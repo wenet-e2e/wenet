@@ -89,7 +89,7 @@ class TransformerEncoder(torch.nn.Module):
         xs_pad: torch.Tensor,
         ilens: torch.Tensor,
         prev_states: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 
         Args:
@@ -109,5 +109,4 @@ class TransformerEncoder(torch.nn.Module):
             xs_pad, masks = layer(xs_pad, masks)
         if self.normalize_before:
             xs_pad = self.after_norm(xs_pad)
-        olens = masks.squeeze(1).sum(1)
-        return xs_pad, olens, masks
+        return xs_pad, masks

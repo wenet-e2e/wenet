@@ -31,7 +31,7 @@ model_conf:
 
 
 collate_conf:
-    spec_aug: false
+    spec_aug: true
     norm_mean: true # if true, must specify cmvn file in cmd line
     norm_var: true # if true, must specify cmvn file in cmd line
 

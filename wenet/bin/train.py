@@ -84,7 +84,6 @@ if __name__ == '__main__':
     cv_collate_func = CollateFunc(**cv_collate_conf, cmvn=args.cmvn)
     dataset_conf = configs.get('dataset_conf', {})
     train_dataset = AudioDataset(args.train_data, **dataset_conf)
-    dataset_conf['batch_size'] = 16
     cv_dataset = AudioDataset(args.cv_data, **dataset_conf)
 
     if distributed:
@@ -110,9 +109,18 @@ if __name__ == '__main__':
                                 batch_size=1,
                                 num_workers=0)
 
-    ## Init transformer model
+    # Init transformer model
     input_dim = train_dataset.input_dim
     vocab_size = train_dataset.output_dim
+    # Save configs to model_dir/train.yaml for inference and export
+    if args.rank == 0:
+        saved_config_path = os.path.join(args.model_dir, 'train.yaml')
+        with open(saved_config_path, 'w') as fout:
+            configs['input_dim'] = input_dim
+            configs['output_dim'] = vocab_size
+            data = yaml.dump(configs)
+            fout.write(data)
+
     encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
     decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                  **configs['decoder_conf'])

@@ -76,3 +76,44 @@ def make_non_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
                  [1, 1, 0, 0, 0]]
     """
     return ~make_pad_mask(lengths)
+
+
+def mask_finished_scores(score: torch.Tensor,
+                         flag: torch.Tensor) -> torch.Tensor:
+    """
+    If a sequence is finished, we only allow one alive branch. This function
+    aims to give one branch a zero score and the rest -inf score.
+    Args:
+        score: A real value array with shape [batch_size * beam_size, beam_size].
+        flag: A bool array with shape [batch_size * beam_size, 1].
+    Returns:
+        A real value array with shape [batch_size * beam_size, beam_size].
+    """
+    beam_size = score.size(-1)
+    zero_mask = torch.zeros_like(flag, dtype=torch.bool)
+    if beam_size > 1:
+        unfinished = torch.cat((zero_mask, flag.repeat([1, beam_size - 1])),
+                               dim=1)
+        finished = torch.cat(
+            (flag.bool(), zero_mask.repeat([1, beam_size - 1])), dim=1)
+    else:
+        unfinished = zero_mask
+        finished = flag.bool()
+    score.masked_fill_(unfinished, -float('inf'))
+    score.masked_fill_(finished, 0)
+    return score
+
+
+def mask_finished_preds(pred: torch.Tensor, flag: torch.Tensor,
+                        eos: int) -> torch.Tensor:
+    """
+    If a sequence is finished, all of its branch should be </S> (3).
+    Args:
+        pred: A int array with shape [batch_size * beam_size, beam_size].
+        flag: A bool array with shape [batch_size * beam_size, 1].
+    Returns:
+        A int array with shape [batch_size * beam_size].
+    """
+    beam_size = pred.size(-1)
+    finished = flag.repeat([1, beam_size])
+    return pred.masked_fill_(finished.bool(), eos)

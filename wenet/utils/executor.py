@@ -59,48 +59,23 @@ class Executor:
         num_seen_utts = 0
         total_loss = 0.0
         num_total_batch = len(data_loader)
-        for batch_idx, batch in enumerate(data_loader):
-            key, feats, target, feats_lengths, target_lengths = batch
-            feats = feats.to(device)
-            target = target.to(device)
-            feats_lengths = feats_lengths.to(device)
-            target_lengths = target_lengths.to(device)
-            num_utts = target_lengths.size(0)
-            if num_utts == 0: continue
-            loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
-                                             target_lengths)
-            num_seen_utts += num_utts
-            total_loss += loss.item() * num_utts
-            if batch_idx % log_interval == 0:
-                logging.debug('CV Batch {}/{} loss {:.6f} loss_att {:.6f} '
-                              'loss_ctc {:.6f} history loss {:.6f}'.format(
-                                  batch_idx, num_total_batch, loss.item(),
-                                  loss_att.item(), loss_ctc.item(),
-                                  total_loss / num_seen_utts))
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(data_loader):
+                key, feats, target, feats_lengths, target_lengths = batch
+                feats = feats.to(device)
+                target = target.to(device)
+                feats_lengths = feats_lengths.to(device)
+                target_lengths = target_lengths.to(device)
+                num_utts = target_lengths.size(0)
+                if num_utts == 0: continue
+                loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
+                                                 target_lengths)
+                num_seen_utts += num_utts
+                total_loss += loss.item() * num_utts
+                if batch_idx % log_interval == 0:
+                    logging.debug('CV Batch {}/{} loss {:.6f} loss_att {:.6f} '
+                                  'loss_ctc {:.6f} history loss {:.6f}'.format(
+                                      batch_idx, num_total_batch, loss.item(),
+                                      loss_att.item(), loss_ctc.item(),
+                                      total_loss / num_seen_utts))
         return total_loss / num_seen_utts
-
-    #def test(self, model, data_loader, device, args):
-    #    ''' test/inference
-    #    '''
-    #    beam = args.get('beam', 10)
-    #    nbest = args.get('nbest', 1)
-    #    token_dict = {}
-    #    with codecs.open(args['dict'], 'r', 'utf8') as fin:
-    #        for line in fin:
-    #            arr = line.strip().split()
-    #            token = arr[0]
-    #            index = int(arr[1])
-    #            token_dict[index] = token
-    #    if 0 not in token_dict:
-    #        token_dict[0] = '<blank>'
-    #    model.eval()
-    #    for batch_idx, batch in enumerate(data_loader):
-    #        key, feats, target, feats_lengths, target_lengths = batch
-    #        feats = feats.to(device)
-    #        target = target.to(device)
-    #        feats_lengths = feats_lengths.to(device)
-    #        target_lengths = target_lengths.to(device)
-    #        assert (target_lengths.size(0) == 1)
-    #        result, posterior = model.beam_search(feats, beam, 1.0, token_dict,
-    #                                              nbest)
-    #        yield key[0], result, posterior

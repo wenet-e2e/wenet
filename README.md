@@ -1,6 +1,9 @@
 # WeNet
 
-We net together. We borrowed a lot of code from espnet.
+We net together.
+We borrowed a lot of code from [espnet](https://github.com/espnet/espnet),
+and we refered [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
+for batch inference.
 
 # Install
 
