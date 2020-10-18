@@ -8,7 +8,7 @@ from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.ctc import CTC
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
-from wenet.utils.common import add_sos_eos, th_accuracy
+from wenet.utils.common import add_sos_eos, th_accuracy, IGNORE_ID
 from wenet.utils.mask import subsequent_mask
 from wenet.utils.mask import mask_finished_scores
 from wenet.utils.mask import mask_finished_preds
@@ -23,7 +23,7 @@ class ASRModel(torch.nn.Module):
         decoder: TransformerDecoder,
         ctc: CTC,
         ctc_weight: float = 0.5,
-        ignore_id: int = -1,
+        ignore_id: int = IGNORE_ID,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
     ):
@@ -155,7 +155,6 @@ class ASRModel(torch.nn.Module):
             # logp: (B*N, vocab)
             logp, cache = self.decoder.forward_one_step(
                 encoder_out, encoder_mask, hyps, hyps_mask, cache)
-            logp[:, 0] = -float('inf') # mask blank(0) score
             # 2.2 First beam prune: select topk best prob at current time
             top_k_logp, top_k_index = logp.topk(beam_size)  # (B*N, N)
             top_k_logp = mask_finished_scores(top_k_logp, end_flag)

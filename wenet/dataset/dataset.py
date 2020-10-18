@@ -15,7 +15,7 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 
 import wenet.dataset.kaldi_io as kaldi_io
-
+from wenet.utils.common import IGNORE_ID
 
 def _splice(feats, left_context, right_context):
     ''' Splice feature
@@ -206,7 +206,7 @@ class CollateFunc(object):
                 np.array([y.shape[0] for y in ys], dtype=np.int32))
             if len(ys) > 0:
                 ys_pad = pad_sequence([torch.from_numpy(y).int() for y in ys],
-                                      True, 0)
+                                      True, IGNORE_ID)
             else:
                 ys_pad = torch.Tensor(ys)
         else:

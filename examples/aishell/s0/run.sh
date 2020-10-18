@@ -116,11 +116,12 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Test model, please specify the model you want to test by --checkpoint
     cmvn_opts=
     $cmvn && cmvn_opts="--cmvn ${feat_dir}/${train_set}/global_cmvn"
+    # TODO, Add model average here
     mkdir -p $dir/test
     python wenet/bin/recognize.py --gpu -1 \
         --config $dir/train.yaml \
         --test_data $feat_dir/test/format.data \
-        --checkpoint $dir/15.pt \
+        --checkpoint $dir/final.pt \
         --beam_size 10 \
         --batch_size 4 \
         --penalty 0.0 \
@@ -135,7 +136,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     # Export the best model you want
     python wenet/bin/export_jit.py \
         --config $dir/train.yaml \
-        --checkpoint $dir/15.pt \
-        --output_file $dir/15.zip
+        --checkpoint $dir/final.pt \
+        --output_file $dir/final.zip
 fi
 
