@@ -23,6 +23,8 @@ if __name__ == '__main__':
     parser.add_argument('--output_file', required=True, help='output file')
 
     args = parser.parse_args()
+    # No need gpu for model export
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin)

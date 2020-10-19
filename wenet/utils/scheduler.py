@@ -46,3 +46,5 @@ class WarmupLR(_LRScheduler):
             for lr in self.base_lrs
         ]
 
+    def set_step(self, step: int):
+        self.last_epoch = step

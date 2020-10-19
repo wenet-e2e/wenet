@@ -146,12 +146,11 @@ if __name__ == '__main__':
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
         infos = load_checkpoint(model, args.checkpoint)
-        configs['optim_conf']['lr'] = infos.get('lr', 1e-4)
     else:
         infos = {}
-    start_epoch = infos.get('epoch', 0)
+    start_epoch = infos.get('epoch', -1) + 1
     cv_loss = infos.get('cv_loss', 0.0)
-    step = infos.get('step', 0)
+    step = infos.get('step', -1)
 
     num_epochs = configs.get('max_epoch', 100)
     model_dir = args.model_dir
@@ -183,6 +182,7 @@ if __name__ == '__main__':
 
     # Start training loop
     executor.step = step
+    scheduler.set_step(step)
     for epoch in range(start_epoch, num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
