@@ -7,7 +7,7 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0"
+export CUDA_VISIBLE_DEVICES="0,1,2,3"
 
 stage=5 # start from 0 if you need to start from data preparation
 stop_stage=5
@@ -25,6 +25,10 @@ train_config=conf/train_transformer.yaml
 checkpoint=
 cmvn=true
 dir=exp/sp_spec_aug
+
+average_checkpoint=true
+decode_checkpoint=$dir/final.pt
+average_num=5
 
 . utils/parse_options.sh || exit 1;
 
@@ -118,10 +122,19 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     $cmvn && cmvn_opts="--cmvn ${feat_dir}/${train_set}/global_cmvn"
     # TODO, Add model average here
     mkdir -p $dir/test
+    if [ ${average_checkpoint} == true ]; then
+        decode_checkpoint=$dir/avg_${average_num}.pt
+        echo "do model average and final checkpoint is $decode_checkpoint"
+        python wenet/bin/average_model.py \
+            --dst_model $decode_checkpoint \
+            --src_path $dir  \
+            --num ${average_num} \
+            --val_best
+    fi
     python wenet/bin/recognize.py --gpu -1 \
         --config $dir/train.yaml \
         --test_data $feat_dir/test/format.data \
-        --checkpoint $dir/final.pt \
+        --checkpoint $decode_checkpoint \
         --beam_size 10 \
         --batch_size 4 \
         --penalty 0.0 \
