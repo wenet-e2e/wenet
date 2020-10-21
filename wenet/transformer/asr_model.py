@@ -112,6 +112,7 @@ class ASRModel(torch.nn.Module):
         )
         return loss_att, acc_att
 
+    @torch.jit.export
     def recognize(self,
                   speech: torch.Tensor,
                   speech_lengths: torch.Tensor,
@@ -139,11 +140,12 @@ class ASRModel(torch.nn.Module):
 
         hyps = torch.ones([running_size, 1], dtype=torch.long,
                           device=device).fill_(self.sos)  # (B*N, 1)
-        scores = torch.FloatTensor([0.0] + [-float('inf')] * (beam_size - 1))
+        scores = torch.tensor([0.0] + [-float('inf')] * (beam_size - 1),
+                              dtype=torch.float)
         scores = scores.to(device).repeat([batch_size]).unsqueeze(1).to(
             device)  # (B*N, 1)
         end_flag = torch.zeros_like(scores, dtype=torch.bool, device=device)
-        cache = None
+        cache: Optional[List[torch.Tensor]] = None
         # 2. Decoder forward step by step
         for i in range(1, maxlen + 1):
             # Stop if all batch and all beam produce eos

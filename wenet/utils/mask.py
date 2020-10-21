@@ -95,10 +95,10 @@ def mask_finished_scores(score: torch.Tensor,
         unfinished = torch.cat((zero_mask, flag.repeat([1, beam_size - 1])),
                                dim=1)
         finished = torch.cat(
-            (flag.bool(), zero_mask.repeat([1, beam_size - 1])), dim=1)
+            (flag, zero_mask.repeat([1, beam_size - 1])), dim=1)
     else:
         unfinished = zero_mask
-        finished = flag.bool()
+        finished = flag
     score.masked_fill_(unfinished, -float('inf'))
     score.masked_fill_(finished, 0)
     return score
@@ -116,4 +116,4 @@ def mask_finished_preds(pred: torch.Tensor, flag: torch.Tensor,
     """
     beam_size = pred.size(-1)
     finished = flag.repeat([1, beam_size])
-    return pred.masked_fill_(finished.bool(), eos)
+    return pred.masked_fill_(finished, eos)
