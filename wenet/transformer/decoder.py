@@ -1,7 +1,7 @@
 # Copyright 2019 Shigeki Karita
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 """Decoder definition."""
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import torch
 from typeguard import check_argument_types
@@ -143,7 +143,7 @@ class TransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         tgt: torch.Tensor,
         tgt_mask: torch.Tensor,
-        cache: List[torch.Tensor] = None,
+        cache: Optional[List[torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """Forward one step.
 
@@ -160,17 +160,18 @@ class TransformerDecoder(torch.nn.Module):
             y.shape` is (batch, maxlen_out, token)
         """
         x = self.embed(tgt)
-        if cache is None:
-            cache = [None] * len(self.decoders)
         new_cache = []
-        for c, decoder in zip(cache, self.decoders):
+        for i, decoder in enumerate(self.decoders):
+            if cache is None:
+                c = None
+            else:
+                c = cache[i]
             x, tgt_mask, memory, memory_mask = decoder(x,
                                                        tgt_mask,
                                                        memory,
                                                        memory_mask,
                                                        cache=c)
             new_cache.append(x)
-
         if self.normalize_before:
             y = self.after_norm(x[:, -1])
         else:
