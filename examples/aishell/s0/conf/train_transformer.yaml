@@ -40,16 +40,17 @@ dataset_conf:
     max_length: 10240
     min_length: 0
     batch_type: 'static' # static or dynamic
-    batch_size: 28
+    batch_size: 24
     sort: true
 
 grad_clip: 5
-max_epoch: 50
+accum_grad: 4
+max_epoch: 80
 log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.0002
+    lr: 0.001
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 25000

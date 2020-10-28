@@ -9,7 +9,7 @@
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3"
 
-stage=5 # start from 0 if you need to start from data preparation
+stage=4 # start from 0 if you need to start from data preparation
 stop_stage=5
 # data
 data=/export/data/asr-data/OpenSLR/33/
@@ -28,7 +28,7 @@ dir=exp/sp_spec_aug
 
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
-average_num=5
+average_num=10
 
 . utils/parse_options.sh || exit 1;
 
@@ -131,12 +131,12 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --num ${average_num} \
             --val_best
     fi
-    python wenet/bin/recognize.py --gpu -1 \
+    python wenet/bin/recognize.py --gpu 0 \
         --config $dir/train.yaml \
         --test_data $feat_dir/test/format.data \
         --checkpoint $decode_checkpoint \
-        --beam_size 10 \
-        --batch_size 4 \
+        --beam_size 5 \
+        --batch_size 100 \
         --penalty 0.0 \
         --dict $dict \
         --result_file $dir/test/text \
