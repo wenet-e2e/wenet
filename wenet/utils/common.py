@@ -7,6 +7,7 @@ import torch
 
 IGNORE_ID = -1
 
+
 def pad_list(xs: List[torch.Tensor], pad_value: int):
     """Perform padding for the list of tensors.
 
@@ -84,3 +85,20 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
         pad_pred.masked_select(mask) == pad_targets.masked_select(mask))
     denominator = torch.sum(mask)
     return float(numerator) / float(denominator)
+
+
+def get_activation(act):
+    """Return activation function."""
+    # Lazy load to avoid unused import
+    from wenet.transformer.swish import Swish
+
+    activation_funcs = {
+        "hardtanh": torch.nn.Hardtanh,
+        "tanh": torch.nn.Tanh,
+        "relu": torch.nn.ReLU,
+        "selu": torch.nn.SELU,
+        "swish": Swish,
+        "gelu": torch.nn.GELU
+    }
+
+    return activation_funcs[act]()

@@ -1,5 +1,5 @@
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
-# Author: binbinzhang@mobvoi.com (Binbin Zhang)
+# Author: di.wu@mobvoi.com (DI WU)
 import os
 import argparse
 import glob
@@ -65,6 +65,7 @@ if __name__ == '__main__':
     # average
     for k in avg.keys():
         if avg[k] is not None:
-            avg[k] /= num
+            # pytorch 1.6 use true_divide instead of /=
+            avg[k] = torch.true_divide(avg[k], num)
     print('Saving to {}'.format(args.dst_model))
     torch.save(avg, args.dst_model)

@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import CollateFunc, AudioDataset
 from wenet.transformer.encoder import TransformerEncoder
+from wenet.transformer.encoder import ConformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.ctc import CTC
 from wenet.transformer.asr_model import ASRModel
@@ -72,7 +73,11 @@ if __name__ == '__main__':
     # Init transformer model
     input_dim = test_dataset.input_dim
     vocab_size = test_dataset.output_dim
-    encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
+    encoder_type = configs.get('encoder', 'conformer')
+    if encoder_type == 'conformer':
+        encoder = ConformerEncoder(input_dim, **configs['encoder_conf'])
+    else:
+        encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
     decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                  **configs['decoder_conf'])
     ctc = CTC(vocab_size, encoder.output_size())
@@ -115,8 +120,8 @@ if __name__ == '__main__':
                 hyp = hyps[i].tolist()
                 content = ''
                 for w in hyp:
-                    if w == eos: break
+                    if w == eos:
+                        break
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
-

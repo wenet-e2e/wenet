@@ -5,7 +5,9 @@ import torch
 from typeguard import check_argument_types
 
 from wenet.transformer.encoder import TransformerEncoder
+from wenet.transformer.encoder import ConformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
+
 from wenet.transformer.ctc import CTC
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import add_sos_eos, th_accuracy, IGNORE_ID
@@ -16,6 +18,7 @@ from wenet.utils.mask import mask_finished_preds
 
 class ASRModel(torch.nn.Module):
     """CTC-attention hybrid Encoder-Decoder model"""
+
     def __init__(
         self,
         vocab_size: int,
@@ -73,8 +76,8 @@ class ASRModel(torch.nn.Module):
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # 2a. Attention-decoder branch
-        loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
-                                                text, text_lengths)
+        loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask, text,
+                                                text_lengths)
 
         # 2b. CTC branch
         loss_ctc = self.ctc(encoder_out, encoder_out_lens, text, text_lengths)
@@ -84,8 +87,7 @@ class ASRModel(torch.nn.Module):
         elif self.ctc_weight == 1.0:
             loss = loss_ctc
         else:
-            loss = self.ctc_weight * loss_ctc + (1 -
-                                                 self.ctc_weight) * loss_att
+            loss = self.ctc_weight * loss_ctc + (1 - self.ctc_weight) * loss_att
         return loss, loss_att, loss_ctc
 
     def _calc_att_loss(
@@ -142,8 +144,8 @@ class ASRModel(torch.nn.Module):
                           device=device).fill_(self.sos)  # (B*N, 1)
         scores = torch.tensor([0.0] + [-float('inf')] * (beam_size - 1),
                               dtype=torch.float)
-        scores = scores.to(device).repeat([batch_size]).unsqueeze(1).to(
-            device)  # (B*N, 1)
+        scores = scores.to(device).repeat([batch_size
+                                          ]).unsqueeze(1).to(device)  # (B*N, 1)
         end_flag = torch.zeros_like(scores, dtype=torch.bool, device=device)
         cache: Optional[List[torch.Tensor]] = None
         # 2. Decoder forward step by step
@@ -155,8 +157,9 @@ class ASRModel(torch.nn.Module):
             hyps_mask = subsequent_mask(i).unsqueeze(0).repeat(
                 running_size, 1, 1).to(device)  # (B*N, i, i)
             # logp: (B*N, vocab)
-            logp, cache = self.decoder.forward_one_step(
-                encoder_out, encoder_mask, hyps, hyps_mask, cache)
+            logp, cache = self.decoder.forward_one_step(encoder_out,
+                                                        encoder_mask, hyps,
+                                                        hyps_mask, cache)
             # 2.2 First beam prune: select topk best prob at current time
             top_k_logp, top_k_index = logp.topk(beam_size)  # (B*N, N)
             top_k_logp = mask_finished_scores(top_k_logp, end_flag)

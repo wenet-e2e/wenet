@@ -1,6 +1,6 @@
 # network architecture
 # encoder related
-encoder: transformer
+encoder: conformer
 encoder_conf:
     output_size: 256    # dimension of attention
     attention_heads: 4
@@ -11,6 +11,11 @@ encoder_conf:
     attention_dropout_rate: 0.0
     input_layer: conv2d # encoder architecture type
     normalize_before: true
+    cnn_module_kernel: 15
+    use_cnn_module: True
+    activation_type: 'gelu'
+    pos_enc_layer_type: 'rel_pos'
+    selfattention_layer_type: 'rel_selfattn'
 
 # decoder related
 decoder: transformer

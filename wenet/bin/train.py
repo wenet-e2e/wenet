@@ -18,6 +18,7 @@ from tensorboardX import SummaryWriter
 
 from wenet.dataset.dataset import CollateFunc, AudioDataset
 from wenet.transformer.encoder import TransformerEncoder
+from wenet.transformer.encoder import ConformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.ctc import CTC
 from wenet.transformer.asr_model import ASRModel
@@ -121,7 +122,11 @@ if __name__ == '__main__':
             data = yaml.dump(configs)
             fout.write(data)
 
-    encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
+    encoder_type = configs.get('encoder', 'conformer')
+    if encoder_type == 'conformer':
+        encoder = ConformerEncoder(input_dim, **configs['encoder_conf'])
+    else:
+        encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
     decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                  **configs['decoder_conf'])
     ctc = CTC(vocab_size, encoder.output_size())
@@ -141,7 +146,6 @@ if __name__ == '__main__':
     # the code to satisfy the script export requirements
     script_model = torch.jit.script(model)
     script_model.save(os.path.join(args.model_dir, 'init.zip'))
-
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
@@ -194,13 +198,12 @@ if __name__ == '__main__':
         logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
-            save_checkpoint(
-                model, save_model_path, {
-                    'epoch': epoch,
-                    'lr': lr,
-                    'cv_loss': cv_loss,
-                    'step': executor.step
-                })
+            save_checkpoint(model, save_model_path, {
+                'epoch': epoch,
+                'lr': lr,
+                'cv_loss': cv_loss,
+                'step': executor.step
+            })
             writer.add_scalars('epoch', {'cv_loss': cv_loss, 'lr': lr}, epoch)
         final_epoch = epoch
 
