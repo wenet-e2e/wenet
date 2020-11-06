@@ -46,12 +46,25 @@ if __name__ == '__main__':
                         type=int,
                         default=16,
                         help='asr result file')
-
+    parser.add_argument('--mode',
+                        choices=[
+                            'attention', 'ctc_greedy_search',
+                            'ctc_prefix_beam_search', 'attention_rescoring'
+                        ],
+                        default='attention',
+                        help='decoding mode')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+
+    if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring'
+                     ] and args.batch_size > 1:
+        logging.fatal(
+            'decoding mode {} must be running with batch_size == 1'.format(
+                args.mode))
+        sys.exit(1)
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin)
@@ -112,16 +125,31 @@ if __name__ == '__main__':
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
-            hyps = model.recognize(feats,
-                                   feats_lengths,
-                                   beam_size=args.beam_size,
-                                   penalty=args.penalty)
+            if args.mode == 'attention':
+                hyps = model.recognize(feats,
+                                       feats_lengths,
+                                       beam_size=args.beam_size,
+                                       penalty=args.penalty)
+                hyps = [hyp.tolist() for hyp in hyps]
+            elif args.mode == 'ctc_greedy_search':
+                hyps = model.ctc_greedy_search(feats, feats_lengths)
+            # ctc_prefix_beam_search and attention_rescoring only return one
+            # result in List[int], change it to List[List[int]] for compatible
+            # with other batch decoding mode
+            elif args.mode == 'ctc_prefix_beam_search':
+                assert (feats.size(0) == 1)
+                hyp = model.ctc_prefix_beam_search(feats, feats_lengths,
+                                                   args.beam_size)
+                hyps = [hyp]
+            elif args.mode == 'attention_rescoring':
+                assert (feats.size(0) == 1)
+                hyp = model.attention_rescoring(feats, feats_lengths,
+                                                args.beam_size)
+                hyps = [hyp]
             for i, key in enumerate(keys):
-                hyp = hyps[i].tolist()
                 content = ''
-                for w in hyp:
-                    if w == eos:
-                        break
+                for w in hyps[i]:
+                    if w == eos: break
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))

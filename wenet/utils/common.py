@@ -1,6 +1,7 @@
 """Unility funcitons for Transformer."""
 
 import numpy
+import math
 from typing import Tuple, List
 
 import torch
@@ -102,3 +103,26 @@ def get_activation(act):
     }
 
     return activation_funcs[act]()
+
+
+def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
+    new_hyp: List[int] = []
+    cur = 0
+    while cur < len(hyp):
+        if hyp[cur] != 0:
+            new_hyp.append(hyp[cur])
+        prev = cur
+        while cur < len(hyp) and hyp[cur] == hyp[prev]:
+            cur += 1
+    return new_hyp
+
+
+def log_add(args: List[int]) -> float:
+    """
+    Stable log add
+    """
+    if all(a == -float('inf') for a in args):
+        return -float('inf')
+    a_max = max(args)
+    lsp = math.log(sum(math.exp(a - a_max) for a in args))
+    return a_max + lsp
