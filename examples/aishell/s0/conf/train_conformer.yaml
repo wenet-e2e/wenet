@@ -9,11 +9,11 @@ encoder_conf:
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     attention_dropout_rate: 0.0
-    input_layer: conv2d # encoder architecture type
+    input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
     cnn_module_kernel: 15
     use_cnn_module: True
-    activation_type: 'gelu'
+    activation_type: 'swish'
     pos_enc_layer_type: 'rel_pos'
     selfattention_layer_type: 'rel_selfattn'
 
