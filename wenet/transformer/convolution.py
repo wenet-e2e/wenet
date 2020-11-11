@@ -16,12 +16,14 @@ class ConvolutionModule(nn.Module):
     Args:
         channels (int): The number of channels of conv layers.
         kernel_size (int): Kernerl size of conv layers.
+        causal: int: Whether use causal convolution or not
     """
 
     def __init__(self,
                  channels: int,
                  kernel_size: int = 15,
                  activation: nn.Module = nn.ReLU(),
+                 causal: bool = False,
                  bias: bool = True):
         """Construct an ConvolutionModule object."""
         assert check_argument_types()
@@ -37,12 +39,19 @@ class ConvolutionModule(nn.Module):
             padding=0,
             bias=bias,
         )
+        # If self.lorder == 0, won't padd input in forward
+        if causal:
+            padding = 0
+            self.lorder = kernel_size - 1
+        else:
+            padding = (kernel_size - 1) // 2
+            self.lorder = 0
         self.depthwise_conv = nn.Conv1d(
             channels,
             channels,
             kernel_size,
             stride=1,
-            padding=(kernel_size - 1) // 2,
+            padding=padding,
             groups=channels,
             bias=bias,
         )
@@ -66,6 +75,8 @@ class ConvolutionModule(nn.Module):
         """
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)
+        if self.lorder > 0:
+            x = nn.functional.pad(x, (self.lorder, 0), 'constant', 0.0)
 
         # GLU mechanism
         x = self.pointwise_conv1(x)  # (batch, 2*channel, dim)

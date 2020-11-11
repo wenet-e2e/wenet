@@ -22,6 +22,14 @@ if __name__ == '__main__':
                         default=5,
                         type=int,
                         help='nums for averaged model')
+    parser.add_argument('--min_epoch',
+                        default=0,
+                        type=int,
+                        help='min epoch used for averaging model')
+    parser.add_argument('--max_epoch',
+                        default=65536,  # Big enough
+                        type=int,
+                        help='max epoch used for averaging model')
 
     args = parser.parse_args()
     print(args)
@@ -29,13 +37,13 @@ if __name__ == '__main__':
     val_scores = []
     if args.val_best:
         yamls = glob.glob('{}/[!train]*.yaml'.format(args.src_path))
-        loss_best = {}
         for y in yamls:
             with open(y, 'r') as f:
                 dic_yaml = yaml.load(f)
                 loss = dic_yaml['cv_loss']
                 epoch = dic_yaml['epoch']
-                val_scores += [[epoch, loss]]
+                if epoch >= args.min_epoch and epoch <= args.max_epoch:
+                    val_scores += [[epoch, loss]]
         val_scores = np.array(val_scores)
         sort_idx = np.argsort(val_scores[:, -1])
         sorted_val_scores = val_scores[sort_idx][::1]

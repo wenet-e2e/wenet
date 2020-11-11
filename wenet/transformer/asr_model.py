@@ -125,18 +125,25 @@ class ASRModel(torch.nn.Module):
                   speech: torch.Tensor,
                   speech_lengths: torch.Tensor,
                   beam_size: int = 10,
-                  penalty: float = 0.0) -> torch.Tensor:
+                  penalty: float = 0.0,
+                  decoding_chunk_size: int = -1) -> torch.Tensor:
         '''
         param: speech: (batch, max_len, feat_dim)
         param: speech_length: (batch, )
+        param: decoding_chunk_size
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
         '''
         assert speech.shape[0] == speech_lengths.shape[0]
+        assert decoding_chunk_size != 0
         device = speech.device
         batch_size = speech.shape[0]
 
         # Let's assume B = batch_size and N = beam_size
         # 1. Encoder
-        encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
+        encoder_out, encoder_mask = self.encoder(
+            speech, speech_lengths, decoding_chunk_size=decoding_chunk_size)
         maxlen = encoder_out.size(1)
         encoder_dim = encoder_out.size(2)
         running_size = batch_size * beam_size
@@ -206,20 +213,28 @@ class ASRModel(torch.nn.Module):
         best_hyps = best_hyps[:, 1:]
         return best_hyps
 
-    def ctc_greedy_search(self, speech: torch.Tensor,
-                          speech_lengths: torch.Tensor) -> List[List[int]]:
+    def ctc_greedy_search(self,
+                          speech: torch.Tensor,
+                          speech_lengths: torch.Tensor,
+                          decoding_chunk_size: int = -1) -> List[List[int]]:
         '''
         param: speech: (batch, max_len, feat_dim)
         param: speech_length: (batch, )
+        param: decoding_chunk_size
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
         return:
             best path result, without remove blank and duplicates
         '''
         assert speech.shape[0] == speech_lengths.shape[0]
+        assert decoding_chunk_size != 0
         device = speech.device
         batch_size = speech.shape[0]
         # Let's assume B = batch_size
         encoder_out, encoder_mask = self.encoder(
-            speech, speech_lengths)  # (B, maxlen, encoder_dim)
+            speech, speech_lengths, decoding_chunk_size=decoding_chunk_size
+        )  # (B, maxlen, encoder_dim)
         maxlen = encoder_out.size(1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         ctc_probs = self.ctc.log_softmax(
@@ -233,15 +248,24 @@ class ASRModel(torch.nn.Module):
         return hyps
 
     def _ctc_prefix_beam_search(
-            self, speech: torch.Tensor, speech_lengths: torch.Tensor,
-            beam_size: int) -> Tuple[List[List[int]], torch.Tensor]:
+            self,
+            speech: torch.Tensor,
+            speech_lengths: torch.Tensor,
+            beam_size: int,
+            decoding_chunk_size: int = -1
+    ) -> Tuple[List[List[int]], torch.Tensor]:
         '''
         param: speech: (batch, max_len, feat_dim)
         param: speech_length: (batch, )
+        param: decoding_chunk_size
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
         return:
             ctc beam search nbest path result (batch, beam_size, max_token)
         '''
         assert speech.shape[0] == speech_lengths.shape[0]
+        assert decoding_chunk_size != 0
         device = speech.device
         batch_size = speech.shape[0]
         # For CTC prefix beam search, we only support batch_size=1
@@ -249,7 +273,8 @@ class ASRModel(torch.nn.Module):
         # Let's assume B = batch_size and N = beam_size
         # 1. Encoder forward and get CTC score
         encoder_out, encoder_mask = self.encoder(
-            speech, speech_lengths)  # (1, maxlen, encoder_dim)
+            speech, speech_lengths, decoding_chunk_size=decoding_chunk_size
+        )  # (1, maxlen, encoder_dim)
         maxlen = encoder_out.size(1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)  # (1,)
         ctc_probs = self.ctc.log_softmax(
@@ -297,24 +322,35 @@ class ASRModel(torch.nn.Module):
         hyps = [x[0] for x in cur_hyps]
         return hyps, encoder_out
 
-    def ctc_prefix_beam_search(self, speech: torch.Tensor,
+    def ctc_prefix_beam_search(self,
+                               speech: torch.Tensor,
                                speech_lengths: torch.Tensor,
-                               beam_size: int) -> List[int]:
+                               beam_size: int,
+                               decoding_chunk_size: int = -1) -> List[int]:
         hyps, _ = self._ctc_prefix_beam_search(speech, speech_lengths,
-                                               beam_size)
+                                               beam_size, decoding_chunk_size)
         return hyps[0]
 
-    def attention_rescoring(self, speech: torch.Tensor,
+    def attention_rescoring(self,
+                            speech: torch.Tensor,
                             speech_lengths: torch.Tensor,
-                            beam_size: int) -> List[int]:
+                            beam_size: int,
+                            decoding_chunk_size: int = -1) -> List[int]:
+        '''
+        param: decoding_chunk_size
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
+        '''
         assert speech.shape[0] == speech_lengths.shape[0]
+        assert decoding_chunk_size != 0
         device = speech.device
         batch_size = speech.shape[0]
         # For attention rescoring we only support batch_size=1
         assert batch_size == 1
         # encoder_out: (1, maxlen, encoder_dim), len(hyps) = beam_size
         hyps, encoder_out = self._ctc_prefix_beam_search(
-            speech, speech_lengths, beam_size)
+            speech, speech_lengths, beam_size, decoding_chunk_size)
         assert len(hyps) == beam_size
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long) for hyp in hyps

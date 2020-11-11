@@ -8,8 +8,7 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3"
-export CUDA_VISIBLE_DEVICES='7'
-stage=4 # start from 0 if you need to start from data preparation
+stage=0 # start from 0 if you need to start from data preparation
 stop_stage=6
 # data
 data=/export/data/asr-data/OpenSLR/33/
@@ -20,7 +19,10 @@ feat_dir=fbank_pitch
 dict=data/dict/lang_char.txt
 
 train_set=train_sp
-
+# Optional train_config
+# 1. conf/train_transfomer.yaml: Standard transformer
+# 2. conf/train_conformer.yaml: Standard conformer
+# 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 train_config=conf/train_conformer.yaml
 checkpoint=
 cmvn=true
@@ -132,19 +134,31 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --num ${average_num} \
             --val_best
     fi
-    # todo: conformer batch decode
-    python wenet/bin/recognize.py --gpu 7 \
-        --config $dir/train.yaml \
-        --test_data $feat_dir/test/format.data \
-        --checkpoint $decode_checkpoint \
-        --beam_size 5 \
-        --batch_size 1 \
-        --penalty 0.0 \
-        --dict $dict \
-        --result_file $dir/test/text \
-        $cmvn_opts
-    python2 tools/compute-wer.py --char=1 --v=1 \
-        $feat_dir/test/text $dir/test/text > $dir/test/wer
+    # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
+    # -1 for full chunk
+    decoding_chunk_size=
+    for mode in ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring; do
+    {
+        test_dir=$dir/test_${mode}
+        mkdir -p $test_dir
+        python wenet/bin/recognize.py --gpu 0 \
+            --mode $mode \
+            --config $dir/train.yaml \
+            --test_data $feat_dir/test/format.data \
+            --checkpoint $decode_checkpoint \
+            --beam_size 10 \
+            --batch_size 1 \
+            --penalty 0.0 \
+            --dict $dict \
+            --result_file $test_dir/text \
+            $cmvn_opts \
+            ${decoding_chunk_size: "--decoding_chunk_size $decoding_chunk_size"}
+         python2 tools/compute-wer.py --char=1 --v=1 \
+            $feat_dir/test/text $test_dir/text > $test_dir/wer
+    } &
+    done
+    wait
+
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
