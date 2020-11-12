@@ -13,13 +13,13 @@ from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.transformer.linear import InputLinear
 from wenet.transformer.subsampling import Conv2dSubsampling
 from wenet.transformer.subsampling import RelConv2dSubsampling
+from wenet.transformer.subsampling import RelConv2dSubsampling6
 from wenet.transformer.subsampling import RelConv2dSubsampling8
 from wenet.utils.mask import make_pad_mask
 
-from wenet.transformer.layer_norm import LayerNorm
-from wenet.transformer.repeat import repeat
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.attention import (
@@ -200,14 +200,21 @@ class ConformerEncoder(torch.nn.Module):
             raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
 
         if input_layer == "linear":
-            self.embed = torch.nn.Sequential(
-                torch.nn.Linear(input_size, output_size),
-                torch.nn.LayerNorm(attention_dim, eps=1e-12),
-                torch.nn.Dropout(dropout_rate),
-                pos_enc_class(attention_dim, positional_dropout_rate),
+            self.embed = InputLinear(
+                input_size,
+                output_size,
+                dropout_rate,
+                pos_enc_class(output_size, positional_dropout_rate),
             )
         elif input_layer == "conv2d":
             self.embed = RelConv2dSubsampling(
+                input_size,
+                output_size,
+                dropout_rate,
+                pos_enc_class(output_size, positional_dropout_rate),
+            )
+        elif input_layer == "conv2d6":
+            self.embed = RelConv2dSubsampling6(
                 input_size,
                 output_size,
                 dropout_rate,
@@ -319,12 +326,8 @@ class ConformerEncoder(torch.nn.Module):
         """
         masks = ~make_pad_mask(ilens).unsqueeze(1)
 
-        # if you want use RelConv2dSubsampling8, and input layer is conv2d8, 
-        #  please replace RelConv2dSubsampling of RelConv2dSubsampling8
-        if isinstance(self.embed, (RelConv2dSubsampling8)):
-            xs, masks = self.embed(xs, masks)
-        else:
-            xs = self.embed(xs)
+        xs, masks = self.embed(xs, masks)
+
         for layer in self.encoders:
             xs, masks = layer(xs, masks)
         if isinstance(xs, tuple):
