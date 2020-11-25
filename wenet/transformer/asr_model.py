@@ -229,7 +229,6 @@ class ASRModel(torch.nn.Module):
         '''
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
-        device = speech.device
         batch_size = speech.shape[0]
         # Let's assume B = batch_size
         encoder_out, encoder_mask = self.encoder(
@@ -266,7 +265,6 @@ class ASRModel(torch.nn.Module):
         '''
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
-        device = speech.device
         batch_size = speech.shape[0]
         # For CTC prefix beam search, we only support batch_size=1
         assert batch_size == 1
