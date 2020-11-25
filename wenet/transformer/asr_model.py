@@ -127,14 +127,21 @@ class ASRModel(torch.nn.Module):
                   beam_size: int = 10,
                   penalty: float = 0.0,
                   decoding_chunk_size: int = -1) -> torch.Tensor:
-        '''
-        param: speech: (batch, max_len, feat_dim)
-        param: speech_length: (batch, )
-        param: decoding_chunk_size
+        """ Apply beam search on attention decoder
+
+        Args:
+            speech (torch.Tensor): (batch, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            beam_size (int): beam size for beam search
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
                 0: used for training, it's prohibited here
-        '''
+
+        Returns:
+            torch.Tensor: decoding result, (batch, max_result_len)
+        """
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
         device = speech.device
@@ -217,16 +224,22 @@ class ASRModel(torch.nn.Module):
                           speech: torch.Tensor,
                           speech_lengths: torch.Tensor,
                           decoding_chunk_size: int = -1) -> List[List[int]]:
-        '''
-        param: speech: (batch, max_len, feat_dim)
-        param: speech_length: (batch, )
-        param: decoding_chunk_size
+
+        """ Apply CTC greedy search
+
+        Args:
+            speech (torch.Tensor): (batch, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            beam_size (int): beam size for beam search
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
                 0: used for training, it's prohibited here
-        return:
-            best path result, without remove blank and duplicates
-        '''
+
+        Returns:
+            List[List[int]]: best path result
+        """
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
         device = speech.device
@@ -254,16 +267,24 @@ class ASRModel(torch.nn.Module):
             beam_size: int,
             decoding_chunk_size: int = -1
     ) -> Tuple[List[List[int]], torch.Tensor]:
-        '''
-        param: speech: (batch, max_len, feat_dim)
-        param: speech_length: (batch, )
-        param: decoding_chunk_size
+
+        """ CTC prefix beam search inner implementation
+
+        Args:
+            speech (torch.Tensor): (batch, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            beam_size (int): beam size for beam search
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
                 0: used for training, it's prohibited here
-        return:
-            ctc beam search nbest path result (batch, beam_size, max_token)
-        '''
+
+        Returns:
+            List[List[int]]: nbest results
+            torch.Tensor: encoder output, (1, max_len, encoder_dim),
+                it will be used for rescoring in attention rescoring mode
+        """
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
         device = speech.device
@@ -327,6 +348,21 @@ class ASRModel(torch.nn.Module):
                                speech_lengths: torch.Tensor,
                                beam_size: int,
                                decoding_chunk_size: int = -1) -> List[int]:
+        """ Apply CTC prefix beam search
+
+        Args:
+            speech (torch.Tensor): (batch, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            beam_size (int): beam size for beam search
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
+
+        Returns:
+            List[int]: CTC prefix beam search nbest results
+        """
         hyps, _ = self._ctc_prefix_beam_search(speech, speech_lengths,
                                                beam_size, decoding_chunk_size)
         return hyps[0]
@@ -336,12 +372,23 @@ class ASRModel(torch.nn.Module):
                             speech_lengths: torch.Tensor,
                             beam_size: int,
                             decoding_chunk_size: int = -1) -> List[int]:
-        '''
-        param: decoding_chunk_size
+        """ Apply attention rescoring decoding, CTC prefix beam search
+            is applied first to get nbest, then we resoring the nbest on
+            attention decoder with corresponding encoder out
+
+        Args:
+            speech (torch.Tensor): (batch, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            beam_size (int): beam size for beam search
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
                 0: used for training, it's prohibited here
-        '''
+
+        Returns:
+            List[int]: Attention rescoring result
+        """
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
         device = speech.device

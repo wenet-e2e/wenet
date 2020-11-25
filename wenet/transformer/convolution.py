@@ -12,12 +12,7 @@ from typeguard import check_argument_types
 
 
 class ConvolutionModule(nn.Module):
-    """ConvolutionModule in Conformer model.
-    Args:
-        channels (int): The number of channels of conv layers.
-        kernel_size (int): Kernerl size of conv layers.
-        causal: int: Whether use causal convolution or not
-    """
+    """ConvolutionModule in Conformer model."""
 
     def __init__(self,
                  channels: int,
@@ -25,7 +20,12 @@ class ConvolutionModule(nn.Module):
                  activation: nn.Module = nn.ReLU(),
                  causal: bool = False,
                  bias: bool = True):
-        """Construct an ConvolutionModule object."""
+        """Construct an ConvolutionModule object.
+        Args:
+            channels (int): The number of channels of conv layers.
+            kernel_size (int): Kernerl size of conv layers.
+            causal (int): Whether use causal convolution or not
+        """
         assert check_argument_types()
         super().__init__()
         # kernerl_size should be a odd number for 'SAME' padding
@@ -39,7 +39,10 @@ class ConvolutionModule(nn.Module):
             padding=0,
             bias=bias,
         )
-        # If self.lorder == 0, won't padd input in forward
+        # self.lorder is used to distinguish if it's a causal convolution,
+        # if self.lorder > 0: it's a causal convolution, the input will be
+        #    padded with self.lorder frames on the left in forward.
+        # else: it's a symmetrical convolution
         if causal:
             padding = 0
             self.lorder = kernel_size - 1
