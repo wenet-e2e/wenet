@@ -12,14 +12,19 @@ def subsequent_mask(
     size: int, device: torch.device = torch.device("cpu")) -> torch.Tensor:
     """Create mask for subsequent steps (size, size).
 
-    :param int size: size of mask
-    :param str device: "cpu" or "cuda" or torch.Tensor.device
-    :param torch.dtype dtype: result dtype
-    :rtype: torch.Tensor
-    >>> subsequent_mask(3)
-    [[1, 0, 0],
-     [1, 1, 0],
-     [1, 1, 1]]
+    Args:
+        size (int): size of mask
+        str device (str): "cpu" or "cuda" or torch.Tensor.device
+        dtype (torch.device): result dtype
+
+    Returns:
+        torch.Tensor: mask
+
+    Examples:
+        >>> subsequent_mask(3)
+        [[1, 0, 0],
+         [1, 1, 0],
+         [1, 1, 1]]
     """
     ret = torch.ones(size, size, device=device, dtype=torch.bool)
     return torch.tril(ret, out=ret)
@@ -29,17 +34,22 @@ def subsequent_chunk_mask(
     size: int, chunk_size: int,
     device: torch.device = torch.device("cpu")) -> torch.Tensor:
     """Create mask for subsequent steps (size, size) with chunk size,
-       this is for streamline encoder
-    :param int size: size of mask
-	:param int chunk_size: size of chunk
-    :param str device: "cpu" or "cuda" or torch.Tensor.device
-    :param torch.dtype dtype: result dtype
-    :rtype: torch.Tensor
-    >>> subsequent_mask(4, 2)
-    [[1, 1, 0, 0],
-     [1, 1, 0, 0],
-     [1, 1, 1, 1],
-     [1, 1, 1, 1]
+       this is for streaming encoder
+
+    Args:
+        size (int): size of mask
+	    chunk_size (int): size of chunk
+        device (torch.device): "cpu" or "cuda" or torch.Tensor.device
+
+    Returns:
+        torch.Tensor: mask
+
+    Examples:
+        >>> subsequent_mask(4, 2)
+        [[1, 1, 0, 0],
+         [1, 1, 0, 0],
+         [1, 1, 1, 1],
+         [1, 1, 1, 1]]
     """
     ret = torch.zeros(size, size, device=device, dtype=torch.bool)
     for i in range(size):
@@ -51,22 +61,23 @@ def subsequent_chunk_mask(
 def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
                             use_dynamic_chunk: bool, decoding_chunk_size: int,
                             static_chunk_size: int):
-    ''' Adding optional mask for encoder.
-    Args:
-        xs: padded input, (B, L, D), L for max length
-        mask: mask for xs, (B, 1, L)
+    """ Apply optional mask for encoder.
 
-        use_dynamic_chunk: whether to use dynamic chunk or not
-        decoding_chunk_size: decoding chunk size for dynamic chunk, it's
+    Args:
+        xs (torch.Tensor): padded input, (B, L, D), L for max length
+        mask (torch.Tensor): mask for xs, (B, 1, L)
+        use_dynamic_chunk (bool): whether to use dynamic chunk or not
+        decoding_chunk_size (int): decoding chunk size for dynamic chunk, it's
             0: default for training, use random dynamic chunk.
             <0: for decoding, use full chunk.
             >0: for decoding, use fixed chunk size as set.
-        static_chunk_size: chunk size for static chunk training/decoding
+        static_chunk_size (int): chunk size for static chunk training/decoding
             if it's greater than 0, if use_dynamic_chunk is true,
             this parameter will be ignored
+
     Returns:
-        chunk mask of the input xs.
-    '''
+        torch.Tensor: chunk mask of the input xs.
+    """
     # Whether to use chunk mask or not
     if use_dynamic_chunk:
         max_len = xs.size(1)
@@ -76,8 +87,8 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
             chunk_size = decoding_chunk_size
         else:
             # chunk size is either [1, 25] or full context(max_len).
-            # since we use 4 times subsampling, and we allow a maximum
-            # delay of 1s(100 frames), so it's 100 / 4 = 25 here.
+            # Since we use 4 times subsampling and allow up to 1s(100 frames)
+            # delay, the maximum frame is 100 / 4 = 25.
             chunk_size = torch.randint(1, max_len, (1, )).item()
             if chunk_size > max_len // 2:
                 chunk_size = max_len
@@ -101,17 +112,13 @@ def make_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
     """Make mask tensor containing indices of padded part.
 
     Args:
-        lengths (LongTensor or List): Batch of lengths (B,).
+        lengths (torch.Tensor): Batch of lengths (B,).
     Returns:
-        Tensor: Mask tensor containing indices of padded part.
-                dtype=torch.uint8 in PyTorch 1.2-
-                dtype=torch.bool in PyTorch 1.2+ (including 1.2)
+        torch.Tensor: Mask tensor containing indices of padded part.
 
     Examples:
-        With only lengths.
-
         >>> lengths = [5, 3, 2]
-        >>> make_non_pad_mask(lengths)
+        >>> make_pad_mask(lengths)
         masks = [[0, 0, 0, 0 ,0],
                  [0, 0, 0, 1, 1],
                  [0, 0, 1, 1, 1]]
@@ -132,15 +139,11 @@ def make_non_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
     """Make mask tensor containing indices of non-padded part.
 
     Args:
-        lengths (LongTensor or List): Batch of lengths (B,).
+        lengths (torch.Tensor): Batch of lengths (B,).
     Returns:
-        ByteTensor: mask tensor containing indices of padded part.
-                    dtype=torch.uint8 in PyTorch 1.2-
-                    dtype=torch.bool in PyTorch 1.2+ (including 1.2)
+        torch.Tensor: mask tensor containing indices of padded part.
 
     Examples:
-        With only lengths.
-
         >>> lengths = [5, 3, 2]
         >>> make_non_pad_mask(lengths)
         masks = [[1, 1, 1, 1 ,1],
@@ -155,11 +158,15 @@ def mask_finished_scores(score: torch.Tensor,
     """
     If a sequence is finished, we only allow one alive branch. This function
     aims to give one branch a zero score and the rest -inf score.
+
     Args:
-        score: A real value array with shape [batch_size * beam_size, beam_size].
-        flag: A bool array with shape [batch_size * beam_size, 1].
+        score (torch.Tensor): A real value array with shape
+            (batch_size * beam_size, beam_size).
+        flag (torch.Tensor): A bool array with shape
+            (batch_size * beam_size, 1).
+
     Returns:
-        A real value array with shape [batch_size * beam_size, beam_size].
+        torch.Tensor: (batch_size * beam_size, beam_size).
     """
     beam_size = score.size(-1)
     zero_mask = torch.zeros_like(flag, dtype=torch.bool)
@@ -179,12 +186,16 @@ def mask_finished_scores(score: torch.Tensor,
 def mask_finished_preds(pred: torch.Tensor, flag: torch.Tensor,
                         eos: int) -> torch.Tensor:
     """
-    If a sequence is finished, all of its branch should be </S> (3).
+    If a sequence is finished, all of its branch should be <eos>
+
     Args:
-        pred: A int array with shape [batch_size * beam_size, beam_size].
-        flag: A bool array with shape [batch_size * beam_size, 1].
+        pred (torch.Tensor): A int array with shape
+            (batch_size * beam_size, beam_size).
+        flag (torch.Tensor): A bool array with shape
+            (batch_size * beam_size, 1).
+
     Returns:
-        A int array with shape [batch_size * beam_size].
+        torch.Tensor: (batch_size * beam_size).
     """
     beam_size = pred.size(-1)
     finished = flag.repeat([1, beam_size])

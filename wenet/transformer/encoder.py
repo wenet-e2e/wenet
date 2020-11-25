@@ -174,9 +174,9 @@ class ConformerEncoder(torch.nn.Module):
         use_cnn_module (bool): Whether to use convolution module.
         cnn_module_kernel (int): Kernerl size of convolution module.
         padding_idx (int): Padding idx for input_layer=embed.
-        causal: whether to use causal convolution
-        static_chunk_size: same meaning as in TransformerEncoder
-        use_dynamic_chunk: same meaning as in ConformerEncoder
+        causal (bool): whether to use causal convolution
+        static_chunk_size (int): same meaning as in TransformerEncoder
+        use_dynamic_chunk (bool): same meaning as in TransformerEncoder
     """
     def __init__(
         self,
