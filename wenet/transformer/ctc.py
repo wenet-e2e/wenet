@@ -4,14 +4,7 @@ from typeguard import check_argument_types
 
 
 class CTC(torch.nn.Module):
-    """CTC module.
-
-    Args:
-        odim: dimension of outputs
-        encoder_output_size: number of encoder projection units
-        dropout_rate: dropout rate (0.0 ~ 1.0)
-        reduce: reduce the CTC loss into a scalar
-    """
+    """CTC module"""
     def __init__(
         self,
         odim: int,
@@ -19,6 +12,13 @@ class CTC(torch.nn.Module):
         dropout_rate: float = 0.0,
         reduce: bool = True,
     ):
+    """ Construct CTC module
+    Args:
+        odim: dimension of outputs
+        encoder_output_size: number of encoder projection units
+        dropout_rate: dropout rate (0.0 ~ 1.0)
+        reduce: reduce the CTC loss into a scalar
+    """
         assert check_argument_types()
         super().__init__()
         eprojs = encoder_output_size
