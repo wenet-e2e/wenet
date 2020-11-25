@@ -152,7 +152,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --dict $dict \
             --result_file $test_dir/text \
             $cmvn_opts \
-            ${decoding_chunk_size: "--decoding_chunk_size $decoding_chunk_size"}
+            ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
          python2 tools/compute-wer.py --char=1 --v=1 \
             $feat_dir/test/text $test_dir/text > $test_dir/wer
     } &
