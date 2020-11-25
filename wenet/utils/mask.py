@@ -61,7 +61,7 @@ def subsequent_chunk_mask(
 def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
                             use_dynamic_chunk: bool, decoding_chunk_size: int,
                             static_chunk_size: int):
-    ''' Apply optional mask for encoder.
+    """ Apply optional mask for encoder.
 
     Args:
         xs (torch.Tensor): padded input, (B, L, D), L for max length
@@ -77,7 +77,7 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
 
     Returns:
         torch.Tensor: chunk mask of the input xs.
-    '''
+    """
     # Whether to use chunk mask or not
     if use_dynamic_chunk:
         max_len = xs.size(1)

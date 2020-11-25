@@ -224,7 +224,6 @@ class ASRModel(torch.nn.Module):
                           speech: torch.Tensor,
                           speech_lengths: torch.Tensor,
                           decoding_chunk_size: int = -1) -> List[List[int]]:
-
         """ Apply CTC greedy search
 
         Args:
@@ -267,7 +266,6 @@ class ASRModel(torch.nn.Module):
             beam_size: int,
             decoding_chunk_size: int = -1
     ) -> Tuple[List[List[int]], torch.Tensor]:
-
         """ CTC prefix beam search inner implementation
 
         Args:
