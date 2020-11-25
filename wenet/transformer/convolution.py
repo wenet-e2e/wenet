@@ -23,7 +23,7 @@ class ConvolutionModule(nn.Module):
         """Construct an ConvolutionModule object.
         Args:
             channels (int): The number of channels of conv layers.
-            kernel_size (int): Kernerl size of conv layers.
+            kernel_size (int): Kernel size of conv layers.
             causal (int): Whether use causal convolution or not
         """
         assert check_argument_types()
