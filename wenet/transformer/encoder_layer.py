@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
+
 class TransformerEncoderLayer(nn.Module):
     """Encoder layer module.
 
@@ -29,7 +30,6 @@ class TransformerEncoderLayer(nn.Module):
             if False, no additional linear will be applied. i.e. x -> x + att(x)
 
     """
-
     def __init__(
         self,
         size: int,
@@ -125,7 +125,6 @@ class ConformerEncoderLayer(nn.Module):
             i.e. x -> x + linear(concat(x, att(x)))
             if False, no additional linear will be applied. i.e. x -> x + att(x)
     """
-
     def __init__(
         self,
         size: int,
@@ -151,7 +150,8 @@ class ConformerEncoderLayer(nn.Module):
         else:
             self.ff_scale = 1.0
         if self.conv_module is not None:
-            self.norm_conv = nn.LayerNorm(size, eps=1e-12)  # for the CNN module
+            self.norm_conv = nn.LayerNorm(size,
+                                          eps=1e-12)  # for the CNN module
             self.norm_final = nn.LayerNorm(
                 size, eps=1e-12)  # for the final output of the block
         self.dropout = nn.Dropout(dropout_rate)
@@ -241,6 +241,4 @@ class ConformerEncoderLayer(nn.Module):
         if cache is not None:
             x = torch.cat([cache, x], dim=1)
 
-        # if pos_emb is not None:
         return (x, pos_emb), mask
-
