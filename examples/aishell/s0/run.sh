@@ -20,7 +20,7 @@ dict=data/dict/lang_char.txt
 
 train_set=train_sp
 # Optional train_config
-# 1. conf/train_transfomer.yaml: Standard transformer
+# 1. conf/train_transformer.yaml: Standard transformer
 # 2. conf/train_conformer.yaml: Standard conformer
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 train_config=conf/train_conformer.yaml

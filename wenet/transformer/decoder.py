@@ -125,7 +125,7 @@ class TransformerDecoder(torch.nn.Module):
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
 
-        x = self.embed(tgt)
+        x, _ = self.embed(tgt)
         for layer in self.decoders:
             x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
                                                      memory_mask)
@@ -159,7 +159,7 @@ class TransformerDecoder(torch.nn.Module):
             y, cache: NN output value and cache per `self.decoders`.
             y.shape` is (batch, maxlen_out, token)
         """
-        x = self.embed(tgt)
+        x, _ = self.embed(tgt)
         new_cache = []
         for i, decoder in enumerate(self.decoders):
             if cache is None:

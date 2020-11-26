@@ -7,13 +7,12 @@
 
 import math
 
-from typing import Tuple
+from typing import Tuple, Optional
 from typeguard import typechecked
 
 import torch
 
 
-#@typechecked
 class PositionalEncoding(torch.nn.Module):
     """Positional encoding.
 
@@ -24,7 +23,6 @@ class PositionalEncoding(torch.nn.Module):
     PE(pos, 2i)   = sin(pos/(10000^(2i/dmodel)))
     PE(pos, 2i+1) = cos(pos/(10000^(2i/dmodel)))
     """
-
     def __init__(self,
                  d_model: int,
                  dropout_rate: float,
@@ -47,7 +45,9 @@ class PositionalEncoding(torch.nn.Module):
         self.pe[:, 1::2] = torch.cos(position * div_term)
         self.pe = self.pe.unsqueeze(0)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+            self,
+            x: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """Add positional encoding.
 
         Args:
@@ -55,13 +55,12 @@ class PositionalEncoding(torch.nn.Module):
 
         Returns:
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
-
+            None: for comptiable with RelPositionalEncoding
         """
         assert x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         x = x * self.xscale + self.pe[:, :x.size(1)]
-        return self.dropout(x)
-
+        return self.dropout(x), None
 
 
 class RelPositionalEncoding(PositionalEncoding):
@@ -72,12 +71,13 @@ class RelPositionalEncoding(PositionalEncoding):
         dropout_rate (float): Dropout rate.
         max_len (int): Maximum input length.
     """
-
     def __init__(self, d_model: int, dropout_rate: float, max_len: int = 5000):
         """Initialize class."""
         super().__init__(d_model, dropout_rate, max_len, reverse=True)
 
-    def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+            self,
+            x: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """Compute positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
