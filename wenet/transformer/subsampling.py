@@ -59,7 +59,7 @@ class LinearNoSubsampling(BaseSubsampling):
         return x, pos_emb, x_mask
 
 
-class Conv2dSubsampling(BaseSubsampling):
+class Conv2dSubsampling4(BaseSubsampling):
     """Convolutional 2D subsampling (to 1/4 length).
 
     Args:
@@ -70,7 +70,7 @@ class Conv2dSubsampling(BaseSubsampling):
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
                  pos_enc_class: PositionalEncoding):
-        """Construct an Conv2dSubsampling object."""
+        """Construct an Conv2dSubsampling4 object."""
         super().__init__()
         self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(1, odim, 3, 2),
@@ -161,7 +161,7 @@ class Conv2dSubsampling8(BaseSubsampling):
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
                  pos_enc_class: PositionalEncoding):
-        """Construct an Conv2dSubsampling object."""
+        """Construct an Conv2dSubsampling8 object."""
         super().__init__()
         self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(1, odim, 3, 2),

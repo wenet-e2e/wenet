@@ -17,7 +17,7 @@ from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.transformer.subsampling import Conv2dSubsampling
+from wenet.transformer.subsampling import Conv2dSubsampling4
 from wenet.transformer.subsampling import Conv2dSubsampling6
 from wenet.transformer.subsampling import Conv2dSubsampling8
 from wenet.transformer.subsampling import LinearNoSubsampling
@@ -91,7 +91,7 @@ class BaseEncoder(torch.nn.Module):
         if input_layer == "linear":
             subsampling_class = LinearNoSubsampling
         elif input_layer == "conv2d":
-            subsampling_class = Conv2dSubsampling
+            subsampling_class = Conv2dSubsampling4
         elif input_layer == "conv2d6":
             subsampling_class = Conv2dSubsampling6
         elif input_layer == "conv2d8":
