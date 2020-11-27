@@ -3,7 +3,6 @@
 import os
 import argparse
 import glob
-import re
 
 import yaml
 import numpy as np

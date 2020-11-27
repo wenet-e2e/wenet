@@ -7,7 +7,6 @@
 
 import torch
 from torch import nn
-from typing import Optional, Tuple
 from typeguard import check_argument_types
 
 

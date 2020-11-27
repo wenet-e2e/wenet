@@ -22,13 +22,14 @@ class DecoderLayer(nn.Module):
         feed_forward (torch.nn.Module): Feed-forward module instance.
             `PositionwiseFeedForward` instance can be used as the argument.
         dropout_rate (float): Dropout rate.
-        normalize_before (bool): Whether to use layer_norm before the first block.
-        concat_after (bool): Whether to concat attention layer's input and output.
+        normalize_before (bool): Whether to use layer_norm before the
+            first block.
+        concat_after (bool): Whether to concat attention layer's inpu
+            and output.
             if True, additional linear will be applied.
-            i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied. i.e. x -> x + att(x)
-
-
+                i.e. x -> x + linear(concat(x, att(x)))
+            if False, no additional linear will be applied.
+                i.e. x -> x + att(x)
     """
     def __init__(
         self,
@@ -67,9 +68,12 @@ class DecoderLayer(nn.Module):
 
         Args:
             tgt (torch.Tensor): Input tensor (#batch, maxlen_out, size).
-            tgt_mask (torch.Tensor): Mask for input tensor (#batch, maxlen_out).
-            memory (torch.Tensor): Encoded memory, float32 (#batch, maxlen_in, size).
-            memory_mask (torch.Tensor): Encoded memory mask (#batch, maxlen_in).
+            tgt_mask (torch.Tensor): Mask for input tensor
+                (#batch, maxlen_out).
+            memory (torch.Tensor): Encoded memory, float32
+                (#batch, maxlen_in, size).
+            memory_mask (torch.Tensor): Encoded memory mask
+                (#batch, maxlen_in).
             cache (List[torch.Tensor]): List of cached tensors.
                 Each tensor shape should be (#batch, maxlen_out - 1, size).
 
@@ -93,7 +97,7 @@ class DecoderLayer(nn.Module):
                 tgt.shape[0],
                 tgt.shape[1] - 1,
                 self.size,
-            ), f"{cache.shape} == {(tgt.shape[0], tgt.shape[1] - 1, self.size)}"
+            ), "{cache.shape} == {(tgt.shape[0], tgt.shape[1] - 1, self.size)}"
             tgt_q = tgt[:, -1:, :]
             residual = residual[:, -1:, :]
             tgt_q_mask = tgt_mask[:, -1:, :]

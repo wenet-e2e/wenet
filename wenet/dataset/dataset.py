@@ -3,7 +3,6 @@
 
 import argparse
 import logging
-import os
 import random
 import sys
 import codecs
@@ -17,15 +16,18 @@ from torch.utils.data import Dataset, DataLoader
 import wenet.dataset.kaldi_io as kaldi_io
 from wenet.utils.common import IGNORE_ID
 
+
 def _splice(feats, left_context, right_context):
-    ''' Splice feature
+    """ Splice feature
+
     Args:
         feats: input feats
         left_context: left context for splice
         right_context: right context for splice
+
     Returns:
         Spliced feature
-    '''
+    """
     if left_context == 0 and right_context == 0:
         return feats
     assert (len(feats.shape) == 2)
@@ -83,6 +85,7 @@ def spec_augmentation(x,
         y[:, start:end] = 0
     return y
 
+
 def _load_kaldi_cmvn(kaldi_cmvn_file):
     '''
     @param kaldi_cmvn_file, kaldi text style global cmvn file, which
@@ -94,29 +97,31 @@ def _load_kaldi_cmvn(kaldi_cmvn_file):
     with open(kaldi_cmvn_file, 'r') as fid:
         # kaldi binary file start with '\0B'
         if fid.read(2) == '\0B':
-         logging.error('kaldi cmvn binary file is not supported, please '
+            logging.error('kaldi cmvn binary file is not supported, please '
                           'recompute it by: compute-cmvn-stats --binary=false '
                           ' scp:feats.scp global_cmvn')
-         sys.exit(1)
+            sys.exit(1)
         fid.seek(0)
         arr = fid.read().split()
-        assert(arr[0] == '[')
-        assert(arr[-2] == '0')
-        assert(arr[-1] == ']')
+        assert (arr[0] == '[')
+        assert (arr[-2] == '0')
+        assert (arr[-1] == ']')
         feat_dim = int((len(arr) - 2 - 2) / 2)
-        for i in range(1, feat_dim+1):
+        for i in range(1, feat_dim + 1):
             means.append(float(arr[i]))
-        count = float(arr[feat_dim+1])
-        for i in range(feat_dim+2, 2*feat_dim+2):
+        count = float(arr[feat_dim + 1])
+        for i in range(feat_dim + 2, 2 * feat_dim + 2):
             variance.append(float(arr[i]))
 
     for i in range(len(means)):
         means[i] /= count
         variance[i] = variance[i] / count - means[i] * means[i]
-        if variance[i] < 1.0e-20: variance[i] = 1.0e-20
+        if variance[i] < 1.0e-20:
+            variance[i] = 1.0e-20
         variance[i] = 1.0 / math.sqrt(variance[i])
     cmvn = np.array([means, variance])
     return cmvn
+
 
 def _load_from_file(batch):
     keys = []
@@ -128,8 +133,8 @@ def _load_from_file(batch):
             feats.append(mat)
             keys.append(x[0])
             lengths.append(mat.shape[0])
-        except:
-            #logging.warn('read utterance {} error'.format(x[0]))
+        except (Exception):
+            # logging.warn('read utterance {} error'.format(x[0]))
             pass
     # Sort it because sorting is required in pack/pad operation
     order = np.argsort(lengths)[::-1]
@@ -144,7 +149,6 @@ def _load_from_file(batch):
 class CollateFunc(object):
     ''' Collate function for AudioDataset
     '''
-
     def __init__(self,
                  cmvn=None,
                  subsampling_factor=1,
@@ -174,7 +178,7 @@ class CollateFunc(object):
         assert (len(batch) == 1)
         keys, xs, ys = _load_from_file(batch[0])
         train_flag = True
-        if ys == None:
+        if ys is None:
             train_flag = False
         # optional cmvn
         if self.cmvn is not None:
@@ -187,7 +191,9 @@ class CollateFunc(object):
             xs = [spec_augmentation(x) for x in xs]
         # optional splice
         if self.left_context != 0 or self.right_context != 0:
-            xs = [_splice(x, self.left_context, self.right_context) for x in xs]
+            xs = [
+                _splice(x, self.left_context, self.right_context) for x in xs
+            ]
         # optional subsampling
         if self.subsampling_factor > 1:
             xs = [x[::self.subsampling_factor] for x in xs]
@@ -216,7 +222,6 @@ class CollateFunc(object):
 
 
 class AudioDataset(Dataset):
-
     def __init__(self,
                  data_file,
                  max_length=10240,
@@ -251,7 +256,7 @@ class AudioDataset(Dataset):
         # tokenid: int id of this token
         # token_shape:M,N    # M is the number of token, N is vocab size
 
-        #Open in utf8 mode since meet encoding problem
+        # Open in utf8 mode since meet encoding problem
         with codecs.open(data_file, 'r', encoding='utf-8') as f:
             for line in f:
                 arr = line.strip().split('\t')
@@ -274,9 +279,9 @@ class AudioDataset(Dataset):
         for i in range(len(data)):
             length = data[i][2]
             if length > max_length or length < min_length:
+                # logging.warn('ignore utterance {} feature {}'.format(
+                #     data[i][0], length))
                 pass
-                #logging.warn('ignore utterance {} feature {}'.format(
-                #    data[i][0], length))
             else:
                 valid_data.append(data[i])
         data = valid_data
@@ -284,7 +289,7 @@ class AudioDataset(Dataset):
         num_data = len(data)
         # Dynamic batch size
         if batch_type == 'dynamic':
-            assert(max_frames_in_batch > 0)
+            assert (max_frames_in_batch > 0)
             self.minibatch.append([])
             num_frames_in_batch = 0
             for i in range(num_data):

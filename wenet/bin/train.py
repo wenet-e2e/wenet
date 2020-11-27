@@ -7,7 +7,6 @@ import argparse
 import copy
 import logging
 import os
-import sys
 
 import yaml
 import torch
