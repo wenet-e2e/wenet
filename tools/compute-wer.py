@@ -57,7 +57,7 @@ def stripoff_tags(x):
       i += 1
   return ''.join(chars)
 
-                                                                                 
+
 def normalize(sentence, ignore_words, cs, split=None):
     """ sentence, ignore_words are both in unicode
     """

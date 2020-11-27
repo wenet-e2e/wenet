@@ -2,14 +2,14 @@
 
 # Copyright 2019 Shigeki Karita
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
-"""Mask module."""
-import sys
 
 import torch
 
 
 def subsequent_mask(
-    size: int, device: torch.device = torch.device("cpu")) -> torch.Tensor:
+        size: int,
+        device: torch.device = torch.device("cpu"),
+) -> torch.Tensor:
     """Create mask for subsequent steps (size, size).
 
     Args:
@@ -31,14 +31,16 @@ def subsequent_mask(
 
 
 def subsequent_chunk_mask(
-    size: int, chunk_size: int,
-    device: torch.device = torch.device("cpu")) -> torch.Tensor:
+        size: int,
+        chunk_size: int,
+        device: torch.device = torch.device("cpu"),
+) -> torch.Tensor:
     """Create mask for subsequent steps (size, size) with chunk size,
        this is for streaming encoder
 
     Args:
         size (int): size of mask
-	    chunk_size (int): size of chunk
+        chunk_size (int): size of chunk
         device (torch.device): "cpu" or "cuda" or torch.Tensor.device
 
     Returns:
@@ -94,13 +96,13 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
                 chunk_size = max_len
             else:
                 chunk_size = chunk_size % 25 + 1
-        chunk_masks = subsequent_chunk_mask(
-            xs.size(1), chunk_size, xs.device) # (L, L)
+        chunk_masks = subsequent_chunk_mask(xs.size(1), chunk_size,
+                                            xs.device)  # (L, L)
         chunk_masks = chunk_masks.unsqueeze(0)  # (1, L, L)
         chunk_masks = masks & chunk_masks  # (B, L, L)
     elif static_chunk_size > 0:
         chunk_masks = subsequent_chunk_mask(xs.size(1), static_chunk_size,
-                                            xs.device)  #(L, L)
+                                            xs.device)  # (L, L)
         chunk_masks = chunk_masks.unsqueeze(0)  # (1, L, L)
         chunk_masks = masks & chunk_masks  # (B, L, L)
     else:

@@ -5,11 +5,12 @@
 # Author: di.wu@mobvoi.com (DI WU)
 """Subsampling layer definition."""
 
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import torch
 
 from wenet.transformer.embedding import PositionalEncoding
+
 
 class BaseSubsampling(torch.nn.Module):
     def __init__(self):
@@ -17,6 +18,7 @@ class BaseSubsampling(torch.nn.Module):
         self.right_context = 0
         # TODO(Binbin Zhang): Add right context for subclass
         # for simulating streaming encoder
+
 
 class LinearNoSubsampling(BaseSubsampling):
     """Linear transform the input without subsampling

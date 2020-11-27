@@ -1,6 +1,5 @@
 """Unility funcitons for Transformer."""
 
-import numpy
 import math
 from typing import Tuple, List
 

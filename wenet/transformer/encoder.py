@@ -4,7 +4,7 @@
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
 # Author: di.wu@mobvoi.com (DI WU)
 """Encoder definition."""
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 from typeguard import check_argument_types
@@ -23,7 +23,6 @@ from wenet.transformer.subsampling import Conv2dSubsampling8
 from wenet.transformer.subsampling import LinearNoSubsampling
 from wenet.utils.common import get_activation
 from wenet.utils.mask import make_pad_mask
-from wenet.utils.mask import subsequent_chunk_mask
 from wenet.utils.mask import add_optional_chunk_mask
 
 
@@ -81,8 +80,6 @@ class BaseEncoder(torch.nn.Module):
 
         if pos_enc_layer_type == "abs_pos":
             pos_enc_class = PositionalEncoding
-        elif pos_enc_layer_type == "scaled_abs_pos":
-            pos_enc_class = ScaledPositionalEncoding
         elif pos_enc_layer_type == "rel_pos":
             pos_enc_class = RelPositionalEncoding
         else:
@@ -143,8 +140,8 @@ class BaseEncoder(torch.nn.Module):
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
-        # return the masks before encoder layers, and the masks will be used for
-        # cross attention with decoder later
+        # return the masks before encoder layers, and the masks will be used
+        # for cross attention with decoder later
         return xs, masks
 
 

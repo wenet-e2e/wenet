@@ -11,7 +11,6 @@ import sys
 
 import yaml
 import torch
-import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import CollateFunc, AudioDataset
@@ -167,7 +166,8 @@ if __name__ == '__main__':
             for i, key in enumerate(keys):
                 content = ''
                 for w in hyps[i]:
-                    if w == eos: break
+                    if w == eos:
+                        break
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
