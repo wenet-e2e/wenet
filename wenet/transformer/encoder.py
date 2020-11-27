@@ -116,15 +116,15 @@ class BaseEncoder(torch.nn.Module):
 
     def forward(
         self,
-        xs: torch.Tensor,
-        ilens: torch.Tensor,
+        xs_pad: torch.Tensor,
+        xs_lens: torch.Tensor,
         decoding_chunk_size: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 
         Args:
-            xs: input tensor (B, L, D)
-            ilens: input length (B)
+            xs_pad: padded input tensor (B, L, D)
+            xs_lens: input length (B)
             decoding_chunk_size: decoding chunk size for dynamic chunk, it's
                 0: default for training, use random dynamic chunk.
                 <0: for decoding, use full chunk.
@@ -132,8 +132,8 @@ class BaseEncoder(torch.nn.Module):
         Returns:
             encoder output tensor, lens and mask
         """
-        masks = ~make_pad_mask(ilens).unsqueeze(1)  # (B, 1, L)
-        xs, pos_emb, masks = self.embed(xs, masks)
+        masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, L)
+        xs, pos_emb, masks = self.embed(xs_pad, masks)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               decoding_chunk_size,

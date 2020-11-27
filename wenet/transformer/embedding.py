@@ -55,7 +55,7 @@ class PositionalEncoding(torch.nn.Module):
 
         Returns:
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
-            None: for comptiable with RelPositionalEncoding
+            None: for compatible with RelPositionalEncoding
         """
         assert x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)

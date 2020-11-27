@@ -19,7 +19,7 @@ class BaseSubsampling(torch.nn.Module):
         # for simulating streaming encoder
 
 class LinearNoSubsampling(BaseSubsampling):
-    """Linear transforme to input, no subsampling
+    """Linear transform the input without subsampling
 
     Args:
         idim (int): Input dimension.

@@ -45,7 +45,7 @@ class ConvolutionModule(nn.Module):
             padding = 0
             self.lorder = kernel_size - 1
         else:
-            # kernerl_size should be a odd number for none causal convolution
+            # kernerl_size should be an odd number for none causal convolution
             assert (kernel_size - 1) % 2 == 0
             padding = (kernel_size - 1) // 2
             self.lorder = 0
