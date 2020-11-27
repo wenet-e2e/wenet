@@ -10,31 +10,21 @@ import torch
 from typeguard import check_argument_types
 
 from wenet.transformer.attention import MultiHeadedAttention
-from wenet.transformer.embedding import PositionalEncoding
-from wenet.transformer.encoder_layer import TransformerEncoderLayer
-from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.transformer.subsampling import (
-    LinearNoSubsampling,
-    Conv2dSubsampling,
-    Conv2dSubsampling6,
-    Conv2dSubsampling8,
-)
-from wenet.utils.mask import (
-    make_pad_mask,
-    subsequent_chunk_mask,
-    add_optional_chunk_mask,
-)
+from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.convolution import ConvolutionModule
+from wenet.transformer.embedding import PositionalEncoding
+from wenet.transformer.embedding import RelPositionalEncoding
+from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
-from wenet.transformer.attention import (
-    MultiHeadedAttention,
-    RelPositionMultiHeadedAttention,
-)
-from wenet.transformer.embedding import (
-    PositionalEncoding,
-    RelPositionalEncoding,
-)
+from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.transformer.subsampling import Conv2dSubsampling
+from wenet.transformer.subsampling import Conv2dSubsampling6
+from wenet.transformer.subsampling import Conv2dSubsampling8
+from wenet.transformer.subsampling import LinearNoSubsampling
 from wenet.utils.common import get_activation
+from wenet.utils.mask import make_pad_mask
+from wenet.utils.mask import subsequent_chunk_mask
+from wenet.utils.mask import add_optional_chunk_mask
 
 
 class BaseEncoder(torch.nn.Module):
