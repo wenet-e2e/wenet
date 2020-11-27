@@ -17,16 +17,19 @@ class TransformerEncoderLayer(nn.Module):
     Args:
         size (int): Input dimension.
         self_attn (torch.nn.Module): Self-attention module instance.
-            `MultiHeadedAttention` or `RelPositionMultiHeadedAttention` instance
-            can be used as the argument.
+            `MultiHeadedAttention` or `RelPositionMultiHeadedAttention`
+            instance can be used as the argument.
         feed_forward (torch.nn.Module): Feed-forward module instance.
             `PositionwiseFeedForward`, instance can be used as the argument.
         dropout_rate (float): Dropout rate.
-        normalize_before (bool): Whether to use layer_norm before the first block.
-        concat_after (bool): Whether to concat attention layer's input and output.
+        normalize_before (bool): Whether to use layer_norm before the first
+            block.
+        concat_after (bool): Whether to concat attention layer's input and
+            output.
             if True, additional linear will be applied.
-            i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied. i.e. x -> x + att(x)
+                i.e. x -> x + linear(concat(x, att(x)))
+            if False, no additional linear will be applied.
+                i.e. x -> x + att(x)
 
     """
     def __init__(
@@ -48,7 +51,8 @@ class TransformerEncoderLayer(nn.Module):
         self.size = size
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        # concat_linear may be not used in forward fuction, but will be saved in the *.pt
+        # concat_linear may be not used in forward fuction,
+        # but will be saved in the *.pt
         self.concat_linear = nn.Linear(size + size, size)
 
     def forward(
@@ -110,20 +114,24 @@ class ConformerEncoderLayer(nn.Module):
     Args:
         size (int): Input dimension.
         self_attn (torch.nn.Module): Self-attention module instance.
-            `MultiHeadedAttention` or `RelPositionMultiHeadedAttention` instance
-            can be used as the argument.
+            `MultiHeadedAttention` or `RelPositionMultiHeadedAttention`
+            instance can be used as the argument.
         feed_forward (torch.nn.Module): Feed-forward module instance.
             `PositionwiseFeedForward` instance can be used as the argument.
-        feed_forward_macaron (torch.nn.Module): Additional feed-forward module instance.
+        feed_forward_macaron (torch.nn.Module): Additional feed-forward module
+             instance.
             `PositionwiseFeedForward` instance can be used as the argument.
         conv_module (torch.nn.Module): Convolution module instance.
             `ConvlutionModule` instance can be used as the argument.
         dropout_rate (float): Dropout rate.
-        normalize_before (bool): Whether to use layer_norm before the first block.
-        concat_after (bool): Whether to concat attention layer's input and output.
+        normalize_before (bool): Whether to use layer_norm before the first
+            block.
+        concat_after (bool): Whether to concat attention layer's input and
+            output.
             if True, additional linear will be applied.
-            i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied. i.e. x -> x + att(x)
+                i.e. x -> x + linear(concat(x, att(x)))
+            if False, no additional linear will be applied.
+                i.e. x -> x + att(x)
     """
     def __init__(
         self,
@@ -158,7 +166,6 @@ class ConformerEncoderLayer(nn.Module):
         self.size = size
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        #if self.concat_after:
         self.concat_linear = nn.Linear(size + size, size)
 
     def forward(

@@ -1,14 +1,11 @@
-from typing import List, Optional, Tuple, Union
-import logging
+from typing import List, Optional, Tuple
 from collections import defaultdict
 
 import torch
-from typeguard import check_argument_types
 
 from torch.nn.utils.rnn import pad_sequence
 
 from wenet.transformer.encoder import TransformerEncoder
-from wenet.transformer.encoder import ConformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
 
 from wenet.transformer.ctc import CTC
@@ -35,7 +32,6 @@ class ASRModel(torch.nn.Module):
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
     ):
-        #assert check_argument_types()
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
 
         super().__init__()
@@ -158,7 +154,7 @@ class ASRModel(torch.nn.Module):
             running_size, maxlen, encoder_dim)  # (B*N, maxlen, encoder_dim)
         encoder_mask = encoder_mask.unsqueeze(1).repeat(
             1, beam_size, 1, 1).view(running_size, 1,
-                                     maxlen)  #(B*N, 1, max_len)
+                                     maxlen)  # (B*N, 1, max_len)
 
         hyps = torch.ones([running_size, 1], dtype=torch.long,
                           device=device).fill_(self.sos)  # (B*N, 1)
@@ -192,20 +188,20 @@ class ASRModel(torch.nn.Module):
             # regard top_k_index as (B*N*N),regard offset_k_index as (B*N),
             # then find offset_k_index in top_k_index
             base_k_index = torch.arange(batch_size, device=device).view(
-                -1, 1).repeat([1, beam_size])  #(B, N)
+                -1, 1).repeat([1, beam_size])  # (B, N)
             base_k_index = base_k_index * beam_size * beam_size
             best_k_index = base_k_index.view(-1) + offset_k_index.view(
-                -1)  #(B*N)
+                -1)  # (B*N)
 
             # 2.5 Update best hyps
             best_k_pred = torch.index_select(top_k_index.view(-1),
                                              dim=-1,
-                                             index=best_k_index)  #(B*N)
+                                             index=best_k_index)  # (B*N)
             best_hyps_index = best_k_index // beam_size
             last_best_k_hyps = torch.index_select(
-                hyps, dim=0, index=best_hyps_index)  #(B*N, i)
+                hyps, dim=0, index=best_hyps_index)  # (B*N, i)
             hyps = torch.cat((last_best_k_hyps, best_k_pred.view(-1, 1)),
-                             dim=1)  #(B*N, i+1)
+                             dim=1)  # (B*N, i+1)
 
             # 2.6 Update end flag
             end_flag = torch.eq(hyps[:, -1], self.eos).view(-1, 1)
@@ -293,7 +289,6 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size=decoding_chunk_size
         )  # (1, maxlen, encoder_dim)
         maxlen = encoder_out.size(1)
-        encoder_out_lens = encoder_mask.squeeze(1).sum(1)  # (1,)
         ctc_probs = self.ctc.log_softmax(
             encoder_out)  # (1, maxlen, vocab_size)
         ctc_probs = ctc_probs.squeeze(0)

@@ -2,12 +2,8 @@
 # Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
 import logging
-import codecs
-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.nn.utils import clip_grad_value_, clip_grad_norm_
+from torch.nn.utils import clip_grad_norm_
 
 
 class Executor:
@@ -24,9 +20,8 @@ class Executor:
         log_interval = args.get('log_interval', 10)
         rank = args.get('rank', 0)
         accum_grad = args.get('accum_grad', 1)
-        logging.info(
-            'using accumulate grad, new batch size is {} times larger than before'
-            .format(accum_grad))
+        logging.info('using accumulate grad, new batch size is {} times'
+                     'larger than before'.format(accum_grad))
         num_seen_utts = 0
         num_total_batch = len(data_loader)
         for batch_idx, batch in enumerate(data_loader):
@@ -44,7 +39,7 @@ class Executor:
             loss.backward()
             num_seen_utts += num_utts
             if batch_idx % accum_grad == 0:
-                if rank == 0 and writer != None:
+                if rank == 0 and writer is not None:
                     writer.add_scalar('train_loss', loss, self.step)
                 grad_norm = clip_grad_norm_(model.parameters(), clip)
                 if torch.isfinite(grad_norm):

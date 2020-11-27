@@ -5,10 +5,12 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 from typeguard import check_argument_types
 
+
 class WarmupLR(_LRScheduler):
     """The WarmupLR scheduler
 
-    This scheduler is almost same as NoamLR Scheduler except for following difference:
+    This scheduler is almost same as NoamLR Scheduler except for following
+    difference:
 
     NoamLR:
         lr = optimizer.lr * model_size ** -0.5

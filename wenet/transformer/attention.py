@@ -8,7 +8,6 @@
 import math
 from typing import Optional, Tuple
 
-import numpy
 import torch
 from torch import nn
 
@@ -46,9 +45,12 @@ class MultiHeadedAttention(nn.Module):
             value (torch.Tensor): Value tensor (#batch, time2, size).
 
         Returns:
-            torch.Tensor: Transformed query tensor (#batch, n_head, time1, d_k).
-            torch.Tensor: Transformed key tensor (#batch, n_head, time2, d_k).
-            torch.Tensor: Transformed value tensor (#batch, n_head, time2, d_k).
+            torch.Tensor: Transformed query tensor, size
+                (#batch, n_head, time1, d_k).
+            torch.Tensor: Transformed key tensor, size
+                (#batch, n_head, time2, d_k).
+            torch.Tensor: Transformed value tensor, size
+                (#batch, n_head, time2, d_k).
 
         """
         n_batch = query.size(0)
@@ -66,9 +68,12 @@ class MultiHeadedAttention(nn.Module):
         """Compute attention context vector.
 
         Args:
-            value (torch.Tensor): Transformed value (#batch, n_head, time2, d_k).
-            scores (torch.Tensor): Attention score (#batch, n_head, time1, time2).
-            mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2).
+            value (torch.Tensor): Transformed value, size
+                (#batch, n_head, time2, d_k).
+            scores (torch.Tensor): Attention score, size
+                (#batch, n_head, time1, time2).
+            mask (torch.Tensor): Mask, size (#batch, 1, time2) or
+                (#batch, time1, time2).
 
         Returns:
             torch.Tensor: Transformed value (#batch, time1, d_model)
@@ -137,7 +142,8 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         """Compute relative positinal encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, size).
-            zero_triu (bool): If true, return the lower triangular part of the matrix.
+            zero_triu (bool): If true, return the lower triangular part of
+                the matrix.
         Returns:
             torch.Tensor: Output tensor.
         """
@@ -166,7 +172,8 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             query (torch.Tensor): Query tensor (#batch, time1, size).
             key (torch.Tensor): Key tensor (#batch, time2, size).
             value (torch.Tensor): Value tensor (#batch, time2, size).
-            pos_emb (torch.Tensor): Positional embedding tensor (#batch, time2, size).
+            pos_emb (torch.Tensor): Positional embedding tensor
+                (#batch, time2, size).
             mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
                 (#batch, time1, time2).
         Returns:

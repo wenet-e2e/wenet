@@ -6,9 +6,7 @@
 """Positonal Encoding Module."""
 
 import math
-
 from typing import Tuple, Optional
-from typeguard import typechecked
 
 import torch
 

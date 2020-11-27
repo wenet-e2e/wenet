@@ -13,7 +13,8 @@ import sys
 
 PY2 = sys.version_info[0] == 2
 sys.stdin = codecs.getreader('utf-8')(sys.stdin if PY2 else sys.stdin.buffer)
-sys.stdout = codecs.getwriter('utf-8')(sys.stdout if PY2 else sys.stdout.buffer)
+sys.stdout = codecs.getwriter('utf-8')(
+    sys.stdout if PY2 else sys.stdout.buffer)
 
 
 # Special types:
@@ -140,5 +141,5 @@ if __name__ == '__main__':
 
     for f in fids:
         f.close()
-    if args.out != None:
+    if args.out is not None:
         out.close()
