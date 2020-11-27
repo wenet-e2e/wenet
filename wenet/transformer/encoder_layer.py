@@ -20,8 +20,7 @@ class TransformerEncoderLayer(nn.Module):
             `MultiHeadedAttention` or `RelPositionMultiHeadedAttention` instance
             can be used as the argument.
         feed_forward (torch.nn.Module): Feed-forward module instance.
-            `PositionwiseFeedForward`, `MultiLayeredConv1d`, or `Conv1dLinear` instance
-            can be used as the argument.
+            `PositionwiseFeedForward`, instance can be used as the argument.
         dropout_rate (float): Dropout rate.
         normalize_before (bool): Whether to use layer_norm before the first block.
         concat_after (bool): Whether to concat attention layer's input and output.
@@ -56,15 +55,18 @@ class TransformerEncoderLayer(nn.Module):
         self,
         x: torch.Tensor,
         mask: torch.Tensor,
-        cache: Optional[torch.Tensor] = None
+        pos_emb: Optional[torch.Tensor] = None,
+        cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
         Args:
-            x_input (torch.Tensor): Input tensor (#batch, time, size).
+            x (torch.Tensor): Input tensor (#batch, time, size).
             mask (torch.Tensor): Mask tensor for the input (#batch, time).
-            cache (torch.Tensor): Cache tensor of the input (#batch, time - 1, size).
-
+            pos_emb (None): Will be None here, just for interface compatible
+                with ConformerEncoderLayer
+            cache (torch.Tensor): Cache tensor of the input
+                (#batch, time - 1, size).
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
             torch.Tensor: Mask tensor (#batch, time).
@@ -111,11 +113,9 @@ class ConformerEncoderLayer(nn.Module):
             `MultiHeadedAttention` or `RelPositionMultiHeadedAttention` instance
             can be used as the argument.
         feed_forward (torch.nn.Module): Feed-forward module instance.
-            `PositionwiseFeedForward`, `MultiLayeredConv1d`, or `Conv1dLinear` instance
-            can be used as the argument.
+            `PositionwiseFeedForward` instance can be used as the argument.
         feed_forward_macaron (torch.nn.Module): Additional feed-forward module instance.
-            `PositionwiseFeedForward`, `MultiLayeredConv1d`, or `Conv1dLinear` instance
-            can be used as the argument.
+            `PositionwiseFeedForward` instance can be used as the argument.
         conv_module (torch.nn.Module): Convolution module instance.
             `ConvlutionModule` instance can be used as the argument.
         dropout_rate (float): Dropout rate.
@@ -163,22 +163,23 @@ class ConformerEncoderLayer(nn.Module):
 
     def forward(
         self,
-        x_input: Tuple[torch.Tensor, torch.Tensor],
+        x: torch.Tensor,
         mask: torch.Tensor,
-        cache: Optional[torch.Tensor] = None
-    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], torch.Tensor]:
+        pos_emb: Optional[torch.Tensor] = None,
+        cache: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute encoded features.
         Args:
-            x_input (Union[Tuple, torch.Tensor]): Input tensor w/ or w/o pos emb.
-                - w/ pos emb: Tuple of tensors [(#batch, time, size), (1, time, size)].
-                - w/o pos emb: Tensor (#batch, time, size).
+            x (torch.Tensor): (#batch, time, size)
             mask (torch.Tensor): Mask tensor for the input (#batch, time).
-            cache (torch.Tensor): Cache tensor of the input (#batch, time - 1, size).
+            cache (torch.Tensor): Cache tensor of the input
+                (#batch, time - 1, size).
+            pos_emb (torch.Tensor): positional encoding, must not be None
+                for ConformerEncoderLayer.
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
             torch.Tensor: Mask tensor (#batch, time).
         """
-        x, pos_emb = x_input[0], x_input[1]
 
         # whether to use macaron style
         if self.feed_forward_macaron is not None:
@@ -202,10 +203,8 @@ class ConformerEncoderLayer(nn.Module):
             x_q = x[:, -1:, :]
             residual = residual[:, -1:, :]
             mask = mask[:, -1:, :]
-        if pos_emb is not None:
-            x_att = self.self_attn(x_q, x, x, pos_emb, mask)
-        else:
-            x_att = self.self_attn(x_q, x, x, mask)
+        assert pos_emb is not None
+        x_att = self.self_attn(x_q, x, x, pos_emb, mask)
 
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
@@ -241,4 +240,4 @@ class ConformerEncoderLayer(nn.Module):
         if cache is not None:
             x = torch.cat([cache, x], dim=1)
 
-        return (x, pos_emb), mask
+        return x, mask
