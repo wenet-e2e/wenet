@@ -20,8 +20,7 @@ class DecoderLayer(nn.Module):
         src_attn (torch.nn.Module): Self-attention module instance.
             `MultiHeadedAttention` instance can be used as the argument.
         feed_forward (torch.nn.Module): Feed-forward module instance.
-            `PositionwiseFeedForward`, `MultiLayeredConv1d`, or `Conv1dLinear` instance
-            can be used as the argument.
+            `PositionwiseFeedForward` instance can be used as the argument.
         dropout_rate (float): Dropout rate.
         normalize_before (bool): Whether to use layer_norm before the first block.
         concat_after (bool): Whether to concat attention layer's input and output.

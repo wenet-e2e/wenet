@@ -28,8 +28,6 @@ class ConvolutionModule(nn.Module):
         """
         assert check_argument_types()
         super().__init__()
-        # kernerl_size should be a odd number for 'SAME' padding
-        assert (kernel_size - 1) % 2 == 0
 
         self.pointwise_conv1 = nn.Conv1d(
             channels,
@@ -47,6 +45,8 @@ class ConvolutionModule(nn.Module):
             padding = 0
             self.lorder = kernel_size - 1
         else:
+            # kernerl_size should be an odd number for none causal convolution
+            assert (kernel_size - 1) % 2 == 0
             padding = (kernel_size - 1) // 2
             self.lorder = 0
         self.depthwise_conv = nn.Conv1d(
