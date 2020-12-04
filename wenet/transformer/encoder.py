@@ -4,7 +4,7 @@
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
 # Author: di.wu@mobvoi.com (DI WU)
 """Encoder definition."""
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 import torch
 from typeguard import check_argument_types
@@ -143,6 +143,114 @@ class BaseEncoder(torch.nn.Module):
         # return the masks before encoder layers, and the masks will be used
         # for cross attention with decoder later
         return xs, masks
+
+    def forward_chunk(
+        self,
+        xs: torch.Tensor,
+        subsampling_cache: Optional[torch.Tensor] = None,
+        embeding_cache: Optional[torch.Tensor] = None,
+        attention_cache: Optional[List[torch.Tensor]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Forward just one chunk
+
+        Args:
+            xs (torch.Tensor): chunk input
+            subsampling_cache (Optional[torch.Tensor]): subsampling cache
+            embeding_cache (Optional[torch.Tensor]):
+                positional embeding cache
+            attention_cache (Optional[List[torch.Tensor]]):
+                attention cache
+        """
+        assert xs.size(0) == 1
+        # offset, current time offset in encoder, in output time stamp,
+        # namely after subsampling, it's the same size to
+        # subsampling_cache.size(1)
+        if subsampling_cache is None:
+            offset = 0
+        else:
+            assert embeding_cache is not None
+            assert attention_cache is not None
+            offset = subsampling_cache.size(1)
+        # tmp_masks is just for interface compatibility
+        tmp_masks = torch.ones(1,
+                               xs.size(1),
+                               device=xs.device,
+                               dtype=torch.bool)
+        tmp_masks = tmp_masks.unsqueeze(1)
+        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
+        if subsampling_cache is not None:
+            xs = torch.cat((subsampling_cache, xs), dim=1)
+            pos_emb = torch.cat((embeding_cache, pos_emb), dim=1)
+        r_subsampling_cache = xs
+        r_pos_emb = pos_emb
+        # Real mask for transformer/conformer layers
+        masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
+        masks = masks.unsqueeze(1)
+        r_attention_cache = []
+        for i, layer in enumerate(self.encoders):
+            if attention_cache is None:
+                c = None
+            else:
+                c = attention_cache[i]
+            xs, _ = layer(xs, masks, cache=c)
+            r_attention_cache.append(xs)
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+        return xs, r_subsampling_cache, r_pos_emb, r_attention_cache
+
+    def forward_chunk_by_chunk(self, xs: torch.Tensor,
+                               decoding_chunk_size: int):
+        """ Forward input chunk by chunk with chunk_size like a streaming
+            fashion
+
+        Here we should pay special attention to computation cache in the
+        streaming style forward chunk by chunk. Three things should be taken
+        into account for computation in the current network:
+            1. attention cache
+            2. convolution in conformer
+            3. convolution in subsampling
+
+        However, we don't implement subsampling cache for:
+            1. We can control subsampling module to output the right result by
+               overlapping input instead of cache left context, even though it
+               wastes some computation, but subsampling only takes a very
+               small fraction of computation in the whole model.
+            2. Typically, there are several covolution layers with subsampling
+               in subsampling module, it is tricky and complicated to do cache
+               with different convolution layers with different subsampling
+               rate.
+            3. Currently, nn.Sequential is used to stack all the convolution
+               layers in subsampling, we need to rewrite it to make it work
+               with cache, which is not prefered.
+        Args:
+            xs (torch.Tensor): (1, max_len, dim)
+            chunk_size (int): decoding chunk size
+        """
+        assert decoding_chunk_size > 0
+        # The model is trained by static or dynamic chunk
+        assert self.static_chunk_size > 0 or self.use_dynamic_chunk
+        subsampling = self.embed.subsampling_rate
+        context = self.embed.right_context + 1  # Add current frame
+        stride = subsampling * decoding_chunk_size
+        decoding_window = (decoding_chunk_size - 1) * subsampling + context
+        num_frames = xs.size(1)
+        embeding_cache = None
+        subsampling_cache = None
+        attention_cache = None
+        ys = None
+
+        # Feed forward overlap input step by step
+        for cur in range(0, num_frames - context + 1, stride):
+            end = min(cur + decoding_window, num_frames)
+            chunk_xs = xs[:, cur:end, :]
+            (ys, subsampling_cache, embeding_cache,
+             attention_cache) = self.forward_chunk(chunk_xs, subsampling_cache,
+                                                   embeding_cache,
+                                                   attention_cache)
+        # Return the last output
+        masks = torch.ones(1, ys.size(1), device=ys.device, dtype=torch.bool)
+        masks = masks.unsqueeze(1)
+        return ys, masks
 
 
 class TransformerEncoder(BaseEncoder):

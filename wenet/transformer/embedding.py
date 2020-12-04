@@ -45,7 +45,8 @@ class PositionalEncoding(torch.nn.Module):
 
     def forward(
             self,
-            x: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+            x: torch.Tensor,
+            offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """Add positional encoding.
 
         Args:
@@ -53,12 +54,31 @@ class PositionalEncoding(torch.nn.Module):
 
         Returns:
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
-            None: for compatible with RelPositionalEncoding
+            torch.Tensor: for compatible with RelPositionalEncoding
         """
-        assert x.size(1) < self.max_len
+        assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
-        x = x * self.xscale + self.pe[:, :x.size(1)]
-        return self.dropout(x), None
+        pos_emb = self.pe[:, offset:offset+x.size(1)]
+        x = x * self.xscale + pos_emb
+        return self.dropout(x), self.dropout(pos_emb)
+
+    def position_encoding(self, size: int) -> torch.Tensor:
+        """ For getting encoding in a streaming fashion
+
+        Attention!!!!!
+        we apply dropout only once at the whole utterance level in a none
+        streaming way, but will call this function several times with
+        increasing input size in a streaming scenario, so the dropout will
+        be applied several times.
+
+        Args:
+            size (int): requried size of position encoding
+
+        Returns:
+            torch.Tensor: Corresponding encoding
+        """
+        assert size < self.max_len
+        return self.dropout(self.pe[:, :size])
 
 
 class RelPositionalEncoding(PositionalEncoding):
@@ -75,7 +95,8 @@ class RelPositionalEncoding(PositionalEncoding):
 
     def forward(
             self,
-            x: torch.Tensor) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+            x: torch.Tensor,
+            offset: int = 0) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         """Compute positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
@@ -83,8 +104,8 @@ class RelPositionalEncoding(PositionalEncoding):
             torch.Tensor: Encoded tensor (batch, time, `*`).
             torch.Tensor: Positional embedding tensor (1, time, `*`).
         """
-        assert x.size(1) < self.max_len
+        assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         x = x * self.xscale
-        pos_emb = self.pe[:, :x.size(1)]
+        pos_emb = self.pe[:, offset:offset+x.size(1)]
         return self.dropout(x), self.dropout(pos_emb)

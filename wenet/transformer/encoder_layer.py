@@ -59,7 +59,7 @@ class TransformerEncoderLayer(nn.Module):
         self,
         x: torch.Tensor,
         mask: torch.Tensor,
-        pos_emb: Optional[torch.Tensor] = None,
+        pos_emb: torch.Tensor = None,
         cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute encoded features.
@@ -67,7 +67,7 @@ class TransformerEncoderLayer(nn.Module):
         Args:
             x (torch.Tensor): Input tensor (#batch, time, size).
             mask (torch.Tensor): Mask tensor for the input (#batch, time).
-            pos_emb (None): Will be None here, just for interface compatible
+            pos_emb (torch.Tensor): just for interface compatible
                 with ConformerEncoderLayer
             cache (torch.Tensor): Cache tensor of the input
                 (#batch, time - 1, size).
@@ -83,10 +83,13 @@ class TransformerEncoderLayer(nn.Module):
         if cache is None:
             x_q = x
         else:
-            assert cache.shape == (x.shape[0], x.shape[1] - 1, self.size)
-            x_q = x[:, -1:, :]
-            residual = residual[:, -1:, :]
-            mask = mask[:, -1:, :]
+            assert cache.size(0) == x.size(0)
+            assert cache.size(2) == self.size
+            assert cache.size(1) < x.size(1)
+            chunk = x.size(1) - cache.size(1)
+            x_q = x[:, -chunk:, :]
+            residual = residual[:, -chunk:, :]
+            mask = mask[:, -chunk:, :]
 
         if self.concat_after:
             x_concat = torch.cat((x, self.self_attn(x_q, x, x, mask)), dim=-1)
@@ -172,7 +175,7 @@ class ConformerEncoderLayer(nn.Module):
         self,
         x: torch.Tensor,
         mask: torch.Tensor,
-        pos_emb: Optional[torch.Tensor] = None,
+        pos_emb: torch.Tensor = None,
         cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute encoded features.
@@ -210,7 +213,7 @@ class ConformerEncoderLayer(nn.Module):
             x_q = x[:, -1:, :]
             residual = residual[:, -1:, :]
             mask = mask[:, -1:, :]
-        assert pos_emb is not None
+
         x_att = self.self_attn(x_q, x, x, pos_emb, mask)
 
         if self.concat_after:
