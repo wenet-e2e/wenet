@@ -148,7 +148,6 @@ class BaseEncoder(torch.nn.Module):
         self,
         xs: torch.Tensor,
         subsampling_cache: Optional[torch.Tensor] = None,
-        embeding_cache: Optional[torch.Tensor] = None,
         attention_cache: Optional[List[torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Forward just one chunk
@@ -156,8 +155,6 @@ class BaseEncoder(torch.nn.Module):
         Args:
             xs (torch.Tensor): chunk input
             subsampling_cache (Optional[torch.Tensor]): subsampling cache
-            embeding_cache (Optional[torch.Tensor]):
-                positional embeding cache
             attention_cache (Optional[List[torch.Tensor]]):
                 attention cache
         """
@@ -168,7 +165,6 @@ class BaseEncoder(torch.nn.Module):
         if subsampling_cache is None:
             offset = 0
         else:
-            assert embeding_cache is not None
             assert attention_cache is not None
             offset = subsampling_cache.size(1)
         # tmp_masks is just for interface compatibility
@@ -177,12 +173,11 @@ class BaseEncoder(torch.nn.Module):
                                device=xs.device,
                                dtype=torch.bool)
         tmp_masks = tmp_masks.unsqueeze(1)
-        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
+        xs, _, _ = self.embed(xs, tmp_masks, offset)
         if subsampling_cache is not None:
             xs = torch.cat((subsampling_cache, xs), dim=1)
-            pos_emb = torch.cat((embeding_cache, pos_emb), dim=1)
+        pos_emb = self.embed.position_encoding(xs.size(1))
         r_subsampling_cache = xs
-        r_pos_emb = pos_emb
         # Real mask for transformer/conformer layers
         masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
         masks = masks.unsqueeze(1)
@@ -196,7 +191,7 @@ class BaseEncoder(torch.nn.Module):
             r_attention_cache.append(xs)
         if self.normalize_before:
             xs = self.after_norm(xs)
-        return xs, r_subsampling_cache, r_pos_emb, r_attention_cache
+        return xs, r_subsampling_cache, r_attention_cache
 
     def forward_chunk_by_chunk(self, xs: torch.Tensor,
                                decoding_chunk_size: int):
@@ -234,7 +229,6 @@ class BaseEncoder(torch.nn.Module):
         stride = subsampling * decoding_chunk_size
         decoding_window = (decoding_chunk_size - 1) * subsampling + context
         num_frames = xs.size(1)
-        embeding_cache = None
         subsampling_cache = None
         attention_cache = None
         ys = None
@@ -243,9 +237,8 @@ class BaseEncoder(torch.nn.Module):
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            (ys, subsampling_cache, embeding_cache,
+            (ys, subsampling_cache,
              attention_cache) = self.forward_chunk(chunk_xs, subsampling_cache,
-                                                   embeding_cache,
                                                    attention_cache)
         # Return the last output
         masks = torch.ones(1, ys.size(1), device=ys.device, dtype=torch.bool)
