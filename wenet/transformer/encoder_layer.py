@@ -59,7 +59,7 @@ class TransformerEncoderLayer(nn.Module):
         self,
         x: torch.Tensor,
         mask: torch.Tensor,
-        pos_emb: torch.Tensor = None,
+        pos_emb: torch.Tensor,
         cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute encoded features.
@@ -175,7 +175,7 @@ class ConformerEncoderLayer(nn.Module):
         self,
         x: torch.Tensor,
         mask: torch.Tensor,
-        pos_emb: torch.Tensor = None,
+        pos_emb: torch.Tensor,
         cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute encoded features.

@@ -149,7 +149,7 @@ class BaseEncoder(torch.nn.Module):
         xs: torch.Tensor,
         subsampling_cache: Optional[torch.Tensor] = None,
         attention_cache: Optional[List[torch.Tensor]] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, List[torch.Tensor]]:
         """ Forward just one chunk
 
         Args:
@@ -187,14 +187,17 @@ class BaseEncoder(torch.nn.Module):
                 c = None
             else:
                 c = attention_cache[i]
-            xs, _ = layer(xs, masks, cache=c)
+            xs, _ = layer(xs, masks, pos_emb, cache=c)
             r_attention_cache.append(xs)
         if self.normalize_before:
             xs = self.after_norm(xs)
         return xs, r_subsampling_cache, r_attention_cache
 
-    def forward_chunk_by_chunk(self, xs: torch.Tensor,
-                               decoding_chunk_size: int):
+    def forward_chunk_by_chunk(
+        self,
+        xs: torch.Tensor,
+        decoding_chunk_size: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Forward input chunk by chunk with chunk_size like a streaming
             fashion
 
@@ -229,9 +232,9 @@ class BaseEncoder(torch.nn.Module):
         stride = subsampling * decoding_chunk_size
         decoding_window = (decoding_chunk_size - 1) * subsampling + context
         num_frames = xs.size(1)
-        subsampling_cache = None
-        attention_cache = None
-        ys = None
+        subsampling_cache: Optional[torch.Tensor] = None
+        attention_cache: Optional[List[torch.Tensor]] = None
+        ys = torch.tensor([0.0], dtype=xs.dtype, device=xs.device)
 
         # Feed forward overlap input step by step
         for cur in range(0, num_frames - context + 1, stride):
