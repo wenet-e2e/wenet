@@ -1,0 +1,36 @@
+name: "Check and Publish Docs"
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+ 
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+
+    # install sphinx related package and build sphinx files
+    - uses: ammaraskar/sphinx-action@master
+      with:
+        docs-folder: "docs/"
+        pre-build-command: "pip install sphinx-markdown-tables nbsphinx recommonmark sphinx_rtd_theme"
+
+
+    # add .nojekyll to notice Pages use the _* dirs
+    - name: copy the generated site
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      run: |
+        mkdir public
+        touch public/.nojekyll
+        cp -r docs/_build/html/* public/
+
+    # push to gh-pages branch
+    - name: github pages deploy
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      uses: peaceiris/actions-gh-pages@v2.3.1
+      env:
+        PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN  }}
+        PUBLISH_BRANCH: gh-pages
+        PUBLISH_DIR: public
