@@ -96,7 +96,7 @@ class RelPositionalEncoding(PositionalEncoding):
     def forward(
             self,
             x: torch.Tensor,
-            offset: int = 0) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
+            offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).

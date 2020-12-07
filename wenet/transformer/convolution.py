@@ -5,6 +5,8 @@
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 """ConvolutionModule definition."""
 
+from typing import Optional, Tuple
+
 import torch
 from torch import nn
 from typeguard import check_argument_types
@@ -12,7 +14,6 @@ from typeguard import check_argument_types
 
 class ConvolutionModule(nn.Module):
     """ConvolutionModule in Conformer model."""
-
     def __init__(self,
                  channels: int,
                  kernel_size: int = 15,
@@ -68,17 +69,35 @@ class ConvolutionModule(nn.Module):
         )
         self.activation = activation
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        x: torch.Tensor,
+        cache: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute convolution module.
         Args:
             x (torch.Tensor): Input tensor (#batch, time, channels).
+            cache (torch.Tensor): left context cache, it is only
+                used in causal convolution
         Returns:
             torch.Tensor: Output tensor (#batch, time, channels).
         """
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)
         if self.lorder > 0:
-            x = nn.functional.pad(x, (self.lorder, 0), 'constant', 0.0)
+            if cache is None:
+                x = nn.functional.pad(x, (self.lorder, 0), 'constant', 0.0)
+            else:
+                assert cache.size(0) == x.size(0)
+                assert cache.size(1) == x.size(1)
+                x = torch.cat((cache, x), dim=2)
+            assert (x.size(2) > self.lorder)
+            new_cache = x[:, :, -self.lorder:]
+        else:
+            # It's better we just return None if no cache is requried,
+            # However, for JIT export, here we just fake one tensor instead of
+            # None.
+            new_cache = torch.tensor([0.0], dtype=x.dtype, device=x.device)
 
         # GLU mechanism
         x = self.pointwise_conv1(x)  # (batch, 2*channel, dim)
@@ -90,4 +109,4 @@ class ConvolutionModule(nn.Module):
 
         x = self.pointwise_conv2(x)
 
-        return x.transpose(1, 2)
+        return x.transpose(1, 2), new_cache

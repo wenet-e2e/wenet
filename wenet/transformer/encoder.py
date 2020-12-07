@@ -136,7 +136,7 @@ class BaseEncoder(torch.nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size)
         for layer in self.encoders:
-            xs, chunk_masks = layer(xs, chunk_masks, pos_emb)
+            xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb)
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
@@ -148,8 +148,11 @@ class BaseEncoder(torch.nn.Module):
         self,
         xs: torch.Tensor,
         subsampling_cache: Optional[torch.Tensor] = None,
+        position_encoding_cache: Optional[torch.Tensor] = None,
         attention_cache: Optional[List[torch.Tensor]] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor, List[torch.Tensor]]:
+        conformer_cnn_cache: Optional[List[torch.Tensor]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, List[torch.Tensor],
+               List[torch.Tensor]]:
         """ Forward just one chunk
 
         Args:
@@ -166,6 +169,7 @@ class BaseEncoder(torch.nn.Module):
             offset = 0
         else:
             assert attention_cache is not None
+            assert position_encoding_cache is not None
             offset = subsampling_cache.size(1)
         # tmp_masks is just for interface compatibility
         tmp_masks = torch.ones(1,
@@ -173,25 +177,38 @@ class BaseEncoder(torch.nn.Module):
                                device=xs.device,
                                dtype=torch.bool)
         tmp_masks = tmp_masks.unsqueeze(1)
-        xs, _, _ = self.embed(xs, tmp_masks, offset)
+        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
         if subsampling_cache is not None:
             xs = torch.cat((subsampling_cache, xs), dim=1)
-        pos_emb = self.embed.position_encoding(xs.size(1))
+            pos_emb = torch.cat((position_encoding_cache, pos_emb), dim=1)
+        #pos_emb = self.embed.position_encoding(xs.size(1))
         r_subsampling_cache = xs
+        r_position_encoding = pos_emb
         # Real mask for transformer/conformer layers
         masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
         masks = masks.unsqueeze(1)
         r_attention_cache = []
+        r_conformer_cnn_cache = []
         for i, layer in enumerate(self.encoders):
             if attention_cache is None:
-                c = None
+                attn_cache = None
             else:
-                c = attention_cache[i]
-            xs, _ = layer(xs, masks, pos_emb, cache=c)
+                attn_cache = attention_cache[i]
+            if conformer_cnn_cache is None:
+                cnn_cache = None
+            else:
+                cnn_cache = conformer_cnn_cache[i]
+            xs, _, new_cnn_cache = layer(xs,
+                                         masks,
+                                         pos_emb,
+                                         cache=attn_cache,
+                                         cnn_cache=cnn_cache)
             r_attention_cache.append(xs)
+            r_conformer_cnn_cache.append(new_cnn_cache)
         if self.normalize_before:
             xs = self.after_norm(xs)
-        return xs, r_subsampling_cache, r_attention_cache
+        return (xs, r_subsampling_cache, r_position_encoding,
+                r_attention_cache, r_conformer_cnn_cache)
 
     def forward_chunk_by_chunk(
         self,
@@ -233,16 +250,19 @@ class BaseEncoder(torch.nn.Module):
         decoding_window = (decoding_chunk_size - 1) * subsampling + context
         num_frames = xs.size(1)
         subsampling_cache: Optional[torch.Tensor] = None
+        position_encoding_cache: Optional[torch.Tensor] = None
         attention_cache: Optional[List[torch.Tensor]] = None
+        conformer_cnn_cache: Optional[List[torch.Tensor]] = None
         ys = torch.tensor([0.0], dtype=xs.dtype, device=xs.device)
 
         # Feed forward overlap input step by step
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            (ys, subsampling_cache,
-             attention_cache) = self.forward_chunk(chunk_xs, subsampling_cache,
-                                                   attention_cache)
+            (ys, subsampling_cache, position_encoding_cache, attention_cache,
+             conformer_cnn_cache) = self.forward_chunk(
+                 chunk_xs, subsampling_cache, position_encoding_cache,
+                 attention_cache, conformer_cnn_cache)
         # Return the last output
         masks = torch.ones(1, ys.size(1), device=ys.device, dtype=torch.bool)
         masks = masks.unsqueeze(1)
