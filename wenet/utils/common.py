@@ -1,4 +1,4 @@
-"""Unility funcitons for Transformer."""
+"""Unility functions for Transformer."""
 
 import math
 from typing import Tuple, List
