@@ -224,7 +224,7 @@ class ConformerEncoder(BaseEncoder):
                 compatibility.
             activation_type (str): Encoder activation function type.
             use_cnn_module (bool): Whether to use convolution module.
-            cnn_module_kernel (int): Kernerl size of convolution module.
+            cnn_module_kernel (int): Kernel size of convolution module.
             causal (bool): whether to use causal convolution or not.
         """
         assert check_argument_types()
