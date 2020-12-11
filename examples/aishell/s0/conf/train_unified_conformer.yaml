@@ -17,7 +17,7 @@ encoder_conf:
     pos_enc_layer_type: 'rel_pos'
     selfattention_layer_type: 'rel_selfattn'
     causal: true
-    use_dynmaic_chunk: true
+    use_dynamic_chunk: true
 
 # decoder related
 decoder: transformer
