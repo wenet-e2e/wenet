@@ -331,7 +331,7 @@ class ASRModel(torch.nn.Module):
                                key=lambda x: log_add(list(x[1])),
                                reverse=True)
             cur_hyps = next_hyps[:beam_size]
-        hyps = [x[0] for x in cur_hyps]
+        hyps = [(y[0], log_add([y[1][0], y[1][1]])) for y in cur_hyps]  
         return hyps, encoder_out
 
     def ctc_prefix_beam_search(self,
@@ -355,14 +355,16 @@ class ASRModel(torch.nn.Module):
             List[int]: CTC prefix beam search nbest results
         """
         hyps, _ = self._ctc_prefix_beam_search(speech, speech_lengths,
-                                               beam_size, decoding_chunk_size)
-        return hyps[0]
+                                                  beam_size,
+                                                  decoding_chunk_size)
+        return hyps[0][0]
 
     def attention_rescoring(self,
                             speech: torch.Tensor,
                             speech_lengths: torch.Tensor,
                             beam_size: int,
-                            decoding_chunk_size: int = -1) -> List[int]:
+                            decoding_chunk_size: int = -1,
+                            ctc_weight: float = 0.0) -> List[int]:
         """ Apply attention rescoring decoding, CTC prefix beam search
             is applied first to get nbest, then we resoring the nbest on
             attention decoder with corresponding encoder out
@@ -391,9 +393,9 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, beam_size, decoding_chunk_size)
         assert len(hyps) == beam_size
         hyps_pad = pad_sequence([
-            torch.tensor(hyp, device=device, dtype=torch.long) for hyp in hyps
+            torch.tensor(hyp[0], device=device, dtype=torch.long) for hyp in hyps
         ], True, self.ignore_id)  # (beam_size, max_hyps_len)
-        hys_lens = torch.tensor([len(hyp) for hyp in hyps],
+        hys_lens = torch.tensor([len(hyp[0]) for hyp in hyps],
                                 device=device,
                                 dtype=torch.long)  # (beam_size,)
         hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos, self.ignore_id)
@@ -414,10 +416,12 @@ class ASRModel(torch.nn.Module):
         best_index = 0
         for i, hyp in enumerate(hyps):
             score = 0.0
-            for j, w in enumerate(hyp):
+            for j, w in enumerate(hyp[0]):
                 score += decoder_out[i][j][w]
             score += decoder_out[i][len(hyp)][self.eos]
+            # add ctc score
+            score += hyp[1] * ctc_weight
             if score > best_score:
                 best_score = score
                 best_index = i
-        return hyps[best_index]
+        return hyps[best_index][0]

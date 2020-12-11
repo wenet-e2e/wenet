@@ -144,6 +144,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
     # -1 for full chunk
     decoding_chunk_size=
+    ctc_weight=0.5
     for mode in ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring; do
     {
         test_dir=$dir/test_${mode}
@@ -157,6 +158,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --batch_size 1 \
             --penalty 0.0 \
             --dict $dict \
+            --ctc_weight $ctc_weight \
             --result_file $test_dir/text \
             $cmvn_opts \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
