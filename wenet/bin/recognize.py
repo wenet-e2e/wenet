@@ -52,6 +52,10 @@ if __name__ == '__main__':
                         ],
                         default='attention',
                         help='decoding mode')
+    parser.add_argument('--ctc_weight',
+                        type=float,
+                        default=0.0,
+                        help='ctc weight for attention rescoring decode mode')
     parser.add_argument('--decoding_chunk_size',
                         type=int,
                         default=-1,
@@ -161,7 +165,8 @@ if __name__ == '__main__':
                     feats,
                     feats_lengths,
                     args.beam_size,
-                    decoding_chunk_size=args.decoding_chunk_size)
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    ctc_weight=args.ctc_weight)
                 hyps = [hyp]
             for i, key in enumerate(keys):
                 content = ''
