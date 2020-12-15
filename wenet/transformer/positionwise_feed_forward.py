@@ -22,7 +22,7 @@ class PositionwiseFeedForward(torch.nn.Module):
                  hidden_units: int,
                  dropout_rate: float,
                  activation: torch.nn.Module = torch.nn.ReLU()):
-        """Construct an PositionwiseFeedForward object."""
+        """Construct a PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
         self.w_1 = torch.nn.Linear(idim, hidden_units)
         self.w_2 = torch.nn.Linear(hidden_units, idim)
@@ -30,5 +30,5 @@ class PositionwiseFeedForward(torch.nn.Module):
         self.activation = activation
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Forward funciton."""
+        """Forward function."""
         return self.w_2(self.dropout(self.activation(self.w_1(x))))

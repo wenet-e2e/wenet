@@ -45,7 +45,7 @@ class ConvolutionModule(nn.Module):
             padding = 0
             self.lorder = kernel_size - 1
         else:
-            # kernerl_size should be an odd number for none causal convolution
+            # kernel_size should be an odd number for none causal convolution
             assert (kernel_size - 1) % 2 == 0
             padding = (kernel_size - 1) // 2
             self.lorder = 0
@@ -108,6 +108,5 @@ class ConvolutionModule(nn.Module):
         x = x.transpose(1, 2)
         x = self.activation(self.norm(x))
         x = x.transpose(1, 2)
-
         x = self.pointwise_conv2(x)
         return x.transpose(1, 2), new_cache

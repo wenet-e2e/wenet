@@ -27,11 +27,10 @@ train_config=conf/train_conformer.yaml
 checkpoint=
 cmvn=true
 dir=exp/sp_spec_aug
-
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
-average_num=5
+average_num=10
 
 . utils/parse_options.sh || exit 1;
 
@@ -47,6 +46,14 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     utils/perturb_data_dir_speed.sh 0.9 data/train data/train_sp0.9
     utils/perturb_data_dir_speed.sh 1.1 data/train data/train_sp1.1
     utils/combine_data.sh data/train_sp data/train data/train_sp0.9 data/train_sp1.1
+    # Remove the space in Mandarin text
+    for x in train_sp dev test; do
+        cp data/${x}/text data/${x}/text.org
+        paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " data/${x}/text.org | tr -d " ") \
+            > data/${x}/text
+        rm data/${x}/text.org
+   done
+
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -137,6 +144,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
     # -1 for full chunk
     decoding_chunk_size=
+    ctc_weight=0.5
     for mode in ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring; do
     {
         test_dir=$dir/test_${mode}
@@ -150,6 +158,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --batch_size 1 \
             --penalty 0.0 \
             --dict $dict \
+            --ctc_weight $ctc_weight \
             --result_file $test_dir/text \
             $cmvn_opts \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}

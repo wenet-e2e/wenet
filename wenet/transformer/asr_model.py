@@ -364,7 +364,7 @@ class ASRModel(torch.nn.Module):
                                key=lambda x: log_add(list(x[1])),
                                reverse=True)
             cur_hyps = next_hyps[:beam_size]
-        hyps = [x[0] for x in cur_hyps]
+        hyps = [(y[0], log_add([y[1][0], y[1][1]])) for y in cur_hyps]  
         return hyps, encoder_out
 
     def ctc_prefix_beam_search(
@@ -395,7 +395,7 @@ class ASRModel(torch.nn.Module):
         hyps, _ = self._ctc_prefix_beam_search(speech, speech_lengths,
                                                beam_size, decoding_chunk_size,
                                                simulate_streaming)
-        return hyps[0]
+        return hyps[0][0]
 
     def attention_rescoring(
         self,
@@ -403,6 +403,7 @@ class ASRModel(torch.nn.Module):
         speech_lengths: torch.Tensor,
         beam_size: int,
         decoding_chunk_size: int = -1,
+        ctc_weight: float = 0.0,
         simulate_streaming: bool = False,
     ) -> List[int]:
         """ Apply attention rescoring decoding, CTC prefix beam search
@@ -437,9 +438,9 @@ class ASRModel(torch.nn.Module):
 
         assert len(hyps) == beam_size
         hyps_pad = pad_sequence([
-            torch.tensor(hyp, device=device, dtype=torch.long) for hyp in hyps
+            torch.tensor(hyp[0], device=device, dtype=torch.long) for hyp in hyps
         ], True, self.ignore_id)  # (beam_size, max_hyps_len)
-        hys_lens = torch.tensor([len(hyp) for hyp in hyps],
+        hys_lens = torch.tensor([len(hyp[0]) for hyp in hyps],
                                 device=device,
                                 dtype=torch.long)  # (beam_size,)
         hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos, self.ignore_id)
@@ -460,13 +461,15 @@ class ASRModel(torch.nn.Module):
         best_index = 0
         for i, hyp in enumerate(hyps):
             score = 0.0
-            for j, w in enumerate(hyp):
+            for j, w in enumerate(hyp[0]):
                 score += decoder_out[i][j][w]
             score += decoder_out[i][len(hyp)][self.eos]
+            # add ctc score
+            score += hyp[1] * ctc_weight
             if score > best_score:
                 best_score = score
                 best_index = i
-        return hyps[best_index]
+        return hyps[best_index][0]
 
     @torch.jit.export
     def subsampling_rate(self) -> int:
