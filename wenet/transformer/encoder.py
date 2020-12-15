@@ -150,7 +150,7 @@ class BaseEncoder(torch.nn.Module):
         subsampling_cache: Optional[torch.Tensor] = None,
         attention_cache: Optional[List[torch.Tensor]] = None,
         conformer_cnn_cache: Optional[List[torch.Tensor]] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, List[torch.Tensor],
+    ) -> Tuple[torch.Tensor, torch.Tensor, List[torch.Tensor],
                List[torch.Tensor]]:
         """ Forward just one chunk
 
@@ -159,6 +159,15 @@ class BaseEncoder(torch.nn.Module):
             subsampling_cache (Optional[torch.Tensor]): subsampling cache
             attention_cache (Optional[List[torch.Tensor]]):
                 attention cache
+            conformer_cnn_cache (Optional[List[torch.Tensor]]): conformer
+                cnn cache
+
+        Returns:
+            torch.Tensor: output, it ranges from time 0 to current chunk.
+            torch.Tensor: subsampling cache
+            List[torch.Tensor]: attention cache
+            List[torch.Tensor]: conformer cnn cache
+
         """
         assert xs.size(0) == 1
         # offset, current time offset in encoder, in output time stamp,
@@ -203,6 +212,7 @@ class BaseEncoder(torch.nn.Module):
             r_conformer_cnn_cache.append(new_cnn_cache)
         if self.normalize_before:
             xs = self.after_norm(xs)
+
         return (xs, r_subsampling_cache, r_attention_cache,
                 r_conformer_cnn_cache)
 

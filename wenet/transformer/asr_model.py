@@ -467,3 +467,101 @@ class ASRModel(torch.nn.Module):
                 best_score = score
                 best_index = i
         return hyps[best_index]
+
+    @torch.jit.export
+    def subsampling_rate(self) -> int:
+        """ Export interface for c++ call, return subsampling_rate of the
+            model
+        """
+        return self.encoder.embed.subsampling_rate
+
+    @torch.jit.export
+    def right_context(self) -> int:
+        """ Export interface for c++ call, return right_context of the model
+        """
+        return self.encoder.embed.right_context
+
+    @torch.jit.export
+    def sos_symbol(self) -> int:
+        """ Export interface for c++ call, return sos symbol id of the model
+        """
+        return self.sos
+
+    @torch.jit.export
+    def eos_symbol(self) -> int:
+        """ Export interface for c++ call, return eos symbol id of the model
+        """
+        return self.eos
+
+    @torch.jit.export
+    def forward_encoder_chunk(
+        self,
+        xs: torch.Tensor,
+        subsampling_cache: Optional[torch.Tensor] = None,
+        attention_cache: Optional[List[torch.Tensor]] = None,
+        conformer_cnn_cache: Optional[List[torch.Tensor]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, List[torch.Tensor],
+               List[torch.Tensor]]:
+        """ Export interface for c++ call, give input chunk xs, and return
+            output from time 0 to current chunk.
+
+        Args:
+            xs (torch.Tensor): chunk input
+            subsampling_cache (Optional[torch.Tensor]): subsampling cache
+            attention_cache (Optional[List[torch.Tensor]]):
+                attention cache
+            conformer_cnn_cache (Optional[List[torch.Tensor]]): conformer
+                cnn cache
+
+        Returns:
+            torch.Tensor: output, it ranges from time 0 to current chunk.
+            torch.Tensor: subsampling cache
+            List[torch.Tensor]: attention cache
+            List[torch.Tensor]: conformer cnn cache
+
+        """
+        return self.encoder.forward_chunk(xs, subsampling_cache,
+                                          attention_cache, conformer_cnn_cache)
+
+    @torch.jit.export
+    def ctc_activation(self, xs: torch.Tensor) -> torch.Tensor:
+        """ Export interface for c++ call, apply linear transform and log
+            softmax before ctc
+        Args:
+            xs (torch.Tensor): encoder output
+
+        Returns:
+            torch.Tensor: activation before ctc
+
+        """
+        return self.ctc.log_softmax(xs)
+
+    @torch.jit.export
+    def forward_attention_decoder(
+        self,
+        hyp: torch.Tensor,
+        encoder_out: torch.Tensor,
+    ) -> torch.Tensor:
+        """ Export interface for c++ call, forward decoder with one hypothesis
+            and corresponding encoder output
+        Args:
+            hyp (torch.Tensor): one hyp from ctc prefix beam search, already
+                pad sos at the begining
+            encoder_out (torch.Tensor): corresponding encoder output
+
+        Returns:
+            torch.Tensor: decoder output
+        """
+        assert encoder_out.size(0) == 1
+        assert hyp.size(0) == 1
+        encoder_mask = torch.ones(1,
+                                  1,
+                                  encoder_out.size(1),
+                                  device=hyp.device,
+                                  dtype=torch.bool)
+        hyp_len = torch.tensor([hyp.size(1)],
+                               device=hyp.device,
+                               dtype=torch.long)
+        decoder_out, _ = self.decoder(encoder_out, encoder_mask, hyp, hyp_len)
+        decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
+        return decoder_out
