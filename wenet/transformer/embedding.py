@@ -6,7 +6,7 @@
 """Positonal Encoding Module."""
 
 import math
-from typing import Tuple, Optional
+from typing import Tuple
 
 import torch
 
@@ -58,7 +58,7 @@ class PositionalEncoding(torch.nn.Module):
         """
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
-        pos_emb = self.pe[:, offset:offset+x.size(1)]
+        pos_emb = self.pe[:, offset:offset + x.size(1)]
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
@@ -107,5 +107,5 @@ class RelPositionalEncoding(PositionalEncoding):
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         x = x * self.xscale
-        pos_emb = self.pe[:, offset:offset+x.size(1)]
+        pos_emb = self.pe[:, offset:offset + x.size(1)]
         return self.dropout(x), self.dropout(pos_emb)
