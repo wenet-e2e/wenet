@@ -11,6 +11,8 @@ cmd=run.pl
 nlsyms=""
 lang=""
 feat=""
+feat_type="kaldi"
+#feat_type="wav"
 oov="<unk>"
 bpecode=""
 allow_one_column=false
@@ -47,7 +49,7 @@ set -euo pipefail
 dir=$1
 dic=$2
 tmpdir=$(mktemp -d ${dir}/tmp-XXXXX)
-trap 'rm -rf ${tmpdir}' EXIT
+#trap 'rm -rf ${tmpdir}' EXIT
 
 # 1. Create scp files for inputs
 #   These are not necessary for decoding mode, and make it as an option
@@ -69,10 +71,17 @@ if [ -n "${feat}" ]; then
                 > ${tmpdir}/input_${i}/filetype.scp
         fi
 
-        tools/feat_to_shape.sh --cmd "${cmd}" --nj ${nj} \
-            --filetype "${filetype}" \
-            --preprocess-conf "${preprocess_conf}" \
-            --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
+        if [ ${feat_type} == "kaldi" ]; then
+            tools/feat_to_shape.sh --cmd "${cmd}" --nj ${nj} \
+                --filetype "${filetype}" \
+                --preprocess-conf "${preprocess_conf}" \
+                --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
+        elif [ ${feat_type} == "wav" ]; then
+            tools/wav_to_duration.sh --cmd "${cmd}" --nj ${nj} \
+                --filetype "${filetype}" \
+                --preprocess-conf "${preprocess_conf}" \
+                --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
+        fi
     done
 fi
 
@@ -106,7 +115,7 @@ if [ -n "${category}" ]; then
     awk -v category=${category} '{print $1 " " category}' ${dir}/text \
         > ${tmpdir}/other/category.scp
 fi
-cat ${dir}/utt2spk > ${tmpdir}/other/utt2spk.scp
+#cat ${dir}/utt2spk > ${tmpdir}/other/utt2spk.scp
 
 # 4. Merge scp files into a one file
 opts=""
@@ -143,4 +152,4 @@ fi
 
 tools/merge_scp2txt.py --verbose ${verbose} ${opts}
 
-rm -fr ${tmpdir}
+#rm -fr ${tmpdir}
