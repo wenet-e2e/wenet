@@ -364,7 +364,7 @@ class ASRModel(torch.nn.Module):
                                key=lambda x: log_add(list(x[1])),
                                reverse=True)
             cur_hyps = next_hyps[:beam_size]
-        hyps = [(y[0], log_add([y[1][0], y[1][1]])) for y in cur_hyps]  
+        hyps = [(y[0], log_add([y[1][0], y[1][1]])) for y in cur_hyps]
         return hyps, encoder_out
 
     def ctc_prefix_beam_search(
@@ -438,7 +438,8 @@ class ASRModel(torch.nn.Module):
 
         assert len(hyps) == beam_size
         hyps_pad = pad_sequence([
-            torch.tensor(hyp[0], device=device, dtype=torch.long) for hyp in hyps
+            torch.tensor(hyp[0], device=device, dtype=torch.long)
+            for hyp in hyps
         ], True, self.ignore_id)  # (beam_size, max_hyps_len)
         hys_lens = torch.tensor([len(hyp[0]) for hyp in hyps],
                                 device=device,
@@ -501,7 +502,7 @@ class ASRModel(torch.nn.Module):
         self,
         xs: torch.Tensor,
         subsampling_cache: Optional[torch.Tensor] = None,
-        attention_cache: Optional[List[torch.Tensor]] = None,
+        elayers_output_cache: Optional[List[torch.Tensor]] = None,
         conformer_cnn_cache: Optional[List[torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, List[torch.Tensor],
                List[torch.Tensor]]:
@@ -511,8 +512,8 @@ class ASRModel(torch.nn.Module):
         Args:
             xs (torch.Tensor): chunk input
             subsampling_cache (Optional[torch.Tensor]): subsampling cache
-            attention_cache (Optional[List[torch.Tensor]]):
-                attention cache
+            elayers_output_cache (Optional[List[torch.Tensor]]):
+                transformer/conformer encoder layers output cache
             conformer_cnn_cache (Optional[List[torch.Tensor]]): conformer
                 cnn cache
 
@@ -524,7 +525,8 @@ class ASRModel(torch.nn.Module):
 
         """
         return self.encoder.forward_chunk(xs, subsampling_cache,
-                                          attention_cache, conformer_cnn_cache)
+                                          elayers_output_cache,
+                                          conformer_cnn_cache)
 
     @torch.jit.export
     def ctc_activation(self, xs: torch.Tensor) -> torch.Tensor:
