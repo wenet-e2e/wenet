@@ -355,8 +355,8 @@ class ASRModel(torch.nn.Module):
             List[int]: CTC prefix beam search nbest results
         """
         hyps, _ = self._ctc_prefix_beam_search(speech, speech_lengths,
-                                                  beam_size,
-                                                  decoding_chunk_size)
+                                               beam_size,
+                                               decoding_chunk_size)
         return hyps[0][0]
 
     def attention_rescoring(self,
