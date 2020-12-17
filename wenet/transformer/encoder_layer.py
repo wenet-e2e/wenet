@@ -68,10 +68,10 @@ class TransformerEncoderLayer(nn.Module):
         Args:
             x (torch.Tensor): Input tensor (#batch, time, size).
             mask (torch.Tensor): Mask tensor for the input (#batch, time).
-            pos_emb (torch.Tensor): just for interface compatible
-                with ConformerEncoderLayer
+            pos_emb (torch.Tensor): just for interface compatibility
+                to ConformerEncoderLayer
             output_cache (torch.Tensor): Cache tensor of the output
-                (#batch, *, size).
+                (#batch, time2, size), time2 < time in x.
             cnn_cache (torch.Tensor): not used here, it's for interface
                 compatibility to ConformerEncoderLayer
         Returns:
@@ -190,7 +190,7 @@ class ConformerEncoderLayer(nn.Module):
             pos_emb (torch.Tensor): positional encoding, must not be None
                 for ConformerEncoderLayer.
             output_cache (torch.Tensor): Cache tensor of the output
-                (#batch, *, size).
+                (#batch, time2, size), time2 < time in x.
             cnn_cache (torch.Tensor): Convolution cache in conformer layer
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).

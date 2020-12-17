@@ -51,10 +51,11 @@ class PositionalEncoding(torch.nn.Module):
 
         Args:
             x (torch.Tensor): Input. Its shape is (batch, time, ...)
+            offset (int): position offset
 
         Returns:
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
-            torch.Tensor: for compatible with RelPositionalEncoding
+            torch.Tensor: for compatibility to RelPositionalEncoding
         """
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
