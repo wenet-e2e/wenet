@@ -441,11 +441,11 @@ class ASRModel(torch.nn.Module):
             torch.tensor(hyp[0], device=device, dtype=torch.long)
             for hyp in hyps
         ], True, self.ignore_id)  # (beam_size, max_hyps_len)
-        hys_lens = torch.tensor([len(hyp[0]) for hyp in hyps],
-                                device=device,
-                                dtype=torch.long)  # (beam_size,)
+        hyps_lens = torch.tensor([len(hyp[0]) for hyp in hyps],
+                                 device=device,
+                                 dtype=torch.long)  # (beam_size,)
         hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos, self.ignore_id)
-        hyps_lens = hys_lens + 1  # Add <sos> at begining
+        hyps_lens = hyps_lens + 1  # Add <sos> at begining
         encoder_out = encoder_out.repeat(beam_size, 1, 1)
         encoder_mask = torch.ones(beam_size,
                                   1,
@@ -544,29 +544,32 @@ class ASRModel(torch.nn.Module):
     @torch.jit.export
     def forward_attention_decoder(
         self,
-        hyp: torch.Tensor,
+        hyps: torch.Tensor,
+        hyps_lens: torch.Tensor,
         encoder_out: torch.Tensor,
     ) -> torch.Tensor:
-        """ Export interface for c++ call, forward decoder with one hypothesis
-            and corresponding encoder output
+        """ Export interface for c++ call, forward decoder with multiple
+            hypothesis from ctc prefix beam search and one encoder output
         Args:
-            hyp (torch.Tensor): one hyp from ctc prefix beam search, already
+            hyps (torch.Tensor): hyps from ctc prefix beam search, already
                 pad sos at the begining
+            hyps_lens (torch.Tensor): length of each hyp in hyps
             encoder_out (torch.Tensor): corresponding encoder output
 
         Returns:
             torch.Tensor: decoder output
         """
         assert encoder_out.size(0) == 1
-        assert hyp.size(0) == 1
-        encoder_mask = torch.ones(1,
+        num_hyps = hyps.size(0)
+        assert hyps_lens.size(0) == num_hyps
+        encoder_out = encoder_out.repeat(num_hyps, 1, 1)
+        encoder_mask = torch.ones(num_hyps,
                                   1,
                                   encoder_out.size(1),
-                                  device=hyp.device,
-                                  dtype=torch.bool)
-        hyp_len = torch.tensor([hyp.size(1)],
-                               device=hyp.device,
-                               dtype=torch.long)
-        decoder_out, _ = self.decoder(encoder_out, encoder_mask, hyp, hyp_len)
+                                  dtype=torch.bool,
+                                  device=encoder_out.device)
+        decoder_out, _ = self.decoder(
+            encoder_out, encoder_mask, hyps,
+            hyps_lens)  # (num_hyps, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         return decoder_out
