@@ -1,0 +1,412 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Tutorial &mdash; Wenet  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Welcome to Wenet’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> Wenet
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Tutorial:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#setup-environment">Setup environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#first-experiment">First Experiment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#stage-1-download-data">stage -1 Download data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-0-prepare-kaldi-format">stage 0 Prepare Kaldi format</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-1-extract-acoustic-feature">stage 1 Extract acoustic feature</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-2-generate-label-token-dictionary">stage 2 Generate label token dictionary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-3-prepare-wenet-data-format">stage 3 Prepare Wenet data format</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-4-neural-network-training">stage 4 Neural Network training</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-5-recognize-wav-using-the-trained-model">stage 5 Recognize wav using the trained model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-6-export-the-trained-model">stage 6 Export the trained model</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wenet</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Tutorial</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/tutorial.md.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<p>If you meet any problems when going through this tutorial, please feel free to ask in github <a class="reference external" href="https://github.com/mobvoi/wenet/issues">issues</a>. And thanks for any kind feedbacks.</p>
+<div class="section" id="setup-environment">
+<h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Clone</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/mobvoi/wenet.git
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Install Conda</p></li>
+</ul>
+<p>https://docs.conda.io/en/latest/miniconda.html</p>
+<ul class="simple">
+<li><p>Create conda env</p></li>
+</ul>
+<p>pytorch 1.6.0 is suggested. We meet some error on NCCL when using 1.7.0 on 2080 Ti.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">create</span> <span class="o">-</span><span class="n">n</span> <span class="n">wenet</span> <span class="n">python</span><span class="o">=</span><span class="mf">3.8</span>
+<span class="n">conda</span> <span class="n">activate</span> <span class="n">wenet</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
+<span class="n">conda</span> <span class="n">install</span> <span class="n">pytorch</span><span class="o">==</span><span class="mf">1.6</span><span class="o">.</span><span class="mi">0</span> <span class="n">cudatoolkit</span><span class="o">=</span><span class="mf">10.1</span> <span class="o">-</span><span class="n">c</span> <span class="n">pytorch</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Install Kaldi</p></li>
+</ul>
+<p>Wenet need Kaldi to extract feature (a torchaudio version is in developing)</p>
+<p>Download and build <a class="reference external" href="https://github.com/kaldi-asr/kaldi">Kaldi</a>.</p>
+<p>Set the Kaldi root</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">vim</span> <span class="n">example</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s0</span><span class="o">/</span><span class="n">path</span><span class="o">.</span><span class="n">sh</span>
+<span class="n">KALDI_ROOT</span><span class="o">=</span><span class="n">your_kaldi_root_path</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="first-experiment">
+<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this headline">¶</a></h2>
+<p>We provide a recipe example/aishell/s0/run.sh on aishell-1 data.</p>
+<p>The recipe is simple and we suggest you run each stage one by one manually and check the result to understand the whole process.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">example</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s0</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="o">-</span><span class="mi">1</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">0</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">0</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">1</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">1</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">2</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">2</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">3</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">3</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">4</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">5</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">5</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">5</span>
+</pre></div>
+</div>
+<p>You could also just run the whole script</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">5</span>
+</pre></div>
+</div>
+<div class="section" id="stage-1-download-data">
+<h3>stage -1 Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this headline">¶</a></h3>
+<p>This stage downloads the data to the local path <code class="docutils literal notranslate"><span class="pre">$data</span></code>. This may take several hours.  If you already downloaded the aishell-1 data. please change the <code class="docutils literal notranslate"><span class="pre">$data</span></code> variable in <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> and start from <code class="docutils literal notranslate"><span class="pre">--stage</span> <span class="pre">0</span></code>.</p>
+</div>
+<div class="section" id="stage-0-prepare-kaldi-format">
+<h3>stage 0 Prepare Kaldi format<a class="headerlink" href="#stage-0-prepare-kaldi-format" title="Permalink to this headline">¶</a></h3>
+<p>In this stage, <code class="docutils literal notranslate"><span class="pre">local/aishell_data_prep.sh</span></code> organizes the original aishell-1 data into a Kaldi format. In the kaldi dataset format, each dataset includes the two most important files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code>, <code class="docutils literal notranslate"><span class="pre">text</span></code>, and other resource files.</p>
+<p>In this demo recipe, this stage also uses Kaldi script <code class="docutils literal notranslate"><span class="pre">utils/perturb_data_dir_speed.sh</span></code> to do speed perturb augmentation on the training data. With 0.9 and 1.1 speeding up, the size of the training data is 3 times of the original data.</p>
+<p>please see <code class="docutils literal notranslate"><span class="pre">data/train/wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">data/train/text</span></code>.
+If you want to train your customized data, just organize the data into two files wav.scp and text, and start from <code class="docutils literal notranslate"><span class="pre">stage</span> <span class="pre">1</span></code>.</p>
+</div>
+<div class="section" id="stage-1-extract-acoustic-feature">
+<h3>stage 1 Extract acoustic feature<a class="headerlink" href="#stage-1-extract-acoustic-feature" title="Permalink to this headline">¶</a></h3>
+<p>In this stage, Kaldi script <code class="docutils literal notranslate"><span class="pre">steps/make_fbank_pitch.sh</span></code> is used to extract the acoustic feature from the wavs for train, test, and dev set.</p>
+<p><code class="docutils literal notranslate"><span class="pre">compute-cmvn-stats</span></code> is used to extract global cmvn statistics. These statistics will be used to normalize the acoustic feature. Set <code class="docutils literal notranslate"><span class="pre">cmvn=false</span></code> will ignore this step.</p>
+<p>See the generated training feature file in <code class="docutils literal notranslate"><span class="pre">fbank_pitch/train/feat.scp</span></code>.</p>
+</div>
+<div class="section" id="stage-2-generate-label-token-dictionary">
+<h3>stage 2 Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this headline">¶</a></h3>
+<p>The dict, a map between label tokens(we use the character for Aishell-1) and
+the integer indexes.</p>
+<p>A dict is like this</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">blank</span><span class="o">&gt;</span> <span class="mi">0</span>
+<span class="o">&lt;</span><span class="n">unk</span><span class="o">&gt;</span> <span class="mi">1</span>
+<span class="n">一</span> <span class="mi">2</span>
+<span class="n">丁</span> <span class="mi">3</span>
+<span class="o">...</span>
+<span class="n">龚</span> <span class="mi">4230</span>
+<span class="n">龟</span> <span class="mi">4231</span>
+<span class="o">&lt;</span><span class="n">sos</span><span class="o">/</span><span class="n">eos</span><span class="o">&gt;</span> <span class="mi">4232</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;blank&gt;</span></code> denotes blank symbol for CTC.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;unk&gt;</span></code> denotes unknown token, any out of vocabulary token will be mapped into .</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;sos/eos&gt;</span></code> denotes sos and eos symbol for attention encoder decoder training, and they shares the same id.</p></li>
+</ul>
+</div>
+<div class="section" id="stage-3-prepare-wenet-data-format">
+<h3>stage 3 Prepare Wenet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this headline">¶</a></h3>
+<p>This stage generates a single wenet format file including all the input/output information needed by neural network training/evaluation.</p>
+<p>See the generated training feature file in <code class="docutils literal notranslate"><span class="pre">fbank_pitch/train/format.data</span></code>.</p>
+<p>In the wenet format file , each line record a data sample of seven tab splited columns. For example, a line is like this(repalce tab with newline here):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">utt</span><span class="p">:</span><span class="n">BAC009S0764W0121</span>
+<span class="n">feat</span><span class="p">:</span><span class="o">/</span><span class="n">l</span><span class="o">/</span><span class="n">wenet</span><span class="o">/</span><span class="n">examples</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s0</span><span class="o">/</span><span class="n">fbank_pitch</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">raw_fbank_pitch_test</span><span class="o">.</span><span class="mf">1.</span><span class="n">ark</span><span class="p">:</span><span class="mi">17</span>
+<span class="n">feat_shape</span><span class="p">:</span><span class="mi">418</span><span class="p">,</span><span class="mi">83</span>
+<span class="n">text</span><span class="p">:</span><span class="n">甚至出现交易几乎停滞的情况</span>
+<span class="n">token</span><span class="p">:</span><span class="n">甚</span> <span class="n">至</span> <span class="n">出</span> <span class="n">现</span> <span class="n">交</span> <span class="n">易</span> <span class="n">几</span> <span class="n">乎</span> <span class="n">停</span> <span class="n">滞</span> <span class="n">的</span> <span class="n">情</span> <span class="n">况</span>
+<span class="n">tokenid</span><span class="p">:</span><span class="mi">2474</span> <span class="mi">3116</span> <span class="mi">331</span> <span class="mi">2408</span> <span class="mi">82</span> <span class="mi">1684</span> <span class="mi">321</span> <span class="mi">47</span> <span class="mi">235</span> <span class="mi">2199</span> <span class="mi">2553</span> <span class="mi">1319</span> <span class="mi">307</span>
+<span class="n">token_shape</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span><span class="mi">4233</span>
+</pre></div>
+</div>
+<p>In the future, wenet will also support using raw wavs as input and use torchaudio to extract the feature just-in-time in dataloader.</p>
+</div>
+<div class="section" id="stage-4-neural-network-training">
+<h3>stage 4 Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this headline">¶</a></h3>
+<p>The NN model is training in this step.</p>
+<ul class="simple">
+<li><p>Multi-GPU mode</p></li>
+</ul>
+<p>If using DDP mode for multi-GPU, we suggest using <code class="docutils literal notranslate"><span class="pre">dist_backend=&quot;nccl&quot;</span></code>. If the NCCL does not work, try using <code class="docutils literal notranslate"><span class="pre">gloo</span></code> or use <code class="docutils literal notranslate"><span class="pre">torch==1.6.0</span></code>
+Set the GPU ids in CUDA_VISIBLE_DEVICES. For example, set <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">CUDA_VISIBLE_DEVICES=&quot;0,1,2,3,6,7&quot;</span></code> to use card 0,1,2,3,6,7.</p>
+<ul class="simple">
+<li><p>Resume training</p></li>
+</ul>
+<p>If your experiment is terminated after running several epochs for some reasons(e.g. the GPU is accidentally used by other people and is out-of-memory ), you could continue the training on a checkpoint model. Just check the finished epoch in <code class="docutils literal notranslate"><span class="pre">exp/your_exp/</span></code> and set  <code class="docutils literal notranslate"><span class="pre">checkpoint=exp/your_exp/$n.pt</span></code> and run the <code class="docutils literal notranslate"><span class="pre">run.sh</span> <span class="pre">--stage</span> <span class="pre">4</span></code>. Then the training will continue from the $n+1.pt</p>
+<ul class="simple">
+<li><p>Config</p></li>
+</ul>
+<p>The config of neural network structure, optimization parameter, loss parameters, and dataset could be set in a YAML format file.</p>
+<p>In <code class="docutils literal notranslate"><span class="pre">conf/</span></code>,  we provide several models like transformer and conformer. see <code class="docutils literal notranslate"><span class="pre">conf/train_conformer.yaml</span></code> for reference.</p>
+<ul class="simple">
+<li><p>Use Tensorboard</p></li>
+</ul>
+<p>The training takes several hours. The actual hours depend on your GPU number and type. In an 8 card 2080 Ti machine, it will take about less than one day for 50 epochs.
+You could use the tensorboard to monitor the loss.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>tensorboard --logdir tensorboard/$your_exp_name/ --port 12598 --bind_all
+</pre></div>
+</div>
+</div>
+<div class="section" id="stage-5-recognize-wav-using-the-trained-model">
+<h3>stage 5 Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this headline">¶</a></h3>
+<p>This stage shows how to recognize a set of wavs into text. It also shows how to do the model average.</p>
+<ul class="simple">
+<li><p>Average model</p></li>
+</ul>
+<p>if <code class="docutils literal notranslate"><span class="pre">${average_checkpoint}</span></code> is <code class="docutils literal notranslate"><span class="pre">true</span></code>, the best <code class="docutils literal notranslate"><span class="pre">${average_num}</span></code> model on cross validation set will be averaged to generated a boosted model and used for recognition.</p>
+<ul class="simple">
+<li><p>Decoding</p></li>
+</ul>
+<p>Recognition is also called decoding or inference. The function of the NN will be applied on the input acoustic feature sequence to out a text sequence.</p>
+<p>Four decoding methods are provided in wenet:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ctc_greedy_search</span></code> : encoder + CTC greedy search</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ctc_prefix_beam_search</span></code> :  encoder + CTC prefix beam search</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attention</span></code> : encoder + attention-based decoder decoding</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">attention_rescoring</span></code> : rescoring the ctc candidates from ctc prefix beam search with encoder output on attention-based decoder.</p></li>
+</ul>
+<p>In general, attention_rescoring is the best method. Please see <a class="reference external" href="https://arxiv.org/pdf/2012.05481.pdf">U2 paper</a> for the details of these algorithms.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--beam_size</span></code> is a tunable parameter, use a large beam size may get better results but also cause high computation cost.</p>
+<p><code class="docutils literal notranslate"><span class="pre">--batch_size</span></code> can be greater than 1 for “ctc_greedy_search” and “attention” decoding mode, and must be 1 for “ctc_prefix_beam_search” and “attention_rescoring” decoding mode.</p>
+<ul class="simple">
+<li><p>WER Evaluation</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">tools/compute-wer.py</span></code> will calculate the word(or char) error rate of the result. If you run the recipe without any change, you may get WER ~= 5%.</p>
+</div>
+<div class="section" id="stage-6-export-the-trained-model">
+<h3>stage 6 Export the trained model<a class="headerlink" href="#stage-6-export-the-trained-model" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">wenet/bin/export_jit.py</span></code> will export the trained model using libtorch. The exported model files could be easily used in other language appliction such as C++.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Wenet’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, wenet-team
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
