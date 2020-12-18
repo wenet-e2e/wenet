@@ -7,6 +7,7 @@ from torch.nn.utils import clip_grad_norm_
 
 
 class Executor:
+
     def __init__(self):
         self.step = 0
 
