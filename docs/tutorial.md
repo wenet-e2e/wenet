@@ -76,7 +76,6 @@ In this demo recipe, this stage also uses Kaldi script `utils/perturb_data_dir_s
 
 please see `data/train/wav.scp` and `data/train/text`. 
 If you want to train your customized data, just organize the data into two files wav.scp and text, and start from `stage 1`.
-c
 
 
 #### stage 1 Extract acoustic feature
@@ -105,6 +104,10 @@ A dict is like this
 <sos/eos> 4232
 ```
 
+* `<blank>` denotes blank symbol for CTC.
+* `<unk>` denotes unknown token, any out of vocabulary token will be mapped into .
+* `<sos/eos>` denotes sos and eos symbol for attention encoder decoder training, and they shares the same id.
+
 #### stage 3 Prepare Wenet data format
 
 This stage generates a single wenet format file including all the input/output information needed by neural network training/evaluation.
@@ -131,12 +134,12 @@ In the future, wenet will also support using raw wavs as input and use torchaudi
 
 The NN model is training in this step.
 
-- multi-GPU mode
+- Multi-GPU mode
 
 If using DDP mode for multi-GPU, we suggest using `dist_backend="nccl"`. If the NCCL does not work, try using `gloo` or use `torch==1.6.0`
 Set the GPU ids in CUDA_VISIBLE_DEVICES. For example, set `export CUDA_VISIBLE_DEVICES="0,1,2,3,6,7"` to use card 0,1,2,3,6,7.
 
-- BreakPoint training
+- Resume training
 
 If your experiment is terminated after running several epochs for some reasons(e.g. the GPU is accidentally used by other people and is out-of-memory ), you could continue the training on a checkpoint model. Just check the finished epoch in `exp/your_exp/` and set  `checkpoint=exp/your_exp/$n.pt` and run the `run.sh --stage 4`. Then the training will continue from the $n+1.pt
 
@@ -169,16 +172,16 @@ Recognition is also called decoding or inference. The function of the NN will be
 
 Four decoding methods are provided in wenet:
 
-* ctc_greedy_search: encoder + CTC greedy search
-* ctc_prefix_beam_search:  encoder + CTC prefix beam search
-* attention: encoder + attention-based decoder decoding
-* attention_rescoring: rescoring on the ctc candidates
+* `ctc_greedy_search` : encoder + CTC greedy search
+* `ctc_prefix_beam_search` :  encoder + CTC prefix beam search
+* `attention` : encoder + attention-based decoder decoding
+* `attention_rescoring` : rescoring the ctc candidates from ctc prefix beam search with encoder output on attention-based decoder.
 
-In general, attention_rescoring is the best method. Please see [] for the details of these algorithms.
+In general, attention_rescoring is the best method. Please see [U2 paper](https://arxiv.org/pdf/2012.05481.pdf) for the details of these algorithms.
 
 `--beam_size` is a tunable parameter, use a large beam size may get better results but also cause high computation cost.
 
-
+`--batch_size` can be greater than 1 for "ctc_greedy_search" and "attention" decoding mode, and must be 1 for "ctc_prefix_beam_search" and "attention_rescoring" decoding mode.
 
 - WER Evaluation
 
