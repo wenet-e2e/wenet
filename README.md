@@ -10,13 +10,27 @@ to reduce the efforts of productizing E2E model, and to explore better E2E model
 
 ## Installation
 
-WeNet requires PyTorch 1.6.0.
+- Clone
+``` sh
+git clone https://github.com/mobvoi/wenet.git
+```
+
+- Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
+- Create conda env: **pytorch 1.6.0** is suggested. We meet some error on NCCL when using 1.7.0 on 2080 Ti.
 
 ``` sh
-# 1. setup your own python3 virtual env, miniconda is recommended.
-# 2. install pytorch: conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
-# 3. install requirements: pip install -r requirements.txt
-# 4. link Kaldi on root directory of this repo: ln -s YOUR_KALDI_PATH kaldi
+conda create -n wenet python=3.8
+conda activate wenet
+pip install -r requirements.txt
+conda install pytorch==1.6.0 cudatoolkit=10.1 -c pytorch
+```
+
+- Install Kaldi: WeNet requries Kaldi to extract feature (a torchaudio version is in developing),
+  please download and build [Kaldi](https://github.com/kaldi-asr/kaldi), then set Kaldi root as:
+
+``` sh
+vim example/aishell/s0/path.sh
+KALDI_ROOT=your_kaldi_root_path
 ```
 
 ## Feature
