@@ -7,7 +7,6 @@ from torch.nn.utils import clip_grad_norm_
 
 
 class Executor:
-
     def __init__(self):
         self.step = 0
 
@@ -84,4 +83,5 @@ class Executor:
                                       batch_idx, num_total_batch, loss.item(),
                                       loss_att.item(), loss_ctc.item(),
                                       total_loss / num_seen_utts))
-        return total_loss / num_seen_utts
+
+        return total_loss, num_seen_utts
