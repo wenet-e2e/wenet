@@ -48,8 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode',
                         choices=[
                             'attention', 'ctc_greedy_search',
-                            'ctc_prefix_beam_search', 'attention_rescoring'
-                        ],
+                            'ctc_prefix_beam_search', 'attention_rescoring'],
                         default='attention',
                         help='decoding mode')
     parser.add_argument('--ctc_weight',
@@ -63,6 +62,9 @@ if __name__ == '__main__':
                                 <0: for decoding, use full chunk.
                                 >0: for decoding, use fixed chunk size as set.
                                 0: used for training, it's prohibited here''')
+    parser.add_argument('--simulate_streaming',
+                        action='store_true',
+                        help='simulate streaming inference')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG,
@@ -111,7 +113,6 @@ if __name__ == '__main__':
         ctc=ctc,
         **configs['model_conf'],
     )
-    print(model)
 
     # Load dict
     char_dict = {}
@@ -140,14 +141,15 @@ if __name__ == '__main__':
                     feats,
                     feats_lengths,
                     beam_size=args.beam_size,
-                    penalty=args.penalty,
-                    decoding_chunk_size=args.decoding_chunk_size)
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    simulate_streaming=args.simulate_streaming)
                 hyps = [hyp.tolist() for hyp in hyps]
             elif args.mode == 'ctc_greedy_search':
                 hyps = model.ctc_greedy_search(
                     feats,
                     feats_lengths,
-                    decoding_chunk_size=args.decoding_chunk_size)
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    simulate_streaming=args.simulate_streaming)
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
             # with other batch decoding mode
@@ -157,7 +159,8 @@ if __name__ == '__main__':
                     feats,
                     feats_lengths,
                     args.beam_size,
-                    decoding_chunk_size=args.decoding_chunk_size)
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    simulate_streaming=args.simulate_streaming)
                 hyps = [hyp]
             elif args.mode == 'attention_rescoring':
                 assert (feats.size(0) == 1)
@@ -166,7 +169,8 @@ if __name__ == '__main__':
                     feats_lengths,
                     args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
-                    ctc_weight=args.ctc_weight)
+                    ctc_weight=args.ctc_weight,
+                    simulate_streaming=args.simulate_streaming)
                 hyps = [hyp]
             for i, key in enumerate(keys):
                 content = ''
