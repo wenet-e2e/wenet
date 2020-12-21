@@ -5,45 +5,50 @@ We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
 and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
 for batch inference.
 
-# Installation
+The main motivation of WeNet is to close the gap between research and production End to End(E2E) speech recognition model,
+to reduce the efforts of productizing E2E model, and to explore better E2E model for production.
 
-WeNet requries PyTorch 1.6.0+.
+## Installation
+
+- Clone
+``` sh
+git clone https://github.com/mobvoi/wenet.git
+```
+
+- Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
+- Create conda env: **pytorch 1.6.0** is suggested. We meet some error on NCCL when using 1.7.0 on 2080 Ti.
 
 ``` sh
-# 1. setup your own python3 virtual env, miniconda is recommended.
-# 2. install pytorch: conda install pytorch torchvision cudatoolkit=10.1 -c pytorch
-# 3. install requriments: pip install -r requirements.txt
-# 4. link Kaldi on root directory of this repo: ln -s YOUR_KALDI_PATH kaldi
+conda create -n wenet python=3.8
+conda activate wenet
+pip install -r requirements.txt
+conda install pytorch==1.6.0 cudatoolkit=10.1 -c pytorch
 ```
 
-# Python code principles
+- Install Kaldi: WeNet requries Kaldi to extract feature (a torchaudio version is in developing),
+  please download and build [Kaldi](https://github.com/kaldi-asr/kaldi), then set Kaldi root as:
 
-We want that our PyTorch model can be directly exported by torch.jit.script method,
-which is essential for deploying the model to production.
-
-See the following resource for how to deploy PyTorch models in production in details.
-- [INTRODUCTION TO TORCHSCRIPT](https://pytorch.org/tutorials/beginner/Intro_to_TorchScript_tutorial.html)
-- [TORCHSCRIPT LANGUAGE REFERENCE](https://pytorch.org/docs/stable/jit_language_reference.html#language-reference)
-- [LOADING A TORCHSCRIPT MODEL IN C++](https://pytorch.org/tutorials/advanced/cpp_export.html)
-- [TorchScript and PyTorch JIT | Deep Dive](https://www.youtube.com/watch?v=2awmrMRf0dA&t=574s)
-- [Research to Production: PyTorch JIT/TorchScript Updates](https://www.youtube.com/watch?v=St3gdHJzic0)
-
-To ensure that, we will try to export the model before training stage.
-If it fails, we should modify the training code to satisfy the export requirements.
-
-``` python
-# See in wenet/bin/train.py
-script_model = torch.jit.script(model)
-script_model.save(os.path.join(args.model_dir, 'init.zip'))
+``` sh
+vim example/aishell/s0/path.sh
+KALDI_ROOT=your_kaldi_root_path
 ```
 
-Two principles should be taken into consideration when we contribute our python code
-to WeNet, especially for the subclass of torch.nn.Module, and for the forward function.
+## Feature
 
-1. Know what is allowed and what is disallowed.
-    - [Torch and Tensor Unsupported Attributes](https://pytorch.org/docs/master/jit_unsupported.html#jit-unsupported)
-    - [Python Language Reference Coverage](https://pytorch.org/docs/master/jit_python_reference.html#python-language-reference)
+* **Light weight**: Wenet is specifically designed for E2E speech recognition,
+  the code of which is clean, simple, and all based on PyTorch and it's corresponding ecosystem.
+* **Production prefered**: The python code of WeNet meets the requirements TorchScript,
+  so the model trained by WeNet can be directly exported by torch JIT, and be inferenced by LibTorch.
+  There is no gap in the research model and prodction model,
+  neither model conversion or additional code is required for model inference.
+* **Production runtime**: WeNet will provide several demos to show how to host WeNet trained models
+  on different platforms, including x86, ARM and Android platforms.
+* **Unified streaming and non-streaming solution**: WeNet implements [Unified Two Pass(U2)](https://arxiv.org/pdf/2012.05481.pdf)
+  framework to give accurate, fast and unified E2E model, which is industry favored.
+* **Well documented**
 
-2. Try to use explicit typing as much as possible. You can try to do type checking
-forced by typeguard, see https://typeguard.readthedocs.io/en/latest/userguide.html for details.
+## Performance
+
+Please see examples/$dataset/s0/README.md for WeNet benchmark on different speech datasets.
+* [AIShell-1](examples/aishell/s0/README.md)
 
