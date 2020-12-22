@@ -8,6 +8,13 @@ for batch inference.
 The main motivation of WeNet is to close the gap between research and production End to End(E2E) speech recognition model,
 to reduce the efforts of productizing E2E model, and to explore better E2E model for production.
 
+## Documentation
+
+You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please see:
+* [Tutorial](docs/tutorial.md)
+* [JIT in WeNet](docs/jit_in_wenet.md)
+
+
 ## Installation
 
 - Clone
