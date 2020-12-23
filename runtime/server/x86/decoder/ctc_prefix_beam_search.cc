@@ -1,13 +1,13 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
+#include <glog/logging.h>
+
 #include <algorithm>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <cmath>
-
-#include <glog/logging.h>
 
 #include "decoder/ctc_prefix_beam_search.h"
 

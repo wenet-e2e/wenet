@@ -1,10 +1,10 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
+#include <gtest/gtest.h>
+
 #include <math.h>
 #include <vector>
-
-#include <gtest/gtest.h>
 
 #include "decoder/ctc_prefix_beam_search.h"
 
