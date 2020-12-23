@@ -4,6 +4,8 @@
 #ifndef WENET_DECODER_TORCH_ASR_MODEL_H_
 #define WENET_DECODER_TORCH_ASR_MODEL_H_
 
+#include <memory>
+#include <string>
 
 namespace wenet {
 
@@ -18,10 +20,10 @@ class TorchAsrModel {
   int sos() const { return sos_; }
   int eos() const { return eos_; }
   // TODO(Binbin Zhang): Refine the design here
-  TorchModule* model() { return &module_; }
+  std::shared_ptr<TorchModule> model() const { return module_; }
 
  private:
-  TorchModule module_;
+  std::shared_ptr<TorchModule> module_ = nullptr;
   int right_context_ = 1;
   int subsampling_rate_ = 1;
   int sos_ = 0;
