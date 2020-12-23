@@ -7,10 +7,16 @@
 #include <torch/torch.h>
 #include <torch/script.h>
 
-DEFINE_int32(num, 10, "int help");
+#include "decoder/torch_asr_model.h"
+
+DEFINE_string(model_path, "", "pytorch exported model path");
 
 int main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-  LOG(INFO) << FLAGS_num;
+  google::ParseCommandLineFlags(&argc, &argv, false);
+  google::InitGoogleLogging(argv[0]);
+  LOG(INFO) << FLAGS_model_path;
+
+  wenet::TorchAsrModel model;
+  model.Read(FLAGS_model_path);
   return 0;
 }

@@ -1,0 +1,33 @@
+// Copyright 2020 Mobvoi Inc. All Rights Reserved.
+// Author: binbinzhang@mobvoi.com (Binbin Zhang)
+
+#ifndef WENET_DECODER_TORCH_ASR_MODEL_H_
+#define WENET_DECODER_TORCH_ASR_MODEL_H_
+
+
+namespace wenet {
+
+using TorchModule = torch::jit::script::Module;
+// A wrapper for pytorch asr model
+class TorchAsrModel {
+ public:
+  TorchAsrModel() = default;
+  void Read(const std::string& model_path);
+  int right_context() const { return right_context_; }
+  int subsampling_rate() const { return subsampling_rate_; }
+  int sos() const { return sos_; }
+  int eos() const { return eos_; }
+  // TODO(Binbin Zhang): Refine the design here
+  TorchModule* model() { return &module_; }
+
+ private:
+  TorchModule module_;
+  int right_context_ = 1;
+  int subsampling_rate_ = 1;
+  int sos_ = 0;
+  int eos_ = 0;
+};
+
+}  // namespace wenet
+
+#endif  // WENET_DECODER_TORCH_ASR_MODEL_H_
