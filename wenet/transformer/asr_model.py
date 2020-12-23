@@ -418,7 +418,7 @@ class ASRModel(torch.nn.Module):
             score = 0.0
             for j, w in enumerate(hyp[0]):
                 score += decoder_out[i][j][w]
-            score += decoder_out[i][len(hyp)][self.eos]
+            score += decoder_out[i][len(hyp[0])][self.eos]
             # add ctc score
             score += hyp[1] * ctc_weight
             if score > best_score:

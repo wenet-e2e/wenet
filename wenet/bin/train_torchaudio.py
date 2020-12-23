@@ -77,9 +77,12 @@ if __name__ == '__main__':
     distributed = args.world_size > 1
 
     # Init dataset and data loader
+    configs['collate_conf']['wav_distortion_rate'] = 0.5
     collate_func = TorchAudioCollateFunc(**configs['collate_conf'])
     cv_collate_conf = copy.copy(configs['collate_conf'])
     cv_collate_conf['spec_aug'] = False
+    cv_collate_conf['add_dither'] = False
+    cv_collate_conf['wav_distortion_rate'] = 0
     cv_collate_func = TorchAudioCollateFunc(**cv_collate_conf)
     dataset_conf = configs.get('dataset_conf', {})
     train_dataset = TorchAudioDataset(args.train_data, **dataset_conf)

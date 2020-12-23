@@ -8,6 +8,7 @@ import sys
 import codecs
 import math
 import numpy as np
+import random
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -16,6 +17,7 @@ from torch.utils.data import Dataset, DataLoader
 from wenet.utils.common import IGNORE_ID
 import torchaudio.compliance.kaldi as kaldi
 import torchaudio
+from wenet.dataset.wav_distortion import distort_wav
 
 def _splice(feats, left_context, right_context):
     """ Splice feature
@@ -92,13 +94,29 @@ FBANK_80_CONFIG={
     'frame_shift': 10,
     }
 
-def _load_from_file(batch,feature_extraction_config):
+def _do_distortion(waveform):
+    r = random.uniform(0, 1)
+    if r < 0.5:
+        return distort_wav('double_jag_distortion', waveform, 0.6)
+    elif r >= 0.5 and r < 0.75:
+        return distort_wav('max_pain', waveform, 0.05)
+    else:
+        return distort_wav('poly_distortion', waveform, 0.5)
+
+def _extract_feature(batch, wav_distortion_rate, feature_extraction_config):
     keys = []
     feats = []
     lengths = []
     for i, x in enumerate(batch):
         try:
             waveform, sample_rate = torchaudio.load_wav(x[1])
+            if wav_distortion_rate > 0.0:
+                r = random.uniform(0, 1)
+                if r < wav_distortion_rate:
+                    waveform = waveform.detach().numpy()
+                    waveform =_do_distortion(waveform)
+                    waveform = torch.from_numpy(waveform)
+
             mat = kaldi.fbank(
             waveform,
             num_mel_bins=feature_extraction_config['mel_bins'],
@@ -111,7 +129,8 @@ def _load_from_file(batch,feature_extraction_config):
             feats.append(mat)
             keys.append(x[0])
             lengths.append(mat.shape[0])
-        except (Exception):
+        except (Exception) as e:
+            print(e)
             logging.warn('read utterance {} error'.format(x[0]))
             pass
     # Sort it because sorting is required in pack/pad operation
@@ -133,6 +152,7 @@ class TorchAudioCollateFunc(object):
                  right_context=0,
                  spec_aug=False,
                  add_dither=True,
+                 wav_distortion_rate = 0.0,
                  feature_extraction_config=FBANK_80_CONFIG):
         '''
         Args:
@@ -145,17 +165,20 @@ class TorchAudioCollateFunc(object):
         self.right_context = right_context
         self.spec_aug = spec_aug
         self.add_dither = add_dither
+        self.wav_distortion_rate = wav_distortion_rate
         self.feature_extraction_config = feature_extraction_config
 
     def __call__(self, batch):
         assert (len(batch) == 1)
-        keys, xs, ys = _load_from_file(batch[0],self.feature_extraction_config)
+        keys, xs, ys = _extract_feature(batch[0], self.wav_distortion_rate, self.feature_extraction_config)
         train_flag = True
         if ys is None:
             train_flag = False
-        # (-0.5, 0.5)dither
+        # add dither d ~ (-a, a) on fbank feature
+        # a ~ (0, 0.5)
         if self.add_dither:
-            xs = [x + np.random.random_sample(x.shape) - 0.5 for x in xs]
+            a = random.uniform(0, 1)
+            xs = [ x + (np.random.random_sample(x.shape) - 0.5) * a for x in xs]
         if self.spec_aug:
             xs = [spec_augmentation(x) for x in xs]
         # optional splice
@@ -170,6 +193,7 @@ class TorchAudioCollateFunc(object):
         # padding
         xs_lengths = torch.from_numpy(
             np.array([x.shape[0] for x in xs], dtype=np.int32))
+
         # pad_sequence will FAIL in case xs is empty
         if len(xs) > 0:
             xs_pad = pad_sequence([torch.from_numpy(x).float() for x in xs],

@@ -8,7 +8,7 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 #export CUDA_VISIBLE_DEVICES="0"
-export CUDA_VISIBLE_DEVICES="6,7"
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 stage=1 # start from 0 if you need to start from data preparation
 stop_stage=1
 # data
@@ -24,10 +24,10 @@ train_set=train
 # 1. conf/train_transformer.yaml: Standard transformer
 # 2. conf/train_conformer.yaml: Standard conformer
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
-train_config=conf/train_conformer_torchaudio.yaml
+train_config=conf/train_conformer_torchaudio_wav_distort.yaml
 checkpoint=
-checkpoint=exp/torchaudio_baseline/48.pt
-dir=exp/torchaudio_baseline
+checkpoint=exp/torchaudio_wav_distort/119.pt
+dir=exp/torchaudio_wav_distort
 
 # use average_checkpoint will get better result
 average_checkpoint=true
