@@ -5,12 +5,12 @@ We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
 and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
 for batch inference.
 
-The main motivation of WeNet is to close the gap between research and production End to End(E2E) speech recognition model,
-to reduce the efforts of productizing E2E model, and to explore better E2E model for production.
+The main motivation of WeNet is to close the gap between research and production End-to-End (E2E) speech recognition models, 
+to reduce the effort of productizing E2E models, and to explore better E2E models for production.
 
 ## Documentation
 
-You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please see:
+You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please see tutorails below:
 * [Tutorial](docs/tutorial.md)
 * [JIT in WeNet](docs/jit_in_wenet.md)
 
@@ -32,27 +32,27 @@ pip install -r requirements.txt
 conda install pytorch==1.6.0 cudatoolkit=10.1 -c pytorch
 ```
 
-- Install Kaldi: WeNet requries Kaldi to extract feature (a torchaudio version is in developing),
-  please download and build [Kaldi](https://github.com/kaldi-asr/kaldi), then set Kaldi root as:
+- Install Kaldi: WeNet requries Kaldi for feature extraction (a TorchAudio version is under development).
+  Please download and build [Kaldi](https://github.com/kaldi-asr/kaldi), then set Kaldi root as:
 
 ``` sh
 vim example/aishell/s0/path.sh
-KALDI_ROOT=your_kaldi_root_path
+KALDI_ROOT=${your_kaldi_root_path}
 ```
 
-## Feature
+## Highlights
 
-* **Light weight**: Wenet is specifically designed for E2E speech recognition,
-  the code of which is clean, simple, and all based on PyTorch and it's corresponding ecosystem.
-* **Production prefered**: The python code of WeNet meets the requirements TorchScript,
-  so the model trained by WeNet can be directly exported by torch JIT, and be inferenced by LibTorch.
-  There is no gap in the research model and prodction model,
-  neither model conversion or additional code is required for model inference.
-* **Production runtime**: WeNet will provide several demos to show how to host WeNet trained models
-  on different platforms, including x86, ARM and Android platforms.
-* **Unified streaming and non-streaming solution**: WeNet implements [Unified Two Pass(U2)](https://arxiv.org/pdf/2012.05481.pdf)
-  framework to give accurate, fast and unified E2E model, which is industry favored.
-* **Well documented**
+* **Light weight**: Wenet is designed specifically for E2E speech recognition,
+  with clean and simple code. It is all based on PyTorch and the corresponding ecosystem.
+* **Production ready**: The python code of WeNet meets the requirements of TorchScript,
+  so the model trained by WeNet can be directly exported by Torch JIT and use LibTorch for inference.
+  There is no gap between the research model and production model.
+  Neither model conversion nor additional code is required for model inference.
+* **Portable runtime**: WeNet will provide several demos to show how to host WeNet trained models
+  on different platforms, including server (x86) and embedded (ARM in Android platforms).
+* **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
+  framework to achieve accurate, fast and unified E2E model, which is favored for industry adoption.
+* **Well documented**: Detailed documentation and tutorials will be provided.
 
 ## Performance
 
