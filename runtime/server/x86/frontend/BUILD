@@ -1,3 +1,13 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = 'frontend',
+    hdrs = ['wav.h'],
+    deps = [
+        'feature_pipeline',
+    ],
+)
+
 cc_library(
     name = 'fft',
     srcs = ['fft.cc'],

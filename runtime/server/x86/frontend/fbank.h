@@ -133,11 +133,12 @@ class Fbank {
   }
 
   // Compute fbank feat, return num frames
-  int Compute(const std::vector<float>& wave, std::vector<float>* feat) {
+  int Compute(const std::vector<float>& wave,
+              std::vector<std::vector<float> >* feat) {
     int num_samples = wave.size();
     if (num_samples < frame_length_) return 0;
     int num_frames = 1 + ((num_samples - frame_length_) / frame_shift_);
-    feat->resize(num_frames * num_bins_);
+    feat->resize(num_frames);
     std::vector<float> fft_real(fft_points_, 0), fft_img(fft_points_, 0);
     std::vector<float> power(fft_points_ / 2);
     for (int i = 0; i < num_frames; i++) {
@@ -168,6 +169,7 @@ class Fbank {
         power[j] = fft_real[j] * fft_real[j] + fft_img[j] * fft_img[j];
       }
 
+      (*feat)[i].resize(num_bins_);
       // cepstral coefficients, triangle filter array
       for (int j = 0; j < num_bins_; j++) {
         float mel_energy = 0.0;
@@ -182,7 +184,7 @@ class Fbank {
           mel_energy = logf(mel_energy);
         }
 
-        (*feat)[i * num_bins_ + j] = mel_energy;
+        (*feat)[i][j] = mel_energy;
         // printf("%f ", mel_energy);
       }
       // printf("\n");

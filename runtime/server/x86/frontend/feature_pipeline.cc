@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <utility>
 
 #include "frontend/feature_pipeline.h"
 
@@ -20,90 +21,48 @@ namespace wenet {
 
 FeaturePipeline::FeaturePipeline(const FeaturePipelineConfig& config):
     config_(config),
-    left_context_(config.left_context),
-    right_context_(config.right_context),
-    raw_feat_dim_(config.num_bins),
+    feature_dim_(config.num_bins),
     fbank_(config.num_bins, config.sample_rate,
            config.frame_length, config.frame_shift),
     num_frames_(0),
-    done_(false) {
+    input_finished_(false) {
 }
 
-void FeaturePipeline::AcceptRawWav(const std::vector<float>& wav) {
-  std::vector<float> feat;
+void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
+  std::vector<std::vector<float> > feats;
   std::vector<float> waves;
-  waves.insert(waves.end(), ctx_wav_.begin(), ctx_wav_.end());
+  waves.insert(waves.end(), remained_wav_.begin(), remained_wav_.end());
   waves.insert(waves.end(), wav.begin(), wav.end());
-  int num_frames = fbank_.Compute(waves, &feat);
-  if (feature_buf_.size() == 0 && left_context_ > 0) {
-    for (int i = 0; i < left_context_; i++) {
-      feature_buf_.insert(feature_buf_.end(), feat.begin(),
-                          feat.begin() + raw_feat_dim_);
-    }
+  int num_frames = fbank_.Compute(waves, &feats);
+  for (size_t i = 0; i < feats.size(); i++) {
+    feature_queue_.push(std::move(feats[i]));
   }
-  feature_buf_.insert(feature_buf_.end(), feat.begin(), feat.end());
   num_frames_ += num_frames;
 
   int left_samples = waves.size() - config_.frame_shift * num_frames;
-  ctx_wav_.resize(left_samples);
+  remained_wav_.resize(left_samples);
   std::copy(waves.begin() + config_.frame_shift * num_frames,
-            waves.end(), ctx_wav_.begin());
+            waves.end(), remained_wav_.begin());
 }
 
-int FeaturePipeline::NumFramesReady() const {
-  if (num_frames_ < right_context_) return 0;
-  if (done_) {
-    return num_frames_;
-  } else {
-    return num_frames_ - right_context_;
+int FeaturePipeline::Read(int num_frames,
+                          std::vector<std::vector<float> > *feats) {
+  feats->clear();
+  while (feats->size() < num_frames && !feature_queue_.empty()) {
+    feats->push_back(std::move(feature_queue_.back()));
+    feature_queue_.pop();
   }
+
+  return 0;
 }
 
-void FeaturePipeline::SetDone() {
-  CHECK(!done_);
-  done_ = true;
-  if (num_frames_ == 0) return;
-  // copy last frames to buffer
-  std::vector<float> last_feat(feature_buf_.end() - raw_feat_dim_,
-                               feature_buf_.end());
-  for (int i = 0; i < right_context_; i++) {
-    feature_buf_.insert(feature_buf_.end(), last_feat.begin(), last_feat.end());
+void FeaturePipeline::Reset() {
+  input_finished_ = false;
+  num_frames_ = 0;
+  while (!feature_queue_.empty()) {
+    feature_queue_.pop();
   }
-}
-
-int FeaturePipeline::ReadFeature(int t, std::vector<float>* feat) {
-  CHECK(t < num_frames_);
-  int num_frames_ready = NumFramesReady();
-  if (num_frames_ready <= 0) return 0;
-  int total_frame = num_frames_ready - t;
-  int feat_dim = (left_context_ + 1 + right_context_) * raw_feat_dim_;
-  feat->resize(total_frame * feat_dim);
-  for (int i = t; i < num_frames_ready; i++) {
-    memcpy(feat->data() + (i - t) * feat_dim,
-           feature_buf_.data() + i * raw_feat_dim_,
-           sizeof(float) * feat_dim);
-  }
-  return total_frame;
-}
-
-int FeaturePipeline::ReadOneFrame(int t, float *data) {
-  CHECK(data != nullptr);
-  CHECK(t < num_frames_);
-  int num_frames_ready = NumFramesReady();
-  if (num_frames_ready <= 0) return 0;
-  CHECK(t <= num_frames_ready);
-  int feat_dim = (left_context_ + 1 + right_context_) * raw_feat_dim_;
-  memcpy(data, feature_buf_.data() + t * raw_feat_dim_,
-         sizeof(float) * feat_dim);
-  return 1;
-}
-
-int FeaturePipeline::ReadAllFeature(std::vector<float> *feat) {
-  return ReadFeature(0, feat);
-}
-
-int FeaturePipeline::NumFrames(int size) const {
-  return 1 + (size - config_.frame_length) / config_.frame_shift;
+  remained_wav_.clear();
 }
 
 }  // namespace wenet
