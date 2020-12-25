@@ -32,16 +32,19 @@ cc_library(
 cc_library(
     name = 'torch_asr_decoder',
     srcs = ['torch_asr_decoder.cc'],
-    hdrs = ['torch_asr_decoder.h'],
+    hdrs = ['torch_asr_decoder.h', 'symbol_table.h'],
     deps = [
 		"@com_github_google_glog//:glog",
         "@libtorch//:torch",
+        "//frontend:frontend",
+        ":torch_asr_model",
+        ":ctc_prefix_beam_search",
     ],
 )
 
 cc_library(
     name = 'decoder',
     deps = [
-        ":torch_asr_model",
+        ":torch_asr_decoder",
     ],
 )

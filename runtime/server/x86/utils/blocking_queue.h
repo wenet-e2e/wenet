@@ -56,7 +56,7 @@ class BlockingQueue {
     while (queue_.empty()) {
       not_empty_condition_.wait(lock);
     }
-    T t(std::move(queue_.back()));
+    T t(std::move(queue_.front()));
     queue_.pop();
     not_full_condition_.notify_one();
     return t;
