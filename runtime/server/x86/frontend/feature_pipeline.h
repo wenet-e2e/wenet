@@ -18,6 +18,7 @@
 #include <vector>
 #include <queue>
 
+#include "utils/blocking_queue.h"
 #include "frontend/fbank.h"
 
 #ifndef WENET_FRONTEND_FEATURE_PIPELINE_H_
@@ -45,20 +46,32 @@ struct FeaturePipelineConfig {
   }
 };
 
+// Typically, FeaturePipeline is used in two threads: one thread call
+// AcceptWaveform() to add raw wav data, another thread call Read() to read
+// feature. so it is important to make it thread safe, and the Read() call
+// should be a blocking call when there is no feature in feature_queue_ while
+// the input is not finished.
+
 class FeaturePipeline {
  public:
   explicit FeaturePipeline(const FeaturePipelineConfig& config);
 
   void AcceptWaveform(const std::vector<float>& wav);
   int NumFramesReady() const { return num_frames_; }
-  void InputFinished() {
+  void set_input_finished() {
     CHECK(!input_finished_);
     input_finished_ = true;
   }
-  int FeatureDim() const {
+  int feature_dim() const {
     return feature_dim_;
   }
-  int Read(int num_frames, std::vector<std::vector<float> >* feats);
+
+  // Return false if input_finished_ and there is no feature left in
+  // feature_queue_
+  bool ReadOne(std::vector<float> *feat);
+  // Return value is the same to ReadOne
+  bool Read(int num_frames, std::vector<std::vector<float> >* feats);
+
   void Reset();
   bool IsLastFrame(int frame) const {
     return input_finished_ && (frame == num_frames_ - 1);
@@ -68,8 +81,8 @@ class FeaturePipeline {
   const FeaturePipelineConfig &config_;
   int feature_dim_;
   Fbank fbank_;
-  // Feature queue
-  std::queue<std::vector<float> > feature_queue_;
+
+  BlockingQueue<std::vector<float> > feature_queue_;
   int num_frames_;
   bool input_finished_;
   std::vector<float> remained_wav_;

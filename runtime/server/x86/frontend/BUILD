@@ -21,5 +21,6 @@ cc_library(
     deps = [
         ":fft",
         "@com_github_google_glog//:glog",
+        "//utils:utils",
     ],
 )

@@ -35,7 +35,7 @@ void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
   waves.insert(waves.end(), wav.begin(), wav.end());
   int num_frames = fbank_.Compute(waves, &feats);
   for (size_t i = 0; i < feats.size(); i++) {
-    feature_queue_.push(std::move(feats[i]));
+    feature_queue_.Push(std::move(feats[i]));
   }
   num_frames_ += num_frames;
 
@@ -45,24 +45,34 @@ void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
             waves.end(), remained_wav_.begin());
 }
 
-int FeaturePipeline::Read(int num_frames,
-                          std::vector<std::vector<float> > *feats) {
-  feats->clear();
-  while (feats->size() < num_frames && !feature_queue_.empty()) {
-    feats->push_back(std::move(feature_queue_.back()));
-    feature_queue_.pop();
+bool FeaturePipeline::ReadOne(std::vector<float> *feat) {
+  if (input_finished_ && feature_queue_.Empty()) {
+    return false;
+  } else {
+    *feat = std::move(feature_queue_.Pop());
+    return true;
   }
+}
 
-  return 0;
+bool FeaturePipeline::Read(int num_frames,
+                           std::vector<std::vector<float> > *feats) {
+  feats->clear();
+  std::vector<float> feat;
+  while (feats->size() < num_frames) {
+    if (ReadOne(&feat)) {
+      feats->push_back(std::move(feat));
+    } else {
+      return false;
+    }
+  }
+  return true;
 }
 
 void FeaturePipeline::Reset() {
   input_finished_ = false;
   num_frames_ = 0;
-  while (!feature_queue_.empty()) {
-    feature_queue_.pop();
-  }
   remained_wav_.clear();
+  feature_queue_.Clear();
 }
 
 }  // namespace wenet
