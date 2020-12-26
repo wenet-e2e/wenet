@@ -102,11 +102,11 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     ctc_prefix_beam_searcher_->Search(ctc_log_probs);
     auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
     const std::vector<int>& best_hyp = hypotheses[0];
-    hyp_ = "";
+    result_ = "";
     for (size_t i = 0; i < best_hyp.size(); i++) {
-      hyp_ += symbol_table_.Find(best_hyp[i]);
+      result_ += symbol_table_.Find(best_hyp[i]);
     }
-    LOG(INFO) << "Partial CTC result " << hyp_;
+    VLOG(1) << "Partial CTC result " << result_;
 
     // 3. cache feature for next chunk
     if (!finish) {
@@ -127,7 +127,73 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   return finish;
 }
 
+static bool CompareFunc(const std::pair<int, float>& a,
+                        const std::pair<int, float>& b) {
+  return a.second > b.second;
+}
+
 void TorchAsrDecoder::AttentionRescoring() {
+  int sos = model_->sos();
+  int eos = model_->eos();
+  auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  size_t num_hyps = hypotheses.size();
+  torch::NoGradGuard no_grad;
+  // Step 1: Prepare input for libtorch
+  torch::Tensor hyps_length = torch::zeros({num_hyps}, torch::kLong);
+  size_t max_hyps_len = 0;
+  for (size_t i = 0; i < num_hyps; i++) {
+    size_t length = hypotheses[i].size() + 1;
+    max_hyps_len = std::max(length, max_hyps_len);
+    hyps_length[i] = static_cast<int64_t>(length);
+  }
+  torch::Tensor hyps_tensor = torch::zeros({num_hyps, max_hyps_len},
+                                           torch::kLong);
+  for (size_t i = 0; i < num_hyps; i++) {
+    const std::vector<int>& hyp = hypotheses[i];
+    hyps_tensor[i][0] = sos;
+    for (size_t j = 0; j < hyp.size(); j++) {
+      hyps_tensor[i][j+1] = hyp[j];
+    }
+  }
+
+  // Step 2: forward attention decoder by hyps and corresponding encoder_out_
+  torch::Tensor probs = model_->torch_model()->run_method(
+      "forward_attention_decoder",
+      hyps_tensor,
+      hyps_length,
+      encoder_out_).toTensor();
+  CHECK_EQ(probs.size(0), num_hyps);
+  CHECK_EQ(probs.size(1), max_hyps_len);
+
+  // Step 3: Compute rescoring score
+  // (id, score) pair for later sort
+  std::vector<std::pair<int, float> > weighted_scores(num_hyps);
+  for (size_t i = 0; i < num_hyps; i++) {
+    const std::vector<int>& hyp = hypotheses[i];
+    float score = 0.0f;
+    for (size_t j = 0; j < hyp.size(); j++) {
+      score += probs[i][j][hyp[j]].item<float>();
+    }
+    score += probs[i][hyp.size()][eos].item<float>();
+    // TODO(Binbin Zhang): Combine CTC and attention decoder score
+    weighted_scores[i].first = i;
+    weighted_scores[i].second = score;
+  }
+
+  std::sort(weighted_scores.begin(), weighted_scores.end(), CompareFunc);
+  for (size_t i = 0; i < weighted_scores.size(); i++) {
+    std::string result;
+    int best_k = weighted_scores[i].first;
+    for (size_t j = 0; j < hypotheses[best_k].size(); j++) {
+      result += symbol_table_.Find(hypotheses[best_k][j]);
+    }
+    VLOG(1) << "ctc index " << best_k
+            << " result " << result
+            << " score " << weighted_scores[i].second;
+    if (0 == i) {
+      result_ = result;
+    }
+  }
 }
 
 }  // namespace wenet

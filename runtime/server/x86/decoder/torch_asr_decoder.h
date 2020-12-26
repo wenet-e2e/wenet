@@ -36,6 +36,7 @@ class TorchAsrDecoder {
   // Return true if all feature has been decoded, else return false
   bool Decode();
   void Reset();
+  std::string result() const { return result_; }
 
  private:
   // Return true if we reach the end of the feature pipeline
@@ -59,7 +60,7 @@ class TorchAsrDecoder {
 
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
 
-  std::string hyp_;
+  std::string result_;
 };
 
 }  // namespace wenet

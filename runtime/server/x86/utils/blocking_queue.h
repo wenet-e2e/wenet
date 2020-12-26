@@ -26,7 +26,7 @@ namespace wenet {
 template <typename T>
 class BlockingQueue {
  public:
-  explicit BlockingQueue(int capacity = std::numeric_limits<int>::max()):
+  explicit BlockingQueue(size_t capacity = std::numeric_limits<int>::max()):
     capacity_(capacity) {}
 
   void Push(T const& value) {
@@ -79,7 +79,7 @@ class BlockingQueue {
   }
 
  private:
-  int capacity_;
+  size_t capacity_;
   mutable std::mutex              mutex_;
   std::condition_variable not_full_condition_;
   std::condition_variable not_empty_condition_;

@@ -45,7 +45,10 @@ int main(int argc, char* argv[]) {
   while (true) {
     bool finish = decoder.Decode();
     if (finish) {
+      LOG(INFO) << "Final result: " << decoder.result();
       break;
+    } else {
+      LOG(INFO) << "Partial result: " << decoder.result();
     }
   }
   return 0;
