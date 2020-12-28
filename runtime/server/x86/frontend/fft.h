@@ -1,7 +1,7 @@
 // Copyright (c) 2016 HR
 
-#ifndef WENET_FRONTEND_FFT_H_
-#define WENET_FRONTEND_FFT_H_
+#ifndef FRONTEND_FFT_H_
+#define FRONTEND_FFT_H_
 
 #include <string.h>
 #include <stdlib.h>
@@ -18,6 +18,6 @@ int fft(float* x, float* y, int n);
 
 }  // namespace wenet
 
-#endif  // WENET_FRONTEND_FFT_H_
+#endif  // FRONTEND_FFT_H_
 
 

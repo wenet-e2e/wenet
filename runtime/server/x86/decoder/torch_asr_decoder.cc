@@ -1,6 +1,7 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
+#include <algorithm>
 #include <limits>
 #include <utility>
 

@@ -1,8 +1,8 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
-#ifndef WENET_DECODER_CTC_PREFIX_BEAM_SEARCH_H_
-#define WENET_DECODER_CTC_PREFIX_BEAM_SEARCH_H_
+#ifndef DECODER_CTC_PREFIX_BEAM_SEARCH_H_
+#define DECODER_CTC_PREFIX_BEAM_SEARCH_H_
 
 #include <torch/torch.h>
 #include <torch/script.h>
@@ -67,4 +67,4 @@ class CtcPrefixBeamSearch {
 
 }  // namespace wenet
 
-#endif  // WENET_DECODER_CTC_PREFIX_BEAM_SEARCH_H_
+#endif  // DECODER_CTC_PREFIX_BEAM_SEARCH_H_

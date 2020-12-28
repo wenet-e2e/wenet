@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef WAV_H_
-#define WAV_H_
+#ifndef FRONTEND_WAV_H_
+#define FRONTEND_WAV_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -185,4 +185,4 @@ class WavWriter {
 
 }  // namespace wenet
 
-#endif  // WAV_H_
+#endif  // FRONTEND_WAV_H_

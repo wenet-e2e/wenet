@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef WENET_UTILS_BLOCKING_QUEUE_H_
-#define WENET_UTILS_BLOCKING_QUEUE_H_
+#ifndef UTILS_BLOCKING_QUEUE_H_
+#define UTILS_BLOCKING_QUEUE_H_
 
 #include <queue>
 #include <limits>
@@ -88,4 +88,4 @@ class BlockingQueue {
 
 }  // namespace wenet
 
-#endif  // WENET_UTILS_BLOCKING_QUEUE_H_
+#endif  // UTILS_BLOCKING_QUEUE_H_

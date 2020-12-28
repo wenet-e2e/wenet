@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SYMBOL_TABLE_H_
-#define SYMBOL_TABLE_H_
+#ifndef DECODER_SYMBOL_TABLE_H_
+#define DECODER_SYMBOL_TABLE_H_
 
 #include <stdio.h>
 
@@ -64,4 +64,4 @@ class SymbolTable {
 
 }  // namespace wenet
 
-#endif  // SYMBOL_TABLE_H_
+#endif  // DECODER_SYMBOL_TABLE_H_

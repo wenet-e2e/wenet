@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef WENET_FRONTEND_FBANK_H_
-#define WENET_FRONTEND_FBANK_H_
+#ifndef FRONTEND_FBANK_H_
+#define FRONTEND_FBANK_H_
 
 #include <assert.h>
 
@@ -209,4 +209,4 @@ class Fbank {
 
 }  // namespace wenet
 
-#endif  // FBANK_H_
+#endif  // FRONTEND_FBANK_H_

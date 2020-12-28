@@ -21,8 +21,8 @@
 #include "utils/blocking_queue.h"
 #include "frontend/fbank.h"
 
-#ifndef WENET_FRONTEND_FEATURE_PIPELINE_H_
-#define WENET_FRONTEND_FEATURE_PIPELINE_H_
+#ifndef FRONTEND_FEATURE_PIPELINE_H_
+#define FRONTEND_FEATURE_PIPELINE_H_
 
 namespace wenet {
 
@@ -90,6 +90,6 @@ class FeaturePipeline {
 
 }  // namespace wenet
 
-#endif  // WENET_FRONTEND_FEATURE_PIPELINE_H_
+#endif  // FRONTEND_FEATURE_PIPELINE_H_
 
 
