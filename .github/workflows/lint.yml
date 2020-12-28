@@ -69,5 +69,13 @@ jobs:
           pip install cpplint
           cpplint --version
           cpplint --recursive . | tee ${GITHUB_WORKSPACE}/cpplint-output.txt
-
+      - name: Add annotations
+        uses: pytorch/add-annotations-github-action@master
+        with:
+          check_name: 'cpplint'
+          linter_output_path: 'cpplint'
+          commit_sha: ${{ steps.get_pr_tip.outputs.commit_sha }}
+          regex: '^(?<filename>.*?):(?<lineNumber>\d+): (?<errorDesc>.*)'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
