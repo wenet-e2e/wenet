@@ -19,6 +19,7 @@ void TorchAsrModel::Read(const std::string& model_path) {
   at::set_num_threads(1);
   at::set_num_interop_threads(1);
   torch::NoGradGuard no_grad;
+  module_->eval();
   torch::jit::IValue o1 = module_->run_method("subsampling_rate");
   CHECK_EQ(o1.isInt(), true);
   subsampling_rate_ = o1.toInt();
