@@ -2,3 +2,5 @@ flake8
 pyyaml
 tensorboardX
 typeguard
+Pillow
+sentencepiece

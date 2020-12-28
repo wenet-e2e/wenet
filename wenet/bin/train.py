@@ -78,7 +78,9 @@ if __name__ == '__main__':
     distributed = args.world_size > 1
 
     # Init dataset and data loader
-    collate_func = CollateFunc(**configs['collate_conf'], cmvn=args.cmvn)
+    collate_func = CollateFunc(**configs['collate_conf'],
+                               **configs['spec_aug_conf'],
+                               cmvn=args.cmvn)
     cv_collate_conf = copy.copy(configs['collate_conf'])
     cv_collate_conf['spec_aug'] = False
     cv_collate_func = CollateFunc(**cv_collate_conf, cmvn=args.cmvn)
