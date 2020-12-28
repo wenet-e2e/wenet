@@ -4,19 +4,17 @@
 import argparse
 import logging
 import random
-import sys
 import codecs
-import math
 import numpy as np
 import random
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
-
-from wenet.utils.common import IGNORE_ID
 import torchaudio.compliance.kaldi as kaldi
 import torchaudio
+
+from wenet.utils.common import IGNORE_ID
 from wenet.dataset.wav_distortion import distort_wav
 
 def _splice(feats, left_context, right_context):
@@ -87,26 +85,36 @@ def spec_augmentation(x,
         y[:, start:end] = 0
     return y
 
+def _do_waveform_distortion(waveform, distortion_methods_conf):
+    r = random.uniform(0, 1)
+    acc = 0.0
+    for distortion_method in distortion_methods_conf:
+        method_rate = distortion_method['method_rate']
+        acc + = method_rate
+        if r < acc:
+            distortion_type = distortion_method['name']
+            distortion_conf = distortion_method['conf']
+            point_rate = distortion_method['point_rate']
+            return distort_wav_conf(waveform, distortion_type, distortion_conf , point_rate)
+    return waveform
 
-FBANK_80_CONFIG={
-    'mel_bins': 80,
-    'frame_length': 25,
-    'frame_shift': 10,
-    }
 
-def _do_distortion(waveform):
+def old_do_waveform_distortion(waveform, distortion_methods_conf):
     r = random.uniform(0, 1)
     if r < 0.5:
-        return distort_wav('double_jag_distortion', waveform, 0.6)
+        return distort_wav('jag_distortion', waveform, 0.6)
     elif r >= 0.5 and r < 0.75:
-        return distort_wav('max_pain', waveform, 0.05)
+        return distort_wav('max_distortion', waveform, 0.05)
     else:
         return distort_wav('poly_distortion', waveform, 0.5)
 
-def _extract_feature(batch, wav_distortion_rate, feature_extraction_config):
+def _extract_feature(batch, wav_distortion_conf, feature_extraction_conf):
     keys = []
     feats = []
     lengths = []
+    wav_distortion_rate = wav_distortion_conf['wav_distortion_rate']
+    distortion_methods_conf= wav_distortion_conf['distortion_methods']
+
     for i, x in enumerate(batch):
         try:
             waveform, sample_rate = torchaudio.load_wav(x[1])
@@ -114,17 +122,18 @@ def _extract_feature(batch, wav_distortion_rate, feature_extraction_config):
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
                     waveform = waveform.detach().numpy()
-                    waveform =_do_distortion(waveform)
+                    waveform =_do_waveform_distortion(waveform, distortion_methods_conf)
                     waveform = torch.from_numpy(waveform)
-
-            mat = kaldi.fbank(
-            waveform,
-            num_mel_bins=feature_extraction_config['mel_bins'],
-            frame_length=feature_extraction_config['frame_length'],
-            frame_shift=feature_extraction_config['frame_shift'],
-            dither=0.0,
-            energy_floor=0.0
-            )
+            if feature_extraction_conf['feature_type'] = 'fbank':
+                mat = kaldi.fbank(
+                waveform,
+                num_mel_bins=feature_extraction_conf['mel_bins'],
+                frame_length=feature_extraction_conf['frame_length'],
+                frame_shift=feature_extraction_conf['frame_shift'],
+                dither=0.0,
+                energy_floor=0.0
+                )
+            else
             mat = mat.detach().numpy()
             feats.append(mat)
             keys.append(x[0])
@@ -147,37 +156,37 @@ class TorchAudioCollateFunc(object):
     ''' Collate function for AudioDataset
     '''
     def __init__(self,
+                 feature_extraction_conf,
+                 wav_distortion_conf,
                  subsampling_factor=1,
                  left_context=0,
                  right_context=0,
                  spec_aug=False,
-                 add_dither=True,
-                 wav_distortion_rate = 0.0,
-                 feature_extraction_config=FBANK_80_CONFIG):
+                 feature_dither= 0.0):
         '''
         Args:
             subsampling_factor: subsampling_factor for feature
             left_context: left context for splice feature
             right_context: right_context for splice feature
         '''
+        self.wav_distortion_conf = wav_distortion_conf
+        self.feature_extraction_conf = feature_extraction_conf
         self.subsampling_factor = subsampling_factor
         self.left_context = left_context
         self.right_context = right_context
         self.spec_aug = spec_aug
-        self.add_dither = add_dither
-        self.wav_distortion_rate = wav_distortion_rate
-        self.feature_extraction_config = feature_extraction_config
+        self.feature_dither = feature_dither
 
     def __call__(self, batch):
         assert (len(batch) == 1)
-        keys, xs, ys = _extract_feature(batch[0], self.wav_distortion_rate, self.feature_extraction_config)
+        keys, xs, ys = _extract_feature(batch[0], self.wav_distortion_conf, self.feature_extraction_conf)
         train_flag = True
         if ys is None:
             train_flag = False
         # add dither d ~ (-a, a) on fbank feature
         # a ~ (0, 0.5)
-        if self.add_dither:
-            a = random.uniform(0, 1)
+        if self.feature_dither != 0.0:
+            a = random.uniform(0, feature_dither)
             xs = [ x + (np.random.random_sample(x.shape) - 0.5) * a for x in xs]
         if self.spec_aug:
             xs = [spec_augmentation(x) for x in xs]
@@ -212,7 +221,7 @@ class TorchAudioCollateFunc(object):
             ys_pad = None
             ys_lengths = None
         return keys, xs_pad, ys_pad, xs_lengths, ys_lengths
-
+ 
 
 class TorchAudioDataset(Dataset):
     def __init__(self,
@@ -260,7 +269,7 @@ class TorchAudioDataset(Dataset):
                 wav_path = ':'.join(arr[1].split(':')[1:])
                 duration = int(float(arr[2].split(':')[1]) *1000) # to milliseconds
                 tokenid = arr[5].split(':')[1]
-                self.input_dim = FBANK_80_CONFIG['mel_bins']
+                #self.input_dim = FBANK_80_CONFIG['mel_bins']
                 output_dim = int(arr[6].split(':')[1].split(',')[1])
                 data.append((key, wav_path, duration, tokenid))
                 self.output_dim = output_dim

@@ -45,7 +45,7 @@ dataset_conf:
     max_length: 10240
     min_length: 0
     batch_type: 'static' # static or dynamic
-    batch_size: 20
+    batch_size: 15
     sort: true
 
 grad_clip: 5

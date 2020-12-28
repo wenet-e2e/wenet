@@ -12,7 +12,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 stage=1 # start from 0 if you need to start from data preparation
 stop_stage=1
 # data
-data=/export/data/asr-data/OpenSLR/33/
+data=/export/expts4/chaoyang/
 data_url=www.openslr.org/resources/33
 
 nj=16
@@ -26,7 +26,7 @@ train_set=train
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 train_config=conf/train_conformer_torchaudio_wav_distort.yaml
 checkpoint=
-checkpoint=exp/torchaudio_wav_distort/119.pt
+checkpoint=exp/torchaudio_wav_distort/140.pt
 dir=exp/torchaudio_wav_distort
 
 # use average_checkpoint will get better result

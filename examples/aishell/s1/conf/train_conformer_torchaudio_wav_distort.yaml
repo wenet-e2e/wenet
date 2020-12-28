@@ -38,22 +38,62 @@ model_conf:
 
 # feature extraction
 collate_conf:
-    wav_distortion_rate: 0.5
+    wav_distortion_rate: 0.7
     spec_aug: true
     add_dither: true
 
-# collate_conf:
-#     feature_conf:
-#         feature_type: 'fbank'
-#         mel_bins: 80
-#         frame_shift: 10
-#         frame_length: 25
-#         using_pitch: false
-#     wav_dither: 0.0 # add dither [-wav_dither,wav_dither] on wavform
-#     feature_dither: 0.0 # add dither [-wav_dither,wav_dither] on fbank feature
-#     wav_distortion_rate: 0.5
-#     spec_swap: false
-#     spec_aug: true
+collate_conf:
+    feature_extraction_conf:
+        feature_type: 'fbank'
+        mel_bins: 80
+        frame_shift: 10
+        frame_length: 25
+        using_pitch: false
+    wav_distortion_conf:
+        wav_distortion_rate: 0.5
+        distortion_methods:
+            - name: jag_distortion
+              method_rate: 0.2
+              point_rate: 0.2
+              params:
+                mask_number: 4
+            - name: jag_distortion
+              method_rate: 0.1
+              point_rate: 0.2
+              params:
+                mask_number: 3
+            - name: jag_distortion
+              method_rate: 0.1
+              point_rate: 0.2
+              params:
+                mask_number: 2
+            - name: fence_distortion
+              method_rate: 0.2
+              point_rate: 0.1
+              params:
+                mask_number: 4
+                max_db: -20
+            - name: max_distortion
+              method_rate: 0.2
+              point_rate: 0.1
+              params:
+            - name: poly_distortion
+              method_rate: 0.1
+              point_rate: 0.95
+              params:
+                a: -0.5
+                m: 1
+                n: 1
+            - name: poly_distortion
+              method_rate: 0.1
+              point_rate: 0.1
+              params:
+                a: 6
+                m: 2
+                n: 2
+    feature_dither: 0.1 # add dither [-feature_dither,feature_dither] on fbank feature
+    #spec_swap: false
+    spec_aug: true
 
 # dataset related
 dataset_conf:

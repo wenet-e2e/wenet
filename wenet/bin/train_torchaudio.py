@@ -77,9 +77,9 @@ if __name__ == '__main__':
     distributed = args.world_size > 1
 
     # Init dataset and data loader
-    configs['collate_conf']['wav_distortion_rate'] = 0.5
     collate_func = TorchAudioCollateFunc(**configs['collate_conf'])
     cv_collate_conf = copy.copy(configs['collate_conf'])
+    # use raw wav of validation set
     cv_collate_conf['spec_aug'] = False
     cv_collate_conf['add_dither'] = False
     cv_collate_conf['wav_distortion_rate'] = 0
@@ -87,6 +87,9 @@ if __name__ == '__main__':
     dataset_conf = configs.get('dataset_conf', {})
     train_dataset = TorchAudioDataset(args.train_data, **dataset_conf)
     cv_dataset = TorchAudioDataset(args.cv_data, **dataset_conf)
+
+    # wenet does not use power and pitch feature.
+    input_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
 
     if distributed:
         logging.info('training on multiple gpu, this gpu {}'.format(args.gpu))
@@ -112,7 +115,7 @@ if __name__ == '__main__':
                                 num_workers=0)
 
     # Init transformer model
-    input_dim = train_dataset.input_dim
+    #input_dim = train_dataset.input_dim
     vocab_size = train_dataset.output_dim
     # Save configs to model_dir/train.yaml for inference and export
     if args.rank == 0:
@@ -189,14 +192,11 @@ if __name__ == '__main__':
     executor.step = step
     scheduler.set_step(step)
     for epoch in range(start_epoch, num_epochs):
-        #lr = optimizer.param_groups[0]['lr']
-        #if False:
         if distributed:
             train_sampler.set_epoch(epoch)
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
-        executor.train(model, optimizer, scheduler, train_data_loader, device,
-                    writer, configs)
+        executor.train(model, optimizer, scheduler, train_data_loader, device, writer, configs)
         if args.rank == 0:
             cv_loss = executor.cv(model, cv_data_loader, device, configs)
             logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
