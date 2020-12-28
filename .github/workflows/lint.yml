@@ -73,7 +73,7 @@ jobs:
         uses: pytorch/add-annotations-github-action@master
         with:
           check_name: 'cpplint'
-          linter_output_path: 'cpplint'
+          linter_output_path: 'cpplint-output.txt'
           commit_sha: ${{ steps.get_pr_tip.outputs.commit_sha }}
           regex: '^(?<filename>.*?):(?<lineNumber>\d+): (?<errorDesc>.*)'
         env:
