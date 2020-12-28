@@ -12,6 +12,8 @@ import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
+from PIL import Image
+from PIL.Image import BICUBIC
 
 import wenet.dataset.kaldi_io as kaldi_io
 from wenet.utils.common import IGNORE_ID
@@ -53,10 +55,12 @@ def _splice(feats, left_context, right_context):
 
 def spec_augmentation(x,
                       gauss_mask_for_t=False,
+                      warp_for_time=False,
                       num_t_mask=2,
                       num_f_mask=2,
-                      max_t=50,
-                      max_f=10):
+                      max_t=40,
+                      max_f=30,
+                      max_w=80):
     ''' Deep copy x and do spec augmentation then return it
     Args:
         x: input feature, T * F 2D
@@ -70,6 +74,18 @@ def spec_augmentation(x,
     y = np.copy(x)
     max_frames = y.shape[0]
     max_freq = y.shape[1]
+
+    # time warp
+    if warp_for_time and max_frames > max_w * 2:
+        center = random.randrange(max_w, max_frames - max_w)
+        warped = random.randrange(center - max_w, center + max_w) + 1
+
+        left = Image.fromarray(x[:center]).resize((max_freq, warped), BICUBIC)
+        right = Image.fromarray(x[center:]).resize((max_freq, 
+                                                   max_frames - warped),
+                                                   BICUBIC)
+        y = np.concatenate((left, right), 0)
+    # time mask
     for i in range(num_t_mask):
         start = random.randint(0, max_frames - 1)
         length = random.randint(1, max_t)
@@ -78,6 +94,7 @@ def spec_augmentation(x,
             y[start:end, :] = np.random.randn(end - start, max_freq)
         else:
             y[start:end, :] = 0
+    # freq mask
     for i in range(num_f_mask):
         start = random.randint(0, max_freq - 1)
         length = random.randint(1, max_f)
@@ -156,7 +173,14 @@ class CollateFunc(object):
                  right_context=0,
                  spec_aug=False,
                  norm_mean=False,
-                 norm_var=False):
+                 norm_var=False,
+                 gauss_mask_for_time=False,
+                 warp_for_time=False,
+                 num_time_mask=2,
+                 num_freq_mask=2,
+                 max_time_mask=50,
+                 max_freq_mask=10,
+                 max_time_warp=80):
         '''
         Args:
             cmvn: cmvn stats file
@@ -173,6 +197,13 @@ class CollateFunc(object):
         self.spec_aug = spec_aug
         self.norm_mean = norm_mean
         self.norm_var = norm_var
+        self.gauss_mask_for_time = gauss_mask_for_time
+        self.num_time_mask = num_time_mask
+        self.num_freq_mask = num_freq_mask
+        self.max_time_mask = max_time_mask
+        self.max_freq_mask = max_freq_mask
+        self.max_time_warp = max_time_warp
+        self.warp_for_time = warp_for_time
 
     def __call__(self, batch):
         assert (len(batch) == 1)
@@ -188,7 +219,14 @@ class CollateFunc(object):
                 xs = [x * self.cmvn[1] for x in xs]
         # optional spec augmentation
         if self.spec_aug:
-            xs = [spec_augmentation(x) for x in xs]
+            xs = [spec_augmentation(x,
+                                    gauss_mask_for_t=self.gauss_mask_for_time,
+                                    warp_for_time=self.warp_for_time,
+                                    num_t_mask=self.num_time_mask,
+                                    num_f_mask=self.num_freq_mask,
+                                    max_t=self.max_time_mask,
+                                    max_f=self.max_freq_mask,
+                                    max_w=self.max_time_warp) for x in xs]
         # optional splice
         if self.left_context != 0 or self.right_context != 0:
             xs = [

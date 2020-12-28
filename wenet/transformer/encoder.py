@@ -4,7 +4,7 @@
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
 # Author: di.wu@mobvoi.com (DI WU)
 """Encoder definition."""
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 import torch
 from typeguard import check_argument_types
@@ -136,13 +136,143 @@ class BaseEncoder(torch.nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size)
         for layer in self.encoders:
-            xs, chunk_masks = layer(xs, chunk_masks, pos_emb)
+            xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb)
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
         # return the masks before encoder layers, and the masks will be used
         # for cross attention with decoder later
         return xs, masks
+
+    def forward_chunk(
+        self,
+        xs: torch.Tensor,
+        subsampling_cache: Optional[torch.Tensor] = None,
+        elayers_output_cache: Optional[List[torch.Tensor]] = None,
+        conformer_cnn_cache: Optional[List[torch.Tensor]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, List[torch.Tensor],
+               List[torch.Tensor]]:
+        """ Forward just one chunk
+
+        Args:
+            xs (torch.Tensor): chunk input
+            subsampling_cache (Optional[torch.Tensor]): subsampling cache
+            elayers_output_cache (Optional[List[torch.Tensor]]):
+                transformer/conformer encoder layers output cache
+            conformer_cnn_cache (Optional[List[torch.Tensor]]): conformer
+                cnn cache
+
+        Returns:
+            torch.Tensor: output, it ranges from time 0 to current chunk.
+            torch.Tensor: subsampling cache
+            List[torch.Tensor]: attention cache
+            List[torch.Tensor]: conformer cnn cache
+
+        """
+        assert xs.size(0) == 1
+        # offset, current time offset in encoder, in output time stamp,
+        # namely after subsampling, it's the same size to
+        # subsampling_cache.size(1)
+        if subsampling_cache is None:
+            offset = 0
+        else:
+            assert elayers_output_cache is not None
+            offset = subsampling_cache.size(1)
+        # tmp_masks is just for interface compatibility
+        tmp_masks = torch.ones(1,
+                               xs.size(1),
+                               device=xs.device,
+                               dtype=torch.bool)
+        tmp_masks = tmp_masks.unsqueeze(1)
+        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
+        if subsampling_cache is not None:
+            xs = torch.cat((subsampling_cache, xs), dim=1)
+        pos_emb = self.embed.position_encoding(xs.size(1))
+        r_subsampling_cache = xs
+        # Real mask for transformer/conformer layers
+        masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
+        masks = masks.unsqueeze(1)
+        r_elayers_output_cache = []
+        r_conformer_cnn_cache = []
+        for i, layer in enumerate(self.encoders):
+            if elayers_output_cache is None:
+                attn_cache = None
+            else:
+                attn_cache = elayers_output_cache[i]
+            if conformer_cnn_cache is None:
+                cnn_cache = None
+            else:
+                cnn_cache = conformer_cnn_cache[i]
+            xs, _, new_cnn_cache = layer(xs,
+                                         masks,
+                                         pos_emb,
+                                         output_cache=attn_cache,
+                                         cnn_cache=cnn_cache)
+            r_elayers_output_cache.append(xs)
+            r_conformer_cnn_cache.append(new_cnn_cache)
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+
+        return (xs, r_subsampling_cache, r_elayers_output_cache,
+                r_conformer_cnn_cache)
+
+    def forward_chunk_by_chunk(
+        self,
+        xs: torch.Tensor,
+        decoding_chunk_size: int,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Forward input chunk by chunk with chunk_size like a streaming
+            fashion
+
+        Here we should pay special attention to computation cache in the
+        streaming style forward chunk by chunk. Three things should be taken
+        into account for computation in the current network:
+            1. transformer/conformer encoder layers output cache
+            2. convolution in conformer
+            3. convolution in subsampling
+
+        However, we don't implement subsampling cache for:
+            1. We can control subsampling module to output the right result by
+               overlapping input instead of cache left context, even though it
+               wastes some computation, but subsampling only takes a very
+               small fraction of computation in the whole model.
+            2. Typically, there are several covolution layers with subsampling
+               in subsampling module, it is tricky and complicated to do cache
+               with different convolution layers with different subsampling
+               rate.
+            3. Currently, nn.Sequential is used to stack all the convolution
+               layers in subsampling, we need to rewrite it to make it work
+               with cache, which is not prefered.
+        Args:
+            xs (torch.Tensor): (1, max_len, dim)
+            chunk_size (int): decoding chunk size
+        """
+        assert decoding_chunk_size > 0
+        # The model is trained by static or dynamic chunk
+        assert self.static_chunk_size > 0 or self.use_dynamic_chunk
+        subsampling = self.embed.subsampling_rate
+        context = self.embed.right_context + 1  # Add current frame
+        stride = subsampling * decoding_chunk_size
+        decoding_window = (decoding_chunk_size - 1) * subsampling + context
+        num_frames = xs.size(1)
+        subsampling_cache: Optional[torch.Tensor] = None
+        elayers_output_cache: Optional[List[torch.Tensor]] = None
+        conformer_cnn_cache: Optional[List[torch.Tensor]] = None
+        ys = torch.tensor([0.0], dtype=xs.dtype, device=xs.device)
+
+        # Feed forward overlap input step by step
+        for cur in range(0, num_frames - context + 1, stride):
+            end = min(cur + decoding_window, num_frames)
+            chunk_xs = xs[:, cur:end, :]
+            (ys, subsampling_cache, elayers_output_cache,
+             conformer_cnn_cache) = self.forward_chunk(chunk_xs,
+                                                       subsampling_cache,
+                                                       elayers_output_cache,
+                                                       conformer_cnn_cache)
+        # Return the last output
+        masks = torch.ones(1, ys.size(1), device=ys.device, dtype=torch.bool)
+        masks = masks.unsqueeze(1)
+        return ys, masks
 
 
 class TransformerEncoder(BaseEncoder):

@@ -78,7 +78,9 @@ if __name__ == '__main__':
     distributed = args.world_size > 1
 
     # Init dataset and data loader
-    collate_func = CollateFunc(**configs['collate_conf'], cmvn=args.cmvn)
+    collate_func = CollateFunc(**configs['collate_conf'],
+                               **configs['spec_aug_conf'],
+                               cmvn=args.cmvn)
     cv_collate_conf = copy.copy(configs['collate_conf'])
     cv_collate_conf['spec_aug'] = False
     cv_collate_func = CollateFunc(**cv_collate_conf, cmvn=args.cmvn)
@@ -94,8 +96,11 @@ if __name__ == '__main__':
                                 rank=args.rank)
         train_sampler = torch.utils.data.distributed.DistributedSampler(
             train_dataset, shuffle=True)
+        cv_sampler = torch.utils.data.distributed.DistributedSampler(
+            cv_dataset, shuffle=False)
     else:
         train_sampler = None
+        cv_sampler = None
 
     train_data_loader = DataLoader(train_dataset,
                                    collate_fn=collate_func,
@@ -105,9 +110,10 @@ if __name__ == '__main__':
                                    num_workers=args.num_workers)
     cv_data_loader = DataLoader(cv_dataset,
                                 collate_fn=cv_collate_func,
+                                sampler=cv_sampler,
                                 shuffle=False,
                                 batch_size=1,
-                                num_workers=0)
+                                num_workers=args.num_workers)
 
     # Init transformer model
     input_dim = train_dataset.input_dim
@@ -193,7 +199,19 @@ if __name__ == '__main__':
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs)
-        cv_loss = executor.cv(model, cv_data_loader, device, configs)
+        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device, configs)
+        if args.world_size > 1:
+            # all_reduce expected a sequence parameter, so we use [num_seen_utts].
+            num_seen_utts = torch.Tensor([num_seen_utts]).to(device)
+            # the default operator in all_reduce function is sum.
+            dist.all_reduce(num_seen_utts)
+            total_loss = torch.Tensor([total_loss]).to(device)
+            dist.all_reduce(total_loss)
+            cv_loss = total_loss[0] / num_seen_utts[0]
+            cv_loss = cv_loss.item()
+        else:
+            cv_loss = total_loss / num_seen_utts
+
         logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))

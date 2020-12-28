@@ -13,8 +13,8 @@ Wenet is an tansformer-based end-to-end ASR toolkit.
    :maxdepth: 1
    :caption: Tutorial:
    
-   ./installation.md
-
+   ./tutorial.md
+   ./jit_in_wenet.md
 
 
 Indices and tables
