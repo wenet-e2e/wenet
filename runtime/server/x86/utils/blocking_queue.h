@@ -80,10 +80,10 @@ class BlockingQueue {
 
  private:
   size_t capacity_;
-  mutable std::mutex              mutex_;
+  mutable std::mutex mutex_;
   std::condition_variable not_full_condition_;
   std::condition_variable not_empty_condition_;
-  std::queue<T>           queue_;
+  std::queue<T> queue_;
 };
 
 }  // namespace wenet
