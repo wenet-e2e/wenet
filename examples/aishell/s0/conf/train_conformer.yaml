@@ -40,6 +40,15 @@ collate_conf:
     norm_mean: true # if true, must specify cmvn file in cmd line
     norm_var: true # if true, must specify cmvn file in cmd line
 
+# specaugmentation related
+spec_aug_conf:
+    num_time_mask: 2
+    num_freq_mask: 2
+    max_time_mask: 50
+    max_freq_mask: 10
+    max_time_warp: 80
+    warp_for_time: False
+
 # dataset related
 dataset_conf:
     max_length: 10240

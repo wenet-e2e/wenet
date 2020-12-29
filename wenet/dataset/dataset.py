@@ -54,7 +54,6 @@ def _splice(feats, left_context, right_context):
 
 
 def spec_augmentation(x,
-                      gauss_mask_for_t=False,
                       warp_for_time=False,
                       num_t_mask=2,
                       num_f_mask=2,
@@ -90,10 +89,7 @@ def spec_augmentation(x,
         start = random.randint(0, max_frames - 1)
         length = random.randint(1, max_t)
         end = min(max_frames, start + length)
-        if gauss_mask_for_t:
-            y[start:end, :] = np.random.randn(end - start, max_freq)
-        else:
-            y[start:end, :] = 0
+        y[start:end, :] = 0
     # freq mask
     for i in range(num_f_mask):
         start = random.randint(0, max_freq - 1)
@@ -174,7 +170,6 @@ class CollateFunc(object):
                  spec_aug=False,
                  norm_mean=False,
                  norm_var=False,
-                 gauss_mask_for_time=False,
                  warp_for_time=False,
                  num_time_mask=2,
                  num_freq_mask=2,
@@ -197,7 +192,6 @@ class CollateFunc(object):
         self.spec_aug = spec_aug
         self.norm_mean = norm_mean
         self.norm_var = norm_var
-        self.gauss_mask_for_time = gauss_mask_for_time
         self.num_time_mask = num_time_mask
         self.num_freq_mask = num_freq_mask
         self.max_time_mask = max_time_mask
@@ -220,7 +214,6 @@ class CollateFunc(object):
         # optional spec augmentation
         if self.spec_aug:
             xs = [spec_augmentation(x,
-                                    gauss_mask_for_t=self.gauss_mask_for_time,
                                     warp_for_time=self.warp_for_time,
                                     num_t_mask=self.num_time_mask,
                                     num_f_mask=self.num_freq_mask,
