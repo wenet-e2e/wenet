@@ -23,10 +23,10 @@ On transformer
 
 | decoding mode/chunk size | full |
 |--------------------------|------|
-| attention decoder        | 5.60 |
-| ctc greedy search        | 5.92 |
-| ctc prefix beam search   | 5.91 |
-| attention rescoring      | 5.42 |
+| attention decoder        | 5.67 |
+| ctc greedy search        | 5.88 |
+| ctc prefix beam search   | 5.88 |
+| attention rescoring      | 5.30 |
 
 
 
