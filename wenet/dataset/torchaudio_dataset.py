@@ -5,9 +5,8 @@ import argparse
 import logging
 import random
 import codecs
-import numpy as np
-import random
 
+import numpy as np
 import torch
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
@@ -15,7 +14,7 @@ import torchaudio.compliance.kaldi as kaldi
 import torchaudio
 
 from wenet.utils.common import IGNORE_ID
-from wenet.dataset.wav_distortion import distort_wav
+from wenet.dataset.wav_distortion import distort_wav_conf
 
 def _splice(feats, left_context, right_context):
     """ Splice feature
@@ -90,30 +89,30 @@ def _do_waveform_distortion(waveform, distortion_methods_conf):
     acc = 0.0
     for distortion_method in distortion_methods_conf:
         method_rate = distortion_method['method_rate']
-        acc + = method_rate
+        acc += method_rate
         if r < acc:
             distortion_type = distortion_method['name']
-            distortion_conf = distortion_method['conf']
+            distortion_conf = distortion_method['params']
             point_rate = distortion_method['point_rate']
             return distort_wav_conf(waveform, distortion_type, distortion_conf , point_rate)
     return waveform
 
 
-def old_do_waveform_distortion(waveform, distortion_methods_conf):
-    r = random.uniform(0, 1)
-    if r < 0.5:
-        return distort_wav('jag_distortion', waveform, 0.6)
-    elif r >= 0.5 and r < 0.75:
-        return distort_wav('max_distortion', waveform, 0.05)
-    else:
-        return distort_wav('poly_distortion', waveform, 0.5)
+# def old_do_waveform_distortion(waveform, distortion_methods_conf):
+#     r = random.uniform(0, 1)
+#     if r < 0.5:
+#         return distort_wav('jag_distortion', waveform, 0.6)
+#     elif r >= 0.5 and r < 0.75:
+#         return distort_wav('max_distortion', waveform, 0.05)
+#     else:
+#         return distort_wav('poly_distortion', waveform, 0.5)
 
 def _extract_feature(batch, wav_distortion_conf, feature_extraction_conf):
     keys = []
     feats = []
     lengths = []
     wav_distortion_rate = wav_distortion_conf['wav_distortion_rate']
-    distortion_methods_conf= wav_distortion_conf['distortion_methods']
+    distortion_methods_conf = wav_distortion_conf['distortion_methods']
 
     for i, x in enumerate(batch):
         try:
@@ -122,18 +121,16 @@ def _extract_feature(batch, wav_distortion_conf, feature_extraction_conf):
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
                     waveform = waveform.detach().numpy()
-                    waveform =_do_waveform_distortion(waveform, distortion_methods_conf)
+                    waveform = _do_waveform_distortion(waveform, distortion_methods_conf)
                     waveform = torch.from_numpy(waveform)
-            if feature_extraction_conf['feature_type'] = 'fbank':
-                mat = kaldi.fbank(
+            mat = kaldi.fbank(
                 waveform,
                 num_mel_bins=feature_extraction_conf['mel_bins'],
                 frame_length=feature_extraction_conf['frame_length'],
                 frame_shift=feature_extraction_conf['frame_shift'],
                 dither=0.0,
                 energy_floor=0.0
-                )
-            else
+            )
             mat = mat.detach().numpy()
             feats.append(mat)
             keys.append(x[0])
@@ -162,7 +159,7 @@ class TorchAudioCollateFunc(object):
                  left_context=0,
                  right_context=0,
                  spec_aug=False,
-                 feature_dither= 0.0):
+                 feature_dither=0.0):
         '''
         Args:
             subsampling_factor: subsampling_factor for feature
@@ -186,8 +183,8 @@ class TorchAudioCollateFunc(object):
         # add dither d ~ (-a, a) on fbank feature
         # a ~ (0, 0.5)
         if self.feature_dither != 0.0:
-            a = random.uniform(0, feature_dither)
-            xs = [ x + (np.random.random_sample(x.shape) - 0.5) * a for x in xs]
+            a = random.uniform(0, self.feature_dither)
+            xs = [x + (np.random.random_sample(x.shape) - 0.5) * a for x in xs]
         if self.spec_aug:
             xs = [spec_augmentation(x) for x in xs]
         # optional splice
@@ -221,7 +218,7 @@ class TorchAudioCollateFunc(object):
             ys_pad = None
             ys_lengths = None
         return keys, xs_pad, ys_pad, xs_lengths, ys_lengths
- 
+
 
 class TorchAudioDataset(Dataset):
     def __init__(self,
@@ -267,9 +264,8 @@ class TorchAudioDataset(Dataset):
                     continue
                 key = arr[0].split(':')[1]
                 wav_path = ':'.join(arr[1].split(':')[1:])
-                duration = int(float(arr[2].split(':')[1]) *1000) # to milliseconds
+                duration = int(float(arr[2].split(':')[1]) * 1000)  # to milliseconds
                 tokenid = arr[5].split(':')[1]
-                #self.input_dim = FBANK_80_CONFIG['mel_bins']
                 output_dim = int(arr[6].split(':')[1].split(',')[1])
                 data.append((key, wav_path, duration, tokenid))
                 self.output_dim = output_dim
@@ -323,14 +319,14 @@ if __name__ == '__main__':
     args = parser.parse_args()
     print(args.data_file)
     dataset = TorchAudioDataset(args.data_file,
-                           max_length=30000,
-                           min_length=0,
-                           batch_size=1,
-                           max_frames_in_batch=4096,
-                           sort=True)
+                                max_length=30000,
+                                min_length=0,
+                                batch_size=1,
+                                max_frames_in_batch=4096,
+                                sort=True)
     collate_func = TorchAudioCollateFunc(subsampling_factor=1,
-                               left_context=0,
-                               right_context=0)
+                                         left_context=0,
+                                         right_context=0)
     data_loader = DataLoader(dataset,
                              batch_size=1,
                              shuffle=False,

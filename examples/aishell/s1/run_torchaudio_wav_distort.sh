@@ -16,7 +16,7 @@ data=/export/expts4/chaoyang/
 data_url=www.openslr.org/resources/33
 
 nj=16
-feat_dir=raw_wav
+feat_dir=raw_wav2
 dict=data/dict/lang_char.txt
 
 train_set=train

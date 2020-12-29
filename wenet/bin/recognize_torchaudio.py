@@ -78,8 +78,8 @@ if __name__ == '__main__':
     # Init dataset and data loader
     test_collate_conf = copy.copy(configs['collate_conf'])
     test_collate_conf['spec_aug'] = False
-    test_collate_conf['add_dither'] = False
-    test_collate_conf['wav_distortion_rate'] = 0
+    test_collate_conf['feature_dither'] = False
+    test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
     test_collate_func = TorchAudioCollateFunc(**test_collate_conf)
     dataset_conf = configs.get('dataset_conf', {})
     dataset_conf['batch_size'] = args.batch_size
@@ -93,7 +93,7 @@ if __name__ == '__main__':
                                   num_workers=0)
 
     # Init transformer model
-    input_dim = test_dataset.input_dim
+    input_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
     vocab_size = test_dataset.output_dim
     encoder_type = configs.get('encoder', 'conformer')
     if encoder_type == 'conformer':

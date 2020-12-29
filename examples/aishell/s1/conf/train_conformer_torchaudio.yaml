@@ -37,23 +37,22 @@ model_conf:
 # for torchaudio data loader
 
 # feature extraction
-collate_conf:
-    wav_distortion_rate: 0.5
-    spec_aug: true
-    add_dither: true
 
-# collate_conf:
-#     feature_conf:
-#         feature_type: 'fbank'
-#         mel_bins: 80
-#         frame_shift: 10
-#         frame_length: 25
-#         using_pitch: false
-#     wav_dither: 0.0 # add dither [-wav_dither,wav_dither] on wavform
-#     feature_dither: 0.0 # add dither [-wav_dither,wav_dither] on fbank feature
-#     wav_distortion_rate: 0.5
-#     spec_swap: false
-#     spec_aug: true
+collate_conf:
+    wav_distortion_conf:
+        wav_distortion_rate: 0.0
+        distortion_methods: []
+    feature_extraction_conf:
+        feature_type: 'fbank'
+        mel_bins: 80
+        frame_shift: 10
+        frame_length: 25
+        using_pitch: false
+    feature_dither: 0.1 # add dither [-feature_dither,feature_dither] on fbank feature
+    #spec_swap: false
+    spec_aug: true
+
+
 
 # dataset related
 dataset_conf:
