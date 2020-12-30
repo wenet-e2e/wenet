@@ -69,13 +69,13 @@ collate_conf:
                 mask_number: 2
             - name: fence_distortion
               method_rate: 0.2
-              point_rate: 0.1
+              point_rate: 0.05
               params:
                 mask_number: 4
                 max_db: -20
             - name: max_distortion
               method_rate: 0.2
-              point_rate: 0.1
+              point_rate: 0.05
               params:
                 max_db: -10
             - name: poly_distortion
@@ -87,12 +87,12 @@ collate_conf:
                 n: 1
             - name: poly_distortion
               method_rate: 0.1
-              point_rate: 0.1
+              point_rate: 0.05
               params:
                 a: 6
                 m: 2
                 n: 2
-    feature_dither: 0.1 # add dither [-feature_dither,feature_dither] on fbank feature
+    feature_dither: 0.01 # add dither [-feature_dither,feature_dither] on fbank feature
     #spec_swap: false
     spec_aug: true
 
@@ -101,7 +101,7 @@ dataset_conf:
     max_length: 30960
     min_length: 0
     batch_type: 'static' # static or dynamic
-    batch_size: 16
+    batch_size: 15
     sort: true
 
 grad_clip: 5

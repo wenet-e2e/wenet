@@ -94,7 +94,8 @@ def _do_waveform_distortion(waveform, distortion_methods_conf):
             distortion_type = distortion_method['name']
             distortion_conf = distortion_method['params']
             point_rate = distortion_method['point_rate']
-            return distort_wav_conf(waveform, distortion_type, distortion_conf , point_rate)
+            return distort_wav_conf(waveform, distortion_type,
+                                    distortion_conf , point_rate)
     return waveform
 
 
@@ -121,7 +122,8 @@ def _extract_feature(batch, wav_distortion_conf, feature_extraction_conf):
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
                     waveform = waveform.detach().numpy()
-                    waveform = _do_waveform_distortion(waveform, distortion_methods_conf)
+                    waveform = _do_waveform_distortion(waveform,
+                                                       distortion_methods_conf)
                     waveform = torch.from_numpy(waveform)
             mat = kaldi.fbank(
                 waveform,
@@ -176,7 +178,9 @@ class TorchAudioCollateFunc(object):
 
     def __call__(self, batch):
         assert (len(batch) == 1)
-        keys, xs, ys = _extract_feature(batch[0], self.wav_distortion_conf, self.feature_extraction_conf)
+        keys, xs, ys = _extract_feature(batch[0],
+                                        self.wav_distortion_conf,
+                                        self.feature_extraction_conf)
         train_flag = True
         if ys is None:
             train_flag = False

@@ -13,7 +13,7 @@ def db2amp(db):
 def amp2db(amp):
     return 20 * math.log10(amp)
 
-#  db域上的通用的多项式变换
+# ploy function in db domain
 def make_poly_distortion(distortion_conf):
     # x = a * x^m * (1-x)^n + x
     # a = [1, m*n]
@@ -49,19 +49,17 @@ def make_poly_distortion(distortion_conf):
 def dither(x):
     return x + 1.0
 
-# 二次函数
 def make_quad_distortion():
     return make_poly_distortion({'a' : 1, 'm' : 1, 'n' : 1})
 
-
-def make_amp_mask(db_mask=[(-110, -95),
-                           (-90, -80), (-65, -60), (-50, -30), (-15, 0)]):
+def make_amp_mask(db_mask=None):
+    if db_mask is None:
+        db_mask = [(-110, -95), (-90, -80), (-65, -60), (-50, -30), (-15, 0)]
     amp_mask = [(db2amp(db[0]), db2amp(db[1])) for db in db_mask]
     return amp_mask
 
 default_mask = make_amp_mask()
 
-# gen amp slots in -100db ~ 0db.
 def make_max_distortion(conf):
     max_db = conf['max_db']
     if max_db:
@@ -79,6 +77,7 @@ def make_max_distortion(conf):
         return x
     return max_distortion
 
+# -100db ~ 0db.
 def generate_amp_mask(mask_num):
     a = [0] * 2 * mask_num
     a[0] = 0
@@ -92,7 +91,6 @@ def generate_amp_mask(mask_num):
         m.append((l, r))
     return make_amp_mask(m)
 
-# gen amp slots in -100db ~ 0db.
 def make_fence_distortion(conf):
     mask_number = conf['mask_number']
     max_db = conf['max_db']
@@ -125,9 +123,6 @@ def make_fence_distortion(conf):
 
     return fence_distortion
 
-
-
-# gen amp slots in -100db ~ 0db.
 def make_jag_distortion(conf):
     mask_number = conf['mask_number']
     if mask_number <= 0 :
@@ -158,7 +153,10 @@ def make_jag_distortion(conf):
 
     return jag_distortion
 
-def fast_fence_distortion(x, positive_mask=default_mask, negative_mask=make_amp_mask([(-50, 0)])):
+def fast_fence_distortion(x,
+                          positive_mask=default_mask,
+                          negative_mask=make_amp_mask([(-50, 0)])
+                          ):
     is_in_mask = False
     if x > 0:
         for mask in positive_mask:
