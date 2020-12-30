@@ -11,10 +11,11 @@
 #include <vector>
 #include <memory>
 
-#include "frontend/feature_pipeline.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "decoder/ctc_prefix_beam_search.h"
+#include "frontend/feature_pipeline.h"
+#include "utils/utils.h"
 
 namespace wenet {
 
@@ -61,6 +62,7 @@ class TorchAsrDecoder {
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
 
   std::string result_;
+  DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
 };
 
 }  // namespace wenet

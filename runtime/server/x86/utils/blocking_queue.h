@@ -21,6 +21,8 @@
 #include <mutex>
 #include <condition_variable>
 
+#include "utils/utils.h"
+
 namespace wenet {
 
 template <typename T>
@@ -84,6 +86,7 @@ class BlockingQueue {
   std::condition_variable not_full_condition_;
   std::condition_variable not_empty_condition_;
   std::queue<T> queue_;
+  DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
 };
 
 }  // namespace wenet

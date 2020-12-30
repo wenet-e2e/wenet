@@ -11,6 +11,8 @@
 #include <vector>
 #include <unordered_map>
 
+#include "utils/utils.h"
+
 namespace wenet {
 
 using TorchModule = torch::jit::script::Module;
@@ -63,6 +65,7 @@ class CtcPrefixBeamSearch {
   std::vector<float> likelihood_;
 
   const CtcPrefixBeamSearchOptions& opts_;
+  DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
 };
 
 }  // namespace wenet

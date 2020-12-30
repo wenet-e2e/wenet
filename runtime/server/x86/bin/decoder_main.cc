@@ -7,11 +7,11 @@
 #include <torch/torch.h>
 #include <torch/script.h>
 
-#include "frontend/wav.h"
-#include "frontend/feature_pipeline.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "decoder/torch_asr_decoder.h"
+#include "frontend/wav.h"
+#include "frontend/feature_pipeline.h"
 
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
 DEFINE_int32(chunk_size, 16, "num mel bins for fbank feature");

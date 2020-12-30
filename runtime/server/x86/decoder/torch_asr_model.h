@@ -10,6 +10,8 @@
 #include <memory>
 #include <string>
 
+#include "utils/utils.h"
+
 namespace wenet {
 
 using TorchModule = torch::jit::script::Module;
@@ -30,6 +32,8 @@ class TorchAsrModel {
   int subsampling_rate_ = 1;
   int sos_ = 0;
   int eos_ = 0;
+
+  DISALLOW_COPY_AND_ASSIGN(TorchAsrModel);
 };
 
 }  // namespace wenet
