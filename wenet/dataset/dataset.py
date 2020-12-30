@@ -80,7 +80,7 @@ def spec_augmentation(x,
         warped = random.randrange(center - max_w, center + max_w) + 1
 
         left = Image.fromarray(x[:center]).resize((max_freq, warped), BICUBIC)
-        right = Image.fromarray(x[center:]).resize((max_freq, 
+        right = Image.fromarray(x[center:]).resize((max_freq,
                                                    max_frames - warped),
                                                    BICUBIC)
         y = np.concatenate((left, right), 0)
