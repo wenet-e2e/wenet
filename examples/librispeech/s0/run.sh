@@ -168,12 +168,12 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --val_best
     fi
     # static dataloader is need for attention_rescoring decode
-    sed -i 's/dynamic/static/g' $dir/train.yaml    
+    sed -i 's/dynamic/static/g' $dir/train.yaml
     # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
     # -1 for full chunk
     decoding_chunk_size=
     ctc_weight=0.5
-    for test in $recog_set; do 
+    for test in $recog_set; do
     for mode in attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention; do
     {
         test_dir=$dir/${test}_${mode}

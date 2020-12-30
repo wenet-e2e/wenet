@@ -5,7 +5,7 @@ We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
 and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
 for batch inference.
 
-The main motivation of WeNet is to close the gap between research and production End-to-End (E2E) speech recognition models, 
+The main motivation of WeNet is to close the gap between research and production End-to-End (E2E) speech recognition models,
 to reduce the effort of productizing E2E models, and to explore better E2E models for production.
 
 ## Documentation

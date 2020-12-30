@@ -74,7 +74,7 @@ In this stage, `local/aishell_data_prep.sh` organizes the original aishell-1 dat
 
 In this demo recipe, this stage also uses Kaldi script `utils/perturb_data_dir_speed.sh` to perform speed perturb augmentation on the training data. With 0.9 and 1.1 speed up factors, the size of the training data becomes 3 times of the original data size.
 
-Please refer to `data/train/wav.scp` and `data/train/text`. 
+Please refer to `data/train/wav.scp` and `data/train/text`.
 If you want to train using your customized data, just organize the data into two files `wav.scp` and `text`, and start from `stage 1`.
 
 

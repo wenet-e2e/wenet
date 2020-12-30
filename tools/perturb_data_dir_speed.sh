@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # 2020 @kamo-naoyuki
-# This file was copied from Kaldi and 
-# I deleted parts related to wav duration 
+# This file was copied from Kaldi and
+# I deleted parts related to wav duration
 # because we shouldn't use kaldi's command here
 # and we don't need the files actually.
 
