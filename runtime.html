@@ -201,12 +201,12 @@
 <ul class="simple">
 <li><p>Server</p>
 <ul>
-<li><p><a class="reference external" href="../runtime/server/x86">x86</a></p></li>
+<li><p><a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86">x86</a></p></li>
 </ul>
 </li>
 <li><p>Device</p>
 <ul>
-<li><p><a class="reference external" href="../runtime/device/andorid">andorid</a></p></li>
+<li><p><a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/device/andorid">andorid</a></p></li>
 </ul>
 </li>
 </ul>
@@ -223,7 +223,7 @@
 </div>
 <div class="section" id="interface-design">
 <h3>Interface design<a class="headerlink" href="#interface-design" title="Permalink to this headline">¶</a></h3>
-<p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by &#64;torch.jit.export(see <a class="reference external" href="../wenet/transformer/asr_model.py">asr_model.py</a>), which are required and used in c++ runtime in <a class="reference external" href="../runtime/server/x86/decoder/torch_asr_model.cc">torch_asr_model.cc</a> and <a class="reference external" href="../runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a>. Here we just list the interface give a brief introduction.</p>
+<p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by &#64;torch.jit.export(see <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/wenet/transformer/asr_model.py">asr_model.py</a>), which are required and used in c++ runtime in <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc">torch_asr_model.cc</a> and <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a>. Here we just list the interface give a brief introduction.</p>
 <table border="1" class="docutils">
 <thead>
 <tr>
@@ -270,7 +270,7 @@
 <li><p>Conformer CNN cache: If conformer is used, we should cache the left context for causal CNN computation in Conformer.</p></li>
 <li><p>Subsampling cache: cache the output of subsampling layer, which is the input of the first encoder layer.</p></li>
 </ul>
-<p>Please see <a class="reference external" href="../wenet/transformer/encoder.py">encoder.py:forward_chunk()</a> and <a class="reference external" href="../runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a> for the details of the caches.</p>
+<p>Please see <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/wenet/transformer/encoder.py">encoder.py:forward_chunk()</a> and <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a> for the details of the caches.</p>
 <p>In practice, CNN is also used in the Subsampling. We should handle the CNN cache in Subsampling. However, since there are serveral CNN layers in Subsampling with different left contexts, right contexts and strides, which makes it tircky to directly implement the CNN cache in Subsampling. In our implementation, we simply overlap the input to avoid Subsampling CNN cache. It is simple and straightforward with negligible additional cost since Subsampling CNN only takes very small fraction of the whole computation. The following picture shows how it works, the blue is for the overlap part of current inputs and previous inputs.</p>
 <p><img alt="Overlap input for Subsampling CNN" src="_images/subsampling_overalp.gif" /></p>
 </div>
