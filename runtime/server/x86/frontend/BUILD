@@ -19,8 +19,8 @@ cc_library(
     srcs = ['feature_pipeline.cc'],
     hdrs = ['fbank.h', 'feature_pipeline.h'],
     deps = [
-        ":fft",
         "@com_github_google_glog//:glog",
         "//utils:utils",
+        ":fft",
     ],
 )

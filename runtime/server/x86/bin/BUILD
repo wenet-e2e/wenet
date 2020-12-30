@@ -1,5 +1,4 @@
 
-
 cc_binary(
     name = "decoder_main",
     srcs = ["decoder_main.cc"],
@@ -7,8 +6,8 @@ cc_binary(
         "@com_github_google_glog//:glog",
         "@com_github_gflags_gflags//:gflags",
         "@libtorch//:torch",
-        "//frontend:frontend",
         "//decoder:decoder",
+        "//frontend:frontend",
     ],
 )
 

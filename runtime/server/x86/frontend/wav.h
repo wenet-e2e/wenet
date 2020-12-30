@@ -24,6 +24,8 @@
 
 #include <string>
 
+#include "glog/logging.h"
+
 namespace wenet {
 
 struct WavHeader {
@@ -47,8 +49,7 @@ class WavReader {
   explicit WavReader(const std::string& filename) {
     FILE* fp = fopen(filename.c_str(), "r");
     if (NULL == fp) {
-      perror(filename.c_str());
-      exit(1);
+      LOG(FATAL) << "Error in read " << filename;
     }
 
     WavHeader header;
@@ -99,16 +100,16 @@ class WavReader {
     fclose(fp);
   }
 
-  int NumChannel() const { return num_channel_; }
-  int SampleRate() const { return sample_rate_; }
-  int BitsPerSample() const { return bits_per_sample_; }
-  int NumSample() const { return num_sample_; }
+  int num_channel() const { return num_channel_; }
+  int sample_rate() const { return sample_rate_; }
+  int bits_per_sample() const { return bits_per_sample_; }
+  int num_sample() const { return num_sample_; }
 
   ~WavReader() {
     if (data_ != NULL) delete data_;
   }
 
-  const float *Data() const { return data_; }
+  const float *data() const { return data_; }
 
  private:
   int num_channel_;

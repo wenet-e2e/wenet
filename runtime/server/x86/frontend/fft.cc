@@ -1,5 +1,9 @@
 // Copyright (c) 2016 HR
 
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "frontend/fft.h"
 
 namespace wenet {
@@ -37,7 +41,7 @@ static void make_bitrev(int n, int* bitrev) {
   }
 }
 
-// x:实部  y:虚部  n：fft长度
+// x:real part y:image part  n: fft length
 int fft(float* x, float* y, int n) {
   static int    last_n = 0;     /* previous n */
   static int    *bitrev = NULL; /* bit reversal table */

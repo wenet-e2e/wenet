@@ -15,8 +15,8 @@ cc_test(
     name = 'ctc_prefix_beam_search_test',
     srcs = ['ctc_prefix_beam_search_test.cc'],
     deps = [
-        ":ctc_prefix_beam_search",
         "@com_github_google_gtest//:gtest",
+        ":ctc_prefix_beam_search",
     ],
 )
 
@@ -39,8 +39,8 @@ cc_library(
         "@com_github_google_glog//:glog",
         "@libtorch//:torch",
         "//frontend:frontend",
-        ":torch_asr_model",
         ":ctc_prefix_beam_search",
+        ":torch_asr_model",
     ],
 )
 

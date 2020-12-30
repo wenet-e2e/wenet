@@ -1,11 +1,11 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
+#include "decoder/torch_asr_decoder.h"
+
 #include <algorithm>
 #include <limits>
 #include <utility>
-
-#include "decoder/torch_asr_decoder.h"
 
 namespace wenet {
 
@@ -32,9 +32,8 @@ bool TorchAsrDecoder::Decode() {
     // Do attention rescoring
     AttentionRescoring();
     return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 bool TorchAsrDecoder::AdvanceDecoding() {
@@ -56,7 +55,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   } else {
     num_requried_frames = std::numeric_limits<int>::max();
   }
-  std::vector<std::vector<float> > chunk_feats;
+  std::vector<std::vector<float>> chunk_feats;
   // If not okay, that means we reach the end of the input
   bool finish = !feature_pipeline_->Read(num_requried_frames, &chunk_feats);
   LOG(INFO) << "Required " << num_requried_frames
@@ -168,7 +167,7 @@ void TorchAsrDecoder::AttentionRescoring() {
 
   // Step 3: Compute rescoring score
   // (id, score) pair for later sort
-  std::vector<std::pair<int, float> > weighted_scores(num_hyps);
+  std::vector<std::pair<int, float>> weighted_scores(num_hyps);
   for (size_t i = 0; i < num_hyps; i++) {
     const std::vector<int>& hyp = hypotheses[i];
     float score = 0.0f;

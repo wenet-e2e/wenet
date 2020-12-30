@@ -16,12 +16,12 @@
 #ifndef FRONTEND_FBANK_H_
 #define FRONTEND_FBANK_H_
 
-#include <assert.h>
-
-#include <vector>
 #include <limits>
 #include <random>
 #include <utility>
+#include <vector>
+
+#include "glog/logging.h"
 
 #include "frontend/fft.h"
 
@@ -34,6 +34,8 @@
 
 namespace wenet {
 
+// This code is based on kaldi Fbank implentation, please see
+// https://github.com/kaldi-asr/kaldi/blob/master/src/feat/feature-fbank.cc
 class Fbank {
  public:
   Fbank(int num_bins, int sample_rate, int frame_length, int frame_shift):
@@ -73,7 +75,7 @@ class Fbank {
           last_index = i;
         }
       }
-      assert(first_index != -1 && last_index >= first_index);
+      CHECK(first_index != -1 && last_index >= first_index);
       bins_[bin].first = first_index;
       int size = last_index + 1 - first_index;
       bins_[bin].second.resize(size);
@@ -90,19 +92,19 @@ class Fbank {
     }
   }
 
-  void SetUseLog(bool use_log) {
+  void set_use_log(bool use_log) {
     use_log_ = use_log;
   }
 
-  void SetRemoveDcOffset(bool remove_dc_offset) {
+  void set_remove_dc_offset(bool remove_dc_offset) {
     remove_dc_offset_ = remove_dc_offset;
   }
 
-  void SetDither(float dither) {
+  void set_dither(float dither) {
     dither_ = dither;
   }
 
-  int NumBins() const { return num_bins_; }
+  int num_bins() const { return num_bins_; }
 
   static inline float InverseMelScale(float mel_freq) {
     return 700.0f * (expf (mel_freq / 1127.0f) - 1.0f);
@@ -112,7 +114,7 @@ class Fbank {
     return 1127.0f * logf (1.0f + freq / 700.0f);
   }
 
-  int UpperPowerOfTwo(int n) const {
+  static int UpperPowerOfTwo(int n) {
     return static_cast<int>(pow(2, ceil(log(n) / log(2))));
   }
 
@@ -126,7 +128,7 @@ class Fbank {
 
   // Apply hamming window on data in place
   void Hamming(std::vector<float>* data) const {
-    assert(data->size() >= hamming_window_.size());
+    CHECK_GE(data->size(), hamming_window_.size());
     for (size_t i = 0; i < hamming_window_.size(); i++) {
       (*data)[i] *= hamming_window_[i];
     }
@@ -134,7 +136,7 @@ class Fbank {
 
   // Compute fbank feat, return num frames
   int Compute(const std::vector<float>& wave,
-              std::vector<std::vector<float> >* feat) {
+              std::vector<std::vector<float>>* feat) {
     int num_samples = wave.size();
     if (num_samples < frame_length_) return 0;
     int num_frames = 1 + ((num_samples - frame_length_) / frame_shift_);
@@ -200,7 +202,7 @@ class Fbank {
   bool use_log_;
   bool remove_dc_offset_;
   std::vector<float> center_freqs_;
-  std::vector<std::pair<int, std::vector<float> > > bins_;
+  std::vector<std::pair<int, std::vector<float>>> bins_;
   std::vector<float> hamming_window_;
   std::default_random_engine generator_;
   std::normal_distribution<float> distribution_;

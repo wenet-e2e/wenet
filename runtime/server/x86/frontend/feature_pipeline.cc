@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "frontend/feature_pipeline.h"
+
 #include <algorithm>
 #include <utility>
-
-#include "frontend/feature_pipeline.h"
 
 namespace wenet {
 
@@ -29,7 +29,7 @@ FeaturePipeline::FeaturePipeline(const FeaturePipelineConfig& config):
 }
 
 void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
-  std::vector<std::vector<float> > feats;
+  std::vector<std::vector<float>> feats;
   std::vector<float> waves;
   waves.insert(waves.end(), remained_wav_.begin(), remained_wav_.end());
   waves.insert(waves.end(), wav.begin(), wav.end());
@@ -48,14 +48,13 @@ void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
 bool FeaturePipeline::ReadOne(std::vector<float> *feat) {
   if (input_finished_ && feature_queue_.Empty()) {
     return false;
-  } else {
-    *feat = std::move(feature_queue_.Pop());
-    return true;
   }
+  *feat = std::move(feature_queue_.Pop());
+  return true;
 }
 
 bool FeaturePipeline::Read(int num_frames,
-                           std::vector<std::vector<float> > *feats) {
+                           std::vector<std::vector<float>> *feats) {
   feats->clear();
   std::vector<float> feat;
   while (feats->size() < num_frames) {

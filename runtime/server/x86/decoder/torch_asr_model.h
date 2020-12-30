@@ -4,11 +4,11 @@
 #ifndef DECODER_TORCH_ASR_MODEL_H_
 #define DECODER_TORCH_ASR_MODEL_H_
 
-#include <torch/torch.h>
-#include <torch/script.h>
-
 #include <memory>
 #include <string>
+
+#include "torch/torch.h"
+#include "torch/script.h"
 
 #include "utils/utils.h"
 
@@ -19,6 +19,8 @@ using TorchModule = torch::jit::script::Module;
 class TorchAsrModel {
  public:
   TorchAsrModel() = default;
+  DISALLOW_COPY_AND_ASSIGN(TorchAsrModel);
+
   void Read(const std::string& model_path);
   int right_context() const { return right_context_; }
   int subsampling_rate() const { return subsampling_rate_; }
@@ -32,8 +34,6 @@ class TorchAsrModel {
   int subsampling_rate_ = 1;
   int sos_ = 0;
   int eos_ = 0;
-
-  DISALLOW_COPY_AND_ASSIGN(TorchAsrModel);
 };
 
 }  // namespace wenet

@@ -1,12 +1,12 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
-#include <gtest/gtest.h>
+#include "decoder/ctc_prefix_beam_search.h"
 
 #include <math.h>
 #include <vector>
 
-#include "decoder/ctc_prefix_beam_search.h"
+#include "gtest/gtest.h"
 
 
 TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
@@ -27,7 +27,7 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   // top 1: [2, 1] 0.2185
   // top 2: [1, 2] 0.1550
   // top 3: [1] 0.1525
-  const std::vector<std::vector<int> >& result =
+  const std::vector<std::vector<int>>& result =
       prefix_beam_search.hypotheses();
   const std::vector<float>& likelihood  = prefix_beam_search.likelihood();
   EXPECT_EQ(result.size(), 3);

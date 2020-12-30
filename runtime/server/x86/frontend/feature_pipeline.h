@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <glog/logging.h>
+#ifndef FRONTEND_FEATURE_PIPELINE_H_
+#define FRONTEND_FEATURE_PIPELINE_H_
 
 #include <string>
 #include <vector>
 #include <queue>
 
-#include "utils/blocking_queue.h"
-#include "frontend/fbank.h"
+#include "glog/logging.h"
 
-#ifndef FRONTEND_FEATURE_PIPELINE_H_
-#define FRONTEND_FEATURE_PIPELINE_H_
+#include "frontend/fbank.h"
+#include "utils/blocking_queue.h"
 
 namespace wenet {
 
@@ -57,7 +57,7 @@ class FeaturePipeline {
   explicit FeaturePipeline(const FeaturePipelineConfig& config);
 
   void AcceptWaveform(const std::vector<float>& wav);
-  int NumFramesReady() const { return num_frames_; }
+  int num_frames () const { return num_frames_; }
   void set_input_finished() {
     CHECK(!input_finished_);
     input_finished_ = true;
@@ -70,7 +70,7 @@ class FeaturePipeline {
   // feature_queue_
   bool ReadOne(std::vector<float> *feat);
   // Return value is the same to ReadOne
-  bool Read(int num_frames, std::vector<std::vector<float> >* feats);
+  bool Read(int num_frames, std::vector<std::vector<float>>* feats);
 
   void Reset();
   bool IsLastFrame(int frame) const {
@@ -82,7 +82,7 @@ class FeaturePipeline {
   int feature_dim_;
   Fbank fbank_;
 
-  BlockingQueue<std::vector<float> > feature_queue_;
+  BlockingQueue<std::vector<float>> feature_queue_;
   int num_frames_;
   bool input_finished_;
   std::vector<float> remained_wav_;

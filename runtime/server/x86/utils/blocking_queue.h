@@ -30,8 +30,9 @@ class BlockingQueue {
  public:
   explicit BlockingQueue(size_t capacity = std::numeric_limits<int>::max()):
     capacity_(capacity) {}
+  DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
 
-  void Push(T const& value) {
+  void Push(const T& value) {
     {
       std::unique_lock<std::mutex> lock(mutex_);
       while (queue_.size() >= capacity_) {
@@ -86,7 +87,6 @@ class BlockingQueue {
   std::condition_variable not_full_condition_;
   std::condition_variable not_empty_condition_;
   std::queue<T> queue_;
-  DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
 };
 
 }  // namespace wenet

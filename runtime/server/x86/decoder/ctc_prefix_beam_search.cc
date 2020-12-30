@@ -1,15 +1,15 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
-#include <glog/logging.h>
+#include "decoder/ctc_prefix_beam_search.h"
 
 #include <algorithm>
+#include <cmath>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
-#include <cmath>
 
-#include "decoder/ctc_prefix_beam_search.h"
+#include "glog/logging.h"
 
 namespace wenet {
 
@@ -77,7 +77,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
       for (const auto& it : cur_hyps_) {
         const std::vector<int>& prefix = it.first;
         const PrefixScore& prefix_score = it.second;
-        // If prefix doesn't exit in next_hyps, next_hyps[prefix] will insert
+        // If prefix doesn't exist in next_hyps, next_hyps[prefix] will insert
         // PrefixScore(-inf, -inf) by default, since the default constructor
         // of PrefixScore will set fields s(blank ending score) and
         // ns(none blank ending score) to -inf, respectively.
@@ -105,7 +105,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     }
 
     // 3. Second beam pure, only keep top n best paths
-    std::vector<std::pair<std::vector<int>, PrefixScore> > arr(
+    std::vector<std::pair<std::vector<int>, PrefixScore>> arr(
         next_hyps.begin(), next_hyps.end());
     int second_beam_size = std::min(static_cast<int>(arr.size()),
                                     opts_.second_beam_size);
