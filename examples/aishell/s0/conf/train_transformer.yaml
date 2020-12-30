@@ -35,6 +35,15 @@ collate_conf:
     norm_mean: true # if true, must specify cmvn file in cmd line
     norm_var: true # if true, must specify cmvn file in cmd line
 
+# specaugmentation related
+spec_aug_conf:
+    num_time_mask: 2
+    num_freq_mask: 2
+    max_time_mask: 50
+    max_freq_mask: 10
+    max_time_warp: 80
+    warp_for_time: False
+
 # dataset related
 dataset_conf:
     max_length: 10240
@@ -50,7 +59,7 @@ log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.001
+    lr: 0.002
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 25000

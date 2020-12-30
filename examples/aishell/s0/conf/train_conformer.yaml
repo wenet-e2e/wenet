@@ -40,6 +40,7 @@ collate_conf:
     norm_mean: true # if true, must specify cmvn file in cmd line
     norm_var: true # if true, must specify cmvn file in cmd line
 
+# specaugmentation related
 spec_aug_conf:
     num_time_mask: 2
     num_freq_mask: 2
