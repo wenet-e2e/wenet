@@ -13,6 +13,7 @@ to reduce the effort of productizing E2E models, and to explore better E2E model
 You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please see tutorails below:
 * [Tutorial](docs/tutorial.md)
 * [JIT in WeNet](docs/jit_in_wenet.md)
+* [Runtime](docs/runtime.md)
 
 
 ## Installation
