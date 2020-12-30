@@ -33,7 +33,6 @@ class TorchAsrDecoder {
                   std::shared_ptr<TorchAsrModel> model,
                   const SymbolTable& symbol_table,
                   const DecodeOptions& opts);
-  DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
 
   // Return true if all feature has been decoded, else return false
   bool Decode();
@@ -63,6 +62,9 @@ class TorchAsrDecoder {
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
 
   std::string result_;
+
+ public:
+  DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
 };
 
 }  // namespace wenet

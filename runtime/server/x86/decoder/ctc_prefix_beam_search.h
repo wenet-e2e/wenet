@@ -49,7 +49,6 @@ struct PrefixHash {
 class CtcPrefixBeamSearch {
  public:
   explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts);
-  DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
 
   void Search(const torch::Tensor& logp);
   void Reset();
@@ -67,6 +66,9 @@ class CtcPrefixBeamSearch {
   std::vector<float> likelihood_;
 
   const CtcPrefixBeamSearchOptions& opts_;
+
+ public:
+  DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
 };
 
 }  // namespace wenet
