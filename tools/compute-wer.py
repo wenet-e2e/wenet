@@ -113,7 +113,7 @@ class Calculator :
       if token not in self.data and len(token) > 0 :
         self.data[token] = {'all' : 0, 'cor' : 0, 'sub' : 0, 'ins' : 0, 'del' : 0}
     # Computing edit distance
-    for i, lab_token in enumerate(lab) : 
+    for i, lab_token in enumerate(lab) :
       for j, rec_token in enumerate(rec) :
         if i == 0 or j == 0 :
           continue
@@ -186,7 +186,7 @@ class Calculator :
       else : # shouldn't reach here
         print('this should not happen , i = {i} , j = {j} , error = {error}'.format(i = i, j = j, error = self.space[i][j]['error']))
     return result
-  def overall(self) : 
+  def overall(self) :
     result = {'all':0, 'cor':0, 'sub':0, 'ins':0, 'del':0}
     for token in self.data :
       result['all'] = result['all'] + self.data[token]['all']
@@ -220,7 +220,7 @@ def default_cluster(word) :
           unicode_names[i].startswith('CJK COMPATIBILITY IDEOGRAPH')) :
       # 明 / 郎
       unicode_names[i] = 'Mandarin'  # 'CJK IDEOGRAPH'
-    elif (unicode_names[i].startswith('LATIN CAPITAL LETTER') or 
+    elif (unicode_names[i].startswith('LATIN CAPITAL LETTER') or
           unicode_names[i].startswith('LATIN SMALL LETTER')) :
       # A / a
       unicode_names[i] = 'English'  # 'LATIN LETTER'
@@ -267,7 +267,7 @@ if __name__ == '__main__':
   case_sensitive = False
   max_words_per_line = sys.maxint
   split = None
-  while len(sys.argv) > 3: 
+  while len(sys.argv) > 3:
      a = '--maxw='
      if sys.argv[1].startswith(a):
         b = sys.argv[1][len(a):]
