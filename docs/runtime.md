@@ -1,3 +1,5 @@
+# Runtime in WeNet
+
 WeNet runtime uses [Unified Two Pass(U2)](https://arxiv.org/pdf/2012.05481.pdf) framework for inference, Because U2 is:
 * **Unified**: U2 unified the streaming and non-streaming model in a simple way, and our runtime is also unified, you can easily balance the latency and accuracy by changing chunk_size(described in the following section).
 * **Accurate**: U2 gets better accuracy by CTC joint training.
@@ -19,7 +21,7 @@ The runtime support the following platforms.
 
 The following picture shows how U2 works.
 
-![U2](u2.gif)
+![U2](images/u2.gif)
 
 When input is not finished, the input frames $x_t$ is fed into the *Shared Encoder* module frame by frame to get the encoder output $e_t$, then $e_t$ is transformed by the *CTC Activation* module(typically, it's just a linear transform with a log_softmax) to get the CTC prob $y_t$ at current frame, and $y_t$ is further used by the *CTC prefix beam search* module to generate n-best results at current time $t$, and the best result is used as partial result of the U2 system.
 
@@ -29,7 +31,7 @@ We can group $C$ continuous frames $x_t, x_{t+1}, x_{t+C}$ as one chunk for the 
 
 ### Interface design
 
-We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by @torch.jit.export(see [asr_model.py](wenet/transformer/asr_model.py)), which are required and used in c++ runtime in [torch_asr_model.cc](runtime/server/x86/decoder/torch_asr_model.cc) and [torch_asr_decoder.cc](runtime/server/x86/decoder/torch_asr_decoder.cc). Here we just list the interface give a brief introduction.
+We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by @torch.jit.export(see [asr_model.py](../wenet/transformer/asr_model.py)), which are required and used in c++ runtime in [torch_asr_model.cc](../runtime/server/x86/decoder/torch_asr_model.cc) and [torch_asr_decoder.cc](../runtime/server/x86/decoder/torch_asr_decoder.cc). Here we just list the interface give a brief introduction.
 
 | interface                       | description                             |
 |---------------------------------|-----------------------------------------|
@@ -49,11 +51,11 @@ For streaming scenario, the *Shared Encoder* module works in a incremental way. 
 * Conformer CNN cache: If conformer is used, we should cache the left context for causal CNN computation in Conformer.
 * Subsampling cache: cache the output of subsampling layer, which is the input of the first encoder layer.
 
-Please see [encoder.py:forward_chunk()](wenet/transformer/encoder.py) and [torch_asr_decoder.cc](runtime/server/x86/decoder/torch_asr_decoder.cc) for the details of the caches.
+Please see [encoder.py:forward_chunk()](../wenet/transformer/encoder.py) and [torch_asr_decoder.cc](../runtime/server/x86/decoder/torch_asr_decoder.cc) for the details of the caches.
 
 In practice, CNN is also used in the Subsampling. We should handle the CNN cache in Subsampling. However, since there are serveral CNN layers in Subsampling with different left contexts, right contexts and strides, which makes it tircky to directly implement the CNN cache in Subsampling. In our implementation, we simply overlap the input to avoid Subsampling CNN cache. It is simple and straightforward with negligible additional cost since Subsampling CNN only takes very small fraction of the whole computation. The following picture shows how it works, the blue is for the overlap part of current inputs and previous inputs.
 
-![Overlap input for Subsampling CNN](subsampling_overalp.gif)
+![Overlap input for Subsampling CNN](images/subsampling_overalp.gif)
 
 ## Reference
 1. [Sequence Modeling With CTC](https://distill.pub/2017/ctc/)
