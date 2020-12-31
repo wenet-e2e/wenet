@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Runtime in WeNet &mdash; Wenet  documentation</title>
+  <title>Runtime for WeNet &mdash; Wenet  documentation</title>
   
 
   
@@ -86,15 +86,15 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
 <li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Runtime in WeNet</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#support-platforms">Support platforms</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Runtime for WeNet</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#platforms-supported">Platforms Supported</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#architecture-and-implementation">Architecture and Implementation</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#architecture">Architecture</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#interface-design">Interface design</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#cache-in-details">Cache in details</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interface-design">Interface Design</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cache-in-details">Cache in Details</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#reference">Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a></li>
 </ul>
 </li>
 </ul>
@@ -143,7 +143,7 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>Runtime in WeNet</li>
+      <li>Runtime for WeNet</li>
     
     
       <li class="wy-breadcrumbs-aside">
@@ -186,18 +186,18 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="runtime-in-wenet">
-<h1>Runtime in WeNet<a class="headerlink" href="#runtime-in-wenet" title="Permalink to this headline">¶</a></h1>
-<p>WeNet runtime uses <a class="reference external" href="https://arxiv.org/pdf/2012.05481.pdf">Unified Two Pass(U2)</a> framework for inference, Because U2 is:</p>
+<div class="section" id="runtime-for-wenet">
+<h1>Runtime for WeNet<a class="headerlink" href="#runtime-for-wenet" title="Permalink to this headline">¶</a></h1>
+<p>WeNet runtime uses <a class="reference external" href="https://arxiv.org/pdf/2012.05481.pdf">Unified Two Pass (U2)</a> framework for inference. U2 has the following advantages:</p>
 <ul class="simple">
-<li><p><strong>Unified</strong>: U2 unified the streaming and non-streaming model in a simple way, and our runtime is also unified, you can easily balance the latency and accuracy by changing chunk_size(described in the following section).</p></li>
-<li><p><strong>Accurate</strong>: U2 gets better accuracy by CTC joint training.</p></li>
-<li><p><strong>Fast</strong>: Our runtime uses attention rescoring decoding method described in U2, which is much faster than a traditional autoregressive beam search.</p></li>
-<li><p><strong>Other benefits</strong>: In practice, we find U2 is more stable on long-form speech than standard transformer which usually fails or degrades a lot on long-form speech; and we can easily get the words time stamp by CTC spike in U2. Both of them are favored for industry adoption.</p></li>
+<li><p><strong>Unified</strong>: U2 unified the streaming and non-streaming model in a simple way, and our runtime is also unified. Therefore you can easily balance the latency and accuracy by changing chunk_size (described in the following section).</p></li>
+<li><p><strong>Accurate</strong>: U2 achieves better accuracy by CTC joint training.</p></li>
+<li><p><strong>Fast</strong>: Our runtime uses attention rescoring based decoding method described in U2, which is much faster than a traditional autoregressive beam search.</p></li>
+<li><p><strong>Other benefits</strong>: In practice, we find U2 is more stable on long-form speech than standard transformer which usually fails or degrades a lot on long-form speech; and we can easily get the word-level time stamps by CTC spikes in U2. Both of these aspects are favored for industry adoption.</p></li>
 </ul>
-<div class="section" id="support-platforms">
-<h2>Support platforms<a class="headerlink" href="#support-platforms" title="Permalink to this headline">¶</a></h2>
-<p>The runtime support the following platforms.</p>
+<div class="section" id="platforms-supported">
+<h2>Platforms Supported<a class="headerlink" href="#platforms-supported" title="Permalink to this headline">¶</a></h2>
+<p>The WeNet runtime supports the following platforms.</p>
 <ul class="simple">
 <li><p>Server</p>
 <ul>
@@ -217,13 +217,13 @@
 <h3>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h3>
 <p>The following picture shows how U2 works.</p>
 <p><img alt="U2" src="_images/u2.gif" /></p>
-<p>When input is not finished, the input frames $x_t$ is fed into the <em>Shared Encoder</em> module frame by frame to get the encoder output $e_t$, then $e_t$ is transformed by the <em>CTC Activation</em> module(typically, it’s just a linear transform with a log_softmax) to get the CTC prob $y_t$ at current frame, and $y_t$ is further used by the <em>CTC prefix beam search</em> module to generate n-best results at current time $t$, and the best result is used as partial result of the U2 system.</p>
-<p>When input is finished at time $T$, the n-bests results from the <em>CTC prefix beam search</em> module and the encoder output $e_1, e_2, e_3, …, e_T$  are fed into the <em>Attention Decoder</em> module, then the <em>Attention Decoder</em> module computes a score for every result, and the result has the best score is selected as the final result of U2 system.</p>
-<p>We can group $C$ continuous frames $x_t, x_{t+1}, x_{t+C}$ as one chunk for the <em>Shared Encoder</em> module, it is called chunk_size in the U2 framework. The chunk_size will affect the attention computation in the <em>Shared Encoder</em> module. When chunk_size is infinite, it is a non-streaming case, the system has the best accuracy and infinite latency. When chunk_size is limited(typically less than 1s), it is a streaming case, the system has limited latency and also gives promising accuracy. So the user can balance the accuracy and latency and setting a proper chunk_size.</p>
+<p>When input is not finished, the input frames $x_t$ are fed into the <em>Shared Encoder</em> module frame by frame to get the encoder output $e_t$, then $e_t$ is transformed by the <em>CTC Activation</em> module (typically, it’s just a linear transform with a log_softmax) to get the CTC prob $y_t$ at current frame, and $y_t$ is further used by the <em>CTC prefix beam search</em> module to generate n-best results at current time $t$, and the best result is used as partial result of the U2 system.</p>
+<p>When input is finished at time $T$, the n-best results from the <em>CTC prefix beam search</em> module and the encoder output $e_1, e_2, e_3, …, e_T$ are fed into the <em>Attention Decoder</em> module, then the <em>Attention Decoder</em> module computes a score for every result. The result with the best score is selected as the final result of U2 system.</p>
+<p>We can group $C$ continuous frames $x_t, x_{t+1}, x_{t+C}$ as one chunk for the <em>Shared Encoder</em> module, and $C$ is called chunk_size in the U2 framework. The chunk_size will affect the attention computation in the <em>Shared Encoder</em> module. When chunk_size is infinite, it is a non-streaming case. The system gives the best accuracy with infinite latency. When chunk_size is limited (typically less than 1s), it is a streaming case. The system has limited latency and also gives promising accuracy. So the developer can balance the accuracy and latency and setting a proper chunk_size.</p>
 </div>
 <div class="section" id="interface-design">
-<h3>Interface design<a class="headerlink" href="#interface-design" title="Permalink to this headline">¶</a></h3>
-<p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by &#64;torch.jit.export(see <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/wenet/transformer/asr_model.py">asr_model.py</a>), which are required and used in c++ runtime in <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc">torch_asr_model.cc</a> and <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a>. Here we just list the interface give a brief introduction.</p>
+<h3>Interface Design<a class="headerlink" href="#interface-design" title="Permalink to this headline">¶</a></h3>
+<p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by &#64;torch.jit.export (see <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/wenet/transformer/asr_model.py">asr_model.py</a>), which are required and used in C++ runtime in <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc">torch_asr_model.cc</a> and <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a>. Here we just list the interface and give a brief introduction.</p>
 <table border="1" class="docutils">
 <thead>
 <tr>
@@ -233,50 +233,50 @@
 </thead>
 <tbody>
 <tr>
-<td>subsampling_rate(args)</td>
+<td>subsampling_rate (args)</td>
 <td>get the subsampling rate of the model</td>
 </tr>
 <tr>
-<td>right_context(args)</td>
+<td>right_context (args)</td>
 <td>get the right context of the model</td>
 </tr>
 <tr>
-<td>sos_symbol(args)</td>
+<td>sos_symbol (args)</td>
 <td>get the sos symbol id of the model</td>
 </tr>
 <tr>
-<td>eos_symbol(args)</td>
+<td>eos_symbol (args)</td>
 <td>get the eos symbol id of the model</td>
 </tr>
 <tr>
-<td>forward_encoder_chunk(args)</td>
+<td>forward_encoder_chunk (args)</td>
 <td>used for the <em>Shared Encoder</em> module</td>
 </tr>
 <tr>
-<td>ctc_activation(args)</td>
+<td>ctc_activation (args)</td>
 <td>used for the <em>CTC Activation</em> module</td>
 </tr>
 <tr>
-<td>forward_attention_decoder(args)</td>
+<td>forward_attention_decoder (args)</td>
 <td>used for the <em>Attention Decoder</em> module</td>
 </tr>
 </tbody>
 </table></div>
 <div class="section" id="cache-in-details">
-<h3>Cache in details<a class="headerlink" href="#cache-in-details" title="Permalink to this headline">¶</a></h3>
-<p>For streaming scenario, the <em>Shared Encoder</em> module works in a incremental way. The current chunk computation requries the inputs and outputs of all the history chunks. And we imiplement the incremental computation by cache. Overall, three caches are used in our runtime.</p>
+<h3>Cache in Details<a class="headerlink" href="#cache-in-details" title="Permalink to this headline">¶</a></h3>
+<p>For streaming scenario, the <em>Shared Encoder</em> module works in an incremental way. The current chunk computation requries the inputs and outputs of all the history chunks. We implement the incremental computation by using caches. Overall, three caches are used in our runtime.</p>
 <ul class="simple">
 <li><p>Encoder Conformer/Transformer layers output cache: cache the output of every encoder layer.</p></li>
-<li><p>Conformer CNN cache: If conformer is used, we should cache the left context for causal CNN computation in Conformer.</p></li>
+<li><p>Conformer CNN cache: if conformer is used, we should cache the left context for causal CNN computation in Conformer.</p></li>
 <li><p>Subsampling cache: cache the output of subsampling layer, which is the input of the first encoder layer.</p></li>
 </ul>
-<p>Please see <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/wenet/transformer/encoder.py">encoder.py:forward_chunk()</a> and <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a> for the details of the caches.</p>
-<p>In practice, CNN is also used in the Subsampling. We should handle the CNN cache in Subsampling. However, since there are serveral CNN layers in Subsampling with different left contexts, right contexts and strides, which makes it tircky to directly implement the CNN cache in Subsampling. In our implementation, we simply overlap the input to avoid Subsampling CNN cache. It is simple and straightforward with negligible additional cost since Subsampling CNN only takes very small fraction of the whole computation. The following picture shows how it works, the blue is for the overlap part of current inputs and previous inputs.</p>
+<p>Please see <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/wenet/transformer/encoder.py">encoder.py:forward_chunk()</a> and <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a> for details of the caches.</p>
+<p>In practice, CNN is also used in the subsampling. We should handle the CNN cache in subsampling. However, since there are serveral CNN layers in subsampling with different left contexts, right contexts and strides, which makes it tircky to directly implement the CNN cache in subsampling. In our implementation, we simply overlap the input to avoid subsampling CNN cache. It is simple and straightforward with negligible additional cost since subsampling CNN only costs a very small fraction of the whole computation. The following picture shows how it works, where the blue color is for the overlap part of current inputs and previous inputs.</p>
 <p><img alt="Overlap input for Subsampling CNN" src="_images/subsampling_overalp.gif" /></p>
 </div>
 </div>
-<div class="section" id="reference">
-<h2>Reference<a class="headerlink" href="#reference" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
 <ol class="simple">
 <li><p><a class="reference external" href="https://distill.pub/2017/ctc/">Sequence Modeling With CTC</a></p></li>
 <li><p><a class="reference external" href="https://arxiv.org/pdf/1408.2873.pdf">First-Pass Large Vocabulary Continuous Speech Recognition using Bi-Directional Recurrent DNNs</a></p></li>
