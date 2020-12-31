@@ -161,8 +161,9 @@ class Fbank {
       PreEmphasis(0.97, &data);
       Hamming(&data);
       // copy data to fft_real
-      memset(fft_real.data(), 0, sizeof(float) * fft_points_);
       memset(fft_img.data(), 0, sizeof(float) * fft_points_);
+      memset(fft_real.data() + frame_length_, 0,
+             sizeof(float) * (fft_points_ - frame_length_));
       memcpy(fft_real.data(), data.data(), sizeof(float) * frame_length_);
       fft(fft_real.data(), fft_img.data(), fft_points_);
       // power
