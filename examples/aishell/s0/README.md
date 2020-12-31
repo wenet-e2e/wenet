@@ -1,12 +1,12 @@
-# Performance Record
+# ASR Benchmark Results on AISHELL-1
 
-## Standard E2E
+## Standard E2E Results
 
-On conformer
-* configure: conf/train_conformer.yaml
-* beam size: 10
-* gpu nums: 8
-* ctc weight(used for attention rescoring): 0.5
+Conformer
+* config: conf/train_conformer.yaml
+* beam: 10
+* num of gpu: 8
+* ctc weight (used for attention rescoring): 0.5
 
 | decoding mode/chunk size | full |
 |--------------------------|------|
@@ -15,11 +15,11 @@ On conformer
 | ctc prefix beam search   | 4.93 |
 | attention rescoring      | 4.70 |
 
-On transformer
-* configure: conf/train_transformer.yaml
-* beam size: 10
-* gpu nums: 8
-* ctc weight(used for attention rescoring): 0.5
+Transformer
+* config: conf/train_transformer.yaml
+* beam: 10
+* num of gpu: 8
+* ctc weight (used for attention rescoring): 0.5
 
 | decoding mode/chunk size | full |
 |--------------------------|------|
@@ -30,13 +30,13 @@ On transformer
 
 
 
-## Unified Dynamic chunk
+## Unified Dynamic Chunk Results
 
-On conformer(causal convolution)
-* configure: conf/train_unified_conformer.yaml
-* beam size: 10
-* gpu nums: 8
-* ctc weight(used for attention rescoring): 0.5
+Conformer (causal convolution)
+* config: conf/train_unified_conformer.yaml
+* beam: 10
+* num of gpu: 8
+* ctc weight (used for attention rescoring): 0.5
 
 | decoding mode/chunk size | full | 16   | 8    | 4    | 1    |
 |--------------------------|------|------|------|------|------|
