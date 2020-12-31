@@ -72,7 +72,7 @@ class WavReader {
     data_ = new float[num_data];
     num_sample_ = num_data / num_channel_;
 
-    for (int i = 0; i < num_data; i++) {
+    for (int i = 0; i < num_data; ++i) {
       switch (bits_per_sample_) {
         case 8: {
           char sample;
@@ -152,8 +152,8 @@ class WavWriter {
 
     fwrite(&header, 1, sizeof(header), fp);
 
-    for (int i = 0; i < num_sample_; i++) {
-      for (int j = 0; j < num_channel_; j++) {
+    for (int i = 0; i < num_sample_; ++i) {
+      for (int j = 0; j < num_channel_; ++j) {
         switch (bits_per_sample_) {
           case 8: {
             char sample = static_cast<char>(data_[i * num_channel_ + j]);

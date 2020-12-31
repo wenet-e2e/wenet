@@ -16,15 +16,15 @@ static void make_sintbl(int n, float* sintbl) {
   t = sin(M_PI / n);
   dc = 2 * t * t;  ds = sqrt(dc * (2 - dc));
   t = 2 * dc;  c = sintbl[n4] = 1;  s = sintbl[0] = 0;
-  for (i = 1; i < n8; i++) {
+  for (i = 1; i < n8; ++i) {
     c -= dc;  dc += t * c;
     s += ds;  ds -= t * s;
     sintbl[i] = s;  sintbl[n4 - i] = c;
   }
   if (n8 != 0) sintbl[n8] = sqrt(0.5);
-  for (i = 0; i < n4; i++)
+  for (i = 0; i < n4; ++i)
     sintbl[n2 - i] = sintbl[i];
-  for (i = 0; i < n2 + n4; i++)
+  for (i = 0; i < n2 + n4; ++i)
     sintbl[i + n2] = -sintbl[i];
 }
 
@@ -72,7 +72,7 @@ int fft(float* x, float* y, int n) {
   }
 
   /* bit reversal */
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < n; ++i) {
     j = bitrev[i];
     if (i < j) {
       t = x[i];  x[i] = x[j];  x[j] = t;
@@ -83,7 +83,7 @@ int fft(float* x, float* y, int n) {
   /* transformation */
   for (k = 1; k < n; k = k2) {
     h = 0;  k2 = k + k;  d = n / k2;
-    for (j = 0; j < k; j++) {
+    for (j = 0; j < k; ++j) {
       c = sintbl[h + n4];
       if (inverse)
         s = -sintbl[h];
@@ -101,7 +101,7 @@ int fft(float* x, float* y, int n) {
   }
   if (inverse) {
     /* divide by n in case of the inverse transformation */
-    for (i = 0; i < n; i++) {
+    for (i = 0; i < n; ++i) {
       x[i] /= n;
       y[i] /= n;
     }

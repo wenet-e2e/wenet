@@ -66,7 +66,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     // 1. Prepare libtorch requried data, splice cached_feature_ and chunk_feats
     torch::Tensor feats = torch::zeros(
         {1, num_frames, feature_dim}, torch::kFloat);
-    for (size_t i = 0; i < cached_feature_.size(); i++) {
+    for (size_t i = 0; i < cached_feature_.size(); ++i) {
       torch::Tensor row = torch::from_blob(cached_feature_[i].data(),
           {feature_dim}, torch::kFloat).clone();
       feats[0][i] = std::move(row);
@@ -103,7 +103,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
     const std::vector<int>& best_hyp = hypotheses[0];
     result_ = "";
-    for (size_t i = 0; i < best_hyp.size(); i++) {
+    for (size_t i = 0; i < best_hyp.size(); ++i) {
       result_ += symbol_table_.Find(best_hyp[i]);
     }
     VLOG(1) << "Partial CTC result " << result_;
@@ -116,7 +116,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
       // new requirements
       CHECK(chunk_feats.size() >= cached_feature_size);
       cached_feature_.resize(cached_feature_size);
-      for (int i = 0; i < cached_feature_size; i++) {
+      for (int i = 0; i < cached_feature_size; ++i) {
         cached_feature_[i] = std::move(
             chunk_feats[chunk_feats.size() - cached_feature_size + i]);
       }
@@ -141,17 +141,17 @@ void TorchAsrDecoder::AttentionRescoring() {
   // Step 1: Prepare input for libtorch
   torch::Tensor hyps_length = torch::zeros({num_hyps}, torch::kLong);
   size_t max_hyps_len = 0;
-  for (size_t i = 0; i < num_hyps; i++) {
+  for (size_t i = 0; i < num_hyps; ++i) {
     size_t length = hypotheses[i].size() + 1;
     max_hyps_len = std::max(length, max_hyps_len);
     hyps_length[i] = static_cast<int64_t>(length);
   }
   torch::Tensor hyps_tensor = torch::zeros({num_hyps, max_hyps_len},
                                            torch::kLong);
-  for (size_t i = 0; i < num_hyps; i++) {
+  for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
     hyps_tensor[i][0] = sos;
-    for (size_t j = 0; j < hyp.size(); j++) {
+    for (size_t j = 0; j < hyp.size(); ++j) {
       hyps_tensor[i][j+1] = hyp[j];
     }
   }
@@ -168,10 +168,10 @@ void TorchAsrDecoder::AttentionRescoring() {
   // Step 3: Compute rescoring score
   // (id, score) pair for later sort
   std::vector<std::pair<int, float>> weighted_scores(num_hyps);
-  for (size_t i = 0; i < num_hyps; i++) {
+  for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
     float score = 0.0f;
-    for (size_t j = 0; j < hyp.size(); j++) {
+    for (size_t j = 0; j < hyp.size(); ++j) {
       score += probs[i][j][hyp[j]].item<float>();
     }
     score += probs[i][hyp.size()][eos].item<float>();
@@ -181,10 +181,10 @@ void TorchAsrDecoder::AttentionRescoring() {
   }
 
   std::sort(weighted_scores.begin(), weighted_scores.end(), CompareFunc);
-  for (size_t i = 0; i < weighted_scores.size(); i++) {
+  for (size_t i = 0; i < weighted_scores.size(); ++i) {
     std::string result;
     int best_k = weighted_scores[i].first;
-    for (size_t j = 0; j < hypotheses[best_k].size(); j++) {
+    for (size_t j = 0; j < hypotheses[best_k].size(); ++j) {
       result += symbol_table_.Find(hypotheses[best_k][j]);
     }
     VLOG(1) << "ctc index " << best_k

@@ -39,7 +39,7 @@ struct PrefixHash {
   size_t operator()(const std::vector<int>& prefix) const {
     size_t hash_code = 0;
     // here we use KB&DR hash code
-    for (size_t i = 0; i < prefix.size(); i++) {
+    for (size_t i = 0; i < prefix.size(); ++i) {
       hash_code = prefix[i] + 31 * hash_code;
     }
     return hash_code;

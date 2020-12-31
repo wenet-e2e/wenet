@@ -52,14 +52,14 @@ class Fbank {
     float mel_freq_delta = (mel_high_freq - mel_low_freq) / (num_bins+1);
     bins_.resize(num_bins_);
     center_freqs_.resize(num_bins_);
-    for (int bin = 0; bin < num_bins; bin++) {
+    for (int bin = 0; bin < num_bins; ++bin) {
       float left_mel = mel_low_freq + bin * mel_freq_delta,
       center_mel = mel_low_freq + (bin + 1) * mel_freq_delta,
       right_mel = mel_low_freq + (bin + 2) * mel_freq_delta;
       center_freqs_[bin] = InverseMelScale(center_mel);
       std::vector<float> this_bin(num_fft_bins);
       int first_index = -1, last_index = -1;
-      for (int i = 0; i < num_fft_bins; i++) {
+      for (int i = 0; i < num_fft_bins; ++i) {
         float freq = (fft_bin_width * i);  // Center frequency of this fft
         // bin.
         float mel = MelScale(freq);
@@ -79,7 +79,7 @@ class Fbank {
       bins_[bin].first = first_index;
       int size = last_index + 1 - first_index;
       bins_[bin].second.resize(size);
-      for (int i = 0; i < size; i++) {
+      for (int i = 0; i < size; ++i) {
         bins_[bin].second[i] = this_bin[first_index + i];
       }
     }
@@ -87,7 +87,7 @@ class Fbank {
     // hamming window
     hamming_window_.resize(frame_length_);
     double a = M_2PI / (frame_length-1);
-    for (int i = 0; i < frame_length; i++) {
+    for (int i = 0; i < frame_length; ++i) {
         hamming_window_[i] = 0.54 - 0.46*cos(a * i);
     }
   }
@@ -129,7 +129,7 @@ class Fbank {
   // Apply hamming window on data in place
   void Hamming(std::vector<float>* data) const {
     CHECK_GE(data->size(), hamming_window_.size());
-    for (size_t i = 0; i < hamming_window_.size(); i++) {
+    for (size_t i = 0; i < hamming_window_.size(); ++i) {
       (*data)[i] *= hamming_window_[i];
     }
   }
@@ -143,20 +143,20 @@ class Fbank {
     feat->resize(num_frames);
     std::vector<float> fft_real(fft_points_, 0), fft_img(fft_points_, 0);
     std::vector<float> power(fft_points_ / 2);
-    for (int i = 0; i < num_frames; i++) {
+    for (int i = 0; i < num_frames; ++i) {
       std::vector<float> data(wave.data() + i * frame_shift_,
                               wave.data() + i * frame_shift_ + frame_length_);
       // optional add noise
       if (dither_ != 0.0) {
-        for (size_t j = 0; j < data.size(); j++)
+        for (size_t j = 0; j < data.size(); ++j)
           data[j] += dither_ * distribution_(generator_);
       }
       // optinal remove dc offset
       if (remove_dc_offset_) {
         float mean = 0.0;
-        for (size_t j = 0; j < data.size(); j++) mean += data[j];
+        for (size_t j = 0; j < data.size(); ++j) mean += data[j];
         mean /= data.size();
-        for (size_t j = 0; j < data.size(); j++) data[j] -= mean;
+        for (size_t j = 0; j < data.size(); ++j) data[j] -= mean;
       }
 
       PreEmphasis(0.97, &data);
@@ -167,16 +167,16 @@ class Fbank {
       memcpy(fft_real.data(), data.data(), sizeof(float) * frame_length_);
       fft(fft_real.data(), fft_img.data(), fft_points_);
       // power
-      for (int j = 0; j < fft_points_ / 2; j++) {
+      for (int j = 0; j < fft_points_ / 2; ++j) {
         power[j] = fft_real[j] * fft_real[j] + fft_img[j] * fft_img[j];
       }
 
       (*feat)[i].resize(num_bins_);
       // cepstral coefficients, triangle filter array
-      for (int j = 0; j < num_bins_; j++) {
+      for (int j = 0; j < num_bins_; ++j) {
         float mel_energy = 0.0;
         int s = bins_[j].first;
-        for (size_t k = 0; k < bins_[j].second.size(); k++) {
+        for (size_t k = 0; k < bins_[j].second.size(); ++k) {
           mel_energy += bins_[j].second[k] * power[s + k];
         }
         // optional use log

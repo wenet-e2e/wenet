@@ -62,7 +62,7 @@ static bool PrefixScoreCompare(
 void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   CHECK_EQ(logp.dtype(), torch::kFloat);
   CHECK_EQ(logp.dim(), 2);
-  for (int t = 0; t < logp.size(0); t++) {
+  for (int t = 0; t < logp.size(0); ++t) {
     torch::Tensor logp_t = logp[t];
     std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> next_hyps;
     // 1. First beam prune, only select topk candidates
@@ -71,7 +71,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     Tensor topk_index = std::get<1>(topk);
 
     // 2. Token passing
-    for (int i = 0; i < topk_index.size(0); i++) {
+    for (int i = 0; i < topk_index.size(0); ++i) {
       int id = topk_index[i].item<int>();
       float prob = topk_score[i].item<float>();
       for (const auto& it : cur_hyps_) {
@@ -117,7 +117,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     cur_hyps_.clear();
     hypotheses_.clear();
     likelihood_.clear();
-    for (size_t i = 0; i < arr.size(); i++) {
+    for (size_t i = 0; i < arr.size(); ++i) {
       cur_hyps_[arr[i].first] = arr[i].second;
       hypotheses_.emplace_back(std::move(arr[i].first));
       likelihood_.emplace_back(LogAdd(arr[i].second.s, arr[i].second.ns));
