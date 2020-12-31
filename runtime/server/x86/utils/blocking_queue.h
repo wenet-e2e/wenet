@@ -15,11 +15,11 @@
 #ifndef UTILS_BLOCKING_QUEUE_H_
 #define UTILS_BLOCKING_QUEUE_H_
 
-#include <queue>
-#include <limits>
-#include <utility>
-#include <mutex>
 #include <condition_variable>
+#include <limits>
+#include <mutex>
+#include <queue>
+#include <utility>
 
 #include "utils/utils.h"
 
@@ -28,8 +28,8 @@ namespace wenet {
 template <typename T>
 class BlockingQueue {
  public:
-  explicit BlockingQueue(size_t capacity = std::numeric_limits<int>::max()):
-    capacity_(capacity) {}
+  explicit BlockingQueue(size_t capacity = std::numeric_limits<int>::max())
+      : capacity_(capacity) {}
 
   void Push(const T& value) {
     {

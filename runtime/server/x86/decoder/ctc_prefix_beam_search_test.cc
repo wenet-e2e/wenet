@@ -8,13 +8,11 @@
 
 #include "gtest/gtest.h"
 
-
 TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   // See https://robin1001.github.io/2020/12/11/ctc-search/ for the
   // graph demonstration of the data
-  std::vector<float> data = {0.25, 0.40, 0.35,
-                             0.40, 0.35, 0.25,
-                             0.10, 0.50, 0.40};
+  std::vector<float> data = {0.25, 0.40, 0.35, 0.40, 0.35,
+                             0.25, 0.10, 0.50, 0.40};
   torch::Tensor input = torch::from_blob(data.data(), {3, 3}, torch::kFloat);
   EXPECT_EQ(input.size(0), 3);
   EXPECT_EQ(input.size(1), 3);
@@ -27,9 +25,8 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   // top 1: [2, 1] 0.2185
   // top 2: [1, 2] 0.1550
   // top 3: [1] 0.1525
-  const std::vector<std::vector<int>>& result =
-      prefix_beam_search.hypotheses();
-  const std::vector<float>& likelihood  = prefix_beam_search.likelihood();
+  const std::vector<std::vector<int>>& result = prefix_beam_search.hypotheses();
+  const std::vector<float>& likelihood = prefix_beam_search.likelihood();
   EXPECT_EQ(result.size(), 3);
   EXPECT_EQ(likelihood.size(), 3);
   EXPECT_EQ(result[0].size(), 2);
@@ -44,5 +41,3 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   EXPECT_FLOAT_EQ(exp(likelihood[1]), 0.1550);
   EXPECT_FLOAT_EQ(exp(likelihood[2]), 0.1525);
 }
-
-

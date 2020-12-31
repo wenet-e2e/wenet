@@ -15,9 +15,9 @@
 #ifndef FRONTEND_FEATURE_PIPELINE_H_
 #define FRONTEND_FEATURE_PIPELINE_H_
 
+#include <queue>
 #include <string>
 #include <vector>
-#include <queue>
 
 #include "glog/logging.h"
 
@@ -31,17 +31,15 @@ struct FeaturePipelineConfig {
   int sample_rate;
   int frame_length;
   int frame_shift;
-  FeaturePipelineConfig():
-      num_bins(80),  // 80 dim fbank
-      sample_rate(16000),  // 16k sample rate
-      frame_length(400),  // frame length 25ms,
-      frame_shift(160) {
-  }
+  FeaturePipelineConfig()
+      : num_bins(80),        // 80 dim fbank
+        sample_rate(16000),  // 16k sample rate
+        frame_length(400),   // frame length 25ms,
+        frame_shift(160) {}
 
   void Info() const {
     LOG(INFO) << "feature pipeline config"
-              << " num_bins " << num_bins
-              << " frame_length " << frame_length
+              << " num_bins " << num_bins << " frame_length " << frame_length
               << "frame_shift" << frame_shift;
   }
 };
@@ -57,18 +55,16 @@ class FeaturePipeline {
   explicit FeaturePipeline(const FeaturePipelineConfig& config);
 
   void AcceptWaveform(const std::vector<float>& wav);
-  int num_frames () const { return num_frames_; }
+  int num_frames() const { return num_frames_; }
   void set_input_finished() {
     CHECK(!input_finished_);
     input_finished_ = true;
   }
-  int feature_dim() const {
-    return feature_dim_;
-  }
+  int feature_dim() const { return feature_dim_; }
 
   // Return false if input_finished_ and there is no feature left in
   // feature_queue_
-  bool ReadOne(std::vector<float> *feat);
+  bool ReadOne(std::vector<float>* feat);
   // Return value is the same to ReadOne
   bool Read(int num_frames, std::vector<std::vector<float>>* feats);
 
@@ -78,7 +74,7 @@ class FeaturePipeline {
   }
 
  private:
-  const FeaturePipelineConfig &config_;
+  const FeaturePipelineConfig& config_;
   int feature_dim_;
   Fbank fbank_;
 
@@ -91,5 +87,3 @@ class FeaturePipeline {
 }  // namespace wenet
 
 #endif  // FRONTEND_FEATURE_PIPELINE_H_
-
-

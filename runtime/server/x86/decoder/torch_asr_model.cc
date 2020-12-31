@@ -7,9 +7,8 @@
 #include <string>
 #include <utility>
 
-#include "torch/torch.h"
 #include "torch/script.h"
-
+#include "torch/torch.h"
 
 namespace wenet {
 
@@ -34,9 +33,8 @@ void TorchAsrModel::Read(const std::string& model_path) {
   CHECK_EQ(o4.isInt(), true);
   eos_ = o4.toInt();
   LOG(INFO) << "torch model info subsampling_rate " << subsampling_rate_
-            << " right context " << right_context_
-            << " sos " << sos_ << " eos " << eos_;
+            << " right context " << right_context_ << " sos " << sos_ << " eos "
+            << eos_;
 }
 
 }  // namespace wenet
-

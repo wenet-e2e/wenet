@@ -16,11 +16,11 @@
 #ifndef FRONTEND_WAV_H_
 #define FRONTEND_WAV_H_
 
+#include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <string.h>
-#include <assert.h>
 
 #include <string>
 
@@ -55,8 +55,9 @@ class WavReader {
     WavHeader header;
     fread(&header, 1, sizeof(header), fp);
     if (header.fmt_size < 16) {
-      fprintf(stderr, "WaveData: expect PCM format data "
-                      "to have fmt chunk of at least size 16.\n");
+      fprintf(stderr,
+              "WaveData: expect PCM format data "
+              "to have fmt chunk of at least size 16.\n");
       exit(1);
     } else if (header.fmt_size > 16) {
       int offset = 44 - 8 + header.fmt_size - 16;
@@ -109,45 +110,43 @@ class WavReader {
     if (data_ != NULL) delete data_;
   }
 
-  const float *data() const { return data_; }
+  const float* data() const { return data_; }
 
  private:
   int num_channel_;
   int sample_rate_;
   int bits_per_sample_;
   int num_sample_;  // sample points per channel
-  float *data_;
+  float* data_;
 };
 
 class WavWriter {
  public:
-  WavWriter(const float* data, int num_sample, int num_channel,
-            int sample_rate, int bits_per_sample):
-    data_(data), num_sample_(num_sample),
-    num_channel_(num_channel),
-    sample_rate_(sample_rate),
-    bits_per_sample_(bits_per_sample) {}
+  WavWriter(const float* data, int num_sample, int num_channel, int sample_rate,
+            int bits_per_sample)
+      : data_(data),
+        num_sample_(num_sample),
+        num_channel_(num_channel),
+        sample_rate_(sample_rate),
+        bits_per_sample_(bits_per_sample) {}
 
   void Write(const std::string& filename) {
     FILE* fp = fopen(filename.c_str(), "w");
     // init char 'riff' 'WAVE' 'fmt ' 'data'
     WavHeader header;
-    char wav_header[44] = {
-        0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00,
-        0x57, 0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20,
-        0x10, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x64, 0x61, 0x74, 0x61,
-        0x00, 0x00, 0x00, 0x00
-    };
+    char wav_header[44] = {0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57,
+                           0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20, 0x10, 0x00,
+                           0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                           0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00};
     memcpy(&header, wav_header, sizeof(header));
     header.channels = num_channel_;
     header.bit = bits_per_sample_;
     header.sample_rate = sample_rate_;
     header.data_size = num_sample_ * num_channel_ * (bits_per_sample_ / 8);
     header.size = sizeof(header) - 8 + header.data_size;
-    header.bytes_per_second = sample_rate_ * num_channel_ *
-                              (bits_per_sample_ / 8);
+    header.bytes_per_second =
+        sample_rate_ * num_channel_ * (bits_per_sample_ / 8);
     header.block_size = num_channel_ * (bits_per_sample_ / 8);
 
     fwrite(&header, 1, sizeof(header), fp);

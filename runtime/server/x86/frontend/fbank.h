@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef FRONTEND_FBANK_H_
 #define FRONTEND_FBANK_H_
 
@@ -38,24 +37,29 @@ namespace wenet {
 // https://github.com/kaldi-asr/kaldi/blob/master/src/feat/feature-fbank.cc
 class Fbank {
  public:
-  Fbank(int num_bins, int sample_rate, int frame_length, int frame_shift):
-      num_bins_(num_bins), sample_rate_(sample_rate),
-      frame_length_(frame_length), frame_shift_(frame_shift),
-      use_log_(true), remove_dc_offset_(true),
-      generator_(0), distribution_(0, 1.0), dither_(0.0) {
+  Fbank(int num_bins, int sample_rate, int frame_length, int frame_shift)
+      : num_bins_(num_bins),
+        sample_rate_(sample_rate),
+        frame_length_(frame_length),
+        frame_shift_(frame_shift),
+        use_log_(true),
+        remove_dc_offset_(true),
+        generator_(0),
+        distribution_(0, 1.0),
+        dither_(0.0) {
     fft_points_ = UpperPowerOfTwo(frame_length_);
     int num_fft_bins = fft_points_ / 2;
     float fft_bin_width = static_cast<float>(sample_rate_) / fft_points_;
     int low_freq = 20, high_freq = sample_rate_ / 2;
     float mel_low_freq = MelScale(low_freq);
     float mel_high_freq = MelScale(high_freq);
-    float mel_freq_delta = (mel_high_freq - mel_low_freq) / (num_bins+1);
+    float mel_freq_delta = (mel_high_freq - mel_low_freq) / (num_bins + 1);
     bins_.resize(num_bins_);
     center_freqs_.resize(num_bins_);
     for (int bin = 0; bin < num_bins; ++bin) {
       float left_mel = mel_low_freq + bin * mel_freq_delta,
-      center_mel = mel_low_freq + (bin + 1) * mel_freq_delta,
-      right_mel = mel_low_freq + (bin + 2) * mel_freq_delta;
+            center_mel = mel_low_freq + (bin + 1) * mel_freq_delta,
+            right_mel = mel_low_freq + (bin + 2) * mel_freq_delta;
       center_freqs_[bin] = InverseMelScale(center_mel);
       std::vector<float> this_bin(num_fft_bins);
       int first_index = -1, last_index = -1;
@@ -68,10 +72,9 @@ class Fbank {
           if (mel <= center_mel)
             weight = (mel - left_mel) / (center_mel - left_mel);
           else
-            weight = (right_mel-mel) / (right_mel-center_mel);
+            weight = (right_mel - mel) / (right_mel - center_mel);
           this_bin[i] = weight;
-          if (first_index == -1)
-            first_index = i;
+          if (first_index == -1) first_index = i;
           last_index = i;
         }
       }
@@ -86,32 +89,28 @@ class Fbank {
 
     // hamming window
     hamming_window_.resize(frame_length_);
-    double a = M_2PI / (frame_length-1);
+    double a = M_2PI / (frame_length - 1);
     for (int i = 0; i < frame_length; ++i) {
-        hamming_window_[i] = 0.54 - 0.46*cos(a * i);
+      hamming_window_[i] = 0.54 - 0.46 * cos(a * i);
     }
   }
 
-  void set_use_log(bool use_log) {
-    use_log_ = use_log;
-  }
+  void set_use_log(bool use_log) { use_log_ = use_log; }
 
   void set_remove_dc_offset(bool remove_dc_offset) {
     remove_dc_offset_ = remove_dc_offset;
   }
 
-  void set_dither(float dither) {
-    dither_ = dither;
-  }
+  void set_dither(float dither) { dither_ = dither; }
 
   int num_bins() const { return num_bins_; }
 
   static inline float InverseMelScale(float mel_freq) {
-    return 700.0f * (expf (mel_freq / 1127.0f) - 1.0f);
+    return 700.0f * (expf(mel_freq / 1127.0f) - 1.0f);
   }
 
   static inline float MelScale(float freq) {
-    return 1127.0f * logf (1.0f + freq / 700.0f);
+    return 1127.0f * logf(1.0f + freq / 700.0f);
   }
 
   static int UpperPowerOfTwo(int n) {
@@ -122,7 +121,7 @@ class Fbank {
   void PreEmphasis(float coeff, std::vector<float>* data) const {
     if (coeff == 0.0) return;
     for (int i = data->size() - 1; i > 0; i--)
-      (*data)[i] -= coeff * (*data)[i-1];
+      (*data)[i] -= coeff * (*data)[i - 1];
     (*data)[0] -= coeff * (*data)[0];
   }
 
@@ -182,7 +181,7 @@ class Fbank {
         // optional use log
         if (use_log_) {
           if (mel_energy < std::numeric_limits<float>::epsilon())
-              mel_energy = std::numeric_limits<float>::epsilon();
+            mel_energy = std::numeric_limits<float>::epsilon();
           mel_energy = logf(mel_energy);
         }
 

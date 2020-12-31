@@ -13,8 +13,8 @@
 
 namespace wenet {
 
-CtcPrefixBeamSearch::CtcPrefixBeamSearch(
-    const CtcPrefixBeamSearchOptions& opts): opts_(opts) {
+CtcPrefixBeamSearch::CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts)
+    : opts_(opts) {
   Reset();
 }
 
@@ -83,8 +83,8 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
         // ns(none blank ending score) to -inf, respectively.
         if (id == opts_.blank) {
           PrefixScore& next_score = next_hyps[prefix];
-          next_score.s = LogAdd(next_score.s,
-              LogAdd(prefix_score.s + prob, prefix_score.ns + prob));
+          next_score.s = LogAdd(next_score.s, LogAdd(prefix_score.s + prob,
+                                                     prefix_score.ns + prob));
         } else if (prefix.size() > 0 && id == prefix.back()) {
           // Case 1: *aa -> *a;
           PrefixScore& next_score1 = next_hyps[prefix];
@@ -98,19 +98,19 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
           PrefixScore& next_score = next_hyps[new_prefix];
-          next_score.ns = LogAdd(next_score.ns,
-              LogAdd(prefix_score.s + prob, prefix_score.ns + prob));
+          next_score.ns = LogAdd(next_score.ns, LogAdd(prefix_score.s + prob,
+                                                       prefix_score.ns + prob));
         }
       }
     }
 
     // 3. Second beam pure, only keep top n best paths
-    std::vector<std::pair<std::vector<int>, PrefixScore>> arr(
-        next_hyps.begin(), next_hyps.end());
-    int second_beam_size = std::min(static_cast<int>(arr.size()),
-                                    opts_.second_beam_size);
-    std::nth_element(arr.begin(), arr.begin() + second_beam_size,
-                     arr.end(), PrefixScoreCompare);
+    std::vector<std::pair<std::vector<int>, PrefixScore>> arr(next_hyps.begin(),
+                                                              next_hyps.end());
+    int second_beam_size =
+        std::min(static_cast<int>(arr.size()), opts_.second_beam_size);
+    std::nth_element(arr.begin(), arr.begin() + second_beam_size, arr.end(),
+                     PrefixScoreCompare);
     arr.resize(second_beam_size);
     std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 

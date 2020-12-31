@@ -33,13 +33,11 @@ class SymbolTable {
 
   ~SymbolTable() {}
 
-  std::string Find(int id) const {
-    return symbol_tabel_.at(id);
-  }
+  std::string Find(int id) const { return symbol_tabel_.at(id); }
 
  private:
-  void ReadSymbolFile(const std::string &symbol_file) {
-    FILE *fp = fopen(symbol_file.c_str(), "r");
+  void ReadSymbolFile(const std::string& symbol_file) {
+    FILE* fp = fopen(symbol_file.c_str(), "r");
     if (!fp) {
       LOG(FATAL) << symbol_file << " not exist, please check!!!";
     }

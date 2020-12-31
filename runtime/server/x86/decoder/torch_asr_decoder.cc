@@ -11,15 +11,14 @@ namespace wenet {
 
 TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
-    std::shared_ptr<TorchAsrModel> model,
-    const SymbolTable& symbol_table,
+    std::shared_ptr<TorchAsrModel> model, const SymbolTable& symbol_table,
     const DecodeOptions& opts)
     : feature_pipeline_(feature_pipeline),
       model_(model),
       symbol_table_(symbol_table),
       opts_(opts),
-      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts))
-    {}
+      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts)) {
+}
 
 void TorchAsrDecoder::Reset() {
   start_ = false;
@@ -45,10 +44,9 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   // If opts_.chunk_size > 0, streaming case, read feature chunk by chunk
   // otherwise, none streaming case, read all feature at once
   if (opts_.chunk_size > 0) {
-    if (!start_) {  // First batch
+    if (!start_) {                      // First batch
       int context = right_context + 1;  // Add current frame
-      num_requried_frames = (opts_.chunk_size - 1) *
-                            subsampling_rate + context;
+      num_requried_frames = (opts_.chunk_size - 1) * subsampling_rate + context;
     } else {
       num_requried_frames = opts_.chunk_size * subsampling_rate;
     }
@@ -58,32 +56,36 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   std::vector<std::vector<float>> chunk_feats;
   // If not okay, that means we reach the end of the input
   bool finish = !feature_pipeline_->Read(num_requried_frames, &chunk_feats);
-  LOG(INFO) << "Required " << num_requried_frames
-            << " get " << chunk_feats.size();
+  LOG(INFO) << "Required " << num_requried_frames << " get "
+            << chunk_feats.size();
   int num_frames = cached_feature_.size() + chunk_feats.size();
   // The total frames should be big enough to get just one output
   if (num_frames >= right_context + 1) {
     // 1. Prepare libtorch requried data, splice cached_feature_ and chunk_feats
-    torch::Tensor feats = torch::zeros(
-        {1, num_frames, feature_dim}, torch::kFloat);
+    torch::Tensor feats =
+        torch::zeros({1, num_frames, feature_dim}, torch::kFloat);
     for (size_t i = 0; i < cached_feature_.size(); ++i) {
       torch::Tensor row = torch::from_blob(cached_feature_[i].data(),
-          {feature_dim}, torch::kFloat).clone();
+                                           {feature_dim}, torch::kFloat)
+                              .clone();
       feats[0][i] = std::move(row);
     }
     int offset = cached_feature_.size();
     for (size_t i = 0; i < chunk_feats.size(); ++i) {
-      torch::Tensor row = torch::from_blob(chunk_feats[i].data(),
-          {feature_dim}, torch::kFloat).clone();
+      torch::Tensor row =
+          torch::from_blob(chunk_feats[i].data(), {feature_dim}, torch::kFloat)
+              .clone();
       feats[0][offset + i] = std::move(row);
     }
 
     // 2. Encoder chunk forward
     torch::NoGradGuard no_grad;
-    std::vector<torch::jit::IValue> inputs = {feats, subsampling_cache_,
-        elayers_output_cache_, conformer_cnn_cache_};
-    auto outputs = model_->torch_model()->get_method(
-        "forward_encoder_chunk")(inputs).toTuple()->elements();
+    std::vector<torch::jit::IValue> inputs = {
+        feats, subsampling_cache_, elayers_output_cache_, conformer_cnn_cache_};
+    auto outputs = model_->torch_model()
+                       ->get_method("forward_encoder_chunk")(inputs)
+                       .toTuple()
+                       ->elements();
     CHECK_EQ(outputs.size(), 4);
     // The encoder_out_ is from time 0 to current chunk, and offset_ is the
     // offset of current chunk, so to get output of current chunk, just slice
@@ -92,13 +94,14 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     subsampling_cache_ = outputs[1];
     elayers_output_cache_ = outputs[2];
     conformer_cnn_cache_ = outputs[3];
-    torch::Tensor chunk_out = encoder_out_.slice(1, offset_,
-        encoder_out_.size(1));
+    torch::Tensor chunk_out =
+        encoder_out_.slice(1, offset_, encoder_out_.size(1));
     offset_ = encoder_out_.size(1);
     // The first dimension is a fake dimension, it's 1 for one utterance,
     // so just ignore it here.
-    torch::Tensor ctc_log_probs = model_->torch_model()->run_method(
-        "ctc_activation", chunk_out).toTensor()[0];
+    torch::Tensor ctc_log_probs = model_->torch_model()
+                                      ->run_method("ctc_activation", chunk_out)
+                                      .toTensor()[0];
     ctc_prefix_beam_searcher_->Search(ctc_log_probs);
     auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
     const std::vector<int>& best_hyp = hypotheses[0];
@@ -146,22 +149,21 @@ void TorchAsrDecoder::AttentionRescoring() {
     max_hyps_len = std::max(length, max_hyps_len);
     hyps_length[i] = static_cast<int64_t>(length);
   }
-  torch::Tensor hyps_tensor = torch::zeros({num_hyps, max_hyps_len},
-                                           torch::kLong);
+  torch::Tensor hyps_tensor =
+      torch::zeros({num_hyps, max_hyps_len}, torch::kLong);
   for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
     hyps_tensor[i][0] = sos;
     for (size_t j = 0; j < hyp.size(); ++j) {
-      hyps_tensor[i][j+1] = hyp[j];
+      hyps_tensor[i][j + 1] = hyp[j];
     }
   }
 
   // Step 2: forward attention decoder by hyps and corresponding encoder_out_
-  torch::Tensor probs = model_->torch_model()->run_method(
-      "forward_attention_decoder",
-      hyps_tensor,
-      hyps_length,
-      encoder_out_).toTensor();
+  torch::Tensor probs = model_->torch_model()
+                            ->run_method("forward_attention_decoder",
+                                         hyps_tensor, hyps_length, encoder_out_)
+                            .toTensor();
   CHECK_EQ(probs.size(0), num_hyps);
   CHECK_EQ(probs.size(1), max_hyps_len);
 
@@ -187,9 +189,8 @@ void TorchAsrDecoder::AttentionRescoring() {
     for (size_t j = 0; j < hypotheses[best_k].size(); ++j) {
       result += symbol_table_.Find(hypotheses[best_k][j]);
     }
-    VLOG(1) << "ctc index " << best_k
-            << " result " << result
-            << " score " << weighted_scores[i].second;
+    VLOG(1) << "ctc index " << best_k << " result " << result << " score "
+            << weighted_scores[i].second;
     if (0 == i) {
       result_ = result;
     }

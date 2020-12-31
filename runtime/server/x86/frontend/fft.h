@@ -12,5 +12,3 @@ int fft(float* x, float* y, int n);
 }  // namespace wenet
 
 #endif  // FRONTEND_FFT_H_
-
-

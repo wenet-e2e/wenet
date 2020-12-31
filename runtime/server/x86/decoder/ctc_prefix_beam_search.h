@@ -8,8 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "torch/torch.h"
 #include "torch/script.h"
+#include "torch/torch.h"
 
 #include "utils/utils.h"
 
@@ -30,9 +30,7 @@ struct PrefixScore {
   // none blank ending score
   float ns = -std::numeric_limits<float>::max();
   PrefixScore() {}
-  PrefixScore(float s, float ns):
-      s(s),
-      ns(ns) {}
+  PrefixScore(float s, float ns) : s(s), ns(ns) {}
 };
 
 struct PrefixHash {

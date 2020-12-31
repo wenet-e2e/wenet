@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include "torch/torch.h"
 #include "torch/script.h"
+#include "torch/torch.h"
 
 #include "utils/utils.h"
 
