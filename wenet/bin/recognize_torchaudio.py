@@ -80,7 +80,8 @@ if __name__ == '__main__':
     test_collate_conf['spec_aug'] = False
     test_collate_conf['feature_dither'] = False
     test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    test_collate_func = TorchAudioCollateFunc(**test_collate_conf)
+    test_collate_func = TorchAudioCollateFunc(**test_collate_conf,
+                                              cmvn=args.cmvn)
     dataset_conf = configs.get('dataset_conf', {})
     dataset_conf['batch_size'] = args.batch_size
     dataset_conf['sort'] = False

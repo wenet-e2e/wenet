@@ -62,6 +62,7 @@ if __name__ == '__main__':
                         default=0,
                         type=int,
                         help='num of subprocess workers for reading')
+    parser.add_argument('--cmvn', default=None, help='global cmvn file')
 
     args = parser.parse_args()
 
@@ -77,7 +78,8 @@ if __name__ == '__main__':
     distributed = args.world_size > 1
 
     # Init dataset and data loader
-    collate_func = TorchAudioCollateFunc(**configs['collate_conf'])
+    collate_func = TorchAudioCollateFunc(**configs['collate_conf'],
+                                         cmvn=args.cmvn)
     print(configs['collate_conf'])
     cv_collate_conf = copy.deepcopy(configs['collate_conf'])
 
@@ -85,7 +87,8 @@ if __name__ == '__main__':
     cv_collate_conf['spec_aug'] = False
     cv_collate_conf['feature_dither'] = False
     cv_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    cv_collate_func = TorchAudioCollateFunc(**cv_collate_conf)
+    cv_collate_func = TorchAudioCollateFunc(**cv_collate_conf,
+                                            cmvn=args.cmvn)
     dataset_conf = configs.get('dataset_conf', {})
     train_dataset = TorchAudioDataset(args.train_data, **dataset_conf)
     cv_dataset = TorchAudioDataset(args.cv_data, **dataset_conf)
