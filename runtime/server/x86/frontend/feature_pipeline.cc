@@ -12,50 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "frontend/feature_pipeline.h"
+
 #include <algorithm>
 #include <utility>
 
-#include "frontend/feature_pipeline.h"
-
 namespace wenet {
 
-FeaturePipeline::FeaturePipeline(const FeaturePipelineConfig& config):
-    config_(config),
-    feature_dim_(config.num_bins),
-    fbank_(config.num_bins, config.sample_rate,
-           config.frame_length, config.frame_shift),
-    num_frames_(0),
-    input_finished_(false) {
-}
+FeaturePipeline::FeaturePipeline(const FeaturePipelineConfig& config)
+    : config_(config),
+      feature_dim_(config.num_bins),
+      fbank_(config.num_bins, config.sample_rate, config.frame_length,
+             config.frame_shift),
+      num_frames_(0),
+      input_finished_(false) {}
 
 void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
-  std::vector<std::vector<float> > feats;
+  std::vector<std::vector<float>> feats;
   std::vector<float> waves;
   waves.insert(waves.end(), remained_wav_.begin(), remained_wav_.end());
   waves.insert(waves.end(), wav.begin(), wav.end());
   int num_frames = fbank_.Compute(waves, &feats);
-  for (size_t i = 0; i < feats.size(); i++) {
+  for (size_t i = 0; i < feats.size(); ++i) {
     feature_queue_.Push(std::move(feats[i]));
   }
   num_frames_ += num_frames;
 
   int left_samples = waves.size() - config_.frame_shift * num_frames;
   remained_wav_.resize(left_samples);
-  std::copy(waves.begin() + config_.frame_shift * num_frames,
-            waves.end(), remained_wav_.begin());
+  std::copy(waves.begin() + config_.frame_shift * num_frames, waves.end(),
+            remained_wav_.begin());
 }
 
-bool FeaturePipeline::ReadOne(std::vector<float> *feat) {
+bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
   if (input_finished_ && feature_queue_.Empty()) {
     return false;
-  } else {
-    *feat = std::move(feature_queue_.Pop());
-    return true;
   }
+  *feat = std::move(feature_queue_.Pop());
+  return true;
 }
 
 bool FeaturePipeline::Read(int num_frames,
-                           std::vector<std::vector<float> > *feats) {
+                           std::vector<std::vector<float>>* feats) {
   feats->clear();
   std::vector<float> feat;
   while (feats->size() < num_frames) {
@@ -76,4 +74,3 @@ void FeaturePipeline::Reset() {
 }
 
 }  // namespace wenet
-

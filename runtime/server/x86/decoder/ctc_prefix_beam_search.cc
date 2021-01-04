@@ -1,20 +1,20 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
-#include <glog/logging.h>
+#include "decoder/ctc_prefix_beam_search.h"
 
 #include <algorithm>
+#include <cmath>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
-#include <cmath>
 
-#include "decoder/ctc_prefix_beam_search.h"
+#include "glog/logging.h"
 
 namespace wenet {
 
-CtcPrefixBeamSearch::CtcPrefixBeamSearch(
-    const CtcPrefixBeamSearchOptions& opts): opts_(opts) {
+CtcPrefixBeamSearch::CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts)
+    : opts_(opts) {
   Reset();
 }
 
@@ -62,7 +62,7 @@ static bool PrefixScoreCompare(
 void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   CHECK_EQ(logp.dtype(), torch::kFloat);
   CHECK_EQ(logp.dim(), 2);
-  for (int t = 0; t < logp.size(0); t++) {
+  for (int t = 0; t < logp.size(0); ++t) {
     torch::Tensor logp_t = logp[t];
     std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> next_hyps;
     // 1. First beam prune, only select topk candidates
@@ -71,20 +71,20 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     Tensor topk_index = std::get<1>(topk);
 
     // 2. Token passing
-    for (int i = 0; i < topk_index.size(0); i++) {
+    for (int i = 0; i < topk_index.size(0); ++i) {
       int id = topk_index[i].item<int>();
       float prob = topk_score[i].item<float>();
       for (const auto& it : cur_hyps_) {
         const std::vector<int>& prefix = it.first;
         const PrefixScore& prefix_score = it.second;
-        // If prefix doesn't exit in next_hyps, next_hyps[prefix] will insert
+        // If prefix doesn't exist in next_hyps, next_hyps[prefix] will insert
         // PrefixScore(-inf, -inf) by default, since the default constructor
         // of PrefixScore will set fields s(blank ending score) and
         // ns(none blank ending score) to -inf, respectively.
         if (id == opts_.blank) {
           PrefixScore& next_score = next_hyps[prefix];
-          next_score.s = LogAdd(next_score.s,
-              LogAdd(prefix_score.s + prob, prefix_score.ns + prob));
+          next_score.s = LogAdd(next_score.s, LogAdd(prefix_score.s + prob,
+                                                     prefix_score.ns + prob));
         } else if (prefix.size() > 0 && id == prefix.back()) {
           // Case 1: *aa -> *a;
           PrefixScore& next_score1 = next_hyps[prefix];
@@ -98,26 +98,26 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
           PrefixScore& next_score = next_hyps[new_prefix];
-          next_score.ns = LogAdd(next_score.ns,
-              LogAdd(prefix_score.s + prob, prefix_score.ns + prob));
+          next_score.ns = LogAdd(next_score.ns, LogAdd(prefix_score.s + prob,
+                                                       prefix_score.ns + prob));
         }
       }
     }
 
     // 3. Second beam pure, only keep top n best paths
-    std::vector<std::pair<std::vector<int>, PrefixScore> > arr(
-        next_hyps.begin(), next_hyps.end());
-    int second_beam_size = std::min(static_cast<int>(arr.size()),
-                                    opts_.second_beam_size);
-    std::nth_element(arr.begin(), arr.begin() + second_beam_size,
-                     arr.end(), PrefixScoreCompare);
+    std::vector<std::pair<std::vector<int>, PrefixScore>> arr(next_hyps.begin(),
+                                                              next_hyps.end());
+    int second_beam_size =
+        std::min(static_cast<int>(arr.size()), opts_.second_beam_size);
+    std::nth_element(arr.begin(), arr.begin() + second_beam_size, arr.end(),
+                     PrefixScoreCompare);
     arr.resize(second_beam_size);
     std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
     cur_hyps_.clear();
     hypotheses_.clear();
     likelihood_.clear();
-    for (size_t i = 0; i < arr.size(); i++) {
+    for (size_t i = 0; i < arr.size(); ++i) {
       cur_hyps_[arr[i].first] = arr[i].second;
       hypotheses_.emplace_back(std::move(arr[i].first));
       likelihood_.emplace_back(LogAdd(arr[i].second.s, arr[i].second.ns));

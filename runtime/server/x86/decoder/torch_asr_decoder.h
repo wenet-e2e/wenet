@@ -4,16 +4,16 @@
 #ifndef DECODER_TORCH_ASR_DECODER_H_
 #define DECODER_TORCH_ASR_DECODER_H_
 
-#include <torch/torch.h>
-#include <torch/script.h>
-
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
+#include "torch/script.h"
+#include "torch/torch.h"
+
+#include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
-#include "decoder/ctc_prefix_beam_search.h"
 #include "frontend/feature_pipeline.h"
 #include "utils/utils.h"
 
@@ -31,8 +31,7 @@ class TorchAsrDecoder {
  public:
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
                   std::shared_ptr<TorchAsrModel> model,
-                  const SymbolTable& symbol_table,
-                  const DecodeOptions& opts);
+                  const SymbolTable& symbol_table, const DecodeOptions& opts);
 
   // Return true if all feature has been decoded, else return false
   bool Decode();
@@ -47,9 +46,9 @@ class TorchAsrDecoder {
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
   const SymbolTable& symbol_table_;
-  const DecodeOptions &opts_;
+  const DecodeOptions& opts_;
   // cache feature
-  std::vector<std::vector<float> > cached_feature_;
+  std::vector<std::vector<float>> cached_feature_;
   bool start_ = false;
 
   torch::jit::IValue subsampling_cache_;
@@ -62,6 +61,8 @@ class TorchAsrDecoder {
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
 
   std::string result_;
+
+ public:
   DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
 };
 
