@@ -34,7 +34,10 @@ cc_library(
 cc_library(
     name = 'torch_asr_decoder',
     srcs = ['torch_asr_decoder.cc'],
-    hdrs = ['torch_asr_decoder.h', 'symbol_table.h'],
+    hdrs = [
+        'symbol_table.h',
+        'torch_asr_decoder.h',
+    ],
     deps = [
         ":ctc_prefix_beam_search",
         ":torch_asr_model",

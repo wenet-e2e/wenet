@@ -33,7 +33,7 @@ class SymbolTable {
 
   ~SymbolTable() {}
 
-  std::string Find(int id) const { return symbol_tabel_.at(id); }
+  const std::string& Find(int id) const { return symbol_tabel_.at(id); }
 
  private:
   void ReadSymbolFile(const std::string& symbol_file) {

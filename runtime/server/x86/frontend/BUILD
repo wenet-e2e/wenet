@@ -17,7 +17,10 @@ cc_library(
 cc_library(
     name = 'feature_pipeline',
     srcs = ['feature_pipeline.cc'],
-    hdrs = ['fbank.h', 'feature_pipeline.h'],
+    hdrs = [
+        'fbank.h',
+        'feature_pipeline.h'
+    ],
     deps = [
         ":fft",
         "//utils:utils",
