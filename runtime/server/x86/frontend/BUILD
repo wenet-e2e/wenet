@@ -4,7 +4,7 @@ cc_library(
     name = 'frontend',
     hdrs = ['wav.h'],
     deps = [
-        'feature_pipeline',
+        ':feature_pipeline',
     ],
 )
 
@@ -17,10 +17,13 @@ cc_library(
 cc_library(
     name = 'feature_pipeline',
     srcs = ['feature_pipeline.cc'],
-    hdrs = ['fbank.h', 'feature_pipeline.h'],
+    hdrs = [
+        'fbank.h',
+        'feature_pipeline.h'
+    ],
     deps = [
         ":fft",
-        "@com_github_google_glog//:glog",
         "//utils:utils",
+        "@com_github_google_glog//:glog",
     ],
 )

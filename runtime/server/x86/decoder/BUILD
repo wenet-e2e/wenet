@@ -5,9 +5,9 @@ cc_library(
     srcs = ['ctc_prefix_beam_search.cc'],
     hdrs = ['ctc_prefix_beam_search.h'],
     deps = [
+        "//utils:utils",
         "@com_github_google_glog//:glog",
         "@libtorch//:torch",
-        "//utils:utils",
     ],
 )
 
@@ -25,22 +25,25 @@ cc_library(
     srcs = ['torch_asr_model.cc'],
     hdrs = ['torch_asr_model.h'],
     deps = [
+        "//utils:utils",
         "@com_github_google_glog//:glog",
         "@libtorch//:torch",
-        "//utils:utils",
     ],
 )
 
 cc_library(
     name = 'torch_asr_decoder',
     srcs = ['torch_asr_decoder.cc'],
-    hdrs = ['torch_asr_decoder.h', 'symbol_table.h'],
+    hdrs = [
+        'symbol_table.h',
+        'torch_asr_decoder.h',
+    ],
     deps = [
+        ":ctc_prefix_beam_search",
+        ":torch_asr_model",
+        "//frontend:frontend",
         "@com_github_google_glog//:glog",
         "@libtorch//:torch",
-        "//frontend:frontend",
-        ":torch_asr_model",
-        ":ctc_prefix_beam_search",
     ],
 )
 

@@ -18,10 +18,10 @@
 
 #include <stdio.h>
 
-#include <glog/logging.h>
-
 #include <string>
 #include <unordered_map>
+
+#include "glog/logging.h"
 
 namespace wenet {
 
@@ -33,16 +33,13 @@ class SymbolTable {
 
   ~SymbolTable() {}
 
-  std::string Find(int id) const {
-    CHECK(symbol_tabel_.find(id) != symbol_tabel_.end());
-    return symbol_tabel_[id];
-  }
+  const std::string& Find(int id) const { return symbol_tabel_.at(id); }
 
  private:
-  void ReadSymbolFile(const std::string &symbol_file) {
-    FILE *fp = fopen(symbol_file.c_str(), "r");
+  void ReadSymbolFile(const std::string& symbol_file) {
+    FILE* fp = fopen(symbol_file.c_str(), "r");
     if (!fp) {
-      LOG(FATAL) << symbol_file << " not exint, please check!!!";
+      LOG(FATAL) << symbol_file << " not exist, please check!!!";
     }
     char buffer[1024] = {0}, str[1024] = {0};
     int id;
@@ -51,7 +48,6 @@ class SymbolTable {
       if (num != 2) {
         LOG(FATAL) << "each line shoud have 2 fields, symbol & id";
       }
-      CHECK(str != NULL);
       CHECK_GE(id, 0);
       std::string symbol = str;
       symbol_tabel_[id] = symbol;
@@ -59,7 +55,7 @@ class SymbolTable {
     fclose(fp);
   }
 
-  mutable std::unordered_map<int, std::string> symbol_tabel_;
+  std::unordered_map<int, std::string> symbol_tabel_;
 };
 
 }  // namespace wenet
