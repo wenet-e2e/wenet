@@ -1,5 +1,4 @@
 KALDI_ROOT=/export/maryland/binbinzhang/kaldi
-#ANACONDA_ROOT=/home/binbinzhang/miniconda3
 
 [ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
 export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$KALDI_ROOT/tools/sctk/bin:$PWD:$PATH
@@ -12,7 +11,5 @@ export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$KALDI_ROOT/tools/sctk/bin
 export LC_ALL=C
 
 # NOTE(kan-bayashi): Use UTF-8 in Python to avoid UnicodeDecodeError when LC_ALL=C
-#source $ANACONDA_ROOT/bin/activate py3
-conda activate wenet
 export PYTHONIOENCODING=UTF-8
 export PYTHONPATH=../../:$PYTHONPATH

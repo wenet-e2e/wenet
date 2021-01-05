@@ -49,6 +49,7 @@ collate_conf:
         frame_length: 25
         using_pitch: false
     feature_dither: 0.1 # add dither [-feature_dither,feature_dither] on fbank feature
+    speed_perturb: true
     #spec_swap: false
     spec_aug: true
 

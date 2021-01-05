@@ -86,12 +86,12 @@ def _load_kaldi_cmvn(kaldi_cmvn_file):
     cmvn = np.array([means, variance])
     return cmvn
 
-def spec_augmentation(x,
-                      gauss_mask_for_t=False,
-                      num_t_mask=2,
-                      num_f_mask=2,
-                      max_t=50,
-                      max_f=10):
+def _spec_augmentation(x,
+                       gauss_mask_for_t=False,
+                       num_t_mask=2,
+                       num_f_mask=2,
+                       max_t=50,
+                       max_f=10):
     ''' Deep copy x and do spec augmentation then return it
     Args:
         x: input feature, T * F 2D
@@ -134,17 +134,27 @@ def _do_waveform_distortion(waveform, distortion_methods_conf):
                                     distortion_conf , point_rate)
     return waveform
 
+# add speed perturb when loading wav
+# return augmented, sr
+def _load_wav_with_speed(wav_file):
+    r = random.uniform(0, 1)
+    if r < 1 / 3:
+        return torchaudio.load_wav(wav_file)
+    else:
+        if r < 2 / 3:
+            speed = 0.9  # slower
+        else:
+            speed = 1.1  # faster
+        si, _ = torchaudio.info(wav_file)
+        E = torchaudio.sox_effects.SoxEffectsChain()
+        E.append_effect_to_chain('speed', speed)  
+        E.append_effect_to_chain("rate", si.rate)
+        E.set_input_file(wav_file)
+        return E.sox_build_flow_effects()
 
-# def old_do_waveform_distortion(waveform, distortion_methods_conf):
-#     r = random.uniform(0, 1)
-#     if r < 0.5:
-#         return distort_wav('jag_distortion', waveform, 0.6)
-#     elif r >= 0.5 and r < 0.75:
-#         return distort_wav('max_distortion', waveform, 0.05)
-#     else:
-#         return distort_wav('poly_distortion', waveform, 0.5)
 
-def _extract_feature(batch, wav_distortion_conf, feature_extraction_conf):
+def _extract_feature(batch, speed_perturb, wav_distortion_conf,
+                     feature_extraction_conf):
     keys = []
     feats = []
     lengths = []
@@ -153,7 +163,12 @@ def _extract_feature(batch, wav_distortion_conf, feature_extraction_conf):
 
     for i, x in enumerate(batch):
         try:
-            waveform, sample_rate = torchaudio.load_wav(x[1])
+            waveform = None
+            sample_rate = 16000
+            if speed_perturb:
+                waveform, sample_rate = _load_wav_with_speed(x[1])
+            else:
+                waveform, sample_rate = torchaudio.load_wav(x[1])
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
@@ -199,6 +214,7 @@ class TorchAudioCollateFunc(object):
                  right_context=0,
                  spec_aug=False,
                  feature_dither=0.0,
+                 speed_perturb=False
                  ):
         '''
         Args:
@@ -216,10 +232,12 @@ class TorchAudioCollateFunc(object):
         self.right_context = right_context
         self.spec_aug = spec_aug
         self.feature_dither = feature_dither
+        self.speed_perturb = speed_perturb
 
     def __call__(self, batch):
         assert (len(batch) == 1)
         keys, xs, ys = _extract_feature(batch[0],
+                                        self.speed_perturb,
                                         self.wav_distortion_conf,
                                         self.feature_extraction_conf)
         if self.cmvn is not None:
@@ -236,7 +254,7 @@ class TorchAudioCollateFunc(object):
             a = random.uniform(0, self.feature_dither)
             xs = [x + (np.random.random_sample(x.shape) - 0.5) * a for x in xs]
         if self.spec_aug:
-            xs = [spec_augmentation(x) for x in xs]
+            xs = [_spec_augmentation(x) for x in xs]
         # optional splice
         if self.left_context != 0 or self.right_context != 0:
             xs = [

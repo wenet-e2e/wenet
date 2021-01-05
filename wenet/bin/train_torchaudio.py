@@ -86,6 +86,7 @@ if __name__ == '__main__':
     # use raw wav of validation set
     cv_collate_conf['spec_aug'] = False
     cv_collate_conf['feature_dither'] = False
+    cv_collate_conf['speed_perturb'] = False
     cv_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
     cv_collate_func = TorchAudioCollateFunc(**cv_collate_conf,
                                             cmvn=args.cmvn)

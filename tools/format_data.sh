@@ -12,7 +12,6 @@ nlsyms=""
 lang=""
 feat=""
 feat_type="kaldi"
-#feat_type="wav"
 oov="<unk>"
 bpecode=""
 allow_one_column=false
@@ -30,6 +29,7 @@ Options:
   --nj <nj>                                        # number of parallel jobs
   --cmd (utils/run.pl|utils/queue.pl <queue opts>) # how to run jobs.
   --feat <feat-scp>                                # feat.scp or feat1.scp,feat2.scp,...
+  --feat-type <feat-type>                          # kaldi or wav
   --oov <oov-word>                                 # Default: <unk>
   --out <outputfile>                               # If omitted, write in stdout
   --filetype <mat|hdf5|sound.hdf5>                 # Specify the format of feats file

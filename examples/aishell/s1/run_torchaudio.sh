@@ -7,7 +7,6 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-#export CUDA_VISIBLE_DEVICES="0"
 export CUDA_VISIBLE_DEVICES="6,7"
 stage=1 # start from 0 if you need to start from data preparation
 stop_stage=1
@@ -25,8 +24,12 @@ train_set=train
 # 2. conf/train_conformer.yaml: Standard conformer
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 train_config=conf/train_conformer_torchaudio.yaml
+
+# train from start
 checkpoint=
-checkpoint=exp/torchaudio_baseline/48.pt
+# continue train from a checkpoint model
+# checkpoint=exp/torchaudio_baseline/48.pt
+
 dir=exp/torchaudio_baseline
 
 # use average_checkpoint will get better result
@@ -75,7 +78,6 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    nj=32
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
@@ -93,7 +95,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     init_method=file://$(readlink -f $INIT_FILE)
     echo "$0: init method is $init_method"
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-    echo "$num_gpus"
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
     
@@ -113,7 +114,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.world_size $num_gpus \
             --ddp.rank $i \
             --ddp.dist_backend $dist_backend \
-            --num_workers 2 
+            --num_workers 2
     } &
     done
     wait
@@ -134,6 +135,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
     # -1 for full chunk
     decoding_chunk_size=
+    ctc_weight=0.5
     for mode in ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring; do
     {
         test_dir=$dir/test_${mode}
@@ -147,6 +149,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --batch_size 1 \
             --penalty 0.0 \
             --dict $dict \
+            --ctc_weight $ctc_weight \
             --result_file $test_dir/text \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
          python2 tools/compute-wer.py --char=1 --v=1 \
