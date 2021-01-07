@@ -16,7 +16,9 @@
 
 #include <thread>
 #include <utility>
+#include <vector>
 
+#include "boost/json/src.hpp"
 #include "glog/logging.h"
 
 namespace wenet {
@@ -24,8 +26,9 @@ namespace wenet {
 namespace beast = boost::beast;          // from <boost/beast.hpp>
 namespace http = beast::http;            // from <boost/beast/http.hpp>
 namespace websocket = beast::websocket;  // from <boost/beast/websocket.hpp>
-namespace net = boost::asio;             // from <boost/asio.hpp>
+namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
+namespace json = boost::json;
 
 void ConnectionHandler(tcp::socket& socket) {  // NOLINT
   try {
@@ -33,15 +36,53 @@ void ConnectionHandler(tcp::socket& socket) {  // NOLINT
     websocket::stream<tcp::socket> ws{std::move(socket)};
     // Accept the websocket handshake
     ws.accept();
+    bool got_start_tag = false;
     for (;;) {
       // This buffer will hold the incoming message
       beast::flat_buffer buffer;
       // Read a message
       ws.read(buffer);
-      LOG(INFO) << beast::make_printable(buffer.data());
-      // Echo the message back
-      ws.text(ws.got_text());
-      ws.write(buffer.data());
+      if (ws.got_text()) {
+        std::string message = beast::buffers_to_string(buffer.data());
+        LOG(INFO) << message;
+        json::value v = json::parse(message);
+        if (v.is_object()) {
+          json::object obj = v.get_object();
+          if (obj.find("signal") != obj.end()) {
+            json::string signal = obj["signal"].as_string();
+            if (signal == "start") {
+              LOG(INFO) << "Start recieve data";
+              got_start_tag = true;
+              json::value rv = {{"status", "ok"}, {"type", "server_ready"}};
+              ws.text(true);
+              ws.write(asio::buffer(json::serialize(rv)));
+            } else if (signal == "end") {
+              json::value rv = {{"status", "ok"}, {"type", "speech_end"}};
+              ws.text(true);
+              ws.write(asio::buffer(json::serialize(rv)));
+              LOG(INFO) << "Stop recieve data";
+            } else {
+              // TODO(Binbin Zhang): error handle
+            }
+          } else {
+            // TODO(Binbin Zhang): error handle
+          }
+        }
+      } else {
+        if (!got_start_tag) {
+          // TODO(Binbin Zhang): error handle
+        } else {
+          // Read binary PCM data
+          int num_samples = buffer.size() / sizeof(int16_t);
+          std::vector<float> pcm_data(num_samples);
+          const int16_t* pdata = static_cast<int16_t*>(buffer.data().data());
+          for (int i = 0; i < num_samples; i++) {
+            pcm_data[i] = static_cast<float>(*pdata);
+            pdata++;
+          }
+          LOG(INFO) << "Recieved " << buffer.size() << " " << pcm_data[0];
+        }
+      }
     }
   } catch (beast::system_error const& se) {
     // This indicates that the session was closed
@@ -55,7 +96,7 @@ void ConnectionHandler(tcp::socket& socket) {  // NOLINT
 
 void WebSocketServer::Start() {
   try {
-    auto const address = net::ip::make_address("0.0.0.0");
+    auto const address = asio::ip::make_address("0.0.0.0");
     tcp::acceptor acceptor{ioc_, {address, static_cast<uint16_t>(port_)}};
     for (;;) {
       // This will receive the new connection
