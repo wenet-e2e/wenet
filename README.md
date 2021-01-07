@@ -24,26 +24,26 @@ to reduce the effort of productizing E2E models, and to explore better E2E model
 
 ## Performance Benchmark
 
-Please see examples/$dataset/s0/README.md for WeNet benchmark on different speech datasets.
+Please see `examples/$dataset/s0/README.md` for WeNet benchmark on different speech datasets.
 * [AIShell-1](examples/aishell/s0/README.md)
-* LibriSpeech (to be added)
+* [LibriSpeech](examples/librispeech/s0/README.md)
 
 ## Documentation
 
-You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please see tutorails below:
+You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please read tutorials below:
 * [Tutorial](docs/tutorial.md)
 * [JIT in WeNet](docs/jit_in_wenet.md)
 * [Runtime](docs/runtime.md)
 
 ## Installation
 
-- Clone
+- Clone the repo
 ``` sh
 git clone https://github.com/mobvoi/wenet.git
 ```
 
 - Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
-- Create conda env: **pytorch 1.6.0** is suggested. We meet some error on NCCL when using 1.7.0 on 2080 Ti.
+- Create Conda env: (**PyTorch 1.6.0** is recommended. We met some error on NCCL when using 1.7.0 on 2080 Ti.)
 
 ``` sh
 conda create -n wenet python=3.8
