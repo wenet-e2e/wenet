@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef WEBSOCKET_WEBSOCKET_CLIENT_H_
-#define WEBSOCKET_WEBSOCKET_CLIENT_H_
+#ifndef WEBSOCKET_WEBSOCKET_SERVER_H_
+#define WEBSOCKET_WEBSOCKET_SERVER_H_
 
 #include <iostream>
 #include <memory>
@@ -24,6 +24,7 @@
 #include "boost/asio/ip/tcp.hpp"
 #include "boost/beast/core.hpp"
 #include "boost/beast/websocket.hpp"
+#include "glog/logging.h"
 
 namespace wenet {
 
@@ -33,23 +34,17 @@ namespace websocket = beast::websocket;  // from <boost/beast/websocket.hpp>
 namespace net = boost::asio;             // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 
-class WebSocketClient {
+class WebSocketServer {
  public:
-  WebSocketClient(const std::string& host, int port);
-
-  void AddData(const std::string& data);
-  void ReadLoopFunc();
-  void Close();
+  explicit WebSocketServer(int port) : port_(port) {}
+  void Start();
 
  private:
-  void Connect();
-  std::string host_;
-  int port_;
-  net::io_context ioc_;
-  websocket::stream<tcp::socket> ws_{ioc_};
-  std::unique_ptr<std::thread> t_{nullptr};
+  int port_ = 10086;
+  // The io_context is required for all I/O
+  net::io_context ioc_{1};
 };
 
 }  // namespace wenet
 
-#endif  // WEBSOCKET_WEBSOCKET_CLIENT_H_
+#endif  // WEBSOCKET_WEBSOCKET_SERVER_H_
