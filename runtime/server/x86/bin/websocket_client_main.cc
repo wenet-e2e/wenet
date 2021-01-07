@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <chrono>
+
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 
@@ -50,6 +52,8 @@ int main(int argc, char *argv[]) {
     // Send PCM data
     client.SendBinaryData(data.data(), data.size() * sizeof(int16_t));
     LOG(INFO) << "Send " << data.size() * sizeof(int16_t) << " " << data[0];
+    std::this_thread::sleep_for(
+        std::chrono::milliseconds(static_cast<int>(interval * 1000)));
   }
   client.SendEndSignal();
   client.Join();
