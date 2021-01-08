@@ -87,7 +87,7 @@ add_library(websocket STATIC
   websocket/websocket_client.cc
   websocket/websocket_server.cc
 )
-target_link_libraries(websocket PUBLIC glog)
+target_link_libraries(websocket PUBLIC glog decoder)
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)

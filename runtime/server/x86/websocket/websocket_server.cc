@@ -30,19 +30,17 @@ namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 namespace json = boost::json;
 
-void ConnectionHandler(tcp::socket& socket) {  // NOLINT
+void ConnectionHandler::operator()() {
   try {
-    // Construct the stream by moving in the socket
-    websocket::stream<tcp::socket> ws{std::move(socket)};
     // Accept the websocket handshake
-    ws.accept();
+    ws_.accept();
     bool got_start_tag = false;
     for (;;) {
       // This buffer will hold the incoming message
       beast::flat_buffer buffer;
       // Read a message
-      ws.read(buffer);
-      if (ws.got_text()) {
+      ws_.read(buffer);
+      if (ws_.got_text()) {
         std::string message = beast::buffers_to_string(buffer.data());
         LOG(INFO) << message;
         json::value v = json::parse(message);
@@ -54,12 +52,12 @@ void ConnectionHandler(tcp::socket& socket) {  // NOLINT
               LOG(INFO) << "Start recieve data";
               got_start_tag = true;
               json::value rv = {{"status", "ok"}, {"type", "server_ready"}};
-              ws.text(true);
-              ws.write(asio::buffer(json::serialize(rv)));
+              ws_.text(true);
+              ws_.write(asio::buffer(json::serialize(rv)));
             } else if (signal == "end") {
               json::value rv = {{"status", "ok"}, {"type", "speech_end"}};
-              ws.text(true);
-              ws.write(asio::buffer(json::serialize(rv)));
+              ws_.text(true);
+              ws_.write(asio::buffer(json::serialize(rv)));
               LOG(INFO) << "Stop recieve data";
             } else {
               // TODO(Binbin Zhang): error handle
@@ -104,7 +102,10 @@ void WebSocketServer::Start() {
       // Block until we get a connection
       acceptor.accept(socket);
       // Launch the session, transferring ownership of the socket
-      std::thread{std::bind(ConnectionHandler, std::move(socket))}.detach();
+      ConnectionHandler handler(std::move(socket), feature_config_,
+                                decode_config_, symbol_table_, model_);
+      std::thread t(std::move(handler));
+      t.detach();
     }
   } catch (const std::exception& e) {
     LOG(FATAL) << e.what();
