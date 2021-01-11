@@ -30,11 +30,87 @@ namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 namespace json = boost::json;
 
+void ConnectionHandler::OnSpeechStart() {
+  LOG(INFO) << "Recieved speech start signal, start reading speech";
+  got_start_tag_ = true;
+  json::value rv = {{"status", "ok"}, {"type", "server_ready"}};
+  ws_.text(true);
+  ws_.write(asio::buffer(json::serialize(rv)));
+  feature_pipeline_ = std::make_shared<FeaturePipeline>(*feature_config_);
+  decoder_ = std::make_shared<TorchAsrDecoder>(feature_pipeline_, model_,
+                                               *symbol_table_, *decode_config_);
+  // Start decoder thread
+  decode_thread_ =
+      std::make_shared<std::thread>(&ConnectionHandler::DecodeThreadFunc, this);
+}
+
+void ConnectionHandler::OnSpeechEnd() {
+  LOG(INFO) << "Recieved speech end signal";
+  CHECK(feature_pipeline_ != nullptr);
+  feature_pipeline_->set_input_finished();
+}
+
+void ConnectionHandler::OnPartialResult(const std::string& result) {
+  LOG(INFO) << "Partial result: " << result;
+  json::value rv = {
+      {"status", "ok"}, {"type", "partial_result"}, {"content", result}};
+  ws_.text(true);
+  ws_.write(asio::buffer(json::serialize(rv)));
+}
+
+void ConnectionHandler::OnFinalResult(const std::string& result) {
+  LOG(INFO) << "Final result: " << result;
+  json::value rv = {
+      {"status", "ok"}, {"type", "final_result"}, {"content", result}};
+  ws_.text(true);
+  ws_.write(asio::buffer(json::serialize(rv)));
+
+  // Send finish tag
+  json::value rv2 = {{"status", "ok"}, {"type", "speech_end"}};
+  ws_.text(true);
+  ws_.write(asio::buffer(json::serialize(rv2)));
+}
+
+void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
+  // Read binary PCM data
+  int num_samples = buffer.size() / sizeof(int16_t);
+  std::vector<float> pcm_data(num_samples);
+  const int16_t* pdata = static_cast<const int16_t*>(buffer.data().data());
+  for (int i = 0; i < num_samples; i++) {
+    pcm_data[i] = static_cast<float>(*pdata);
+    pdata++;
+  }
+  LOG(INFO) << "Recieved " << buffer.size() << " " << pcm_data[0];
+  CHECK(feature_pipeline_ != nullptr);
+  CHECK(decoder_ != nullptr);
+  feature_pipeline_->AcceptWaveform(pcm_data);
+}
+
+void ConnectionHandler::DecodeThreadFunc() {
+  while (true) {
+    bool finish = decoder_->Decode();
+    const std::string& result = decoder_->result();
+    if (finish) {
+      OnFinalResult(result);
+      break;
+    } else {
+      OnPartialResult(result);
+    }
+  }
+}
+
+void ConnectionHandler::OnError(const std::string& message) {
+  json::value rv = {{"status", "failed"}, {"message", message}};
+  ws_.text(true);
+  ws_.write(asio::buffer(json::serialize(rv)));
+  // Close websocket
+  ws_.close(websocket::close_code::normal);
+}
+
 void ConnectionHandler::operator()() {
   try {
     // Accept the websocket handshake
     ws_.accept();
-    bool got_start_tag = false;
     for (;;) {
       // This buffer will hold the incoming message
       beast::flat_buffer buffer;
@@ -49,38 +125,29 @@ void ConnectionHandler::operator()() {
           if (obj.find("signal") != obj.end()) {
             json::string signal = obj["signal"].as_string();
             if (signal == "start") {
-              LOG(INFO) << "Start recieve data";
-              got_start_tag = true;
-              json::value rv = {{"status", "ok"}, {"type", "server_ready"}};
-              ws_.text(true);
-              ws_.write(asio::buffer(json::serialize(rv)));
+              OnSpeechStart();
             } else if (signal == "end") {
-              json::value rv = {{"status", "ok"}, {"type", "speech_end"}};
-              ws_.text(true);
-              ws_.write(asio::buffer(json::serialize(rv)));
-              LOG(INFO) << "Stop recieve data";
+              OnSpeechEnd();
+              break;
             } else {
-              // TODO(Binbin Zhang): error handle
+              OnError("Unexpected signal type");
             }
           } else {
-            // TODO(Binbin Zhang): error handle
+            OnError("Wrong message header");
           }
         }
       } else {
-        if (!got_start_tag) {
-          // TODO(Binbin Zhang): error handle
+        if (!got_start_tag_) {
+          OnError("Start singal is expected before binary data");
         } else {
-          // Read binary PCM data
-          int num_samples = buffer.size() / sizeof(int16_t);
-          std::vector<float> pcm_data(num_samples);
-          const int16_t* pdata = static_cast<int16_t*>(buffer.data().data());
-          for (int i = 0; i < num_samples; i++) {
-            pcm_data[i] = static_cast<float>(*pdata);
-            pdata++;
-          }
-          LOG(INFO) << "Recieved " << buffer.size() << " " << pcm_data[0];
+          OnSpeechData(buffer);
         }
       }
+    }
+
+    LOG(INFO) << "Read all pcm data, wait for decoding thread";
+    if (decode_thread_ != nullptr) {
+      decode_thread_->join();
     }
   } catch (beast::system_error const& se) {
     // This indicates that the session was closed

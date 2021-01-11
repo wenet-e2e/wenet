@@ -60,6 +60,13 @@ class ConnectionHandler {
         symbol_table_(other.symbol_table_),
         model_(other.model_) {}
 
+  void OnSpeechStart();
+  void OnSpeechEnd();
+  void OnSpeechData(const beast::flat_buffer& buffer);
+  void OnError(const std::string& message);
+  void OnPartialResult(const std::string& result);
+  void OnFinalResult(const std::string& result);
+  void DecodeThreadFunc();
   void operator()();
 
  private:
@@ -68,6 +75,11 @@ class ConnectionHandler {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
+
+  bool got_start_tag_ = false;
+  std::shared_ptr<FeaturePipeline> feature_pipeline_ = nullptr;
+  std::shared_ptr<TorchAsrDecoder> decoder_ = nullptr;
+  std::shared_ptr<std::thread> decode_thread_ = nullptr;
 };
 
 class WebSocketServer {
