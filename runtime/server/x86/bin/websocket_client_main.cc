@@ -48,10 +48,10 @@ int main(int argc, char *argv[]) {
     for (int j = start; j < end; j++) {
       data.push_back(static_cast<int16_t>(pcm_data[j]));
     }
-    // TODO(Binbin Zhang): Network byte order?
+    // TODO(Binbin Zhang): Network order?
     // Send PCM data
     client.SendBinaryData(data.data(), data.size() * sizeof(int16_t));
-    LOG(INFO) << "Send " << data.size() * sizeof(int16_t) << " " << data[0];
+    VLOG(2) << "Send " << data.size() << " samples";
     std::this_thread::sleep_for(
         std::chrono::milliseconds(static_cast<int>(interval * 1000)));
   }

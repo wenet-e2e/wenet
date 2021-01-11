@@ -80,7 +80,7 @@ void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
     pcm_data[i] = static_cast<float>(*pdata);
     pdata++;
   }
-  LOG(INFO) << "Recieved " << buffer.size() << " " << pcm_data[0];
+  VLOG(2) << "Recieved " << num_samples << " samples";
   CHECK(feature_pipeline_ != nullptr);
   CHECK(decoder_ != nullptr);
   feature_pipeline_->AcceptWaveform(pcm_data);
