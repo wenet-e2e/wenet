@@ -77,16 +77,25 @@ if __name__ == '__main__':
 
     distributed = args.world_size > 1
 
-    # Init dataset and data loader
-    collate_func = CollateFunc(**configs['collate_conf'],
-                               **configs['spec_aug_conf'],
-                               cmvn=args.cmvn)
-    cv_collate_conf = copy.copy(configs['collate_conf'])
+    raw_wav = configs['raw_wav']
+
+    train_collate_func = CollateFunc(**configs['collate_conf'],
+                                     raw_wav=raw_wav,
+                                     cmvn=args.cmvn)
+
+    cv_collate_conf = copy.deepcopy(configs['collate_conf'])
+    # no augmenation on cv set
     cv_collate_conf['spec_aug'] = False
-    cv_collate_func = CollateFunc(**cv_collate_conf, cmvn=args.cmvn)
+    cv_collate_conf['feature_dither'] = 0.0
+    cv_collate_conf['speed_perturb'] = False
+    cv_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
+    cv_collate_func = CollateFunc(**cv_collate_conf,
+                                  raw_wav=raw_wav,
+                                  cmvn=args.cmvn)
+
     dataset_conf = configs.get('dataset_conf', {})
-    train_dataset = AudioDataset(args.train_data, **dataset_conf)
-    cv_dataset = AudioDataset(args.cv_data, **dataset_conf)
+    train_dataset = AudioDataset(args.train_data, **dataset_conf, raw_wav=raw_wav)
+    cv_dataset = AudioDataset(args.cv_data, **dataset_conf, raw_wav=raw_wav)
 
     if distributed:
         logging.info('training on multiple gpu, this gpu {}'.format(args.gpu))
@@ -103,7 +112,7 @@ if __name__ == '__main__':
         cv_sampler = None
 
     train_data_loader = DataLoader(train_dataset,
-                                   collate_fn=collate_func,
+                                   collate_fn=train_collate_func,
                                    sampler=train_sampler,
                                    shuffle=(train_sampler is None),
                                    batch_size=1,
@@ -115,9 +124,12 @@ if __name__ == '__main__':
                                 batch_size=1,
                                 num_workers=args.num_workers)
 
-    # Init transformer model
-    input_dim = train_dataset.input_dim
+    if raw_wav:
+        input_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
+    else:
+        input_dim = train_dataset.input_dim
     vocab_size = train_dataset.output_dim
+
     # Save configs to model_dir/train.yaml for inference and export
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')

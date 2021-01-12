@@ -136,12 +136,11 @@ def _do_waveform_distortion(waveform, distortion_methods_conf):
 
 # add speed perturb when loading wav
 # return augmented, sr
-def _load_wav_with_speed(wav_file):
-    r = random.uniform(0, 1)
-    if r < 1 / 3:
+def _load_wav_with_speed(wav_file, rate):
+    if rate < 1 / 3:
         return torchaudio.load_wav(wav_file)
     else:
-        if r < 2 / 3:
+        if rate < 2 / 3:
             speed = 0.9  # slower
         else:
             speed = 1.1  # faster
@@ -166,7 +165,8 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             waveform = None
             sample_rate = 16000
             if speed_perturb:
-                waveform, sample_rate = _load_wav_with_speed(x[1])
+                r = random.uniform(0, 1)
+                waveform, sample_rate = _load_wav_with_speed(x[1], r)
             else:
                 waveform, sample_rate = torchaudio.load_wav(x[1])
             if wav_distortion_rate > 0.0:
@@ -176,6 +176,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                     waveform = _do_waveform_distortion(waveform,
                                                        distortion_methods_conf)
                     waveform = torch.from_numpy(waveform)
+            # dither could be 1/32767.
             mat = kaldi.fbank(
                 waveform,
                 num_mel_bins=feature_extraction_conf['mel_bins'],
