@@ -15,11 +15,11 @@
 #ifndef UTILS_BLOCKING_QUEUE_H_
 #define UTILS_BLOCKING_QUEUE_H_
 
-#include <queue>
-#include <limits>
-#include <utility>
-#include <mutex>
 #include <condition_variable>
+#include <limits>
+#include <mutex>
+#include <queue>
+#include <utility>
 
 #include "utils/utils.h"
 
@@ -28,10 +28,10 @@ namespace wenet {
 template <typename T>
 class BlockingQueue {
  public:
-  explicit BlockingQueue(size_t capacity = std::numeric_limits<int>::max()):
-    capacity_(capacity) {}
+  explicit BlockingQueue(size_t capacity = std::numeric_limits<int>::max())
+      : capacity_(capacity) {}
 
-  void Push(T const& value) {
+  void Push(const T& value) {
     {
       std::unique_lock<std::mutex> lock(mutex_);
       while (queue_.size() >= capacity_) {
@@ -65,12 +65,12 @@ class BlockingQueue {
   }
 
   bool Empty() const {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return queue_.empty();
   }
 
   size_t Size() const {
-    std::unique_lock<std::mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return queue_.size();
   }
 
@@ -86,6 +86,8 @@ class BlockingQueue {
   std::condition_variable not_full_condition_;
   std::condition_variable not_empty_condition_;
   std::queue<T> queue_;
+
+ public:
   DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
 };
 
