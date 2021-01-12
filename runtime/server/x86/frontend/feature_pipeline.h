@@ -15,6 +15,7 @@
 #ifndef FRONTEND_FEATURE_PIPELINE_H_
 #define FRONTEND_FEATURE_PIPELINE_H_
 
+#include <mutex>
 #include <queue>
 #include <string>
 #include <vector>
@@ -56,11 +57,8 @@ class FeaturePipeline {
 
   void AcceptWaveform(const std::vector<float>& wav);
   int num_frames() const { return num_frames_; }
-  void set_input_finished() {
-    CHECK(!input_finished_);
-    input_finished_ = true;
-  }
   int feature_dim() const { return feature_dim_; }
+  void set_input_finished();
 
   // Return false if input_finished_ and there is no feature left in
   // feature_queue_
@@ -82,6 +80,9 @@ class FeaturePipeline {
   int num_frames_;
   bool input_finished_;
   std::vector<float> remained_wav_;
+
+  mutable std::mutex mutex_;
+  std::condition_variable finish_condition_;
 };
 
 }  // namespace wenet

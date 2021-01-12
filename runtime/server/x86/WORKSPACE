@@ -29,3 +29,12 @@ http_archive(
     strip_prefix = "libtorch",
     build_file = "@//:third_party/libtorch.BUILD",
 )
+
+http_archive(
+    name = "boost",
+    urls = ["https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz"],
+    sha256 = "aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a",
+    strip_prefix = "boost_1_75_0",
+    build_file = "@//:third_party/boost.BUILD",
+)
+

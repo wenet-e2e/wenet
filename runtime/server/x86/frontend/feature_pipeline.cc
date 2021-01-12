@@ -42,14 +42,37 @@ void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
   remained_wav_.resize(left_samples);
   std::copy(waves.begin() + config_.frame_shift * num_frames, waves.end(),
             remained_wav_.begin());
+  // We are still adding wave, notify input is not finished
+  finish_condition_.notify_one();
+}
+
+void FeaturePipeline::set_input_finished() {
+  CHECK(!input_finished_);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    input_finished_ = true;
+  }
+  finish_condition_.notify_one();
 }
 
 bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
-  if (input_finished_ && feature_queue_.Empty()) {
+  if (!feature_queue_.Empty()) {
+    *feat = std::move(feature_queue_.Pop());
+    return true;
+  } else {
+    std::unique_lock<std::mutex> lock(mutex_);
+    while (!input_finished_) {
+      finish_condition_.wait(lock);
+      // Notified by AcceptWaveform, new data comes
+      if (!feature_queue_.Empty()) {
+        *feat = std::move(feature_queue_.Pop());
+        return true;
+      }
+    }
+    CHECK(input_finished_);
+    CHECK(feature_queue_.Empty());
     return false;
   }
-  *feat = std::move(feature_queue_.Pop());
-  return true;
 }
 
 bool FeaturePipeline::Read(int num_frames,
