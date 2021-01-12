@@ -25,14 +25,14 @@ train_set=train
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer_cmvn
-#checkpoint=$dir/20.pt
+checkpoint=
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=10
 
-. utils/parse_options.sh || exit 1;
+. tools/parse_options.sh || exit 1;
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     echo "stage -1: Data Download"
@@ -58,7 +58,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     for x in ${train_set} dev test; do
         cp -r data/$x $feat_dir
     done
-    tools/compute_cmvn_stats.py --num_workers 16 --in_scp data/${train_set}/wav.scp \
+    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+        --in_scp data/${train_set}/wav.scp \
         --out_cmvn $feat_dir/$train_set/global_cmvn
 fi
 

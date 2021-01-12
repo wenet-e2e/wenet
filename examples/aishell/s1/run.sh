@@ -29,6 +29,7 @@ compress=true
 fbank_conf=conf/fbank.conf
 dir=exp/fbank_sp
 checkpoint=
+
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt

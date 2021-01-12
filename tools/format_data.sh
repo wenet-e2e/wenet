@@ -37,7 +37,7 @@ Options:
   --verbose <num>                                  # Default: 0
 EOF
 )
-. utils/parse_options.sh
+. tools/parse_options.sh
 
 if [ $# != 2 ]; then
     echo "${help_message}" 1>&2
@@ -96,7 +96,7 @@ elif [ -n "${raw}" ]; then
 else
     tools/text2token.py -s 1 -n 1 ${dir}/text --trans_type ${trans_type} > ${tmpdir}/output/token.scp
 fi
-< ${tmpdir}/output/token.scp utils/sym2int.pl --map-oov ${oov} -f 2- ${dic} > ${tmpdir}/output/tokenid.scp
+< ${tmpdir}/output/token.scp tools/sym2int.pl --map-oov ${oov} -f 2- ${dic} > ${tmpdir}/output/tokenid.scp
 odim=$(cat ${dic} | wc -l)
 < ${tmpdir}/output/tokenid.scp awk -v odim=${odim} '{print $1 " " NF-1 "," odim}' > ${tmpdir}/output/shape.scp
 

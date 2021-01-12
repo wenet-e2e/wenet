@@ -39,23 +39,17 @@ raw_wav: false
 
 # feature extraction
 collate_conf:
-    # waveform level config
-    wav_distortion_conf:
-        wav_dither: 0.0 # x means x/32768.0 in torchaudio
-        wav_distortion_rate: 0.0
-        distortion_methods: []
-    speed_perturb: true
-    feature_extraction_conf:
-        feature_type: 'fbank'
-        mel_bins: 80
-        frame_shift: 10
-        frame_length: 25
-        using_pitch: false
     # spec level config
     # spec_swap: false
     feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
     spec_aug: true
-
+    spec_aug_conf:
+        warp_for_time: False
+        num_t_mask: 2
+        num_f_mask: 2
+        max_t: 50
+        max_f: 10
+        max_w: 80
 
 # dataset related
 dataset_conf:

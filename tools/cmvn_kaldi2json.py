@@ -31,6 +31,7 @@ def kaldi2json(kaldi_cmvn_file):
                  'frame_num' : count}
     return cmvn_info
 
-with open(sys.argv[2], 'w') as fout:
-    cmvn = kaldi2json(sys.argv[1])
-    fout.write(json.dumps(cmvn))
+if __name__ == '__main__':
+    with open(sys.argv[2], 'w') as fout:
+        cmvn = kaldi2json(sys.argv[1])
+        fout.write(json.dumps(cmvn))

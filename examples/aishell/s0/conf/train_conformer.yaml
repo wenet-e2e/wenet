@@ -55,6 +55,13 @@ collate_conf:
     # spec_swap: false
     feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
     spec_aug: true
+    spec_aug_conf:
+        warp_for_time: False
+        num_t_mask: 2
+        num_f_mask: 2
+        max_t: 50
+        max_f: 10
+        max_w: 80
 
 
 # dataset related

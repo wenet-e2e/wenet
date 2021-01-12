@@ -47,9 +47,9 @@ for dir in $train_dir $dev_dir $test_dir; do
   echo Preparing $dir transcriptions
   sed -e 's/\.wav//' $dir/wav.flist | awk -F '/' '{print $NF}' > $dir/utt.list
   paste -d' ' $dir/utt.list $dir/wav.flist > $dir/wav.scp_all
-  utils/filter_scp.pl -f 1 $dir/utt.list $aishell_text > $dir/transcripts.txt
+  tools/filter_scp.pl -f 1 $dir/utt.list $aishell_text > $dir/transcripts.txt
   awk '{print $1}' $dir/transcripts.txt > $dir/utt.list
-  utils/filter_scp.pl -f 1 $dir/utt.list $dir/wav.scp_all | sort -u > $dir/wav.scp
+  tools/filter_scp.pl -f 1 $dir/utt.list $dir/wav.scp_all | sort -u > $dir/wav.scp
   sort -u $dir/transcripts.txt > $dir/text
 done
 

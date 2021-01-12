@@ -16,6 +16,8 @@ from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset, DataLoader
 import torchaudio.compliance.kaldi as kaldi
 import torchaudio
+from PIL import Image
+from PIL.Image import BICUBIC
 
 from wenet.utils.common import IGNORE_ID
 from wenet.dataset.wav_distortion import distort_wav_conf
@@ -357,6 +359,8 @@ class CollateFunc(object):
         self.feature_dither = feature_dither
         self.speed_perturb = speed_perturb
         self.raw_wav = raw_wav
+        self.spec_aug_conf = spec_aug_conf
+        print(self.spec_aug_conf)
 
     def __call__(self, batch):
         assert (len(batch) == 1)
@@ -388,7 +392,7 @@ class CollateFunc(object):
 
         # optinoal spec augmentation
         if self.spec_aug:
-            xs = [_spec_augmentation(x) for x in xs]
+            xs = [_spec_augmentation(x, **self.spec_aug_conf) for x in xs]
 
         # optional splice
         if self.left_context != 0 or self.right_context != 0:
@@ -442,7 +446,7 @@ class AudioDataset(Dataset):
                 which is split by '\t':
                     utt:utt1
                     feat:tmp/data/file1.wav or feat:tmp/data/fbank.ark:30
-                    feat_shape:5.042(in ms) or feat_shape:495,30
+                    feat_shape: 4.95(in seconds) or feat_shape:495,80(495 is in frames)
                     text:i love you
                     token: i <space> l o v e <space> y o u
                     tokenid: int id of this token
