@@ -21,7 +21,7 @@ to reduce the effort of productizing E2E models, and to explore better E2E model
 * **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
   framework to achieve accurate, fast and unified E2E model, which is favorable for industry adoption.
 * **Well documented**: Detailed documentation and tutorials will be provided.
-* **Kaldi free**: WeNet has no dependency on Kaldi, which simplify installation and use.
+* **Kaldi free**: WeNet has no dependency on Kaldi, which simplifies installation and use.
 
 ## Performance Benchmark
 
