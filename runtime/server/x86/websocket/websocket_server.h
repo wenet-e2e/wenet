@@ -46,19 +46,8 @@ class ConnectionHandler {
                     std::shared_ptr<FeaturePipelineConfig> feature_config,
                     std::shared_ptr<DecodeOptions> decode_config,
                     std::shared_ptr<SymbolTable> symbol_table,
-                    std::shared_ptr<TorchAsrModel> model)
-      : ws_(std::move(socket)),
-        feature_config_(feature_config),
-        decode_config_(decode_config),
-        symbol_table_(symbol_table),
-        model_(model) {}
-
-  ConnectionHandler(ConnectionHandler&& other)
-      : ws_(std::move(other.ws_)),
-        feature_config_(other.feature_config_),
-        decode_config_(other.decode_config_),
-        symbol_table_(other.symbol_table_),
-        model_(other.model_) {}
+                    std::shared_ptr<TorchAsrModel> model);
+  ConnectionHandler(ConnectionHandler&& other);
 
   void OnSpeechStart();
   void OnSpeechEnd();
