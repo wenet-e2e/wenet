@@ -12,8 +12,8 @@ mkdir build && cd build && cmake .. && cmake --build .
 
 You can run the following on your trained model, or on our pretrained model, click the following link to download the pretrained model.
 
-[TODO ADD Aishell model](link)
-[TODO ADD Librispeech model](link)
+* [TODO ADD Aishell model](link)
+* [TODO ADD Librispeech model](link)
 
 ## Run Offline Demo
 
