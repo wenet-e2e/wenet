@@ -57,7 +57,7 @@ def make_max_distortion(conf):
     '''Generate a max distortion function
 
     Args:
-        conf: a dict {'max_db': float } 
+        conf: a dict {'max_db': float }
             'max_db': the maxium value.
 
     Returns:
@@ -107,7 +107,7 @@ def generate_amp_mask(mask_num):
 
     Returns:
         A list of tuple. each tuple defines a slot.
-        e.g. [(-100, -80), (-65, -60), (-50, -30), (-15, 0)] 
+        e.g. [(-100, -80), (-65, -60), (-50, -30), (-15, 0)]
         for #mask_num = 4
     '''
     a = [0] * 2 * mask_num
@@ -131,7 +131,7 @@ def make_fence_distortion(conf):
     Use seperated masks for Positive and negetive amplitude.
 
     Args:
-        conf: a dict {'mask_number': int,'max_db': float } 
+        conf: a dict {'mask_number': int,'max_db': float }
             'mask_number': the slot number in mask.
             'max_db': the maxium value.
 
@@ -174,7 +174,7 @@ def make_fence_distortion(conf):
 def make_jag_distortion(conf):
     '''Generate a jag distortion function
 
-    In this jag-like shape function, the values in mask slots are 
+    In this jag-like shape function, the values in mask slots are
     not changed, while the values not in mask slots are set to 0.
     Use seperated masks for Positive and negetive amplitude.
 
@@ -240,7 +240,7 @@ def distort(x, func, rate=0.8):
     '''Distort a waveform in sample point level
 
     Args:
-        x: the origin wavefrom 
+        x: the origin wavefrom
         func: the distort function
         rate: sample point-level distort probability
 

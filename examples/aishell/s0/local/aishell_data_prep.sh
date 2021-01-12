@@ -46,19 +46,16 @@ rm -r $tmp_dir
 for dir in $train_dir $dev_dir $test_dir; do
   echo Preparing $dir transcriptions
   sed -e 's/\.wav//' $dir/wav.flist | awk -F '/' '{print $NF}' > $dir/utt.list
-  sed -e 's/\.wav//' $dir/wav.flist | awk -F '/' '{i=NF-1;printf("%s %s\n",$NF,$i)}' > $dir/utt2spk_all
   paste -d' ' $dir/utt.list $dir/wav.flist > $dir/wav.scp_all
   utils/filter_scp.pl -f 1 $dir/utt.list $aishell_text > $dir/transcripts.txt
   awk '{print $1}' $dir/transcripts.txt > $dir/utt.list
-  utils/filter_scp.pl -f 1 $dir/utt.list $dir/utt2spk_all | sort -u > $dir/utt2spk
   utils/filter_scp.pl -f 1 $dir/utt.list $dir/wav.scp_all | sort -u > $dir/wav.scp
   sort -u $dir/transcripts.txt > $dir/text
-  utils/utt2spk_to_spk2utt.pl $dir/utt2spk > $dir/spk2utt
 done
 
 mkdir -p data/train data/dev data/test
 
-for f in spk2utt utt2spk wav.scp text; do
+for f in wav.scp text; do
   cp $train_dir/$f data/train/$f || exit 1;
   cp $dev_dir/$f data/dev/$f || exit 1;
   cp $test_dir/$f data/test/$f || exit 1;

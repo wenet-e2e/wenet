@@ -81,7 +81,7 @@ with torch.no_grad():
         if wav_number % 1000 == 0:
             print('process {} wavs,{} frames'.format(wav_number, all_number))
 
-cmvn_info = {'mean_stat' : list(all_mean_stat.tolist()), 
+cmvn_info = {'mean_stat' : list(all_mean_stat.tolist()),
              'var_stat' : list(all_var_stat.tolist()),
              'frame_num' : all_number}
 

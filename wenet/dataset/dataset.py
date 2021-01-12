@@ -338,7 +338,7 @@ class CollateFunc(object):
             left_context: left context for splice feature
             right_context: right_context for splice feature
             raw_wav:
-                    True if input is raw wav and feature extraction is needed. 
+                    True if input is raw wav and feature extraction is needed.
                     False if input is extracted feature
         """
         self.cmvn = None
@@ -442,7 +442,7 @@ class AudioDataset(Dataset):
                 which is split by '\t':
                     utt:utt1
                     feat:tmp/data/file1.wav or feat:tmp/data/fbank.ark:30
-                    feat_shape:5.042(in ms) or feat_shape:495,30 
+                    feat_shape:5.042(in ms) or feat_shape:495,30
                     text:i love you
                     token: i <space> l o v e <space> y o u
                     tokenid: int id of this token
@@ -461,7 +461,7 @@ class AudioDataset(Dataset):
             raw_wav: use raw wave or extracted featute.
                 if raw wave is used, dynamic waveform-level augmentation could be used
                 and the feature is extracted by torchaudio.
-                if extracted featute(e.g. by kaldi) is used, only feature-level 
+                if extracted featute(e.g. by kaldi) is used, only feature-level
                 augmentation such as specaug could be used.
         """
         assert batch_type in ['static', 'dynamic']

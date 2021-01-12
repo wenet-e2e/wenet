@@ -34,29 +34,24 @@ model_conf:
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
 
-# for torchaudio data loader
-
-# feature extraction
 
 collate_conf:
-    wav_distortion_conf:
-        wav_distortion_rate: 0.0
-        distortion_methods: []
-    speed_perturb: true
-    feature_extraction_conf:
-        feature_type: 'fbank'
-        mel_bins: 80
-        frame_shift: 10
-        frame_length: 25
-        using_pitch: false
-    #spec_swap: false
-    feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
     spec_aug: true
+    norm_mean: true # if true, must specify cmvn file in cmd line
+    norm_var: true # if true, must specify cmvn file in cmd line
 
+# specaugmentation related
+spec_aug_conf:
+    num_time_mask: 2
+    num_freq_mask: 2
+    max_time_mask: 50
+    max_freq_mask: 10
+    max_time_warp: 80
+    warp_for_time: False
 
 # dataset related
 dataset_conf:
-    max_length: 30960
+    max_length: 10240
     min_length: 0
     batch_type: 'static' # static or dynamic
     batch_size: 15
@@ -64,7 +59,7 @@ dataset_conf:
 
 grad_clip: 5
 accum_grad: 4
-max_epoch: 200
+max_epoch: 80
 log_interval: 100
 
 optim: adam

@@ -1,19 +1,47 @@
-# Performance Record
+# ASR Benchmark Results on AISHELL-1
 
-* Aishell1
-* torchaudio.compliance.kalid.fbank
-* fbank, dither=0, no cmvn, no speed perturb.
-* 80 epoch / 12h,8GPU
+## Standard E2E Results
 
-| decoding mode            | wav  | kaldi|
-|--------------------------|------|------|
-| attention decoder        | 5.18 | 5.28 |
-| ctc greedy search        | 5.41 | 5.68 |
-| ctc prefix beam search   | 5.55 | 5.79 |
-| attention rescoring      | 5.55 | 5.78 |
+Conformer
+* config: conf/train_conformer.yaml
+* beam: 10
+* num of gpu: 8
+* ctc weight (used for attention rescoring): 0.5
+
+| decoding mode/chunk size | full |
+|--------------------------|------|
+| attention decoder        | 4.97 |
+| ctc greedy search        | 4.93 |
+| ctc prefix beam search   | 4.93 |
+| attention rescoring      | 4.70 |
+
+Transformer
+* config: conf/train_transformer.yaml
+* beam: 10
+* num of gpu: 8
+* ctc weight (used for attention rescoring): 0.5
+
+| decoding mode/chunk size | full |
+|--------------------------|------|
+| attention decoder        | 5.67 |
+| ctc greedy search        | 5.88 |
+| ctc prefix beam search   | 5.88 |
+| attention rescoring      | 5.30 |
 
 
-| Exp id |                          | All test | origin(539 utts) | max_pain_wav_n25_0.1(539 utts) | max_pain_wav_n25_0.8(539 utts) | poly_distortion_wav_8_2_2_1.0(539 utts) | double_jag_distortion_wav_0.8(539 utts)  |
-|--------|--------------------------|----------|------------------|--------------------------------|--------------------------------|-----------------------------------------|------------------------------------------|
-| e1     | torchaudio-100-conformer | 5.18%    | 3.15%            | 66.16%                         | 90.77%                         | 89.61%                                  | 25.78%                                   |
-| e2     | d1 + WavDis(20epoch)     | 5.17%    | 3.12 %           | 21.52 %                        | 54.09%                         | 21.52%                                  | 13.31 %                                  |
+
+## Unified Dynamic Chunk Results
+
+Conformer (causal convolution)
+* config: conf/train_unified_conformer.yaml
+* beam: 10
+* num of gpu: 8
+* ctc weight (used for attention rescoring): 0.5
+
+| decoding mode/chunk size | full | 16   | 8    | 4    | 1    |
+|--------------------------|------|------|------|------|------|
+| attention decoder        | 5.27 | 5.51 | 5.67 | 5.72 | 5.88 |
+| ctc greedy search        | 5.49 | 6.08 | 6.41 | 6.64 | 7.58 |
+| ctc prefix beam search   | 5.49 | 6.08 | 6.41 | 6.64 | 7.58 |
+| attention rescoring      | 4.90 | 5.33 | 5.52 | 5.71 | 6.23 |
+
