@@ -21,11 +21,12 @@ to reduce the effort of productizing E2E models, and to explore better E2E model
 * **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
   framework to achieve accurate, fast and unified E2E model, which is favorable for industry adoption.
 * **Well documented**: Detailed documentation and tutorials will be provided.
+* **Kaldi free**: WeNet has no dependency on Kaldi, which simplifies installation and use.
 
 ## Performance Benchmark
 
 Please see `examples/$dataset/s0/README.md` for WeNet benchmark on different speech datasets.
-* [AIShell-1](examples/aishell/s0/README.md)
+* [AIShell-1](examples/aishell/s0/README.md), [AIShell-1 with Kaldi](examples/aishell/s1/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
 
 ## Documentation
@@ -49,13 +50,6 @@ git clone https://github.com/mobvoi/wenet.git
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 -c pytorch
+conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio -c pytorch
 ```
 
-- Install Kaldi: WeNet requries Kaldi for feature extraction (a TorchAudio version is under development).
-  Please download and build [Kaldi](https://github.com/kaldi-asr/kaldi), then set Kaldi root as:
-
-``` sh
-vim example/aishell/s0/path.sh
-KALDI_ROOT=${your_kaldi_root_path}
-```
