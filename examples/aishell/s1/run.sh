@@ -104,7 +104,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
     cmvn_opts=
-    $cmvn && cmvn_opts="--cmvn ${feat_dir}/${train_set}/global_cmvn"
+    $cmvn && (cp ${feat_dir}/${train_set}/global_cmvn $dir;cmvn_opts="--cmvn ${dir}/global_cmvn")
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
     # export later
@@ -131,7 +131,7 @@ fi
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Test model, please specify the model you want to test by --checkpoint
     cmvn_opts=
-    $cmvn && cmvn_opts="--cmvn ${feat_dir}/${train_set}/global_cmvn"
+    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # TODO, Add model average here
     mkdir -p $dir/test
     if [ ${average_checkpoint} == true ]; then

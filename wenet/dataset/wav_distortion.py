@@ -12,7 +12,7 @@ def amp2db(amp):
     return 20 * math.log10(amp)
 
 def make_poly_distortion(conf):
-    '''Generate a db-domain ploynomial distortion function
+    """Generate a db-domain ploynomial distortion function
 
         f(x) = a * x^m * (1-x)^n + x
 
@@ -22,7 +22,7 @@ def make_poly_distortion(conf):
     Returns:
         The ploynomial function, which could be applied on
         a float amplitude value
-    '''
+    """
     a = conf['a']
     m = conf['m']
     n = conf['n']
@@ -54,7 +54,7 @@ def make_quad_distortion():
 
 # the amplitude are set to max for all non-zero point
 def make_max_distortion(conf):
-    '''Generate a max distortion function
+    """Generate a max distortion function
 
     Args:
         conf: a dict {'max_db': float }
@@ -63,7 +63,7 @@ def make_max_distortion(conf):
     Returns:
         The max function, which could be applied on
         a float amplitude value
-    '''
+    """
     max_db = conf['max_db']
     if max_db:
         max_amp = db2amp(max_db)  # < 0.997
@@ -83,14 +83,14 @@ def make_max_distortion(conf):
 
 
 def make_amp_mask(db_mask=None):
-    '''Get a amplitude domain mask from db domain mask
+    """Get a amplitude domain mask from db domain mask
 
     Args:
         db_mask: Optional. A list of tuple. if None, using default value.
 
     Returns:
         A list of tuple. The amplitude domain mask
-    '''
+    """
     if db_mask is None:
         db_mask = [(-110, -95), (-90, -80), (-65, -60), (-50, -30), (-15, 0)]
     amp_mask = [(db2amp(db[0]), db2amp(db[1])) for db in db_mask]
@@ -100,7 +100,7 @@ default_mask = make_amp_mask()
 
 
 def generate_amp_mask(mask_num):
-    '''Generate amplitude domain mask randomly in [-100db, 0db]
+    """Generate amplitude domain mask randomly in [-100db, 0db]
 
     Args:
         mask_num: the slot number of the mask
@@ -109,7 +109,7 @@ def generate_amp_mask(mask_num):
         A list of tuple. each tuple defines a slot.
         e.g. [(-100, -80), (-65, -60), (-50, -30), (-15, 0)]
         for #mask_num = 4
-    '''
+    """
     a = [0] * 2 * mask_num
     a[0] = 0
     m = []
@@ -124,7 +124,7 @@ def generate_amp_mask(mask_num):
 
 
 def make_fence_distortion(conf):
-    '''Generate a fence distortion function
+    """Generate a fence distortion function
 
     In this fence-like shape function, the values in mask slots are
     set to maxium, while the values not in mask slots are set to 0.
@@ -138,7 +138,7 @@ def make_fence_distortion(conf):
     Returns:
         The fence function, which could be applied on
         a float amplitude value
-    '''
+    """
     mask_number = conf['mask_number']
     max_db = conf['max_db']
     max_amp = db2amp(max_db)  # 0.997
@@ -172,7 +172,7 @@ def make_fence_distortion(conf):
 
 #
 def make_jag_distortion(conf):
-    '''Generate a jag distortion function
+    """Generate a jag distortion function
 
     In this jag-like shape function, the values in mask slots are
     not changed, while the values not in mask slots are set to 0.
@@ -185,7 +185,7 @@ def make_jag_distortion(conf):
     Returns:
         The jag function,which could be applied on
         a float amplitude value
-    '''
+    """
     mask_number = conf['mask_number']
     if mask_number <= 0 :
         positive_mask = default_mask
@@ -218,7 +218,7 @@ def make_jag_distortion(conf):
 # gaining 20db means amp = amp * 10
 # gaining -20db means amp = amp / 10
 def make_gain_db(conf):
-    '''Generate a db domain gain function
+    """Generate a db domain gain function
 
     Args:
         conf: a dict {'db': #float}
@@ -227,7 +227,7 @@ def make_gain_db(conf):
     Returns:
         The db gain function, which could be applied on
         a float amplitude value
-    '''
+    """
     db = conf['db']
 
     def gain_db(x):
@@ -237,7 +237,7 @@ def make_gain_db(conf):
 
 
 def distort(x, func, rate=0.8):
-    '''Distort a waveform in sample point level
+    """Distort a waveform in sample point level
 
     Args:
         x: the origin wavefrom
@@ -246,7 +246,7 @@ def distort(x, func, rate=0.8):
 
     Returns:
         the distorted waveform
-    '''
+    """
     for i in range(0, x.shape[1]):
         a = random.uniform(0, 1)
         if a < rate:

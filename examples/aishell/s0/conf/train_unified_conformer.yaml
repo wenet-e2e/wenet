@@ -61,7 +61,7 @@ collate_conf:
 
 # dataset related
 dataset_conf:
-    max_length: 30960
+    max_length: 40960
     min_length: 0
     batch_type: 'static' # static or dynamic
     batch_size: 20
