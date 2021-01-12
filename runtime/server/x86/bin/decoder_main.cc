@@ -13,7 +13,7 @@
 #include "frontend/wav.h"
 
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
-DEFINE_int32(chunk_size, 16, "num mel bins for fbank feature");
+DEFINE_int32(chunk_size, 16, "decoding chunk size");
 DEFINE_string(model_path, "", "pytorch exported model path");
 DEFINE_string(wav_path, "", "wav path");
 DEFINE_string(dict_path, "", "dict path");
