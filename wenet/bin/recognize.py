@@ -81,14 +81,21 @@ if __name__ == '__main__':
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin)
 
+    raw_wav = configs['raw_wav']
     # Init dataset and data loader
-    test_collate_conf = copy.copy(configs['collate_conf'])
+    # Init dataset and data loader
+    test_collate_conf = copy.deepcopy(configs['collate_conf'])
     test_collate_conf['spec_aug'] = False
-    test_collate_func = CollateFunc(**test_collate_conf, cmvn=args.cmvn)
+    test_collate_conf['feature_dither'] = False
+    test_collate_conf['speed_perturb'] = False
+    test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
+    test_collate_func = CollateFunc(**test_collate_conf,
+                                    raw_wav=raw_wav,
+                                    cmvn=args.cmvn)
     dataset_conf = configs.get('dataset_conf', {})
     dataset_conf['batch_size'] = args.batch_size
     dataset_conf['sort'] = False
-    test_dataset = AudioDataset(args.test_data, **dataset_conf)
+    test_dataset = AudioDataset(args.test_data, **dataset_conf, raw_wav=raw_wav)
     test_data_loader = DataLoader(test_dataset,
                                   collate_fn=test_collate_func,
                                   shuffle=False,
@@ -96,7 +103,10 @@ if __name__ == '__main__':
                                   num_workers=0)
 
     # Init transformer model
-    input_dim = test_dataset.input_dim
+    if raw_wav:
+        input_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
+    else:
+        input_dim = test_dataset.input_dim
     vocab_size = test_dataset.output_dim
     encoder_type = configs.get('encoder', 'conformer')
     if encoder_type == 'conformer':

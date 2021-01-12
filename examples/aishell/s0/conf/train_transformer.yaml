@@ -30,23 +30,38 @@ model_conf:
     length_normalized_loss: false
 
 
-collate_conf:
-    spec_aug: true
-    norm_mean: true # if true, must specify cmvn file in cmd line
-    norm_var: true # if true, must specify cmvn file in cmd line
+# use raw_wav or kaldi feature
+raw_wav: true
 
-# specaugmentation related
-spec_aug_conf:
-    num_time_mask: 2
-    num_freq_mask: 2
-    max_time_mask: 50
-    max_freq_mask: 10
-    max_time_warp: 80
-    warp_for_time: False
+# feature extraction
+collate_conf:
+    # waveform level config
+    wav_distortion_conf:
+        wav_dither: 1.0 # x means x/32768.0 in torchaudio
+        wav_distortion_rate: 0.0
+        distortion_methods: []
+    speed_perturb: true
+    feature_extraction_conf:
+        feature_type: 'fbank'
+        mel_bins: 80
+        frame_shift: 10
+        frame_length: 25
+        using_pitch: false
+    # spec level config
+    # spec_swap: false
+    feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
+    spec_aug: true
+    spec_aug_conf:
+        warp_for_time: False
+        num_t_mask: 2
+        num_f_mask: 2
+        max_t: 50
+        max_f: 10
+        max_w: 80
 
 # dataset related
 dataset_conf:
-    max_length: 10240
+    max_length: 40960
     min_length: 0
     batch_type: 'static' # static or dynamic
     batch_size: 20
@@ -59,7 +74,7 @@ log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.002
+    lr: 0.001
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 25000
