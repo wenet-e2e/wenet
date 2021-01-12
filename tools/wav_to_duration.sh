@@ -1,7 +1,7 @@
 #!/bin/bash
 # split the wav scp, calculate duration and merge
 nj=4
-. utils/parse_options.sh || exit 1;
+. tools/parse_options.sh || exit 1;
 
 inscp=$1
 outscp=$2
@@ -13,8 +13,8 @@ else
 fi
 mkdir -p ${logdir}
 
-rm $logdir/wav_*.slice
-rm $logdir/wav_*.shape
+rm -f $logdir/wav_*.slice
+rm -f $logdir/wav_*.shape
 split --additional-suffix .slice -d -n l/$nj $inscp $logdir/wav_
 
 for slice in `ls $logdir/wav_*.slice`; do
