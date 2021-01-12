@@ -25,6 +25,8 @@
 #include "boost/beast/core.hpp"
 #include "boost/beast/websocket.hpp"
 
+#include "utils/utils.h"
+
 namespace wenet {
 
 namespace beast = boost::beast;          // from <boost/beast.hpp>
@@ -52,6 +54,8 @@ class WebSocketClient {
   asio::io_context ioc_;
   websocket::stream<tcp::socket> ws_{ioc_};
   std::unique_ptr<std::thread> t_{nullptr};
+
+  DISALLOW_COPY_AND_ASSIGN(WebSocketClient);
 };
 
 }  // namespace wenet

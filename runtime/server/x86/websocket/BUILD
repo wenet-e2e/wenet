@@ -15,6 +15,7 @@ cc_library(
     srcs = ['websocket_client.cc'],
     hdrs = ['websocket_client.h'],
     deps = [
+        "//utils:utils",
         "@boost//:boost",
         "@com_github_google_glog//:glog",
     ],

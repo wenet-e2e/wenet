@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
   const int num_sample = wav_reader.num_sample();
   std::vector<float> pcm_data(wav_reader.data(),
                               wav_reader.data() + num_sample);
-  // Send data every 0.1 second
+  // Send data every 0.5 second
   const float interval = 0.5;
   const int sample_interval = interval * sample_rate;
   for (int start = 0; start < num_sample; start += sample_interval) {
