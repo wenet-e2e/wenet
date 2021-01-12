@@ -11,6 +11,7 @@ cmd=run.pl
 nlsyms=""
 lang=""
 feat=""
+feat_type="kaldi"
 oov="<unk>"
 bpecode=""
 allow_one_column=false
@@ -28,6 +29,7 @@ Options:
   --nj <nj>                                        # number of parallel jobs
   --cmd (utils/run.pl|utils/queue.pl <queue opts>) # how to run jobs.
   --feat <feat-scp>                                # feat.scp or feat1.scp,feat2.scp,...
+  --feat-type <feat-type>                          # kaldi or wav
   --oov <oov-word>                                 # Default: <unk>
   --out <outputfile>                               # If omitted, write in stdout
   --filetype <mat|hdf5|sound.hdf5>                 # Specify the format of feats file
@@ -35,7 +37,7 @@ Options:
   --verbose <num>                                  # Default: 0
 EOF
 )
-. utils/parse_options.sh
+. tools/parse_options.sh
 
 if [ $# != 2 ]; then
     echo "${help_message}" 1>&2
@@ -47,7 +49,7 @@ set -euo pipefail
 dir=$1
 dic=$2
 tmpdir=$(mktemp -d ${dir}/tmp-XXXXX)
-trap 'rm -rf ${tmpdir}' EXIT
+#trap 'rm -rf ${tmpdir}' EXIT
 
 # 1. Create scp files for inputs
 #   These are not necessary for decoding mode, and make it as an option
@@ -69,10 +71,15 @@ if [ -n "${feat}" ]; then
                 > ${tmpdir}/input_${i}/filetype.scp
         fi
 
-        tools/feat_to_shape.sh --cmd "${cmd}" --nj ${nj} \
-            --filetype "${filetype}" \
-            --preprocess-conf "${preprocess_conf}" \
-            --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
+        if [ ${feat_type} == "kaldi" ]; then
+            tools/feat_to_shape.sh --cmd "${cmd}" --nj ${nj} \
+                --filetype "${filetype}" \
+                --preprocess-conf "${preprocess_conf}" \
+                --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
+        elif [ ${feat_type} == "wav" ]; then
+            tools/wav_to_duration.sh --nj ${nj} \
+                ${feat} ${tmpdir}/input_${i}/shape.scp
+        fi
     done
 fi
 
@@ -89,7 +96,7 @@ elif [ -n "${raw}" ]; then
 else
     tools/text2token.py -s 1 -n 1 ${dir}/text --trans_type ${trans_type} > ${tmpdir}/output/token.scp
 fi
-< ${tmpdir}/output/token.scp utils/sym2int.pl --map-oov ${oov} -f 2- ${dic} > ${tmpdir}/output/tokenid.scp
+< ${tmpdir}/output/token.scp tools/sym2int.pl --map-oov ${oov} -f 2- ${dic} > ${tmpdir}/output/tokenid.scp
 odim=$(cat ${dic} | wc -l)
 < ${tmpdir}/output/tokenid.scp awk -v odim=${odim} '{print $1 " " NF-1 "," odim}' > ${tmpdir}/output/shape.scp
 
@@ -106,7 +113,7 @@ if [ -n "${category}" ]; then
     awk -v category=${category} '{print $1 " " category}' ${dir}/text \
         > ${tmpdir}/other/category.scp
 fi
-cat ${dir}/utt2spk > ${tmpdir}/other/utt2spk.scp
+#cat ${dir}/utt2spk > ${tmpdir}/other/utt2spk.scp
 
 # 4. Merge scp files into a one file
 opts=""
@@ -143,4 +150,4 @@ fi
 
 tools/merge_scp2txt.py --verbose ${verbose} ${opts}
 
-rm -fr ${tmpdir}
+#rm -fr ${tmpdir}

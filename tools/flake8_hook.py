@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# encoding: utf-8
 import sys
 
 from flake8.main import git

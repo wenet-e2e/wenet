@@ -1,30 +1,33 @@
 #!/bin/bash
 
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
+
 . ./path.sh || exit 1;
+. ./cmd.sh || exit 1;
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-#export CUDA_VISIBLE_DEVICES="0"
-export CUDA_VISIBLE_DEVICES="6,7"
-stage=1 # start from 0 if you need to start from data preparation
-stop_stage=1
+export CUDA_VISIBLE_DEVICES="0,1,2,3"
+stage=0 # start from 0 if you need to start from data preparation
+stop_stage=6
 # data
-data=/export/expts4/chaoyang/
+data=/export/data/asr-data/OpenSLR/33/
 data_url=www.openslr.org/resources/33
 
 nj=16
-feat_dir=raw_wav
+feat_dir=fbank
 dict=data/dict/lang_char.txt
 
-train_set=train
+train_set=train_sp
 # Optional train_config
 # 1. conf/train_transformer.yaml: Standard transformer
 # 2. conf/train_conformer.yaml: Standard conformer
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 train_config=conf/train_conformer.yaml
 cmvn=true
-dir=exp/conformer_cmvn
+compress=true
+fbank_conf=conf/fbank.conf
+dir=exp/fbank_sp
 checkpoint=
 
 # use average_checkpoint will get better result
@@ -32,7 +35,7 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=10
 
-. tools/parse_options.sh || exit 1;
+. utils/parse_options.sh || exit 1;
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     echo "stage -1: Data Download"
@@ -43,24 +46,31 @@ fi
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # Data preparation
     local/aishell_data_prep.sh ${data}/data_aishell/wav ${data}/data_aishell/transcript
-fi
-
-
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    for x in train dev test; do
+    utils/perturb_data_dir_speed.sh 0.9 data/train data/train_sp0.9
+    utils/perturb_data_dir_speed.sh 1.1 data/train data/train_sp1.1
+    utils/combine_data.sh data/train_sp data/train data/train_sp0.9 data/train_sp1.1
+    # Remove the space in Mandarin text
+    for x in train_sp dev test; do
         cp data/${x}/text data/${x}/text.org
         paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " data/${x}/text.org | tr -d " ") \
             > data/${x}/text
         rm data/${x}/text.org
-    done
-    # For wav feature, just copy the data. Fbank extraction is done in training
+   done
+
+fi
+
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    # Feature extraction
     mkdir -p $feat_dir
     for x in ${train_set} dev test; do
         cp -r data/$x $feat_dir
+        steps/make_fbank.sh --cmd "$train_cmd" --nj $nj \
+            --write_utt2num_frames true --fbank_config $fbank_conf --compress $compress $feat_dir/$x
     done
-    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
-        --in_scp data/${train_set}/wav.scp \
-        --out_cmvn $feat_dir/$train_set/global_cmvn
+    if $cmvn; then
+        compute-cmvn-stats --binary=false scp:$feat_dir/$train_set/feats.scp \
+            $feat_dir/$train_set/global_cmvn
+    fi
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -76,12 +86,10 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    nj=32
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
-        tools/format_data.sh --nj ${nj} \
-            --feat-type wav --feat $feat_dir/$x/wav.scp \
+        tools/format_data.sh --nj ${nj} --feat $feat_dir/$x/feats.scp \
             $feat_dir/$x ${dict} > $feat_dir/$x/format.data
     done
 fi
@@ -94,7 +102,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     init_method=file://$(readlink -f $INIT_FILE)
     echo "$0: init method is $init_method"
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-    echo "$num_gpus"
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
     cmvn_opts=
@@ -120,13 +127,13 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     } &
     done
     wait
-    cp $feat_dir/$train_set/global_cmvn $dir/
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Test model, please specify the model you want to test by --checkpoint
     cmvn_opts=
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
+    # TODO, Add model average here
     mkdir -p $dir/test
     if [ ${average_checkpoint} == true ]; then
         decode_checkpoint=$dir/avg_${average_num}.pt
@@ -145,7 +152,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     {
         test_dir=$dir/test_${mode}
         mkdir -p $test_dir
-        python wenet/bin/recognize.py --gpu 1 \
+        python wenet/bin/recognize.py --gpu 0 \
             --mode $mode \
             --config $dir/train.yaml \
             --test_data $feat_dir/test/format.data \
