@@ -41,7 +41,6 @@ class PositionalEncoding(torch.nn.Module):
             -(math.log(10000.0) / self.d_model))
         self.pe[:, 0::2] = torch.sin(position * div_term)
         self.pe[:, 1::2] = torch.cos(position * div_term)
-        self.pe = self.pe.unsqueeze(0)
 
     def forward(
             self,
@@ -59,7 +58,7 @@ class PositionalEncoding(torch.nn.Module):
         """
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
-        pos_emb = self.pe[:, offset:offset + x.size(1)]
+        pos_emb = self.pe[offset:offset + x.size(1)]
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
@@ -103,10 +102,12 @@ class RelPositionalEncoding(PositionalEncoding):
             x (torch.Tensor): Input tensor (batch, time, `*`).
         Returns:
             torch.Tensor: Encoded tensor (batch, time, `*`).
-            torch.Tensor: Positional embedding tensor (1, time, `*`).
+            torch.Tensor: Positional embedding tensor (1, 2*time-1, `*`).
         """
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         x = x * self.xscale
-        pos_emb = self.pe[:, offset:offset + x.size(1)]
+        mid_pos = int(self.max_len / 2)
+        L = x.size(1)
+        pos_emb = self.pe[mid_pos - L + 1:mid_pos + L]
         return self.dropout(x), self.dropout(pos_emb)

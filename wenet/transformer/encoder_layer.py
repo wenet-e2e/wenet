@@ -187,8 +187,8 @@ class ConformerEncoderLayer(nn.Module):
         Args:
             x (torch.Tensor): (#batch, time, size)
             mask (torch.Tensor): Mask tensor for the input (#batch, time).
-            pos_emb (torch.Tensor): positional encoding, must not be None
-                for ConformerEncoderLayer.
+            pos_emb (torch.Tensor): Relative positional encoding tensor
+                (2*time-1, size), must not be None for ConformerEncoderLayer.
             output_cache (torch.Tensor): Cache tensor of the output
                 (#batch, time2, size), time2 < time in x.
             cnn_cache (torch.Tensor): Convolution cache in conformer layer

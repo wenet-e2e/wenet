@@ -141,7 +141,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
     def rel_shift(self, x, zero_triu: bool = False):
         """Compute relative positinal encoding.
         Args:
-            x (torch.Tensor): Input tensor (batch, time, size).
+            x (torch.Tensor): Input tensor (batch, head, time, 2*time-1).
             zero_triu (bool): If true, return the lower triangular part of
                 the matrix.
         Returns:
@@ -169,41 +169,40 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 mask: Optional[torch.Tensor]):
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
-            query (torch.Tensor): Query tensor (#batch, time1, size).
-            key (torch.Tensor): Key tensor (#batch, time2, size).
-            value (torch.Tensor): Value tensor (#batch, time2, size).
+            query (torch.Tensor): Query tensor (#batch, time, size).
+            key (torch.Tensor): Key tensor (#batch, time, size).
+            value (torch.Tensor): Value tensor (#batch, time, size).
             pos_emb (torch.Tensor): Positional embedding tensor
-                (#batch, time2, size).
-            mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
-                (#batch, time1, time2).
+                (2*time-1, size).
+            mask (torch.Tensor): Mask tensor (#batch, 1, time) or
+                (#batch, time, time).
         Returns:
-            torch.Tensor: Output tensor (#batch, time1, d_model).
+            torch.Tensor: Output tensor (#batch, time, d_model).
         """
         q, k, v = self.forward_qkv(query, key, value)
-        q = q.transpose(1, 2)  # (batch, time1, head, d_k)
+        q = q.transpose(1, 2)  # (batch, time, head, d_k)
 
-        n_batch_pos = pos_emb.size(0)
-        p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
-        p = p.transpose(1, 2)  # (batch, head, time1, d_k)
+        p = self.linear_pos(pos_emb).view(-1, self.h, self.d_k)  # (time1, head, d_k)
+        p = p.transpose(0, 1)  # (head, time1, d_k)
 
-        # (batch, head, time1, d_k)
+        # (batch, head, time, d_k)
         q_with_bias_u = (q + self.pos_bias_u).transpose(1, 2)
-        # (batch, head, time1, d_k)
+        # (batch, head, time, d_k)
         q_with_bias_v = (q + self.pos_bias_v).transpose(1, 2)
 
         # compute attention score
         # first compute matrix a and matrix c
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
-        # (batch, head, time1, time2)
+        # (batch, head, time, time)
         matrix_ac = torch.matmul(q_with_bias_u, k.transpose(-2, -1))
 
         # compute matrix b and matrix d
-        # (batch, head, time1, time2)
+        # (batch, head, time, 2*time -1)
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
         # Remove rel_shift since it is useless in speech recognition,
         # and it requires special attention for streaming.
-        # matrix_bd = self.rel_shift(matrix_bd)
-
+        matrix_bd = self.rel_shift(matrix_bd)
+        matrix_bd = matrix_bd[:, :, :, :matrix_ac.size(3)]
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k)  # (batch, head, time1, time2)
 
