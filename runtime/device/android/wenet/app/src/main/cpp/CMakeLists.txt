@@ -6,8 +6,12 @@ set(CMAKE_CXX_STANDARD 14)
 include_directories(${CMAKE_SOURCE_DIR})
 
 file(GLOB wenet_SOURCES
-        ${CMAKE_SOURCE_DIR}/wenet.cpp
-        ${CMAKE_SOURCE_DIR}/glog/logging.h
+        wenet.cpp
+        decoder/ctc_prefix_beam_search.cc
+        decoder/torch_asr_decoder.cc
+        decoder/torch_asr_model.cc
+        frontend/feature_pipeline.cc
+        frontend/fft.cc
         )
 
 add_library(${TARGET} SHARED
@@ -34,5 +38,5 @@ target_include_directories(${TARGET} PRIVATE
 
 target_link_libraries(${TARGET}
         ${PYTORCH_LIBRARY}
-        log
+        log    # android log
         )

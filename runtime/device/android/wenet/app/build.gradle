@@ -26,7 +26,7 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                cppFlags "-std=c++14", "-DC10_USE_GLOG", "-DC10_USE_MINIMAL_GLOG"
+                cppFlags "-std=c++14", "-DC10_USE_GLOG", "-DC10_USE_MINIMAL_GLOG", "-Wno-c++11-narrowing"
             }
         }
     }
