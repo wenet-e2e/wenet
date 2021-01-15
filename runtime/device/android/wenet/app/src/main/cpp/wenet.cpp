@@ -19,8 +19,9 @@ std::shared_ptr<FeaturePipeline> feature_pipeline;
 std::shared_ptr<SymbolTable> symbol_table;
 std::shared_ptr<TorchAsrModel> model;
 std::shared_ptr<TorchAsrDecoder> decoder;
+bool finished = false;
 
-jstring init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
+void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   model = std::make_shared<TorchAsrModel>();
   const char *pModelPath = (env)->GetStringUTFChars(jModelPath, nullptr);
   std::string modelPath = std::string(pModelPath);
@@ -43,30 +44,46 @@ jstring init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
                                               model,
                                               *symbol_table,
                                               *decode_config);
-
-  std::string hello = "Hello from C++";
-  return env->NewStringUTF(hello.c_str());
 }
 
-void recognize(JNIEnv *env, jobject, jstring jWavPath) {
-  const char *pWavPath = (env)->GetStringUTFChars(jWavPath, nullptr);
-  std::string wavPath = std::string(pWavPath);
-  WavReader wav_reader(wavPath);
+void reset(JNIEnv *env, jobject) {
+  decoder->Reset();
+  finished = false;
+}
 
-  feature_pipeline->AcceptWaveform(std::vector<float>(
-      wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
+void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
+  jsize size = env->GetArrayLength(jWaveform);
+  std::vector<short> waveform(size);
+  env->GetShortArrayRegion(jWaveform, 0, size, &waveform[0]);
+  std::vector<float> floatWaveform(waveform.begin(), waveform.end());
+  feature_pipeline->AcceptWaveform(floatWaveform);
+}
+
+void set_input_finished() {
   feature_pipeline->set_input_finished();
-  LOG(INFO) << "num frames " << feature_pipeline->num_frames();
+}
 
+void decode_thread_func() {
   while (true) {
     bool finish = decoder->Decode();
     if (finish) {
-      LOG(INFO) << "Final result: " << decoder->result();
+      finished = true;
       break;
-    } else {
-      LOG(INFO) << "Partial result: " << decoder->result();
     }
   }
+}
+
+void start_decode() {
+  std::thread decode_thread(decode_thread_func);
+  decode_thread.detach();
+}
+
+jboolean get_finished(JNIEnv *env, jobject) {
+  return finished ? JNI_TRUE : JNI_FALSE;
+}
+
+jstring get_result(JNIEnv *env, jobject) {
+  return env->NewStringUTF(decoder->result().c_str());
 }
 }  // namespace wenet
 
@@ -82,10 +99,13 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
   }
 
   static const JNINativeMethod methods[] = {
-      {"init",
-       "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
-       (void *) wenet::init},
-      {"recognize", "(Ljava/lang/String;)V", (void *) wenet::recognize},
+      {"init", "(Ljava/lang/String;Ljava/lang/String;)V", (void *) wenet::init},
+      {"reset", "()V", (void *) wenet::reset},
+      {"acceptWaveform", "([S)V", (void *) wenet::accept_waveform},
+      {"setInputFinished", "()V", (void *) wenet::set_input_finished},
+      {"getFinished", "()Z", (void *) wenet::get_finished},
+      {"startDecode", "()V", (void *) wenet::start_decode},
+      {"getResult", "()Ljava/lang/String;", (void *) wenet::get_result},
   };
   int rc = env->RegisterNatives(
       c, methods, sizeof(methods) / sizeof(JNINativeMethod));

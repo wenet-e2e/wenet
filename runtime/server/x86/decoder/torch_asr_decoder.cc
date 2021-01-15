@@ -23,6 +23,8 @@ TorchAsrDecoder::TorchAsrDecoder(
 void TorchAsrDecoder::Reset() {
   start_ = false;
   cached_feature_.clear();
+  ctc_prefix_beam_searcher_->Reset();
+  feature_pipeline_->Reset();
 }
 
 bool TorchAsrDecoder::Decode() {
