@@ -1,14 +1,17 @@
 # Performance Record
 
-* Aishell1
-* use torchaudio.compliance.kalid.fbank
-* fbank, dither=0, no cmvn, no speed perturb.
-* 80 epoch / 12h,8GPU
+## Conformer Result
 
-| decoding mode            | wav  | kaldi|
-|--------------------------|------|------|
-| attention decoder        | 5.18 | 5.28 |
-| ctc greedy search        | 5.41 | 5.68 |
-| ctc prefix beam search   | 5.55 | 5.79 |
-| attention rescoring      | 5.55 | 5.78 |
+* Feature info: using fbank feature, dither=0, no cmvn, no speed perturb.
+* Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 80 epochs, dither 0.0
+* Git hash: (TODO Add here)
+* Model link: (TODO Add here)
+
+| decoding mode          | CER  |
+|------------------------|------|
+| attention decoder      | 5.95 |
+| ctc greedy search      | 5.89 |
+| ctc prefix beam search | 5.89 |
+| attention rescoring    | 5.28 |
+
 
