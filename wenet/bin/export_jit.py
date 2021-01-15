@@ -21,7 +21,9 @@ if __name__ == '__main__':
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--output_file', required=True, help='output file')
-
+    parser.add_argument('--output_quant_file',
+                        default=None,
+                        help='output quantized model file')
     args = parser.parse_args()
     # No need gpu for model export
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -51,7 +53,18 @@ if __name__ == '__main__':
 
     load_checkpoint(model, args.checkpoint)
     # Export jit torch script model
+
     script_model = torch.jit.script(model)
     script_model.save(args.output_file)
+
+    # Export quantized jit torch script model
+    if args.output_quant_file:
+        quantized_model = torch.quantization.quantize_dynamic(
+            model, {torch.nn.Linear}, dtype=torch.qint8
+        )
+        print(quantized_model)
+        script_quant_model = torch.jit.script(quantized_model)
+        script_quant_model.save(args.output_quant_file)
+        print('Succeed, see {}'.format(args.output_quant_file))
 
     print('Succeed, see {}'.format(args.output_file))
