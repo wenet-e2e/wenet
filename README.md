@@ -26,7 +26,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 Please see `examples/$dataset/s0/README.md` for WeNet benchmark on different speech datasets.
 * [AIShell-1](examples/aishell/s0/README.md)
-* [AIShell-1 without Kaldi](examples/aishell/s1/README.md)
+* [AIShell-1 with Kaldi](examples/aishell/s1/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
 
 ## Documentation
