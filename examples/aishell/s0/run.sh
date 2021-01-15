@@ -88,6 +88,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Training
     mkdir -p $dir
+    cp ${feat_dir}/${train_set}/global_cmvn $dir
     INIT_FILE=$dir/ddp_init
     rm -f $INIT_FILE # delete old one before starting
     init_method=file://$(readlink -f $INIT_FILE)
@@ -97,7 +98,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
     cmvn_opts=
-    $cmvn && (cp ${feat_dir}/${train_set}/global_cmvn $dir;cmvn_opts="--cmvn ${dir}/global_cmvn")
+    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
     # export later
@@ -169,6 +170,6 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     python wenet/bin/export_jit.py \
         --config $dir/train.yaml \
         --checkpoint $dir/avg_${average_num}.pt \
-        --output_file $dir/final.zip
+        --output_file $dir/final.zip 
 fi
 
