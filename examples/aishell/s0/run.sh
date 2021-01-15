@@ -169,6 +169,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     python wenet/bin/export_jit.py \
         --config $dir/train.yaml \
         --checkpoint $dir/avg_${average_num}.pt \
-        --output_file $dir/final.zip
+        --output_file $dir/final.zip \
+        --output_quant_file $dir/final_quant.zip
 fi
 
