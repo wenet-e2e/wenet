@@ -13,7 +13,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 * **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
   framework to achieve accurate, fast and unified E2E model, which is favorable for industry adoption.
 * **Light weight**: WeNet is designed specifically for E2E speech recognition,
-  with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi, 
+  with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi,
   which simplifies installation and usage.
 * **Production ready**: The python code of WeNet meets the requirements of TorchScript,
   so the model trained by WeNet can be directly exported by Torch JIT and use LibTorch for inference.
