@@ -140,7 +140,6 @@ class RelPositionalEncoding(PositionalEncoding):
             torch.Tensor: Corresponding encoding
         """
         assert size < int(self.max_len / 2)
-        self.pe = self.pe.to(x.device)
         mid_pos = int(self.max_len / 2)
         pos_emb = self.pe[mid_pos - size + 1:mid_pos + size]
         return self.dropout(pos_emb)
