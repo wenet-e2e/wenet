@@ -68,7 +68,7 @@ def _load_json_cmvn(json_cmvn_file):
     """
     with open(json_cmvn_file) as f:
         cmvn_stats = json.load(f)
-    print(cmvn_stats)
+
     means = cmvn_stats['mean_stat']
     variance = cmvn_stats['var_stat']
     count = cmvn_stats['frame_num']
@@ -360,7 +360,6 @@ class CollateFunc(object):
         self.speed_perturb = speed_perturb
         self.raw_wav = raw_wav
         self.spec_aug_conf = spec_aug_conf
-        print(self.spec_aug_conf)
 
     def __call__(self, batch):
         assert (len(batch) == 1)
