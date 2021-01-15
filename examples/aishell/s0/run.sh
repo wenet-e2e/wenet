@@ -7,7 +7,7 @@
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 stage=1 # start from 0 if you need to start from data preparation
-stop_stage=1
+stop_stage=6
 # data
 data=/export/expts4/chaoyang/
 data_url=www.openslr.org/resources/33
@@ -22,14 +22,14 @@ train_set=train
 # 2. conf/train_conformer.yaml: Standard conformer
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 train_config=conf/train_conformer.yaml
-cmvn=false
+cmvn=true
 dir=exp/conformer
 checkpoint=
 
 # use average_checkpoint will get better result
-average_checkpoint=true
+average_checkpoint=false
 decode_checkpoint=$dir/final.pt
-average_num=10
+average_num=20
 
 . tools/parse_options.sh || exit 1;
 
@@ -96,8 +96,9 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "$num_gpus"
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
+    cp ${feat_dir}/${train_set}/global_cmvn $dir
     cmvn_opts=
-    $cmvn && (cp ${feat_dir}/${train_set}/global_cmvn $dir;cmvn_opts="--cmvn ${dir}/global_cmvn")
+    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
     # export later
@@ -126,7 +127,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Test model, please specify the model you want to test by --checkpoint
     cmvn_opts=
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
-    if [ ${average_checkpoint} == true ]; then
+    if [ ${average_checkpoint}==true ]; then
         decode_checkpoint=$dir/avg_${average_num}.pt
         echo "do model average and final checkpoint is $decode_checkpoint"
         python wenet/bin/average_model.py \
@@ -168,7 +169,8 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     # Export the best model you want
     python wenet/bin/export_jit.py \
         --config $dir/train.yaml \
-        --checkpoint $dir/avg_${average_num}.pt \
-        --output_file $dir/final.zip
+        --checkpoint $dir/0.pt \
+        --output_file $dir/final.zip \
+	--output_quant_file $dir/final_quant.zip
 fi
 

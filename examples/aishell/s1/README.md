@@ -3,23 +3,45 @@
 ## Standard E2E Results
 
 Conformer
+* feature: fbank
 * config: conf/train_conformer.yaml
 * beam: 10
-* num of gpu: 8
+* num of gpu: 4
 * ctc weight (used for attention rescoring): 0.5
+* num of averaged model: 20
+* convolution module norm: layernorm
 
 | decoding mode/chunk size | full |
 |--------------------------|------|
-| attention decoder        | 4.97 |
+| attention decoder        | 4.90 |
 | ctc greedy search        | 4.93 |
 | ctc prefix beam search   | 4.93 |
-| attention rescoring      | 4.70 |
+| attention rescoring      | 4.59 |
+
+Conformer
+* feature: fbank & pitch
+* config: conf/train_conformer.yaml
+* beam: 10
+* num of gpu: 4
+* ctc weight (used for attention rescoring): 0.7
+* num of averaged model: 20
+* convolution module norm: layernorm
+
+| decoding mode/chunk size | full |
+|--------------------------|------|
+| attention decoder        | 4.92 |
+| ctc greedy search        | 4.93 |
+| ctc prefix beam search   | 4.93 |
+| attention rescoring      | 4.64 |
 
 Transformer
+* feature: fbank & pitch
 * config: conf/train_transformer.yaml
 * beam: 10
-* num of gpu: 8
+* num of gpu: 4
 * ctc weight (used for attention rescoring): 0.5
+* convolution module norm: layernorm
+* num of averaged model: 20
 
 | decoding mode/chunk size | full |
 |--------------------------|------|
@@ -28,8 +50,6 @@ Transformer
 | ctc prefix beam search   | 5.88 |
 | attention rescoring      | 5.30 |
 
-
-
 ## Unified Dynamic Chunk Results
 
 Conformer (causal convolution)
@@ -37,6 +57,7 @@ Conformer (causal convolution)
 * beam: 10
 * num of gpu: 8
 * ctc weight (used for attention rescoring): 0.5
+* convolution module norm: layernorm
 
 | decoding mode/chunk size | full | 16   | 8    | 4    | 1    |
 |--------------------------|------|------|------|------|------|

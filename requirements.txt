@@ -1,3 +1,4 @@
+torchaudio=0.6
 flake8==3.8.2
 Pillow
 pyyaml
