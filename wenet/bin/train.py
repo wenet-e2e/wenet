@@ -71,7 +71,7 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     # Set random seed
     torch.manual_seed(777)
-
+    print(args)
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin)
 

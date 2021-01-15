@@ -66,7 +66,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help='simulate streaming inference')
     args = parser.parse_args()
-
+    print(args)
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
