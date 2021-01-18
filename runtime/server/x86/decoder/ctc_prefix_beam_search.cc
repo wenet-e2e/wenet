@@ -104,7 +104,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
       }
     }
 
-    // 3. Second beam pure, only keep top n best paths
+    // 3. Second beam prune, only keep top n best paths
     std::vector<std::pair<std::vector<int>, PrefixScore>> arr(next_hyps.begin(),
                                                               next_hyps.end());
     int second_beam_size =
