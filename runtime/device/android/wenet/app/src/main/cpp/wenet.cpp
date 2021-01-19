@@ -1,3 +1,16 @@
+// Copyright (c) 2021 Mobvoi Inc (authors: Xiaoyu Chen)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 #include <jni.h>
 #include <string>
 
@@ -40,10 +53,8 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   decode_config = std::make_shared<DecodeOptions>();
   decode_config->chunk_size = 16;
 
-  decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline,
-                                              model,
-                                              *symbol_table,
-                                              *decode_config);
+  decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline, model,
+                                              *symbol_table, *decode_config);
 }
 
 void reset(JNIEnv *env, jobject) {
@@ -54,11 +65,12 @@ void reset(JNIEnv *env, jobject) {
 
 void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
   jsize size = env->GetArrayLength(jWaveform);
-  std::vector<short> waveform(size);
+  std::vector<int16_t> waveform(size);
   env->GetShortArrayRegion(jWaveform, 0, size, &waveform[0]);
   std::vector<float> floatWaveform(waveform.begin(), waveform.end());
   feature_pipeline->AcceptWaveform(floatWaveform);
-  LOG(INFO) << "wenet accept waveform in ms: " << int(floatWaveform.size() / 16);
+  LOG(INFO) << "wenet accept waveform in ms: "
+            << int(floatWaveform.size() / 16);
 }
 
 void set_input_finished() {
@@ -109,16 +121,20 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
   }
 
   static const JNINativeMethod methods[] = {
-      {"init", "(Ljava/lang/String;Ljava/lang/String;)V", (void *) wenet::init},
-      {"reset", "()V", (void *) wenet::reset},
-      {"acceptWaveform", "([S)V", (void *) wenet::accept_waveform},
-      {"setInputFinished", "()V", (void *) wenet::set_input_finished},
-      {"getFinished", "()Z", (void *) wenet::get_finished},
-      {"startDecode", "()V", (void *) wenet::start_decode},
-      {"getResult", "()Ljava/lang/String;", (void *) wenet::get_result},
+      {"init", "(Ljava/lang/String;Ljava/lang/String;)V",
+       reinterpret_cast<void *>(wenet::init)},
+      {"reset", "()V", reinterpret_cast<void *>(wenet::reset)},
+      {"acceptWaveform", "([S)V",
+       reinterpret_cast<void *>(wenet::accept_waveform)},
+      {"setInputFinished", "()V",
+       reinterpret_cast<void *>(wenet::set_input_finished)},
+      {"getFinished", "()Z", reinterpret_cast<void *>(wenet::get_finished)},
+      {"startDecode", "()V", reinterpret_cast<void *>(wenet::start_decode)},
+      {"getResult", "()Ljava/lang/String;",
+       reinterpret_cast<void *>(wenet::get_result)},
   };
-  int rc = env->RegisterNatives(
-      c, methods, sizeof(methods) / sizeof(JNINativeMethod));
+  int rc = env->RegisterNatives(c, methods,
+                                sizeof(methods) / sizeof(JNINativeMethod));
 
   if (rc != JNI_OK) {
     return rc;

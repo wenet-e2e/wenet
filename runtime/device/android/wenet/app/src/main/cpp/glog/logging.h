@@ -61,8 +61,8 @@
 // warnings / errors.
 // To use the debug only versions, Prepend a D to the normal check macros.
 // e.g. DCHECK_EQ(a, b);
-#ifndef MOBILE_BASE_LOGGING_H_
-#define MOBILE_BASE_LOGGING_H_
+#ifndef GLOG_LOGGING_H_
+#define GLOG_LOGGING_H_
 // Definitions for building on an Android system.
 #include <android/log.h>
 #include <time.h>
@@ -331,4 +331,4 @@ T &CheckNotNull(const char *file, int line, const char *names, T &t) {
 inline void PrintAndroid(const char *msg) {
   __android_log_write(ANDROID_LOG_VERBOSE, "native", msg);
 }
-#endif  // MOBILE_BASE_LOGGING_H_
+#endif  // GLOG_LOGGING_H_

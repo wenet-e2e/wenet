@@ -29,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
   private static final String LOG_TAG = "WENET";
   private static final int SAMPLE_RATE = 16000;  // The sampling rate
   private static final int MAX_QUEUE_SIZE = 2500;  // 100 seconds audio, 1 / 0.04 * 100
-  private static final int MAX_AUDIO_DURATION_MS = 30000;
+  private static final int MAX_AUDIO_DURATION_MS = 10000;
 
   private boolean startRecord = false;
   private AudioRecord record = null;
@@ -156,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
           Log.e(LOG_TAG, e.getMessage());
         }
-        timeMs += read / 16;
+        timeMs += read * 1000 / SAMPLE_RATE;
         Button button = findViewById(R.id.button);
         if (timeMs >= 500 && !button.isEnabled() && startRecord) {
           runOnUiThread(() -> button.setEnabled(true));
