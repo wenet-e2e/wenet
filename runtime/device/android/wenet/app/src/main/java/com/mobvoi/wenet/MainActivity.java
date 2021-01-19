@@ -158,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
         }
         timeMs += read * 1000 / SAMPLE_RATE;
         Button button = findViewById(R.id.button);
-        if (timeMs >= 500 && !button.isEnabled() && startRecord) {
+        if (timeMs >= 200 && !button.isEnabled() && startRecord) {
           runOnUiThread(() -> button.setEnabled(true));
         }
         if (timeMs >= MAX_AUDIO_DURATION_MS) {
