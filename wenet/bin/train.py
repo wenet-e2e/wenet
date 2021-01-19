@@ -16,14 +16,16 @@ import torch.distributed as dist
 from tensorboardX import SummaryWriter
 
 from wenet.dataset.dataset import CollateFunc, AudioDataset
-from wenet.transformer.encoder import TransformerEncoder
-from wenet.transformer.encoder import ConformerEncoder
-from wenet.transformer.decoder import TransformerDecoder
-from wenet.transformer.ctc import CTC
 from wenet.transformer.asr_model import ASRModel
+from wenet.transformer.cmvn import GlobalCMVN
+from wenet.transformer.ctc import CTC
+from wenet.transformer.encoder import ConformerEncoder
+from wenet.transformer.encoder import TransformerEncoder
+from wenet.transformer.decoder import TransformerDecoder
+from wenet.utils.checkpoint import save_checkpoint, load_checkpoint
+from wenet.utils.cmvn import load_cmvn
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
-from wenet.utils.checkpoint import save_checkpoint, load_checkpoint
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training your network')
@@ -80,8 +82,7 @@ if __name__ == '__main__':
     raw_wav = configs['raw_wav']
 
     train_collate_func = CollateFunc(**configs['collate_conf'],
-                                     raw_wav=raw_wav,
-                                     cmvn=args.cmvn)
+                                     raw_wav=raw_wav)
 
     cv_collate_conf = copy.deepcopy(configs['collate_conf'])
     # no augmenation on cv set
@@ -90,12 +91,12 @@ if __name__ == '__main__':
         cv_collate_conf['feature_dither'] = 0.0
         cv_collate_conf['speed_perturb'] = False
         cv_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    cv_collate_func = CollateFunc(**cv_collate_conf,
-                                  raw_wav=raw_wav,
-                                  cmvn=args.cmvn)
+    cv_collate_func = CollateFunc(**cv_collate_conf, raw_wav=raw_wav)
 
     dataset_conf = configs.get('dataset_conf', {})
-    train_dataset = AudioDataset(args.train_data, **dataset_conf, raw_wav=raw_wav)
+    train_dataset = AudioDataset(args.train_data,
+                                 **dataset_conf,
+                                 raw_wav=raw_wav)
     cv_dataset = AudioDataset(args.cv_data, **dataset_conf, raw_wav=raw_wav)
 
     if distributed:
@@ -126,7 +127,8 @@ if __name__ == '__main__':
                                 num_workers=args.num_workers)
 
     if raw_wav:
-        input_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
+        input_dim = configs['collate_conf']['feature_extraction_conf'][
+            'mel_bins']
     else:
         input_dim = train_dataset.input_dim
     vocab_size = train_dataset.output_dim
@@ -140,11 +142,23 @@ if __name__ == '__main__':
             data = yaml.dump(configs)
             fout.write(data)
 
+    if args.cmvn is not None:
+        mean, istd = load_cmvn(args.cmvn, raw_wav)
+        global_cmvn = GlobalCMVN(
+            torch.from_numpy(mean).float(),
+            torch.from_numpy(istd).float())
+    else:
+        global_cmvn = None
+
     encoder_type = configs.get('encoder', 'conformer')
     if encoder_type == 'conformer':
-        encoder = ConformerEncoder(input_dim, **configs['encoder_conf'])
+        encoder = ConformerEncoder(input_dim,
+                                   global_cmvn=global_cmvn,
+                                   **configs['encoder_conf'])
     else:
-        encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
+        encoder = TransformerEncoder(input_dim,
+                                     global_cmvn=global_cmvn,
+                                     **configs['encoder_conf'])
     decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                  **configs['decoder_conf'])
     ctc = CTC(vocab_size, encoder.output_size())
@@ -212,7 +226,8 @@ if __name__ == '__main__':
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs)
-        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device, configs)
+        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
+                                                configs)
         if args.world_size > 1:
             # all_reduce expected a sequence parameter, so we use [num_seen_utts].
             num_seen_utts = torch.Tensor([num_seen_utts]).to(device)
@@ -228,12 +243,13 @@ if __name__ == '__main__':
         logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
-            save_checkpoint(model, save_model_path, {
-                'epoch': epoch,
-                'lr': lr,
-                'cv_loss': cv_loss,
-                'step': executor.step
-            })
+            save_checkpoint(
+                model, save_model_path, {
+                    'epoch': epoch,
+                    'lr': lr,
+                    'cv_loss': cv_loss,
+                    'step': executor.step
+                })
             writer.add_scalars('epoch', {'cv_loss': cv_loss, 'lr': lr}, epoch)
         final_epoch = epoch
 
