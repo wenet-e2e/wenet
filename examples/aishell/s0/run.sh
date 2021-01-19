@@ -46,6 +46,7 @@ fi
 
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    # remove the space between the text labels for Mandarin dataset
     for x in train dev test; do
         cp data/${x}/text data/${x}/text.org
         paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " data/${x}/text.org | tr -d " ") \
@@ -57,9 +58,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     for x in ${train_set} dev test; do
         cp -r data/$x $feat_dir
     done
-    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
-        --in_scp data/${train_set}/wav.scp \
-        --out_cmvn $feat_dir/$train_set/global_cmvn
+    if $cmvn; then
+        tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+            --in_scp data/${train_set}/wav.scp \
+            --out_cmvn $feat_dir/$train_set/global_cmvn
+    fi
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
