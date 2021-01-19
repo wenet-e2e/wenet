@@ -22,6 +22,11 @@ TorchAsrDecoder::TorchAsrDecoder(
 
 void TorchAsrDecoder::Reset() {
   start_ = false;
+  result_ = "";
+  offset_ = 0;
+  subsampling_cache_ = std::move(torch::jit::IValue());
+  elayers_output_cache_ = std::move(torch::jit::IValue());
+  conformer_cnn_cache_ = std::move(torch::jit::IValue());
   cached_feature_.clear();
   ctc_prefix_beam_searcher_->Reset();
   feature_pipeline_->Reset();

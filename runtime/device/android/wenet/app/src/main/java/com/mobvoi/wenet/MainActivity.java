@@ -1,6 +1,8 @@
 package com.mobvoi.wenet;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -9,7 +11,10 @@ import android.os.Process;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -20,14 +25,17 @@ import java.util.concurrent.BlockingQueue;
 
 public class MainActivity extends AppCompatActivity {
 
+  private final int MY_PERMISSIONS_RECORD_AUDIO = 1;
   private static final String LOG_TAG = "WENET";
   private static final int SAMPLE_RATE = 16000;  // The sampling rate
   private static final int MAX_QUEUE_SIZE = 2500;  // 100 seconds audio, 1 / 0.04 * 100
+  private static final int MAX_AUDIO_DURATION_MS = 30000;
 
   private boolean startRecord = false;
   private AudioRecord record = null;
   private int miniBufferSize = 0;  // 1280 bytes 648 byte 40ms, 0.04s
   private BlockingQueue<short[]> bufferQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
+  private int timeMs = 0;
 
   public static String assetFilePath(Context context, String assetName) {
     File file = new File(context.getFilesDir(), assetName);
@@ -52,9 +60,25 @@ public class MainActivity extends AppCompatActivity {
   }
 
   @Override
+  public void onRequestPermissionsResult(int requestCode,
+      String permissions[], int[] grantResults) {
+    if (requestCode == MY_PERMISSIONS_RECORD_AUDIO) {
+      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        Log.i(LOG_TAG, "record permission is granted");
+      } else {
+        Toast.makeText(this, "Permissions denied to record audio", Toast.LENGTH_LONG).show();
+        Button button = findViewById(R.id.button);
+        button.setEnabled(false);
+      }
+    }
+  }
+
+  @Override
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
+
+    requestAudioPermissions();
 
     final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
     final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
@@ -62,24 +86,36 @@ public class MainActivity extends AppCompatActivity {
     textView.setText("");
     Recognize.init(modelPath, dictPath);
 
-    initRecoder();
-
     Button button = findViewById(R.id.button);
     button.setText("Start Record");
     button.setOnClickListener(view -> {
       if (!startRecord) {
         startRecord = true;
-        startRecordThread();
+        timeMs = 0;
         Recognize.reset();
+        startRecordThread();
         startAsrThread();
         Recognize.startDecode();
         button.setText("Stop Record");
+        button.setEnabled(false);
       } else {
         startRecord = false;
         Recognize.setInputFinished();
         button.setText("Start Record");
+        button.setEnabled(false);
       }
     });
+  }
+
+  private void requestAudioPermissions() {
+    if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+        != PackageManager.PERMISSION_GRANTED) {
+      ActivityCompat.requestPermissions(this,
+          new String[]{Manifest.permission.RECORD_AUDIO},
+          MY_PERMISSIONS_RECORD_AUDIO);
+    } else {
+      initRecoder();
+    }
   }
 
   private void initRecoder() {
@@ -118,6 +154,22 @@ public class MainActivity extends AppCompatActivity {
           }
         } catch (InterruptedException e) {
           Log.e(LOG_TAG, e.getMessage());
+        }
+        timeMs += read / 16;
+        Button button = findViewById(R.id.button);
+        if (timeMs >= 500 && !button.isEnabled() && startRecord) {
+          runOnUiThread(() -> button.setEnabled(true));
+        }
+        if (timeMs >= MAX_AUDIO_DURATION_MS) {
+          startRecord = false;
+          Recognize.setInputFinished();
+          runOnUiThread(() -> {
+            Toast.makeText(MainActivity.this,
+                String.format("Max audio duration is %d seconds", MAX_AUDIO_DURATION_MS / 1000),
+                Toast.LENGTH_LONG).show();
+            button.setText("Start Record");
+            button.setEnabled(false);
+          });
         }
       }
       record.stop();
@@ -163,6 +215,10 @@ public class MainActivity extends AppCompatActivity {
             textView.setText(Recognize.getResult());
           });
         } else {
+          runOnUiThread(() -> {
+            Button button = findViewById(R.id.button);
+            button.setEnabled(true);
+          });
           break;
         }
       }

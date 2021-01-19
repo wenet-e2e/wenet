@@ -47,6 +47,7 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
 }
 
 void reset(JNIEnv *env, jobject) {
+  LOG(INFO) << "wenet reset";
   decoder->Reset();
   finished = false;
 }
@@ -57,9 +58,11 @@ void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
   env->GetShortArrayRegion(jWaveform, 0, size, &waveform[0]);
   std::vector<float> floatWaveform(waveform.begin(), waveform.end());
   feature_pipeline->AcceptWaveform(floatWaveform);
+  LOG(INFO) << "wenet accept waveform in ms: " << int(floatWaveform.size() / 16);
 }
 
 void set_input_finished() {
+  LOG(INFO) << "wenet input finished";
   feature_pipeline->set_input_finished();
 }
 
@@ -67,8 +70,11 @@ void decode_thread_func() {
   while (true) {
     bool finish = decoder->Decode();
     if (finish) {
+      LOG(INFO) << "wenet final result: " << decoder->result();
       finished = true;
       break;
+    } else {
+      LOG(INFO) << "wenet partial result: " << decoder->result();
     }
   }
 }
@@ -79,10 +85,14 @@ void start_decode() {
 }
 
 jboolean get_finished(JNIEnv *env, jobject) {
+  if (finished) {
+    LOG(INFO) << "wenet recognize finished";
+  }
   return finished ? JNI_TRUE : JNI_FALSE;
 }
 
 jstring get_result(JNIEnv *env, jobject) {
+  LOG(INFO) << "wenet ui result: " << decoder->result();
   return env->NewStringUTF(decoder->result().c_str());
 }
 }  // namespace wenet
