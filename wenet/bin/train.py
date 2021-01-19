@@ -1,5 +1,16 @@
-# Copyright 2020 Mobvoi Inc. All Rights Reserved.
-# Author: binbinzhang@mobvoi.com (Binbin Zhang)
+# Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Xiaoyu Chen)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import print_function
 
@@ -8,24 +19,19 @@ import copy
 import logging
 import os
 
-import yaml
 import torch
-import torch.optim as optim
-from torch.utils.data import DataLoader
 import torch.distributed as dist
+import torch.optim as optim
+import yaml
 from tensorboardX import SummaryWriter
+from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import CollateFunc, AudioDataset
-from wenet.transformer.asr_model import ASRModel
-from wenet.transformer.cmvn import GlobalCMVN
-from wenet.transformer.ctc import CTC
-from wenet.transformer.encoder import ConformerEncoder
-from wenet.transformer.encoder import TransformerEncoder
-from wenet.transformer.decoder import TransformerDecoder
-from wenet.utils.checkpoint import save_checkpoint, load_checkpoint
-from wenet.utils.cmvn import load_cmvn
+from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.transformer.asr_model import init_asr_model
+from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training your network')
@@ -134,43 +140,18 @@ if __name__ == '__main__':
     vocab_size = train_dataset.output_dim
 
     # Save configs to model_dir/train.yaml for inference and export
+    configs['input_dim'] = input_dim
+    configs['output_dim'] = vocab_size
+    configs['cmvn_file'] = args.cmvn
+    configs['is_json_cmvn'] = raw_wav
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')
         with open(saved_config_path, 'w') as fout:
-            configs['input_dim'] = input_dim
-            configs['output_dim'] = vocab_size
             data = yaml.dump(configs)
             fout.write(data)
 
-    if args.cmvn is not None:
-        mean, istd = load_cmvn(args.cmvn, raw_wav)
-        global_cmvn = GlobalCMVN(
-            torch.from_numpy(mean).float(),
-            torch.from_numpy(istd).float())
-    else:
-        global_cmvn = None
-
-    encoder_type = configs.get('encoder', 'conformer')
-    if encoder_type == 'conformer':
-        encoder = ConformerEncoder(input_dim,
-                                   global_cmvn=global_cmvn,
-                                   **configs['encoder_conf'])
-    else:
-        encoder = TransformerEncoder(input_dim,
-                                     global_cmvn=global_cmvn,
-                                     **configs['encoder_conf'])
-    decoder = TransformerDecoder(vocab_size, encoder.output_size(),
-                                 **configs['decoder_conf'])
-    ctc = CTC(vocab_size, encoder.output_size())
-
-    model = ASRModel(
-        vocab_size=vocab_size,
-        encoder=encoder,
-        decoder=decoder,
-        ctc=ctc,
-        **configs['model_conf'],
-    )
-
+    # Init asr model from configs
+    model = init_asr_model(configs)
     print(model)
 
     # !!!IMPORTANT!!!
