@@ -53,3 +53,10 @@ pip install -r requirements.txt
 conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio -c pytorch
 ```
 
+## Discuss & Communication
+
+In addition to discussing on Github issues, we create a WeChat group for better discuss and quick response.
+Please scan the following QR code by WeChat to join the chat group.
+
+![Wenet chat group](https://github.com/robin1001/qr/blob/master/wenet.jpeg)
+
