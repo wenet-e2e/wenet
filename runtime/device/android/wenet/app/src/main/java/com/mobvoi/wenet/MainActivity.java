@@ -65,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
     if (requestCode == MY_PERMISSIONS_RECORD_AUDIO) {
       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
         Log.i(LOG_TAG, "record permission is granted");
+        initRecoder();
       } else {
         Toast.makeText(this, "Permissions denied to record audio", Toast.LENGTH_LONG).show();
         Button button = findViewById(R.id.button);
