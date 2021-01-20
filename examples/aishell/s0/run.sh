@@ -6,7 +6,7 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 #export CUDA_VISIBLE_DEVICES="0"
-export CUDA_VISIBLE_DEVICES="6,7"
+export CUDA_VISIBLE_DEVICES="0,1"
 stage=1 # start from 0 if you need to start from data preparation
 stop_stage=1
 # data
@@ -82,7 +82,15 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     for x in dev test ${train_set}; do
         tools/format_data.sh --nj ${nj} \
             --feat-type wav --feat $feat_dir/$x/wav.scp \
-            $feat_dir/$x ${dict} > $feat_dir/$x/format.data
+            $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
+
+        tools/remove_longshortdata.py \
+            --min_input_len 0.5 \
+            --max_input_len 20 \
+            --max_output_len 400 \
+            --max_output_input_ratio 10.0 \
+            --data_file $feat_dir/$x/format.data.tmp \
+            --output_data_file $feat_dir/$x/format.data
     done
 fi
 
