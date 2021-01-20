@@ -58,7 +58,7 @@ This stage downloads the aishell-1 data to the local path `$data`. This may take
 #### Stage 0: Prepare Training data
 
 In this stage, `local/aishell_data_prep.sh` organizes the original aishell-1 data into two files:
-* **wav.scp** each line records two tab-separated columns : `wav_id` and `wav_path` 
+* **wav.scp** each line records two tab-separated columns : `wav_id` and `wav_path`
 * **text**  each line records two tab-separated columns :  `wav_id` and `text_label`
 
 **wav.scp**
