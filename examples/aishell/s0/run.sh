@@ -88,7 +88,6 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Training
     mkdir -p $dir
-    cp ${feat_dir}/${train_set}/global_cmvn $dir
     INIT_FILE=$dir/ddp_init
     rm -f $INIT_FILE # delete old one before starting
     init_method=file://$(readlink -f $INIT_FILE)
@@ -98,6 +97,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
     cmvn_opts=
+    $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
@@ -120,13 +120,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     } &
     done
     wait
-    cp $feat_dir/$train_set/global_cmvn $dir/
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Test model, please specify the model you want to test by --checkpoint
-    cmvn_opts=
-    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     if [ ${average_checkpoint} == true ]; then
         decode_checkpoint=$dir/avg_${average_num}.pt
         echo "do model average and final checkpoint is $decode_checkpoint"
@@ -155,7 +152,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --dict $dict \
             --ctc_weight $ctc_weight \
             --result_file $test_dir/text \
-            $cmvn_opts \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
          python2 tools/compute-wer.py --char=1 --v=1 \
             $feat_dir/test/text $test_dir/text > $test_dir/wer
