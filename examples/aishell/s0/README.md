@@ -14,4 +14,16 @@
 | ctc prefix beam search | 5.89 |
 | attention rescoring    | 5.28 |
 
+## Transformer Result
 
+* Feature info: using fbank feature, dither=0, with cmvn, no speed perturb.
+* Training info: lr 0.002, batch size 16, 8 gpu, acc_grad 1, 120 epochs, dither 0.0
+* Git hash: fb8e0f8c12b5d547fc22e62365e1e114f059c609
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210120_transformer_exp.tar.gz
+
+| decoding mode          | CER  |
+|------------------------|------|
+| attention decoder      | 5.76 |
+| ctc greedy search      | 6.21 |
+| ctc prefix beam search | 6.21 |
+| attention rescoring    | 5.47 |
