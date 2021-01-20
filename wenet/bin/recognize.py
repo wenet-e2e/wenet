@@ -1,5 +1,16 @@
-# Copyright 2020 Mobvoi Inc. All Rights Reserved.
-# Author: binbinzhang@mobvoi.com (Binbin Zhang)
+# Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Xiaoyu Chen)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import print_function
 
@@ -9,16 +20,12 @@ import logging
 import os
 import sys
 
-import yaml
 import torch
+import yaml
 from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import CollateFunc, AudioDataset
-from wenet.transformer.encoder import TransformerEncoder
-from wenet.transformer.encoder import ConformerEncoder
-from wenet.transformer.decoder import TransformerDecoder
-from wenet.transformer.ctc import CTC
-from wenet.transformer.asr_model import ASRModel
+from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 
 if __name__ == '__main__':
@@ -30,7 +37,6 @@ if __name__ == '__main__':
                         default=-1,
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
-    parser.add_argument('--cmvn', default=None, help='global cmvn file')
     parser.add_argument('--dict', required=True, help='dict file')
     parser.add_argument('--beam_size',
                         type=int,
@@ -66,7 +72,7 @@ if __name__ == '__main__':
                         action='store_true',
                         help='simulate streaming inference')
     args = parser.parse_args()
-
+    print(args)
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -90,8 +96,7 @@ if __name__ == '__main__':
     test_collate_conf['speed_perturb'] = False
     test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
     test_collate_func = CollateFunc(**test_collate_conf,
-                                    raw_wav=raw_wav,
-                                    cmvn=args.cmvn)
+                                    raw_wav=raw_wav)
     dataset_conf = configs.get('dataset_conf', {})
     dataset_conf['batch_size'] = args.batch_size
     dataset_conf['sort'] = False
@@ -102,27 +107,8 @@ if __name__ == '__main__':
                                   batch_size=1,
                                   num_workers=0)
 
-    # Init transformer model
-    if raw_wav:
-        input_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
-    else:
-        input_dim = test_dataset.input_dim
-    vocab_size = test_dataset.output_dim
-    encoder_type = configs.get('encoder', 'conformer')
-    if encoder_type == 'conformer':
-        encoder = ConformerEncoder(input_dim, **configs['encoder_conf'])
-    else:
-        encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
-    decoder = TransformerDecoder(vocab_size, encoder.output_size(),
-                                 **configs['decoder_conf'])
-    ctc = CTC(vocab_size, encoder.output_size())
-    model = ASRModel(
-        vocab_size=vocab_size,
-        encoder=encoder,
-        decoder=decoder,
-        ctc=ctc,
-        **configs['model_conf'],
-    )
+    # Init asr model from configs
+    model = init_asr_model(configs)
 
     # Load dict
     char_dict = {}

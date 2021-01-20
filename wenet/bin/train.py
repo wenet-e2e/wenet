@@ -1,5 +1,16 @@
-# Copyright 2020 Mobvoi Inc. All Rights Reserved.
-# Author: binbinzhang@mobvoi.com (Binbin Zhang)
+# Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Xiaoyu Chen)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 from __future__ import print_function
 
@@ -8,22 +19,19 @@ import copy
 import logging
 import os
 
-import yaml
 import torch
-import torch.optim as optim
-from torch.utils.data import DataLoader
 import torch.distributed as dist
+import torch.optim as optim
+import yaml
 from tensorboardX import SummaryWriter
+from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import CollateFunc, AudioDataset
-from wenet.transformer.encoder import TransformerEncoder
-from wenet.transformer.encoder import ConformerEncoder
-from wenet.transformer.decoder import TransformerDecoder
-from wenet.transformer.ctc import CTC
-from wenet.transformer.asr_model import ASRModel
+from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.transformer.asr_model import init_asr_model
+from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
-from wenet.utils.checkpoint import save_checkpoint, load_checkpoint
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training your network')
@@ -71,7 +79,7 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     # Set random seed
     torch.manual_seed(777)
-
+    print(args)
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin)
 
@@ -80,8 +88,7 @@ if __name__ == '__main__':
     raw_wav = configs['raw_wav']
 
     train_collate_func = CollateFunc(**configs['collate_conf'],
-                                     raw_wav=raw_wav,
-                                     cmvn=args.cmvn)
+                                     raw_wav=raw_wav)
 
     cv_collate_conf = copy.deepcopy(configs['collate_conf'])
     # no augmenation on cv set
@@ -90,12 +97,12 @@ if __name__ == '__main__':
         cv_collate_conf['feature_dither'] = 0.0
         cv_collate_conf['speed_perturb'] = False
         cv_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    cv_collate_func = CollateFunc(**cv_collate_conf,
-                                  raw_wav=raw_wav,
-                                  cmvn=args.cmvn)
+    cv_collate_func = CollateFunc(**cv_collate_conf, raw_wav=raw_wav)
 
     dataset_conf = configs.get('dataset_conf', {})
-    train_dataset = AudioDataset(args.train_data, **dataset_conf, raw_wav=raw_wav)
+    train_dataset = AudioDataset(args.train_data,
+                                 **dataset_conf,
+                                 raw_wav=raw_wav)
     cv_dataset = AudioDataset(args.cv_data, **dataset_conf, raw_wav=raw_wav)
 
     if distributed:
@@ -126,37 +133,25 @@ if __name__ == '__main__':
                                 num_workers=args.num_workers)
 
     if raw_wav:
-        input_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
+        input_dim = configs['collate_conf']['feature_extraction_conf'][
+            'mel_bins']
     else:
         input_dim = train_dataset.input_dim
     vocab_size = train_dataset.output_dim
 
     # Save configs to model_dir/train.yaml for inference and export
+    configs['input_dim'] = input_dim
+    configs['output_dim'] = vocab_size
+    configs['cmvn_file'] = args.cmvn
+    configs['is_json_cmvn'] = raw_wav
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')
         with open(saved_config_path, 'w') as fout:
-            configs['input_dim'] = input_dim
-            configs['output_dim'] = vocab_size
             data = yaml.dump(configs)
             fout.write(data)
 
-    encoder_type = configs.get('encoder', 'conformer')
-    if encoder_type == 'conformer':
-        encoder = ConformerEncoder(input_dim, **configs['encoder_conf'])
-    else:
-        encoder = TransformerEncoder(input_dim, **configs['encoder_conf'])
-    decoder = TransformerDecoder(vocab_size, encoder.output_size(),
-                                 **configs['decoder_conf'])
-    ctc = CTC(vocab_size, encoder.output_size())
-
-    model = ASRModel(
-        vocab_size=vocab_size,
-        encoder=encoder,
-        decoder=decoder,
-        ctc=ctc,
-        **configs['model_conf'],
-    )
-
+    # Init asr model from configs
+    model = init_asr_model(configs)
     print(model)
 
     # !!!IMPORTANT!!!
@@ -212,7 +207,8 @@ if __name__ == '__main__':
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs)
-        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device, configs)
+        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
+                                                configs)
         if args.world_size > 1:
             # all_reduce expected a sequence parameter, so we use [num_seen_utts].
             num_seen_utts = torch.Tensor([num_seen_utts]).to(device)
@@ -228,12 +224,13 @@ if __name__ == '__main__':
         logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
-            save_checkpoint(model, save_model_path, {
-                'epoch': epoch,
-                'lr': lr,
-                'cv_loss': cv_loss,
-                'step': executor.step
-            })
+            save_checkpoint(
+                model, save_model_path, {
+                    'epoch': epoch,
+                    'lr': lr,
+                    'cv_loss': cv_loss,
+                    'step': executor.step
+                })
             writer.add_scalars('epoch', {'cv_loss': cv_loss, 'lr': lr}, epoch)
         final_epoch = epoch
 
