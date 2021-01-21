@@ -85,7 +85,15 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     for x in dev test ${train_set}; do
         tools/format_data.sh --nj ${nj} \
             --feat-type wav --feat $feat_dir/$x/wav.scp \
-            $feat_dir/$x ${dict} > $feat_dir/$x/format.data
+            $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
+
+        tools/remove_longshortdata.py \
+            --min_input_len 0.5 \
+            --max_input_len 20 \
+            --max_output_len 400 \
+            --max_output_input_ratio 10.0 \
+            --data_file $feat_dir/$x/format.data.tmp \
+            --output_data_file $feat_dir/$x/format.data
     done
 fi
 
