@@ -58,11 +58,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     for x in ${train_set} dev test; do
         cp -r data/$x $feat_dir
     done
-    if $cmvn; then
-        tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
-            --in_scp data/${train_set}/wav.scp \
-            --out_cmvn $feat_dir/$train_set/global_cmvn
-    fi
+
+    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+        --in_scp data/${train_set}/wav.scp \
+        --out_cmvn $feat_dir/$train_set/global_cmvn
+
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
