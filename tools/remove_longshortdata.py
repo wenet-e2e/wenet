@@ -4,21 +4,27 @@
 import argparse
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='extract CMVN stats')
+    parser = argparse.ArgumentParser(
+        description='remove too long or too short data in format.data')
     parser.add_argument('--data_file',
                         type=str,
                         help='input format data')
     parser.add_argument('--output_data_file',
                         type=str,
-                        help='outnput format data')
+                        help='output format data')
     parser.add_argument('--min_input_len', type=float,
-                        default=0, help='minimum input seq length')
+                        default=0,
+                        help='minimum input seq length, in seconds for raw wav, \
+                            in frame numbers for feature data')
     parser.add_argument('--max_input_len', type=float,
-                        default=20, help='maximum output seq length')
+                        default=20,
+                        help='maximum output seq length, in seconds for raw wav, \
+                            in frame numbers for feature data')
     parser.add_argument('--min_output_len', type=float,
-                        default=0, help='minimum input seq length')
+                        default=0, help='minimum input seq length, in modeling units')
     parser.add_argument('--max_output_len', type=float,
-                        default=500, help='maximum output seq length')
+                        default=500,
+                        help='maximum output seq length, in modeling units')
     parser.add_argument('--min_output_input_ratio', type=float, default=0.05,
                         help='minimum output seq length/output seq length ratio')
     parser.add_argument('--max_output_input_ratio', type=float, default=10,
