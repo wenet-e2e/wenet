@@ -12,7 +12,7 @@ mkdir build && cd build && cmake .. && cmake --build .
 
 You can run the following on your trained model, or on our pretrained model, click the following link to download the pretrained model.
 
-* [TODO ADD Aishell model](link)
+* [AIshell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210121_unified_transformer_server.tar.gz)
 * [TODO ADD Librispeech model](link)
 
 ## Run Offline Demo
@@ -26,7 +26,7 @@ wav_path=your_test_wav_path
 model_dir=your_model_dir
 ./build/decoder_main \
     --chunk_size -1 \
-    --wav_path  \
+    --wav_path $wav_path \
     --model_path $model_dir/final.zip \
     --dict_path $model_dir/words.txt
 ```
@@ -58,5 +58,9 @@ export GLOG_v=2
     --wav_path your_test_wav_path
 ```
 
-TODO(Binbin Zhang): Add a gif command line screenshot to show it works.
+
+Here is a gif demo using our pretrained AIshell unified E2E model, which shows how our
+model, websocket server and websocket client cowork in a streaming way.
+
+![Runtime server demo](../../../docs/images/runtime_server.gif)
 
