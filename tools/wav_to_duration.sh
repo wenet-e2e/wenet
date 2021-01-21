@@ -18,7 +18,10 @@ rm -f $logdir/wav_*.shape
 split --additional-suffix .slice -d -n l/$nj $inscp $logdir/wav_
 
 for slice in `ls $logdir/wav_*.slice`; do
+{
     name=`basename -s .slice $slice`
     python tools/wav2dur.py $slice $logdir/$name.shape 1>$logdir/$name.log
+} &
 done
+wait
 cat $logdir/wav_*.shape > $outscp
