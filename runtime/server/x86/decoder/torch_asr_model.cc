@@ -17,7 +17,9 @@ void TorchAsrModel::Read(const std::string& model_path) {
   module_.reset(new TorchModule(std::move(model)));
   // For multi-thread performance
   at::set_num_threads(1);
+#ifndef ANDROID
   at::set_num_interop_threads(1);
+#endif
   torch::NoGradGuard no_grad;
   module_->eval();
   torch::jit::IValue o1 = module_->run_method("subsampling_rate");

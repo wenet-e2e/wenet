@@ -22,7 +22,14 @@ TorchAsrDecoder::TorchAsrDecoder(
 
 void TorchAsrDecoder::Reset() {
   start_ = false;
+  result_ = "";
+  offset_ = 0;
+  subsampling_cache_ = std::move(torch::jit::IValue());
+  elayers_output_cache_ = std::move(torch::jit::IValue());
+  conformer_cnn_cache_ = std::move(torch::jit::IValue());
   cached_feature_.clear();
+  ctc_prefix_beam_searcher_->Reset();
+  feature_pipeline_->Reset();
 }
 
 bool TorchAsrDecoder::Decode() {
@@ -139,13 +146,13 @@ void TorchAsrDecoder::AttentionRescoring() {
   int sos = model_->sos();
   int eos = model_->eos();
   auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
-  size_t num_hyps = hypotheses.size();
+  int num_hyps = hypotheses.size();
   torch::NoGradGuard no_grad;
   // Step 1: Prepare input for libtorch
   torch::Tensor hyps_length = torch::zeros({num_hyps}, torch::kLong);
-  size_t max_hyps_len = 0;
+  int max_hyps_len = 0;
   for (size_t i = 0; i < num_hyps; ++i) {
-    size_t length = hypotheses[i].size() + 1;
+    int length = hypotheses[i].size() + 1;
     max_hyps_len = std::max(length, max_hyps_len);
     hyps_length[i] = static_cast<int64_t>(length);
   }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="VoiceRect">
+        <attr name="RectCount" format="integer" />
+        <attr name="RectDownColor" format="reference|color" />
+        <attr name="RectSpeed" format="integer" />
+        <attr name="RectTopColor" format="reference|color" />
+        <attr name="RectOffset" format="integer" />
+    </declare-styleable>
+    <declare-styleable name="VoiceLine">
+        <attr name="amplitude_big" format="dimension|reference" />
+        <attr name="amplitude_small" format="dimension|reference" />
+        <attr name="lineColor" format="color|reference" />
+        <attr name="backColor" format="color|reference" />
+        <attr name="frequency" format="float" />
+    </declare-styleable>
+</resources>
