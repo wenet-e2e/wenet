@@ -58,9 +58,9 @@ export GLOG_v=2
     --wav_path your_test_wav_path
 ```
 
-Here is a gif demo using our pretrained AIshell unified E2E model, which shows how our
-model, server, and client work in a streaming way.
 
+Here is a gif demo using our pretrained AIshell unified E2E model, which shows how our
+model, websocket server and websocket client cowork in a streaming way.
 
 ![Runtime server demo](../../../docs/images/runtime_server.gif)
 
