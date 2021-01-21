@@ -92,8 +92,8 @@
 <li class="toctree-l2"><a class="reference internal" href="#setup-environment">Setup environment</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#first-experiment">First Experiment</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#stage-1-download-data">Stage -1: Download data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#stage-0-prepare-kaldi-format-data">Stage 0: Prepare Kaldi format data</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#stage-1-extract-acoustic-features">Stage 1: Extract acoustic features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-0-prepare-training-data">Stage 0: Prepare Training data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stage-1-extract-optinal-cmvn-features">Stage 1: Extract optinal cmvn features</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#stage-2-generate-label-token-dictionary">Stage 2: Generate label token dictionary</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#stage-3-prepare-wenet-data-format">Stage 3: Prepare WeNet data format</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#stage-4-neural-network-training">Stage 4: Neural Network training</a></li>
@@ -218,17 +218,7 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">create</span> <span class="o">-</span><span class="n">n</span> <span class="n">wenet</span> <span class="n">python</span><span class="o">=</span><span class="mf">3.8</span>
 <span class="n">conda</span> <span class="n">activate</span> <span class="n">wenet</span>
 <span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
-<span class="n">conda</span> <span class="n">install</span> <span class="n">pytorch</span><span class="o">==</span><span class="mf">1.6</span><span class="o">.</span><span class="mi">0</span> <span class="n">cudatoolkit</span><span class="o">=</span><span class="mf">10.1</span> <span class="o">-</span><span class="n">c</span> <span class="n">pytorch</span>
-</pre></div>
-</div>
-<ul class="simple">
-<li><p>Install Kaldi</p></li>
-</ul>
-<p>Wenet needs Kaldi to extract features (a TorchAudio version is under development)</p>
-<p>Download and build <a class="reference external" href="https://github.com/kaldi-asr/kaldi">Kaldi</a>.</p>
-<p>Set the Kaldi root</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>vim example/aishell/s0/path.sh
-KALDI_ROOT=${your_kaldi_root_path}
+<span class="n">conda</span> <span class="n">install</span> <span class="n">pytorch</span><span class="o">==</span><span class="mf">1.6</span><span class="o">.</span><span class="mi">0</span> <span class="n">cudatoolkit</span><span class="o">=</span><span class="mf">10.1</span> <span class="n">torchaudio</span> <span class="o">-</span><span class="n">c</span> <span class="n">pytorch</span>
 </pre></div>
 </div>
 </div>
@@ -242,30 +232,48 @@ KALDI_ROOT=${your_kaldi_root_path}
 <span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">1</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">1</span>
 <span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">2</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">2</span>
 <span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">3</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">3</span>
-<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">4</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">5</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">4</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">4</span>
 <span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">5</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">5</span>
+<span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="mi">6</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">6</span>
 </pre></div>
 </div>
 <p>You could also just run the whole script</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">5</span>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">stop</span><span class="o">-</span><span class="n">stage</span> <span class="mi">6</span>
 </pre></div>
 </div>
 <div class="section" id="stage-1-download-data">
 <h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this headline">¶</a></h3>
 <p>This stage downloads the aishell-1 data to the local path <code class="docutils literal notranslate"><span class="pre">$data</span></code>. This may take several hours. If you have already downloaded the data, please change the <code class="docutils literal notranslate"><span class="pre">$data</span></code> variable in <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> and start from <code class="docutils literal notranslate"><span class="pre">--stage</span> <span class="pre">0</span></code>.</p>
 </div>
-<div class="section" id="stage-0-prepare-kaldi-format-data">
-<h3>Stage 0: Prepare Kaldi format data<a class="headerlink" href="#stage-0-prepare-kaldi-format-data" title="Permalink to this headline">¶</a></h3>
-<p>In this stage, <code class="docutils literal notranslate"><span class="pre">local/aishell_data_prep.sh</span></code> organizes the original aishell-1 data into Kaldi format. In the Kaldi dataset format, each dataset includes two  important files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>, and other resource files.</p>
-<p>In this demo recipe, this stage also uses Kaldi script <code class="docutils literal notranslate"><span class="pre">utils/perturb_data_dir_speed.sh</span></code> to perform speed perturb augmentation on the training data. With 0.9 and 1.1 speed up factors, the size of the training data becomes 3 times of the original data size.</p>
-<p>Please refer to <code class="docutils literal notranslate"><span class="pre">data/train/wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">data/train/text</span></code>.
-If you want to train using your customized data, just organize the data into two files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>, and start from <code class="docutils literal notranslate"><span class="pre">stage</span> <span class="pre">1</span></code>.</p>
+<div class="section" id="stage-0-prepare-training-data">
+<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this headline">¶</a></h3>
+<p>In this stage, <code class="docutils literal notranslate"><span class="pre">local/aishell_data_prep.sh</span></code> organizes the original aishell-1 data into two files:</p>
+<ul class="simple">
+<li><p><strong>wav.scp</strong> each line records two tab-separated columns : <code class="docutils literal notranslate"><span class="pre">wav_id</span></code> and <code class="docutils literal notranslate"><span class="pre">wav_path</span></code></p></li>
+<li><p><strong>text</strong>  each line records two tab-separated columns :  <code class="docutils literal notranslate"><span class="pre">wav_id</span></code> and <code class="docutils literal notranslate"><span class="pre">text_label</span></code></p></li>
+</ul>
+<p><strong>wav.scp</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BAC009S0002W0122</span> <span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">asr</span><span class="o">-</span><span class="n">data</span><span class="o">/</span><span class="n">OpenSLR</span><span class="o">/</span><span class="mi">33</span><span class="o">/</span><span class="n">data_aishell</span><span class="o">/</span><span class="n">wav</span><span class="o">/</span><span class="n">train</span><span class="o">/</span><span class="n">S0002</span><span class="o">/</span><span class="n">BAC009S0002W0122</span><span class="o">.</span><span class="n">wav</span>
+<span class="n">BAC009S0002W0123</span> <span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">asr</span><span class="o">-</span><span class="n">data</span><span class="o">/</span><span class="n">OpenSLR</span><span class="o">/</span><span class="mi">33</span><span class="o">/</span><span class="n">data_aishell</span><span class="o">/</span><span class="n">wav</span><span class="o">/</span><span class="n">train</span><span class="o">/</span><span class="n">S0002</span><span class="o">/</span><span class="n">BAC009S0002W0123</span><span class="o">.</span><span class="n">wav</span>
+<span class="n">BAC009S0002W0124</span> <span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">asr</span><span class="o">-</span><span class="n">data</span><span class="o">/</span><span class="n">OpenSLR</span><span class="o">/</span><span class="mi">33</span><span class="o">/</span><span class="n">data_aishell</span><span class="o">/</span><span class="n">wav</span><span class="o">/</span><span class="n">train</span><span class="o">/</span><span class="n">S0002</span><span class="o">/</span><span class="n">BAC009S0002W0124</span><span class="o">.</span><span class="n">wav</span>
+<span class="n">BAC009S0002W0125</span> <span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">asr</span><span class="o">-</span><span class="n">data</span><span class="o">/</span><span class="n">OpenSLR</span><span class="o">/</span><span class="mi">33</span><span class="o">/</span><span class="n">data_aishell</span><span class="o">/</span><span class="n">wav</span><span class="o">/</span><span class="n">train</span><span class="o">/</span><span class="n">S0002</span><span class="o">/</span><span class="n">BAC009S0002W0125</span><span class="o">.</span><span class="n">wav</span>
+<span class="o">...</span>
+</pre></div>
 </div>
-<div class="section" id="stage-1-extract-acoustic-features">
-<h3>Stage 1: Extract acoustic features<a class="headerlink" href="#stage-1-extract-acoustic-features" title="Permalink to this headline">¶</a></h3>
-<p>In this stage, Kaldi script <code class="docutils literal notranslate"><span class="pre">steps/make_fbank_pitch.sh</span></code> is used to extract the acoustic features from the wavs for train, test, and dev sets.</p>
-<p><code class="docutils literal notranslate"><span class="pre">compute-cmvn-stats</span></code> is used to extract global cmvn statistics. These statistics will be used to normalize the acoustic features. Setting <code class="docutils literal notranslate"><span class="pre">cmvn=false</span></code> will skip this step.</p>
-<p>The generated training feature file is in <code class="docutils literal notranslate"><span class="pre">fbank_pitch/train/feat.scp</span></code>.</p>
+<p><strong>text</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">BAC009S0002W0122</span> <span class="n">而对楼市成交抑制作用最大的限购</span>
+<span class="n">BAC009S0002W0123</span> <span class="n">也成为地方政府的眼中钉</span>
+<span class="n">BAC009S0002W0124</span> <span class="n">自六月底呼和浩特市率先宣布取消限购后</span>
+<span class="n">BAC009S0002W0125</span> <span class="n">各地政府便纷纷跟进</span>
+<span class="o">...</span>
+</pre></div>
+</div>
+<p>If you want to train using your customized data, just organize the data into two files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>, and start from <code class="docutils literal notranslate"><span class="pre">stage</span> <span class="pre">1</span></code>.</p>
+</div>
+<div class="section" id="stage-1-extract-optinal-cmvn-features">
+<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this headline">¶</a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">example/aishell/s0</span></code> uses raw wav as input and and <a class="reference external" href="https://pytorch.org/audio/stable/index.html">TorchAudio</a> to extract the features just-in-time in dataloader. So in this step we just copy the training wav.scp and text file into the <code class="docutils literal notranslate"><span class="pre">raw_wav/train/</span></code> dir.</p>
+<p><code class="docutils literal notranslate"><span class="pre">tools/compute_cmvn_stats.py</span></code> is used to extract global cmvn(cepstral mean and variance normalization) statistics. These statistics will be used to normalize the acoustic features. Setting <code class="docutils literal notranslate"><span class="pre">cmvn=false</span></code> will skip this step.</p>
 </div>
 <div class="section" id="stage-2-generate-label-token-dictionary">
 <h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this headline">¶</a></h3>
@@ -294,15 +302,15 @@ the integer indices.</p>
 <p>See the generated training feature file in <code class="docutils literal notranslate"><span class="pre">fbank_pitch/train/format.data</span></code>.</p>
 <p>In the WeNet format file , each line records a data sample of seven tab-separated columns. For example, a line is as follows (tab replaced with newline here):</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">utt</span><span class="p">:</span><span class="n">BAC009S0764W0121</span>
-<span class="n">feat</span><span class="p">:</span><span class="o">/</span><span class="n">l</span><span class="o">/</span><span class="n">wenet</span><span class="o">/</span><span class="n">examples</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s0</span><span class="o">/</span><span class="n">fbank_pitch</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">raw_fbank_pitch_test</span><span class="o">.</span><span class="mf">1.</span><span class="n">ark</span><span class="p">:</span><span class="mi">17</span>
-<span class="n">feat_shape</span><span class="p">:</span><span class="mi">418</span><span class="p">,</span><span class="mi">83</span>
+<span class="n">feat</span><span class="p">:</span><span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">asr</span><span class="o">-</span><span class="n">data</span><span class="o">/</span><span class="n">OpenSLR</span><span class="o">/</span><span class="mi">33</span><span class="o">/</span><span class="n">data_aishell</span><span class="o">/</span><span class="n">wav</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">S0764</span><span class="o">/</span><span class="n">BAC009S0764W0121</span><span class="o">.</span><span class="n">wav</span>
+<span class="n">feat_shape</span><span class="p">:</span><span class="mf">4.2039375</span>
 <span class="n">text</span><span class="p">:</span><span class="n">甚至出现交易几乎停滞的情况</span>
 <span class="n">token</span><span class="p">:</span><span class="n">甚</span> <span class="n">至</span> <span class="n">出</span> <span class="n">现</span> <span class="n">交</span> <span class="n">易</span> <span class="n">几</span> <span class="n">乎</span> <span class="n">停</span> <span class="n">滞</span> <span class="n">的</span> <span class="n">情</span> <span class="n">况</span>
 <span class="n">tokenid</span><span class="p">:</span><span class="mi">2474</span> <span class="mi">3116</span> <span class="mi">331</span> <span class="mi">2408</span> <span class="mi">82</span> <span class="mi">1684</span> <span class="mi">321</span> <span class="mi">47</span> <span class="mi">235</span> <span class="mi">2199</span> <span class="mi">2553</span> <span class="mi">1319</span> <span class="mi">307</span>
 <span class="n">token_shape</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span><span class="mi">4233</span>
 </pre></div>
 </div>
-<p>In the future, WeNet will also support using raw wavs as input and use TorchAudio to extract the features just-in-time in dataloader.</p>
+<p><code class="docutils literal notranslate"><span class="pre">feat_shape</span></code> is the duration(in seconds) of the wav.</p>
 </div>
 <div class="section" id="stage-4-neural-network-training">
 <h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this headline">¶</a></h3>
