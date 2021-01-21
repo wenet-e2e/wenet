@@ -24,21 +24,8 @@ Pytorch 1.6.0 is recommended. We met some error with NCCL when using 1.7.0 on 20
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 -c pytorch
+conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio -c pytorch
 ```
-
-- Install Kaldi
-
-Wenet needs Kaldi to extract features (a TorchAudio version is under development)
-
-Download and build [Kaldi](https://github.com/kaldi-asr/kaldi).
-
-Set the Kaldi root
-```
-vim example/aishell/s0/path.sh
-KALDI_ROOT=${your_kaldi_root_path}
-```
-
 
 ### First Experiment
 
@@ -53,44 +40,58 @@ bash run.sh --stage 0 --stop-stage 0
 bash run.sh --stage 1 --stop-stage 1
 bash run.sh --stage 2 --stop-stage 2
 bash run.sh --stage 3 --stop-stage 3
-bash run.sh --stage 4 --stop-stage 5
+bash run.sh --stage 4 --stop-stage 4
 bash run.sh --stage 5 --stop-stage 5
+bash run.sh --stage 6 --stop-stage 6
 ```
 
 You could also just run the whole script
 ```
-bash run.sh --stage -1 --stop-stage 5
+bash run.sh --stage -1 --stop-stage 6
 ```
-
 
 
 #### Stage -1: Download data
 
 This stage downloads the aishell-1 data to the local path `$data`. This may take several hours. If you have already downloaded the data, please change the `$data` variable in `run.sh` and start from `--stage 0`.
 
-#### Stage 0: Prepare Kaldi format data
+#### Stage 0: Prepare Training data
 
-In this stage, `local/aishell_data_prep.sh` organizes the original aishell-1 data into Kaldi format. In the Kaldi dataset format, each dataset includes two  important files `wav.scp` and `text`, and other resource files.
+In this stage, `local/aishell_data_prep.sh` organizes the original aishell-1 data into two files:
+* **wav.scp** each line records two tab-separated columns : `wav_id` and `wav_path`
+* **text**  each line records two tab-separated columns :  `wav_id` and `text_label`
 
-In this demo recipe, this stage also uses Kaldi script `utils/perturb_data_dir_speed.sh` to perform speed perturb augmentation on the training data. With 0.9 and 1.1 speed up factors, the size of the training data becomes 3 times of the original data size.
+**wav.scp**
+```
+BAC009S0002W0122 /export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0122.wav
+BAC009S0002W0123 /export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0123.wav
+BAC009S0002W0124 /export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0124.wav
+BAC009S0002W0125 /export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0125.wav
+...
+```
 
-Please refer to `data/train/wav.scp` and `data/train/text`.
+**text**
+```
+BAC009S0002W0122 而对楼市成交抑制作用最大的限购
+BAC009S0002W0123 也成为地方政府的眼中钉
+BAC009S0002W0124 自六月底呼和浩特市率先宣布取消限购后
+BAC009S0002W0125 各地政府便纷纷跟进
+...
+```
+
 If you want to train using your customized data, just organize the data into two files `wav.scp` and `text`, and start from `stage 1`.
 
 
-#### Stage 1: Extract acoustic features
+#### Stage 1: Extract optinal cmvn features
 
-In this stage, Kaldi script `steps/make_fbank_pitch.sh` is used to extract the acoustic features from the wavs for train, test, and dev sets.
+`example/aishell/s0` uses raw wav as input and and [TorchAudio](https://pytorch.org/audio/stable/index.html) to extract the features just-in-time in dataloader. So in this step we just copy the training wav.scp and text file into the `raw_wav/train/` dir.
 
-`compute-cmvn-stats` is used to extract global cmvn statistics. These statistics will be used to normalize the acoustic features. Setting `cmvn=false` will skip this step.
-
-The generated training feature file is in `fbank_pitch/train/feat.scp`.
+`tools/compute_cmvn_stats.py` is used to extract global cmvn(cepstral mean and variance normalization) statistics. These statistics will be used to normalize the acoustic features. Setting `cmvn=false` will skip this step.
 
 #### Stage 2: Generate label token dictionary
 
 The dict is a map between label tokens (we use characters for Aishell-1) and
  the integer indices.
-
 
 An example dict is as follows
 ```
@@ -114,21 +115,19 @@ This stage generates a single WeNet format file including all the input/output i
 
 See the generated training feature file in `fbank_pitch/train/format.data`.
 
-
 In the WeNet format file , each line records a data sample of seven tab-separated columns. For example, a line is as follows (tab replaced with newline here):
 
 ```
 utt:BAC009S0764W0121
-feat:/l/wenet/examples/aishell/s0/fbank_pitch/test/data/raw_fbank_pitch_test.1.ark:17
-feat_shape:418,83
+feat:/export/data/asr-data/OpenSLR/33/data_aishell/wav/test/S0764/BAC009S0764W0121.wav
+feat_shape:4.2039375
 text:甚至出现交易几乎停滞的情况
 token:甚 至 出 现 交 易 几 乎 停 滞 的 情 况
 tokenid:2474 3116 331 2408 82 1684 321 47 235 2199 2553 1319 307
 token_shape:13,4233
 ```
 
-In the future, WeNet will also support using raw wavs as input and use TorchAudio to extract the features just-in-time in dataloader.
-
+`feat_shape` is the duration(in seconds) of the wav.
 
 #### Stage 4: Neural Network training
 
