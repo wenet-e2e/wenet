@@ -8,7 +8,7 @@ scp = sys.argv[1]
 dur_scp = sys.argv[2]
 with open(scp, 'r') as f, open(dur_scp, 'w') as fout:
     cnt = 0
-    total_duration=0
+    total_duration = 0
     for l in f:
         items = l.strip().split()
         wav_id = items[0]
