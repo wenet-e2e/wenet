@@ -6,8 +6,8 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-stage=1 # start from 0 if you need to start from data preparation
-stop_stage=1
+stage=0 # start from 0 if you need to start from data preparation
+stop_stage=5
 # data
 data=/export/expts4/chaoyang/
 data_url=www.openslr.org/resources/33
@@ -23,14 +23,14 @@ train_set=train
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 # 4. conf/train_unified_transformer.yaml: Unified dynamic chunk transformer
 train_config=conf/train_conformer.yaml
-cmvn=false
+cmvn=true
 dir=exp/conformer
 checkpoint=
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
-average_num=10
+average_num=30
 
 . tools/parse_options.sh || exit 1;
 
