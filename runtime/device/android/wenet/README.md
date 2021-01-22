@@ -1,27 +1,27 @@
-# Wenet Android Runtime
+# WeNet On-device ASR Android Demo
 
-You can use our prebuilt APK or build your APK by source code.
+This Android demo shows we can run on-device streaming ASR with WeNet. You can download our prebuilt APK or build your APK from source code.
 
 ## Prebuilt APK
 
-* [Chinese APK, powered by AIshell data(TODO)]()
-* [English APK, powered by LibriSpeech data(TODO)]()
+* [Chinese ASR Demo APK, with model trained on AIShell data (To be added)]()
+* [English ASR Demo APK, with model trained on LibriSpeech data (To be added)]()
 
-## Build your APK
+## Build your APK from source code
 
-### Build model
+### 1) Build model
 
-You can use our pretrained model(click the following link to download),
+You can use our pretrained model (click the following link to download):
 
-* [AIshell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210121_unified_transformer_device.tar.gz)
-* [LibriSpeech(TODO)]()
+* [Chinese model trained on AIshell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210121_unified_transformer_device.tar.gz)
+* [English model trained on LibriSpeech(TODO)]()
 
-Or train your own model by WeNet pipeline with your own data.
+Or you can train your own model using WeNet training pipeline on your data.
 
-### Build APK
+### 2) Build APK
 
-When your model is ready, put `final.zip` and `words.txt` into android assets (`app/src/main/assets`) folder,
-then just build and run. Here is a gif demo, which shows how our device streaming e2e works,
-please note there is no network connection ^\_^.
+When your model is ready, put `final.zip` and `words.txt` into Android assets (`app/src/main/assets`) folder,
+then just build and run the APK. Here is a gif demo, which shows how our on-device streaming e2e ASR runs with low latency.
+Please note the wifi and data has been disabled in the demo so there is no network connection ^\_^.
 
 ![Runtime android demo](../../../../docs/images/runtime_android.gif)
