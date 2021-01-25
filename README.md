@@ -59,5 +59,6 @@ In addition to discussing on Github issues, we create a WeChat group for better 
 Please scan the following QR code by WeChat to join the chat group.
 If it fails, please scan the personal QR code on the right with contact info like "wenet", and we will invite you to the chat group.
 
-![Wenet chat group](https://github.com/robin1001/qr/blob/master/wenet.jpeg)![Wenet chat group](https://github.com/robin1001/qr/blob/master/binbin.jpeg)
+| ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/wenet.jpeg) | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/binbin.jpeg) |
+|-------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
