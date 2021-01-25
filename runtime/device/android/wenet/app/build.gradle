@@ -10,6 +10,14 @@ repositories {
 }
 
 android {
+    signingConfigs {
+        release {
+            storeFile file('wenet.keystore')
+            storePassword '123456'
+            keyAlias 'wenet'
+            keyPassword '123456'
+        }
+    }
     configurations {
         extractForNativeBuild
     }
@@ -38,6 +46,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
