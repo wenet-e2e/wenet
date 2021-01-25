@@ -3,17 +3,37 @@
 ## Standard E2E Results
 
 Conformer
+* feature: fbank
 * config: conf/train_conformer.yaml
 * beam: 10
-* num of gpu: 8
-* ctc weight (used for attention rescoring): 0.5
+* num of gpu: 4
+* learning rate: 0.002
+* ctc weight (used for attention rescoring): 0.6
+* num of averaged model: 20
 
 | decoding mode/chunk size | full |
 |--------------------------|------|
-| attention decoder        | 4.97 |
+| attention decoder        | 5.20 |
+| ctc greedy search        | 4.92 |
+| ctc prefix beam search   | 4.92 |
+| attention rescoring      | 4.61 |
+
+Conformer
+* feature: fbank & pitch
+* config: conf/train_conformer.yaml
+* beam: 10
+* num of gpu: 4
+* learning rate: 0.002
+* ctc weight (used for attention rescoring): 0.7
+* num of averaged model: 20
+
+| decoding mode/chunk size | full |
+|--------------------------|------|
+| attention decoder        | 4.92 |
 | ctc greedy search        | 4.93 |
 | ctc prefix beam search   | 4.93 |
-| attention rescoring      | 4.70 |
+| attention rescoring      | 4.64 |
+
 
 Transformer
 * config: conf/train_transformer.yaml
