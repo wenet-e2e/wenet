@@ -1,8 +1,8 @@
-# Wenet X86 Runtime
+# WeNet Server (x86) ASR Demo
 
 ## Build
 
-The build requires cmake 3.14 or above. For build, please first change to wenet/runtime/x86 as your build directory, then type:
+The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/x86` as your build directory, then type:
 
 ``` sh
 mkdir build && cd build && cmake .. && cmake --build .
@@ -10,14 +10,14 @@ mkdir build && cd build && cmake .. && cmake --build .
 
 ## Pretrained model
 
-You can run the following on your trained model, or on our pretrained model, click the following link to download the pretrained model.
+You can run the following on your trained model, or using our pretrained model. Click the following link to download the pretrained model.
 
-* [TODO ADD Aishell model](link)
-* [TODO ADD Librispeech model](link)
+* [Chinese model trained on AIShell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210121_unified_transformer_server.tar.gz)
+* [TODO: add English model trained on Librispeech](link)
 
-## Run Offline Demo
+## Run offline ASR demo
 
-You can run the offline demo by
+You can run the offline demo with the following commands
 
 ``` sh
 export GLOG_logtostderr=1
@@ -26,16 +26,16 @@ wav_path=your_test_wav_path
 model_dir=your_model_dir
 ./build/decoder_main \
     --chunk_size -1 \
-    --wav_path  \
+    --wav_path $wav_path \
     --model_path $model_dir/final.zip \
     --dict_path $model_dir/words.txt
 ```
 
-## Run Websocket Streaming Demo
+## Run Websocket streaming ASR demo
 
-We build a Websocket demo to show how WeNet U2 model works in a streaming way.
+We build a Websocket demo to show how WeNet U2 model works in a streaming fashion.
 
-First run server by:
+First, run the server by:
 
 ``` sh
 export GLOG_logtostderr=1
@@ -48,7 +48,7 @@ model_dir=your_model_dir
     --dict_path $model_dir/words.txt
 ```
 
-Then run client by:
+Then, run the client by:
 
 ```sh
 export GLOG_logtostderr=1
@@ -58,5 +58,9 @@ export GLOG_v=2
     --wav_path your_test_wav_path
 ```
 
-TODO(Binbin Zhang): Add a gif command line screenshot to show it works.
+
+Here is a gif demo using our pretrained AIShell unified E2E model, which shows how our
+model, websocket server and websocket client enable streaming ASR.
+
+![Runtime server demo](../../../docs/images/runtime_server.gif)
 
