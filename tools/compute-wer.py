@@ -1,15 +1,15 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from __future__ import print_function
+
 import re, sys, unicodedata
 import codecs
 
 remove_tag = True
 spacelist= [' ', '\t', '\r', '\n']
-puncts = [u'!', u',', u'?',
-          u'、', u'。', u'！', u'，', u'；', u'？',
-          u'：', u'「', u'」', u'︰',  u'『', u'』', u'《', u'》']
+puncts = ['!', ',', '?',
+          '、', '。', '！', '，', '；', '？',
+          '：', '「', '」', '︰',  '『', '』', '《', '》']
 
 def characterize(string) :
   res = []
@@ -99,10 +99,10 @@ class Calculator :
         element['error'] = 'non'
       while len(row) < len(rec) :
         row.append({'dist' : 0, 'error' : 'non'})
-    for i in xrange(len(lab)) :
+    for i in range(len(lab)) :
       self.space[i][0]['dist'] = i
       self.space[i][0]['error'] = 'del'
-    for j in xrange(len(rec)) :
+    for j in range(len(rec)) :
       self.space[0][j]['dist'] = j
       self.space[0][j]['error'] = 'ins'
     self.space[0][0]['error'] = 'non'
@@ -117,7 +117,7 @@ class Calculator :
       for j, rec_token in enumerate(rec) :
         if i == 0 or j == 0 :
           continue
-        min_dist = sys.maxint
+        min_dist = sys.maxsize
         min_error = 'none'
         dist = self.space[i-1][j]['dist'] + self.cost['del']
         error = 'del'
@@ -206,7 +206,7 @@ class Calculator :
         result['del'] = result['del'] + self.data[token]['del']
     return result
   def keys(self) :
-      return self.data.keys()
+      return list(self.data.keys())
 
 def width(string):
   return sum(1 + (unicodedata.east_asian_width(c) in "AFW") for c in string)
@@ -265,7 +265,7 @@ if __name__ == '__main__':
   verbose= 1
   padding_symbol= ' '
   case_sensitive = False
-  max_words_per_line = sys.maxint
+  max_words_per_line = sys.maxsize
   split = None
   while len(sys.argv) > 3:
      a = '--maxw='
@@ -375,9 +375,9 @@ if __name__ == '__main__':
   # compute error rate on the interaction of reference file and hyp file
   for line in open(ref_file, 'r') :
     if tochar:
-          array = characterize(line.decode('utf-8'))
+          array = characterize(line)
     else:
-          array = line.decode('utf-8').rstrip('\n').split()
+          array = line.rstrip('\n').split()
     if len(array)==0: continue
     fid = array[0]
     if fid not in rec_set:
@@ -385,7 +385,7 @@ if __name__ == '__main__':
     lab = normalize(array[1:], ignore_words, case_sensitive, split)
     rec = rec_set[fid]
     if verbose:
-      print('\nutt: %s' % fid.encode('utf-8'))
+      print('\nutt: %s' % fid)
 
     for word in rec + lab :
       if word not in default_words :
@@ -408,7 +408,7 @@ if __name__ == '__main__':
       space = {}
       space['lab'] = []
       space['rec'] = []
-      for idx in xrange(len(result['lab'])) :
+      for idx in range(len(result['lab'])) :
         len_lab = width(result['lab'][idx])
         len_rec = width(result['rec'][idx])
         length = max(len_lab, len_rec)
@@ -425,8 +425,8 @@ if __name__ == '__main__':
          lab2 = min(upper_lab, lab1 + max_words_per_line)
          for idx in range(lab1, lab2):
            token = result['lab'][idx]
-           print('{token}'.format(token = token.encode('utf-8')), end = '')
-           for n in xrange(space['lab'][idx]) :
+           print('{token}'.format(token = token), end = '')
+           for n in range(space['lab'][idx]) :
              print(padding_symbol, end = '')
            print(' ',end='')
          print()
@@ -437,8 +437,8 @@ if __name__ == '__main__':
          rec2 = min(upper_rec, rec1 + max_words_per_line)
          for idx in range(rec1, rec2):
            token = result['rec'][idx]
-           print('{token}'.format(token = token.encode('utf-8')), end = '')
-           for n in xrange(space['rec'][idx]) :
+           print('{token}'.format(token = token), end = '')
+           for n in range(space['rec'][idx]) :
              print(padding_symbol, end = '')
            print(' ',end='')
          print('\n', end='\n')
