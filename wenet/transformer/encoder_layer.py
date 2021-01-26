@@ -22,14 +22,13 @@ class TransformerEncoderLayer(nn.Module):
         feed_forward (torch.nn.Module): Feed-forward module instance.
             `PositionwiseFeedForward`, instance can be used as the argument.
         dropout_rate (float): Dropout rate.
-        normalize_before (bool): Whether to use layer_norm before the first
-            block.
+        normalize_before (bool):
+            True: use layer_norm before each sub-block.
+            False: to use layer_norm after each sub-block.
         concat_after (bool): Whether to concat attention layer's input and
             output.
-            if True, additional linear will be applied.
-                i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied.
-                i.e. x -> x + att(x)
+            True: x -> x + linear(concat(x, att(x)))
+            False: x -> x + att(x)
 
     """
     def __init__(
@@ -131,14 +130,13 @@ class ConformerEncoderLayer(nn.Module):
         conv_module (torch.nn.Module): Convolution module instance.
             `ConvlutionModule` instance can be used as the argument.
         dropout_rate (float): Dropout rate.
-        normalize_before (bool): Whether to use layer_norm before the first
-            block.
+        normalize_before (bool):
+            True: use layer_norm before each sub-block.
+            False: use layer_norm after each sub-block.
         concat_after (bool): Whether to concat attention layer's input and
             output.
-            if True, additional linear will be applied.
-                i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied.
-                i.e. x -> x + att(x)
+            True: x -> x + linear(concat(x, att(x)))
+            False: x -> x + att(x)
     """
     def __init__(
         self,
@@ -184,6 +182,7 @@ class ConformerEncoderLayer(nn.Module):
         cnn_cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
+
         Args:
             x (torch.Tensor): (#batch, time, size)
             mask (torch.Tensor): Mask tensor for the input (#batch, time).

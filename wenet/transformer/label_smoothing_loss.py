@@ -12,11 +12,34 @@ from torch import nn
 class LabelSmoothingLoss(nn.Module):
     """Label-smoothing loss.
 
-    :param int size: the number of class
-    :param int padding_idx: ignored class id
-    :param float smoothing: smoothing rate (0.0 means the conventional CE)
-    :param bool normalize_length: normalize loss by sequence length if True
-    :param torch.nn.Module criterion: loss function to be smoothed
+    In a standard CE loss, the label's data distribution is:
+    [0,1,2] ->
+    [
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [1.0, 0.0, 1.0],
+    ]
+
+    In the smoothing version CE Loss,some probabilities
+    are taken from the true label prob (1.0) and are divided
+    among other labels.
+
+    e.g.
+    smoothing=0.1
+    [0,1,2] ->
+    [
+        [0.9, 0.05, 0.05],
+        [0.05, 0.9, 0.05],
+        [0.05, 0.05, 0.9],
+    ]
+
+    Args:
+        size (int): the number of class
+        padding_idx (int): padding class id which will be ignored for loss
+        smoothing (float): smoothing rate (0.0 means the conventional CE)
+        normalize_length (bool):
+            normalize loss by sequence length if True
+            normalize loss by batch size if False
     """
     def __init__(self,
                  size: int,
@@ -35,11 +58,16 @@ class LabelSmoothingLoss(nn.Module):
     def forward(self, x: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Compute loss between x and target.
 
-        :param torch.Tensor x: prediction (batch, seqlen, class)
-        :param torch.Tensor target:
-            target signal masked with self.padding_id (batch, seqlen)
-        :return: scalar float value
-        :rtype torch.Tensor
+        The model outputs and data labels tensors are flatten to
+        (batch*seqlen, class) shape and a mask is applied to the
+        padding part which should not be calculated for loss.
+
+        Args:
+            x (torch.Tensor): prediction (batch, seqlen, class)
+            target (torch.Tensor):
+                target signal masked with self.padding_id (batch, seqlen)
+        Returns:
+            loss (torch.Tensor) : The KL loss, scalar float value
         """
         assert x.size(2) == self.size
         batch_size = x.size(0)

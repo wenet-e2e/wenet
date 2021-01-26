@@ -22,14 +22,13 @@ class DecoderLayer(nn.Module):
         feed_forward (torch.nn.Module): Feed-forward module instance.
             `PositionwiseFeedForward` instance can be used as the argument.
         dropout_rate (float): Dropout rate.
-        normalize_before (bool): Whether to use layer_norm before the
-            first block.
+        normalize_before (bool):
+            True: use layer_norm before each sub-block.
+            False: to use layer_norm after each sub-block.
         concat_after (bool): Whether to concat attention layer's inpu
             and output.
-            if True, additional linear will be applied.
-                i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied.
-                i.e. x -> x + att(x)
+            True: x -> x + linear(concat(x, att(x)))
+            False: x -> x + att(x)
     """
     def __init__(
         self,
@@ -70,15 +69,15 @@ class DecoderLayer(nn.Module):
             tgt (torch.Tensor): Input tensor (#batch, maxlen_out, size).
             tgt_mask (torch.Tensor): Mask for input tensor
                 (#batch, maxlen_out).
-            memory (torch.Tensor): Encoded memory, float32
+            memory (torch.Tensor): Encoded memory
                 (#batch, maxlen_in, size).
             memory_mask (torch.Tensor): Encoded memory mask
                 (#batch, maxlen_in).
-            cache (List[torch.Tensor]): List of cached tensors.
-                Each tensor shape should be (#batch, maxlen_out - 1, size).
+            cache (torch.Tensor): cached tensors.
+                (#batch, maxlen_out - 1, size).
 
         Returns:
-            torch.Tensor: Output tensor(#batch, maxlen_out, size).
+            torch.Tensor: Output tensor (#batch, maxlen_out, size).
             torch.Tensor: Mask for output tensor (#batch, maxlen_out).
             torch.Tensor: Encoded memory (#batch, maxlen_in, size).
             torch.Tensor: Encoded memory mask (#batch, maxlen_in).

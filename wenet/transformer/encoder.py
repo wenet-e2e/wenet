@@ -50,7 +50,7 @@ class BaseEncoder(torch.nn.Module):
             input_size (int): input dim
             output_size (int): dimension of attention
             attention_heads (int): the number of heads of multi head attention
-            linear_units (int): the number of units of position-wise feed
+            linear_units (int): the hidden units number of position-wise feed
                 forward
             num_blocks (int): the number of decoder blocks
             dropout_rate (float): dropout rate
@@ -61,14 +61,13 @@ class BaseEncoder(torch.nn.Module):
                 optional [linear, conv2d, conv2d6, conv2d8]
             pos_enc_layer_type (str): Encoder positional encoding layer type.
                 opitonal [abs_pos, scaled_abs_pos, rel_pos]
-            normalize_before (bool): whether to use layer_norm before the
-                first block
+            normalize_before (bool):
+                True: use layer_norm before each sub-block of a layer.
+                False: use layer_norm after each sub-block of a layer.
             concat_after (bool): whether to concat attention layer's input
                 and output.
-                if True, additional linear will be applied.
-                i.e. x -> x + linear(concat(x, att(x)))
-                if False, no additional linear will be applied.
-                i.e. x -> x + att(x)
+                True: x -> x + linear(concat(x, att(x)))
+                False: x -> x + att(x)
             static_chunk_size (int): chunk size for static chunk training and
                 decoding
             use_dynamic_chunk (bool): whether use dynamic chunk size for
@@ -124,7 +123,7 @@ class BaseEncoder(torch.nn.Module):
         Args:
             xs: padded input tensor (B, L, D)
             xs_lens: input length (B)
-            decoding_chunk_size: decoding chunk size for dynamic chunk, it's
+            decoding_chunk_size: decoding chunk size for dynamic chunk
                 0: default for training, use random dynamic chunk.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
