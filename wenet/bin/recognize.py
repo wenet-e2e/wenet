@@ -92,6 +92,7 @@ if __name__ == '__main__':
     # Init dataset and data loader
     test_collate_conf = copy.deepcopy(configs['collate_conf'])
     test_collate_conf['spec_aug'] = False
+    test_collate_conf['spec_sub'] = False
     test_collate_conf['feature_dither'] = False
     test_collate_conf['speed_perturb'] = False
     test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0

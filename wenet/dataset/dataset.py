@@ -80,6 +80,28 @@ def _spec_augmentation(x,
         y[:, start:end] = 0
     return y
 
+def _spec_substitute(x, max_t=20, num_t_sub=3):
+    """ Deep copy x and do spec substitute then return it
+
+    Args:
+        x: input feature, T * F 2D
+        num_t: number of time substitute to apply
+        max_t: max width of time substitute
+
+    Returns:
+        augmented feature
+    """
+    y = np.copy(x)
+    max_frames = y.shape[0]
+    for i in range(num_t_sub):
+        start = random.randint(0, max_frames - 1)
+        length = random.randint(1, max_t)
+        end = min(max_frames, start + length)
+        # only substitute the earlier time chosen randomly for current time
+        pos = random.randint(0, start)
+        y[start:end, :] = y[start - pos:end - pos, :]
+    return y
+
 def _waveform_distortion(waveform, distortion_methods_conf):
     """ Apply distortion on waveform
 
@@ -235,6 +257,8 @@ class CollateFunc(object):
                  speed_perturb=False,
                  spec_aug=False,
                  spec_aug_conf=None,
+                 spec_sub=False,
+                 spec_sub_conf=None,
                  raw_wav=True,
                  feature_extraction_conf=None,
                  wav_distortion_conf=None,
@@ -252,6 +276,8 @@ class CollateFunc(object):
         self.speed_perturb = speed_perturb
         self.raw_wav = raw_wav
         self.spec_aug_conf = spec_aug_conf
+        self.spec_sub = spec_sub
+        self.spec_sub_conf = spec_sub_conf
 
     def __call__(self, batch):
         assert (len(batch) == 1)
@@ -273,6 +299,10 @@ class CollateFunc(object):
         if self.feature_dither != 0.0:
             a = random.uniform(0, self.feature_dither)
             xs = [x + (np.random.random_sample(x.shape) - 0.5) * a for x in xs]
+
+        # optinoal spec substitute
+        if self.spec_sub:
+            xs = [_spec_substitute(x, **self.spec_sub_conf) for x in xs]
 
         # optinoal spec augmentation
         if self.spec_aug:
