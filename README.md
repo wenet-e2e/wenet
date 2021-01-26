@@ -1,6 +1,6 @@
 # WeNet
 
-We share net together.
+**We** share neural **Net** together.
 We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
 and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
 for batch inference.
@@ -53,10 +53,10 @@ pip install -r requirements.txt
 conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio -c pytorch
 ```
 
-## Discuss & Communication
+## Discussion & Communication
 
-In addition to discussing on Github issues, we create a WeChat group for better discuss and quick response.
-Please scan the following QR code by WeChat to join the chat group.
+In addition to discussing in [Github Issues](https://github.com/mobvoi/wenet/issues), we created a WeChat group for better discussion and quicker response.
+Please scan the following QR code in WeChat to join the chat group.
 If it fails, please scan the personal QR code on the right with contact info like "wenet", and we will invite you to the chat group.
 
 | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/wenet.jpeg) | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/binbin.jpeg) |
