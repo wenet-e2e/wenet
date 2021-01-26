@@ -9,7 +9,6 @@
 
 #include "torch/script.h"
 #include "torch/torch.h"
-
 #include "utils/utils.h"
 
 namespace wenet {
@@ -20,7 +19,7 @@ class TorchAsrModel {
  public:
   TorchAsrModel() = default;
 
-  void Read(const std::string& model_path);
+  void Read(const std::string& model_path, const int num_threads = 1);
   int right_context() const { return right_context_; }
   int subsampling_rate() const { return subsampling_rate_; }
   int sos() const { return sos_; }

@@ -8,13 +8,12 @@
 #include <string>
 #include <vector>
 
-#include "torch/script.h"
-#include "torch/torch.h"
-
 #include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "torch/script.h"
+#include "torch/torch.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -36,6 +35,7 @@ class TorchAsrDecoder {
   // Return true if all feature has been decoded, else return false
   bool Decode();
   void Reset();
+  inline void DecodeAll() { while (Decode()) {}; }
   std::string result() const { return result_; }
 
  private:
