@@ -10,6 +10,9 @@ from torch.utils.data import Dataset, DataLoader
 import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
+import torchaudio.compliance.kaldi as kaldi
+from wenet.dataset.dataset import _load_wav_with_speed
+from torchaudio.backend.sox_io_backend import load
 
 class CollateFunc(object):
     ''' Collate function for AudioDataset
@@ -24,14 +27,16 @@ class CollateFunc(object):
         number = 0
         for item in batch:
             key = item[0]
-            waveform, sample_rate = torchaudio.load_wav(item[1])
-            mat = kaldi.fbank(waveform,
+            speed_perturb = [1.0]
+            for speed in speed_perturb:
+                waveform = _load_wav_with_speed(item[1], speed)[0]
+                mat = kaldi.fbank(waveform,
                               num_mel_bins=self.feat_dim,
                               dither=0.0,
                               energy_floor=0.0)
-            mean_stat += torch.sum(mat, axis=0)
-            var_stat += torch.sum(torch.square(mat), axis=0)
-            number += mat.shape[0]
+                mean_stat += torch.sum(mat, axis=0)
+                var_stat += torch.sum(torch.square(mat), axis=0)
+                number += mat.shape[0]
         return number, mean_stat, var_stat
 
 class AudioDataset(Dataset):

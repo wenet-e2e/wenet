@@ -5,6 +5,7 @@ nj=4
 
 inscp=$1
 outscp=$2
+sound_type=$3
 data=$(dirname ${inscp})
 if [ $# -eq 3 ]; then
   logdir=$3
@@ -20,7 +21,7 @@ split --additional-suffix .slice -d -n l/$nj $inscp $logdir/wav_
 for slice in `ls $logdir/wav_*.slice`; do
 {
     name=`basename -s .slice $slice`
-    python tools/wav2dur.py $slice $logdir/$name.shape 1>$logdir/$name.log
+    python tools/wav2dur.py $slice $logdir/$name.shape $sound_type 1>$logdir/$name.log
 } &
 done
 wait
