@@ -16,7 +16,6 @@ FetchContent_Declare(
   GIT_TAG        v2.2.0
   GIT_PROGRESS   TRUE
 )
-FetchContent_MakeAvailable(gflags)
 
 # third_party: glog
 FetchContent_Declare(
@@ -25,7 +24,6 @@ FetchContent_Declare(
   GIT_TAG        v0.4.0
   GIT_PROGRESS   TRUE
 )
-FetchContent_MakeAvailable(glog)
 
 # third_party: gtest
 FetchContent_Declare(
@@ -34,25 +32,6 @@ FetchContent_Declare(
   GIT_TAG        release-1.10.0
   GIT_PROGRESS   TRUE
 )
-FetchContent_MakeAvailable(googletest)
-
-# third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
-# use find_package to find since libtorch is not a standard cmake project
-FetchContent_Declare(
-  libtorch
-  URL      https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-1.6.0%2Bcpu.zip
-  URL_HASH SHA256=c6c0d3a87039338f7812a1ae343b9e48198536f20d1415b0e5a9a15ba7b90b3f
-)
-FetchContent_GetProperties(libtorch)
-if(NOT libtorch_POPULATED)
-  FetchContent_Populate(libtorch)
-  message(STATUS "libtorch_SOURCE_DIR ${libtorch_SOURCE_DIR}")
-  set(Torch_DIR ${libtorch_SOURCE_DIR})
-endif()
-find_package(Torch REQUIRED PATHS ${Torch_DIR} NO_DEFAULT_PATH)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG -std=c++14")
-message(STATUS "CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS}")
-message(STATUS "TORCH_LIBRARIES ${TORCH_LIBRARIES}")
 
 # third_party: boost
 FetchContent_Declare(
@@ -60,14 +39,33 @@ FetchContent_Declare(
   URL      https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz
   URL_HASH SHA256=aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a
 )
-FetchContent_GetProperties(boost)
-if(NOT boost_POPULATED)
-  FetchContent_Populate(boost)
-  include_directories(${boost_SOURCE_DIR})
-  message(STATUS "INCLUDE_DIRECTORIES ${INCLUDE_DIRECTORIES}")
-endif()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
+# third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
+# use find_package to find since libtorch is not a standard cmake project
+set(PYTORCH_VERSION "1.6.0")
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+    set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-${PYTORCH_VERSION}%2Bcpu.zip")
+    set(URL_HASH "SHA256=dacb2af654f1cffa43b0f3187ce945e1c93305b4c8bb60361c7a8cb543e1da82")
+    set(CMAKE_BUILD_TYPE "Release")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+    set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-${PYTORCH_VERSION}%2Bcpu.zip")
+    set(URL_HASH "SHA256=c6c0d3a87039338f7812a1ae343b9e48198536f20d1415b0e5a9a15ba7b90b3f")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-macos-${PYTORCH_VERSION}.zip")
+    set(URL_HASH "SHA256=e1140bed7bd56c26638bae28aebbdf68e588a9fae92c6684645bcdd996e4183c")
+else()
+    message(FATAL_ERROR "Unsupported CMake System Name '${CMAKE_SYSTEM_NAME}' (expected 'Windows', 'Linux' or 'Darwin')")
+endif()
+FetchContent_Declare(
+  libtorch
+  URL      ${LIBTORCH_URL}
+  URL_HASH ${URL_HASH}
+)
+
+FetchContent_MakeAvailable(gflags glog googletest boost libtorch)
+include_directories(${boost_SOURCE_DIR})
+find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG -std=c++14 -pthread")
 
 # frontend
 add_library(frontend STATIC
@@ -82,7 +80,7 @@ add_library(decoder STATIC
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC glog "${TORCH_LIBRARIES}")
+target_link_libraries(decoder PUBLIC glog ${TORCH_LIBRARIES})
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC glog gtest_main decoder)
