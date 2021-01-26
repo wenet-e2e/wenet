@@ -20,19 +20,19 @@ class TransformerDecoder(torch.nn.Module):
         vocab_size: output dim
         encoder_output_size: dimension of attention
         attention_heads: the number of heads of multi head attention
-        linear_units: the number of units of position-wise feed forward
+        linear_units: the hidden units number of position-wise feedforward
         num_blocks: the number of decoder blocks
         dropout_rate: dropout rate
         self_attention_dropout_rate: dropout rate for attention
         input_layer: input layer type
         use_output_layer: whether to use output layer
         pos_enc_class: PositionalEncoding or ScaledPositionalEncoding
-        normalize_before: whether to use layer_norm before the first block
+        normalize_before:
+            True: use layer_norm before each sub-block of a layer.
+            False: use layer_norm after each sub-block of a layer.
         concat_after: whether to concat attention layer's input and output
-            if True, additional linear will be applied.
-            i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied.
-            i.e. x -> x + att(x)
+            True: x -> x + linear(concat(x, att(x)))
+            False: x -> x + att(x)
     """
     def __init__(
         self,
@@ -60,17 +60,9 @@ class TransformerDecoder(torch.nn.Module):
                 torch.nn.Embedding(vocab_size, attention_dim),
                 PositionalEncoding(attention_dim, positional_dropout_rate),
             )
-        elif input_layer == "linear":
-            self.embed = torch.nn.Sequential(
-                torch.nn.Linear(vocab_size, attention_dim),
-                torch.nn.LayerNorm(attention_dim, eps=1e-12),
-                torch.nn.Dropout(dropout_rate),
-                torch.nn.ReLU(),
-                PositionalEncoding(attention_dim, positional_dropout_rate),
-            )
         else:
             raise ValueError(
-                f"only 'embed' or 'linear' is supported: {input_layer}")
+                f"only 'embed' is supported: {input_layer}")
 
         self.normalize_before = normalize_before
         self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-12)
@@ -104,17 +96,13 @@ class TransformerDecoder(torch.nn.Module):
         Args:
             memory: encoded memory, float32  (batch, maxlen_in, feat)
             memory_mask: encoder memory mask, (batch, 1, maxlen_in)
-            ys_in_pad:
-                input token ids, int64 (batch, maxlen_out)
-                if input_layer == "embed"
-                input tensor (batch, maxlen_out, #mels) in the other cases
-            ys_in_lens: (batch)
+            ys_in_pad: padded input token ids, int64 (batch, maxlen_out)
+            ys_in_lens: input lengths of this batch (batch)
         Returns:
             (tuple): tuple containing:
-
-            x: decoded token score before softmax (batch, maxlen_out, token)
-                if use_output_layer is True,
-            olens: (batch, )
+                x: decoded token score before softmax (batch, maxlen_out, vocab_size)
+                    if use_output_layer is True,
+                olens: (batch, )
         """
         tgt = ys_in_pad
         # tgt_mask: (B, 1, L)
@@ -146,6 +134,8 @@ class TransformerDecoder(torch.nn.Module):
         cache: Optional[List[torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """Forward one step.
+
+            This is only used for decoding.
 
         Args:
             memory: encoded memory, float32  (batch, maxlen_in, feat)
