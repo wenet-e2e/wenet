@@ -10,6 +10,7 @@ Conformer
 * learning rate: 0.002
 * ctc weight (used for attention rescoring): 0.8
 * num of averaged model: 20
+* use spec substitute
 
 | decoding mode/chunk size | full |
 |--------------------------|------|

@@ -85,8 +85,8 @@ def _spec_substitute(x, max_t=20, num_t_sub=3):
 
     Args:
         x: input feature, T * F 2D
-        num_t: number of time substitute to apply
         max_t: max width of time substitute
+        num_t_sub: number of time substitute to apply
 
     Returns:
         augmented feature
