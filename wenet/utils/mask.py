@@ -34,6 +34,7 @@ def subsequent_chunk_mask(
         size: int,
         chunk_size: int,
         device: torch.device = torch.device("cpu"),
+        left_chunk_size: int = -1
 ) -> torch.Tensor:
     """Create mask for subsequent steps (size, size) with chunk size,
        this is for streaming encoder
@@ -42,21 +43,25 @@ def subsequent_chunk_mask(
         size (int): size of mask
         chunk_size (int): size of chunk
         device (torch.device): "cpu" or "cuda" or torch.Tensor.device
+        left_chunk_size (int): size of history chunk size
 
     Returns:
         torch.Tensor: mask
 
     Examples:
-        >>> subsequent_mask(4, 2)
+        >>> subsequent_mask(4, 2, left_chunk_size=1)
         [[1, 1, 0, 0],
          [1, 1, 0, 0],
-         [1, 1, 1, 1],
-         [1, 1, 1, 1]]
+         [0, 1, 1, 1],
+         [0, 1, 1, 1]]
     """
     ret = torch.zeros(size, size, device=device, dtype=torch.bool)
     for i in range(size):
         ending = min((i // chunk_size + 1) * chunk_size, size)
         ret[i, 0:ending] = True
+        if left_chunk_size != -1:
+            left_start = max(0, (i // chunk_size)* chunk_size-left_chunk_size)
+            ret[i, 0:left_start] = False
     return ret
 
 
