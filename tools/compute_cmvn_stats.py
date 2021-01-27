@@ -6,10 +6,10 @@ import json
 import codecs
 import yaml
 
-from torch.utils.data import Dataset, DataLoader
 import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
+from torch.utils.data import Dataset, DataLoader
 
 class CollateFunc(object):
     ''' Collate function for AudioDataset
