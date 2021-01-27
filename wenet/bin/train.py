@@ -93,6 +93,7 @@ if __name__ == '__main__':
     cv_collate_conf = copy.deepcopy(configs['collate_conf'])
     # no augmenation on cv set
     cv_collate_conf['spec_aug'] = False
+    cv_collate_conf['spec_sub'] = False
     if raw_wav:
         cv_collate_conf['feature_dither'] = 0.0
         cv_collate_conf['speed_perturb'] = False

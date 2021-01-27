@@ -8,7 +8,7 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3"
-stage=0 # start from 0 if you need to start from data preparation
+stage=4 # start from 0 if you need to start from data preparation
 stop_stage=6
 # data
 data=/export/data/asr-data/OpenSLR/33/
@@ -33,7 +33,7 @@ checkpoint=
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
-average_num=10
+average_num=20
 
 . utils/parse_options.sh || exit 1;
 
@@ -131,8 +131,6 @@ fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Test model, please specify the model you want to test by --checkpoint
-    cmvn_opts=
-    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # TODO, Add model average here
     mkdir -p $dir/test
     if [ ${average_checkpoint} == true ]; then
@@ -163,7 +161,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --dict $dict \
             --ctc_weight $ctc_weight \
             --result_file $test_dir/text \
-            $cmvn_opts \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
          python2 tools/compute-wer.py --char=1 --v=1 \
             $feat_dir/test/text $test_dir/text > $test_dir/wer
