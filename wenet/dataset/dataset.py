@@ -126,9 +126,10 @@ def _load_wav_with_speed(wav_file, speed):
         E.append_effect_to_chain('speed', speed)
         E.append_effect_to_chain("rate", si.rate)
         E.set_input_file(wav_file)
-        return E.sox_build_flow_effects()
-
-
+        wav, sr = E.sox_build_flow_effects()
+        # sox will normalize the waveform, scale to [-32768, 32767]
+        wav = wav * (1 << 15)
+        return wav, sr
 
 def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                      feature_extraction_conf):
@@ -148,7 +149,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
     keys = []
     feats = []
     lengths = []
-    wav_dither = wav_distortion_conf['wav_dither'] / 32768.0
+    wav_dither = wav_distortion_conf['wav_dither']
     wav_distortion_rate = wav_distortion_conf['wav_distortion_rate']
     distortion_methods_conf = wav_distortion_conf['distortion_methods']
     if speed_perturb:
