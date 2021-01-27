@@ -50,6 +50,10 @@ collate_conf:
         max_t: 50
         max_f: 10
         max_w: 80
+    spec_sub: true
+    spec_sub_conf:
+        num_t_sub: 3
+        max_t: 20
 
 # dataset related
 dataset_conf:

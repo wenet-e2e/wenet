@@ -8,6 +8,23 @@ Conformer
 * beam: 10
 * num of gpu: 4
 * learning rate: 0.002
+* ctc weight (used for attention rescoring): 0.8
+* num of averaged model: 20
+* use spec substitute
+
+| decoding mode/chunk size | full |
+|--------------------------|------|
+| attention decoder        | 5.15 |
+| ctc greedy search        | 4.85 |
+| ctc prefix beam search   | 4.85 |
+| attention rescoring      | 4.48 |
+
+Conformer
+* feature: fbank
+* config: conf/train_conformer.yaml
+* beam: 10
+* num of gpu: 4
+* learning rate: 0.002
 * ctc weight (used for attention rescoring): 0.6
 * num of averaged model: 20
 
