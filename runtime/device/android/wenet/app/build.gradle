@@ -18,6 +18,10 @@ android {
             keyPassword '123456'
         }
     }
+    packagingOptions {
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
+        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
+    }
     configurations {
         extractForNativeBuild
     }
@@ -34,7 +38,9 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                cppFlags "-std=c++14", "-DC10_USE_GLOG", "-DC10_USE_MINIMAL_GLOG", "-DANDROID", "-Wno-c++11-narrowing"
+                targets  "wenet", "decoder_main"
+                cppFlags "-std=c++14", "-DC10_USE_GLOG", "-DC10_USE_MINIMAL_GLOG", "-DANDROID", "-Wno-c++11-narrowing", "-fexceptions"
+                arguments "-DANDROID_STL=c++_shared"
             }
         }
 
