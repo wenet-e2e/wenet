@@ -43,13 +43,14 @@ class BaseEncoder(torch.nn.Module):
         concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
+        global_cmvn: torch.nn.Module = None,
     ):
         """
         Args:
             input_size (int): input dim
             output_size (int): dimension of attention
             attention_heads (int): the number of heads of multi head attention
-            linear_units (int): the number of units of position-wise feed
+            linear_units (int): the hidden units number of position-wise feed
                 forward
             num_blocks (int): the number of decoder blocks
             dropout_rate (float): dropout rate
@@ -60,14 +61,13 @@ class BaseEncoder(torch.nn.Module):
                 optional [linear, conv2d, conv2d6, conv2d8]
             pos_enc_layer_type (str): Encoder positional encoding layer type.
                 opitonal [abs_pos, scaled_abs_pos, rel_pos]
-            normalize_before (bool): whether to use layer_norm before the
-                first block
+            normalize_before (bool):
+                True: use layer_norm before each sub-block of a layer.
+                False: use layer_norm after each sub-block of a layer.
             concat_after (bool): whether to concat attention layer's input
                 and output.
-                if True, additional linear will be applied.
-                i.e. x -> x + linear(concat(x, att(x)))
-                if False, no additional linear will be applied.
-                i.e. x -> x + att(x)
+                True: x -> x + linear(concat(x, att(x)))
+                False: x -> x + att(x)
             static_chunk_size (int): chunk size for static chunk training and
                 decoding
             use_dynamic_chunk (bool): whether use dynamic chunk size for
@@ -96,6 +96,7 @@ class BaseEncoder(torch.nn.Module):
         else:
             raise ValueError("unknown input_layer: " + input_layer)
 
+        self.global_cmvn = global_cmvn
         self.embed = subsampling_class(
             input_size,
             output_size,
@@ -113,16 +114,16 @@ class BaseEncoder(torch.nn.Module):
 
     def forward(
         self,
-        xs_pad: torch.Tensor,
+        xs: torch.Tensor,
         xs_lens: torch.Tensor,
         decoding_chunk_size: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 
         Args:
-            xs_pad: padded input tensor (B, L, D)
+            xs: padded input tensor (B, L, D)
             xs_lens: input length (B)
-            decoding_chunk_size: decoding chunk size for dynamic chunk, it's
+            decoding_chunk_size: decoding chunk size for dynamic chunk
                 0: default for training, use random dynamic chunk.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
@@ -130,7 +131,9 @@ class BaseEncoder(torch.nn.Module):
             encoder output tensor, lens and mask
         """
         masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, L)
-        xs, pos_emb, masks = self.embed(xs_pad, masks)
+        if self.global_cmvn is not None:
+            xs = self.global_cmvn(xs)
+        xs, pos_emb, masks = self.embed(xs, masks)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               decoding_chunk_size,
@@ -184,6 +187,8 @@ class BaseEncoder(torch.nn.Module):
                                device=xs.device,
                                dtype=torch.bool)
         tmp_masks = tmp_masks.unsqueeze(1)
+        if self.global_cmvn is not None:
+            xs = self.global_cmvn(xs)
         xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
         if subsampling_cache is not None:
             xs = torch.cat((subsampling_cache, xs), dim=1)
@@ -293,6 +298,7 @@ class TransformerEncoder(BaseEncoder):
         concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
+        global_cmvn: torch.nn.Module = None,
     ):
         """ Construct TransformerEncoder
 
@@ -303,7 +309,8 @@ class TransformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         concat_after, static_chunk_size, use_dynamic_chunk)
+                         concat_after, static_chunk_size, use_dynamic_chunk,
+                         global_cmvn)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
@@ -333,6 +340,7 @@ class ConformerEncoder(BaseEncoder):
         concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
+        global_cmvn: torch.nn.Module = None,
         positionwise_conv_kernel_size: int = 1,
         macaron_style: bool = True,
         selfattention_layer_type: str = "rel_selfattn",

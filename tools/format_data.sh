@@ -76,7 +76,7 @@ if [ -n "${feat}" ]; then
                 --filetype "${filetype}" \
                 --preprocess-conf "${preprocess_conf}" \
                 --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
-        elif [ ${feat_type} == "wav" ]; then
+        elif [ ${feat_type} == "wav" ] || [ ${feat_type} == "flac" ]; then
             tools/wav_to_duration.sh --nj ${nj} \
                 ${feat} ${tmpdir}/input_${i}/shape.scp
         fi

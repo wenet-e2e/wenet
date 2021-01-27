@@ -6,8 +6,8 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-stage=1 # start from 0 if you need to start from data preparation
-stop_stage=1
+stage=0 # start from 0 if you need to start from data preparation
+stop_stage=5
 # data
 data=/export/expts4/chaoyang/
 data_url=www.openslr.org/resources/33
@@ -21,15 +21,16 @@ train_set=train
 # 1. conf/train_transformer.yaml: Standard transformer
 # 2. conf/train_conformer.yaml: Standard conformer
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
+# 4. conf/train_unified_transformer.yaml: Unified dynamic chunk transformer
 train_config=conf/train_conformer.yaml
-cmvn=false
+cmvn=true
 dir=exp/conformer
 checkpoint=
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
-average_num=10
+average_num=30
 
 . tools/parse_options.sh || exit 1;
 
@@ -46,6 +47,7 @@ fi
 
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    # remove the space between the text labels for Mandarin dataset
     for x in train dev test; do
         cp data/${x}/text data/${x}/text.org
         paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " data/${x}/text.org | tr -d " ") \
@@ -57,9 +59,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     for x in ${train_set} dev test; do
         cp -r data/$x $feat_dir
     done
+
     tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
         --out_cmvn $feat_dir/$train_set/global_cmvn
+
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -81,14 +85,21 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     for x in dev test ${train_set}; do
         tools/format_data.sh --nj ${nj} \
             --feat-type wav --feat $feat_dir/$x/wav.scp \
-            $feat_dir/$x ${dict} > $feat_dir/$x/format.data
+            $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
+
+        tools/remove_longshortdata.py \
+            --min_input_len 0.5 \
+            --max_input_len 20 \
+            --max_output_len 400 \
+            --max_output_input_ratio 10.0 \
+            --data_file $feat_dir/$x/format.data.tmp \
+            --output_data_file $feat_dir/$x/format.data
     done
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Training
     mkdir -p $dir
-    cp ${feat_dir}/${train_set}/global_cmvn $dir
     INIT_FILE=$dir/ddp_init
     rm -f $INIT_FILE # delete old one before starting
     init_method=file://$(readlink -f $INIT_FILE)
@@ -98,6 +109,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
     cmvn_opts=
+    $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
@@ -120,13 +132,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     } &
     done
     wait
-    cp $feat_dir/$train_set/global_cmvn $dir/
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Test model, please specify the model you want to test by --checkpoint
-    cmvn_opts=
-    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     if [ ${average_checkpoint} == true ]; then
         decode_checkpoint=$dir/avg_${average_num}.pt
         echo "do model average and final checkpoint is $decode_checkpoint"
@@ -155,9 +164,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --dict $dict \
             --ctc_weight $ctc_weight \
             --result_file $test_dir/text \
-            $cmvn_opts \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
-         python2 tools/compute-wer.py --char=1 --v=1 \
+         python tools/compute-wer.py --char=1 --v=1 \
             $feat_dir/test/text $test_dir/text > $test_dir/wer
     } &
     done
