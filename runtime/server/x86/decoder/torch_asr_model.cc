@@ -12,11 +12,11 @@
 
 namespace wenet {
 
-void TorchAsrModel::Read(const std::string& model_path) {
+void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   torch::jit::script::Module model = torch::jit::load(model_path);
   module_.reset(new TorchModule(std::move(model)));
   // For multi-thread performance
-  at::set_num_threads(1);
+  at::set_num_threads(num_threads);
 #ifndef ANDROID
   at::set_num_interop_threads(1);
 #endif

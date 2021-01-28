@@ -67,6 +67,9 @@ include_directories(${boost_SOURCE_DIR})
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG -std=c++14 -pthread")
 
+# utils
+add_library(utils STATIC utils/utils.cc)
+
 # frontend
 add_library(frontend STATIC
   frontend/feature_pipeline.cc
@@ -95,7 +98,7 @@ target_link_libraries(websocket PUBLIC glog frontend decoder)
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main PUBLIC gflags frontend decoder)
+target_link_libraries(decoder_main PUBLIC gflags frontend decoder utils)
 add_executable(websocket_client_main bin/websocket_client_main.cc)
 target_link_libraries(websocket_client_main PUBLIC gflags websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)
