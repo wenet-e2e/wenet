@@ -55,7 +55,13 @@ int main(int argc, char *argv[]) {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(static_cast<int>(interval * 1000)));
   }
+  auto start = std::chrono::steady_clock::now();
   client.SendEndSignal();
   client.Join();
+  auto end = std::chrono::steady_clock::now();
+  VLOG(2) << "Total latency: "
+          << std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
+                 .count()
+          << "ms.";
   return 0;
 }

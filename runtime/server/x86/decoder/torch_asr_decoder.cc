@@ -4,6 +4,7 @@
 #include "decoder/torch_asr_decoder.h"
 
 #include <algorithm>
+#include <chrono>
 #include <limits>
 #include <utility>
 
@@ -36,7 +37,13 @@ bool TorchAsrDecoder::Decode() {
   bool finish = this->AdvanceDecoding();
   if (finish) {
     // Do attention rescoring
+    auto start = std::chrono::steady_clock::now();
     AttentionRescoring();
+    auto end = std::chrono::steady_clock::now();
+    LOG(INFO) << "Rescoring cost latency: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end -
+                                                                       start)
+                     .count() << "ms.";
     return true;
   }
   return false;
