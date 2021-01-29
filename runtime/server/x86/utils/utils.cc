@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang)
+// Copyright (c) 2021 Mobvoi Inc (Zhendong Peng)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef UTILS_UTILS_H_
-#define UTILS_UTILS_H_
-
-#include <sstream>
-#include <string>
-#include <vector>
+#include "utils/utils.h"
 
 namespace wenet {
 
-#define DISALLOW_COPY_AND_ASSIGN(Type) \
-  Type(const Type &) = delete;         \
-  Type &operator=(const Type &) = delete;
-
-void SplitString(const std::string& str, std::vector<std::string>* strs);
+void SplitString(const std::string& str, std::vector<std::string>* strs) {
+  auto iss = std::istringstream{str};
+  std::string result;
+  while (iss >> result) {
+    strs->push_back(result);
+  }
+}
 
 }  // namespace wenet
-
-#endif  // UTILS_UTILS_H_
