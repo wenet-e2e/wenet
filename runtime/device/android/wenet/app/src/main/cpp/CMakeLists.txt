@@ -53,6 +53,9 @@ ExternalProject_Add(gflags
 )
 include_directories(${GFLAGS_BUILD_DIR}/include)
 
+# utils
+add_library(utils STATIC utils/utils.cc)
+
 # frontend
 add_library(frontend STATIC
     frontend/feature_pipeline.cc
@@ -70,5 +73,5 @@ link_libraries(frontend decoder android)
 add_library(${TARGET} SHARED wenet.cc)
 
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main ${GFLAGS_LIB_PATH})
+target_link_libraries(decoder_main ${GFLAGS_LIB_PATH} utils)
 add_dependencies(decoder_main gflags)
