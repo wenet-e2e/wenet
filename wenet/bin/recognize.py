@@ -100,6 +100,7 @@ if __name__ == '__main__':
                                     raw_wav=raw_wav)
     dataset_conf = configs.get('dataset_conf', {})
     dataset_conf['batch_size'] = args.batch_size
+    dataset_conf['batch_type'] = 'static'
     dataset_conf['sort'] = False
     test_dataset = AudioDataset(args.test_data, **dataset_conf, raw_wav=raw_wav)
     test_data_loader = DataLoader(test_dataset,

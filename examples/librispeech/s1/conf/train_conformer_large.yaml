@@ -34,21 +34,26 @@ model_conf:
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
 
+# use raw_wav or kaldi feature
+raw_wav: false
 
 collate_conf:
+    # waveform level config
+    wav_distortion_conf:
+        wav_dither: 0.0
+        wav_distortion_rate: 0.0
+        distortion_methods: []
+    speed_perturb: false
+    # spec level config
+    feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
     spec_aug: true
-    norm_mean: true # if true, must specify cmvn file in cmd line
-    norm_var: true # if true, must specify cmvn file in cmd line
-
-# specaugmentation related
-spec_aug_conf:
-    num_time_mask: 2
-    num_freq_mask: 2
-    max_time_mask: 50
-    max_freq_mask: 10
-    max_time_warp: 80
-    gauss_mask_for_time: False
-    warp_for_time: False
+    spec_aug_conf:
+        warp_for_time: False
+        num_t_mask: 2
+        num_f_mask: 2
+        max_t: 50
+        max_f: 10
+        max_w: 80
 
 # dataset related
 dataset_conf:
