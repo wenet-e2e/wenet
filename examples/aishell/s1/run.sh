@@ -162,7 +162,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --ctc_weight $ctc_weight \
             --result_file $test_dir/text \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
-         python2 tools/compute-wer.py --char=1 --v=1 \
+         python tools/compute-wer.py --char=1 --v=1 \
             $feat_dir/test/text $test_dir/text > $test_dir/wer
     } &
     done
