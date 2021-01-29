@@ -24,11 +24,13 @@ export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=your_test_wav_path
 model_dir=your_model_dir
+output_dir=your_output_dir
 ./build/decoder_main \
     --chunk_size -1 \
-    --wav_path $wav_path \
+    --wav_scp $wav_scp \
     --model_path $model_dir/final.zip \
-    --dict_path $model_dir/words.txt
+    --dict_path $model_dir/words.txt \
+    --result $output_dir/result
 ```
 
 ## Run Websocket streaming ASR demo
