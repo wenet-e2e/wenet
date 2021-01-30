@@ -107,7 +107,7 @@ class WavReader {
   int num_sample() const { return num_sample_; }
 
   ~WavReader() {
-    if (data_ != NULL) delete data_;
+    if (data_ != NULL) delete[] data_;
   }
 
   const float* data() const { return data_; }
