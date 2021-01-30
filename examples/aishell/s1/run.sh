@@ -104,8 +104,9 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
+    cp ${feat_dir}/${train_set}/global_cmvn $dir
     cmvn_opts=
-    $cmvn && (cp ${feat_dir}/${train_set}/global_cmvn $dir;cmvn_opts="--cmvn ${dir}/global_cmvn")
+    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
     # export later
