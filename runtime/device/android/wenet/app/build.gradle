@@ -40,7 +40,6 @@ android {
             cmake {
                 targets  "wenet", "decoder_main"
                 cppFlags "-std=c++14", "-DC10_USE_GLOG", "-DC10_USE_MINIMAL_GLOG", "-DANDROID", "-Wno-c++11-narrowing", "-fexceptions"
-                arguments "-DANDROID_STL=c++_shared"
             }
         }
 
