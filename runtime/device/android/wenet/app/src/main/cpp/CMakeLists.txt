@@ -73,5 +73,5 @@ link_libraries(frontend decoder android)
 add_library(${TARGET} SHARED wenet.cc)
 
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main ${GFLAGS_LIB_PATH} utils)
+target_link_libraries(decoder_main ${GFLAGS_LIB_PATH} utils libc++_shared.so)
 add_dependencies(decoder_main gflags)
