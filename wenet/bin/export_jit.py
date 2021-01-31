@@ -24,7 +24,7 @@ from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='training your network')
+    parser = argparse.ArgumentParser(description='export your script model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--output_file', required=True, help='output file')
