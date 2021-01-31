@@ -18,6 +18,7 @@ encoder_conf:
     selfattention_layer_type: 'rel_selfattn'
     causal: true
     use_dynamic_chunk: true
+    cnn_module_norm: 'layer_norm' # using nn.LayerNorm makes model converge faster
 
 # decoder related
 decoder: transformer
