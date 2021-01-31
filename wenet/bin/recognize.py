@@ -29,7 +29,7 @@ from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='training your network')
+    parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--test_data', required=True, help='test data file')
     parser.add_argument('--gpu',
