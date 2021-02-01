@@ -95,7 +95,8 @@ if __name__ == '__main__':
     test_collate_conf['spec_sub'] = False
     test_collate_conf['feature_dither'] = False
     test_collate_conf['speed_perturb'] = False
-    test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
+    if raw_wav:
+        test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
     test_collate_func = CollateFunc(**test_collate_conf,
                                     raw_wav=raw_wav)
     dataset_conf = configs.get('dataset_conf', {})

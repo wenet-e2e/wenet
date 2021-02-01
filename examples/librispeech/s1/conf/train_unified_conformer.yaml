@@ -41,12 +41,6 @@ model_conf:
 raw_wav: false
 
 collate_conf:
-    # waveform level config
-    wav_distortion_conf:
-        wav_dither: 0.0
-        wav_distortion_rate: 0.0
-        distortion_methods: []
-    speed_perturb: false
     # spec level config
     feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
     spec_aug: true
