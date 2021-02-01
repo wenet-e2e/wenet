@@ -348,6 +348,7 @@ class ConformerEncoder(BaseEncoder):
         use_cnn_module: bool = True,
         cnn_module_kernel: int = 15,
         causal: bool = False,
+        cnn_module_norm: str = "batch_norm",
     ):
         """Construct ConformerEncoder
 
@@ -391,7 +392,7 @@ class ConformerEncoder(BaseEncoder):
         # convolution module definition
         convolution_layer = ConvolutionModule
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  causal)
+                                  cnn_module_norm, causal)
 
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(
