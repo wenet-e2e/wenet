@@ -203,7 +203,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
         tools/spm_decode --model=${bpemodel}.model --input_format=piece < $test_dir/text_bpe | sed -e "s/▁/ /g" > $test_dir/text
         python tools/compute-wer.py --char=1 --v=1 \
-            $wave_dat/$test/text $test_dir/text > $test_dir/wer
+            $wave_data/$test/text $test_dir/text > $test_dir/wer
     } &
     done
     done
