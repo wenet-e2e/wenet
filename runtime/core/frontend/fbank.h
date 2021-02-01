@@ -87,11 +87,11 @@ class Fbank {
       }
     }
 
-    // hamming window
-    hamming_window_.resize(frame_length_);
+    // povey window
+    povey_window_.resize(frame_length_);
     double a = M_2PI / (frame_length - 1);
     for (int i = 0; i < frame_length; ++i) {
-      hamming_window_[i] = 0.54 - 0.46 * cos(a * i);
+      povey_window_[i] = pow(0.5 - 0.5 * cos(a * i), 0.85);
     }
   }
 
@@ -125,11 +125,11 @@ class Fbank {
     (*data)[0] -= coeff * (*data)[0];
   }
 
-  // Apply hamming window on data in place
-  void Hamming(std::vector<float>* data) const {
-    CHECK_GE(data->size(), hamming_window_.size());
-    for (size_t i = 0; i < hamming_window_.size(); ++i) {
-      (*data)[i] *= hamming_window_[i];
+  // Apply povey window on data in place
+  void Povey(std::vector<float>* data) const {
+    CHECK_GE(data->size(), povey_window_.size());
+    for (size_t i = 0; i < povey_window_.size(); ++i) {
+      (*data)[i] *= povey_window_[i];
     }
   }
 
@@ -159,7 +159,7 @@ class Fbank {
       }
 
       PreEmphasis(0.97, &data);
-      Hamming(&data);
+      Povey(&data);
       // copy data to fft_real
       memset(fft_img.data(), 0, sizeof(float) * fft_points_);
       memset(fft_real.data() + frame_length_, 0,
@@ -203,7 +203,7 @@ class Fbank {
   bool remove_dc_offset_;
   std::vector<float> center_freqs_;
   std::vector<std::pair<int, std::vector<float>>> bins_;
-  std::vector<float> hamming_window_;
+  std::vector<float> povey_window_;
   std::default_random_engine generator_;
   std::normal_distribution<float> distribution_;
   float dither_;
