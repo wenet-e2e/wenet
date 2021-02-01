@@ -371,7 +371,8 @@ class ConformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         concat_after, static_chunk_size, use_dynamic_chunk)
+                         concat_after, static_chunk_size, use_dynamic_chunk,
+                         global_cmvn)
         activation = get_activation(activation_type)
 
         # self-attention module definition
