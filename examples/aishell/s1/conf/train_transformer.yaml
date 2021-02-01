@@ -35,10 +35,6 @@ raw_wav: false
 # feature extraction
 collate_conf:
     # spec level config
-    wav_distortion_conf:
-        wav_dither: 0.0
-        wav_distortion_rate: 0.0
-        distortion_methods: []
     feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
     spec_aug: true
     spec_aug_conf:
