@@ -13,7 +13,7 @@ The WeNet runtime supports the following platforms.
 * Server
   * [x86](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
 * Device
-  * [andorid](https://github.com/mobvoi/wenet/tree/main/runtime/device/andorid)
+  * [android](https://github.com/mobvoi/wenet/tree/main/runtime/device/android)
 
 ## Architecture and Implementation
 
