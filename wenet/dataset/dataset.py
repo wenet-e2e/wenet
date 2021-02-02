@@ -387,7 +387,7 @@ class AudioDataset(Dataset):
                 output_dim = int(arr[6].split(':')[1].split(',')[1])
                 if raw_wav:
                     wav_path = ':'.join(arr[1].split(':')[1:])
-                    duration = int(float(arr[2].split(':')[1]) * 1000)
+                    duration = int(float(arr[2].split(':')[1]) * 1000 / 10)
                     data.append((key, wav_path, duration, tokenid))
                 else:
                     feat_ark = ':'.join(arr[1].split(':')[1:])
