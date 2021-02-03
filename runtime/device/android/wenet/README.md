@@ -25,3 +25,31 @@ then just build and run the APK. Here is a gif demo, which shows how our on-devi
 Please note the wifi and data has been disabled in the demo so there is no network connection ^\_^.
 
 ![Runtime android demo](../../../../docs/images/runtime_android.gif)
+
+## Compute the RTF
+
+You could build the binary and the APK with Android Studio directly, or with the commands as follows:
+
+``` sh
+cd runtime/device/android/wenet
+./gradlew build
+```
+
+Connect your Android phone, and use `adb push` command to push your model, wav scp, and waves to the sdcard.
+Then push your binary and dynamic library to `/data/local/tmp` as follows:
+
+``` sh
+adb push app/.cxx/cmake/release/arm64-v8a/decoder_main /data/local/tmp
+adb push app/.cxx/cmake/release/arm64-v8a/gflags-build/lib/libgflags.so /data/local/tmp
+adb push app/build/pytorch_android-1.6.0.aar/jni/arm64-v8a/* /data/local/tmp
+```
+
+After that, change to the directory `/data/local/tmp` of your phone, and export the library path by:
+
+``` sh
+adb shell
+cd /data/local/tmp
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
+```
+
+Finally, execute the same command as the [x86 demo](../../../server/x86) to run the binary to decode and compute the RTF.
