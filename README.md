@@ -14,7 +14,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 * **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
   framework to achieve accurate, fast and unified E2E model, which is favorable for industry adoption.
 * **Portable runtime**: Several demos will be provided to show how to host WeNet trained models
-  on different platforms, including server [x86](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86) and on-device [android](https://github.com/mobvoi/wenet/tree/main/runtime/device/android).
+  on different platforms, including server [x86](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86) and on-device [android](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet).
 * **Light weight**: WeNet is designed specifically for E2E speech recognition,
   with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi,
   which simplifies installation and usage.
