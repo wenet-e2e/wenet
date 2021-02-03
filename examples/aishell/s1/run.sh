@@ -34,6 +34,7 @@ checkpoint=
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=20
+decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
 . utils/parse_options.sh || exit 1;
 
@@ -147,7 +148,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # -1 for full chunk
     decoding_chunk_size=
     ctc_weight=0.5
-    for mode in ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring; do
+    for mode in ${decode_modes}; do
     {
         test_dir=$dir/test_${mode}
         mkdir -p $test_dir
