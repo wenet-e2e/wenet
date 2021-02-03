@@ -29,6 +29,7 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=20
+decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
 
 . utils/parse_options.sh || exit 1;
 
@@ -171,7 +172,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     decoding_chunk_size=
     ctc_weight=0.5
     for test in $recog_set; do
-    for mode in attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention; do
+    for mode in ${decode_modes}; do
     {
         test_dir=$dir/${test}_${mode}
         mkdir -p $test_dir
