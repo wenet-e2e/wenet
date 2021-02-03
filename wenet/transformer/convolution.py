@@ -62,8 +62,10 @@ class ConvolutionModule(nn.Module):
 
         assert norm in ['batch_norm', 'layer_norm']
         if norm == "batch_norm":
+            self.use_layer_norm = False
             self.norm = nn.BatchNorm1d(channels)
         else:
+            self.use_layer_norm = True
             self.norm = nn.LayerNorm(channels)
 
         self.pointwise_conv2 = nn.Conv1d(
@@ -112,10 +114,10 @@ class ConvolutionModule(nn.Module):
 
         # 1D Depthwise Conv
         x = self.depthwise_conv(x)
-        if isinstance(self.norm, nn.LayerNorm):
+        if self.use_layer_norm:
             x = x.transpose(1, 2)
         x = self.activation(self.norm(x))
-        if isinstance(self.norm, nn.LayerNorm):
+        if self.use_layer_norm:
             x = x.transpose(1, 2)
         x = self.pointwise_conv2(x)
         return x.transpose(1, 2), new_cache
