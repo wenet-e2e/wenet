@@ -15,6 +15,21 @@
 | ctc prefix beam search | 5.14 |
 | attention rescoring    | 4.77 |
 
+## Unified Conformer Result
+
+* Feature info: using fbank feature, dither=0, cmvn, speed perturb
+* Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 180 epochs, dither 0.0
+* Decoding info: ctc_weight 0.5, average_num 20
+* Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210203_unified_conformer_exp.tar.gz
+
+| decoding mode/chunk size | full | 16   | 8    | 4    |
+|--------------------------|------|------|------|------|
+| attention decoder        | 5.40 | 5.60 | 5.74 | 5.86 |
+| ctc greedy search        | 5.56 | 6.29 | 6.68 | 7.10 |
+| ctc prefix beam search   | 5.57 | 6.30 | 6.67 | 7.10 |
+| attention rescoring      | 5.05 | 5.45 | 5.69 | 5.91 |
+
 ## Transformer Result
 
 * Feature info: using fbank feature, dither=0, with cmvn, no speed perturb.
