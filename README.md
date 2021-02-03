@@ -1,26 +1,23 @@
 # WeNet
 
 **We** share neural **Net** together.
-We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
-and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
-for batch inference.
 
 The main motivation of WeNet is to close the gap between research and production end-to-end (E2E) speech recognition models,
 to reduce the effort of productionizing E2E models, and to explore better E2E models for production.
 
 ## Highlights
 
-* **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
-  framework to achieve accurate, fast and unified E2E model, which is favorable for industry adoption.
-* **Light weight**: WeNet is designed specifically for E2E speech recognition,
-  with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi,
-  which simplifies installation and usage.
-* **Production ready**: The python code of WeNet meets the requirements of TorchScript,
+* **Production first and production ready**: The python code of WeNet meets the requirements of TorchScript,
   so the model trained by WeNet can be directly exported by Torch JIT and use LibTorch for inference.
   There is no gap between the research model and production model.
   Neither model conversion nor additional code is required for model inference.
+* **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
+  framework to achieve accurate, fast and unified E2E model, which is favorable for industry adoption.
 * **Portable runtime**: Several demos will be provided to show how to host WeNet trained models
-  on different platforms, including server (x86) and embedded (ARM in Android platforms).
+  on different platforms, including server [x86](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86) and on-device [android](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet).
+* **Light weight**: WeNet is designed specifically for E2E speech recognition,
+  with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi,
+  which simplifies installation and usage.
 
 ## Performance Benchmark
 
@@ -62,3 +59,19 @@ If it fails, please scan the personal QR code on the right with contact info lik
 | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/wenet.jpeg) | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/binbin.jpeg) |
 |-------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
+## Acknowledge
+
+We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
+and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
+for batch inference.
+
+## Citations
+
+```
+@article{zhang2020unified,
+  title={Unified Streaming and Non-streaming Two-pass End-to-end Model for Speech Recognition},
+  author={Zhang, Binbin and Wu, Di and Yao, Zhuoyuan and Wang, Xiong and Yu, Fan and Yang, Chao and Guo, Liyong and Hu, Yaguang and Xie, Lei and Lei, Xin},
+  journal={arXiv preprint arXiv:2012.05481},
+  year={2020}
+}
+```
