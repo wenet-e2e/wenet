@@ -41,10 +41,10 @@ raw_wav: true
 collate_conf:
     # waveform level config
     wav_distortion_conf:
-        wav_dither: 0.0
+        wav_dither: 0.1
         wav_distortion_rate: 0.0
         distortion_methods: []
-    speed_perturb: false
+    speed_perturb: true
     feature_extraction_conf:
         feature_type: 'fbank'
         mel_bins: 80
@@ -74,7 +74,7 @@ dataset_conf:
 
 grad_clip: 5
 accum_grad: 4
-max_epoch: 200
+max_epoch: 240
 log_interval: 100
 
 optim: adam
