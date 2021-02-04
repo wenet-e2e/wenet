@@ -12,6 +12,15 @@ def subsequent_mask(
 ) -> torch.Tensor:
     """Create mask for subsequent steps (size, size).
 
+    This mask is used only in decoder which works in an auto-regressive mode.
+    This means the current step could only do attention with its left steps.
+
+    In encoder, fully attention is used when streaming is not necessary and
+    the sequence is not long. In this  case, no attention mask is needed.
+
+    When streaming is need, chunk-based attention is used in encoder. See
+    subsequent_chunk_mask for the chunk-based attention mask.
+
     Args:
         size (int): size of mask
         str device (str): "cpu" or "cuda" or torch.Tensor.device
@@ -47,7 +56,7 @@ def subsequent_chunk_mask(
         torch.Tensor: mask
 
     Examples:
-        >>> subsequent_mask(4, 2)
+        >>> subsequent_chunk_mask(4, 2)
         [[1, 1, 0, 0],
          [1, 1, 0, 0],
          [1, 1, 1, 1],
@@ -113,7 +122,7 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
 def make_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
     """Make mask tensor containing indices of padded part.
 
-    1 for padded part and 0 for non-padded part.
+    See description of make_non_pad_mask.
 
     Args:
         lengths (torch.Tensor): Batch of lengths (B,).
@@ -141,6 +150,14 @@ def make_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
 
 def make_non_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
     """Make mask tensor containing indices of non-padded part.
+
+    The sequences in a batch may have different lengths. To enable
+    batch computing, padding is need to make all sequence in same
+    size. To avoid the padding part pass value to context dependent
+    block such as attention or convolution , this padding part is
+    masked.
+
+    This pad_mask is used in both encoder and decoder.
 
     1 for non-padded part and 0 for padded part.
 

@@ -185,7 +185,7 @@ class ConformerEncoderLayer(nn.Module):
 
         Args:
             x (torch.Tensor): (#batch, time, size)
-            mask (torch.Tensor): Mask tensor for the input (#batch, time).
+            mask (torch.Tensor): Mask tensor for the input (#batch, time，time).
             pos_emb (torch.Tensor): positional encoding, must not be None
                 for ConformerEncoderLayer.
             output_cache (torch.Tensor): Cache tensor of the output
@@ -223,7 +223,6 @@ class ConformerEncoderLayer(nn.Module):
             mask = mask[:, -chunk:, :]
 
         x_att = self.self_attn(x_q, x, x, pos_emb, mask)
-
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
             x = residual + self.concat_linear(x_concat)
