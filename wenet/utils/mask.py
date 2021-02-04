@@ -14,8 +14,6 @@ def subsequent_mask(
 
     This mask is used only in decoder which works in an auto-regressive mode.
     This means the current step could only do attention with its left steps.
-    In training, for the convenience of batch calculation, a full attention
-    is used and this mask will set the value of right part to 0.
 
     In encoder, fully attention is used when streaming is not necessary and
     the sequence is not long. In this  case, no attention mask is needed.
