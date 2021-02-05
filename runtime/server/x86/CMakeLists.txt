@@ -12,25 +12,22 @@ set(FETCHCONTENT_BASE_DIR ${fc_base})
 # third_party: gflags
 FetchContent_Declare(
   gflags
-  GIT_REPOSITORY https://github.com/gflags/gflags.git
-  GIT_TAG        v2.2.0
-  GIT_PROGRESS   TRUE
+  URL      https://github.com/gflags/gflags/archive/v2.2.0.zip
+  URL_HASH SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
 )
 
 # third_party: glog
 FetchContent_Declare(
   glog
-  GIT_REPOSITORY https://github.com/google/glog.git
-  GIT_TAG        v0.4.0
-  GIT_PROGRESS   TRUE
+  URL      https://github.com/google/glog/archive/v0.4.0.zip
+  URL_HASH SHA256=9e1b54eb2782f53cd8af107ecf08d2ab64b8d0dc2b7f5594472f3bd63ca85cdc
 )
 
 # third_party: gtest
 FetchContent_Declare(
   googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        release-1.10.0
-  GIT_PROGRESS   TRUE
+  URL      https://github.com/google/googletest/archive/release-1.10.0.zip
+  URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
 )
 
 # third_party: boost
