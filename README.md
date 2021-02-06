@@ -68,6 +68,13 @@ for batch inference.
 ## Citations
 
 ```
+@article{zhang2021wenet,
+  title={WeNet: Production First and Production Ready End-to-End Speech Recognition Toolkit},
+  author={Zhang, Binbin and Wu, Di and Yang, Chao and Chen, Xiaoyu and Peng, Zhendong and Wang, Xiangming and Yao, Zhuoyuan and Wang, Xiong and Yu, Fan and Xie, Lei and others},
+  journal={arXiv preprint arXiv:2102.01547},
+  year={2021}
+}
+
 @article{zhang2020unified,
   title={Unified Streaming and Non-streaming Two-pass End-to-end Model for Speech Recognition},
   author={Zhang, Binbin and Wu, Di and Yao, Zhuoyuan and Wang, Xiong and Yu, Fan and Yang, Chao and Guo, Liyong and Hu, Yaguang and Xie, Lei and Lei, Xin},
