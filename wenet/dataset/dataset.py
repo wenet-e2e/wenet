@@ -340,8 +340,8 @@ class CollateFunc(object):
         else:
             xs_pad = torch.Tensor(xs)
         if train_flag:
-            ys_lengths = torch.from_numpy(
-                np.array([y.shape[0] for y in ys], dtype=np.int32))
+            ys_lengths = torch.tensor(
+                [y.shape[0] for y in ys], dtype=torch.int32))
             if len(ys) > 0:
                 if type(ys[0]) == np.ndarray:
                     ys_pad = pad_sequence(
