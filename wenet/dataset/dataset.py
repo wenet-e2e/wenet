@@ -204,7 +204,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             pass
     lengths = torch.tensor([x.shape[0] for x in waveforms])
     waveforms = pad_list(waveforms, 0)
-    
+
     if feature_extraction_conf.get("from_gpu", False):
         # it only need one transfer from cpu to gpu
         waveforms = waveforms.cuda()
@@ -221,10 +221,10 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             energy_floor=0.0
         )
         feats.append(mat)
-    
+
     keys = [x[0] for x in batch]
     labels = [x[2].split() for x in batch]
-    labels = [torch.tensor(list(map(int, x)), dtype=torch.int32) for x in labels] 
+    labels = [torch.tensor(list(map(int, x)), dtype=torch.int32) for x in labels]
     # Sort it because sorting is required in pack/pad operation
     order = torch.argsort(lengths)
     sorted_keys = [keys[i] for i in order]
@@ -332,10 +332,11 @@ class CollateFunc(object):
         # pad_sequence will FAIL in case xs is empty
         if len(xs) > 0:
             if type(xs[0]) == np.ndarray:
-                xs_pad = pad_sequence([torch.from_numpy(x).float() for x in xs],
-                                  True, 0)
+                xs_pad = pad_sequence(
+                    [torch.from_numpy(x).float() for x in xs],
+                    True, 0)
             else:
-                xs_pad = pad_sequence([x.float() for x in xs], True, 0)
+                xs_pad = pad_sequence(xs, True, 0)
         else:
             xs_pad = torch.Tensor(xs)
         if train_flag:
@@ -343,10 +344,11 @@ class CollateFunc(object):
                 np.array([y.shape[0] for y in ys], dtype=np.int32))
             if len(ys) > 0:
                 if type(ys[0]) == np.ndarray:
-                    ys_pad = pad_sequence([torch.from_numpy(y).int() for y in ys],
-                                      True, IGNORE_ID)
+                    ys_pad = pad_sequence(
+                        [torch.from_numpy(y).int() for y in ys],
+                        True, IGNORE_ID)
                 else:
-                    ys_pad = pad_sequence([y for y in ys], True, IGNORE_ID)
+                    ys_pad = pad_sequence(ys, True, IGNORE_ID)
             else:
                 ys_pad = torch.Tensor(ys)
         else:
