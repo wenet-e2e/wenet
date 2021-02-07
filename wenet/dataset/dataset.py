@@ -31,6 +31,7 @@ from torch.utils.data import Dataset, DataLoader
 import wenet.dataset.kaldi_io as kaldi_io
 from wenet.dataset.wav_distortion import distort_wav_conf
 from wenet.utils.common import IGNORE_ID
+from wenet.utils.common import pad_list
 
 def _spec_augmentation(x,
                        warp_for_time=False,
@@ -131,7 +132,7 @@ def _waveform_distortion(waveform, distortion_methods_conf):
 
 # add speed perturb when loading wav
 # return augmented, sr
-def _load_wav_with_speed(wav_file, speed):
+def _load_wav_with_speed(wav_file, speed, sample_rate):
     """ Load the wave from file and apply speed perpturbation
 
     Args:
@@ -143,15 +144,14 @@ def _load_wav_with_speed(wav_file, speed):
     if speed == 1.0:
         return torchaudio.load_wav(wav_file)
     else:
-        si, _ = torchaudio.info(wav_file)
         E = torchaudio.sox_effects.SoxEffectsChain()
         E.append_effect_to_chain('speed', speed)
-        E.append_effect_to_chain("rate", si.rate)
+        E.append_effect_to_chain("rate", sample_rate)
         E.set_input_file(wav_file)
         wav, sr = E.sox_build_flow_effects()
         # sox will normalize the waveform, scale to [-32768, 32767]
         wav = wav * (1 << 15)
-        return wav, sr
+        return wav
 
 def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                      feature_extraction_conf):
@@ -168,12 +168,12 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
     Returns:
         (keys, feats, labels)
     """
-    keys = []
+    waveforms = []
     feats = []
-    lengths = []
     wav_dither = wav_distortion_conf['wav_dither']
     wav_distortion_rate = wav_distortion_conf['wav_distortion_rate']
     distortion_methods_conf = wav_distortion_conf['distortion_methods']
+    sample_rate = feature_extraction_conf["sample_rate"]
     if speed_perturb:
         speeds = [1.0, 1.1, 0.9]
         weights = [1, 1, 1]
@@ -182,38 +182,54 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
     for i, x in enumerate(batch):
         try:
             if speed_perturb:
-                waveform, sample_rate = _load_wav_with_speed(x[1], speed)
+                waveform, _ = _load_wav_with_speed(
+                    x[1], speed, sample_rate)
             else:
-                waveform, sample_rate = torchaudio.load_wav(x[1])
+                waveform, org_sample_rate = torchaudio.load_wav(x[1])
+                if org_sample_rate != sample_rate:
+                    waveform = kaldi.resample_waveform(
+                        waveform, org_sample_rate, sample_rate)
+                waveform = waveform.squeeze(0)
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
                     waveform = waveform.detach().numpy()
                     waveform = _waveform_distortion(waveform,
                                                     distortion_methods_conf)
-                    waveform = torch.from_numpy(waveform)
-            mat = kaldi.fbank(
-                waveform,
-                num_mel_bins=feature_extraction_conf['mel_bins'],
-                frame_length=feature_extraction_conf['frame_length'],
-                frame_shift=feature_extraction_conf['frame_shift'],
-                dither=wav_dither,
-                energy_floor=0.0
-            )
-            mat = mat.detach().numpy()
-            feats.append(mat)
-            keys.append(x[0])
-            lengths.append(mat.shape[0])
+                    waveform = torch.as_tensor(waveform)
+            waveforms.append(waveform)
         except (Exception) as e:
             print(e)
             logging.warn('read utterance {} error'.format(x[0]))
             pass
-    # Sort it because sorting is required in pack/pad operation
-    order = np.argsort(lengths)[::-1]
-    sorted_keys = [keys[i] for i in order]
-    sorted_feats = [feats[i] for i in order]
+    lengths = torch.tensor([x.shape[0] for x in waveforms])
+    waveforms = pad_list(waveforms, 0)
+    
+    if feature_extraction_conf.get("from_gpu", False):
+        # it only need one transfer from cpu to gpu
+        waveforms = waveforms.cuda()
+    # right now only single fbank compute is support,
+    # already request https://github.com/pytorch/audio/issues/1245
+    for waveform, length in zip(waveforms, lengths):
+        mat = kaldi.fbank(
+            waveform[:length].view(1, -1),
+            sample_frequency=sample_rate,
+            num_mel_bins=feature_extraction_conf['mel_bins'],
+            frame_length=feature_extraction_conf['frame_length'],
+            frame_shift=feature_extraction_conf['frame_shift'],
+            dither=wav_dither,
+            energy_floor=0.0
+        )
+        feats.append(mat)
+    
+    keys = [x[0] for x in batch]
     labels = [x[2].split() for x in batch]
-    labels = [np.fromiter(map(int, x), dtype=np.int32) for x in labels]
+    labels = [torch.tensor(list(map(int, x)), dtype=torch.int32) for x in labels] 
+    # Sort it because sorting is required in pack/pad operation
+    order = torch.argsort(lengths)
+    sorted_keys = [keys[i] for i in order]
+    sorted_lengths = [lengths[i] for i in order]
+    sorted_feats = [feats[i] for i in order]
     sorted_labels = [labels[i] for i in order]
     return sorted_keys, sorted_feats, sorted_labels
 
@@ -315,16 +331,22 @@ class CollateFunc(object):
 
         # pad_sequence will FAIL in case xs is empty
         if len(xs) > 0:
-            xs_pad = pad_sequence([torch.from_numpy(x).float() for x in xs],
+            if type(xs[0]) == np.ndarray:
+                xs_pad = pad_sequence([torch.from_numpy(x).float() for x in xs],
                                   True, 0)
+            else:
+                xs_pad = pad_sequence([x.float() for x in xs], True, 0)
         else:
             xs_pad = torch.Tensor(xs)
         if train_flag:
             ys_lengths = torch.from_numpy(
                 np.array([y.shape[0] for y in ys], dtype=np.int32))
             if len(ys) > 0:
-                ys_pad = pad_sequence([torch.from_numpy(y).int() for y in ys],
+                if type(ys[0]) == np.ndarray:
+                    ys_pad = pad_sequence([torch.from_numpy(y).int() for y in ys],
                                       True, IGNORE_ID)
+                else:
+                    ys_pad = pad_sequence([y for y in ys], True, IGNORE_ID)
             else:
                 ys_pad = torch.Tensor(ys)
         else:
