@@ -180,7 +180,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --val_best
     fi
     # static dataloader is need for attention_rescoring decode
-    sed -i 's/dynamic/static/g' $dir/train.yaml
+    sed 's/from_gpu: true/from_gpu: false/g' $dir/train.yaml | sed -i 's/dynamic/static/g' > $dir/train_test.yaml
     # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
     # -1 for full chunk
     decoding_chunk_size=
@@ -192,7 +192,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         mkdir -p $test_dir
         python wenet/bin/recognize.py --gpu -1 \
             --mode $mode \
-            --config $dir/train.yaml \
+            --config $dir/train_test.yaml \
             --test_data $wave_data/$test/format.data \
             --checkpoint $decode_checkpoint \
             --beam_size 10 \
