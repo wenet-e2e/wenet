@@ -6,7 +6,8 @@
 [**Docs**](https://mobvoi.github.io/wenet/)
 | [**Tutorial**](https://mobvoi.github.io/wenet/tutorial.html)
 | [**Papers**](https://mobvoi.github.io/wenet/papers.html)
-| **Runtime** [x86](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)[android](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
+| [**Runtime(x86)**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
+| [**Runtime(android)**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
 
 **We** share neural **Net** together.
 
@@ -31,15 +32,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 Please see `examples/$dataset/s0/README.md` for WeNet benchmark on different speech datasets.
 * [AIShell-1](examples/aishell/s0/README.md)
-* [AIShell-1 with Kaldi](examples/aishell/s1/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
-
-## Documentation
-
-You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please read tutorials below:
-* [Tutorial](docs/tutorial.md)
-* [JIT in WeNet](docs/jit_in_wenet.md)
-* [Runtime](docs/runtime.md)
 
 ## Installation
 
