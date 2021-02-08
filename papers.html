@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>JIT in WeNet &mdash; Wenet  documentation</title>
+  <title>Papers &mdash; Wenet  documentation</title>
   
 
   
@@ -40,8 +40,8 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Runtime for WeNet" href="runtime.html" />
-    <link rel="prev" title="Tutorial" href="tutorial.html" /> 
+    <link rel="next" title="Tutorial" href="tutorial.html" />
+    <link rel="prev" title="Welcome to Wenet’s documentation!" href="index.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -88,9 +88,9 @@
             
               <p class="caption"><span class="caption-text">Tutorial:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Papers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">JIT in WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
 </ul>
 
@@ -140,13 +140,13 @@
     
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
         
-      <li>JIT in WeNet</li>
+      <li>Papers</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="_sources/jit_in_wenet.md.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/papers.md.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -183,37 +183,12 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="jit-in-wenet">
-<h1>JIT in WeNet<a class="headerlink" href="#jit-in-wenet" title="Permalink to this headline">¶</a></h1>
-<p>We want that our PyTorch model can be directly exported by torch.jit.script method,
-which is essential for deploying the model to production.</p>
-<p>See the following resource for how to deploy PyTorch models in production in details.</p>
+<div class="section" id="papers">
+<h1>Papers<a class="headerlink" href="#papers" title="Permalink to this headline">¶</a></h1>
 <ul class="simple">
-<li><p><a class="reference external" href="https://pytorch.org/tutorials/beginner/Intro_to_TorchScript_tutorial.html">INTRODUCTION TO TORCHSCRIPT</a></p></li>
-<li><p><a class="reference external" href="https://pytorch.org/docs/stable/jit_language_reference.html#language-reference">TORCHSCRIPT LANGUAGE REFERENCE</a></p></li>
-<li><p><a class="reference external" href="https://pytorch.org/tutorials/advanced/cpp_export.html">LOADING A TORCHSCRIPT MODEL IN C++</a></p></li>
-<li><p><a class="reference external" href="https://www.youtube.com/watch?v=2awmrMRf0dA&amp;t=574s">TorchScript and PyTorch JIT | Deep Dive</a></p></li>
-<li><p><a class="reference external" href="https://www.youtube.com/watch?v=St3gdHJzic0">Research to Production: PyTorch JIT/TorchScript Updates</a></p></li>
+<li><p><a class="reference external" href="https://arxiv.org/abs/2102.01547">WeNet: Production First and Production Ready End-to-End Speech Recognition Toolkit</a></p></li>
+<li><p>U2: <a class="reference external" href="https://arxiv.org/abs/2012.05481">Unified Streaming and Non-streaming Two-pass End-to-end Model for Speech Recognition</a></p></li>
 </ul>
-<p>To ensure that, we will try to export the model before training stage.
-If it fails, we should modify the training code to satisfy the export requirements.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># See in wenet/bin/train.py</span>
-<span class="n">script_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">script</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-<span class="n">script_model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;init.zip&#39;</span><span class="p">))</span>
-</pre></div>
-</div>
-<p>Two principles should be taken into consideration when we contribute our python code
-to WeNet, especially for the subclass of torch.nn.Module, and for the forward function.</p>
-<ol class="simple">
-<li><p>Know what is allowed and what is disallowed.</p>
-<ul class="simple">
-<li><p><a class="reference external" href="https://pytorch.org/docs/master/jit_unsupported.html#jit-unsupported">Torch and Tensor Unsupported Attributes</a></p></li>
-<li><p><a class="reference external" href="https://pytorch.org/docs/master/jit_python_reference.html#python-language-reference">Python Language Reference Coverage</a></p></li>
-</ul>
-</li>
-<li><p>Try to use explicit typing as much as possible. You can try to do type checking
-forced by typeguard, see https://typeguard.readthedocs.io/en/latest/userguide.html for details.</p></li>
-</ol>
 </div>
 
 
@@ -222,8 +197,8 @@ forced by typeguard, see https://typeguard.readthedocs.io/en/latest/userguide.ht
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="runtime.html" class="btn btn-neutral float-right" title="Runtime for WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="tutorial.html" class="btn btn-neutral float-left" title="Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tutorial.html" class="btn btn-neutral float-right" title="Tutorial" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Wenet’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>
