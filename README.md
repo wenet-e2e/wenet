@@ -1,5 +1,14 @@
 # WeNet
 
+[![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
+[![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/mobvoi/wenet)
+
+[**Docs**](https://mobvoi.github.io/wenet/)
+| [**Tutorial**](https://mobvoi.github.io/wenet/tutorial.html)
+| [**Papers**](https://mobvoi.github.io/wenet/papers.html)
+| [**Runtime(x86)**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
+| [**Runtime(android)**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
+
 **We** share neural **Net** together.
 
 The main motivation of WeNet is to close the gap between research and production end-to-end (E2E) speech recognition models,
@@ -23,15 +32,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 Please see `examples/$dataset/s0/README.md` for WeNet benchmark on different speech datasets.
 * [AIShell-1](examples/aishell/s0/README.md)
-* [AIShell-1 with Kaldi](examples/aishell/s1/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
-
-## Documentation
-
-You can visit [Docs](https://mobvoi.github.io/wenet/) for WeNet Sphinx documentation. Or please read tutorials below:
-* [Tutorial](docs/tutorial.md)
-* [JIT in WeNet](docs/jit_in_wenet.md)
-* [Runtime](docs/runtime.md)
 
 ## Installation
 
