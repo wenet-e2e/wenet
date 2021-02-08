@@ -60,6 +60,8 @@ If it fails, please scan the personal QR code on the right with contact info lik
 | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/wenet.jpeg) | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/binbin.jpeg) |
 |-------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
 
+If you can not access the QR image, please access it [Here](https://gitee.com/robin1001/qr/tree/master)
+
 ## Acknowledge
 
 We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
