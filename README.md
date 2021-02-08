@@ -57,8 +57,8 @@ In addition to discussing in [Github Issues](https://github.com/mobvoi/wenet/iss
 Please scan the following QR code in WeChat to join the chat group.
 If it fails, please scan the personal QR code on the right with contact info like "wenet", and we will invite you to the chat group.
 
-| ![ Wenet chat group ](https://gitee.com/robin1001/qr/blob/master/wenet.jpeg) | ![ Wenet chat group ](https://gitee.com/robin1001/qr/blob/master/binbin.jpeg) |
-|------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| ![ Wenet chat group ](https://gitee.com/robin1001/qr/raw/master/wenet.jpeg) | ![ Wenet chat group ](https://gitee.com/robin1001/qr/raw/master/binbin.jpeg) |
+|------------------------------------------------------------------------------|-----------------------------------------------------------------------------|
 
 ## Acknowledge
 
