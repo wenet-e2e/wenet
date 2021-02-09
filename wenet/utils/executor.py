@@ -75,8 +75,9 @@ class Executor:
                     continue
                 loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
                                                  target_lengths)
-                num_seen_utts += num_utts
-                total_loss += loss.item() * num_utts
+                if torch.isfinite(loss):
+                    num_seen_utts += num_utts
+                    total_loss += loss.item() * num_utts
                 if batch_idx % log_interval == 0:
                     logging.debug('CV Batch {}/{} loss {:.6f} loss_att {:.6f} '
                                   'loss_ctc {:.6f} history loss {:.6f}'.format(
