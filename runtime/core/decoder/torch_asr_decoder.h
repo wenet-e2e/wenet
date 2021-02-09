@@ -36,6 +36,9 @@ class TorchAsrDecoder {
   // Return true if all feature has been decoded, else return false
   bool Decode();
   void Reset();
+  int num_frames_in_current_chunk() const {
+    return num_frames_in_current_chunk_;
+  }
   std::string result() const { return result_; }
 
  private:
@@ -60,6 +63,7 @@ class TorchAsrDecoder {
 
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
 
+  int num_frames_in_current_chunk_;
   std::string result_;
 
  public:
