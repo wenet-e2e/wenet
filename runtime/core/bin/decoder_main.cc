@@ -19,6 +19,7 @@
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
 DEFINE_int32(num_threads, 1, "num threads for device");
+DEFINE_bool(simulate_streaming, false, "simulate streaming input");
 DEFINE_string(model_path, "", "pytorch exported model path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(dict_path, "", "dict path");
@@ -70,12 +71,25 @@ int main(int argc, char *argv[]) {
       auto start = std::chrono::steady_clock::now();
       bool finish = decoder.Decode();
       auto end = std::chrono::steady_clock::now();
-      decode_time +=
+      auto chunk_decode_time =
           std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
               .count();
+      decode_time += chunk_decode_time;
       LOG(INFO) << "Partial result: " << decoder.result();
+
       if (finish) {
         break;
+      } else if (FLAGS_chunk_size > 0 && FLAGS_simulate_streaming) {
+        float frame_shift_in_ms =
+            static_cast<float>(feature_config.frame_shift) / sample_rate * 1000;
+        auto wait_time =
+            decoder.num_frames_in_current_chunk() * frame_shift_in_ms -
+            chunk_decode_time;
+        if (wait_time > 0) {
+          LOG(INFO) << "Simulate streaming, waiting for " << wait_time << "ms";
+          std::this_thread::sleep_for(
+              std::chrono::milliseconds(static_cast<int>(wait_time)));
+        }
       }
     }
     LOG(INFO) << "Final result: " << decoder.result();
