@@ -3,6 +3,10 @@
 #ifndef FRONTEND_FFT_H_
 #define FRONTEND_FFT_H_
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 namespace wenet {
 
 // Fast Fourier Transform
