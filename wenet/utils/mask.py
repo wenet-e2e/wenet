@@ -42,6 +42,7 @@ def subsequent_mask(
 def subsequent_chunk_mask(
         size: int,
         chunk_size: int,
+        num_left_chunks: int,
         device: torch.device = torch.device("cpu"),
 ) -> torch.Tensor:
     """Create mask for subsequent steps (size, size) with chunk size,
@@ -50,6 +51,9 @@ def subsequent_chunk_mask(
     Args:
         size (int): size of mask
         chunk_size (int): size of chunk
+        num_left_chunks (int): number of left chunks
+            <0: use full chunk
+            >=0: use num_left_chunks
         device (torch.device): "cpu" or "cuda" or torch.Tensor.device
 
     Returns:
@@ -64,14 +68,18 @@ def subsequent_chunk_mask(
     """
     ret = torch.zeros(size, size, device=device, dtype=torch.bool)
     for i in range(size):
+        if num_left_chunks < 0:
+            start = 0
+        else:
+            start = max((i // chunk_size - num_left_chunks) * chunk_size, 0)
         ending = min((i // chunk_size + 1) * chunk_size, size)
-        ret[i, 0:ending] = True
+        ret[i, start:ending] = True
     return ret
 
 
 def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
                             use_dynamic_chunk: bool, decoding_chunk_size: int,
-                            static_chunk_size: int):
+                            static_chunk_size: int, num_left_chunks: int):
     """ Apply optional mask for encoder.
 
     Args:
@@ -106,11 +114,13 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
             else:
                 chunk_size = chunk_size % 25 + 1
         chunk_masks = subsequent_chunk_mask(xs.size(1), chunk_size,
+                                            num_left_chunks,
                                             xs.device)  # (L, L)
         chunk_masks = chunk_masks.unsqueeze(0)  # (1, L, L)
         chunk_masks = masks & chunk_masks  # (B, L, L)
     elif static_chunk_size > 0:
         chunk_masks = subsequent_chunk_mask(xs.size(1), static_chunk_size,
+                                            num_left_chunks,
                                             xs.device)  # (L, L)
         chunk_masks = chunk_masks.unsqueeze(0)  # (1, L, L)
         chunk_masks = masks & chunk_masks  # (B, L, L)
