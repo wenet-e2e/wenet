@@ -117,6 +117,7 @@ class BaseEncoder(torch.nn.Module):
         xs: torch.Tensor,
         xs_lens: torch.Tensor,
         decoding_chunk_size: int = 0,
+        num_left_chunks: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 
@@ -127,6 +128,10 @@ class BaseEncoder(torch.nn.Module):
                 0: default for training, use random dynamic chunk.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
+            num_left_chunks: number of left chunks
+                0: default for training
+                <0: for decoding, use all left chunks
+                >0: for decoding, use num_left_chunks
         Returns:
             encoder output tensor, lens and mask
         """
@@ -137,7 +142,8 @@ class BaseEncoder(torch.nn.Module):
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               decoding_chunk_size,
-                                              self.static_chunk_size)
+                                              self.static_chunk_size,
+                                              num_left_chunks)
         for layer in self.encoders:
             xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb)
         if self.normalize_before:
