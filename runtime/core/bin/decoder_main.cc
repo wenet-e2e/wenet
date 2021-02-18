@@ -3,7 +3,7 @@
 
 #include <chrono>
 #include <iomanip>
-#include <unordered_map>
+#include <utility>
 
 #include "gflags/gflags.h"
 #include "glog/logging.h"
@@ -42,9 +42,12 @@ int main(int argc, char *argv[]) {
   auto feature_pipeline =
       std::make_shared<wenet::FeaturePipeline>(feature_config);
 
-  std::unordered_map<std::string, std::string> waves;
+  if (FLAGS_wav_path.empty() && FLAGS_wav_scp.empty()) {
+    LOG(FATAL) << "Please provide the wave path or the wav scp.";
+  }
+  std::vector<std::pair<std::string, std::string>> waves;
   if (!FLAGS_wav_path.empty()) {
-    waves["test"] = FLAGS_wav_path;
+    waves.emplace_back(make_pair("test", FLAGS_wav_path));
   } else {
     std::ifstream wav_scp(FLAGS_wav_scp);
     std::string line;
@@ -52,14 +55,16 @@ int main(int argc, char *argv[]) {
       std::vector<std::string> strs;
       wenet::SplitString(line, &strs);
       CHECK_GE(strs.size(), 2);
-      std::string utt = strs[0];
-      std::string wav = strs[1];
-      waves[utt] = wav;
+      waves.emplace_back(make_pair(strs[0], strs[1]));
     }
   }
 
   std::ofstream result;
-  result.open(FLAGS_result);
+  if (!FLAGS_result.empty()) {
+    result.open(FLAGS_result, std::ios::out);
+  }
+  std::ostream& buffer = FLAGS_result.empty() ? std::cout : result;
+
   int total_waves_dur = 0;
   int total_decode_time = 0;
   for (auto &wav : waves) {
@@ -104,7 +109,7 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "Final result: " << decoder.result();
     LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time
               << "ms.";
-    result << wav.first << " " << decoder.result() << std::endl;
+    buffer << wav.first << " " << decoder.result() << std::endl;
 
     total_waves_dur += wave_dur;
     total_decode_time += decode_time;
