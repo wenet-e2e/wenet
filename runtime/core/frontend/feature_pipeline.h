@@ -35,8 +35,9 @@ struct FeaturePipelineConfig {
   FeaturePipelineConfig()
       : num_bins(80),        // 80 dim fbank
         sample_rate(16000),  // 16k sample rate
-        frame_length(400),   // frame length 25ms,
-        frame_shift(160) {}
+        frame_length(400),   // frame length 25ms
+        frame_shift(160) {   // frame shift 10ms
+  }
 
   void Info() const {
     LOG(INFO) << "feature pipeline config"

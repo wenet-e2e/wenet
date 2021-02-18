@@ -25,6 +25,7 @@ void TorchAsrDecoder::Reset() {
   start_ = false;
   result_ = "";
   offset_ = 0;
+  num_frames_in_current_chunk_ = 0;
   subsampling_cache_ = std::move(torch::jit::IValue());
   elayers_output_cache_ = std::move(torch::jit::IValue());
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
@@ -70,6 +71,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   std::vector<std::vector<float>> chunk_feats;
   // If not okay, that means we reach the end of the input
   bool finish = !feature_pipeline_->Read(num_requried_frames, &chunk_feats);
+  num_frames_in_current_chunk_ = chunk_feats.size();
   LOG(INFO) << "Required " << num_requried_frames << " get "
             << chunk_feats.size();
   int num_frames = cached_feature_.size() + chunk_feats.size();

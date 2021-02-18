@@ -6,31 +6,28 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET off)
-get_filename_component(fc_base "../fc_base" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
 
 # third_party: gflags
 FetchContent_Declare(
   gflags
-  GIT_REPOSITORY https://github.com/gflags/gflags.git
-  GIT_TAG        v2.2.0
-  GIT_PROGRESS   TRUE
+  URL      https://github.com/gflags/gflags/archive/v2.2.0.zip
+  URL_HASH SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
 )
 
 # third_party: glog
 FetchContent_Declare(
   glog
-  GIT_REPOSITORY https://github.com/google/glog.git
-  GIT_TAG        v0.4.0
-  GIT_PROGRESS   TRUE
+  URL      https://github.com/google/glog/archive/v0.4.0.zip
+  URL_HASH SHA256=9e1b54eb2782f53cd8af107ecf08d2ab64b8d0dc2b7f5594472f3bd63ca85cdc
 )
 
 # third_party: gtest
 FetchContent_Declare(
   googletest
-  GIT_REPOSITORY https://github.com/google/googletest.git
-  GIT_TAG        release-1.10.0
-  GIT_PROGRESS   TRUE
+  URL      https://github.com/google/googletest/archive/release-1.10.0.zip
+  URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
 )
 
 # third_party: boost
@@ -62,10 +59,19 @@ FetchContent_Declare(
   URL_HASH ${URL_HASH}
 )
 
+set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
 FetchContent_MakeAvailable(gflags glog googletest boost libtorch)
 include_directories(${boost_SOURCE_DIR})
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG -std=c++14 -pthread")
+if(MSVC)
+  file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
+  file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
+endif(MSVC)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
+endif()
 
 # utils
 add_library(utils STATIC utils/utils.cc)
