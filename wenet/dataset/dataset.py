@@ -173,7 +173,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
     wav_dither = wav_distortion_conf['wav_dither']
     wav_distortion_rate = wav_distortion_conf['wav_distortion_rate']
     distortion_methods_conf = wav_distortion_conf['distortion_methods']
-    sample_rate = feature_extraction_conf["sample_rate"]
+    sample_rate = feature_extraction_conf.get("sample_rate", 16000)
     if speed_perturb:
         speeds = [1.0, 1.1, 0.9]
         weights = [1, 1, 1]
