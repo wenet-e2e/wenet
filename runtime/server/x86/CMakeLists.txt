@@ -6,7 +6,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET off)
-get_filename_component(fc_base "../fc_base" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
 
 # third_party: gflags
@@ -59,10 +59,19 @@ FetchContent_Declare(
   URL_HASH ${URL_HASH}
 )
 
+set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
 FetchContent_MakeAvailable(gflags glog googletest boost libtorch)
 include_directories(${boost_SOURCE_DIR})
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG -std=c++14 -pthread")
+if(MSVC)
+  file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
+  file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
+endif(MSVC)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
+endif()
 
 # utils
 add_library(utils STATIC utils/utils.cc)
