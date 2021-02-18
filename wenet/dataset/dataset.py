@@ -142,7 +142,7 @@ def _load_wav_with_speed(wav_file, speed, sample_rate):
         augmented feature
     """
     if speed == 1.0:
-        return torchaudio.load_wav(wav_file)
+        return torchaudio.load_wav(wav_file)[0]
     else:
         E = torchaudio.sox_effects.SoxEffectsChain()
         E.append_effect_to_chain('speed', speed)
@@ -182,14 +182,14 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
     for i, x in enumerate(batch):
         try:
             if speed_perturb:
-                waveform, _ = _load_wav_with_speed(
+                waveform = _load_wav_with_speed(
                     x[1], speed, sample_rate)
             else:
                 waveform, org_sample_rate = torchaudio.load_wav(x[1])
                 if org_sample_rate != sample_rate:
                     waveform = kaldi.resample_waveform(
                         waveform, org_sample_rate, sample_rate)
-                waveform = waveform.squeeze(0)
+            waveform = waveform.squeeze(0)
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
