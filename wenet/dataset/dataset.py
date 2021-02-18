@@ -262,7 +262,7 @@ def _load_feature(batch):
     sorted_keys = [keys[i] for i in order]
     sorted_feats = [feats[i] for i in order]
     labels = [x[2].split() for x in batch]
-    labels = [torch.as_tensor(list(map(int, x)), dtype=torch.int32) for x in labels] 
+    labels = [torch.as_tensor(list(map(int, x)), dtype=torch.int32) for x in labels]
     sorted_labels = [labels[i] for i in order]
     return sorted_keys, sorted_feats, sorted_labels
 
@@ -324,7 +324,8 @@ class CollateFunc(object):
 
         # optinoal spec augmentation
         if self.spec_aug:
-            xs = [torch.as_tensor(_spec_augmentation(x, **self.spec_aug_conf)) for x in xs]
+            xs = [torch.as_tensor(
+                _spec_augmentation(x, **self.spec_aug_conf)) for x in xs]
 
         # padding
         xs_lengths = torch.as_tensor(
