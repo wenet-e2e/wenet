@@ -250,7 +250,7 @@ def _load_feature(batch):
     lengths = []
     for i, x in enumerate(batch):
         try:
-            mat = kaldi_io.read_mat(x[1])
+            mat = torch.as_tensor(kaldi_io.read_mat(x[1]))
             feats.append(mat)
             keys.append(x[0])
             lengths.append(mat.shape[0])
@@ -258,11 +258,11 @@ def _load_feature(batch):
             # logging.warn('read utterance {} error'.format(x[0]))
             pass
     # Sort it because sorting is required in pack/pad operation
-    order = np.argsort(lengths)[::-1]
+    order = torch.argsort(torch.as_tensor(lengths))
     sorted_keys = [keys[i] for i in order]
     sorted_feats = [feats[i] for i in order]
     labels = [x[2].split() for x in batch]
-    labels = [np.fromiter(map(int, x), dtype=np.int32) for x in labels]
+    labels = [torch.as_tensor(list(map(int, x)), dtype=torch.int32) for x in labels] 
     sorted_labels = [labels[i] for i in order]
     return sorted_keys, sorted_feats, sorted_labels
 
@@ -307,9 +307,10 @@ class CollateFunc(object):
         else:
             keys, xs, ys = _load_feature(batch[0])
 
-        train_flag = True
         if ys is None:
             train_flag = False
+        else:
+            train_flag = True
 
         # optional feature dither d ~ (-a, a) on fbank feature
         # a ~ (0, 0.5)
@@ -323,32 +324,22 @@ class CollateFunc(object):
 
         # optinoal spec augmentation
         if self.spec_aug:
-            xs = [_spec_augmentation(x, **self.spec_aug_conf) for x in xs]
+            xs = [torch.as_tensor(_spec_augmentation(x, **self.spec_aug_conf)) for x in xs]
 
         # padding
-        xs_lengths = torch.from_numpy(
-            np.array([x.shape[0] for x in xs], dtype=np.int32))
+        xs_lengths = torch.as_tensor(
+            [x.shape[0] for x in xs], dtype=torch.int32)
 
         # pad_sequence will FAIL in case xs is empty
         if len(xs) > 0:
-            if type(xs[0]) == np.ndarray:
-                xs_pad = pad_sequence(
-                    [torch.from_numpy(x).float() for x in xs],
-                    True, 0)
-            else:
-                xs_pad = pad_sequence(xs, True, 0)
+            xs_pad = pad_sequence([x.float() for x in xs], True, 0)
         else:
             xs_pad = torch.Tensor(xs)
         if train_flag:
-            ys_lengths = torch.tensor(
-                [y.shape[0] for y in ys], dtype=torch.int32))
+            ys_lengths = torch.as_tensor(
+                [y.shape[0] for y in ys], dtype=torch.int32)
             if len(ys) > 0:
-                if type(ys[0]) == np.ndarray:
-                    ys_pad = pad_sequence(
-                        [torch.from_numpy(y).int() for y in ys],
-                        True, IGNORE_ID)
-                else:
-                    ys_pad = pad_sequence(ys, True, IGNORE_ID)
+                ys_pad = pad_sequence(ys, True, IGNORE_ID)
             else:
                 ys_pad = torch.Tensor(ys)
         else:
