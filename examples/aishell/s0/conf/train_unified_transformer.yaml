@@ -12,6 +12,7 @@ encoder_conf:
     input_layer: conv2d # encoder architecture type
     normalize_before: true
     use_dynamic_chunk: true
+    use_dynamic_left_chunk: false
 
 # decoder related
 decoder: transformer
