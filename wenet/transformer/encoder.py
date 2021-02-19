@@ -44,6 +44,7 @@ class BaseEncoder(torch.nn.Module):
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
+        use_dynamic_left_chunk: bool = False,
     ):
         """
         Args:
@@ -73,6 +74,9 @@ class BaseEncoder(torch.nn.Module):
             use_dynamic_chunk (bool): whether use dynamic chunk size for
                 training or not, You can only use fixed chunk(chunk_size > 0)
                 or dyanmic chunk size(use_dynamic_chunk = True)
+            global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
+            use_dynamic_left_chunk (bool): whether use dynamic left chunk in
+                dynamic chunk training
         """
         assert check_argument_types()
         super().__init__()
@@ -108,6 +112,7 @@ class BaseEncoder(torch.nn.Module):
         self.after_norm = torch.nn.LayerNorm(output_size, eps=1e-12)
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
+        self.use_dynamic_left_chunk = use_dynamic_left_chunk
 
     def output_size(self) -> int:
         return self._output_size
@@ -117,6 +122,7 @@ class BaseEncoder(torch.nn.Module):
         xs: torch.Tensor,
         xs_lens: torch.Tensor,
         decoding_chunk_size: int = 0,
+        num_decoding_left_chunks: int = -1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 
@@ -127,6 +133,10 @@ class BaseEncoder(torch.nn.Module):
                 0: default for training, use random dynamic chunk.
                 <0: for decoding, use full chunk.
                 >0: for decoding, use fixed chunk size as set.
+            num_decoding_left_chunks: number of left chunks, this is for decoding,
+            the chunk size is decoding_chunk_size.
+                >=0: use num_decoding_left_chunks
+                <0: use all left chunks
         Returns:
             encoder output tensor, lens and mask
         """
@@ -136,8 +146,10 @@ class BaseEncoder(torch.nn.Module):
         xs, pos_emb, masks = self.embed(xs, masks)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
+                                              self.use_dynamic_left_chunk,
                                               decoding_chunk_size,
-                                              self.static_chunk_size)
+                                              self.static_chunk_size,
+                                              num_decoding_left_chunks)
         for layer in self.encoders:
             xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb)
         if self.normalize_before:
@@ -299,6 +311,7 @@ class TransformerEncoder(BaseEncoder):
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
+        use_dynamic_left_chunk: bool = False,
     ):
         """ Construct TransformerEncoder
 
@@ -310,7 +323,7 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn)
+                         global_cmvn, use_dynamic_left_chunk)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
@@ -341,6 +354,7 @@ class ConformerEncoder(BaseEncoder):
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
+        use_dynamic_left_chunk: bool = False,
         positionwise_conv_kernel_size: int = 1,
         macaron_style: bool = True,
         selfattention_layer_type: str = "rel_selfattn",
@@ -372,7 +386,7 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn)
+                         global_cmvn, use_dynamic_left_chunk)
         activation = get_activation(activation_type)
 
         # self-attention module definition
