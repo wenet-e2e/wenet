@@ -71,7 +71,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_decoding_left_chunks',
                         type=int,
                         default=-1,
-                        help='''number of left chunks for decoding''')
+                        help='number of left chunks for decoding')
 
     parser.add_argument('--simulate_streaming',
                         action='store_true',
