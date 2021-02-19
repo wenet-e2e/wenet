@@ -179,8 +179,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --num ${average_num} \
             --val_best
     fi
-    # static dataloader is need for attention_rescoring decode
-    sed -i 's/dynamic/static/g' $dir/train.yaml
     # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
     # -1 for full chunk
     decoding_chunk_size=
