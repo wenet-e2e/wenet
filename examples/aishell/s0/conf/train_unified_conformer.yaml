@@ -19,6 +19,7 @@ encoder_conf:
     causal: true
     use_dynamic_chunk: true
     cnn_module_norm: 'layer_norm' # using nn.LayerNorm makes model converge faster
+    use_dynamic_left_chunk: false
 
 # decoder related
 decoder: transformer

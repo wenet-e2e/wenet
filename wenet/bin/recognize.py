@@ -68,7 +68,7 @@ if __name__ == '__main__':
                                 <0: for decoding, use full chunk.
                                 >0: for decoding, use fixed chunk size as set.
                                 0: used for training, it's prohibited here''')
-    parser.add_argument('--num_left_chunks',
+    parser.add_argument('--num_decoding_left_chunks',
                         type=int,
                         default=-1,
                         help='''number of left chunks for decoding''')
@@ -146,7 +146,7 @@ if __name__ == '__main__':
                     feats_lengths,
                     beam_size=args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
-                    num_left_chunks=args.num_left_chunks,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp.tolist() for hyp in hyps]
             elif args.mode == 'ctc_greedy_search':
@@ -154,7 +154,7 @@ if __name__ == '__main__':
                     feats,
                     feats_lengths,
                     decoding_chunk_size=args.decoding_chunk_size,
-                    num_left_chunks=args.num_left_chunks,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
@@ -166,7 +166,7 @@ if __name__ == '__main__':
                     feats_lengths,
                     args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
-                    num_left_chunks=args.num_left_chunks,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp]
             elif args.mode == 'attention_rescoring':
@@ -176,7 +176,7 @@ if __name__ == '__main__':
                     feats_lengths,
                     args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
-                    num_left_chunks=args.num_left_chunks,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
                     ctc_weight=args.ctc_weight,
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp]
