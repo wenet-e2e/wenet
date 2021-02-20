@@ -74,3 +74,12 @@ model, websocket server and websocket client enable streaming ASR.
 
 ![Runtime server demo](../../../docs/images/runtime_server.gif)
 
+## Run the demo in Docker
+
+When you encounter an issue trying to run the demo, we encourage you to run the demo in
+the Docker container. The image contains the latest release, a shell script and
+several waves to run the demo. Just run it as follows:
+
+``` bash
+docker run -it mobvoiwenet/wenet:v0.1.0 bash /home/run.sh
+```
