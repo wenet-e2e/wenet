@@ -29,6 +29,7 @@ void TorchAsrDecoder::Reset() {
   subsampling_cache_ = std::move(torch::jit::IValue());
   elayers_output_cache_ = std::move(torch::jit::IValue());
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
+  encoder_outs_.clear();
   cached_feature_.clear();
   ctc_prefix_beam_searcher_->Reset();
   feature_pipeline_->Reset();
@@ -44,7 +45,8 @@ bool TorchAsrDecoder::Decode() {
     LOG(INFO) << "Rescoring cost latency: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end -
                                                                        start)
-                     .count() << "ms.";
+                     .count()
+              << "ms.";
     return true;
   }
   return false;
@@ -86,38 +88,38 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                               .clone();
       feats[0][i] = std::move(row);
     }
-    int offset = cached_feature_.size();
     for (size_t i = 0; i < chunk_feats.size(); ++i) {
       torch::Tensor row =
           torch::from_blob(chunk_feats[i].data(), {feature_dim}, torch::kFloat)
               .clone();
-      feats[0][offset + i] = std::move(row);
+      feats[0][cached_feature_.size() + i] = std::move(row);
     }
 
     // 2. Encoder chunk forward
+    int requried_cache_size = opts_.chunk_size * opts_.num_left_chunks;
     torch::NoGradGuard no_grad;
-    std::vector<torch::jit::IValue> inputs = {
-        feats, subsampling_cache_, elayers_output_cache_, conformer_cnn_cache_};
+    std::vector<torch::jit::IValue> inputs = {feats,
+                                              offset_,
+                                              requried_cache_size,
+                                              subsampling_cache_,
+                                              elayers_output_cache_,
+                                              conformer_cnn_cache_};
     auto outputs = model_->torch_model()
                        ->get_method("forward_encoder_chunk")(inputs)
                        .toTuple()
                        ->elements();
     CHECK_EQ(outputs.size(), 4);
-    // The encoder_out_ is from time 0 to current chunk, and offset_ is the
-    // offset of current chunk, so to get output of current chunk, just slice
-    // as the following code
-    encoder_out_ = outputs[0].toTensor();
+    torch::Tensor chunk_out = outputs[0].toTensor();
     subsampling_cache_ = outputs[1];
     elayers_output_cache_ = outputs[2];
     conformer_cnn_cache_ = outputs[3];
-    torch::Tensor chunk_out =
-        encoder_out_.slice(1, offset_, encoder_out_.size(1));
-    offset_ = encoder_out_.size(1);
+    offset_ += chunk_out.size(1);
     // The first dimension is a fake dimension, it's 1 for one utterance,
     // so just ignore it here.
     torch::Tensor ctc_log_probs = model_->torch_model()
                                       ->run_method("ctc_activation", chunk_out)
                                       .toTensor()[0];
+    encoder_outs_.push_back(std::move(chunk_out));
     ctc_prefix_beam_searcher_->Search(ctc_log_probs);
     auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
     const std::vector<int>& best_hyp = hypotheses[0];
@@ -175,10 +177,11 @@ void TorchAsrDecoder::AttentionRescoring() {
     }
   }
 
-  // Step 2: forward attention decoder by hyps and corresponding encoder_out_
+  // Step 2: forward attention decoder by hyps and corresponding encoder_outs_
+  torch::Tensor encoder_out = torch::cat(encoder_outs_, 1);
   torch::Tensor probs = model_->torch_model()
                             ->run_method("forward_attention_decoder",
-                                         hyps_tensor, hyps_length, encoder_out_)
+                                         hyps_tensor, hyps_length, encoder_out)
                             .toTensor();
   CHECK_EQ(probs.size(0), num_hyps);
   CHECK_EQ(probs.size(1), max_hyps_len);

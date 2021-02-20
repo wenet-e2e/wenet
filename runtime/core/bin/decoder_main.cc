@@ -19,6 +19,7 @@
 
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
+DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
 DEFINE_int32(num_threads, 1, "num threads for device");
 DEFINE_bool(simulate_streaming, false, "simulate streaming input");
 DEFINE_string(model_path, "", "pytorch exported model path");
@@ -36,6 +37,7 @@ int main(int argc, char *argv[]) {
   wenet::SymbolTable symbol_table(FLAGS_dict_path);
   wenet::DecodeOptions decode_config;
   decode_config.chunk_size = FLAGS_chunk_size;
+  decode_config.num_left_chunks = FLAGS_num_left_chunks;
   wenet::FeaturePipelineConfig feature_config;
   feature_config.num_bins = FLAGS_num_bins;
   const int sample_rate = 16000;
