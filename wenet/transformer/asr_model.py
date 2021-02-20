@@ -141,7 +141,8 @@ class ASRModel(torch.nn.Module):
         # 1. Encoder
         if simulate_streaming and decoding_chunk_size > 0:
             encoder_out, encoder_mask = self.encoder.forward_chunk_by_chunk(
-                speech, decoding_chunk_size=decoding_chunk_size
+                speech, decoding_chunk_size=decoding_chunk_size,
+                num_decoding_left_chunks=num_decoding_left_chunks
             )  # (B, maxlen, encoder_dim)
         else:
             encoder_out, encoder_mask = self.encoder(

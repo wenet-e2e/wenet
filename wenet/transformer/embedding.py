@@ -43,10 +43,9 @@ class PositionalEncoding(torch.nn.Module):
         self.pe[:, 1::2] = torch.cos(position * div_term)
         self.pe = self.pe.unsqueeze(0)
 
-    def forward(
-            self,
-            x: torch.Tensor,
-            offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self,
+                x: torch.Tensor,
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """Add positional encoding.
 
         Args:
@@ -63,7 +62,7 @@ class PositionalEncoding(torch.nn.Module):
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
-    def position_encoding(self, size: int) -> torch.Tensor:
+    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
         """ For getting encoding in a streaming fashion
 
         Attention!!!!!
@@ -73,13 +72,14 @@ class PositionalEncoding(torch.nn.Module):
         be applied several times.
 
         Args:
+            offset (int): start offset
             size (int): requried size of position encoding
 
         Returns:
             torch.Tensor: Corresponding encoding
         """
-        assert size < self.max_len
-        return self.dropout(self.pe[:, :size])
+        assert offset + size < self.max_len
+        return self.dropout(self.pe[:, offset:offset + size])
 
 
 class RelPositionalEncoding(PositionalEncoding):
@@ -94,10 +94,9 @@ class RelPositionalEncoding(PositionalEncoding):
         """Initialize class."""
         super().__init__(d_model, dropout_rate, max_len, reverse=True)
 
-    def forward(
-            self,
-            x: torch.Tensor,
-            offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self,
+                x: torch.Tensor,
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
