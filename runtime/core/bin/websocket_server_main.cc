@@ -24,6 +24,7 @@
 DEFINE_int32(port, 10086, "websocket listening port");
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
+DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
 DEFINE_string(model_path, "", "pytorch exported model path");
 DEFINE_string(wav_path, "", "wav path");
 DEFINE_string(dict_path, "", "dict path");
@@ -36,6 +37,7 @@ int main(int argc, char *argv[]) {
   feature_config->num_bins = FLAGS_num_bins;
   auto decode_config = std::make_shared<wenet::DecodeOptions>();
   decode_config->chunk_size = FLAGS_chunk_size;
+  decode_config->num_left_chunks = FLAGS_num_left_chunks;
   auto symbol_table = std::make_shared<wenet::SymbolTable>(FLAGS_dict_path);
   auto model = std::make_shared<wenet::TorchAsrModel>();
   model->Read(FLAGS_model_path);

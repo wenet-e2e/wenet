@@ -23,6 +23,7 @@ using TorchModule = torch::jit::script::Module;
 
 struct DecodeOptions {
   int chunk_size = 16;
+  int num_left_chunks = -1;
   CtcPrefixBeamSearchOptions ctc_search_opts;
 };
 
@@ -58,7 +59,7 @@ class TorchAsrDecoder {
   // transformer/conformer encoder layers output cache
   torch::jit::IValue elayers_output_cache_;
   torch::jit::IValue conformer_cnn_cache_;
-  torch::Tensor encoder_out_;
+  std::vector<torch::Tensor> encoder_outs_;
   int offset_ = 0;  // offset
 
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
