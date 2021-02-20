@@ -45,7 +45,8 @@ bool TorchAsrDecoder::Decode() {
     LOG(INFO) << "Rescoring cost latency: "
               << std::chrono::duration_cast<std::chrono::milliseconds>(end -
                                                                        start)
-                     .count() << "ms.";
+                     .count()
+              << "ms.";
     return true;
   }
   return false;
@@ -87,19 +88,22 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                               .clone();
       feats[0][i] = std::move(row);
     }
-    int offset = cached_feature_.size();
     for (size_t i = 0; i < chunk_feats.size(); ++i) {
       torch::Tensor row =
           torch::from_blob(chunk_feats[i].data(), {feature_dim}, torch::kFloat)
               .clone();
-      feats[0][offset + i] = std::move(row);
+      feats[0][cached_feature_.size() + i] = std::move(row);
     }
 
     // 2. Encoder chunk forward
     int requried_cache_size = opts_.chunk_size * opts_.num_left_chunks;
     torch::NoGradGuard no_grad;
-    std::vector<torch::jit::IValue> inputs = {
-        feats, offset, requried_cache_size, subsampling_cache_, elayers_output_cache_, conformer_cnn_cache_};
+    std::vector<torch::jit::IValue> inputs = {feats,
+                                              offset_,
+                                              requried_cache_size,
+                                              subsampling_cache_,
+                                              elayers_output_cache_,
+                                              conformer_cnn_cache_};
     auto outputs = model_->torch_model()
                        ->get_method("forward_encoder_chunk")(inputs)
                        .toTuple()
