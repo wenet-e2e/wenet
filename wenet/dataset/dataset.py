@@ -328,7 +328,7 @@ class CollateFunc(object):
         # optinoal spec augmentation
         if self.spec_aug:
             xs = [torch.as_tensor(
-                _spec_augmentation(x, **self.spec_aug_conf)) for x in xs]
+                _spec_augmentation(x.cpu().numpy(), **self.spec_aug_conf)) for x in xs]
 
         # padding
         xs_lengths = torch.as_tensor(
