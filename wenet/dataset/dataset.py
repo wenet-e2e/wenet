@@ -189,7 +189,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                 if org_sample_rate != sample_rate:
                     waveform = kaldi.resample_waveform(
                         waveform, org_sample_rate, sample_rate)
-            if len(waveform.shape) > 1:
+            if waveform.dim() > 1:
                 waveform = waveform.mean(dim=0)
             else:
                 waveform = waveform.squeeze(0)
@@ -208,7 +208,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
     lengths = torch.tensor([x.shape[0] for x in waveforms])
     waveforms = pad_list(waveforms, 0)
 
-    if feature_extraction_conf.get("from_gpu", False):
+    if feature_extraction_conf.get("using_gpu", False):
         # it only need one transfer from cpu to gpu
         waveforms = waveforms.cuda()
     # right now only single fbank compute is support,
