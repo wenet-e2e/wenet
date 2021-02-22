@@ -6,8 +6,21 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+# The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
+# communication. More details can be found in
+# https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
+# export NCCL_SOCKET_IFNAME=ens4f1
+export NCCL_DEBUG=INFO
 stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
+# The num of nodes or machines used for multi-machine training
+# Default 1 for single machine/node
+# NFS will be needed if you want run multi-machine training
+num_nodes=1
+# The rank of each node or machine, range from 0 to num_nodes -1
+# The first node/machine sets node_rank 0, the second one sets node_rank 1
+# the third one set node_rank 2, and so on. Default 0
+node_rank=0
 # data
 data=/export/expts4/chaoyang/
 data_url=www.openslr.org/resources/33
@@ -102,13 +115,20 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Training
     mkdir -p $dir
     INIT_FILE=$dir/ddp_init
-    rm -f $INIT_FILE # delete old one before starting
+    # You had better rm it manually before you start run.sh on first node.
+    # rm -f $INIT_FILE # delete old one before starting
     init_method=file://$(readlink -f $INIT_FILE)
     echo "$0: init method is $init_method"
+    # The number of gpus runing on each node/machine
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-    echo "$num_gpus"
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
+    # The total number of processes/gpus, so that the master knows
+    # how many workers to wait for.
+    # More details about ddp can be found in
+    # https://pytorch.org/tutorials/intermediate/dist_tuto.html
+    world_size=`expr $num_gpus \* $num_nodes`
+    echo "total gpus is: $world_size"
     cmvn_opts=
     $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
@@ -118,15 +138,18 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     for ((i = 0; i < $num_gpus; ++i)); do
     {
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-        python wenet/bin/train.py --gpu $gpu_id \
+    # Rank of each gpu/process used for knowing whether it is
+    # the master of a worker.
+    rank=`expr $node_rank \* $num_gpus + $i`
+    python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
             --train_data $feat_dir/$train_set/format.data \
             --cv_data $feat_dir/dev/format.data \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
-            --ddp.world_size $num_gpus \
-            --ddp.rank $i \
+            --ddp.world_size $world_size \
+            --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
             --num_workers 2 \
             $cmvn_opts
