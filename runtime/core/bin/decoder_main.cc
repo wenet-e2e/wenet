@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
     wenet::WavReader wav_reader(wav.second);
     CHECK_EQ(wav_reader.sample_rate(), sample_rate);
 
+    feature_pipeline->Reset();
     feature_pipeline->AcceptWaveform(std::vector<float>(
         wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
     feature_pipeline->set_input_finished();
