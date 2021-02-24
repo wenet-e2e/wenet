@@ -47,7 +47,7 @@ collate_conf:
     speed_perturb: false
     feature_extraction_conf:
         feature_type: 'fbank'
-        from_gpu: true
+        use_gpu: true
         sample_rate: 16000
         mel_bins: 80
         frame_shift: 10

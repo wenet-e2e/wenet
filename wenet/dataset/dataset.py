@@ -204,8 +204,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             pass
     lengths = torch.tensor([x.shape[0] for x in waveforms])
     waveforms = pad_list(waveforms, 0)
-
-    if feature_extraction_conf.get("from_gpu", False):
+    if feature_extraction_conf.get("use_gpu", False):
         # it only need one transfer from cpu to gpu
         waveforms = waveforms.cuda()
     # right now only single fbank compute is support,
