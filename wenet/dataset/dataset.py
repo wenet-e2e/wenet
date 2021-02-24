@@ -189,7 +189,10 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                 if org_sample_rate != sample_rate:
                     waveform = kaldi.resample_waveform(
                         waveform, org_sample_rate, sample_rate)
-            waveform = waveform.squeeze(0)
+            if waveform.dim() > 1:
+                waveform = waveform.mean(dim=0)
+            else:
+                waveform = waveform.squeeze(0)
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
@@ -324,7 +327,7 @@ class CollateFunc(object):
         # optinoal spec augmentation
         if self.spec_aug:
             xs = [torch.as_tensor(
-                _spec_augmentation(x, **self.spec_aug_conf)) for x in xs]
+                _spec_augmentation(x.cpu().numpy(), **self.spec_aug_conf)) for x in xs]
 
         # padding
         xs_lengths = torch.as_tensor(
