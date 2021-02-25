@@ -8,6 +8,7 @@ include(FetchContent)
 set(FETCHCONTENT_QUIET off)
 get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
+include(ExternalProject)
 
 # third_party: gflags
 FetchContent_Declare(
@@ -36,6 +37,20 @@ FetchContent_Declare(
   URL      https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz
   URL_HASH SHA256=aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a
 )
+
+# third_party: openfst
+set(openfst_SRC_DIR ${fc_base}/openfst-src)
+set(openfst_BUILD_DIR ${fc_base}/openfst-build)
+ExternalProject_Add(openfst
+URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
+URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
+SOURCE_DIR        ${openfst_SRC_DIR}
+BINARY_DIR        ${openfst_BUILD_DIR}
+CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${CMAKE_SOURCE_DIR}/openfst
+BUILD_COMMAND     make -j 4
+)
+include_directories(${CMAKE_SOURCE_DIR}/openfst/include)
+link_directories(${CMAKE_SOURCE_DIR}/openfst/lib)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
@@ -109,3 +124,7 @@ add_executable(websocket_client_main bin/websocket_client_main.cc)
 target_link_libraries(websocket_client_main PUBLIC gflags websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)
 target_link_libraries(websocket_server_main PUBLIC gflags websocket)
+add_executable(lm lm/lm.cc)
+target_link_libraries(lm PUBLIC fst)
+add_dependencies(lm openfst)
+
