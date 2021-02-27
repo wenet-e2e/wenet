@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     # Load dict
     char_dict = {}
-    with open(args.dict, 'r') as fin:
+    with open(args.dict, 'r', encoding='utf-8') as fin:
         for line in fin:
             arr = line.strip().split()
             assert len(arr) == 2
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     model = model.to(device)
 
     model.eval()
-    with torch.no_grad(), open(args.result_file, 'w') as fout:
+    with torch.no_grad(), open(args.result_file, 'w', encoding='utf-8') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
             keys, feats, target, feats_lengths, target_lengths = batch
             feats = feats.to(device)
