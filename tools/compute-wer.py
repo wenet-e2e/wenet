@@ -373,7 +373,7 @@ if __name__ == '__main__':
         rec_set[fid] = normalize(array[1:], ignore_words, case_sensitive, split)
 
   # compute error rate on the interaction of reference file and hyp file
-  for line in open(ref_file, 'r') :
+  for line in open(ref_file, 'r', encoding='utf-8') :
     if tochar:
           array = characterize(line)
     else:
@@ -473,7 +473,7 @@ if __name__ == '__main__':
    if len(cluster_file) > 0 : # compute separated WERs for word clusters
      cluster_id = ''
      cluster = []
-     for line in open(cluster_file, 'r') :
+     for line in open(cluster_file, 'r', encoding='utf-8') :
        for token in line.decode('utf-8').rstrip('\n').split() :
         # end of cluster reached, like </Keyword>
         if token[0:2] == '</' and token[len(token)-1] == '>' and \
