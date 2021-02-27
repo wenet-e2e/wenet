@@ -198,7 +198,8 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                 frame_length=feature_extraction_conf['frame_length'],
                 frame_shift=feature_extraction_conf['frame_shift'],
                 dither=wav_dither,
-                energy_floor=0.0
+                energy_floor=0.0,
+                sample_frequency=sample_rate
             )
             mat = mat.detach().numpy()
             feats.append(mat)
