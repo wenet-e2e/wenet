@@ -2,9 +2,11 @@
 # Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
 import logging
+from contextlib import nullcontext
+# if your python version < 3.7 use the below one
+# from contextlib import suppress as nullcontext
 import torch
 from torch.nn.utils import clip_grad_norm_
-
 
 class Executor:
     def __init__(self):
@@ -19,6 +21,7 @@ class Executor:
         log_interval = args.get('log_interval', 10)
         rank = args.get('rank', 0)
         accum_grad = args.get('accum_grad', 1)
+        is_distributed = args.get('is_distributed', True)
         logging.info('using accumulate grad, new batch size is {} times'
                      'larger than before'.format(accum_grad))
         num_seen_utts = 0
@@ -32,10 +35,24 @@ class Executor:
             num_utts = target_lengths.size(0)
             if num_utts == 0:
                 continue
-            loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
-                                             target_lengths)
-            loss = loss / accum_grad
-            loss.backward()
+            context = None
+            # Disable gradient synchronizations across DDP processes.
+            # Within this context, gradients will be accumulated on module
+            # variables, which will later be synchronized.
+            if is_distributed and batch_idx % accum_grad != 0 :
+                context = model.no_sync
+            # Used for single gpu training and DDP gradient synchronization
+            # processes.
+            else:
+                context = nullcontext
+            with context():
+                loss, loss_att, loss_ctc = model(feats,
+                                                 feats_lengths,
+                                                 target,
+                                                 target_lengths)
+                loss = loss / accum_grad
+                loss.backward()
+
             num_seen_utts += num_utts
             if batch_idx % accum_grad == 0:
                 if rank == 0 and writer is not None:
