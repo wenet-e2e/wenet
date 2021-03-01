@@ -48,6 +48,7 @@ SOURCE_DIR        ${openfst_SRC_DIR}
 BINARY_DIR        ${openfst_BUILD_DIR}
 CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${CMAKE_SOURCE_DIR}/openfst
 BUILD_COMMAND     make -j 4
+INSTALL_COMMAND   make install
 )
 include_directories(${CMAKE_SOURCE_DIR}/openfst/include)
 link_directories(${CMAKE_SOURCE_DIR}/openfst/lib)
@@ -83,7 +84,10 @@ if(MSVC)
   file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
 endif(MSVC)
 
+# C10_USE_GLOG: from libtorch, force use GLOG
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
+# USE LOG and FLAGS from openfst
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_OPENFST_LOG -DUSE_OPENFST_FLAGS")
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
 endif()
@@ -117,6 +121,11 @@ add_library(websocket STATIC
 )
 target_link_libraries(websocket PUBLIC glog frontend decoder)
 
+# lm
+add_library(lm STATIC lm/lm_fst.cc)
+target_link_libraries(lm PUBLIC fst)
+add_dependencies(lm openfst)
+
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
 target_link_libraries(decoder_main PUBLIC gflags frontend decoder utils)
@@ -124,7 +133,6 @@ add_executable(websocket_client_main bin/websocket_client_main.cc)
 target_link_libraries(websocket_client_main PUBLIC gflags websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)
 target_link_libraries(websocket_server_main PUBLIC gflags websocket)
-add_executable(lm lm/lm.cc)
-target_link_libraries(lm PUBLIC fst)
-add_dependencies(lm openfst)
 
+add_executable(lm_fst_score_main bin/lm_fst_score_main.cc)
+target_link_libraries(lm_fst_score_main PUBLIC lm gflags glog)
