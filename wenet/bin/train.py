@@ -41,7 +41,7 @@ if __name__ == '__main__':
     parser.add_argument('--gpu',
                         type=int,
                         default=-1,
-                        help='gpu id for this rank, -1 for cpu')
+                        help='gpu id for this local rank, -1 for cpu')
     parser.add_argument('--model_dir', required=True, help='save model dir')
     parser.add_argument('--checkpoint', help='checkpoint model')
     parser.add_argument('--tensorboard_dir',
@@ -51,12 +51,13 @@ if __name__ == '__main__':
                         dest='rank',
                         default=0,
                         type=int,
-                        help='node rank for distributed training')
+                        help='global rank for distributed training')
     parser.add_argument('--ddp.world_size',
                         dest='world_size',
                         default=-1,
                         type=int,
-                        help='number of nodes for distributed training')
+                        help='''number of total processes/gpus for
+                        distributed training''')
     parser.add_argument('--ddp.dist_backend',
                         dest='dist_backend',
                         default='nccl',
@@ -107,7 +108,7 @@ if __name__ == '__main__':
     cv_dataset = AudioDataset(args.cv_data, **dataset_conf, raw_wav=raw_wav)
 
     if distributed:
-        logging.info('training on multiple gpu, this gpu {}'.format(args.gpu))
+        logging.info('training on multiple gpus, this gpu {}'.format(args.gpu))
         dist.init_process_group(args.dist_backend,
                                 init_method=args.init_method,
                                 world_size=args.world_size,
@@ -194,6 +195,7 @@ if __name__ == '__main__':
     scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
     final_epoch = None
     configs['rank'] = args.rank
+    configs['is_distributed'] = distributed
     if start_epoch == 0 and args.rank == 0:
         save_model_path = os.path.join(model_dir, 'init.pt')
         save_checkpoint(model, save_model_path)
