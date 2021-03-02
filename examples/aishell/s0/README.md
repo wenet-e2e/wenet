@@ -63,13 +63,13 @@
 ## Muilti-machines Training Conformer Result
 
 * Feature info: using fbank feature, dither, cmvn, online speed perturb
-* Training info: lr 0.008, batch size 16, 2 machines, 8*2=16 gpus, acc_grad 4, 240 epochs, dither 0.1
+* Training info: lr 0.004, batch size 16, 2 machines, 8*2=16 gpus, acc_grad 4, 240 epochs, dither 0.1, warm up steps 10000
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: f6b1409023440da1998d31abbcc3826dd40aaf35
 
 | decoding mode          | CER  |
 |------------------------|------|
-| attention decoder      | 5.47 |
-| ctc greedy search      | 5.56 |
-| ctc prefix beam search | 5.56 |
-| attention rescoring    | 5.06 |
+| attention decoder      | 4.90 |
+| ctc greedy search      | 5.07 |
+| ctc prefix beam search | 5.06 |
+| attention rescoring    | 4.65 |

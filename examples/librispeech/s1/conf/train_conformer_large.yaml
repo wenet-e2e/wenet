@@ -53,9 +53,9 @@ collate_conf:
 dataset_conf:
     max_length: 10240
     min_length: 0
+    # the size of batch_size should be set according to your gpu memory size, here we used titan xp gpu whose memory size is 12GB
     max_frames_in_batch: 12000
     batch_type: 'dynamic' # static or dynamic
-    batch_size: 16
     sort: true
 
 grad_clip: 5
