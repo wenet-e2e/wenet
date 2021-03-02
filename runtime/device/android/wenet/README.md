@@ -13,7 +13,7 @@ This Android demo shows we can run on-device streaming ASR with WeNet. You can d
 
 You can use our pretrained model (click the following link to download):
 
-* [Chinese model trained on AIshell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210121_unified_transformer_device.tar.gz)
+* [Chinese model trained on AIshell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210221_unified_transformer_device.tar.gz)
 * [English model trained on LibriSpeech(TODO)]()
 
 Or you can train your own model using WeNet training pipeline on your data.
