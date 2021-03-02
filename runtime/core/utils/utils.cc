@@ -17,6 +17,7 @@
 namespace wenet {
 
 void SplitString(const std::string& str, std::vector<std::string>* strs) {
+  strs->clear();
   auto iss = std::istringstream{str};
   std::string result;
   while (iss >> result) {

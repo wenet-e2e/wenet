@@ -135,4 +135,4 @@ add_executable(websocket_server_main bin/websocket_server_main.cc)
 target_link_libraries(websocket_server_main PUBLIC gflags websocket)
 
 add_executable(lm_fst_score_main bin/lm_fst_score_main.cc)
-target_link_libraries(lm_fst_score_main PUBLIC lm gflags glog)
+target_link_libraries(lm_fst_score_main PUBLIC lm gflags glog utils)

@@ -12,19 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <iostream>
+#include <string>
+#include <vector>
+
 #include "lm/lm_fst.h"
 #include "utils/flags.h"
 #include "utils/log.h"
-
+#include "utils/utils.h"
 
 DEFINE_string(fst_path, "", "arpa fst lm file");
 DEFINE_string(dict_path, "", "dict path");
 
 int main(int argc, char *argv[]) {
   ParseCommandLineFlags(&argc, &argv, false);
-  wenet::LmFst lm_fst(FLAGS_fst_path, FLAGS_dict_path);
   LOG(INFO) << FLAGS_fst_path;
   LOG(INFO) << FLAGS_dict_path;
+  wenet::LmFst lm_fst(FLAGS_fst_path, FLAGS_dict_path);
+
+  while (true) {
+    std::string line;
+    std::getline(std::cin, line);
+    std::vector<std::string> strs;
+    wenet::SplitString(line, &strs);
+    lm_fst.StepTokenArray(strs);
+  }
   return 0;
 }
-
