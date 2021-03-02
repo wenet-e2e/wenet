@@ -90,13 +90,11 @@ class ASRModel(torch.nn.Module):
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # 2a. Attention-decoder branch
-        if self.ctc_weight != 0.0:
-            loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
-                                                    text, text_lengths)
+        loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
+                                                text, text_lengths)
 
         # 2b. CTC branch
-        if self.ctc_weight != 1.0:
-            loss_ctc = self.ctc(encoder_out, encoder_out_lens, text, text_lengths)
+        loss_ctc = self.ctc(encoder_out, encoder_out_lens, text, text_lengths)
 
         if self.ctc_weight == 0.0:
             loss = loss_att
