@@ -92,7 +92,7 @@ class ASRModel(torch.nn.Module):
         # 2a. Attention-decoder branch
         if self.ctc_weight != 0.0:
             loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
-                                                text, text_lengths)
+                                                    text, text_lengths)
 
         # 2b. CTC branch
         if self.ctc_weight != 1.0:
