@@ -15,6 +15,7 @@
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "lm/lm_fst.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -32,7 +33,8 @@ class TorchAsrDecoder {
  public:
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
                   std::shared_ptr<TorchAsrModel> model,
-                  const SymbolTable& symbol_table, const DecodeOptions& opts);
+                  const SymbolTable& symbol_table, const DecodeOptions& opts,
+                  std::shared_ptr<LmFst> lm_fst = nullptr);
 
   // Return true if all feature has been decoded, else return false
   bool Decode();
@@ -68,7 +70,7 @@ class TorchAsrDecoder {
   std::string result_;
 
  public:
-  DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
+  WENET_DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
 };
 
 }  // namespace wenet

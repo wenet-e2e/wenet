@@ -3,12 +3,17 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(wenet VERSION 0.1)
 
 include_directories(${CMAKE_SOURCE_DIR})
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 include(FetchContent)
 set(FETCHCONTENT_QUIET off)
 get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
+message(STATUS ${fc_base})
 include(ExternalProject)
+
+# Keep the same with openfst, -fPIC or -fpic
+set(CMAKE_CXX_FLAGS "-fPIC")
 
 # third_party: gflags
 FetchContent_Declare(
@@ -16,6 +21,7 @@ FetchContent_Declare(
   URL      https://github.com/gflags/gflags/archive/v2.2.0.zip
   URL_HASH SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
 )
+FetchContent_MakeAvailable(gflags)
 
 # third_party: glog
 FetchContent_Declare(
@@ -23,6 +29,9 @@ FetchContent_Declare(
   URL      https://github.com/google/glog/archive/v0.4.0.zip
   URL_HASH SHA256=9e1b54eb2782f53cd8af107ecf08d2ab64b8d0dc2b7f5594472f3bd63ca85cdc
 )
+FetchContent_MakeAvailable(glog)
+message(STATUS ${glog_SOURCE_DIR})
+message(STATUS ${glog_BINARY_DIR})
 
 # third_party: gtest
 FetchContent_Declare(
@@ -30,6 +39,7 @@ FetchContent_Declare(
   URL      https://github.com/google/googletest/archive/release-1.10.0.zip
   URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
 )
+FetchContent_MakeAvailable(googletest)
 
 # third_party: boost
 FetchContent_Declare(
@@ -37,8 +47,13 @@ FetchContent_Declare(
   URL      https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz
   URL_HASH SHA256=aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a
 )
+FetchContent_MakeAvailable(boost)
+include_directories(${boost_SOURCE_DIR})
 
 # third_party: openfst
+set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I${gflags_BINARY_DIR}/include")
+set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
+message(STATUS ${OPENFST_EXTRA_LIBS})
 set(openfst_SRC_DIR ${fc_base}/openfst-src)
 set(openfst_BUILD_DIR ${fc_base}/openfst-build)
 ExternalProject_Add(openfst
@@ -47,11 +62,17 @@ URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a39
 SOURCE_DIR        ${openfst_SRC_DIR}
 BINARY_DIR        ${openfst_BUILD_DIR}
 CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${CMAKE_SOURCE_DIR}/openfst
+                      "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
+                      "LIBS=${OPENFST_EXTRA_LIBS}"
+COMMAND           cp ${CMAKE_SOURCE_DIR}/third_party/openfst_patch/log.h ${openfst_SRC_DIR}/src/include/fst/log.h
+COMMAND           cp ${CMAKE_SOURCE_DIR}/third_party/openfst_patch/flags.h ${openfst_SRC_DIR}/src/include/fst/flags.h
+COMMAND           cp ${CMAKE_SOURCE_DIR}/third_party/openfst_patch/flags.cc ${openfst_SRC_DIR}/src/lib/flags.cc
 BUILD_COMMAND     make -j 4
 INSTALL_COMMAND   make install
 )
 include_directories(${CMAKE_SOURCE_DIR}/openfst/include)
 link_directories(${CMAKE_SOURCE_DIR}/openfst/lib)
+add_dependencies(openfst gflags glog)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
@@ -74,33 +95,33 @@ FetchContent_Declare(
   URL      ${LIBTORCH_URL}
   URL_HASH ${URL_HASH}
 )
-
 set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
-FetchContent_MakeAvailable(gflags glog googletest boost libtorch)
-include_directories(${boost_SOURCE_DIR})
+FetchContent_MakeAvailable(libtorch)
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 if(MSVC)
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
 endif(MSVC)
-
 # C10_USE_GLOG: from libtorch, force use GLOG
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
-# USE LOG and FLAGS from openfst
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_OPENFST_LOG -DUSE_OPENFST_FLAGS")
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
 endif()
 
 # utils
 add_library(utils STATIC utils/utils.cc)
+target_link_libraries(utils PUBLIC fst glog gflags)
 
 # frontend
 add_library(frontend STATIC
   frontend/feature_pipeline.cc
   frontend/fft.cc
 )
-target_link_libraries(frontend PUBLIC glog)
+target_link_libraries(frontend PUBLIC utils)
+
+# lm
+add_library(lm STATIC lm/lm_fst.cc)
+target_link_libraries(lm PUBLIC utils)
 
 # decoder
 add_library(decoder STATIC
@@ -108,10 +129,9 @@ add_library(decoder STATIC
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC glog ${TORCH_LIBRARIES})
-
+target_link_libraries(decoder PUBLIC utils ${TORCH_LIBRARIES})
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
-target_link_libraries(ctc_prefix_beam_search_test PUBLIC glog gtest_main decoder)
+target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main decoder)
 add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
 
 # websocket
@@ -119,20 +139,14 @@ add_library(websocket STATIC
   websocket/websocket_client.cc
   websocket/websocket_server.cc
 )
-target_link_libraries(websocket PUBLIC glog frontend decoder)
-
-# lm
-add_library(lm STATIC lm/lm_fst.cc)
-target_link_libraries(lm PUBLIC fst)
-add_dependencies(lm openfst)
+target_link_libraries(websocket PUBLIC frontend decoder utils)
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main PUBLIC gflags frontend decoder utils)
+target_link_libraries(decoder_main PUBLIC frontend decoder)
 add_executable(websocket_client_main bin/websocket_client_main.cc)
-target_link_libraries(websocket_client_main PUBLIC gflags websocket)
+target_link_libraries(websocket_client_main PUBLIC websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)
-target_link_libraries(websocket_server_main PUBLIC gflags websocket)
-
+target_link_libraries(websocket_server_main PUBLIC websocket)
 add_executable(lm_fst_score_main bin/lm_fst_score_main.cc)
-target_link_libraries(lm_fst_score_main PUBLIC lm gflags glog utils)
+target_link_libraries(lm_fst_score_main PUBLIC lm)

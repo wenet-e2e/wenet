@@ -55,7 +55,7 @@ class WebSocketClient {
   websocket::stream<tcp::socket> ws_{ioc_};
   std::unique_ptr<std::thread> t_{nullptr};
 
-  DISALLOW_COPY_AND_ASSIGN(WebSocketClient);
+  WENET_DISALLOW_COPY_AND_ASSIGN(WebSocketClient);
 };
 
 }  // namespace wenet

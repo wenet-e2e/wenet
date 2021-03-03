@@ -13,13 +13,13 @@ namespace wenet {
 TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
     std::shared_ptr<TorchAsrModel> model, const SymbolTable& symbol_table,
-    const DecodeOptions& opts)
+    const DecodeOptions& opts, std::shared_ptr<LmFst> lm_fst)
     : feature_pipeline_(feature_pipeline),
       model_(model),
       symbol_table_(symbol_table),
       opts_(opts),
-      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts)) {
-}
+      ctc_prefix_beam_searcher_(
+          new CtcPrefixBeamSearch(opts.ctc_search_opts, lm_fst)) {}
 
 void TorchAsrDecoder::Reset() {
   start_ = false;

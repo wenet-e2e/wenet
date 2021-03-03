@@ -25,12 +25,12 @@
 #include "boost/asio/ip/tcp.hpp"
 #include "boost/beast/core.hpp"
 #include "boost/beast/websocket.hpp"
-#include "glog/logging.h"
 
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "utils/log.h"
 
 namespace wenet {
 
@@ -94,7 +94,7 @@ class WebSocketServer {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
-  DISALLOW_COPY_AND_ASSIGN(WebSocketServer);
+  WENET_DISALLOW_COPY_AND_ASSIGN(WebSocketServer);
 };
 
 }  // namespace wenet

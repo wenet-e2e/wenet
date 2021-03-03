@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gflags/gflags.h"
-#include "glog/logging.h"
-
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "utils/flags.h"
+#include "utils/log.h"
 #include "websocket/websocket_server.h"
 
 DEFINE_int32(port, 10086, "websocket listening port");
@@ -30,8 +29,8 @@ DEFINE_string(wav_path, "", "wav path");
 DEFINE_string(dict_path, "", "dict path");
 
 int main(int argc, char *argv[]) {
-  google::ParseCommandLineFlags(&argc, &argv, false);
-  google::InitGoogleLogging(argv[0]);
+  ParseCommandLineFlags(&argc, &argv, false);
+  InitGoogleLogging(argv[0]);
 
   auto feature_config = std::make_shared<wenet::FeaturePipelineConfig>();
   feature_config->num_bins = FLAGS_num_bins;

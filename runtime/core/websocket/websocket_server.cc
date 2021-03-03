@@ -19,7 +19,6 @@
 #include <vector>
 
 #include "boost/json/src.hpp"
-#include "glog/logging.h"
 
 namespace wenet {
 
@@ -30,23 +29,23 @@ namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 namespace json = boost::json;
 
-ConnectionHandler::ConnectionHandler(tcp::socket&& socket,
-                    std::shared_ptr<FeaturePipelineConfig> feature_config,
-                    std::shared_ptr<DecodeOptions> decode_config,
-                    std::shared_ptr<SymbolTable> symbol_table,
-                    std::shared_ptr<TorchAsrModel> model)
-      : ws_(std::move(socket)),
-        feature_config_(feature_config),
-        decode_config_(decode_config),
-        symbol_table_(symbol_table),
-        model_(model) {}
+ConnectionHandler::ConnectionHandler(
+    tcp::socket&& socket, std::shared_ptr<FeaturePipelineConfig> feature_config,
+    std::shared_ptr<DecodeOptions> decode_config,
+    std::shared_ptr<SymbolTable> symbol_table,
+    std::shared_ptr<TorchAsrModel> model)
+    : ws_(std::move(socket)),
+      feature_config_(feature_config),
+      decode_config_(decode_config),
+      symbol_table_(symbol_table),
+      model_(model) {}
 
 ConnectionHandler::ConnectionHandler(ConnectionHandler&& other)
-      : ws_(std::move(other.ws_)),
-        feature_config_(other.feature_config_),
-        decode_config_(other.decode_config_),
-        symbol_table_(other.symbol_table_),
-        model_(other.model_) {}
+    : ws_(std::move(other.ws_)),
+      feature_config_(other.feature_config_),
+      decode_config_(other.decode_config_),
+      symbol_table_(other.symbol_table_),
+      model_(other.model_) {}
 
 void ConnectionHandler::OnSpeechStart() {
   LOG(INFO) << "Recieved speech start signal, start reading speech";

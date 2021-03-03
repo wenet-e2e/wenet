@@ -5,8 +5,6 @@
 #include <iomanip>
 #include <utility>
 
-#include "gflags/gflags.h"
-#include "glog/logging.h"
 #include "torch/script.h"
 #include "torch/torch.h"
 
@@ -15,6 +13,8 @@
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
+#include "utils/flags.h"
+#include "utils/log.h"
 #include "utils/utils.h"
 
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
@@ -29,8 +29,8 @@ DEFINE_string(dict_path, "", "dict path");
 DEFINE_string(result, "", "result output file");
 
 int main(int argc, char *argv[]) {
-  google::ParseCommandLineFlags(&argc, &argv, false);
-  google::InitGoogleLogging(argv[0]);
+  ParseCommandLineFlags(&argc, &argv, false);
+  InitGoogleLogging(argv[0]);
 
   auto model = std::make_shared<wenet::TorchAsrModel>();
   model->Read(FLAGS_model_path, FLAGS_num_threads);
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_result.empty()) {
     result.open(FLAGS_result, std::ios::out);
   }
-  std::ostream& buffer = FLAGS_result.empty() ? std::cout : result;
+  std::ostream &buffer = FLAGS_result.empty() ? std::cout : result;
 
   int total_waves_dur = 0;
   int total_decode_time = 0;

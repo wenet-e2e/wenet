@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef UTILS_LOG_H_
 #define UTILS_LOG_H_
 
-#ifdef USE_OPENFST_LOG
-#include  "fst/log.h"
-#else
 #include "glog/logging.h"
-#endif
 
 #endif  // UTILS_LOG_H_

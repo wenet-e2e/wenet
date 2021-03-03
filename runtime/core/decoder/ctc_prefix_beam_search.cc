@@ -9,12 +9,14 @@
 #include <unordered_map>
 #include <utility>
 
-#include "glog/logging.h"
+#include "lm/lm_fst.h"
+#include "utils/log.h"
 
 namespace wenet {
 
-CtcPrefixBeamSearch::CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts)
-    : opts_(opts) {
+CtcPrefixBeamSearch::CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts,
+                                         std::shared_ptr<LmFst> lm_fst)
+    : opts_(opts), lm_fst_(lm_fst) {
   Reset();
 }
 

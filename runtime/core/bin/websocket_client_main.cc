@@ -14,10 +14,9 @@
 
 #include <chrono>
 
-#include "gflags/gflags.h"
-#include "glog/logging.h"
-
 #include "frontend/wav.h"
+#include "utils/flags.h"
+#include "utils/log.h"
 #include "websocket/websocket_client.h"
 
 DEFINE_string(host, "127.0.0.1", "host of websocket server");
@@ -25,8 +24,8 @@ DEFINE_int32(port, 10086, "port of websocket server");
 DEFINE_string(wav_path, "", "test wav file path");
 
 int main(int argc, char *argv[]) {
-  google::ParseCommandLineFlags(&argc, &argv, false);
-  google::InitGoogleLogging(argv[0]);
+  ParseCommandLineFlags(&argc, &argv, false);
+  InitGoogleLogging(argv[0]);
   wenet::WebSocketClient client(FLAGS_host, FLAGS_port);
   client.SendStartSignal();
 

@@ -12,18 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef UTILS_FLAGS_H_
 #define UTILS_FLAGS_H_
 
-#ifdef USE_OPENFST_FLAGS
-#include  "fst/flags.h"
-#define ParseCommandLineFlags(argc, argv, flags) \
-        SET_FLAGS("", argc, argv, true);
-#else
 #include "gflags/gflags.h"
+
 #define ParseCommandLineFlags(argc, argv, flags) \
-        google::ParseCommandLineFlags(argc, argv, flags);
-#endif
+  google::ParseCommandLineFlags(argc, argv, flags);
+
+#define InitGoogleLogging(arg) \
+  google::InitGoogleLogging(arg);
 
 #endif  // UTILS_FLAGS_H_

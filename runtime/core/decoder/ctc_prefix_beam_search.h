@@ -11,6 +11,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
+#include "lm/lm_fst.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -22,6 +23,7 @@ struct CtcPrefixBeamSearchOptions {
   int blank = 0;  // blank id
   int first_beam_size = 10;
   int second_beam_size = 10;
+  float lm_weight = 0.0;
 };
 
 struct PrefixScore {
@@ -46,7 +48,8 @@ struct PrefixHash {
 
 class CtcPrefixBeamSearch {
  public:
-  explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts);
+  explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts,
+                               std::shared_ptr<LmFst> lm_fst = nullptr);
 
   void Search(const torch::Tensor& logp);
   void Reset();
@@ -62,11 +65,11 @@ class CtcPrefixBeamSearch {
   // Nbest list and corresponding likelihood_, in sorted order
   std::vector<std::vector<int>> hypotheses_;
   std::vector<float> likelihood_;
-
+  std::shared_ptr<LmFst> lm_fst_;
   const CtcPrefixBeamSearchOptions& opts_;
 
  public:
-  DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
+  WENET_DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
 };
 
 }  // namespace wenet
