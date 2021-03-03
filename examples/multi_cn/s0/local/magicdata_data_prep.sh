@@ -33,8 +33,11 @@ n=`cat $tmp_dir/wav.flist | wc -l`
 for x in train dev test; do
   grep -i "/$x/" $tmp_dir/wav.flist > $data/$x/wav.flist || exit 1;
   echo "Filtering data using found wav list and provided transcript for $x"
-  local/magicdata_data_filter.py $data/$x/wav.flist $corpus/$x/TRANS.txt $data/$x local/magicdata_badlist
-  cat $data/$x/transcripts.txt |\
+  awk -F '.wav' '{print $1}' local/magicdata_badlist | tools/filter_scp.pl --exclude -f 1 - \
+    <(cat $data/$x/wav.flist|awk -F '/' '{print gensub(".wav", "", "g", $NF), $0}') \
+    > $data/$x/wav.scp
+  sed '1d' $corpus/$x/TRANS.txt | awk -F '\t' '{print gensub(".wav","","g",$1), $2}' > $data/$x/utt2spk
+  sed '1d' $corpus/$x/TRANS.txt | awk -F '\t' '{print gensub(".wav","","g",$1), $3}' |\
     sed 's/！//g' | sed 's/？//g' |\
     sed 's/，//g' | sed 's/－//g' |\
     sed 's/：//g' | sed 's/；//g' |\
@@ -46,7 +49,6 @@ for x in train dev test; do
     sed 's/”//g' | sed 's/\\//g' |\
     sed 's/…//g' | sed "s///g" | sed "s///g" | sed 's/《//g' | sed 's/》//g' |\
     sed 's/\[//g' | sed 's/\]//g' | sed 's/FIL//g' | sed 's/SPK//' |\
-    local/word_segmentation.py |\
     tr '[a-z]' '[A-Z]' |\
     awk '{if (NF > 1) print $0;}' > $data/$x/text
   for file in wav.scp utt2spk text; do
@@ -57,6 +59,6 @@ done
 
 # rm -r $tmp_dir
 
-tools/validate_data_dir.sh --no-feats $data/train || exit 1;
-tools/validate_data_dir.sh --no-feats $data/dev || exit 1;
-tools/validate_data_dir.sh --no-feats $data/test || exit 1;
+tools/fix_data_dir.sh $data/train || exit 1;
+tools/fix_data_dir.sh $data/dev || exit 1;
+tools/fix_data_dir.sh $data/test || exit 1;
