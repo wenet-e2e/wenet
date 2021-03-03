@@ -33,7 +33,6 @@ n=`cat $data/wav.flist | wc -l`
 echo "Filtering data using found wav list and provided transcript"
 local/primewords_parse_transcript.py $data/wav.flist $corpus/set1_transcript.json $data/train
 cat $data/train/transcripts.txt |\
-  local/word_segmentation.py |\
   awk '{if (NF > 1) print $0;}' > $data/train/text
 
 for file in wav.scp utt2spk text; do
@@ -41,6 +40,6 @@ for file in wav.scp utt2spk text; do
 done
 tools/utt2spk_to_spk2utt.pl $data/train/utt2spk > $data/train/spk2utt
 
-rm -r $data/wav.flist
+# rm -r $data/wav.flist
 
 tools/validate_data_dir.sh --no-feats $data/train || exit 1;

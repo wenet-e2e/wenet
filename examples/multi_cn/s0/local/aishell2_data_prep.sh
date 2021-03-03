@@ -51,8 +51,8 @@ tools/filter_scp.pl -f 1 $tmp/utt.list $tmp/tmp_trans.txt | sort -k 1 | uniq > $
 dos2unix < $tmp/trans.txt | \
   tools/filter_scp.pl -f 1 $tmp/utt.list - | \
   sort -k 1 | uniq | tr '[a-z]' '[A-Z]' | \
-  sed 's/Ａ/A/g' | sed 's/Ｔ/T/g' | sed 's/Ｍ/M/g' | sed 's/𫚉//g' | sed 's/𫖯/頫/g' | \
-  local/word_segmentation.py > $tmp/text
+  sed 's/Ａ/A/g' | sed 's/Ｔ/T/g' | sed 's/Ｍ/M/g' | sed 's/𫚉//g' | sed 's/𫖯/頫/g' \
+  > $tmp/text
 
 # utt2spk & spk2utt
 awk -F' ' '{print $2}' $tmp/wav.scp > $tmp/wav.list

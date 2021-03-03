@@ -25,7 +25,7 @@ mkdir -p $data/train
 
 # find wav audio file for train
 
-find $corpus -iname "*.wav" > $data/wav.list
+# find $corpus -iname "*.wav" > $data/wav.list
 n=`cat $data/wav.list | wc -l`
 [ $n -ne 102600 ] && \
   echo Warning: expected 102600 data files, found $n
@@ -41,7 +41,6 @@ paste -d' ' $data/utt.list $data/wav.list > $data/train/wav.scp
 paste -d' ' $data/utt.list $data/spk.list > $data/train/utt2spk
 paste -d' ' $data/utt.list $data/text.list |\
   sed 's/，//g' |\
-  local/word_segmentation.py |\
   tr '[a-z]' '[A-Z]' |\
   awk '{if (NF > 1) print $0;}' > $data/train/text
 
