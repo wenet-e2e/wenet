@@ -86,9 +86,13 @@ fi
 # 2. Create scp files for outputs
 mkdir -p ${tmpdir}/output
 if [ -n "${bpecode}" ]; then
-    paste -d " " <(awk '{print $1}' ${dir}/text) <(cut -f 2- -d" " ${dir}/text \
-        | tools/spm_encode --model=${bpecode} --output_format=piece) \
-        > ${tmpdir}/output/token.scp
+    if [ "${trans_type}" == "zh_char_en_bpe" ]; then
+        tools/text2token.py -s 1 -n 1 -m ${bpecode} ${dir}/text --trans_type ${trans_type} > ${tmpdir}/output/token.scp
+    else
+        paste -d " " <(awk '{print $1}' ${dir}/text) <(cut -f 2- -d" " ${dir}/text \
+            | tools/spm_encode --model=${bpecode} --output_format=piece) \
+            > ${tmpdir}/output/token.scp
+    fi
 elif [ -n "${nlsyms}" ]; then
     tools/text2token.py -s 1 -n 1 -l ${nlsyms} ${dir}/text --trans_type ${trans_type} > ${tmpdir}/output/token.scp
 elif [ -n "${raw}" ]; then
@@ -101,7 +105,6 @@ odim=$(cat ${dic} | wc -l)
 < ${tmpdir}/output/tokenid.scp awk -v odim=${odim} '{print $1 " " NF-1 "," odim}' > ${tmpdir}/output/shape.scp
 
 cat ${dir}/text > ${tmpdir}/output/text.scp
-
 
 # 3. Create scp files for the others
 mkdir -p ${tmpdir}/other

@@ -23,7 +23,8 @@ feat_dir=raw_wav
 dict=data/dict/lang_char.txt
 
 train_set=train
-test_sets="aishell aidatatang magicdata thchs aishell2"
+dev_set=dev
+test_sets="aishell aidatatang magicdata thchs aishell2 tal_asr"
 has_aishell2=false  # AISHELL2 train set is not publically downloadable
                     # with this option true, the script assumes you have it in $dbase
 
@@ -69,16 +70,18 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     local/magicdata_data_prep.sh $dbase/magicdata/ data/magicdata || exit 1;
     local/primewords_data_prep.sh $dbase/primewords data/primewords || exit 1;
     local/stcmds_data_prep.sh $dbase/stcmds data/stcmds || exit 1;
+    local/tal_data_prep.sh $dbase/TAL/TAL_ASR-1/aisolution_data data/tal_asr || exit 1;
+    local/tal_csasr_data_prep.sh $dbase/TAL/TAL_CSASR data/tal_csasr || exit 1;
     if $has_aishell2; then
         local/aishell2_data_prep.sh $dbase/aishell2/IOS data/aishell2/train || exit 1;
         local/aishell2_data_prep.sh $dbase/aishell2/IOS/dev data/aishell2/dev || exit 1;
         local/aishell2_data_prep.sh $dbase/aishell2/IOS/test data/aishell2/test || exit 1;
     fi
 
-    tools/combine_data.sh data/train \
-        data/{aidatatang,aishell,magicdata,primewords,stcmds,thchs,aishell2}/train || exit 1;
-    tools/combine_data.sh data/dev \
-        data/{aidatatang,aishell,magicdata,thchs,aishell2}/dev || exit 1;
+    tools/combine_data.sh data/${train_set} \
+        data/{aidatatang,aishell,magicdata,primewords,stcmds,thchs,aishell2,tal_asr,tal_csasr}/train || exit 1;
+    tools/combine_data.sh data/${dev_set} \
+        data/{aidatatang,aishell,magicdata,thchs,aishell2,tal_asr}/dev || exit 1;
 fi
 
 
@@ -86,20 +89,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # For wav feature, just copy the data. Fbank extraction is done in training
     mkdir -p $feat_dir
 
-    # remove the space between the text labels for Mandarin dataset
-    for x in train dev; do
-        cp data/${x}/text data/${x}/text.org
-        paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " data/${x}/text.org | tr -d " ") \
-            > data/${x}/text
-        rm data/${x}/text.org
+    for x in ${train_set} ${dev_set}; do
         cp -r data/$x $feat_dir
     done
     
     for x in ${test_sets}; do
-        cp data/${x}/test/text data/${x}/test/text.org
-        paste -d " " <(cut -f 1 -d" " data/${x}/test/text.org) <(cut -f 2- -d" " data/${x}/test/text.org | tr -d " ") \
-            > data/${x}/test/text
-        rm data/${x}/test/text.org
         cp -r data/$x/test $feat_dir/test_${x}
     done
 
@@ -109,13 +103,15 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
 fi
 
+bpecode=../../librispeech/s0/data/lang_char/train_960_unigram5000.model
+trans_type=zh_char_en_bpe
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # Make train dict
     echo "Make a dictionary"
     mkdir -p $(dirname $dict)
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
-    tools/text2token.py -s 1 -n 1 data/train/text | cut -f 2- -d" " | tr " " "\n" \
+    tools/text2token.py -s 1 -n 1 -m ${bpecode} data/${train_set}/text --trans_type ${trans_type} | cut -f 2- -d" " | tr " " "\n" \
         | sort | uniq | grep -a -v -e '^\s*$' \
         | grep -v '·' | grep -v '“' | grep -v "”" | grep -v "\[" | grep -v "\]" | grep -v "…" \
         | awk '{print $0 " " NR+1}' >> ${dict}
@@ -131,9 +127,10 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     for x in ${test_sets}; do 
         feat_test_sets=${feat_test_sets}" "test_${x}
     done
-    for x in dev ${train_set} ${feat_test_sets}; do
+    for x in ${dev_set} ${train_set} ${feat_test_sets}; do
         tools/format_data.sh --nj ${nj} \
             --feat-type wav --feat $feat_dir/$x/wav.scp \
+            --bpecode ${bpecode} --trans_type ${trans_type} \
             $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
 
         tools/remove_longshortdata.py \
@@ -169,7 +166,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
             --train_data $feat_dir/$train_set/format.data \
-            --cv_data $feat_dir/dev/format.data \
+            --cv_data $feat_dir/$dev_set/format.data \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
@@ -196,15 +193,17 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     fi
     # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
     # -1 for full chunk
-    decoding_chunk_size=
+    decoding_chunk_size=16
     ctc_weight=0.5
+    idx=0
     for mode in ${decode_modes}; do
     {
         for x in ${test_sets}; do 
         {
-            test_dir=$dir/test_${mode}/${x}
+            test_dir=$dir/test_${mode}${decoding_chunk_size:+_chunk$decoding_chunk_size}/${x}
             mkdir -p $test_dir
-            python wenet/bin/recognize.py --gpu 0 \
+            gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
+            python wenet/bin/recognize.py --gpu $gpu_id \
                 --mode $mode \
                 --config $dir/train.yaml \
                 --test_data $feat_dir/test_${x}/format.data \
@@ -221,6 +220,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         }
         done
     } &
+    ((idx+=1))
     done
     wait
 

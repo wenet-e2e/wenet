@@ -25,6 +25,11 @@ def exist_or_not(i, match_pos):
 
     return start_pos, end_pos
 
+def seg_char(sent):
+    pattern = re.compile(r'([\u4e00-\u9fa5])')
+    chars = pattern.split(sent)
+    chars = [w for w in chars if len(w.strip())>0]
+    return chars
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -45,6 +50,11 @@ def get_parser():
                         default='<space>',
                         type=str,
                         help='space symbol')
+    parser.add_argument('--bpe-model',
+                        '-m',
+                        default='',
+                        type=str,
+                        help='bpe model for english part')
     parser.add_argument('--non-lang-syms',
                         '-l',
                         default=None,
@@ -60,7 +70,7 @@ def get_parser():
                         '-t',
                         type=str,
                         default="char",
-                        choices=["char", "phn"],
+                        choices=["char", "phn", "zh_char_en_bpe"],
                         help="""Transcript type. char/phn. e.g., for TIMIT
                              FADG0_SI1279 -
                              If trans_type is char, read from
@@ -81,6 +91,11 @@ def main():
         with codecs.open(args.non_lang_syms, 'r', encoding="utf-8") as f:
             nls = [x.rstrip() for x in f.readlines()]
             rs = [re.compile(re.escape(x)) for x in nls]
+    
+    if args.bpe_model is not None:
+        import sentencepiece as spm
+        sp = spm.SentencePieceProcessor()
+        sp.load(args.bpe_model)
 
     if args.text:
         f = codecs.open(args.text, encoding="utf-8")
@@ -124,6 +139,16 @@ def main():
 
         if (args.trans_type == "phn"):
             a = a.split(" ")
+        elif args.trans_type == "zh_char_en_bpe":
+            b = seg_char(a)
+            a = []
+            for j in b:
+                for l in j.strip().split():
+                    if not l.encode('UTF-8').isalpha():
+                        a.append(l)
+                    else:
+                        for k in sp.encode_as_pieces(l):
+                            a.append(k)
         else:
             a = [a[j:j + n] for j in range(0, len(a), n)]
 

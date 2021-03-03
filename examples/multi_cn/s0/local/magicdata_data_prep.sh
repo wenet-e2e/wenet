@@ -43,12 +43,11 @@ for x in train dev test; do
     sed 's/://g' | sed 's/?//g' |\
     sed 's/\///g' | sed 's/·//g' |\
     sed 's/\"//g' | sed 's/“//g' |\
-    sed 's/”//g' | sed 's/\[//g' |\
-    sed 's/\]//g' | sed 's/\\//g' |\
-    sed 's/…//g' | sed "s///g" | sed "s///g" | sed 's/《//g' | sed 's/》//g' | \
+    sed 's/”//g' | sed 's/\\//g' |\
+    sed 's/…//g' | sed "s///g" | sed "s///g" | sed 's/《//g' | sed 's/》//g' |\
+    sed 's/\[//g' | sed 's/\]//g' | sed 's/FIL//g' | sed 's/SPK//' |\
     local/word_segmentation.py |\
     tr '[a-z]' '[A-Z]' |\
-    sed 's/FIL/[FIL]/g' | sed 's/SPK/[SPK]/' |\
     awk '{if (NF > 1) print $0;}' > $data/$x/text
   for file in wav.scp utt2spk text; do
     sort $data/$x/$file -o $data/$x/$file
@@ -56,7 +55,7 @@ for x in train dev test; do
   tools/utt2spk_to_spk2utt.pl $data/$x/utt2spk > $data/$x/spk2utt
 done
 
-rm -r $tmp_dir
+# rm -r $tmp_dir
 
 tools/validate_data_dir.sh --no-feats $data/train || exit 1;
 tools/validate_data_dir.sh --no-feats $data/dev || exit 1;
