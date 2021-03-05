@@ -63,6 +63,7 @@ dataset_conf:
     max_length: 40960
     min_length: 0
     batch_type: 'static' # static or dynamic
+    # the size of batch_size should be set according to your gpu memory size, here we used 2080ti gpu whose memory size is 11GB
     batch_size: 26
     sort: true
 
