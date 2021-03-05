@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright   2014  Johns Hopkins University (author: Daniel Povey) 
+# Copyright   2014  Johns Hopkins University (author: Daniel Povey)
 # Copyright   2016  Tsinghua University (author: Dong Wang)
 # Apache 2.0
 
@@ -31,7 +31,7 @@ fi
 
 part_ok=false
 list="data_thchs30 test-noise resource"
-for x in $list; do 
+for x in $list; do
   if [ "$part" == $x ]; then part_ok=true; fi
 done
 if ! $part_ok; then

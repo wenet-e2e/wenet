@@ -2,7 +2,7 @@
 # Copyright 2016  Tsinghua University (Author: Dong Wang, Xuewei Zhang).  Apache 2.0.
 #           2016  LeSpeech (Author: Xingyu Na)
 
-#This script pepares the data directory for thchs30 recipe. 
+#This script pepares the data directory for thchs30 recipe.
 #It reads the corpus and get wav.scp and transcriptions.
 
 corpus_dir=$1
@@ -29,7 +29,7 @@ for x in train dev test; do
       echo $uttid $corpus_dir/$x/$nn.wav >> $part/wav.scp
       echo $uttid $spkid >> $part/utt2spk
       echo $uttid `sed -n 1p $corpus_dir/data/$nn.wav.trn` | sed 's/ l =//' >> $part/text
-  done 
+  done
   sort $part/wav.scp -o $part/wav.scp
   sort $part/utt2spk -o $part/utt2spk
   sort $part/text -o $part/text

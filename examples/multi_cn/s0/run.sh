@@ -92,7 +92,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     for x in ${train_set} ${dev_set}; do
         cp -r data/$x $feat_dir
     done
-    
+
     for x in ${test_sets}; do
         cp -r data/$x/test $feat_dir/test_${x}
     done
@@ -124,7 +124,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     feat_test_sets=""
-    for x in ${test_sets}; do 
+    for x in ${test_sets}; do
         feat_test_sets=${feat_test_sets}" "test_${x}
     done
     for x in ${dev_set} ${train_set} ${feat_test_sets}; do
@@ -198,7 +198,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     idx=0
     for mode in ${decode_modes}; do
     {
-        for x in ${test_sets}; do 
+        for x in ${test_sets}; do
         {
             test_dir=$dir/test_${mode}${decoding_chunk_size:+_chunk$decoding_chunk_size}/${x}
             mkdir -p $test_dir

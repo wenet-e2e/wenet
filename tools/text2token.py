@@ -28,7 +28,7 @@ def exist_or_not(i, match_pos):
 def seg_char(sent):
     pattern = re.compile(r'([\u4e00-\u9fa5])')
     chars = pattern.split(sent)
-    chars = [w for w in chars if len(w.strip())>0]
+    chars = [w for w in chars if len(w.strip()) > 0]
     return chars
 
 def get_parser():
@@ -91,7 +91,7 @@ def main():
         with codecs.open(args.non_lang_syms, 'r', encoding="utf-8") as f:
             nls = [x.rstrip() for x in f.readlines()]
             rs = [re.compile(re.escape(x)) for x in nls]
-    
+
     if args.bpe_model is not None:
         import sentencepiece as spm
         sp = spm.SentencePieceProcessor()
