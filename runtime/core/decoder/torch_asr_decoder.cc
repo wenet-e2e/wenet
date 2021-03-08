@@ -12,8 +12,9 @@ namespace wenet {
 
 TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
-    std::shared_ptr<TorchAsrModel> model, const SymbolTable& symbol_table,
-    const DecodeOptions& opts, std::shared_ptr<LmFst> lm_fst)
+    std::shared_ptr<TorchAsrModel> model,
+    std::shared_ptr<fst::SymbolTable> symbol_table, const DecodeOptions& opts,
+    std::shared_ptr<LmFst> lm_fst)
     : feature_pipeline_(feature_pipeline),
       model_(model),
       symbol_table_(symbol_table),
@@ -125,7 +126,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     const std::vector<int>& best_hyp = hypotheses[0];
     result_ = "";
     for (size_t i = 0; i < best_hyp.size(); ++i) {
-      result_ += symbol_table_.Find(best_hyp[i]);
+      result_ += symbol_table_->Find(best_hyp[i]);
     }
     VLOG(1) << "Partial CTC result " << result_;
 
@@ -206,7 +207,7 @@ void TorchAsrDecoder::AttentionRescoring() {
     std::string result;
     int best_k = weighted_scores[i].first;
     for (size_t j = 0; j < hypotheses[best_k].size(); ++j) {
-      result += symbol_table_.Find(hypotheses[best_k][j]);
+      result += symbol_table_->Find(hypotheses[best_k][j]);
     }
     VLOG(1) << "ctc index " << best_k << " result " << result << " score "
             << weighted_scores[i].second;

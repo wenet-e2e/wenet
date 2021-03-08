@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
+#include "fst/symbol-table.h"
 #include "torch/script.h"
 #include "torch/torch.h"
 
 #include "decoder/ctc_prefix_beam_search.h"
-#include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "lm/lm_fst.h"
@@ -33,7 +33,8 @@ class TorchAsrDecoder {
  public:
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
                   std::shared_ptr<TorchAsrModel> model,
-                  const SymbolTable& symbol_table, const DecodeOptions& opts,
+                  std::shared_ptr<fst::SymbolTable> symbol_table,
+                  const DecodeOptions& opts,
                   std::shared_ptr<LmFst> lm_fst = nullptr);
 
   // Return true if all feature has been decoded, else return false
@@ -51,7 +52,7 @@ class TorchAsrDecoder {
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
-  const SymbolTable& symbol_table_;
+  std::shared_ptr<fst::SymbolTable> symbol_table_;
   const DecodeOptions& opts_;
   // cache feature
   std::vector<std::vector<float>> cached_feature_;

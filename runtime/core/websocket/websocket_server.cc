@@ -32,7 +32,7 @@ namespace json = boost::json;
 ConnectionHandler::ConnectionHandler(
     tcp::socket&& socket, std::shared_ptr<FeaturePipelineConfig> feature_config,
     std::shared_ptr<DecodeOptions> decode_config,
-    std::shared_ptr<SymbolTable> symbol_table,
+    std::shared_ptr<fst::SymbolTable> symbol_table,
     std::shared_ptr<TorchAsrModel> model)
     : ws_(std::move(socket)),
       feature_config_(feature_config),
@@ -55,7 +55,7 @@ void ConnectionHandler::OnSpeechStart() {
   ws_.write(asio::buffer(json::serialize(rv)));
   feature_pipeline_ = std::make_shared<FeaturePipeline>(*feature_config_);
   decoder_ = std::make_shared<TorchAsrDecoder>(feature_pipeline_, model_,
-                                               *symbol_table_, *decode_config_);
+                                               symbol_table_, *decode_config_);
   // Start decoder thread
   decode_thread_ =
       std::make_shared<std::thread>(&ConnectionHandler::DecodeThreadFunc, this);
