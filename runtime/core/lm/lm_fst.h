@@ -16,14 +16,16 @@
 #define LM_LM_FST_H_
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "fst/fstlib.h"
 #include "fst/symbol-table.h"
 
 namespace wenet {
 
-const std::string kSOS = "<s>";
-const std::string kEOS = "</s>";
+const char kSOS[] = "<s>";
+const char kEOS[] = "</s>";
 
 class LmFst {
  public:
@@ -32,7 +34,7 @@ class LmFst {
   // Process given state with given label, return weight and the next state
   float Step(int state, int ilabel, int* next_state);
   float StepEos(int state, int* next_state);
-  float StepTokenArray(std::vector<std::string>& strs);
+  float StepTokenArray(const std::vector<std::string>& strs);
 
   int start() const { return start_; }
 

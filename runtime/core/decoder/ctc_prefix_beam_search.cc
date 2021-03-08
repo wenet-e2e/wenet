@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 #include <tuple>
 #include <unordered_map>
 #include <utility>

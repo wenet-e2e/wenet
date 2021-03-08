@@ -5,6 +5,7 @@
 #define DECODER_CTC_PREFIX_BEAM_SEARCH_H_
 
 #include <limits>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 

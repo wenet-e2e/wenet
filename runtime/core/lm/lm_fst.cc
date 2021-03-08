@@ -13,6 +13,10 @@
 // limitations under the License.
 
 #include "lm/lm_fst.h"
+
+#include <string>
+#include <vector>
+
 #include "utils/log.h"
 
 namespace wenet {
@@ -56,7 +60,7 @@ float LmFst::StepEos(int state, int* next_state) {
   return Step(state, eos_, next_state);
 }
 
-float LmFst::StepTokenArray(std::vector<std::string>& strs) {
+float LmFst::StepTokenArray(const std::vector<std::string>& strs) {
   int state = start_;
   int next_state = 0;
   float sentence_weight = 0.0;
