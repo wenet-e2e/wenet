@@ -27,7 +27,8 @@ const std::string kEOS = "</s>";
 
 class LmFst {
  public:
-  LmFst(const std::string& fst_file, const std::string& symbol_file);
+  LmFst(const std::string& fst_file,
+        std::shared_ptr<fst::SymbolTable> symbol_table);
   // Process given state with given label, return weight and the next state
   float Step(int state, int ilabel, int* next_state);
   float StepEos(int state, int* next_state);
@@ -37,7 +38,7 @@ class LmFst {
 
  private:
   std::unique_ptr<fst::StdVectorFst> fst_ = nullptr;
-  std::unique_ptr<fst::SymbolTable> symbols_ = nullptr;
+  std::shared_ptr<fst::SymbolTable> symbol_table_ = nullptr;
 
   int sos_ = -1;
   int eos_ = -1;

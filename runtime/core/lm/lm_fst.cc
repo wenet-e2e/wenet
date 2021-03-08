@@ -17,12 +17,13 @@
 
 namespace wenet {
 
-LmFst::LmFst(const std::string& fst_file, const std::string& symbol_file) {
+LmFst::LmFst(const std::string& fst_file,
+             std::shared_ptr<fst::SymbolTable> symbol_table)
+    : symbol_table_(symbol_table) {
   fst_.reset(fst::StdVectorFst::Read(fst_file));
   CHECK_NE(fst_->Properties(fst::kILabelSorted, true), 0);
-  symbols_.reset(fst::SymbolTable::ReadText(symbol_file));
-  sos_ = symbols_->Find("<s>");
-  eos_ = symbols_->Find("</s>");
+  sos_ = symbol_table_->Find("<s>");
+  eos_ = symbol_table_->Find("</s>");
   // fst::kNoSymbol = -1
   CHECK_NE(sos_, fst::SymbolTable::kNoSymbol);
   CHECK_NE(eos_, fst::SymbolTable::kNoSymbol);
@@ -62,7 +63,7 @@ float LmFst::StepTokenArray(std::vector<std::string>& strs) {
   std::vector<std::string> strs_add_eos(strs);
   strs_add_eos.emplace_back("</s>");
   for (size_t i = 0; i < strs_add_eos.size(); i++) {
-    int ilabel = symbols_->Find(strs_add_eos[i]);
+    int ilabel = symbol_table_->Find(strs_add_eos[i]);
     CHECK_NE(ilabel, fst::SymbolTable::kNoSymbol);
     float weight = Step(state, ilabel, &next_state);
     sentence_weight += weight;
