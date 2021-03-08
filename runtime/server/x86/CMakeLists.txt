@@ -129,7 +129,7 @@ add_library(decoder STATIC
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC utils ${TORCH_LIBRARIES})
+target_link_libraries(decoder PUBLIC lm utils ${TORCH_LIBRARIES})
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main decoder)
 add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)

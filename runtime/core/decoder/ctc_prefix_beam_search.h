@@ -26,13 +26,20 @@ struct CtcPrefixBeamSearchOptions {
   float lm_weight = 0.0;
 };
 
+float LogAdd(float x, float y);
+
 struct PrefixScore {
   // blank endding score
   float s = -std::numeric_limits<float>::max();
   // none blank ending score
   float ns = -std::numeric_limits<float>::max();
+
+  // LM info
+  int lm_state = 0;
+  float lm_score = 0.0f;
   PrefixScore() {}
   PrefixScore(float s, float ns) : s(s), ns(ns) {}
+  float Score() const { return LogAdd(s, ns) + lm_score; }
 };
 
 struct PrefixHash {
@@ -48,6 +55,9 @@ struct PrefixHash {
 
 class CtcPrefixBeamSearch {
  public:
+  typedef std::unordered_map<std::vector<int>, PrefixScore, PrefixHash>
+      PrefixTable;
+
   explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts,
                                std::shared_ptr<LmFst> lm_fst = nullptr);
 
@@ -60,7 +70,14 @@ class CtcPrefixBeamSearch {
   const std::vector<float>& likelihood() const { return likelihood_; }
 
  private:
-  std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> cur_hyps_;
+  // Optional update LM score
+  // return the reference in next_hyps
+  PrefixScore& OptionalUpdateLM(const PrefixScore& prefix,
+                                bool copy_lm_from_prefix,
+                                const std::vector<int>& new_prefix,
+                                PrefixTable* next_hyps);
+
+  PrefixTable cur_hyps_;
 
   // Nbest list and corresponding likelihood_, in sorted order
   std::vector<std::vector<int>> hypotheses_;
