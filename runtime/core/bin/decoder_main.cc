@@ -12,6 +12,7 @@
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
+#include "lm/lm_fst.h"
 #include "utils/flags.h"
 #include "utils/log.h"
 #include "utils/utils.h"
@@ -25,6 +26,9 @@ DEFINE_string(model_path, "", "pytorch exported model path");
 DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(dict_path, "", "dict path");
+DEFINE_string(lm_fst_path, "", "lm fst path");
+DEFINE_double(ctc_lm_weight, 1.0, "lm weight in ctc decoding");
+DEFINE_double(ctc_weight, 0.0, "ctc weight for final rescoring");
 DEFINE_string(result, "", "result output file");
 
 int main(int argc, char *argv[]) {
@@ -38,12 +42,17 @@ int main(int argc, char *argv[]) {
   wenet::DecodeOptions decode_config;
   decode_config.chunk_size = FLAGS_chunk_size;
   decode_config.num_left_chunks = FLAGS_num_left_chunks;
+  decode_config.ctc_weight = FLAGS_ctc_weight;
+  decode_config.ctc_search_opts.lm_weight = FLAGS_ctc_lm_weight;
   wenet::FeaturePipelineConfig feature_config;
   feature_config.num_bins = FLAGS_num_bins;
   const int sample_rate = 16000;
   auto feature_pipeline =
       std::make_shared<wenet::FeaturePipeline>(feature_config);
-
+  std::shared_ptr<wenet::LmFst> lm_fst = nullptr;
+  if (!FLAGS_lm_fst_path.empty()) {
+    lm_fst = std::make_shared<wenet::LmFst>(FLAGS_lm_fst_path, symbol_table);
+  }
   if (FLAGS_wav_path.empty() && FLAGS_wav_scp.empty()) {
     LOG(FATAL) << "Please provide the wave path or the wav scp.";
   }
@@ -80,7 +89,7 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
     wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
-                                   decode_config);
+                                   decode_config, lm_fst);
 
     int wave_dur = wav_reader.num_sample() / sample_rate * 1000;
     int decode_time = 0;

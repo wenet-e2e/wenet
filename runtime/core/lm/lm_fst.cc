@@ -42,17 +42,20 @@ float LmFst::Step(int state, int ilabel, int* next_state) {
   if (sm.Find(ilabel)) {
     const fst::StdArc& arc = sm.Value();
     *next_state = arc.nextstate;
-    return arc.weight.Value();
-  } else {
-    // Backoff path
-    fst::ArcIterator<fst::StdVectorFst> aiter(*fst_, state);
-    // The state must has arcs
-    CHECK(!aiter.Done());
+    return -arc.weight.Value();
+  }
+
+  // Backoff
+  fst::ArcIterator<fst::StdVectorFst> aiter(*fst_, state);
+  // The state must has arcs and has backoff arc
+  if (!aiter.Done() && aiter.Value().ilabel == 0) {
     const fst::StdArc& arc = aiter.Value();
-    // The state must has backoff arcs
-    CHECK_EQ(arc.ilabel, 0);
-    // Recursive to backoff state
-    return arc.weight.Value() + Step(arc.nextstate, ilabel, next_state);
+    return -arc.weight.Value() + Step(arc.nextstate, ilabel, next_state);
+  } else {
+    *next_state = start_;
+    // Give a weight small enough, we don't directly use float max here to
+    // avoid arithmetic overflow when combined with other score outside
+    return -1e5;
   }
 }
 

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -15,9 +16,10 @@
 
 namespace wenet {
 
-CtcPrefixBeamSearch::CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts,
-                                         std::shared_ptr<LmFst> lm_fst)
-    : opts_(opts), lm_fst_(lm_fst) {
+CtcPrefixBeamSearch::CtcPrefixBeamSearch(
+    const CtcPrefixBeamSearchOptions& opts, std::shared_ptr<LmFst> lm_fst,
+    std::shared_ptr<fst::SymbolTable> symbol_table)
+    : opts_(opts), lm_fst_(lm_fst), symbol_table_(symbol_table) {
   Reset();
 }
 
@@ -53,7 +55,7 @@ float LogAdd(float x, float y) {
 static bool PrefixScoreCompare(
     const std::pair<std::vector<int>, PrefixScore>& a,
     const std::pair<std::vector<int>, PrefixScore>& b) {
-  return a.second.Score() > b.second.Score();
+  return a.second.CombinedScore() > b.second.CombinedScore();
 }
 
 // Please refer https://robin1001.github.io/2020/12/11/ctc-search/
@@ -83,32 +85,33 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
         // of PrefixScore will set fields s(blank ending score) and
         // ns(none blank ending score) to -inf, respectively.
         if (id == opts_.blank) {
-          PrefixScore& next_score =
+          PrefixScore* next_score =
               OptionalUpdateLM(prefix_score, true, prefix, &next_hyps);
           // PrefixScore& next_score = next_hyps[prefix];
-          next_score.s = LogAdd(next_score.s, LogAdd(prefix_score.s + prob,
-                                                     prefix_score.ns + prob));
+          next_score->s = LogAdd(next_score->s, LogAdd(prefix_score.s + prob,
+                                                       prefix_score.ns + prob));
         } else if (prefix.size() > 0 && id == prefix.back()) {
           // Case 1: *aa -> *a;
           // PrefixScore& next_score1 = next_hyps[prefix];
-          PrefixScore& next_score1 =
+          PrefixScore* next_score1 =
               OptionalUpdateLM(prefix_score, true, prefix, &next_hyps);
-          next_score1.ns = LogAdd(next_score1.ns, prefix_score.ns + prob);
+          next_score1->ns = LogAdd(next_score1->ns, prefix_score.ns + prob);
           // Case 2: *a-a -> *aa; - is blank
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
-          PrefixScore& next_score2 =
+          PrefixScore* next_score2 =
               OptionalUpdateLM(prefix_score, false, new_prefix, &next_hyps);
           // PrefixScore& next_score2 = next_hyps[new_prefix];
-          next_score2.ns = LogAdd(next_score2.ns, prefix_score.s + prob);
+          next_score2->ns = LogAdd(next_score2->ns, prefix_score.s + prob);
         } else {
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
-          PrefixScore& next_score =
+          PrefixScore* next_score =
               OptionalUpdateLM(prefix_score, false, new_prefix, &next_hyps);
           // PrefixScore& next_score = next_hyps[new_prefix];
-          next_score.ns = LogAdd(next_score.ns, LogAdd(prefix_score.s + prob,
-                                                       prefix_score.ns + prob));
+          next_score->ns =
+              LogAdd(next_score->ns,
+                     LogAdd(prefix_score.s + prob, prefix_score.ns + prob));
         }
       }
     }
@@ -126,26 +129,36 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     cur_hyps_.clear();
     hypotheses_.clear();
     likelihood_.clear();
+    scores_.clear();
     for (size_t i = 0; i < arr.size(); ++i) {
+      string hyp;
+      for (size_t j = 0; j < arr[i].first.size(); j++) {
+        hyp += symbol_table_->Find(arr[i].first[j]);
+        hyp += " ";
+      }
+      LOG(INFO) << hyp << arr[i].second.CombinedScore() << " "
+                << arr[i].second.AmScore() << " " << arr[i].second.LmScore();
       cur_hyps_[arr[i].first] = arr[i].second;
       hypotheses_.emplace_back(std::move(arr[i].first));
-      likelihood_.emplace_back(arr[i].second.Score());
+      likelihood_.emplace_back(arr[i].second.CombinedScore());
+      scores_.push_back(arr[i].second);
     }
+    LOG(INFO) << " ";
   }
 }
 
-PrefixScore& CtcPrefixBeamSearch::OptionalUpdateLM(
+PrefixScore* CtcPrefixBeamSearch::OptionalUpdateLM(
     const PrefixScore& prefix_score, bool copy_lm_from_prefix,
     const std::vector<int>& new_prefix, PrefixTable* next_hyps) {
   // No lm, just use the default 0 value, do nothing
   if (lm_fst_ == nullptr) {
-    return (*next_hyps)[new_prefix];
+    return &(*next_hyps)[new_prefix];
   }
   if (copy_lm_from_prefix) {
     PrefixScore& next_score = (*next_hyps)[new_prefix];
     next_score.lm_state = prefix_score.lm_state;
     next_score.lm_score = prefix_score.lm_score;
-    return next_score;
+    return &next_score;
   } else {
     // If this new_prefix is in cur_hyps_ or next_hyps, if in, the LM
     // info has already been updated
@@ -158,15 +171,32 @@ PrefixScore& CtcPrefixBeamSearch::OptionalUpdateLM(
       lm_state = (*next_hyps)[new_prefix].lm_state;
       lm_score = (*next_hyps)[new_prefix].lm_score;
     } else {
-      lm_score = prefix_score.lm_score +
-                 opts_.lm_weight *
-                     lm_fst_->Step(prefix_score.lm_state, new_prefix.back(),
-                                   &lm_state);
+      float lm_penalty =
+          lm_fst_->Step(prefix_score.lm_state, new_prefix.back(), &lm_state);
+      lm_score = prefix_score.lm_score + opts_.lm_weight * lm_penalty;
+      // if (symbol_table_ != nullptr) {
+      //   std::string hyp;
+      //   for (size_t i = 0; i < new_prefix.size(); i++) {
+      //     hyp += symbol_table_->Find(new_prefix[i]);
+      //     hyp += " ";
+      //   }
+      //   LOG(INFO) << hyp << lm_penalty << " " << lm_score;
+      // }
     }
     PrefixScore& next_score = (*next_hyps)[new_prefix];
     next_score.lm_state = prefix_score.lm_state;
-    next_score.lm_score = prefix_score.lm_score;
-    return next_score;
+    next_score.lm_score = lm_score;
+    return &next_score;
+  }
+}
+
+void CtcPrefixBeamSearch::ApplyEosScore() {
+  if (lm_fst_ == nullptr) return;
+  for (size_t i = 0; i < scores_.size(); i++) {
+    int lm_state = scores_[i].lm_state;
+    float lm_penalty = lm_fst_->StepEos(scores_[i].lm_state, &lm_state);
+    scores_[i].lm_score += opts_.lm_weight * lm_penalty;
+    scores_[i].lm_state = lm_state;
   }
 }
 

@@ -19,8 +19,8 @@ TorchAsrDecoder::TorchAsrDecoder(
       model_(model),
       symbol_table_(symbol_table),
       opts_(opts),
-      ctc_prefix_beam_searcher_(
-          new CtcPrefixBeamSearch(opts.ctc_search_opts, lm_fst)) {}
+      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(
+          opts.ctc_search_opts, lm_fst, symbol_table)) {}
 
 void TorchAsrDecoder::Reset() {
   start_ = false;
@@ -157,7 +157,10 @@ static bool CompareFunc(const std::pair<int, float>& a,
 void TorchAsrDecoder::AttentionRescoring() {
   int sos = model_->sos();
   int eos = model_->eos();
+  ctc_prefix_beam_searcher_->ApplyEosScore();
   auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  std::vector<PrefixScore> ctc_scores = ctc_prefix_beam_searcher_->scores();
+  CHECK_EQ(hypotheses.size(), ctc_scores.size());
   int num_hyps = hypotheses.size();
   torch::NoGradGuard no_grad;
   // Step 1: Prepare input for libtorch
@@ -190,6 +193,7 @@ void TorchAsrDecoder::AttentionRescoring() {
   // Step 3: Compute rescoring score
   // (id, score) pair for later sort
   std::vector<std::pair<int, float>> weighted_scores(num_hyps);
+  std::vector<float> rescoring_score(num_hyps);
   for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
     float score = 0.0f;
@@ -198,8 +202,10 @@ void TorchAsrDecoder::AttentionRescoring() {
     }
     score += probs[i][hyp.size()][eos].item<float>();
     // TODO(Binbin Zhang): Combine CTC and attention decoder score
+    rescoring_score[i] = score;
     weighted_scores[i].first = i;
-    weighted_scores[i].second = score;
+    weighted_scores[i].second =
+        score + opts_.ctc_weight * ctc_scores[i].CombinedScore();
   }
 
   std::sort(weighted_scores.begin(), weighted_scores.end(), CompareFunc);
@@ -209,8 +215,12 @@ void TorchAsrDecoder::AttentionRescoring() {
     for (size_t j = 0; j < hypotheses[best_k].size(); ++j) {
       result += symbol_table_->Find(hypotheses[best_k][j]);
     }
-    VLOG(1) << "ctc index " << best_k << " result " << result << " score "
-            << weighted_scores[i].second;
+    VLOG(1) << "ctc_index " << best_k << " result " << result << " final_score "
+            << weighted_scores[i].second << " rescoring_score "
+            << rescoring_score[best_k] << " ctc_score "
+            << ctc_scores[best_k].CombinedScore() << " AM "
+            << ctc_scores[best_k].AmScore() << " LM "
+            << ctc_scores[best_k].LmScore();
     if (0 == i) {
       result_ = result;
     }

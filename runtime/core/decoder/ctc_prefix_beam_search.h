@@ -24,7 +24,7 @@ struct CtcPrefixBeamSearchOptions {
   int blank = 0;  // blank id
   int first_beam_size = 10;
   int second_beam_size = 10;
-  float lm_weight = 0.0;
+  float lm_weight = 1.0;
 };
 
 float LogAdd(float x, float y);
@@ -39,8 +39,19 @@ struct PrefixScore {
   int lm_state = 0;
   float lm_score = 0.0f;
   PrefixScore() {}
+  PrefixScore(const PrefixScore& other) {
+    s = other.s;
+    ns = other.ns;
+    lm_state = other.lm_state;
+    lm_score = other.lm_score;
+  }
   PrefixScore(float s, float ns) : s(s), ns(ns) {}
-  float Score() const { return LogAdd(s, ns) + lm_score; }
+  float CombinedScore() const { return AmScore() + lm_score; }
+  // Here AmScore is the score from E2E model, we use it here to distinguish
+  // it from lm_score.
+  // it's some kind of ambiguous since E2E models both AM and LM info.
+  float AmScore() const { return LogAdd(s, ns); }
+  float LmScore() const { return lm_score; }
 };
 
 struct PrefixHash {
@@ -59,8 +70,10 @@ class CtcPrefixBeamSearch {
   typedef std::unordered_map<std::vector<int>, PrefixScore, PrefixHash>
       PrefixTable;
 
-  explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts,
-                               std::shared_ptr<LmFst> lm_fst = nullptr);
+  explicit CtcPrefixBeamSearch(
+      const CtcPrefixBeamSearchOptions& opts,
+      std::shared_ptr<LmFst> lm_fst = nullptr,
+      std::shared_ptr<fst::SymbolTable> symbol_table = nullptr);
 
   void Search(const torch::Tensor& logp);
   void Reset();
@@ -69,11 +82,14 @@ class CtcPrefixBeamSearch {
     return hypotheses_;
   }
   const std::vector<float>& likelihood() const { return likelihood_; }
+  const std::vector<PrefixScore>& scores() const { return scores_; }
+
+  void ApplyEosScore();
 
  private:
   // Optional update LM score
-  // return the reference in next_hyps
-  PrefixScore& OptionalUpdateLM(const PrefixScore& prefix,
+  // return the pointer of new_prefix in next_hyps
+  PrefixScore* OptionalUpdateLM(const PrefixScore& prefix,
                                 bool copy_lm_from_prefix,
                                 const std::vector<int>& new_prefix,
                                 PrefixTable* next_hyps);
@@ -83,7 +99,9 @@ class CtcPrefixBeamSearch {
   // Nbest list and corresponding likelihood_, in sorted order
   std::vector<std::vector<int>> hypotheses_;
   std::vector<float> likelihood_;
+  std::vector<PrefixScore> scores_;
   std::shared_ptr<LmFst> lm_fst_;
+  std::shared_ptr<fst::SymbolTable> symbol_table_;
   const CtcPrefixBeamSearchOptions& opts_;
 
  public:

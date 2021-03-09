@@ -26,6 +26,7 @@ struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
   CtcPrefixBeamSearchOptions ctc_search_opts;
+  float ctc_weight = 0.0;
 };
 
 // Torch ASR decoder

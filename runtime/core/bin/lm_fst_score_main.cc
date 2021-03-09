@@ -21,16 +21,16 @@
 #include "utils/log.h"
 #include "utils/utils.h"
 
-DEFINE_string(fst_path, "", "arpa fst lm file");
+DEFINE_string(lm_fst_path, "", "arpa fst lm file");
 DEFINE_string(dict_path, "", "dict path");
 
 int main(int argc, char *argv[]) {
   ParseCommandLineFlags(&argc, &argv, false);
-  LOG(INFO) << FLAGS_fst_path;
+  LOG(INFO) << FLAGS_lm_fst_path;
   LOG(INFO) << FLAGS_dict_path;
   auto symbol_table = std::shared_ptr<fst::SymbolTable>(
       fst::SymbolTable::ReadText(FLAGS_dict_path));
-  wenet::LmFst lm_fst(FLAGS_fst_path, symbol_table);
+  wenet::LmFst lm_fst(FLAGS_lm_fst_path, symbol_table);
 
   while (true) {
     std::string line;
