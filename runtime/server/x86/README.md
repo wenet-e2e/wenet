@@ -2,7 +2,7 @@
 
 ## Build
 
-The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/x86` as your build directory, then type:
+The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/server/x86` as your build directory, then type:
 
 ``` sh
 mkdir build && cd build && cmake .. && cmake --build .
