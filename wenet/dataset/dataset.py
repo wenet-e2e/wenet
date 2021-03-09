@@ -357,8 +357,8 @@ class AudioDataset(Dataset):
                     token: i <space> l o v e <space> y o u
                     tokenid: int id of this token
                     token_shape: M,N    # M is the number of token, N is vocab size
-            max_length: drop utterance which is greater than max_length(ms)
-            min_length: drop utterance which is less than min_length(ms)
+            max_length: drop utterance which is greater than max_length(10ms)
+            min_length: drop utterance which is less than min_length(10ms)
             batch_type: static or dynamic, see max_frames_in_batch(dynamic)
             batch_size: number of utterances in a batch,
                it's for static batch size.
