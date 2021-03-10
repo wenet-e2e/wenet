@@ -67,8 +67,8 @@ class Executor:
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
-                            batch_idx, num_total_batch,
-                            loss.item() * accum_grad)
+                    batch_idx, num_total_batch,
+                    loss.item() * accum_grad)
                 if loss_att is not None:
                     log_str += 'loss_att {:.6f} '.format(loss_att.item())
                 if loss_ctc is not None:
@@ -101,13 +101,13 @@ class Executor:
                     total_loss += loss.item() * num_utts
                 if batch_idx % log_interval == 0:
                     log_str = 'CV Batch {}/{} loss {:.6f} '.format(
-                                 batch_idx, num_total_batch, loss.item())
+                        batch_idx, num_total_batch, loss.item())
                     if loss_att is not None:
                         log_str += 'loss_att {:.6f} '.format(loss_att.item())
                     if loss_ctc is not None:
                         log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
                     log_str += 'history loss {:.6f}'.format(
-                                  total_loss / num_seen_utts)
+                        total_loss / num_seen_utts)
                     logging.debug(log_str)
 
         return total_loss, num_seen_utts
