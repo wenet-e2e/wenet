@@ -71,7 +71,7 @@ class ASRModel(torch.nn.Module):
         speech_lengths: torch.Tensor,
         text: torch.Tensor,
         text_lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
 
         Args:
@@ -90,15 +90,21 @@ class ASRModel(torch.nn.Module):
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # 2a. Attention-decoder branch
-        loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
-                                                text, text_lengths)
+        if self.ctc_weight != 1.0:
+            loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
+                                                    text, text_lengths)
+        else:
+            loss_att = None
 
         # 2b. CTC branch
-        loss_ctc = self.ctc(encoder_out, encoder_out_lens, text, text_lengths)
+        if self.ctc_weight != 0.0:
+            loss_ctc = self.ctc(encoder_out, encoder_out_lens, text, text_lengths)
+        else:
+            loss_ctc = None
 
-        if self.ctc_weight == 0.0:
+        if loss_ctc is None:
             loss = loss_att
-        elif self.ctc_weight == 1.0:
+        elif loss_att is None:
             loss = loss_ctc
         else:
             loss = self.ctc_weight * loss_ctc + (1 -

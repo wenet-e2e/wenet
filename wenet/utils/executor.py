@@ -66,11 +66,15 @@ class Executor:
 
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
-                logging.debug('TRAIN Batch {}/{} loss {:.6f} loss_att {:.6f} '
-                              'loss_ctc {:.6f} lr {:.8f} rank {}'.format(
-                                  batch_idx, num_total_batch,
-                                  loss.item() * accum_grad, loss_att.item(),
-                                  loss_ctc.item(), lr, rank))
+                log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
+                            batch_idx, num_total_batch,
+                            loss.item() * accum_grad)
+                if loss_att is not None:
+                    log_str += 'loss_att {:.6f} '.format(loss_att.item())
+                if loss_ctc is not None:
+                    log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
+                log_str += 'lr {:.8f} rank {}'.format(lr, rank)
+                logging.debug(log_str)
 
     def cv(self, model, data_loader, device, args):
         ''' Cross validation on
@@ -96,10 +100,14 @@ class Executor:
                     num_seen_utts += num_utts
                     total_loss += loss.item() * num_utts
                 if batch_idx % log_interval == 0:
-                    logging.debug('CV Batch {}/{} loss {:.6f} loss_att {:.6f} '
-                                  'loss_ctc {:.6f} history loss {:.6f}'.format(
-                                      batch_idx, num_total_batch, loss.item(),
-                                      loss_att.item(), loss_ctc.item(),
-                                      total_loss / num_seen_utts))
+                    log_str = 'CV Batch {}/{} loss {:.6f} '.format(
+                                 batch_idx, num_total_batch, loss.item())
+                    if loss_att is not None:
+                        log_str += 'loss_att {:.6f} '.format(loss_att.item())
+                    if loss_ctc is not None:
+                        log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
+                    log_str += 'history loss {:.6f}'.format(
+                                  total_loss / num_seen_utts)
+                    logging.debug(log_str)
 
         return total_loss, num_seen_utts
