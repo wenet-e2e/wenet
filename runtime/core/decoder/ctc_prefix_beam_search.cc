@@ -4,7 +4,6 @@
 #include "decoder/ctc_prefix_beam_search.h"
 
 #include <algorithm>
-#include <cmath>
 #include <tuple>
 #include <unordered_map>
 #include <utility>
@@ -22,29 +21,9 @@ void CtcPrefixBeamSearch::Reset() {
   hypotheses_.clear();
   likelihood_.clear();
   cur_hyps_.clear();
-  PrefixScore prefix_score(0.0, -std::numeric_limits<float>::max());
+  PrefixScore prefix_score(0.0, -kFloatMax);
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
-}
-
-static float LogAdd(float x, float y) {
-  const float kMinLogDiffFloat = std::log(1.19209290e-7f);
-  float diff;
-  if (x < y) {
-    diff = x - y;
-    x = y;
-  } else {
-    diff = y - x;
-  }
-  // diff is negative.  x is now the larger one.
-
-  if (diff >= kMinLogDiffFloat) {
-    float res;
-    res = x + log1p(expf(diff));
-    return res;
-  } else {
-    return x;  // return the larger one.
-  }
 }
 
 static bool PrefixScoreCompare(
@@ -73,7 +52,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     // 2. Token passing
     for (int i = 0; i < topk_index.size(0); ++i) {
       int id = topk_index[i].item<int>();
-      float prob = topk_score[i].item<float>();
+      auto prob = topk_score[i].item<float>();
       for (const auto& it : cur_hyps_) {
         const std::vector<int>& prefix = it.first;
         const PrefixScore& prefix_score = it.second;
@@ -83,9 +62,9 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
         // ns(none blank ending score) to -inf, respectively.
         if (id == opts_.blank) {
           PrefixScore& next_score = next_hyps[prefix];
-          next_score.s = LogAdd(next_score.s, LogAdd(prefix_score.s + prob,
-                                                     prefix_score.ns + prob));
-        } else if (prefix.size() > 0 && id == prefix.back()) {
+          next_score.s = LogAdd(next_score.s, LogAdd(prefix_score.s,
+                                                     prefix_score.ns) + prob);
+        } else if (!prefix.empty() && id == prefix.back()) {
           // Case 1: *aa -> *a;
           PrefixScore& next_score1 = next_hyps[prefix];
           next_score1.ns = LogAdd(next_score1.ns, prefix_score.ns + prob);
@@ -98,8 +77,8 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
           PrefixScore& next_score = next_hyps[new_prefix];
-          next_score.ns = LogAdd(next_score.ns, LogAdd(prefix_score.s + prob,
-                                                       prefix_score.ns + prob));
+          next_score.ns = LogAdd(next_score.ns, LogAdd(prefix_score.s,
+                                                       prefix_score.ns) + prob);
         }
       }
     }
@@ -117,10 +96,10 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     cur_hyps_.clear();
     hypotheses_.clear();
     likelihood_.clear();
-    for (size_t i = 0; i < arr.size(); ++i) {
-      cur_hyps_[arr[i].first] = arr[i].second;
-      hypotheses_.emplace_back(std::move(arr[i].first));
-      likelihood_.emplace_back(LogAdd(arr[i].second.s, arr[i].second.ns));
+    for (auto& i : arr) {
+      cur_hyps_[i.first] = i.second;
+      hypotheses_.emplace_back(std::move(i.first));
+      likelihood_.emplace_back(LogAdd(i.second.s, i.second.ns));
     }
   }
 }

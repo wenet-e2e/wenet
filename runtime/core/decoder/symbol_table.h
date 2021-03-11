@@ -31,7 +31,7 @@ class SymbolTable {
     ReadSymbolFile(symbol_file);
   }
 
-  ~SymbolTable() {}
+  ~SymbolTable() = default;
 
   const std::string& Find(int id) const { return symbol_tabel_.at(id); }
 

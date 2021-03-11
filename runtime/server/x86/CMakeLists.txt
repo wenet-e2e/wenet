@@ -92,7 +92,7 @@ add_library(decoder STATIC
 target_link_libraries(decoder PUBLIC glog ${TORCH_LIBRARIES})
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
-target_link_libraries(ctc_prefix_beam_search_test PUBLIC glog gtest_main decoder)
+target_link_libraries(ctc_prefix_beam_search_test PUBLIC glog gtest_main decoder utils)
 add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
 
 # websocket

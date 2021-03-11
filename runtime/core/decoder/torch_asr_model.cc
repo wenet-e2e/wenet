@@ -4,7 +4,6 @@
 #include "decoder/torch_asr_model.h"
 
 #include <memory>
-#include <string>
 #include <utility>
 
 #include "torch/script.h"
@@ -14,7 +13,7 @@ namespace wenet {
 
 void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   torch::jit::script::Module model = torch::jit::load(model_path);
-  module_.reset(new TorchModule(std::move(model)));
+  module_ = std::make_shared<TorchModule>(std::move(model));
   // For multi-thread performance
   at::set_num_threads(num_threads);
 #ifndef ANDROID
