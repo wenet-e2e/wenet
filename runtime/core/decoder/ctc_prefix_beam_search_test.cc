@@ -3,10 +3,12 @@
 
 #include "decoder/ctc_prefix_beam_search.h"
 
-#include <math.h>
+#include <cmath>
 #include <vector>
 
 #include "gtest/gtest.h"
+
+#include "utils/utils.h"
 
 TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   // See https://robin1001.github.io/2020/12/11/ctc-search/ for the
@@ -37,7 +39,7 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   EXPECT_EQ(result[1][1], 2);
   EXPECT_EQ(result[2].size(), 1);
   EXPECT_EQ(result[2][0], 1);
-  EXPECT_FLOAT_EQ(exp(likelihood[0]), 0.2185);
-  EXPECT_FLOAT_EQ(exp(likelihood[1]), 0.1550);
-  EXPECT_FLOAT_EQ(exp(likelihood[2]), 0.1525);
+  EXPECT_FLOAT_EQ(std::exp(likelihood[0]), 0.2185);
+  EXPECT_FLOAT_EQ(std::exp(likelihood[1]), 0.1550);
+  EXPECT_FLOAT_EQ(std::exp(likelihood[2]), 0.1525);
 }
