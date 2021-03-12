@@ -6,8 +6,8 @@
 [**Docs**](https://mobvoi.github.io/wenet/)
 | [**Tutorial**](https://mobvoi.github.io/wenet/tutorial.html)
 | [**Papers**](https://mobvoi.github.io/wenet/papers.html)
-| [**Runtime(x86)**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
-| [**Runtime(android)**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
+| [**Runtime (x86)**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
+| [**Runtime (android)**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
 
 **We** share neural **Net** together.
 

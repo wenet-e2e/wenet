@@ -15,6 +15,9 @@
 #ifndef UTILS_UTILS_H_
 #define UTILS_UTILS_H_
 
+#include <algorithm>
+#include <cmath>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -25,7 +28,12 @@ namespace wenet {
   Type(const Type &) = delete;         \
   Type &operator=(const Type &) = delete;
 
+const float kFloatMax = std::numeric_limits<float>::max();
+
 void SplitString(const std::string& str, std::vector<std::string>* strs);
+
+// Return the sum of two probabilities in log scale
+float LogAdd(const float& x, const float& y);
 
 }  // namespace wenet
 

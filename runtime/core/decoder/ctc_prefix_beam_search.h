@@ -4,7 +4,6 @@
 #ifndef DECODER_CTC_PREFIX_BEAM_SEARCH_H_
 #define DECODER_CTC_PREFIX_BEAM_SEARCH_H_
 
-#include <limits>
 #include <unordered_map>
 #include <vector>
 
@@ -26,10 +25,10 @@ struct CtcPrefixBeamSearchOptions {
 
 struct PrefixScore {
   // blank endding score
-  float s = -std::numeric_limits<float>::max();
+  float s = -kFloatMax;
   // none blank ending score
-  float ns = -std::numeric_limits<float>::max();
-  PrefixScore() {}
+  float ns = -kFloatMax;
+  PrefixScore() = default;
   PrefixScore(float s, float ns) : s(s), ns(ns) {}
 };
 
@@ -37,8 +36,8 @@ struct PrefixHash {
   size_t operator()(const std::vector<int>& prefix) const {
     size_t hash_code = 0;
     // here we use KB&DR hash code
-    for (size_t i = 0; i < prefix.size(); ++i) {
-      hash_code = prefix[i] + 31 * hash_code;
+    for (int id : prefix) {
+      hash_code = id + 31 * hash_code;
     }
     return hash_code;
   }

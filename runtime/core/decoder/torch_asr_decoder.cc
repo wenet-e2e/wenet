@@ -14,8 +14,8 @@ TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
     std::shared_ptr<TorchAsrModel> model, const SymbolTable& symbol_table,
     const DecodeOptions& opts)
-    : feature_pipeline_(feature_pipeline),
-      model_(model),
+    : feature_pipeline_(std::move(feature_pipeline)),
+      model_(std::move(model)),
       symbol_table_(symbol_table),
       opts_(opts),
       ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts)) {
@@ -124,8 +124,8 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
     const std::vector<int>& best_hyp = hypotheses[0];
     result_ = "";
-    for (size_t i = 0; i < best_hyp.size(); ++i) {
-      result_ += symbol_table_.Find(best_hyp[i]);
+    for (int id : best_hyp) {
+      result_ += symbol_table_.Find(id);
     }
     VLOG(1) << "Partial CTC result " << result_;
 

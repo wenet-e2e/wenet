@@ -24,4 +24,12 @@ void SplitString(const std::string& str, std::vector<std::string>* strs) {
   }
 }
 
+float LogAdd(const float& x, const float& y) {
+  static float num_min = -std::numeric_limits<float>::max();
+  if (x <= num_min) return y;
+  if (y <= num_min) return x;
+  float xmax = std::max(x, y);
+  return std::log(std::exp(x - xmax) + std::exp(y - xmax)) + xmax;
+}
+
 }  // namespace wenet
