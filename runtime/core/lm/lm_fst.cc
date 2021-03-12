@@ -75,7 +75,7 @@ float LmFst::StepTokenArray(const std::vector<std::string>& strs) {
     float weight = Step(state, ilabel, &next_state);
     sentence_weight += weight;
     LOG(INFO) << state << " " << next_state << " " << ilabel << "("
-              << strs_add_eos[i] << ") " << weight;
+              << strs_add_eos[i] << ") " << weight << " " << sentence_weight;
     state = next_state;
   }
   LOG(INFO) << "Sentence weight " << sentence_weight;

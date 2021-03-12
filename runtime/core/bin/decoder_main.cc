@@ -30,6 +30,7 @@ DEFINE_string(lm_fst_path, "", "lm fst path");
 DEFINE_double(ctc_lm_weight, 1.0, "lm weight in ctc decoding");
 DEFINE_double(ctc_weight, 0.0, "ctc weight for final rescoring");
 DEFINE_string(result, "", "result output file");
+DEFINE_int32(beam_size, 10, "beam prune size");
 
 int main(int argc, char *argv[]) {
   ParseCommandLineFlags(&argc, &argv, false);
@@ -44,6 +45,8 @@ int main(int argc, char *argv[]) {
   decode_config.num_left_chunks = FLAGS_num_left_chunks;
   decode_config.ctc_weight = FLAGS_ctc_weight;
   decode_config.ctc_search_opts.lm_weight = FLAGS_ctc_lm_weight;
+  decode_config.ctc_search_opts.first_beam_size = FLAGS_beam_size;
+  decode_config.ctc_search_opts.second_beam_size = FLAGS_beam_size;
   wenet::FeaturePipelineConfig feature_config;
   feature_config.num_bins = FLAGS_num_bins;
   const int sample_rate = 16000;

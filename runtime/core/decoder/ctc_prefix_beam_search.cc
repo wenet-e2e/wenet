@@ -28,6 +28,9 @@ void CtcPrefixBeamSearch::Reset() {
   likelihood_.clear();
   cur_hyps_.clear();
   PrefixScore prefix_score(0.0, -std::numeric_limits<float>::max());
+  if (lm_fst_ != nullptr) {
+    prefix_score.lm_state = lm_fst_->start();
+  }
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
 }
@@ -151,7 +154,7 @@ PrefixScore* CtcPrefixBeamSearch::OptionalUpdateLM(
     const PrefixScore& prefix_score, bool copy_lm_from_prefix,
     const std::vector<int>& new_prefix, PrefixTable* next_hyps) {
   // No lm, just use the default 0 value, do nothing
-  if (lm_fst_ == nullptr) {
+  if (lm_fst_ == nullptr || opts_.lm_weight == 0.0) {
     return &(*next_hyps)[new_prefix];
   }
   if (copy_lm_from_prefix) {
@@ -184,14 +187,14 @@ PrefixScore* CtcPrefixBeamSearch::OptionalUpdateLM(
       // }
     }
     PrefixScore& next_score = (*next_hyps)[new_prefix];
-    next_score.lm_state = prefix_score.lm_state;
+    next_score.lm_state = lm_state;
     next_score.lm_score = lm_score;
     return &next_score;
   }
 }
 
 void CtcPrefixBeamSearch::ApplyEosScore() {
-  if (lm_fst_ == nullptr) return;
+  if (lm_fst_ == nullptr || opts_.lm_weight == 0.0) return;
   for (size_t i = 0; i < scores_.size(); i++) {
     int lm_state = scores_[i].lm_state;
     float lm_penalty = lm_fst_->StepEos(scores_[i].lm_state, &lm_state);
