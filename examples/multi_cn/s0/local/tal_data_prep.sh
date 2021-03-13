@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Copyright 2021 JD AI Lab. All Rights Reserved. (authors: Lu Fan)
+# Copyright 2021 Mobvoi Inc. All Rights Reserved. (Di Wu)
 # Apache 2.0
 
 . ./path.sh || exit 1;
@@ -54,7 +55,7 @@ for dir in $train_dir $dev_dir $test_dir; do
   paste -d ' ' <(awk '{print $2}' $dir/utt_uttid) $dir/wav.flist > $dir/wav.scp
   tools/filter_scp.pl -f 1 $dir/utt.list $tal_text | \
     sed 's/Ａ/A/g' | sed 's/#//g' | sed 's/=//g' | \
-    sed 's/，//g' | sed 's/？//g' | sed 's/。//g' \
+    sed 's/，//g' | sed 's/？//g' | sed 's/。//g' | sed 's/[ ][ ]*$//g'\
     > $dir/transcripts.txt
   awk '{print $1}' $dir/transcripts.txt > $dir/utt.list
   paste -d " " <(sort -u -k 1 $dir/utt_uttid | awk '{print $2}') \

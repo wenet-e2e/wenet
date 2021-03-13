@@ -38,7 +38,7 @@ raw_wav: true
 collate_conf:
     # waveform level config
     wav_distortion_conf:
-        wav_dither: 0.0
+        wav_dither: 0.1
         wav_distortion_rate: 0.0
         distortion_methods: []
     speed_perturb: false
@@ -63,20 +63,20 @@ collate_conf:
 
 # dataset related
 dataset_conf:
-    max_length: 40960
+    max_length: 2048
     min_length: 0
     batch_type: 'static' # static or dynamic
-    batch_size: 16
+    batch_size: 18
     sort: true
 
 grad_clip: 5
 accum_grad: 1
-max_epoch: 180
+max_epoch: 220
 log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.002
+    lr: 0.004
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 25000

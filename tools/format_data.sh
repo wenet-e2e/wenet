@@ -86,7 +86,7 @@ fi
 # 2. Create scp files for outputs
 mkdir -p ${tmpdir}/output
 if [ -n "${bpecode}" ]; then
-    if [ "${trans_type}" == "zh_char_en_bpe" ]; then
+    if [ "${trans_type}" == "ch_char_en_bpe" ]; then
         tools/text2token.py -s 1 -n 1 -m ${bpecode} ${dir}/text --trans_type ${trans_type} > ${tmpdir}/output/token.scp
     else
         paste -d " " <(awk '{print $1}' ${dir}/text) <(cut -f 2- -d" " ${dir}/text \

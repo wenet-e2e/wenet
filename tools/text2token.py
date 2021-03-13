@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 # Copyright 2017 Johns Hopkins University (Shinji Watanabe)
+# Copyright 2021 JD AI Lab. All Rights Reserved. (authors: Lu Fan)
+# Copyright 2021 Mobvoi Inc. All Rights Reserved. (Di Wu)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 from __future__ import print_function
@@ -70,7 +72,7 @@ def get_parser():
                         '-t',
                         type=str,
                         default="char",
-                        choices=["char", "phn", "zh_char_en_bpe"],
+                        choices=["char", "phn", "cn_char_en_bpe"],
                         help="""Transcript type. char/phn. e.g., for TIMIT
                              FADG0_SI1279 -
                              If trans_type is char, read from
@@ -139,11 +141,12 @@ def main():
 
         if (args.trans_type == "phn"):
             a = a.split(" ")
-        elif args.trans_type == "zh_char_en_bpe":
+        elif args.trans_type == "cn_char_en_bpe":
             b = seg_char(a)
             a = []
             for j in b:
-                for l in j.strip().split():
+                # we use "▁" to instead of blanks among english words
+                for l in j.strip().split("▁"):
                     if not l.encode('UTF-8').isalpha():
                         a.append(l)
                     else:
