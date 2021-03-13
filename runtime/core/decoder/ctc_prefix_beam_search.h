@@ -40,14 +40,14 @@ class CtcPrefixBeamSearch {
   const std::vector<float>& likelihood() const { return likelihood_; }
 
  private:
+  PathTrie root_;
+  int abs_time_step_;
+  std::vector<PathTrie*> prefixes_;
+
   // Nbest list and corresponding likelihood_, in sorted order
   std::vector<std::vector<int>> hypotheses_;
   std::vector<std::vector<int>> time_steps_;
   std::vector<float> likelihood_;
-
-  int abs_time_step;
-  std::vector<PathTrie*> prefixes;
-  PathTrie root;
 
   const CtcPrefixBeamSearchOptions& opts_;
 
