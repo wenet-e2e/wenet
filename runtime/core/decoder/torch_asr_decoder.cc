@@ -215,11 +215,11 @@ void TorchAsrDecoder::AttentionRescoring() {
     }
   }
 
-  PostProcesser();
+  ProcessBlank();
 }
 
-void TorchAsrDecoder::PostProcesser() {
-  if (opts_.bpe_decode && result_.size()) {
+void TorchAsrDecoder::ProcessBlank() {
+  if (result_.size()) {
     using std::string;
     using std::vector;
     vector<string> characters;

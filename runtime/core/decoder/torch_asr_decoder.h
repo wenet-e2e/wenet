@@ -24,7 +24,6 @@ using TorchModule = torch::jit::script::Module;
 struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
-  bool bpe_decode = true;
   CtcPrefixBeamSearchOptions ctc_search_opts;
 };
 
@@ -47,7 +46,7 @@ class TorchAsrDecoder {
   // Return true if we reach the end of the feature pipeline
   bool AdvanceDecoding();
   void AttentionRescoring();
-  void PostProcesser();
+  void ProcessBlank();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
