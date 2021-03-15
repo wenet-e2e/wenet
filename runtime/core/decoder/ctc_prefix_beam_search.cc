@@ -23,8 +23,8 @@ void CtcPrefixBeamSearch::Reset() {
 
   abs_time_step_ = 0;
   // init prefixes' root
-  root_.score = 0.0;
-  root_.log_prob_b_prev = 0.0;
+  root_.set_score(0.0);
+  root_.set_prob_b_prev(0.0);
   prefixes_.emplace_back(&root_);
 }
 
@@ -43,41 +43,22 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     // 2. Token passing
     for (int i = 0; i < topk_index.size(0); i++) {
       int id = topk_index[i].item<int>();
-      auto prob = topk_score[i].item<float>();
+      auto log_prob = topk_score[i].item<float>();
       for (auto prefix : prefixes_) {
-        if (id == opts_.blank) {
-          prefix->log_prob_b_cur = LogAdd(prefix->log_prob_b_cur,
-                                          prefix->score + prob);
-          continue;
-        }
-        if (id == prefix->id) {
-          prefix->log_prob_nb_cur = LogAdd(prefix->log_prob_nb_cur,
-                                           prefix->log_prob_nb_prev + prob);
-        }
-
-        auto prefix_new = prefix->GetPathTrie(id, prob, abs_time_step_);
-        if (prefix_new != nullptr) {
-          float log_prob = -kFloatMax;
-          if (id == prefix->id && prefix->log_prob_b_prev > -kFloatMax) {
-            log_prob = prob + prefix->log_prob_b_prev;
-          } else if (id != prefix->id) {
-            log_prob = prob + prefix->score;
-          }
-          prefix_new->log_prob_nb_cur = LogAdd(prefix_new->log_prob_nb_cur,
-                                               log_prob);
-        }
+        prefix->Append(id, log_prob, abs_time_step_);
       }
     }
     prefixes_.clear();
-    root_.IterateToVec(&prefixes_);
+    root_.UpdatePrefixes();
+    root_.GetPrefixes(&prefixes_);
 
     // 3. Second beam prune, only keep top n best paths
-    if (prefixes_.size() >= opts_.second_beam_size) {
+    if (prefixes_.size() > opts_.second_beam_size) {
       std::nth_element(prefixes_.begin(),
                        prefixes_.begin() + opts_.second_beam_size,
                        prefixes_.end(), PathTrie::PrefixCompare);
       for (size_t i = opts_.second_beam_size; i < prefixes_.size(); i++) {
-        prefixes_[i]->remove();
+        prefixes_[i]->Remove();
       }
       prefixes_.resize(opts_.second_beam_size);
     }
@@ -89,11 +70,10 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     std::sort(prefixes_.begin(), prefixes_.end(), PathTrie::PrefixCompare);
     for (auto& prefix : prefixes_) {
       std::vector<int> hypothesis;
-      std::vector<int> time_steps;
-      prefix->GetPathVec(&hypothesis, &time_steps);
+      prefix->GetPathVec(&hypothesis);
       hypotheses_.emplace_back(hypothesis);
-      time_steps_.emplace_back(time_steps);
-      likelihood_.emplace_back(prefix->score);
+      time_steps_.emplace_back(prefix->time_steps());
+      likelihood_.emplace_back(prefix->score());
     }
   }
 }

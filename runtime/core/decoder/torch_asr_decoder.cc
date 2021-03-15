@@ -122,12 +122,19 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     encoder_outs_.push_back(std::move(chunk_out));
     ctc_prefix_beam_searcher_->Search(ctc_log_probs);
     auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+    auto time_steps = ctc_prefix_beam_searcher_->time_steps();
     const std::vector<int>& best_hyp = hypotheses[0];
+    const std::vector<int>& best_ts = time_steps[0];
     result_ = "";
+    timestamp_ = "";
     for (int id : best_hyp) {
       result_ += symbol_table_.Find(id);
     }
+    for (int time : best_ts) {
+      timestamp_ += std::to_string(time * model_->subsampling_rate()) + " ";
+    }
     VLOG(1) << "Partial CTC result " << result_;
+    VLOG(1) << "Partial CTC timestamp " << timestamp_;
 
     // 3. cache feature for next chunk
     if (!finish) {
@@ -157,6 +164,7 @@ void TorchAsrDecoder::AttentionRescoring() {
   int sos = model_->sos();
   int eos = model_->eos();
   auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  auto time_steps = ctc_prefix_beam_searcher_->time_steps();
   int num_hyps = hypotheses.size();
   torch::NoGradGuard no_grad;
   // Step 1: Prepare input for libtorch
@@ -204,14 +212,19 @@ void TorchAsrDecoder::AttentionRescoring() {
   std::sort(weighted_scores.begin(), weighted_scores.end(), CompareFunc);
   for (size_t i = 0; i < weighted_scores.size(); ++i) {
     std::string result;
+    std::string timestamp;
     int best_k = weighted_scores[i].first;
-    for (size_t j = 0; j < hypotheses[best_k].size(); ++j) {
-      result += symbol_table_.Find(hypotheses[best_k][j]);
+    for (int id : hypotheses[best_k]) {
+      result += symbol_table_.Find(id);
+    }
+    for (int index : time_steps[best_k]) {
+      timestamp += std::to_string(index * model_->subsampling_rate()) + " ";
     }
     VLOG(1) << "ctc index " << best_k << " result " << result << " score "
             << weighted_scores[i].second;
     if (0 == i) {
       result_ = result;
+      timestamp_ = timestamp;
     }
   }
 }
