@@ -29,6 +29,7 @@ namespace wenet {
   Type &operator=(const Type &) = delete;
 
 const float kFloatMax = std::numeric_limits<float>::max();
+const char kSpaceSymbol[] = "\xe2\x96\x81";
 
 void SplitString(const std::string& str, std::vector<std::string>* strs);
 

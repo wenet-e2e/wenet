@@ -214,7 +214,9 @@ void TorchAsrDecoder::AttentionRescoring() {
       result_ = result;
     }
   }
+}
 
+void TorchAsrDecoder::PostProcesser() {
   if (opts_.bpe_decode && result_.size()) {
     using std::string;
     using std::vector;
@@ -222,10 +224,9 @@ void TorchAsrDecoder::AttentionRescoring() {
 
     if (SplitUTF8String(result_, &characters)) {
       string result;
-      const string delim = "\xe2\x96\x81";
 
       for (size_t i = 0; i < characters.size(); ++i) {
-        if (characters[i] != delim) {
+        if (characters[i] != wenet::kSpaceSymbol) {
           result.append(characters[i]);
         } else {
           // Ignore consecutive space or located in head
