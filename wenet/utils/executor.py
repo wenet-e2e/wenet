@@ -26,7 +26,7 @@ class Executor:
                      'larger than before'.format(accum_grad))
         num_seen_utts = 0
         num_total_batch = len(data_loader)
-        for batch_idx, batch in enumerate(data_loader):
+        for batch_idx, batch in enumerate(data_loader, start=1):
             key, feats, target, feats_lengths, target_lengths = batch
             feats = feats.to(device)
             target = target.to(device)
