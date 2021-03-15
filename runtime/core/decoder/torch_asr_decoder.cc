@@ -228,10 +228,16 @@ void TorchAsrDecoder::AttentionRescoring() {
         if (characters[i] != delim) {
           result.append(characters[i]);
         } else {
+          // Ignore consecutive space or located in head
           if (result.size() && result.back() != ' ') {
             result.push_back(' ');
           }
         }
+      }
+
+      // Ignore tailing space
+      if (result.size() && result.back() != ' ') {
+        result.pop_back();
       }
 
       for (size_t i = 0; i < result.size(); ++i) {
