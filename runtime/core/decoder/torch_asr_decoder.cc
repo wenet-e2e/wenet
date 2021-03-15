@@ -214,6 +214,8 @@ void TorchAsrDecoder::AttentionRescoring() {
       result_ = result;
     }
   }
+
+  PostProcesser();
 }
 
 void TorchAsrDecoder::PostProcesser() {
