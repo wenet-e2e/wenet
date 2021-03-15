@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <title>WeNet-语音实时转写</title>
-  <link rel="shortcut icon" href="./favicon.ico">
-  <script src="./assets/js/jquery-3.2.1.min.js"></script>
-  <script src="./assets/js/recorder/recorder-core.js"></script>
-  <script src="./assets/js/recorder/extensions/lib.fft.js"></script>
-  <script src="./assets/js/recorder/extensions/frequency.histogram.view.js"></script>
-  <script src="./assets/js/recorder/engine/wav.js"></script>
-  <script src="./assets/js/SoundRecognizer.js"></script>
-  <link rel="stylesheet" href="./assets/css/style.css">
-  <link rel="stylesheet" href="./assets/css/font-awesome.min.css">
+  <link rel="shortcut icon" href="./static/favicon.ico">
+  <script src="../static/js/jquery-3.2.1.min.js"></script>
+  <script src="../static/js/recorder/recorder-core.js"></script>
+  <script src="../static/js/recorder/extensions/lib.fft.js"></script>
+  <script src="../static/js/recorder/extensions/frequency.histogram.view.js"></script>
+  <script src="../static/js/recorder/engine/wav.js"></script>
+  <script src="../static/js/SoundRecognizer.js"></script>
+  <link rel="stylesheet" href="../static/css/style.css">
+  <link rel="stylesheet" href="../static/css/font-awesome.min.css">
 </head>
 
 <body>
@@ -25,7 +25,7 @@
           </p>
         </div>
         <div class="img-con">
-          <img src="./assets/image/voice-pic.png" alt="" />
+          <img src="../static/image/voice-pic.png" alt="" />
         </div>
       </div>
     </div>
@@ -89,15 +89,15 @@
         <ul class="service-item-content">
           <li>
             <div class="service-item-content-desc">WeNet企业版</div>
-            <img src="./assets/image/qrcode-enterprise.png" alt="" />
+            <img src="../static/image/qrcode-enterprise.png" alt="" />
           </li>
           <li>
             <div class="service-item-content-desc">商务合作</div>
-            <img src="./assets/image/qrcode-group.png" alt="" />
+            <img src="../static/image/qrcode-group.png" alt="" />
           </li>
           <li>
             <div class="service-item-content-desc">公众号</div>
-            <img src="./assets/image/qrcode-official-account.png" alt="" />
+            <img src="../static/image/qrcode-official-account.png" alt="" />
           </li>
         </ul>
       </div>
@@ -106,7 +106,7 @@
     <div class="voice-footer">Copyright © 2021 Mobvoi Inc. All Rights Reserved. 北京出门问问信息科技有限公司沪 ICP 备 13010933 号-5 京公网安备 11010802023145</div>
   </div>
   <script>
-  var monitoWs = null
+  var wenetWs = null
   var timeLoop = null
   $(document).ready(function() {
     $('#beginBtn').on('click', startRecording)
@@ -115,14 +115,14 @@
 
   function openWebSocket(url) {
     if ("WebSocket" in window) {
-      monitoWs = new WebSocket(url)
-      monitoWs.onopen = function() {
+      wenetWs = new WebSocket(url)
+      wenetWs.onopen = function() {
         console.log("Websocket 连接成功...")
-        monitoWs.send(JSON.stringify({ "signal": "start" }))
+        wenetWs.send(JSON.stringify({ "signal": "start" }))
       }
-      monitoWs.onmessage = function(_msg) { parseResult(_msg.data) }
-      monitoWs.onclose = function() { console.log('onclose', "WebSocket 已断开") }
-      monitoWs.onerror = function() {  console.log('onerror', "WebSocket 连接失败") }
+      wenetWs.onmessage = function(_msg) { parseResult(_msg.data) }
+      wenetWs.onclose = function() { console.log("WebSocket 连接断开") }
+      wenetWs.onerror = function() {  console.log("WebSocket 连接失败") }
     }
   }
 
@@ -143,7 +143,7 @@
       var blob = blobOrNull
       var encTime = blob.encTime
       var reader = new FileReader()
-      reader.onloadend = function() { monitoWs.send(reader.result) }
+      reader.onloadend = function() { wenetWs.send(reader.result) }
       reader.readAsArrayBuffer(blob)
     }
   }
@@ -185,10 +185,9 @@
     $('#timeCount').text('')
     clearInterval(timeLoop)
 
-    monitoWs.send(JSON.stringify({ "signal": "end" }))
+    wenetWs.send(JSON.stringify({ "signal": "end" }))
     SoundRecognizer.recordClose()
   }
   </script>
 </body>
-
 </html>
