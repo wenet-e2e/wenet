@@ -29,11 +29,17 @@ namespace wenet {
   Type &operator=(const Type &) = delete;
 
 const float kFloatMax = std::numeric_limits<float>::max();
+const char kSpaceSymbol[] = "\xe2\x96\x81";
 
 void SplitString(const std::string& str, std::vector<std::string>* strs);
 
 // Return the sum of two probabilities in log scale
 float LogAdd(const float& x, const float& y);
+
+void SplitString(const std::string& data, const std::string& delim,
+                 std::vector<std::string>* strs);
+bool SplitUTF8String(const std::string& str,
+                     std::vector<std::string>* characters);
 
 }  // namespace wenet
 
