@@ -35,6 +35,11 @@ void SplitString(const std::string& str, std::vector<std::string>* strs);
 // Return the sum of two probabilities in log scale
 float LogAdd(const float& x, const float& y);
 
+void SplitString(const std::string& data, const std::string& delim,
+                 std::vector<std::string>* strs);
+bool SplitUTF8String(const std::string& str,
+                     std::vector<std::string>* characters);
+
 }  // namespace wenet
 
 #endif  // UTILS_UTILS_H_

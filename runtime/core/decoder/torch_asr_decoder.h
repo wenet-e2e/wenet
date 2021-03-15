@@ -24,6 +24,7 @@ using TorchModule = torch::jit::script::Module;
 struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
+  bool bpe_decode = true;
   CtcPrefixBeamSearchOptions ctc_search_opts;
 };
 

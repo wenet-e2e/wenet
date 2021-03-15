@@ -214,6 +214,33 @@ void TorchAsrDecoder::AttentionRescoring() {
       result_ = result;
     }
   }
+
+  if (opts_.bpe_decode && result_.size()) {
+    using std::string;
+    using std::vector;
+    vector<string> characters;
+
+    if (SplitUTF8String(result_, &characters)) {
+      string result;
+      const string delim = "\xe2\x96\x81";
+
+      for (size_t i = 0; i < characters.size(); ++i) {
+        if (characters[i] != delim) {
+          result.append(characters[i]);
+        } else {
+          if (result.size() && result.back() != ' ') {
+            result.push_back(' ');
+          }
+        }
+      }
+
+      for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = tolower(result[i]);
+      }
+
+      result_ = result;
+    }
+  }
 }
 
 }  // namespace wenet
