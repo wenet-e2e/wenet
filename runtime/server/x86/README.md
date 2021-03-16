@@ -37,6 +37,8 @@ After decoding, the average RTF of the waves will display on the console.
 
 We build a Websocket demo to show how WeNet U2 model works in a streaming fashion.
 
+### Server
+
 First, run the server by:
 
 ``` sh
@@ -50,7 +52,24 @@ model_dir=your_model_dir
     --dict_path $model_dir/words.txt 2>&1 | tee server.log
 ```
 
-Then, run the client by:
+### Web Client
+
+Then, run the web client to communicate with the `websocket_server_main`. There are
+two ways to run the web client. Open `web/templates/index.html` in the browser directly, or
+start up a web server by Flask as follows:
+
+``` sh
+pip install Flask
+python web/app.py
+```
+
+Input the `WebSocket URL`, it will request some permissions, and start to record.
+
+![Runtime web](../../../docs/images/runtime_web.png)
+
+### Client
+
+Also, you could run the client in the command line by:
 
 ```sh
 export GLOG_logtostderr=1
@@ -80,6 +99,6 @@ When you encounter an issue trying to run the demo, we encourage you to run the 
 the Docker container. The image contains the latest release, a shell script and
 several waves to run the demo. Just run it as follows:
 
-``` bash
+``` sh
 docker run -it mobvoiwenet/wenet:v0.1.0 bash /home/run.sh
 ```
