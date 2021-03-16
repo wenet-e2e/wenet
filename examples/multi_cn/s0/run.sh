@@ -245,7 +245,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
             --num_workers 2 \
-            $cmvn_opts
+            $cmvn_opts \
+            --pin_memory
     } &
     done
     wait

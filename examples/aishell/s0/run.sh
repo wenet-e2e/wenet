@@ -138,10 +138,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     for ((i = 0; i < $num_gpus; ++i)); do
     {
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-    # Rank of each gpu/process used for knowing whether it is
-    # the master of a worker.
-    rank=`expr $node_rank \* $num_gpus + $i`
-    python wenet/bin/train.py --gpu $gpu_id \
+        # Rank of each gpu/process used for knowing whether it is
+        # the master of a worker.
+        rank=`expr $node_rank \* $num_gpus + $i`
+        python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
             --train_data $feat_dir/$train_set/format.data \
             --cv_data $feat_dir/dev/format.data \
@@ -152,7 +152,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
             --num_workers 2 \
-            $cmvn_opts
+            $cmvn_opts \
+            --pin_memory
     } &
     done
     wait

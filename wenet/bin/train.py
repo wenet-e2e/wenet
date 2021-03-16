@@ -71,6 +71,10 @@ if __name__ == '__main__':
                         default=0,
                         type=int,
                         help='num of subprocess workers for reading')
+    parser.add_argument('--pin_memory',
+                        action='store_true',
+                        default=False,
+                        help='Use pinned memory buffers used for reading')
     parser.add_argument('--cmvn', default=None, help='global cmvn file')
 
     args = parser.parse_args()
@@ -125,6 +129,7 @@ if __name__ == '__main__':
                                    collate_fn=train_collate_func,
                                    sampler=train_sampler,
                                    shuffle=(train_sampler is None),
+                                   pin_memory=args.pin_memory,
                                    batch_size=1,
                                    num_workers=args.num_workers)
     cv_data_loader = DataLoader(cv_dataset,
@@ -132,6 +137,7 @@ if __name__ == '__main__':
                                 sampler=cv_sampler,
                                 shuffle=False,
                                 batch_size=1,
+                                pin_memory=args.pin_memory,
                                 num_workers=args.num_workers)
 
     if raw_wav:
