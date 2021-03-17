@@ -141,7 +141,7 @@ class ConformerEncoderLayer(nn.Module):
     def __init__(
         self,
         size: int,
-        self_attn: int,
+        self_attn: torch.nn.Module,
         feed_forward: Optional[nn.Module] = None,
         feed_forward_macaron: Optional[nn.Module] = None,
         conv_module: Optional[nn.Module] = None,
