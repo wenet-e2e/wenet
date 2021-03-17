@@ -8,6 +8,7 @@ from contextlib import nullcontext
 import torch
 from torch.nn.utils import clip_grad_norm_
 
+
 class Executor:
     def __init__(self):
         self.step = 0
@@ -39,17 +40,15 @@ class Executor:
             # Disable gradient synchronizations across DDP processes.
             # Within this context, gradients will be accumulated on module
             # variables, which will later be synchronized.
-            if is_distributed and batch_idx % accum_grad != 0 :
+            if is_distributed and batch_idx % accum_grad != 0:
                 context = model.no_sync
             # Used for single gpu training and DDP gradient synchronization
             # processes.
             else:
                 context = nullcontext
             with context():
-                loss, loss_att, loss_ctc = model(feats,
-                                                 feats_lengths,
-                                                 target,
-                                                 target_lengths)
+                loss, loss_att, l_loss_att, r_loss_att, loss_ctc = model(
+                    feats, feats_lengths, target, target_lengths)
                 loss = loss / accum_grad
                 loss.backward()
 
@@ -71,6 +70,10 @@ class Executor:
                     loss.item() * accum_grad)
                 if loss_att is not None:
                     log_str += 'loss_att {:.6f} '.format(loss_att.item())
+                if l_loss_att is not None:
+                    log_str += 'l_loss_att {:.6f} '.format(l_loss_att.item())
+                if r_loss_att is not None:
+                    log_str += 'r_loss_att {:.6f} '.format(r_loss_att.item())
                 if loss_ctc is not None:
                     log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
                 log_str += 'lr {:.8f} rank {}'.format(lr, rank)
@@ -94,8 +97,8 @@ class Executor:
                 num_utts = target_lengths.size(0)
                 if num_utts == 0:
                     continue
-                loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
-                                                 target_lengths)
+                loss, loss_att, l_loss_att, r_loss_att, loss_ctc = model(
+                    feats, feats_lengths, target, target_lengths)
                 if torch.isfinite(loss):
                     num_seen_utts += num_utts
                     total_loss += loss.item() * num_utts
@@ -104,10 +107,16 @@ class Executor:
                         batch_idx, num_total_batch, loss.item())
                     if loss_att is not None:
                         log_str += 'loss_att {:.6f} '.format(loss_att.item())
+                    if l_loss_att is not None:
+                        log_str += 'l_loss_att {:.6f} '.format(
+                            l_loss_att.item())
+                    if r_loss_att is not None:
+                        log_str += 'r_loss_att {:.6f} '.format(
+                            r_loss_att.item())
                     if loss_ctc is not None:
                         log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
-                    log_str += 'history loss {:.6f}'.format(
-                        total_loss / num_seen_utts)
+                    log_str += 'history loss {:.6f}'.format(total_loss /
+                                                            num_seen_utts)
                     logging.debug(log_str)
 
         return total_loss, num_seen_utts

@@ -76,6 +76,11 @@ if __name__ == '__main__':
     parser.add_argument('--simulate_streaming',
                         action='store_true',
                         help='simulate streaming inference')
+    parser.add_argument('--reverse_weight',
+                        type=float,
+                        default=0.0,
+                        help='''right to left weight for attention rescoring
+                                decode mode''')
     args = parser.parse_args()
     print(args)
     logging.basicConfig(level=logging.DEBUG,
@@ -178,7 +183,8 @@ if __name__ == '__main__':
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     ctc_weight=args.ctc_weight,
-                    simulate_streaming=args.simulate_streaming)
+                    simulate_streaming=args.simulate_streaming,
+                    reverse_weight=args.reverse_weight)
                 hyps = [hyp]
             for i, key in enumerate(keys):
                 content = ''
