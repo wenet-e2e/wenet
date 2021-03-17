@@ -65,7 +65,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # remove the space between the text labels for Mandarin dataset
     for x in ${train_set} dev test; do
         cp data/${x}/text data/${x}/text.org
-        paste -d " " <(cut -f 1 data/${x}/text.org) <(cut -f 2- data/${x}/text.org | tr -d " ") \
+        paste -d " " <(cut -f 1 data/${x}/text.org) <(cut -f 2- data/${x}/text.org \
+             | tr 'a-z' 'A-Z' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " ") \
             > data/${x}/text
         rm data/${x}/text.org
     done
