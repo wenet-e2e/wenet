@@ -36,7 +36,12 @@ awk -F'\t' -v path_prefix=$corpus '{printf("%s\t%s/%s\n",$1,path_prefix,$2)}' $c
 tools/filter_scp.pl -f 1 $tmp/utt.list $tmp/tmp_wav.scp | sort -k 1 | uniq > $tmp/wav.scp
 
 # text
-tools/filter_scp.pl -f 1 $tmp/utt.list $corpus/trans.txt | sort -k 1 | uniq > $tmp/text
+tools/filter_scp.pl -f 1 $tmp/utt.list $corpus/trans.txt | sort -k 1 | uniq > $tmp/trans.txt
+dos2unix < $tmp/trans.txt | \
+  tools/filter_scp.pl -f 1 $tmp/utt.list - | \
+  sort -k 1 | uniq | tr '[a-z]' '[A-Z]' | \
+  sed 's/Ａ/A/g' | sed 's/Ｔ/T/g' | sed 's/Ｍ/M/g' | sed 's/𫚉//g' | sed 's/𫖯/頫/g' | \
+  sed 's/[()]//g' | sed "s/\([^A-Z]\)'/\1/g" > $tmp/text
 
 # copy prepared resources from tmp_dir to target dir
 mkdir -p $dir
