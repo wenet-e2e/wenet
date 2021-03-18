@@ -178,6 +178,7 @@ class ConformerEncoderLayer(nn.Module):
         x: torch.Tensor,
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
+        mask_pad: Optional[torch.Tensor] = None,
         output_cache: Optional[torch.Tensor] = None,
         cnn_cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -188,6 +189,7 @@ class ConformerEncoderLayer(nn.Module):
             mask (torch.Tensor): Mask tensor for the input (#batch, time，time).
             pos_emb (torch.Tensor): positional encoding, must not be None
                 for ConformerEncoderLayer.
+            mask_pad (torch.Tensor): batch padding mask used for conv module.
             output_cache (torch.Tensor): Cache tensor of the output
                 (#batch, time2, size), time2 < time in x.
             cnn_cache (torch.Tensor): Convolution cache in conformer layer
@@ -238,7 +240,7 @@ class ConformerEncoderLayer(nn.Module):
             residual = x
             if self.normalize_before:
                 x = self.norm_conv(x)
-            x, new_cnn_cache = self.conv_module(x, cnn_cache)
+            x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
             x = residual + self.dropout(x)
 
             if not self.normalize_before:

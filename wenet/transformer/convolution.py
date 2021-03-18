@@ -81,11 +81,13 @@ class ConvolutionModule(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        cache: Optional[torch.Tensor] = None
+        mask_pad: Optional[torch.Tensor] = None,
+        cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute convolution module.
         Args:
             x (torch.Tensor): Input tensor (#batch, time, channels).
+            mask_pad (torch.Tensor): used for batch padding
             cache (torch.Tensor): left context cache, it is only
                 used in causal convolution
         Returns:
@@ -93,6 +95,11 @@ class ConvolutionModule(nn.Module):
         """
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)
+
+        # mask batch padding
+        if mask_pad is not None:
+            x.masked_fill_(~mask_pad, 0.0)
+
         if self.lorder > 0:
             if cache is None:
                 x = nn.functional.pad(x, (self.lorder, 0), 'constant', 0.0)
@@ -120,4 +127,8 @@ class ConvolutionModule(nn.Module):
         if self.use_layer_norm:
             x = x.transpose(1, 2)
         x = self.pointwise_conv2(x)
+        # mask batch padding
+        if mask_pad is not None:
+            x.masked_fill_(~mask_pad, 0.0)
+
         return x.transpose(1, 2), new_cache
