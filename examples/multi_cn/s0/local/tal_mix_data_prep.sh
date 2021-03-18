@@ -57,7 +57,7 @@ tools/filter_scp.pl -f 1 $train_dir/utt.list $train_dir/transcript.txt | \
   sed 's/：//g' | sed 's/,//g' | sed 's/\"//g' | sed 's/://g' | \
   sed 's/@//g' | sed 's/-/ /g' | sed 's/、/ /g' | sed 's/~/ /g' | \
   sed "s/‘/\'/g" | sed 's/Ｅ/E/g' | sed "s/’/\'/g" | sed 's/《//g' | sed 's/》//g' | \
-  sed "s/[ ][ ]*$//g" | sed "s/\[//g" > $train_dir/text
+  sed "s/[ ][ ]*$//g" | sed "s/\[//g" | sed 's/、//g' > $train_dir/text
 tools/utt2spk_to_spk2utt.pl $train_dir/utt2spk > $train_dir/spk2utt
 
 mkdir -p $data/train

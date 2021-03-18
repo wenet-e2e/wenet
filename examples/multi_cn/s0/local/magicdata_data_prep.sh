@@ -47,7 +47,8 @@ for x in train dev test; do
     sed 's/\///g' | sed 's/·//g' |\
     sed 's/\"//g' | sed 's/“//g' |\
     sed 's/”//g' | sed 's/\\//g' |\
-    sed 's/…//g' | sed "s///g" | sed "s///g" | sed 's/《//g' | sed 's/》//g' |\
+    sed 's/…//g' | sed "s///g" |\
+    sed 's/、//g' | sed "s///g" | sed 's/《//g' | sed 's/》//g' |\
     sed 's/\[//g' | sed 's/\]//g' | sed 's/FIL//g' | sed 's/SPK//' |\
     tr '[a-z]' '[A-Z]' |\
     awk '{if (NF > 1) print $0;}' > $data/$x/text

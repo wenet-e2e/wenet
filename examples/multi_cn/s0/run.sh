@@ -137,7 +137,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     for x in train dev; do
         cp ${feat_dir}_${en_modeling_unit}/${x}/text ${feat_dir}_${en_modeling_unit}/${x}/text.org
         paste -d " " <(cut -f 1 -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org) <(cut -f 2- -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org \
-            | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " " | tr 'a-z' 'A-Z') \
+            | tr 'a-z' 'A-Z' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " " ) \
             > ${feat_dir}_${en_modeling_unit}/${x}/text
     sed -i 's/\xEF\xBB\xBF//' ${feat_dir}_${en_modeling_unit}/${x}/text
 
