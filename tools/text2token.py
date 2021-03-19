@@ -54,7 +54,7 @@ def get_parser():
                         help='space symbol')
     parser.add_argument('--bpe-model',
                         '-m',
-                        default='',
+                        default=None,
                         type=str,
                         help='bpe model for english part')
     parser.add_argument('--non-lang-syms',

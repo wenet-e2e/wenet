@@ -54,7 +54,7 @@ for dir in $train_dir $dev_dir $test_dir; do
   sed -e 's/\.wav//' $dir/wav.flist | awk -F '/' '{print "TALASR"$(NF-1)"-"$NF, "TALASR"$(NF-1)}' > $dir/utt2spk
   paste -d ' ' <(awk '{print $2}' $dir/utt_uttid) $dir/wav.flist > $dir/wav.scp
   tools/filter_scp.pl -f 1 $dir/utt.list $tal_text | \
-    sed 's/Ａ/A/g' | sed 's/#//g' | sed 's/=//g' | \
+    sed 's/Ａ/A/g' | sed 's/#//g' | sed 's/=//g' | sed 's/、//g' | \
     sed 's/，//g' | sed 's/？//g' | sed 's/。//g' | sed 's/[ ][ ]*$//g'\
     > $dir/transcripts.txt
   awk '{print $1}' $dir/transcripts.txt > $dir/utt.list
