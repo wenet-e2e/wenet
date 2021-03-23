@@ -76,9 +76,9 @@ void PathTrie::Append(int id, float prob, int time_step) {
     // Case 2: *aε + a => *aa
     new_prefix->prob_nb_cur_ =
         LogAdd(new_prefix->prob_nb_cur_, prob_b_prev_ + prob);
-    if (new_prefix->viterbi_prob_nb_cur_ < viterbi_prob_nb_prev_ + prob) {
-      new_prefix->viterbi_prob_nb_cur_ = viterbi_prob_nb_prev_ + prob;
-      new_prefix->time_steps_nb_cur_ = time_steps_nb_prev_;
+    if (new_prefix->viterbi_prob_nb_cur_ < viterbi_prob_b_prev_ + prob) {
+      new_prefix->viterbi_prob_nb_cur_ = viterbi_prob_b_prev_ + prob;
+      new_prefix->time_steps_nb_cur_ = time_steps_b_prev_;
       new_prefix->time_steps_nb_cur_.emplace_back(time_step);
     }
   } else {
