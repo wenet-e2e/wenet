@@ -38,6 +38,9 @@ class CtcPrefixBeamSearch {
     return time_steps_;
   }
   const std::vector<float>& likelihood() const { return likelihood_; }
+  const std::vector<float>& viterbi_likelihood() const {
+    return viterbi_likelihood_;
+  }
 
  private:
   PathTrie root_;
@@ -48,6 +51,7 @@ class CtcPrefixBeamSearch {
   std::vector<std::vector<int>> hypotheses_;
   std::vector<std::vector<int>> time_steps_;
   std::vector<float> likelihood_;
+  std::vector<float> viterbi_likelihood_;
 
   const CtcPrefixBeamSearchOptions& opts_;
 

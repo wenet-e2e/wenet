@@ -23,8 +23,7 @@ void CtcPrefixBeamSearch::Reset() {
 
   abs_time_step_ = 0;
   // init prefixes' root
-  root_.set_score(0.0);
-  root_.set_prob_b_prev(0.0);
+  root_.InitRoot();
   prefixes_.emplace_back(&root_);
 }
 
@@ -67,13 +66,16 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     hypotheses_.clear();
     time_steps_.clear();
     likelihood_.clear();
+    viterbi_likelihood_.clear();
     std::sort(prefixes_.begin(), prefixes_.end(), PathTrie::PrefixCompare);
     for (auto& prefix : prefixes_) {
       std::vector<int> hypothesis;
       prefix->GetPathVec(&hypothesis);
       hypotheses_.emplace_back(hypothesis);
-      time_steps_.emplace_back(prefix->time_steps());
+      // time_steps_.emplace_back(prefix->time_steps());
       likelihood_.emplace_back(prefix->score());
+      viterbi_likelihood_.emplace_back(prefix->viterbi_score());
+      time_steps_.emplace_back(prefix->time_steps());
     }
   }
 }

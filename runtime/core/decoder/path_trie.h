@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "glog/logging.h"
+
 #include "utils/utils.h"
 
 namespace wenet {
@@ -36,11 +38,19 @@ class PathTrie {
   // Remove current path from root for beam prune
   void Remove();
 
+  // Must be called after UpdatePrefixes()
   float score() const { return score_; }
+  float viterbi_score() { return viterbi_score_; }
   const std::vector<int>& time_steps() const { return time_steps_; }
 
-  void set_prob_b_prev(const float prob_b_prev) { prob_b_prev_ = prob_b_prev; }
-  void set_score(const float score) { score_ = score; }
+  // Only used for root node initilization
+  void InitRoot() {
+    prob_b_prev_ = 0.0;
+    score_ = 0.0;
+    viterbi_prob_b_prev_ = 0.0;
+    viterbi_prob_nb_prev_ = 0.0;
+    viterbi_score_ = 0.0;
+  }
 
  private:
   float prob_b_cur_;
@@ -50,12 +60,23 @@ class PathTrie {
   float prob_nb_prev_;
   float score_;
 
+  // use viterbi to trace the best alignment path
+  float viterbi_prob_b_cur_;   // viterbi prob end with blank
+  float viterbi_prob_nb_cur_;  // viterbi prob end with none blank
+  float viterbi_score_;
+  float viterbi_prob_b_prev_;
+  float viterbi_prob_nb_prev_;
+  float cur_token_prob_;
+  std::vector<int> time_steps_b_prev_;
+  std::vector<int> time_steps_nb_prev_;
+  std::vector<int> time_steps_b_cur_;
+  std::vector<int> time_steps_nb_cur_;
+  std::vector<int> time_steps_;
+
   int id_;
-  float prob_;
   bool exists_;
   PathTrie* parent_;
   std::vector<PathTrie*> children_;
-  std::vector<int> time_steps_;
 };
 
 }  // namespace wenet

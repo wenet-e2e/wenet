@@ -14,9 +14,19 @@ PathTrie::PathTrie() {
 
   exists_ = true;
   id_ = root_;
-  prob_ = -kFloatMax;
   parent_ = nullptr;
   children_.clear();
+
+  viterbi_prob_b_cur_ = -kFloatMax;
+  viterbi_prob_nb_cur_ = -kFloatMax;
+  viterbi_prob_b_prev_ = -kFloatMax;
+  viterbi_prob_nb_prev_ = -kFloatMax;
+  viterbi_score_ = -kFloatMax;
+  cur_token_prob_ = -kFloatMax;
+  time_steps_b_cur_.clear();
+  time_steps_nb_cur_.clear();
+  time_steps_b_prev_.clear();
+  time_steps_nb_prev_.clear();
   time_steps_.clear();
 }
 
@@ -37,19 +47,54 @@ void PathTrie::Append(int id, float prob, int time_step) {
   // Case 0: * + ε => *
   if (id == blank_) {
     prob_b_cur_ = LogAdd(prob_b_cur_, score_ + prob);
+    if (viterbi_prob_b_prev_ > viterbi_prob_nb_prev_) {
+      viterbi_prob_b_cur_ = viterbi_prob_b_prev_ + prob;
+      time_steps_b_cur_ = time_steps_b_prev_;
+    } else {
+      viterbi_prob_b_cur_ = viterbi_prob_nb_prev_ + prob;
+      time_steps_b_cur_ = time_steps_nb_prev_;
+    }
     return;
+  }
+
+  // Case 1: *a + a => *a
+  if (id == id_) {
+    prob_nb_cur_ = LogAdd(prob_nb_cur_, prob_nb_prev_ + prob);
+    if (viterbi_prob_nb_cur_ < viterbi_prob_nb_prev_ + prob) {
+      viterbi_prob_nb_cur_ = viterbi_prob_nb_prev_ + prob;
+      if (cur_token_prob_ < prob) {
+        CHECK(time_steps_nb_prev_.size() > 0);
+        time_steps_nb_cur_ = time_steps_nb_prev_;
+        time_steps_nb_cur_.back() = time_step;
+        cur_token_prob_ = prob;
+      }
+    }
   }
 
   auto new_prefix = GetPathTrie(id, prob, time_step);
   if (id == id_) {
-    // Case 1: *a + a => *a
-    prob_nb_cur_ = LogAdd(prob_nb_cur_, prob_nb_prev_ + prob);
     // Case 2: *aε + a => *aa
     new_prefix->prob_nb_cur_ =
-            LogAdd(new_prefix->prob_nb_cur_, prob_b_prev_ + prob);
+        LogAdd(new_prefix->prob_nb_cur_, prob_b_prev_ + prob);
+    if (new_prefix->viterbi_prob_nb_cur_ < viterbi_prob_nb_prev_ + prob) {
+      new_prefix->viterbi_prob_nb_cur_ = viterbi_prob_nb_prev_ + prob;
+      new_prefix->time_steps_nb_cur_ = time_steps_nb_prev_;
+      new_prefix->time_steps_nb_cur_.emplace_back(time_step);
+    }
   } else {
     // Case 3: *a + b => *ab
     new_prefix->prob_nb_cur_ = LogAdd(new_prefix->prob_nb_cur_, score_ + prob);
+    float viterbi_prob =
+        std::max(viterbi_prob_b_prev_, viterbi_prob_nb_prev_) + prob;
+    if (new_prefix->viterbi_prob_nb_cur_ < viterbi_prob) {
+      new_prefix->viterbi_prob_nb_cur_ = viterbi_prob;
+      if (viterbi_prob_b_cur_ > viterbi_prob_nb_cur_) {
+        new_prefix->time_steps_nb_cur_ = time_steps_b_prev_;
+      } else {
+        new_prefix->time_steps_nb_cur_ = time_steps_nb_prev_;
+      }
+      new_prefix->time_steps_nb_cur_.emplace_back(time_step);
+    }
   }
 }
 
@@ -57,20 +102,14 @@ PathTrie* PathTrie::GetPathTrie(int id, float prob, int time_step) {
   for (auto& child : children_) {
     // Prefix exists, check and update
     if (child->id_ == id) {
-      if (child->prob_ < prob) {
-        child->prob_ = prob;
-        child->time_steps_.back() = time_step;
-      }
       return child;
     }
   }
   // Prefix not exists
   auto* new_path = new PathTrie();
   new_path->id_ = id;
-  new_path->prob_ = prob;
   new_path->parent_ = this;
-  new_path->time_steps_ = time_steps_;
-  new_path->time_steps_.emplace_back(time_step);
+  new_path->cur_token_prob_ = prob;
   children_.emplace_back(new_path);
   return new_path;
 }
@@ -91,6 +130,18 @@ void PathTrie::UpdatePrefixes() {
     score_ = LogAdd(prob_b_prev_, prob_nb_prev_);
     prob_b_cur_ = -kFloatMax;
     prob_nb_cur_ = -kFloatMax;
+    viterbi_score_ = std::max(viterbi_prob_b_cur_, viterbi_prob_nb_cur_);
+    if (viterbi_prob_b_cur_ > viterbi_prob_nb_cur_) {
+      time_steps_ = time_steps_b_cur_;
+    } else {
+      time_steps_ = time_steps_nb_cur_;
+    }
+    viterbi_prob_b_prev_ = viterbi_prob_b_cur_;
+    viterbi_prob_nb_prev_ = viterbi_prob_nb_cur_;
+    viterbi_prob_b_cur_ = -kFloatMax;
+    viterbi_prob_nb_cur_ = -kFloatMax;
+    time_steps_b_prev_ = time_steps_b_cur_;
+    time_steps_nb_prev_ = time_steps_nb_cur_;
   }
   for (auto child : children_) {
     child->UpdatePrefixes();
