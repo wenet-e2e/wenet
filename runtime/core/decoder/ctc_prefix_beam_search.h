@@ -29,6 +29,8 @@ struct PrefixScore {
   float v_s = -kFloatMax;             // viterbi blank endding score
   float v_ns = -kFloatMax;            // viterbi none blank endding score
   float cur_token_prob = -kFloatMax;  // prob of current token
+  std::vector<int> times_s;           // times of viterbi blank path
+  std::vector<int> times_ns;          // times of viterbi none blank path
   PrefixScore() = default;
 };
 
@@ -57,14 +59,17 @@ class CtcPrefixBeamSearch {
   const std::vector<float>& viterbi_likelihood() const {
     return viterbi_likelihood_;
   }
+  const std::vector<std::vector<int>> times() const { return times_; }
 
  private:
+  int abs_time_step_;
   std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> cur_hyps_;
 
   // Nbest list and corresponding likelihood_, in sorted order
   std::vector<std::vector<int>> hypotheses_;
   std::vector<float> likelihood_;
   std::vector<float> viterbi_likelihood_;
+  std::vector<std::vector<int>> times_;
 
   const CtcPrefixBeamSearchOptions& opts_;
 

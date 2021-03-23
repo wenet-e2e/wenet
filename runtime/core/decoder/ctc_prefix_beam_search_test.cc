@@ -51,4 +51,10 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   EXPECT_FLOAT_EQ(std::exp(viterbi_likelihood[0]), 0.07);
   EXPECT_FLOAT_EQ(std::exp(viterbi_likelihood[1]), 0.064);
   EXPECT_FLOAT_EQ(std::exp(viterbi_likelihood[2]), 0.07);
+
+  const std::vector<std::vector<int>>& times = prefix_beam_search.times();
+  EXPECT_EQ(times.size(), 3);
+  ASSERT_THAT(times[0], ElementsAre(0, 2));
+  ASSERT_THAT(times[1], ElementsAre(0, 2));
+  ASSERT_THAT(times[2], ElementsAre(2));
 }
