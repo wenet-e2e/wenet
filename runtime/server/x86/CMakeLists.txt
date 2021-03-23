@@ -97,17 +97,17 @@ add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.c
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main decoder gmock)
 add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
 
-## websocket
-#add_library(websocket STATIC
-#  websocket/websocket_client.cc
-#  websocket/websocket_server.cc
-#)
-#target_link_libraries(websocket PUBLIC glog frontend decoder)
-#
-## binary
-#add_executable(decoder_main bin/decoder_main.cc)
-#target_link_libraries(decoder_main PUBLIC gflags frontend decoder utils)
-#add_executable(websocket_client_main bin/websocket_client_main.cc)
-#target_link_libraries(websocket_client_main PUBLIC gflags websocket)
-#add_executable(websocket_server_main bin/websocket_server_main.cc)
-#target_link_libraries(websocket_server_main PUBLIC gflags websocket)
+# websocket
+add_library(websocket STATIC
+  websocket/websocket_client.cc
+  websocket/websocket_server.cc
+)
+target_link_libraries(websocket PUBLIC glog frontend decoder)
+
+# binary
+add_executable(decoder_main bin/decoder_main.cc)
+target_link_libraries(decoder_main PUBLIC gflags frontend decoder utils)
+add_executable(websocket_client_main bin/websocket_client_main.cc)
+target_link_libraries(websocket_client_main PUBLIC gflags websocket)
+add_executable(websocket_server_main bin/websocket_server_main.cc)
+target_link_libraries(websocket_server_main PUBLIC gflags websocket)
