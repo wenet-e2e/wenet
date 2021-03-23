@@ -21,7 +21,11 @@ void CtcPrefixBeamSearch::Reset() {
   hypotheses_.clear();
   likelihood_.clear();
   cur_hyps_.clear();
-  PrefixScore prefix_score(0.0, -kFloatMax);
+  PrefixScore prefix_score;
+  prefix_score.s = 0.0;
+  prefix_score.ns = -kFloatMax;
+  prefix_score.v_s = 0.0;
+  prefix_score.v_ns = 0.0;
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
 }
@@ -61,24 +65,37 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
         // of PrefixScore will set fields s(blank ending score) and
         // ns(none blank ending score) to -inf, respectively.
         if (id == opts_.blank) {
+          // Case 0: *a- -> *a; - is blank
           PrefixScore& next_score = next_hyps[prefix];
-          next_score.s = LogAdd(next_score.s, LogAdd(prefix_score.s,
-                                                     prefix_score.ns) + prob);
+          next_score.s = LogAdd(next_score.s,
+                                LogAdd(prefix_score.s, prefix_score.ns) + prob);
+          next_score.v_s = std::max(prefix_score.v_s, prefix_score.v_ns) + prob;
         } else if (!prefix.empty() && id == prefix.back()) {
           // Case 1: *aa -> *a;
           PrefixScore& next_score1 = next_hyps[prefix];
           next_score1.ns = LogAdd(next_score1.ns, prefix_score.ns + prob);
+          if (next_score1.v_ns < prefix_score.v_ns + prob) {
+            next_score1.v_ns = prefix_score.v_ns + prob;
+          }
           // Case 2: *a-a -> *aa; - is blank
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
           PrefixScore& next_score2 = next_hyps[new_prefix];
           next_score2.ns = LogAdd(next_score2.ns, prefix_score.s + prob);
+          if (next_score2.v_ns < prefix_score.v_s + prob) {
+            next_score2.v_ns = prefix_score.v_s + prob;
+          }
         } else {
+          // Case 3: *ab -> ab, *a-b -> ab; - is blank
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
           PrefixScore& next_score = next_hyps[new_prefix];
-          next_score.ns = LogAdd(next_score.ns, LogAdd(prefix_score.s,
-                                                       prefix_score.ns) + prob);
+          next_score.ns = LogAdd(
+              next_score.ns, LogAdd(prefix_score.s, prefix_score.ns) + prob);
+          float v_ns = std::max(prefix_score.v_s, prefix_score.v_ns) + prob;
+          if (next_score.v_ns < v_ns) {
+            next_score.v_ns = v_ns;
+          }
         }
       }
     }
@@ -96,10 +113,13 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     cur_hyps_.clear();
     hypotheses_.clear();
     likelihood_.clear();
-    for (auto& i : arr) {
-      cur_hyps_[i.first] = i.second;
-      hypotheses_.emplace_back(std::move(i.first));
-      likelihood_.emplace_back(LogAdd(i.second.s, i.second.ns));
+    viterbi_likelihood_.clear();
+    for (auto& item : arr) {
+      cur_hyps_[item.first] = item.second;
+      hypotheses_.emplace_back(std::move(item.first));
+      likelihood_.emplace_back(LogAdd(item.second.s, item.second.ns));
+      viterbi_likelihood_.emplace_back(
+          std::max(item.second.v_s, item.second.v_ns));
     }
   }
 }
