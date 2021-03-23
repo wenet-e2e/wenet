@@ -10,6 +10,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
+#include "decoder/path_trie.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -23,26 +24,6 @@ struct CtcPrefixBeamSearchOptions {
   int second_beam_size = 10;
 };
 
-struct PrefixScore {
-  // blank endding score
-  float s = -kFloatMax;
-  // none blank ending score
-  float ns = -kFloatMax;
-  PrefixScore() = default;
-  PrefixScore(float s, float ns) : s(s), ns(ns) {}
-};
-
-struct PrefixHash {
-  size_t operator()(const std::vector<int>& prefix) const {
-    size_t hash_code = 0;
-    // here we use KB&DR hash code
-    for (int id : prefix) {
-      hash_code = id + 31 * hash_code;
-    }
-    return hash_code;
-  }
-};
-
 class CtcPrefixBeamSearch {
  public:
   explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts);
@@ -53,13 +34,19 @@ class CtcPrefixBeamSearch {
   const std::vector<std::vector<int>>& hypotheses() const {
     return hypotheses_;
   }
+  const std::vector<std::vector<int>>& time_steps() const {
+    return time_steps_;
+  }
   const std::vector<float>& likelihood() const { return likelihood_; }
 
  private:
-  std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> cur_hyps_;
+  PathTrie root_;
+  int abs_time_step_;
+  std::vector<PathTrie*> prefixes_;
 
   // Nbest list and corresponding likelihood_, in sorted order
   std::vector<std::vector<int>> hypotheses_;
+  std::vector<std::vector<int>> time_steps_;
   std::vector<float> likelihood_;
 
   const CtcPrefixBeamSearchOptions& opts_;

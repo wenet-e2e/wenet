@@ -88,13 +88,14 @@ target_link_libraries(frontend PUBLIC glog)
 add_library(decoder STATIC
   utils/utils.cc
   decoder/ctc_prefix_beam_search.cc
+  decoder/path_trie.cc
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC glog ${TORCH_LIBRARIES})
+target_link_libraries(decoder PUBLIC glog ${TORCH_LIBRARIES} utils)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
-target_link_libraries(ctc_prefix_beam_search_test PUBLIC glog gtest_main decoder utils)
+target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
 add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
 
 # websocket
@@ -102,11 +103,11 @@ add_library(websocket STATIC
   websocket/websocket_client.cc
   websocket/websocket_server.cc
 )
-target_link_libraries(websocket PUBLIC glog frontend decoder)
+target_link_libraries(websocket PUBLIC frontend decoder)
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main PUBLIC gflags frontend decoder utils)
+target_link_libraries(decoder_main PUBLIC gflags frontend decoder)
 add_executable(websocket_client_main bin/websocket_client_main.cc)
 target_link_libraries(websocket_client_main PUBLIC gflags websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)

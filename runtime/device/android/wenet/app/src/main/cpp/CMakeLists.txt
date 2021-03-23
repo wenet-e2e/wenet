@@ -66,13 +66,14 @@ target_link_libraries(frontend PUBLIC log)
 add_library(decoder STATIC
     utils/utils.cc
     decoder/ctc_prefix_beam_search.cc
+    decoder/path_trie.cc
     decoder/torch_asr_decoder.cc
     decoder/torch_asr_model.cc)
-target_link_libraries(decoder PUBLIC log ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY})
+target_link_libraries(decoder PUBLIC log ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY} utils)
 link_libraries(frontend decoder android)
 
 add_library(${TARGET} SHARED wenet.cc)
 
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main ${GFLAGS_LIB_PATH} utils libc++_shared.so)
+target_link_libraries(decoder_main ${GFLAGS_LIB_PATH} libc++_shared.so)
 add_dependencies(decoder_main gflags)
