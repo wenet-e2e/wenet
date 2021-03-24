@@ -121,13 +121,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
     ctc_prefix_beam_searcher_->Search(ctc_log_probs);
-    auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
-    const std::vector<int>& best_hyp = hypotheses[0];
-    result_ = "";
-    for (int id : best_hyp) {
-      result_ += symbol_table_.Find(id);
-    }
-    VLOG(1) << "Partial CTC result " << result_;
+    UpdateResult();
 
     // 3. cache feature for next chunk
     if (!finish) {
@@ -218,33 +212,49 @@ void TorchAsrDecoder::AttentionRescoring() {
   ProcessBlank();
 }
 
+void TorchAsrDecoder::UpdateResult() {
+  auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  auto times = ctc_prefix_beam_searcher_->times();
+  const std::vector<int>& best_hyp = hypotheses[0];
+  const std::vector<int>& best_times = times[0];
+  CHECK_EQ(best_hyp.size(), best_times.size());
+  result_ = "";
+  timestamp_ = "";
+  int ms_per_step = model_->subsampling_rate() *
+          feature_pipeline_->config().frame_shift *
+          1000 / feature_pipeline_->config().sample_rate;
+  for (size_t i = 0; i < best_hyp.size(); i++) {
+    result_ += symbol_table_.Find(best_hyp[i]);
+    timestamp_ += std::to_string(best_times[i] * ms_per_step) + " ";
+  }
+  VLOG(1) << "Partial CTC result " << result_;
+  VLOG(1) << "Partial CTC timestamp in ms " << timestamp_;
+}
+
 void TorchAsrDecoder::ProcessBlank() {
-  if (result_.size()) {
-    using std::string;
-    using std::vector;
-    vector<string> characters;
+  if (!result_.empty()) {
+    std::vector<std::string> characters;
 
     if (SplitUTF8String(result_, &characters)) {
-      string result;
-
-      for (size_t i = 0; i < characters.size(); ++i) {
-        if (characters[i] != wenet::kSpaceSymbol) {
-          result.append(characters[i]);
+      std::string result;
+      for (auto& ch : characters) {
+        if (ch != kSpaceSymbol) {
+          result.append(ch);
         } else {
           // Ignore consecutive space or located in head
-          if (result.size() && result.back() != ' ') {
+          if (!result.empty() && result.back() != ' ') {
             result.push_back(' ');
           }
         }
       }
 
       // Ignore tailing space
-      if (result.size() && result.back() != ' ') {
+      if (!result.empty() && result.back() == ' ') {
         result.pop_back();
       }
 
-      for (size_t i = 0; i < result.size(); ++i) {
-        result[i] = tolower(result[i]);
+      for (char& ch : result) {
+        ch = tolower(ch);
       }
 
       result_ = result;

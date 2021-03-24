@@ -41,11 +41,13 @@ class TorchAsrDecoder {
     return num_frames_in_current_chunk_;
   }
   std::string result() const { return result_; }
+  std::string timestamp() const { return timestamp_; }
 
  private:
   // Return true if we reach the end of the feature pipeline
   bool AdvanceDecoding();
   void AttentionRescoring();
+  void UpdateResult();
   void ProcessBlank();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
@@ -67,6 +69,7 @@ class TorchAsrDecoder {
 
   int num_frames_in_current_chunk_;
   std::string result_;
+  std::string timestamp_;
 
  public:
   DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
