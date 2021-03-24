@@ -59,7 +59,7 @@ class CtcPrefixBeamSearch {
   const std::vector<float>& viterbi_likelihood() const {
     return viterbi_likelihood_;
   }
-  const std::vector<std::vector<int>> times() const { return times_; }
+  const std::vector<std::vector<int>>& times() const { return times_; }
 
  private:
   int abs_time_step_;
