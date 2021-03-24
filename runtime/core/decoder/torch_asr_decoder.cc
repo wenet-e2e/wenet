@@ -239,7 +239,7 @@ void TorchAsrDecoder::ProcessBlank() {
       }
 
       // Ignore tailing space
-      if (result.size() && result.back() != ' ') {
+      if (result.size() && result.back() == ' ') {
         result.pop_back();
       }
 
