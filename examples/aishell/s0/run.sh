@@ -207,3 +207,18 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         --output_quant_file $dir/final_quant.zip
 fi
 
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    # Test model, please specify the model you want to use by --checkpoint
+        # alignment input
+        ali_format=format.data
+        # alignment output
+        ali_result=$dir/ali
+        python wenet/bin/alignment.py --gpu -1 \
+            --config $dir/train.yaml \
+            --input_file $ali_format \
+            --checkpoint $checkpoint \
+            --batch_size 1 \
+            --dict $dict \
+            --result_file $ali_result \
+
+fi
