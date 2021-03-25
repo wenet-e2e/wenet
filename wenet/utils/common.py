@@ -3,6 +3,7 @@
 import math
 from typing import Tuple, List
 
+import numpy as np
 import torch
 
 IGNORE_ID = -1
@@ -144,3 +145,12 @@ def log_add(args: List[int]) -> float:
     a_max = max(args)
     lsp = math.log(sum(math.exp(a - a_max) for a in args))
     return a_max + lsp
+
+def insert_blank(label, blank_id=0):
+    """Insert blank token between every two label token."""
+    label = np.expand_dims(label, 1)
+    blanks = np.zeros((label.shape[0], 1), dtype=np.int64) + blank_id
+    label = np.concatenate([blanks, label], axis=1)
+    label = label.reshape(-1)
+    label = np.append(label, label[0])
+    return label
