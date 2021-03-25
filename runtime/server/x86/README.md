@@ -100,5 +100,14 @@ the Docker container. The image contains the latest release, a shell script and
 several waves to run the demo. Just run it as follows:
 
 ``` sh
-docker run -it mobvoiwenet/wenet:v0.1.0 bash /home/run.sh
+docker run --rm -it mobvoiwenet/wenet:v0.1.0 bash
 ```
+
+Or build the Dockerfile yourself, and run it by:
+
+``` sh
+DOCKER_BUILDKIT=1 docker build --no-cache -t wenet:latest .
+docker run --rm -it wenet bash
+```
+
+The pretrained model folder is located at `/home`, and the binary is located at `/home/wenet/runtime/server/x86/build`. Run it as previous mentioned.
