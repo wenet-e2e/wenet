@@ -339,6 +339,8 @@ class AudioDataset(Dataset):
                  data_file,
                  max_length=10240,
                  min_length=0,
+                 token_max_length=200,
+                 token_min_length=1,
                  batch_type='static',
                  batch_size=1,
                  max_frames_in_batch=0,
@@ -403,9 +405,14 @@ class AudioDataset(Dataset):
         valid_data = []
         for i in range(len(data)):
             length = data[i][2]
+            token_length = len(data[i][3].split())
+            # remove too lang or too short utt for both input and output
+            # to prevent from out of memory
             if length > max_length or length < min_length:
                 # logging.warn('ignore utterance {} feature {}'.format(
                 #     data[i][0], length))
+                pass
+            elif token_length > token_max_length or token_length < token_min_length:
                 pass
             else:
                 valid_data.append(data[i])
