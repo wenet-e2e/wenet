@@ -68,18 +68,24 @@ void ConnectionHandler::OnSpeechEnd() {
   feature_pipeline_->set_input_finished();
 }
 
-void ConnectionHandler::OnPartialResult(const std::string& result) {
+void ConnectionHandler::OnPartialResult(const std::string& result,
+                                        const std::string& timestamp) {
   LOG(INFO) << "Partial result: " << result;
-  json::value rv = {
-      {"status", "ok"}, {"type", "partial_result"}, {"content", result}};
+  json::value rv = {{"status", "ok"},
+                    {"type", "partial_result"},
+                    {"content", result},
+                    {"timestamp", timestamp}};
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
 }
 
-void ConnectionHandler::OnFinalResult(const std::string& result) {
+void ConnectionHandler::OnFinalResult(const std::string& result,
+                                      const std::string& timestamp) {
   LOG(INFO) << "Final result: " << result;
-  json::value rv = {
-      {"status", "ok"}, {"type", "final_result"}, {"content", result}};
+  json::value rv = {{"status", "ok"},
+                    {"type", "final_result"},
+                    {"content", result},
+                    {"timestamp", timestamp}};
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
 
@@ -108,11 +114,12 @@ void ConnectionHandler::DecodeThreadFunc() {
   while (true) {
     bool finish = decoder_->Decode();
     const std::string& result = decoder_->result();
+    const std::string& timestamp = decoder_->timestamp();
     if (finish) {
-      OnFinalResult(result);
+      OnFinalResult(result, timestamp);
       break;
     } else {
-      OnPartialResult(result);
+      OnPartialResult(result, timestamp);
     }
   }
 }

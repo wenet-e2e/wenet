@@ -93,6 +93,7 @@ int main(int argc, char *argv[]) {
               .count();
       decode_time += chunk_decode_time;
       LOG(INFO) << "Partial result: " << decoder.result();
+      LOG(INFO) << "Partial timestamp: " << decoder.timestamp();
 
       if (finish) {
         break;

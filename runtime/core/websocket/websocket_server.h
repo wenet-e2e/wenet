@@ -53,8 +53,8 @@ class ConnectionHandler {
   void OnSpeechEnd();
   void OnSpeechData(const beast::flat_buffer& buffer);
   void OnError(const std::string& message);
-  void OnPartialResult(const std::string& result);
-  void OnFinalResult(const std::string& result);
+  void OnPartialResult(const std::string& result, const std::string& timestamp);
+  void OnFinalResult(const std::string& result, const std::string& timestamp);
   void DecodeThreadFunc();
   void operator()();
 

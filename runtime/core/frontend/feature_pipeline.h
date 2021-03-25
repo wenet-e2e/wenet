@@ -59,6 +59,7 @@ class FeaturePipeline {
   void AcceptWaveform(const std::vector<float>& wav);
   int num_frames() const { return num_frames_; }
   int feature_dim() const { return feature_dim_; }
+  const FeaturePipelineConfig& config() const { return config_; }
   void set_input_finished();
 
   // Return false if input_finished_ and there is no feature left in

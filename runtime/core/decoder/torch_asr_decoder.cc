@@ -121,13 +121,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
     ctc_prefix_beam_searcher_->Search(ctc_log_probs);
-    auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
-    const std::vector<int>& best_hyp = hypotheses[0];
-    result_ = "";
-    for (int id : best_hyp) {
-      result_ += symbol_table_.Find(id);
-    }
-    VLOG(1) << "Partial CTC result " << result_;
+    UpdateResult();
 
     // 3. cache feature for next chunk
     if (!finish) {
@@ -146,6 +140,35 @@ bool TorchAsrDecoder::AdvanceDecoding() {
 
   start_ = true;
   return finish;
+}
+
+void TorchAsrDecoder::UpdateResult() {
+  auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  auto times = ctc_prefix_beam_searcher_->times();
+  const std::vector<int>& best_hyp = hypotheses[0];
+  const std::vector<int>& best_times = times[0];
+  CHECK_EQ(best_hyp.size(), best_times.size());
+  result_ = "";
+  timestamp_ = "[";
+  int ms_per_step = model_->subsampling_rate() *
+                    feature_pipeline_->config().frame_shift *
+                    1000 / feature_pipeline_->config().sample_rate;
+  int start = 0;
+  for (size_t i = 0; i < best_hyp.size(); i++) {
+    std::string word = symbol_table_.Find(best_hyp[i]);
+    int end = best_times[i] * ms_per_step;
+    result_ += word;
+    timestamp_ += "{word: " + word +
+            ", startTime: " + std::to_string(start) + ", endTime: " +
+            std::to_string(end) + "}, ";
+    start = end;
+  }
+  if (timestamp_.size() != 1) {
+    timestamp_ = timestamp_.substr(0, timestamp_.size() - 2);
+  }
+  timestamp_ += "]";
+  VLOG(1) << "Partial CTC result " << result_;
+  VLOG(1) << "Partial CTC timestamp " << timestamp_;
 }
 
 static bool CompareFunc(const std::pair<int, float>& a,
