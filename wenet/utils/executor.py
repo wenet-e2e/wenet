@@ -81,7 +81,8 @@ class Executor:
         '''
         model.eval()
         log_interval = args.get('log_interval', 10)
-        num_seen_utts = 0
+        # in order to avoid division by 0
+        num_seen_utts = 1
         total_loss = 0.0
         num_total_batch = len(data_loader)
         with torch.no_grad():
