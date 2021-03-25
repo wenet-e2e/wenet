@@ -59,6 +59,7 @@ class TransformerEncoderLayer(nn.Module):
         x: torch.Tensor,
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
+        mask_pad: Optional[torch.Tensor] = None,
         output_cache: Optional[torch.Tensor] = None,
         cnn_cache: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -69,6 +70,8 @@ class TransformerEncoderLayer(nn.Module):
             mask (torch.Tensor): Mask tensor for the input (#batch, time).
             pos_emb (torch.Tensor): just for interface compatibility
                 to ConformerEncoderLayer
+            mask_pad (torch.Tensor): does not used in transformer layer,
+                just for unified api with conformer.
             output_cache (torch.Tensor): Cache tensor of the output
                 (#batch, time2, size), time2 < time in x.
             cnn_cache (torch.Tensor): not used here, it's for interface
