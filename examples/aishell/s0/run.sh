@@ -210,7 +210,7 @@ fi
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     # Test model, please specify the model you want to use by --checkpoint
         # alignment input
-        ali_format=format.data
+        ali_format=$feat_dir/test/format.data
         # alignment output
         ali_result=$dir/ali
         python wenet/bin/alignment.py --gpu -1 \
