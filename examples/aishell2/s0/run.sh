@@ -22,11 +22,7 @@ num_nodes=1
 # the third one set node_rank 2, and so on. Default 0
 node_rank=0
 
-# modify this to your AISHELL-2 training data path
-# e.g:
-# trn_set=/disk10/data/AISHELL-2/iOS/data
-# dev_set=/disk10/data/AISHELL-2/iOS/dev
-# tst_set=/disk10/data/AISHELL-2/iOS/test
+# modify this to your AISHELL-2 data path
 trn_set=/ssd/nfs06/open_source_data/AISHELL-2/iOS/data
 dev_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/dev
 tst_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/test
