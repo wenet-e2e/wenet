@@ -32,7 +32,7 @@
 
 ## Transformer Result
 
-* Feature info: using fbank feature, dither, with cmvn, no speed perturb.
+* Feature info: using fbank feature, dither, with cmvn, online speed perturb.
 * Training info: lr 0.002, batch size 26, 4 gpu, acc_grad 4, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
@@ -47,18 +47,18 @@
 
 ## Unified Transformer Result
 
-* Feature info: using fbank feature, dither=0, with cmvn, no speed perturb.
-* Training info: lr 0.002, batch size 16, 8 gpu, acc_grad 1, 120 epochs, dither 0.0
+* Feature info: using fbank feature, dither=0, with cmvn, online speed perturb.
+* Training info: lr 0.002, batch size 16, 4 gpu, acc_grad 1, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210204_unified_transformer_exp.tar.gz
 
 | decoding mode/chunk size | full | 16   | 8    | 4    |
 |--------------------------|------|------|------|------|
-| attention decoder        | 6.13 | 6.43 | 6.55 | 6.79 |
-| ctc greedy search        | 6.73 | 7.99 | 8.72 | 9.92 |
-| ctc prefix beam search   | 6.73 | 7.99 | 8.73 | 9.91 |
-| attention rescoring      | 5.80 | 6.56 | 7.02 | 7.68 |
+| attention decoder        | 6.04 | 6.35 | 6.45 | 6.70 |
+| ctc greedy search        | 6.28 | 6.99 | 7.39 | 7.89 |
+| ctc prefix beam search   | 6.28 | 6.98 | 7.40 | 7.89 |
+| attention rescoring      | 5.52 | 6.05 | 6.28 | 6.62 |
 
 ## Muilti-machines Training Conformer Result
 
