@@ -19,7 +19,8 @@ decoder: transformer
 decoder_conf:
     attention_heads: 4
     linear_units: 2048
-    num_blocks: 6
+    num_blocks: 3
+    r_num_blocks: 3
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     self_attention_dropout_rate: 0.0
@@ -38,7 +39,20 @@ raw_wav: true
 collate_conf:
     # waveform level config
     wav_distortion_conf:
-        wav_dither: 0.1
+        wav_dither: 0.0
+        wav_distortion_rate: 0.0
+        distortion_methods: []
+    speed_perturb: false
+    feature_extraction_conf:
+        feature_type: 'fbank'
+        mel_bins: 80
+        frame_shift: 10
+
+# feature extraction
+collate_conf:
+    # waveform level config
+    wav_distortion_conf:
+        wav_dither: 0.0
         wav_distortion_rate: 0.0
         distortion_methods: []
     speed_perturb: false
@@ -63,20 +77,21 @@ collate_conf:
 
 # dataset related
 dataset_conf:
-    max_length: 2048
+    max_length: 40960
     min_length: 0
     batch_type: 'static' # static or dynamic
-    batch_size: 18
+    # the size of batch_size should be set according to your gpu memory size, here we used 2080ti gpu whose memory size is 11GB
+    batch_size: 22
     sort: true
 
 grad_clip: 5
 accum_grad: 1
-max_epoch: 120
+max_epoch: 180
 log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.004
+    lr: 0.002
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 25000
