@@ -28,6 +28,7 @@ from torch.utils.data import DataLoader
 from wenet.dataset.dataset import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.ctc_util import forced_align
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='use ctc to generate alignment')
@@ -107,5 +108,5 @@ if __name__ == '__main__':
                 encoder_out)  # (1, maxlen, vocab_size)
             ctc_probs = ctc_probs.squeeze(0)
             target = target.squeeze(0)
-            alignment = model.ctc.forced_align(ctc_probs, target)
+            alignment = forced_align(ctc_probs, target)
             fout.write('{} {}\n'.format(key[0], alignment))
