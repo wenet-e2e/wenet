@@ -109,6 +109,7 @@ Or build the Dockerfile yourself, and run it by:
 ``` sh
 DOCKER_BUILDKIT=1 docker build --no-cache -t wenet:latest .
 docker run --rm -it wenet bash
+cmake --build /home/wenet/runtime/server/x86/build
 ```
 
 The pretrained model folder is located at `/home`, and the binary is located at `/home/wenet/runtime/server/x86/build`. Run it as previous mentioned.
