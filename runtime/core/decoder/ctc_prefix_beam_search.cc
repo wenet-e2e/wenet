@@ -42,9 +42,7 @@ static bool PrefixScoreCompare(
 }
 
 // Please refer https://robin1001.github.io/2020/12/11/ctc-search/
-// for how CTC prefix beam search works, and there is a simple graph demo in
-// it.
-// TODO(Binbin Zhang): Support timestamp
+// for how CTC prefix beam search works, and there is a simple graph demo in it.
 void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   CHECK_EQ(logp.dtype(), torch::kFloat);
   CHECK_EQ(logp.dim(), 2);
@@ -68,19 +66,13 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
         // of PrefixScore will set fields s(blank ending score) and
         // ns(none blank ending score) to -inf, respectively.
         if (id == opts_.blank) {
-          // Case 0: *a- -> *a; - is blank
+          // Case 0: *a + ε => *a
           PrefixScore& next_score = next_hyps[prefix];
-          next_score.s = LogAdd(next_score.s,
-                                LogAdd(prefix_score.s, prefix_score.ns) + prob);
-          if (prefix_score.v_s > prefix_score.v_ns) {
-            next_score.v_s = prefix_score.v_s + prob;
-            next_score.times_s = prefix_score.times_s;
-          } else {
-            next_score.v_s = prefix_score.v_ns + prob;
-            next_score.times_s = prefix_score.times_ns;
-          }
+          next_score.s = LogAdd(next_score.s, prefix_score.score() + prob);
+          next_score.v_s = prefix_score.viterbi_score() + prob;
+          next_score.times_s = prefix_score.times();
         } else if (!prefix.empty() && id == prefix.back()) {
-          // Case 1: *aa -> *a;
+          // Case 1: *a + a => *a
           PrefixScore& next_score1 = next_hyps[prefix];
           next_score1.ns = LogAdd(next_score1.ns, prefix_score.ns + prob);
           if (next_score1.v_ns < prefix_score.v_ns + prob) {
@@ -92,7 +84,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
               next_score1.times_ns.back() = abs_time_step_;
             }
           }
-          // Case 2: *a-a -> *aa; - is blank
+          // Case 2: *aε + a => *aa
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
           PrefixScore& next_score2 = next_hyps[new_prefix];
@@ -104,21 +96,15 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
             next_score2.times_ns.emplace_back(abs_time_step_);
           }
         } else {
-          // Case 3: *ab -> ab, *a-b -> ab; - is blank
+          // Case 3: *a + b => *ab, *aε + b => *ab
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
           PrefixScore& next_score = next_hyps[new_prefix];
-          next_score.ns = LogAdd(
-              next_score.ns, LogAdd(prefix_score.s, prefix_score.ns) + prob);
-          float v_ns = std::max(prefix_score.v_s, prefix_score.v_ns) + prob;
-          if (next_score.v_ns < v_ns) {
-            next_score.v_ns = v_ns;
+          next_score.ns = LogAdd(next_score.ns, prefix_score.score() + prob);
+          if (next_score.v_ns < prefix_score.viterbi_score() + prob) {
+            next_score.v_ns = prefix_score.viterbi_score() + prob;
             next_score.cur_token_prob = prob;
-            if (prefix_score.v_s > prefix_score.v_ns) {
-              next_score.times_ns = prefix_score.times_s;
-            } else {
-              next_score.times_ns = prefix_score.times_ns;
-            }
+            next_score.times_ns = prefix_score.times();
             next_score.times_ns.emplace_back(abs_time_step_);
           }
         }
@@ -135,6 +121,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     arr.resize(second_beam_size);
     std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
+    // 4. Update cur_hyps_ and get new result
     cur_hyps_.clear();
     hypotheses_.clear();
     likelihood_.clear();
@@ -143,14 +130,9 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     for (auto& item : arr) {
       cur_hyps_[item.first] = item.second;
       hypotheses_.emplace_back(std::move(item.first));
-      likelihood_.emplace_back(LogAdd(item.second.s, item.second.ns));
-      if (item.second.v_s > item.second.v_ns) {
-        viterbi_likelihood_.emplace_back(item.second.v_s);
-        times_.emplace_back(item.second.times_s);
-      } else {
-        viterbi_likelihood_.emplace_back(item.second.v_ns);
-        times_.emplace_back(item.second.times_ns);
-      }
+      likelihood_.emplace_back(item.second.score());
+      viterbi_likelihood_.emplace_back(item.second.viterbi_score());
+      times_.emplace_back(item.second.times());
     }
   }
 }
