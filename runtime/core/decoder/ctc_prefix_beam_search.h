@@ -31,7 +31,13 @@ struct PrefixScore {
   float cur_token_prob = -kFloatMax;  // prob of current token
   std::vector<int> times_s;           // times of viterbi blank path
   std::vector<int> times_ns;          // times of viterbi none blank path
+
   PrefixScore() = default;
+  float score() const { return LogAdd(s, ns); }
+  float viterbi_score() const { return v_s > v_ns ? v_s : v_ns; }
+  const std::vector<int>& times() const {
+    return v_s > v_ns ? times_s : times_ns;
+  }
 };
 
 struct PrefixHash {
