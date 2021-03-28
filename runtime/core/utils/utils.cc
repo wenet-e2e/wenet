@@ -18,20 +18,16 @@
 
 namespace wenet {
 
-void SplitString(const std::string& str, std::vector<std::string>* strs) {
-  auto iss = std::istringstream{str};
-  std::string result;
-  while (iss >> result) {
-    strs->push_back(result);
-  }
-}
-
 float LogAdd(const float& x, const float& y) {
   static float num_min = -std::numeric_limits<float>::max();
   if (x <= num_min) return y;
   if (y <= num_min) return x;
   float xmax = std::max(x, y);
   return std::log(std::exp(x - xmax) + std::exp(y - xmax)) + xmax;
+}
+
+void SplitString(const std::string& str, std::vector<std::string>* strs) {
+  SplitString(str, " \t", strs);
 }
 
 void SplitString(const std::string& data, const std::string& delim,
@@ -139,6 +135,33 @@ bool SplitUTF8String(const std::string& str,
     }
   }
   return true;
+}
+
+std::string ProcessBlank(const std::string& str) {
+  std::string result;
+  if (!str.empty()) {
+    std::vector<std::string> characters;
+    if (SplitUTF8String(str, &characters)) {
+      for (std::string& character : characters) {
+        if (character != kSpaceSymbol) {
+          result.append(character);
+        } else {
+          // Ignore consecutive space or located in head
+          if (!result.empty() && result.back() != ' ') {
+            result.push_back(' ');
+          }
+        }
+      }
+      // Ignore tailing space
+      if (!result.empty() && result.back() == ' ') {
+        result.pop_back();
+      }
+      for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = tolower(result[i]);
+      }
+    }
+  }
+  return result;
 }
 
 }  // namespace wenet

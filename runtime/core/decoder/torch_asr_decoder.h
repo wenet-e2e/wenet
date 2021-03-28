@@ -46,7 +46,6 @@ class TorchAsrDecoder {
   // Return true if we reach the end of the feature pipeline
   bool AdvanceDecoding();
   void AttentionRescoring();
-  void ProcessBlank();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
