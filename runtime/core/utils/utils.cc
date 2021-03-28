@@ -34,36 +34,6 @@ float LogAdd(const float& x, const float& y) {
   return std::log(std::exp(x - xmax) + std::exp(y - xmax)) + xmax;
 }
 
-void SplitString(const std::string& data, const std::string& delim,
-                 std::vector<std::string>* strs) {
-  std::vector<std::string>& elems = *strs;
-  std::string::size_type pos = 0;
-  std::string::size_type len = data.size();
-  std::string::size_type delim_len = delim.size();
-
-  if (len == 0) {
-    return;
-  }
-
-  if (delim_len == 0) {
-    elems.push_back(data);
-    return;
-  }
-
-  while (pos < len) {
-    std::string::size_type find_pos = data.find(delim, pos);
-    if (find_pos == std::string::npos) {
-      elems.push_back(data.substr(pos, len - pos));
-      return;
-    }
-
-    elems.push_back(data.substr(pos, find_pos - pos));
-    pos = find_pos + delim_len;
-  }
-
-  return;
-}
-
 std::string UTF8CodeToUTF8String(int code) {
   std::ostringstream ostr;
   if (code < 0) {
@@ -139,6 +109,33 @@ bool SplitUTF8String(const std::string& str,
     }
   }
   return true;
+}
+
+std::string ProcessBlank(const std::string& str) {
+  std::string result;
+  if (!str.empty()) {
+    std::vector<std::string> characters;
+    if (SplitUTF8String(str, &characters)) {
+      for (std::string& character : characters) {
+        if (character != kSpaceSymbol) {
+          result.append(character);
+        } else {
+          // Ignore consecutive space or located in head
+          if (!result.empty() && result.back() != ' ') {
+            result.push_back(' ');
+          }
+        }
+      }
+      // Ignore tailing space
+      if (!result.empty() && result.back() == ' ') {
+        result.pop_back();
+      }
+      for (size_t i = 0; i < result.size(); ++i) {
+        result[i] = tolower(result[i]);
+      }
+    }
+  }
+  return result;
 }
 
 }  // namespace wenet

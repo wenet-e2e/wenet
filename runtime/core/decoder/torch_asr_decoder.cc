@@ -211,43 +211,7 @@ void TorchAsrDecoder::AttentionRescoring() {
     VLOG(1) << "ctc index " << best_k << " result " << result << " score "
             << weighted_scores[i].second;
     if (0 == i) {
-      result_ = result;
-    }
-  }
-
-  ProcessBlank();
-}
-
-void TorchAsrDecoder::ProcessBlank() {
-  if (result_.size()) {
-    using std::string;
-    using std::vector;
-    vector<string> characters;
-
-    if (SplitUTF8String(result_, &characters)) {
-      string result;
-
-      for (size_t i = 0; i < characters.size(); ++i) {
-        if (characters[i] != wenet::kSpaceSymbol) {
-          result.append(characters[i]);
-        } else {
-          // Ignore consecutive space or located in head
-          if (result.size() && result.back() != ' ') {
-            result.push_back(' ');
-          }
-        }
-      }
-
-      // Ignore tailing space
-      if (result.size() && result.back() == ' ') {
-        result.pop_back();
-      }
-
-      for (size_t i = 0; i < result.size(); ++i) {
-        result[i] = tolower(result[i]);
-      }
-
-      result_ = result;
+      result_ = ProcessBlank(result);
     }
   }
 }
