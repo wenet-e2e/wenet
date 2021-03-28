@@ -1,4 +1,5 @@
 # Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Chao Yang)
+# 2021 jinsong pan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,6 +33,9 @@ import wenet.dataset.kaldi_io as kaldi_io
 from wenet.dataset.wav_distortion import distort_wav_conf
 from wenet.utils.common import IGNORE_ID
 
+torchaudio.set_audio_backend("sox")
+
+
 def _spec_augmentation(x,
                        warp_for_time=False,
                        num_t_mask=2,
@@ -63,7 +67,7 @@ def _spec_augmentation(x,
 
         left = Image.fromarray(x[:center]).resize((max_freq, warped), BICUBIC)
         right = Image.fromarray(x[center:]).resize((max_freq,
-                                                   max_frames - warped),
+                                                    max_frames - warped),
                                                    BICUBIC)
         y = np.concatenate((left, right), 0)
     # time mask
@@ -79,6 +83,7 @@ def _spec_augmentation(x,
         end = min(max_freq, start + length)
         y[:, start:end] = 0
     return y
+
 
 def _spec_substitute(x, max_t=20, num_t_sub=3):
     """ Deep copy x and do spec substitute then return it
@@ -101,6 +106,7 @@ def _spec_substitute(x, max_t=20, num_t_sub=3):
         pos = random.randint(0, start)
         y[start:end, :] = y[start - pos:end - pos, :]
     return y
+
 
 def _waveform_distortion(waveform, distortion_methods_conf):
     """ Apply distortion on waveform
@@ -126,8 +132,9 @@ def _waveform_distortion(waveform, distortion_methods_conf):
             distortion_conf = distortion_method['params']
             point_rate = distortion_method['point_rate']
             return distort_wav_conf(waveform, distortion_type,
-                                    distortion_conf , point_rate)
+                                    distortion_conf, point_rate)
     return waveform
+
 
 # add speed perturb when loading wav
 # return augmented, sr
@@ -144,14 +151,19 @@ def _load_wav_with_speed(wav_file, speed):
         return torchaudio.load_wav(wav_file)
     else:
         si, _ = torchaudio.info(wav_file)
-        E = torchaudio.sox_effects.SoxEffectsChain()
-        E.append_effect_to_chain('speed', speed)
-        E.append_effect_to_chain("rate", si.rate)
-        E.set_input_file(wav_file)
-        wav, sr = E.sox_build_flow_effects()
+
+        # Note: deprecated in torchaudio>=0.8.0
+        # E = torchaudio.sox_effects.SoxEffectsChain()
+        # E.append_effect_to_chain('speed', speed)
+        # E.append_effect_to_chain("rate", si.rate)
+        # E.set_input_file(wav_file)
+        # wav, sr = E.sox_build_flow_effects()
         # sox will normalize the waveform, scale to [-32768, 32767]
+
+        wav, sr = torchaudio.sox_effects.apply_effects_file(wav_file, [['speed', str(speed)], ['rate', str(si.rate)]])
         wav = wav * (1 << 15)
         return wav, sr
+
 
 def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                      feature_extraction_conf):
@@ -251,9 +263,11 @@ def _load_feature(batch):
     sorted_labels = [labels[i] for i in order]
     return sorted_keys, sorted_feats, sorted_labels
 
+
 class CollateFunc(object):
     """ Collate function for AudioDataset
     """
+
     def __init__(self,
                  feature_dither=0.0,
                  speed_perturb=False,
@@ -447,6 +461,8 @@ class AudioDataset(Dataset):
 
     def __getitem__(self, idx):
         return self.minibatch[idx]
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('type', help='config file')
@@ -455,7 +471,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.config_file, 'r') as fin:
-        configs = yaml.load(fin)
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
 
     # Init dataset and data loader
     collate_conf = copy.copy(configs['collate_conf'])

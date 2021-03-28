@@ -86,7 +86,7 @@ if __name__ == '__main__':
     torch.manual_seed(777)
     print(args)
     with open(args.config, 'r') as fin:
-        configs = yaml.load(fin)
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
 
     distributed = args.world_size > 1
 

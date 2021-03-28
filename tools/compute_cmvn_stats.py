@@ -11,6 +11,8 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 from torch.utils.data import Dataset, DataLoader
 
+torchaudio.set_audio_backend("sox")
+
 class CollateFunc(object):
     ''' Collate function for AudioDataset
     '''
@@ -61,7 +63,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.train_config, 'r') as fin:
-        configs = yaml.load(fin)
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
     feat_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
 
     collate_func = CollateFunc(feat_dim)
