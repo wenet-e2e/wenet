@@ -18,20 +18,46 @@
 
 namespace wenet {
 
-void SplitString(const std::string& str, std::vector<std::string>* strs) {
-  auto iss = std::istringstream{str};
-  std::string result;
-  while (iss >> result) {
-    strs->push_back(result);
-  }
-}
-
 float LogAdd(const float& x, const float& y) {
   static float num_min = -std::numeric_limits<float>::max();
   if (x <= num_min) return y;
   if (y <= num_min) return x;
   float xmax = std::max(x, y);
   return std::log(std::exp(x - xmax) + std::exp(y - xmax)) + xmax;
+}
+
+void SplitString(const std::string& str, std::vector<std::string>* strs) {
+  SplitString(str, " \t", strs);
+}
+
+void SplitString(const std::string& data, const std::string& delim,
+                 std::vector<std::string>* strs) {
+  std::vector<std::string>& elems = *strs;
+  std::string::size_type pos = 0;
+  std::string::size_type len = data.size();
+  std::string::size_type delim_len = delim.size();
+
+  if (len == 0) {
+    return;
+  }
+
+  if (delim_len == 0) {
+    elems.push_back(data);
+    return;
+  }
+
+  while (pos < len) {
+    std::string::size_type find_pos = data.find(delim, pos);
+    if (find_pos == std::string::npos) {
+      elems.push_back(data.substr(pos, len - pos));
+      return;
+    }
+
+    elems.push_back(data.substr(pos, find_pos - pos));
+    pos = find_pos + delim_len;
+  }
+
+  return;
 }
 
 std::string UTF8CodeToUTF8String(int code) {
