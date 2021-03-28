@@ -27,37 +27,21 @@ float LogAdd(const float& x, const float& y) {
 }
 
 void SplitString(const std::string& str, std::vector<std::string>* strs) {
-  SplitString(str, " \t", strs);
+  SplitStringToVector(str, " \t", true, strs);
 }
 
-void SplitString(const std::string& data, const std::string& delim,
-                 std::vector<std::string>* strs) {
-  std::vector<std::string>& elems = *strs;
-  std::string::size_type pos = 0;
-  std::string::size_type len = data.size();
-  std::string::size_type delim_len = delim.size();
-
-  if (len == 0) {
-    return;
+void SplitStringToVector(const std::string& full, const char *delim,
+                         bool omit_empty_strings,
+                         std::vector<std::string> *out) {
+  size_t start = 0, found = 0, end = full.size();
+  out->clear();
+  while (found != std::string::npos) {
+    found = full.find_first_of(delim, start);
+    // start != end condition is for when the delimiter is at the end
+    if (!omit_empty_strings || (found != start && start != end))
+      out->push_back(full.substr(start, found - start));
+    start = found + 1;
   }
-
-  if (delim_len == 0) {
-    elems.push_back(data);
-    return;
-  }
-
-  while (pos < len) {
-    std::string::size_type find_pos = data.find(delim, pos);
-    if (find_pos == std::string::npos) {
-      elems.push_back(data.substr(pos, len - pos));
-      return;
-    }
-
-    elems.push_back(data.substr(pos, find_pos - pos));
-    pos = find_pos + delim_len;
-  }
-
-  return;
 }
 
 std::string UTF8CodeToUTF8String(int code) {
