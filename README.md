@@ -48,7 +48,7 @@ git clone https://github.com/mobvoi/wenet.git
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio -c pytorch
+conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.60 -c pytorch
 ```
 
 ## Discussion & Communication
