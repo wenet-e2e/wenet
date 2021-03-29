@@ -1,5 +1,5 @@
 # Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Chao Yang)
-# 2021 jinsong pan
+# Copyright (c) 2021 Jinsong Pan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -152,15 +152,16 @@ def _load_wav_with_speed(wav_file, speed):
     else:
         si, _ = torchaudio.info(wav_file)
 
-        # Note: deprecated in torchaudio>=0.8.0
-        E = torchaudio.sox_effects.SoxEffectsChain()
-        E.append_effect_to_chain('speed', speed)
-        E.append_effect_to_chain("rate", si.rate)
-        E.set_input_file(wav_file)
-        wav, sr = E.sox_build_flow_effects()
-
-        # Note: torchaudio>=0.8.0
-        # wav, sr = torchaudio.sox_effects.apply_effects_file(wav_file, [['speed', str(speed)], ['rate', str(si.rate)]])
+        if int(torchaudio.__version__.split(".")[1]) < 8:
+            # Note: deprecated in torchaudio>=0.8.0
+            E = torchaudio.sox_effects.SoxEffectsChain()
+            E.append_effect_to_chain('speed', speed)
+            E.append_effect_to_chain("rate", si.rate)
+            E.set_input_file(wav_file)
+            wav, sr = E.sox_build_flow_effects()
+        else:
+            # Note: used in torchaudio>=0.8.0
+            wav, sr = torchaudio.sox_effects.apply_effects_file(wav_file, [['speed', str(speed)], ['rate', str(si.rate)]])
 
         # sox will normalize the waveform, scale to [-32768, 32767]
         wav = wav * (1 << 15)
