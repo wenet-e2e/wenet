@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>WeNet-语音实时转写</title>
@@ -34,8 +35,9 @@
         <h2>产品体验</h2>
         <div id="client-word-recorder" style="position: relative;">
           <div class="pd">
-            <div style="text-align:center;height:50px;width:100%;
-                        border:0px solid #bcbcbc;color:#000;box-sizing: border-box;display:inline-block" class="recwave">
+            <div style="text-align:center;height:20px;width:100%;
+                        border:0px solid #bcbcbc;color:#000;box-sizing: border-box;display:inline-block"
+              class="recwave">
             </div>
           </div>
         </div>
@@ -103,91 +105,99 @@
       </div>
     </div>
 
-    <div class="voice-footer">Copyright © 2021 Mobvoi Inc. All Rights Reserved. 北京出门问问信息科技有限公司沪 ICP 备 13010933 号-5 京公网安备 11010802023145</div>
+    <div class="voice-footer">Copyright © 2021 Mobvoi Inc. All Rights Reserved. 北京出门问问信息科技有限公司沪 ICP 备 13010933 号-5 京公网安备
+      11010802023145</div>
   </div>
   <script>
-  var wenetWs = null
-  var timeLoop = null
-  $(document).ready(function() {
-    $('#beginBtn').on('click', startRecording)
-    $('#endBtn').on('click', stopRecording)
-  })
-
-  function openWebSocket(url) {
-    if ("WebSocket" in window) {
-      wenetWs = new WebSocket(url)
-      wenetWs.onopen = function() {
-        console.log("Websocket 连接成功...")
-        wenetWs.send(JSON.stringify({ "signal": "start" }))
-      }
-      wenetWs.onmessage = function(_msg) { parseResult(_msg.data) }
-      wenetWs.onclose = function() { console.log("WebSocket 连接断开") }
-      wenetWs.onerror = function() {  console.log("WebSocket 连接失败") }
-    }
-  }
-
-  function parseResult(data) {
-    var data = JSON.parse(data)
-    if (data.type == 'partial_result') {
-      var content = data.content
-      if (content.length > 0) {
-        $("#resultPanel").html(content)
-      }
-    } else if (data.type == 'final_result') {
-      $("#resultPanel").html(data.content)
-    }
-  }
-
-  function TransferUpload(number, blobOrNull, duration, blobRec, isClose) {
-    if (blobOrNull) {
-      var blob = blobOrNull
-      var encTime = blob.encTime
-      var reader = new FileReader()
-      reader.onloadend = function() { wenetWs.send(reader.result) }
-      reader.readAsArrayBuffer(blob)
-    }
-  }
-
-  function startRecording() {
-    // Check socket url
-    var socketUrl = $('#socketUrl').val()
-    if (!socketUrl.trim()) {
-      alert('请输入 WebSocket 服务器地址，如：ws://127.0.0.1:10086')
-      $('#socketUrl').focus()
-      return
-    }
-    // Change button state
-    $(this).hide()
-    $('#endBtn, #timeBox').addClass('show')
-    // Start countdown
-    var seconds = 60
-    $('#timeCount').text(seconds)
-    timeLoop = setInterval(function() {
-      seconds--
-      $('#timeCount').text(seconds)
-      if (seconds === 0) {
-        stopRecording()
-      }
-    }, 1000)
-    // Start recording
-    SoundRecognizer.init({
-      soundType: 'wav',
-      sampleRate: 16000,
-      recwaveElm: '.recwave',
-      translerCallBack: TransferUpload
+    var wenetWs = null
+    var timeLoop = null
+    $(document).ready(function () {
+      $('#beginBtn').on('click', startRecording)
+      $('#endBtn').on('click', stopRecording)
     })
-    openWebSocket(socketUrl)
-  }
 
-  function stopRecording() {
-    $('#endBtn').add($('#timeBox')).removeClass('show')
-    $('#beginBtn').show()
-    $('#timeCount').text('')
-    clearInterval(timeLoop)
+    function openWebSocket(url) {
+      if ("WebSocket" in window) {
+        wenetWs = new WebSocket(url)
+        wenetWs.onopen = function () {
+          console.log("Websocket 连接成功...")
+          wenetWs.send(JSON.stringify({ "signal": "start" }))
+        }
+        wenetWs.onmessage = function (_msg) { parseResult(_msg.data) }
+        wenetWs.onclose = function () { console.log("WebSocket 连接断开") }
+        wenetWs.onerror = function () { console.log("WebSocket 连接失败") }
+      }
+    }
 
-    wenetWs.send(JSON.stringify({ "signal": "end" }))
-    SoundRecognizer.recordClose()
-  }
+    function parseResult(data) {
+      var data = JSON.parse(data)
+      if (data.type == 'partial_result') {
+        nbest = JSON.parse(data.nbest)
+        var sentence = nbest[0].sentence
+        if (sentence.length > 0) {
+          $("#resultPanel").html(sentence)
+        }
+      } else if (data.type == 'final_result') {
+        nbest = JSON.parse(data.nbest)
+        var sentence = nbest[0].sentence
+        if (sentence.length > 0) {
+          $("#resultPanel").html(sentence)
+        }
+        console.log(nbest[0].word_pieces)
+      }
+    }
+
+    function TransferUpload(number, blobOrNull, duration, blobRec, isClose) {
+      if (blobOrNull) {
+        var blob = blobOrNull
+        var encTime = blob.encTime
+        var reader = new FileReader()
+        reader.onloadend = function () { wenetWs.send(reader.result) }
+        reader.readAsArrayBuffer(blob)
+      }
+    }
+
+    function startRecording() {
+      // Check socket url
+      var socketUrl = $('#socketUrl').val()
+      if (!socketUrl.trim()) {
+        alert('请输入 WebSocket 服务器地址，如：ws://127.0.0.1:10086')
+        $('#socketUrl').focus()
+        return
+      }
+      // Change button state
+      $(this).hide()
+      $('#endBtn, #timeBox').addClass('show')
+      // Start countdown
+      var seconds = 60
+      $('#timeCount').text(seconds)
+      timeLoop = setInterval(function () {
+        seconds--
+        $('#timeCount').text(seconds)
+        if (seconds === 0) {
+          stopRecording()
+        }
+      }, 1000)
+      // Start recording
+      SoundRecognizer.init({
+        soundType: 'wav',
+        sampleRate: 16000,
+        recwaveElm: '.recwave',
+        translerCallBack: TransferUpload
+      })
+      openWebSocket(socketUrl)
+    }
+
+    function stopRecording() {
+      $('#endBtn').add($('#timeBox')).removeClass('show')
+      $('#beginBtn').show()
+      $('#timeCount').text('')
+      clearInterval(timeLoop)
+
+      wenetWs.send(JSON.stringify({ "signal": "end" }))
+      SoundRecognizer.recordClose()
+    }
   </script>
 </body>
+
 </html>
