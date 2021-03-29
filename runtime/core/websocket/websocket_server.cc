@@ -71,7 +71,7 @@ void ConnectionHandler::OnSpeechEnd() {
 void ConnectionHandler::OnPartialResult(const std::string& result) {
   LOG(INFO) << "Partial result: " << result;
   json::value rv = {
-      {"status", "ok"}, {"type", "partial_result"}, {"content", result}};
+      {"status", "ok"}, {"type", "partial_result"}, {"nbest", result}};
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
 }
@@ -79,7 +79,7 @@ void ConnectionHandler::OnPartialResult(const std::string& result) {
 void ConnectionHandler::OnFinalResult(const std::string& result) {
   LOG(INFO) << "Final result: " << result;
   json::value rv = {
-      {"status", "ok"}, {"type", "final_result"}, {"content", result}};
+      {"status", "ok"}, {"type", "final_result"}, {"nbest", result}};
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
 
@@ -104,10 +104,33 @@ void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
   feature_pipeline_->AcceptWaveform(pcm_data);
 }
 
+std::string ConnectionHandler::SerializeResult(bool finish) {
+  json::array nbest;
+  for (const DecodeResult& path : decoder_->result()) {
+    json::object jpath({{"sentence", path.sentence}});
+    if (finish) {
+      json::array word_pieces;
+      for (const WordPiece& word_piece : path.word_pieces) {
+        json::object jword_piece({{"word", word_piece.word},
+                                  {"start", word_piece.start},
+                                  {"end", word_piece.end}});
+        word_pieces.emplace_back(jword_piece);
+      }
+      jpath.emplace("word_pieces", word_pieces);
+    }
+    nbest.emplace_back(jpath);
+
+    if (nbest.size() == nbest_) {
+      break;
+    }
+  }
+  return json::serialize(nbest);
+}
+
 void ConnectionHandler::DecodeThreadFunc() {
   while (true) {
     bool finish = decoder_->Decode();
-    const std::string& result = decoder_->result();
+    std::string result = SerializeResult(finish);
     if (finish) {
       OnFinalResult(result);
       break;
@@ -143,6 +166,8 @@ void ConnectionHandler::operator()() {
           if (obj.find("signal") != obj.end()) {
             json::string signal = obj["signal"].as_string();
             if (signal == "start") {
+              nbest_ = obj.find("nbest") != obj.end() ?
+                      obj["nbest"].as_int64() : 1;
               OnSpeechStart();
             } else if (signal == "end") {
               OnSpeechEnd();

@@ -22,12 +22,13 @@
 
 DEFINE_string(host, "127.0.0.1", "host of websocket server");
 DEFINE_int32(port, 10086, "port of websocket server");
+DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
-  wenet::WebSocketClient client(FLAGS_host, FLAGS_port);
+  wenet::WebSocketClient client(FLAGS_host, FLAGS_port, FLAGS_nbest);
   client.SendStartSignal();
 
   wenet::WavReader wav_reader(FLAGS_wav_path);

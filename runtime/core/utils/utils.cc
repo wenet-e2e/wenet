@@ -30,9 +30,9 @@ void SplitString(const std::string& str, std::vector<std::string>* strs) {
   SplitStringToVector(str, " \t", true, strs);
 }
 
-void SplitStringToVector(const std::string& full, const char *delim,
+void SplitStringToVector(const std::string& full, const char* delim,
                          bool omit_empty_strings,
-                         std::vector<std::string> *out) {
+                         std::vector<std::string>* out) {
   size_t start = 0, found = 0, end = full.size();
   out->clear();
   while (found != std::string::npos) {

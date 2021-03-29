@@ -8,7 +8,6 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 #include "torch/script.h"
-#include "torch/torch.h"
 
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_decoder.h"
@@ -92,7 +91,7 @@ int main(int argc, char *argv[]) {
           std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
               .count();
       decode_time += chunk_decode_time;
-      LOG(INFO) << "Partial result: " << decoder.result();
+      LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
 
       if (finish) {
         break;
@@ -109,10 +108,10 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    LOG(INFO) << "Final result: " << decoder.result();
+    LOG(INFO) << "Final result: " << decoder.result()[0].sentence;
     LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time
               << "ms.";
-    buffer << wav.first << " " << decoder.result() << std::endl;
+    buffer << wav.first << " " << decoder.result()[0].sentence << std::endl;
 
     total_waves_dur += wave_dur;
     total_decode_time += decode_time;
