@@ -11,7 +11,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
-#include "decoder/ctc_prefix_beam_search.h"
+#include "decoder/decoder_interface.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
@@ -21,14 +21,8 @@ namespace wenet {
 
 using TorchModule = torch::jit::script::Module;
 
-struct DecodeOptions {
-  int chunk_size = 16;
-  int num_left_chunks = -1;
-  CtcPrefixBeamSearchOptions ctc_search_opts;
-};
-
 // Torch ASR decoder
-class TorchAsrDecoder {
+class TorchAsrDecoder : public DecoderInterface {
  public:
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
                   std::shared_ptr<TorchAsrModel> model,
@@ -40,12 +34,13 @@ class TorchAsrDecoder {
   int num_frames_in_current_chunk() const {
     return num_frames_in_current_chunk_;
   }
-  std::string result() const { return result_; }
+  const std::vector<DecodeResult>& result() const { return result_; }
 
  private:
   // Return true if we reach the end of the feature pipeline
   bool AdvanceDecoding();
   void AttentionRescoring();
+  void UpdateResult();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
@@ -65,7 +60,7 @@ class TorchAsrDecoder {
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
 
   int num_frames_in_current_chunk_;
-  std::string result_;
+  std::vector<DecodeResult> result_;
 
  public:
   DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);

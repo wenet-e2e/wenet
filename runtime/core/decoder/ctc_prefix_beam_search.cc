@@ -36,9 +36,7 @@ void CtcPrefixBeamSearch::Reset() {
 static bool PrefixScoreCompare(
     const std::pair<std::vector<int>, PrefixScore>& a,
     const std::pair<std::vector<int>, PrefixScore>& b) {
-  float prob_a = LogAdd(a.second.s, a.second.ns);
-  float prob_b = LogAdd(b.second.s, b.second.ns);
-  return prob_a > prob_b;
+  return a.second.score() > b.second.score();
 }
 
 // Please refer https://robin1001.github.io/2020/12/11/ctc-search/

@@ -56,6 +56,7 @@ class ConnectionHandler {
   void OnPartialResult(const std::string& result);
   void OnFinalResult(const std::string& result);
   void DecodeThreadFunc();
+  std::string SerializeResult();
   void operator()();
 
  private:

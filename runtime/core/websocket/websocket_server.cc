@@ -104,10 +104,29 @@ void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
   feature_pipeline_->AcceptWaveform(pcm_data);
 }
 
+std::string ConnectionHandler::SerializeResult() {
+  json::array nbest;
+  for (const DecodeResult& path : decoder_->result()) {
+    json::object jpath({{"sentence", path.sentence},
+                        {"score", path.score}});
+    json::array word_pieces;
+    for (const WordPiece& word_piece : path.word_pieces) {
+      json::object jword_piece({{"word", word_piece.word},
+                                {"start_time", word_piece.start},
+                                {"end_time", word_piece.end}});
+      word_pieces.emplace_back(jword_piece);
+    }
+    jpath.emplace("word_pieces", word_pieces);
+    nbest.emplace_back(jpath);
+  }
+  return json::serialize(nbest);
+}
+
 void ConnectionHandler::DecodeThreadFunc() {
   while (true) {
     bool finish = decoder_->Decode();
-    const std::string& result = decoder_->result();
+    std::string result = SerializeResult();
+
     if (finish) {
       OnFinalResult(result);
       break;
