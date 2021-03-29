@@ -6,12 +6,13 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "torch/script.h"
 #include "torch/torch.h"
 
-#include "decoder/decoder_interface.h"
+#include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
@@ -21,8 +22,33 @@ namespace wenet {
 
 using TorchModule = torch::jit::script::Module;
 
+struct DecodeOptions {
+  int chunk_size = 16;
+  int num_left_chunks = -1;
+  CtcPrefixBeamSearchOptions ctc_search_opts;
+};
+
+struct WordPiece {
+  std::string word;
+  int start = -1;
+  int end = -1;
+
+  WordPiece(std::string word, int start, int end)
+      : word(std::move(word)), start(start), end(end) {}
+};
+
+struct DecodeResult {
+  float score = -kFloatMax;
+  std::string sentence;
+  std::vector<WordPiece> word_pieces;
+
+  static bool CompareFunc(const DecodeResult& a, const DecodeResult& b) {
+    return a.score > b.score;
+  }
+};
+
 // Torch ASR decoder
-class TorchAsrDecoder : public DecoderInterface {
+class TorchAsrDecoder {
  public:
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
                   std::shared_ptr<TorchAsrModel> model,

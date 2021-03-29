@@ -37,7 +37,7 @@ using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 
 class WebSocketClient {
  public:
-  WebSocketClient(const std::string& host, int port);
+  WebSocketClient(const std::string& host, int port, int nbest);
 
   void SendTextData(const std::string& data);
   void SendBinaryData(const void* data, size_t size);
@@ -51,6 +51,7 @@ class WebSocketClient {
   void Connect();
   std::string host_;
   int port_;
+  int nbest_;
   asio::io_context ioc_;
   websocket::stream<tcp::socket> ws_{ioc_};
   std::unique_ptr<std::thread> t_{nullptr};

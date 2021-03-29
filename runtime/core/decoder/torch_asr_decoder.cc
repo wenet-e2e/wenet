@@ -172,7 +172,7 @@ void TorchAsrDecoder::UpdateResult() {
     path.sentence = ProcessBlank(path.sentence);
     result_.emplace_back(path);
   }
-  VLOG(1) << "Partial CTC result " << result_;
+  VLOG(1) << "Partial CTC result " << result_[0].sentence;
 }
 
 void TorchAsrDecoder::AttentionRescoring() {
