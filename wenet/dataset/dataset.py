@@ -157,7 +157,9 @@ def _load_wav_with_speed(wav_file, speed):
             wav, sr = E.sox_build_flow_effects()
         else:
             # Note: enable in torchaudio>=0.8.0
-            wav, sr = torchaudio.sox_effects.apply_effects_file(wav_file, [['speed', str(speed)], ['rate', str(si.rate)]])
+            wav, sr = torchaudio.sox_effects.apply_effects_file(wav_file,
+                                                                [['speed', str(speed)],
+                                                                 ['rate', str(si.rate)]])
 
         # sox will normalize the waveform, scale to [-32768, 32767]
         wav = wav * (1 << 15)
