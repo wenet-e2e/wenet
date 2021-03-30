@@ -150,12 +150,10 @@ def _load_wav_with_speed(wav_file, speed):
         si, _ = torchaudio.info(wav_file)
 
         # get torchaudio version
-        version_no = torchaudio.__version__.split(".")
-        torchaudio_version = 100 * int(version_no[0]) + \
-                             10 * int(version_no[1]) + \
-                             int(version_no[2])
+        ta_no = torchaudio.__version__.split(".")
+        ta_version = 100 * int(ta_no[0]) + 10 * int(ta_no[1]) + int(ta_no[2])
 
-        if torchaudio_version < 80:
+        if ta_version < 80:
             # Note: deprecated in torchaudio>=0.8.0
             E = sox_effects.SoxEffectsChain()
             E.append_effect_to_chain('speed', speed)
