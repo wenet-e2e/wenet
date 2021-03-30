@@ -11,7 +11,6 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 from torch.utils.data import Dataset, DataLoader
 
-torchaudio.set_audio_backend("sox")
 
 class CollateFunc(object):
     ''' Collate function for AudioDataset

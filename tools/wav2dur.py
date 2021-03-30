@@ -4,7 +4,7 @@
 import sys
 
 import torchaudio
-torchaudio.set_audio_backend("sox")
+
 
 scp = sys.argv[1]
 dur_scp = sys.argv[2]
