@@ -109,7 +109,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         tools/combine_data.sh data/train \
             data/{aidatatang,aishell,magicdata,primewords,stcmds,thchs}/train || exit 1;
         tools/combine_data.sh data/dev \
-            data/{aidatatang,aishell,magicdata,thchs,tal_asr}/dev || exit 1;
+            data/{aidatatang,aishell,magicdata,thchs}/dev || exit 1;
     fi
 fi
 
