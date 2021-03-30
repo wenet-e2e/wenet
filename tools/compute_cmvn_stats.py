@@ -61,7 +61,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.train_config, 'r') as fin:
-        configs = yaml.load(fin)
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
     feat_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
 
     collate_func = CollateFunc(feat_dim)
