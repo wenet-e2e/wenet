@@ -51,6 +51,15 @@ pip install -r requirements.txt
 conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.60 -c pytorch
 ```
 
+```sh
+# install on machine with GPU 3090
+conda create -n wenet python=3.8
+conda activate wenet
+pip install -r requirements.txt
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
+
+```
+
 ## Discussion & Communication
 
 In addition to discussing in [Github Issues](https://github.com/mobvoi/wenet/issues), we created a WeChat group for better discussion and quicker response.
