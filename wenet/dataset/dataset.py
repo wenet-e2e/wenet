@@ -455,7 +455,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     with open(args.config_file, 'r') as fin:
-        configs = yaml.load(fin)
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
 
     # Init dataset and data loader
     collate_conf = copy.copy(configs['collate_conf'])
