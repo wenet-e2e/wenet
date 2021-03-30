@@ -90,7 +90,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     with open(args.config, 'r') as fin:
-        configs = yaml.load(fin)
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
 
     raw_wav = configs['raw_wav']
     # Init dataset and data loader
