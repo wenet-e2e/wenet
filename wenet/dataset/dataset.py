@@ -1,4 +1,5 @@
 # Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Chao Yang)
+# Copyright (c) 2021 Jinsong Pan
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +32,8 @@ from torch.utils.data import Dataset, DataLoader
 import wenet.dataset.kaldi_io as kaldi_io
 from wenet.dataset.wav_distortion import distort_wav_conf
 from wenet.utils.common import IGNORE_ID
+torchaudio.set_audio_backend("sox")
+
 
 def _spec_augmentation(x,
                        warp_for_time=False,
@@ -126,7 +129,7 @@ def _waveform_distortion(waveform, distortion_methods_conf):
             distortion_conf = distortion_method['params']
             point_rate = distortion_method['point_rate']
             return distort_wav_conf(waveform, distortion_type,
-                                    distortion_conf , point_rate)
+                                    distortion_conf, point_rate)
     return waveform
 
 # add speed perturb when loading wav
@@ -144,14 +147,22 @@ def _load_wav_with_speed(wav_file, speed):
         return torchaudio.load_wav(wav_file)
     else:
         si, _ = torchaudio.info(wav_file)
-        E = torchaudio.sox_effects.SoxEffectsChain()
-        E.append_effect_to_chain('speed', speed)
-        E.append_effect_to_chain("rate", si.rate)
-        E.set_input_file(wav_file)
-        wav, sr = E.sox_build_flow_effects()
+
+        if int(torchaudio.__version__.split(".")[1]) < 8:
+            # Note: deprecated in torchaudio>=0.8.0
+            E = torchaudio.sox_effects.SoxEffectsChain()
+            E.append_effect_to_chain('speed', speed)
+            E.append_effect_to_chain("rate", si.rate)
+            E.set_input_file(wav_file)
+            wav, sr = E.sox_build_flow_effects()
+        else:
+            # Note: enable in torchaudio>=0.8.0
+            wav, sr = torchaudio.sox_effects.apply_effects_file(wav_file, [['speed', str(speed)], ['rate', str(si.rate)]])
+
         # sox will normalize the waveform, scale to [-32768, 32767]
         wav = wav * (1 << 15)
         return wav, sr
+
 
 def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                      feature_extraction_conf):

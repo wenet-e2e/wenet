@@ -45,10 +45,17 @@ git clone https://github.com/mobvoi/wenet.git
 - Create Conda env: (**PyTorch 1.6.0** is recommended. We met some error on NCCL when using 1.7.0 on 2080 Ti.)
 
 ``` sh
+[option 1]
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.60 -c pytorch
+conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
+
+[option 2: training model on machine with GPU 3090]
+conda create -n wenet python=3.8
+conda activate wenet
+pip install -r requirements.txt
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 ## Discussion & Communication
