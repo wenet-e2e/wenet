@@ -13,6 +13,7 @@
 #include "torch/torch.h"
 
 #include "decoder/ctc_prefix_beam_search.h"
+#include "decoder/online_endpoint.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
@@ -26,6 +27,9 @@ struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
   CtcPrefixBeamSearchOptions ctc_search_opts;
+
+  OnlineEndpointConfig end_point_config;
+  float blank_threshold = 0.8;  // blank threshold to be silence
 };
 
 struct WordPiece {
@@ -60,13 +64,19 @@ class TorchAsrDecoder {
   int num_frames_in_current_chunk() const {
     return num_frames_in_current_chunk_;
   }
+  int frame_shift_in_ms() const {
+    return model_->subsampling_rate() *
+           feature_pipeline_->config().frame_shift * 1000 /
+           feature_pipeline_->config().sample_rate;
+  }
   const std::vector<DecodeResult>& result() const { return result_; }
 
  private:
   // Return true if we reach the end of the feature pipeline
   bool AdvanceDecoding();
   void AttentionRescoring();
-  void UpdateResult();
+  void UpdateResult(const torch::Tensor& ctc_log_probs);
+  bool IsEndpoint(const torch::Tensor& ctc_log_probs);
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
@@ -85,7 +95,9 @@ class TorchAsrDecoder {
 
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
 
-  int num_frames_in_current_chunk_;
+  int num_frames_in_current_chunk_ = 0;
+  int num_frames_decoded_ = 0;
+  int num_frames_trailing_blank_ = 0;
   std::vector<DecodeResult> result_;
 
  public:

@@ -8,6 +8,8 @@
 #include <limits>
 #include <utility>
 
+#include "decoder/online_endpoint.h"
+
 namespace wenet {
 
 TorchAsrDecoder::TorchAsrDecoder(
@@ -26,6 +28,8 @@ void TorchAsrDecoder::Reset() {
   result_.clear();
   offset_ = 0;
   num_frames_in_current_chunk_ = 0;
+  num_frames_decoded_ = 0;
+  num_frames_trailing_blank_ = 0;
   subsampling_cache_ = std::move(torch::jit::IValue());
   elayers_output_cache_ = std::move(torch::jit::IValue());
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
@@ -105,9 +109,9 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                                               elayers_output_cache_,
                                               conformer_cnn_cache_};
     auto outputs = model_->torch_model()
-                       ->get_method("forward_encoder_chunk")(inputs)
-                       .toTuple()
-                       ->elements();
+                          ->get_method("forward_encoder_chunk")(inputs)
+                          .toTuple()
+                          ->elements();
     CHECK_EQ(outputs.size(), 4);
     torch::Tensor chunk_out = outputs[0].toTensor();
     subsampling_cache_ = outputs[1];
@@ -120,8 +124,8 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                                       ->run_method("ctc_activation", chunk_out)
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
-    ctc_prefix_beam_searcher_->Search(ctc_log_probs);
-    UpdateResult();
+    UpdateResult(ctc_log_probs);
+    finish = IsEndpoint(ctc_log_probs) || finish;
 
     // 3. cache feature for next chunk
     if (!finish) {
@@ -142,20 +146,18 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   return finish;
 }
 
-void TorchAsrDecoder::UpdateResult() {
+void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
+  ctc_prefix_beam_searcher_->Search(ctc_log_probs);
   const auto& hypotheses = ctc_prefix_beam_searcher_->hypotheses();
   const auto& likelihood = ctc_prefix_beam_searcher_->likelihood();
   const auto& times = ctc_prefix_beam_searcher_->times();
-  int ms_per_step = model_->subsampling_rate() *
-          feature_pipeline_->config().frame_shift *
-          1000 / feature_pipeline_->config().sample_rate;
   result_.clear();
 
   CHECK_EQ(hypotheses.size(), likelihood.size());
   CHECK_EQ(hypotheses.size(), times.size());
   for (size_t i = 0; i < hypotheses.size(); i++) {
-    std::vector<int> hypothesis = hypotheses[i];
-    std::vector<int> time_stamp = times[i];
+    const std::vector<int>& hypothesis = hypotheses[i];
+    const std::vector<int>& time_stamp = times[i];
     CHECK_EQ(hypothesis.size(), time_stamp.size());
 
     DecodeResult path;
@@ -165,20 +167,38 @@ void TorchAsrDecoder::UpdateResult() {
       std::string word = symbol_table_.Find(hypothesis[j]);
       path.sentence += word;
 
-      WordPiece word_piece(word, start, time_stamp[j] * ms_per_step);
+      WordPiece word_piece(word, start, time_stamp[j] * frame_shift_in_ms());
       path.word_pieces.emplace_back(word_piece);
       start = word_piece.end;
     }
     path.sentence = ProcessBlank(path.sentence);
     result_.emplace_back(path);
   }
+  num_frames_decoded_ += num_frames_in_current_chunk_;
   VLOG(1) << "Partial CTC result " << result_[0].sentence;
+}
+
+bool TorchAsrDecoder::IsEndpoint(const torch::Tensor& ctc_log_probs) {
+  for (int t = 0; t < ctc_log_probs.size(0); ++t) {
+    torch::Tensor logp_t = ctc_log_probs[t];
+    float blank_prob = expf(logp_t[opts_.ctc_search_opts.blank].item<float>());
+    if (blank_prob > opts_.blank_threshold) {
+      num_frames_trailing_blank_++;
+    } else {
+      num_frames_trailing_blank_ = 0;
+    }
+  }
+  bool contains_nonsilence = !result_.empty() && !result_[0].sentence.empty();
+  // We consider blank as silence for purposes of endpointing.
+  return EndpointDetected(opts_.end_point_config, contains_nonsilence,
+                          num_frames_decoded_, num_frames_trailing_blank_,
+                          frame_shift_in_ms());
 }
 
 void TorchAsrDecoder::AttentionRescoring() {
   int sos = model_->sos();
   int eos = model_->eos();
-  auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  const auto& hypotheses = ctc_prefix_beam_searcher_->hypotheses();
   int num_hyps = hypotheses.size();
   torch::NoGradGuard no_grad;
   // Step 1: Prepare input for libtorch

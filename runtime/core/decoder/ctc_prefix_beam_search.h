@@ -68,7 +68,7 @@ class CtcPrefixBeamSearch {
   const std::vector<std::vector<int>>& times() const { return times_; }
 
  private:
-  int abs_time_step_;
+  int abs_time_step_ = 0;
   std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> cur_hyps_;
 
   // Nbest list and corresponding likelihood_, in sorted order
