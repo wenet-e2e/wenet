@@ -38,7 +38,7 @@ if __name__ == '__main__':
         yamls = glob.glob('{}/[!train]*.yaml'.format(args.src_path))
         for y in yamls:
             with open(y, 'r') as f:
-                dic_yaml = yaml.load(f)
+                dic_yaml = yaml.load(f, Loader=yaml.FullLoader)
                 loss = dic_yaml['cv_loss']
                 epoch = dic_yaml['epoch']
                 if epoch >= args.min_epoch and epoch <= args.max_epoch:

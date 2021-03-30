@@ -1,6 +1,6 @@
 flake8==3.8.2
 Pillow
-pyyaml
+pyyaml>=5.1
 sentencepiece
 tensorboard
 tensorboardX
