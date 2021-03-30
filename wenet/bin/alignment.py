@@ -54,8 +54,7 @@ if __name__ == '__main__':
 
     if args.batch_size > 1:
         logging.fatal(
-            'alignment mode {} must be running with batch_size == 1'.format(
-                args.mode))
+            'alignment mode must be running with batch_size == 1')
         sys.exit(1)
 
     with open(args.config, 'r') as fin:

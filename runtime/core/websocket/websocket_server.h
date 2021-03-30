@@ -56,9 +56,11 @@ class ConnectionHandler {
   void OnPartialResult(const std::string& result);
   void OnFinalResult(const std::string& result);
   void DecodeThreadFunc();
+  std::string SerializeResult(bool finish);
   void operator()();
 
  private:
+  int nbest_;
   websocket::stream<tcp::socket> ws_;
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
   std::shared_ptr<DecodeOptions> decode_config_;

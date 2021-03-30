@@ -23,7 +23,7 @@ TorchAsrDecoder::TorchAsrDecoder(
 
 void TorchAsrDecoder::Reset() {
   start_ = false;
-  result_ = "";
+  result_.clear();
   offset_ = 0;
   num_frames_in_current_chunk_ = 0;
   subsampling_cache_ = std::move(torch::jit::IValue());
@@ -121,13 +121,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
     ctc_prefix_beam_searcher_->Search(ctc_log_probs);
-    auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
-    const std::vector<int>& best_hyp = hypotheses[0];
-    result_ = "";
-    for (int id : best_hyp) {
-      result_ += symbol_table_.Find(id);
-    }
-    VLOG(1) << "Partial CTC result " << result_;
+    UpdateResult();
 
     // 3. cache feature for next chunk
     if (!finish) {
@@ -148,9 +142,37 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   return finish;
 }
 
-static bool CompareFunc(const std::pair<int, float>& a,
-                        const std::pair<int, float>& b) {
-  return a.second > b.second;
+void TorchAsrDecoder::UpdateResult() {
+  const auto& hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  const auto& likelihood = ctc_prefix_beam_searcher_->likelihood();
+  const auto& times = ctc_prefix_beam_searcher_->times();
+  int ms_per_step = model_->subsampling_rate() *
+          feature_pipeline_->config().frame_shift *
+          1000 / feature_pipeline_->config().sample_rate;
+  result_.clear();
+
+  CHECK_EQ(hypotheses.size(), likelihood.size());
+  CHECK_EQ(hypotheses.size(), times.size());
+  for (size_t i = 0; i < hypotheses.size(); i++) {
+    std::vector<int> hypothesis = hypotheses[i];
+    std::vector<int> time_stamp = times[i];
+    CHECK_EQ(hypothesis.size(), time_stamp.size());
+
+    DecodeResult path;
+    path.score = likelihood[i];
+    int start = 0;
+    for (size_t j = 0; j < hypothesis.size(); j++) {
+      std::string word = symbol_table_.Find(hypothesis[j]);
+      path.sentence += word;
+
+      WordPiece word_piece(word, start, time_stamp[j] * ms_per_step);
+      path.word_pieces.emplace_back(word_piece);
+      start = word_piece.end;
+    }
+    path.sentence = ProcessBlank(path.sentence);
+    result_.emplace_back(path);
+  }
+  VLOG(1) << "Partial CTC result " << result_[0].sentence;
 }
 
 void TorchAsrDecoder::AttentionRescoring() {
@@ -187,8 +209,6 @@ void TorchAsrDecoder::AttentionRescoring() {
   CHECK_EQ(probs.size(1), max_hyps_len);
 
   // Step 3: Compute rescoring score
-  // (id, score) pair for later sort
-  std::vector<std::pair<int, float>> weighted_scores(num_hyps);
   for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
     float score = 0.0f;
@@ -197,59 +217,9 @@ void TorchAsrDecoder::AttentionRescoring() {
     }
     score += probs[i][hyp.size()][eos].item<float>();
     // TODO(Binbin Zhang): Combine CTC and attention decoder score
-    weighted_scores[i].first = i;
-    weighted_scores[i].second = score;
+    result_[i].score = score;
   }
-
-  std::sort(weighted_scores.begin(), weighted_scores.end(), CompareFunc);
-  for (size_t i = 0; i < weighted_scores.size(); ++i) {
-    std::string result;
-    int best_k = weighted_scores[i].first;
-    for (size_t j = 0; j < hypotheses[best_k].size(); ++j) {
-      result += symbol_table_.Find(hypotheses[best_k][j]);
-    }
-    VLOG(1) << "ctc index " << best_k << " result " << result << " score "
-            << weighted_scores[i].second;
-    if (0 == i) {
-      result_ = result;
-    }
-  }
-
-  ProcessBlank();
-}
-
-void TorchAsrDecoder::ProcessBlank() {
-  if (result_.size()) {
-    using std::string;
-    using std::vector;
-    vector<string> characters;
-
-    if (SplitUTF8String(result_, &characters)) {
-      string result;
-
-      for (size_t i = 0; i < characters.size(); ++i) {
-        if (characters[i] != wenet::kSpaceSymbol) {
-          result.append(characters[i]);
-        } else {
-          // Ignore consecutive space or located in head
-          if (result.size() && result.back() != ' ') {
-            result.push_back(' ');
-          }
-        }
-      }
-
-      // Ignore tailing space
-      if (result.size() && result.back() == ' ') {
-        result.pop_back();
-      }
-
-      for (size_t i = 0; i < result.size(); ++i) {
-        result[i] = tolower(result[i]);
-      }
-
-      result_ = result;
-    }
-  }
+  std::sort(result_.begin(), result_.end(), DecodeResult::CompareFunc);
 }
 
 }  // namespace wenet

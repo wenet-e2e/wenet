@@ -23,7 +23,7 @@ This is a Chinese speech recognition recipe that trains on all Chinese corpora i
 * Training info: lr 0.004, batch size 18, 3 machines, 3*8 = 24 gpu, acc_grad 1, 220 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 013794572a55c7d0dbea23a66106ccf3e5d3b8d4
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/mul_cn/20210315_unified_transformer_exp.tar.gz
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210315_unified_transformer_exp.tar.gz
 
 aishell results
 
@@ -47,7 +47,7 @@ thcs30 results
 
 | decoding mode/chunk size | full | 16   |
 |--------------------------|------|------|
-| attention decoder        | 7.47 | 16.68 |
+| attention decoder        | 16.68 | 17.47 |
 | ctc greedy search        | 15.46 | 16.81 |
 | ctc prefix beam search   | 15,46 | 16.82 |
 | attention rescoring      | 14.38 | 15.63 |

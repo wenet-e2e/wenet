@@ -31,15 +31,19 @@ namespace wenet {
 const float kFloatMax = std::numeric_limits<float>::max();
 const char kSpaceSymbol[] = "\xe2\x96\x81";
 
-void SplitString(const std::string& str, std::vector<std::string>* strs);
-
 // Return the sum of two probabilities in log scale
 float LogAdd(const float& x, const float& y);
 
-void SplitString(const std::string& data, const std::string& delim,
-                 std::vector<std::string>* strs);
+void SplitString(const std::string& str, std::vector<std::string>* strs);
+
+void SplitStringToVector(const std::string &full, const char* delim,
+                         bool omit_empty_strings,
+                         std::vector<std::string>* out);
+
 bool SplitUTF8String(const std::string& str,
                      std::vector<std::string>* characters);
+
+std::string ProcessBlank(const std::string& str);
 
 }  // namespace wenet
 

@@ -93,8 +93,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     local/stcmds_data_prep.sh $dbase/stcmds data/stcmds || exit 1;
     local/tal_data_prep.sh $dbase/TAL/TAL_ASR data/tal_asr || exit 1;
     local/tal_mix_data_prep.sh $dbase/TAL/TAL_ASR_mix data/tal_mix || exit 1;
-    local/tal_data_prep.sh $dbase/tal/tal_asr_data data/tal_asr || exit 1;
-    local/tal_mix_data_prep.sh $dbase/tal/tal_asr_mix_data data/tal_mix || exit 1;
 
     if $has_aishell2; then
         local/aishell2_data_prep.sh $dbase/aishell2/IOS data/aishell2/train || exit 1;
@@ -104,9 +102,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # Merge all data sets.
     if $has_aishell2; then
         tools/combine_data.sh data/train \
-            data/{aidatatang,aishell,magicdata,primewords,stcmds,thchs,aishell2,tal_asr,tal_mix}/train || exit 1;
+            data/{aidatatang,aishell,magicdata,primewords,stcmds,thchs,aishell2}/train || exit 1;
         tools/combine_data.sh data/dev \
-            data/{aidatatang,aishell,magicdata,thchs,aishell2,tal_asr}/dev || exit 1;
+            data/{aidatatang,aishell,magicdata,thchs,aishell2}/dev || exit 1;
     else
         tools/combine_data.sh data/train \
             data/{aidatatang,aishell,magicdata,primewords,stcmds,thchs}/train || exit 1;
@@ -159,17 +157,19 @@ fi
 
 # This bpe model is trained on librispeech training data set.
 bpecode=conf/train_960_unigram5000.model
+trans_type_ops=
+bpe_ops=
+if [ $en_modeling_unit = "bpe" ]; then
+    trans_type_ops="--trans_type cn_char_en_bpe"
+    bpe_ops="--bpecode ${bpecode}"
+fi
+
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # Make train dict
     echo "Make a dictionary"
     mkdir -p $(dirname $dict)
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
-
-    trans_type_ops=
-    if [ $en_modeling_unit = "bpe" ]; then
-        trans_type_ops="--trans_type cn_char_en_bpe"
-    fi
 
     tools/text2token.py -s 1 -n 1 -m ${bpecode} ${feat_dir}_${en_modeling_unit}/${train_set}/text ${trans_type_ops} | cut -f 2- -d" " | tr " " "\n" \
             | sort | uniq | grep -a -v -e '^\s*$' \
@@ -191,7 +191,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     for x in ${dev_set} ${train_set} ${feat_test_sets}; do
         tools/format_data.sh --nj ${nj} \
             --feat-type wav --feat ${feat_dir}_${en_modeling_unit}/$x/wav.scp \
-            --bpecode ${bpecode} $trans_type_ops \
+            $bpe_ops $trans_type_ops \
             ${feat_dir}_${en_modeling_unit}/$x ${dict} > ${feat_dir}_${en_modeling_unit}/$x/format.data.tmp
 
         tools/remove_longshortdata.py \

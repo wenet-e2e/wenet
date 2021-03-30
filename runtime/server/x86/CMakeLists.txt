@@ -64,6 +64,9 @@ FetchContent_MakeAvailable(gflags glog googletest boost libtorch)
 include_directories(${boost_SOURCE_DIR})
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 if(MSVC)
+  execute_process(COMMAND bootstrap.bat WORKING_DIRECTORY ${boost_SOURCE_DIR})
+  execute_process(COMMAND b2.exe WORKING_DIRECTORY ${boost_SOURCE_DIR})
+  link_directories(${boost_SOURCE_DIR}/stage/lib)
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
 endif(MSVC)
@@ -86,10 +89,10 @@ target_link_libraries(frontend PUBLIC glog)
 
 # decoder
 add_library(decoder STATIC
-  utils/utils.cc
   decoder/ctc_prefix_beam_search.cc
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
+  utils/utils.cc
 )
 target_link_libraries(decoder PUBLIC glog ${TORCH_LIBRARIES})
 
