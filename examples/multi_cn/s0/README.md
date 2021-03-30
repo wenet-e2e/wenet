@@ -47,7 +47,7 @@ thcs30 results
 
 | decoding mode/chunk size | full | 16   |
 |--------------------------|------|------|
-| attention decoder        | 7.47 | 16.68 |
+| attention decoder        | 16.68 | 17.47 |
 | ctc greedy search        | 15.46 | 16.81 |
 | ctc prefix beam search   | 15,46 | 16.82 |
 | attention rescoring      | 14.38 | 15.63 |
