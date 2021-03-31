@@ -13,7 +13,7 @@ class Executor:
         self.step = 0
 
     def train(self, model, optimizer, scheduler, data_loader, device, writer,
-              args):
+              args, scaler):
         ''' Train one epoch
         '''
         model.train()
@@ -22,8 +22,12 @@ class Executor:
         rank = args.get('rank', 0)
         accum_grad = args.get('accum_grad', 1)
         is_distributed = args.get('is_distributed', True)
+        use_fp16 = args.get('fp16', False)
         logging.info('using accumulate grad, new batch size is {} times'
                      'larger than before'.format(accum_grad))
+        print(use_fp16)
+        if use_fp16:
+            assert scaler is not None
         num_seen_utts = 0
         num_total_batch = len(data_loader)
         for batch_idx, batch in enumerate(data_loader):
@@ -46,24 +50,39 @@ class Executor:
             else:
                 context = nullcontext
             with context():
-                loss, loss_att, loss_ctc = model(feats,
-                                                 feats_lengths,
-                                                 target,
-                                                 target_lengths)
-                loss = loss / accum_grad
-                loss.backward()
+                # autocast context
+                with torch.cuda.amp.autocast(scaler is not None):
+                    loss, loss_att, loss_ctc = model(feats,
+                                                     feats_lengths,
+                                                     target,
+                                                     target_lengths)
+                    loss = loss / accum_grad
+                if use_fp16:
+                    scaler.scale(loss).backward()
+                else:
+                    loss.backward()
 
             num_seen_utts += num_utts
             if batch_idx % accum_grad == 0:
                 if rank == 0 and writer is not None:
                     writer.add_scalar('train_loss', loss, self.step)
+
+                if use_fp16:
+                    scaler.unscale_(optimizer)
                 grad_norm = clip_grad_norm_(model.parameters(), clip)
                 if torch.isfinite(grad_norm):
-                    optimizer.step()
+                    if use_fp16:
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        optimizer.step()
+                else:
+                    if use_fp16:
+                        scaler.step(optimizer)
+                        scaler.update()
                 optimizer.zero_grad()
                 scheduler.step()
                 self.step += 1
-
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
