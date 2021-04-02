@@ -36,17 +36,10 @@ ConnectionHandler::ConnectionHandler(tcp::socket&& socket,
                     std::shared_ptr<SymbolTable> symbol_table,
                     std::shared_ptr<TorchAsrModel> model)
       : ws_(std::move(socket)),
-        feature_config_(feature_config),
-        decode_config_(decode_config),
-        symbol_table_(symbol_table),
-        model_(model) {}
-
-ConnectionHandler::ConnectionHandler(ConnectionHandler&& other)
-      : ws_(std::move(other.ws_)),
-        feature_config_(other.feature_config_),
-        decode_config_(other.decode_config_),
-        symbol_table_(other.symbol_table_),
-        model_(other.model_) {}
+        feature_config_(std::move(feature_config)),
+        decode_config_(std::move(decode_config)),
+        symbol_table_(std::move(symbol_table)),
+        model_(std::move(model)) {}
 
 void ConnectionHandler::OnSpeechStart() {
   LOG(INFO) << "Recieved speech start signal, start reading speech";
@@ -133,6 +126,7 @@ void ConnectionHandler::DecodeThreadFunc() {
     std::string result = SerializeResult(finish);
     if (finish) {
       OnFinalResult(result);
+      stop_recognition_ = true;
       break;
     } else {
       OnPartialResult(result);
@@ -181,8 +175,11 @@ void ConnectionHandler::operator()() {
         }
       } else {
         if (!got_start_tag_) {
-          OnError("Start singal is expected before binary data");
+          OnError("Start signal is expected before binary data");
         } else {
+          if (stop_recognition_) {
+            break;
+          }
           OnSpeechData(buffer);
         }
       }
