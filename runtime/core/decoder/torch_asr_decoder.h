@@ -13,7 +13,7 @@
 #include "torch/torch.h"
 
 #include "decoder/ctc_prefix_beam_search.h"
-#include "decoder/online_endpoint.h"
+#include "decoder/ctc_endpoint.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"

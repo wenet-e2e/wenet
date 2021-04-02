@@ -1,7 +1,7 @@
 // Copyright 2021 Mobvoi Inc. All Rights Reserved.
 // Author: zhendong.peng@mobvoi.com (Zhendong Peng)
 
-#include "decoder/online_endpoint.h"
+#include "decoder/ctc_endpoint.h"
 
 #include <string>
 

@@ -8,7 +8,7 @@
 #include <limits>
 #include <utility>
 
-#include "decoder/online_endpoint.h"
+#include "decoder/ctc_endpoint.h"
 
 namespace wenet {
 
