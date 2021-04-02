@@ -20,7 +20,9 @@ TorchAsrDecoder::TorchAsrDecoder(
       model_(std::move(model)),
       symbol_table_(symbol_table),
       opts_(opts),
-      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts)) {
+      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts)),
+      ctc_endpointer_(new CtcEndpoint(opts.ctc_endpoint_config)) {
+  ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
 }
 
 void TorchAsrDecoder::Reset() {
@@ -28,8 +30,6 @@ void TorchAsrDecoder::Reset() {
   result_.clear();
   offset_ = 0;
   num_frames_in_current_chunk_ = 0;
-  num_frames_decoded_ = 0;
-  num_frames_trailing_blank_ = 0;
   subsampling_cache_ = std::move(torch::jit::IValue());
   elayers_output_cache_ = std::move(torch::jit::IValue());
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
@@ -125,7 +125,9 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
     UpdateResult(ctc_log_probs);
-    finish = IsEndpoint(ctc_log_probs) || finish;
+
+    bool decoded_sth = !result_.empty() && !result_[0].sentence.empty();
+    finish = ctc_endpointer_->IsEndpoint(ctc_log_probs, decoded_sth) || finish;
 
     // 3. cache feature for next chunk
     if (!finish) {
@@ -174,25 +176,7 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
     path.sentence = ProcessBlank(path.sentence);
     result_.emplace_back(path);
   }
-  num_frames_decoded_ += num_frames_in_current_chunk_;
   VLOG(1) << "Partial CTC result " << result_[0].sentence;
-}
-
-bool TorchAsrDecoder::IsEndpoint(const torch::Tensor& ctc_log_probs) {
-  for (int t = 0; t < ctc_log_probs.size(0); ++t) {
-    torch::Tensor logp_t = ctc_log_probs[t];
-    float blank_prob = expf(logp_t[opts_.ctc_search_opts.blank].item<float>());
-    if (blank_prob > opts_.blank_threshold) {
-      num_frames_trailing_blank_++;
-    } else {
-      num_frames_trailing_blank_ = 0;
-    }
-  }
-  bool contains_nonsilence = !result_.empty() && !result_[0].sentence.empty();
-  // We consider blank as silence for purposes of endpointing.
-  return EndpointDetected(opts_.end_point_config, contains_nonsilence,
-                          num_frames_decoded_, num_frames_trailing_blank_,
-                          frame_shift_in_ms());
 }
 
 void TorchAsrDecoder::AttentionRescoring() {

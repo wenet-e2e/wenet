@@ -26,10 +26,8 @@ using TorchModule = torch::jit::script::Module;
 struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
+  CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_search_opts;
-
-  OnlineEndpointConfig end_point_config;
-  float blank_threshold = 0.8;  // blank threshold to be silence
 };
 
 struct WordPiece {
@@ -76,7 +74,6 @@ class TorchAsrDecoder {
   bool AdvanceDecoding();
   void AttentionRescoring();
   void UpdateResult(const torch::Tensor& ctc_log_probs);
-  bool IsEndpoint(const torch::Tensor& ctc_log_probs);
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
@@ -94,10 +91,9 @@ class TorchAsrDecoder {
   int offset_ = 0;  // offset
 
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
+  std::unique_ptr<CtcEndpoint> ctc_endpointer_;
 
   int num_frames_in_current_chunk_ = 0;
-  int num_frames_decoded_ = 0;
-  int num_frames_trailing_blank_ = 0;
   std::vector<DecodeResult> result_;
 
  public:
