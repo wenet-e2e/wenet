@@ -159,7 +159,7 @@ void TorchAsrDecoder::AttentionRescoring() {
   auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
   int num_hyps = hypotheses.size();
   if (num_hyps <= 0) {
-  	return ;
+    return ;
   }
 
   torch::NoGradGuard no_grad;
