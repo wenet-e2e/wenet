@@ -126,7 +126,7 @@ void ConnectionHandler::DecodeThreadFunc() {
     std::string result = SerializeResult(finish);
     if (finish) {
       OnFinalResult(result);
-      got_end_tag_ = true;
+      stop_recognition_ = true;
       break;
     } else {
       OnPartialResult(result);
@@ -177,7 +177,7 @@ void ConnectionHandler::operator()() {
         if (!got_start_tag_) {
           OnError("Start signal is expected before binary data");
         } else {
-          if (got_end_tag_) {
+          if (stop_recognition_) {
             break;
           }
           OnSpeechData(buffer);
