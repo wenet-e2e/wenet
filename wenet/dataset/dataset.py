@@ -151,7 +151,7 @@ def _load_wav_with_speed(wav_file, speed):
 
         # get torchaudio version
         ta_no = torchaudio.__version__.split(".")
-        ta_version = 100 * int(ta_no[0]) + 10 * int(ta_no[1]) + int(ta_no[2])
+        ta_version = 100 * int(ta_no[0]) + 10 * int(ta_no[1])
 
         if ta_version < 80:
             # Note: deprecated in torchaudio>=0.8.0
