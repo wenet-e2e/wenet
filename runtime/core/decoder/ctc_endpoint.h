@@ -43,7 +43,7 @@ struct CtcEndpointConfig {
 
 class CtcEndpoint {
  public:
-  CtcEndpoint(const CtcEndpointConfig& config);
+  explicit CtcEndpoint(const CtcEndpointConfig& config);
 
   void Reset();
   /// This function returns true if this set of endpointing rules thinks we
