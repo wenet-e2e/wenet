@@ -158,7 +158,7 @@ void TorchAsrDecoder::AttentionRescoring() {
   int eos = model_->eos();
   auto hypotheses = ctc_prefix_beam_searcher_->hypotheses();
   int num_hyps = hypotheses.size();
-  if(num_hyps <= 0){
+  if (num_hyps <= 0) {
   	return ;
   }
 
