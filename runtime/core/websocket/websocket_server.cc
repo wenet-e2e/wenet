@@ -59,6 +59,7 @@ void ConnectionHandler::OnSpeechEnd() {
   LOG(INFO) << "Recieved speech end signal";
   CHECK(feature_pipeline_ != nullptr);
   feature_pipeline_->set_input_finished();
+  got_end_tag_ = true;
 }
 
 void ConnectionHandler::OnPartialResult(const std::string& result) {
@@ -142,6 +143,29 @@ void ConnectionHandler::OnError(const std::string& message) {
   ws_.close(websocket::close_code::normal);
 }
 
+void ConnectionHandler::OnText(const std::string& message) {
+  json::value v = json::parse(message);
+  if (v.is_object()) {
+    json::object obj = v.get_object();
+    if (obj.find("signal") != obj.end()) {
+      json::string signal = obj["signal"].as_string();
+      if (signal == "start") {
+        nbest_ = obj.find("nbest") != obj.end() ?
+                obj["nbest"].as_int64() : 1;
+        OnSpeechStart();
+      } else if (signal == "end") {
+        OnSpeechEnd();
+      } else {
+        OnError("Unexpected signal type");
+      }
+    } else {
+      OnError("Wrong message header");
+    }
+  } else {
+    OnError("Wrong protocol");
+  }
+}
+
 void ConnectionHandler::operator()() {
   try {
     // Accept the websocket handshake
@@ -154,24 +178,9 @@ void ConnectionHandler::operator()() {
       if (ws_.got_text()) {
         std::string message = beast::buffers_to_string(buffer.data());
         LOG(INFO) << message;
-        json::value v = json::parse(message);
-        if (v.is_object()) {
-          json::object obj = v.get_object();
-          if (obj.find("signal") != obj.end()) {
-            json::string signal = obj["signal"].as_string();
-            if (signal == "start") {
-              nbest_ = obj.find("nbest") != obj.end() ?
-                      obj["nbest"].as_int64() : 1;
-              OnSpeechStart();
-            } else if (signal == "end") {
-              OnSpeechEnd();
-              break;
-            } else {
-              OnError("Unexpected signal type");
-            }
-          } else {
-            OnError("Wrong message header");
-          }
+        OnText(message);
+        if (got_end_tag_) {
+          break;
         }
       } else {
         if (!got_start_tag_) {
