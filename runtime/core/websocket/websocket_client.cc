@@ -26,8 +26,8 @@ namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 namespace json = boost::json;
 
-WebSocketClient::WebSocketClient(const std::string& host, int port, int nbest)
-    : host_(host), port_(port), nbest_(nbest) {
+WebSocketClient::WebSocketClient(const std::string& host, int port)
+    : host_(host), port_(port) {
   Connect();
   t_.reset(new std::thread(&WebSocketClient::ReadLoopFunc, this));
 }
@@ -88,7 +88,9 @@ void WebSocketClient::Join() { t_->join(); }
 
 void WebSocketClient::SendStartSignal() {
   // TODO(Binbin Zhang): Add sample rate and other setting surpport
-  json::value start_tag = {{"signal", "start"}, {"nbest", nbest_}};
+  json::value start_tag = {{"signal", "start"},
+                           {"nbest", nbest_},
+                           {"continuous_decoding", continuous_decoding_}};
   std::string start_message = json::serialize(start_tag);
   this->SendTextData(start_message);
 }
