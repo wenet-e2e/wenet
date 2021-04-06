@@ -12,8 +12,8 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
-#include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/ctc_endpoint.h"
+#include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
@@ -49,6 +49,12 @@ struct DecodeResult {
   }
 };
 
+enum DecodeState {
+  kEndBatch = 0x00,  // End of current decoding batch, normal case
+  kEndpoint = 0x01,  // Endpoint is detected
+  kEndFeats = 0x02   // All feature is decoded
+};
+
 // Torch ASR decoder
 class TorchAsrDecoder {
  public:
@@ -56,9 +62,10 @@ class TorchAsrDecoder {
                   std::shared_ptr<TorchAsrModel> model,
                   const SymbolTable& symbol_table, const DecodeOptions& opts);
 
-  // Return true if all feature has been decoded, else return false
-  bool Decode();
+  DecodeState Decode();
+  void Rescoring();
   void Reset();
+  void ResetContinuousDecoding();
   int num_frames_in_current_chunk() const {
     return num_frames_in_current_chunk_;
   }
@@ -67,11 +74,15 @@ class TorchAsrDecoder {
            feature_pipeline_->config().frame_shift * 1000 /
            feature_pipeline_->config().sample_rate;
   }
+  int feature_frame_shift_in_ms() const {
+    return feature_pipeline_->config().frame_shift * 1000 /
+           feature_pipeline_->config().sample_rate;
+  }
   const std::vector<DecodeResult>& result() const { return result_; }
 
  private:
   // Return true if we reach the end of the feature pipeline
-  bool AdvanceDecoding();
+  DecodeState AdvanceDecoding();
   void AttentionRescoring();
   void UpdateResult(const torch::Tensor& ctc_log_probs);
 
@@ -89,6 +100,9 @@ class TorchAsrDecoder {
   torch::jit::IValue conformer_cnn_cache_;
   std::vector<torch::Tensor> encoder_outs_;
   int offset_ = 0;  // offset
+  // For continuous decoding
+  int num_frames_ = 0;
+  int global_frame_offset_ = 0;
 
   std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
   std::unique_ptr<CtcEndpoint> ctc_endpointer_;

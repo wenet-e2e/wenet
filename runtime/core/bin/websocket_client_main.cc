@@ -24,11 +24,14 @@ DEFINE_string(host, "127.0.0.1", "host of websocket server");
 DEFINE_int32(port, 10086, "port of websocket server");
 DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
+DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
-  wenet::WebSocketClient client(FLAGS_host, FLAGS_port, FLAGS_nbest);
+  wenet::WebSocketClient client(FLAGS_host, FLAGS_port);
+  client.set_nbest(FLAGS_nbest);
+  client.set_continuous_decoding(FLAGS_continuous_decoding);
   client.SendStartSignal();
 
   wenet::WavReader wav_reader(FLAGS_wav_path);
@@ -42,6 +45,9 @@ int main(int argc, char *argv[]) {
   const float interval = 0.5;
   const int sample_interval = interval * sample_rate;
   for (int start = 0; start < num_sample; start += sample_interval) {
+    if (client.done()) {
+      break;
+    }
     int end = std::min(start + sample_interval, num_sample);
     // Convert to short
     std::vector<int16_t> data;
