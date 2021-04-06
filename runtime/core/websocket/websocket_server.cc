@@ -30,16 +30,16 @@ namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 namespace json = boost::json;
 
-ConnectionHandler::ConnectionHandler(tcp::socket&& socket,
-                    std::shared_ptr<FeaturePipelineConfig> feature_config,
-                    std::shared_ptr<DecodeOptions> decode_config,
-                    std::shared_ptr<SymbolTable> symbol_table,
-                    std::shared_ptr<TorchAsrModel> model)
-      : ws_(std::move(socket)),
-        feature_config_(std::move(feature_config)),
-        decode_config_(std::move(decode_config)),
-        symbol_table_(std::move(symbol_table)),
-        model_(std::move(model)) {}
+ConnectionHandler::ConnectionHandler(
+    tcp::socket&& socket, std::shared_ptr<FeaturePipelineConfig> feature_config,
+    std::shared_ptr<DecodeOptions> decode_config,
+    std::shared_ptr<SymbolTable> symbol_table,
+    std::shared_ptr<TorchAsrModel> model)
+    : ws_(std::move(socket)),
+      feature_config_(std::move(feature_config)),
+      decode_config_(std::move(decode_config)),
+      symbol_table_(std::move(symbol_table)),
+      model_(std::move(model)) {}
 
 void ConnectionHandler::OnSpeechStart() {
   LOG(INFO) << "Recieved speech start signal, start reading speech";
@@ -150,8 +150,23 @@ void ConnectionHandler::OnText(const std::string& message) {
     if (obj.find("signal") != obj.end()) {
       json::string signal = obj["signal"].as_string();
       if (signal == "start") {
-        nbest_ = obj.find("nbest") != obj.end() ?
-                obj["nbest"].as_int64() : 1;
+        if (obj.find("nbest") != obj.end()) {
+          if (obj["nbest"].is_int64()) {
+            nbest_ = obj["nbest"].as_int64();
+          } else {
+            OnError("integer is expected for nbest option");
+          }
+        }
+        if (obj.find("enable_continuous_decoding") != obj.end()) {
+          if (obj["enable_continuous_decoding"].is_bool()) {
+            enable_continuous_decoding_ =
+                obj["enable_continuous_decoding"].as_bool();
+          } else {
+            OnError(
+                "boolean true or false is expected for "
+                "enable_continuous_decoding option");
+          }
+        }
         OnSpeechStart();
       } else if (signal == "end") {
         OnSpeechEnd();
