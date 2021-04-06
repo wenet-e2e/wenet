@@ -31,7 +31,7 @@ struct CtcEndpointConfig {
 
   /// rule1 times out after 5000 ms of silence, even if we decoded nothing.
   CtcEndpointRule rule1;
-  /// rule2 times out after 1000 mss of silence after decoding something.
+  /// rule2 times out after 1000 ms of silence after decoding something.
   CtcEndpointRule rule2;
   /// rule3 times out after the utterance is 20000 ms long, regardless of
   /// anything else.
