@@ -76,11 +76,13 @@ void ConnectionHandler::OnFinalResult(const std::string& result) {
       {"status", "ok"}, {"type", "final_result"}, {"nbest", result}};
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
+}
 
+void ConnectionHandler::OnFinish() {
   // Send finish tag
-  json::value rv2 = {{"status", "ok"}, {"type", "speech_end"}};
+  json::value rv = {{"status", "ok"}, {"type", "speech_end"}};
   ws_.text(true);
-  ws_.write(asio::buffer(json::serialize(rv2)));
+  ws_.write(asio::buffer(json::serialize(rv)));
 }
 
 void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
@@ -128,6 +130,7 @@ void ConnectionHandler::DecodeThreadFunc() {
       decoder_->Rescoring();
       std::string result = SerializeResult(true);
       OnFinalResult(result);
+      OnFinish();
       stop_recognition_ = true;
       break;
     } else if (state == DecodeState::kEndpoint) {
@@ -139,6 +142,7 @@ void ConnectionHandler::DecodeThreadFunc() {
       if (continuous_decoding_) {
         decoder_->ResetContinuousDecoding();
       } else {
+        OnFinish();
         stop_recognition_ = true;
         break;
       }

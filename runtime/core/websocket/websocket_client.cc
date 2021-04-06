@@ -71,6 +71,7 @@ void WebSocketClient::ReadLoopFunc() {
         break;
       }
       if (obj["type"] == "speech_end") {
+        done_ = true;
         break;
       }
     }
