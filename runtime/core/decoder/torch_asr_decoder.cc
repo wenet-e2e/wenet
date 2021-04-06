@@ -54,6 +54,7 @@ void TorchAsrDecoder::ResetContinuousDecoding() {
   encoder_outs_.clear();
   cached_feature_.clear();
   ctc_prefix_beam_searcher_->Reset();
+  ctc_endpointer_->Reset();
 }
 
 DecodeState TorchAsrDecoder::Decode() { return this->AdvanceDecoding(); }
