@@ -30,16 +30,16 @@ namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 namespace json = boost::json;
 
-ConnectionHandler::ConnectionHandler(tcp::socket&& socket,
-                    std::shared_ptr<FeaturePipelineConfig> feature_config,
-                    std::shared_ptr<DecodeOptions> decode_config,
-                    std::shared_ptr<SymbolTable> symbol_table,
-                    std::shared_ptr<TorchAsrModel> model)
-      : ws_(std::move(socket)),
-        feature_config_(std::move(feature_config)),
-        decode_config_(std::move(decode_config)),
-        symbol_table_(std::move(symbol_table)),
-        model_(std::move(model)) {}
+ConnectionHandler::ConnectionHandler(
+    tcp::socket&& socket, std::shared_ptr<FeaturePipelineConfig> feature_config,
+    std::shared_ptr<DecodeOptions> decode_config,
+    std::shared_ptr<SymbolTable> symbol_table,
+    std::shared_ptr<TorchAsrModel> model)
+    : ws_(std::move(socket)),
+      feature_config_(std::move(feature_config)),
+      decode_config_(std::move(decode_config)),
+      symbol_table_(std::move(symbol_table)),
+      model_(std::move(model)) {}
 
 void ConnectionHandler::OnSpeechStart() {
   LOG(INFO) << "Recieved speech start signal, start reading speech";
@@ -59,6 +59,7 @@ void ConnectionHandler::OnSpeechEnd() {
   LOG(INFO) << "Recieved speech end signal";
   CHECK(feature_pipeline_ != nullptr);
   feature_pipeline_->set_input_finished();
+  got_end_tag_ = true;
 }
 
 void ConnectionHandler::OnPartialResult(const std::string& result) {
@@ -75,11 +76,13 @@ void ConnectionHandler::OnFinalResult(const std::string& result) {
       {"status", "ok"}, {"type", "final_result"}, {"nbest", result}};
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
+}
 
+void ConnectionHandler::OnFinish() {
   // Send finish tag
-  json::value rv2 = {{"status", "ok"}, {"type", "speech_end"}};
+  json::value rv = {{"status", "ok"}, {"type", "speech_end"}};
   ws_.text(true);
-  ws_.write(asio::buffer(json::serialize(rv2)));
+  ws_.write(asio::buffer(json::serialize(rv)));
 }
 
 void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
@@ -122,13 +125,29 @@ std::string ConnectionHandler::SerializeResult(bool finish) {
 
 void ConnectionHandler::DecodeThreadFunc() {
   while (true) {
-    bool finish = decoder_->Decode();
-    std::string result = SerializeResult(finish);
-    if (finish) {
+    DecodeState state = decoder_->Decode();
+    if (state == DecodeState::kEndFeats) {
+      decoder_->Rescoring();
+      std::string result = SerializeResult(true);
       OnFinalResult(result);
+      OnFinish();
       stop_recognition_ = true;
       break;
+    } else if (state == DecodeState::kEndpoint) {
+      decoder_->Rescoring();
+      std::string result = SerializeResult(true);
+      OnFinalResult(result);
+      // If it's not continuous decoidng, continue to do next recognition
+      // otherwise stop the recognition
+      if (continuous_decoding_) {
+        decoder_->ResetContinuousDecoding();
+      } else {
+        OnFinish();
+        stop_recognition_ = true;
+        break;
+      }
     } else {
+      std::string result = SerializeResult(false);
       OnPartialResult(result);
     }
   }
@@ -140,6 +159,43 @@ void ConnectionHandler::OnError(const std::string& message) {
   ws_.write(asio::buffer(json::serialize(rv)));
   // Close websocket
   ws_.close(websocket::close_code::normal);
+}
+
+void ConnectionHandler::OnText(const std::string& message) {
+  json::value v = json::parse(message);
+  if (v.is_object()) {
+    json::object obj = v.get_object();
+    if (obj.find("signal") != obj.end()) {
+      json::string signal = obj["signal"].as_string();
+      if (signal == "start") {
+        if (obj.find("nbest") != obj.end()) {
+          if (obj["nbest"].is_int64()) {
+            nbest_ = obj["nbest"].as_int64();
+          } else {
+            OnError("integer is expected for nbest option");
+          }
+        }
+        if (obj.find("continuous_decoding") != obj.end()) {
+          if (obj["continuous_decoding"].is_bool()) {
+            continuous_decoding_ = obj["continuous_decoding"].as_bool();
+          } else {
+            OnError(
+                "boolean true or false is expected for "
+                "continuous_decoding option");
+          }
+        }
+        OnSpeechStart();
+      } else if (signal == "end") {
+        OnSpeechEnd();
+      } else {
+        OnError("Unexpected signal type");
+      }
+    } else {
+      OnError("Wrong message header");
+    }
+  } else {
+    OnError("Wrong protocol");
+  }
 }
 
 void ConnectionHandler::operator()() {
@@ -154,24 +210,9 @@ void ConnectionHandler::operator()() {
       if (ws_.got_text()) {
         std::string message = beast::buffers_to_string(buffer.data());
         LOG(INFO) << message;
-        json::value v = json::parse(message);
-        if (v.is_object()) {
-          json::object obj = v.get_object();
-          if (obj.find("signal") != obj.end()) {
-            json::string signal = obj["signal"].as_string();
-            if (signal == "start") {
-              nbest_ = obj.find("nbest") != obj.end() ?
-                      obj["nbest"].as_int64() : 1;
-              OnSpeechStart();
-            } else if (signal == "end") {
-              OnSpeechEnd();
-              break;
-            } else {
-              OnError("Unexpected signal type");
-            }
-          } else {
-            OnError("Wrong message header");
-          }
+        OnText(message);
+        if (got_end_tag_) {
+          break;
         }
       } else {
         if (!got_start_tag_) {
