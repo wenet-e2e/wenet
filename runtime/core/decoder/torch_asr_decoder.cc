@@ -39,6 +39,7 @@ void TorchAsrDecoder::Reset() {
   cached_feature_.clear();
   ctc_prefix_beam_searcher_->Reset();
   feature_pipeline_->Reset();
+  ctc_endpointer_->Reset();
 }
 
 void TorchAsrDecoder::ResetContinuousDecoding() {
@@ -55,24 +56,22 @@ void TorchAsrDecoder::ResetContinuousDecoding() {
   ctc_prefix_beam_searcher_->Reset();
 }
 
-bool TorchAsrDecoder::Decode() {
-  bool finish = this->AdvanceDecoding();
-  if (finish) {
-    // Do attention rescoring
-    auto start = std::chrono::steady_clock::now();
-    AttentionRescoring();
-    auto end = std::chrono::steady_clock::now();
-    LOG(INFO) << "Rescoring cost latency: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(end -
-                                                                       start)
-                     .count()
-              << "ms.";
-    return true;
-  }
-  return false;
+DecodeState TorchAsrDecoder::Decode() { return this->AdvanceDecoding(); }
+
+void TorchAsrDecoder::Rescoring() {
+  // Do attention rescoring
+  auto start = std::chrono::steady_clock::now();
+  AttentionRescoring();
+  auto end = std::chrono::steady_clock::now();
+  LOG(INFO) << "Rescoring cost latency: "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(end -
+                                                                     start)
+                   .count()
+            << "ms.";
 }
 
-bool TorchAsrDecoder::AdvanceDecoding() {
+DecodeState TorchAsrDecoder::AdvanceDecoding() {
+  DecodeState state = DecodeState::kEndBatch;
   const int subsampling_rate = model_->subsampling_rate();
   const int right_context = model_->right_context();
   const int cached_feature_size = 1 + right_context - subsampling_rate;
@@ -144,10 +143,15 @@ bool TorchAsrDecoder::AdvanceDecoding() {
     UpdateResult(ctc_log_probs);
 
     bool decoded_sth = !result_.empty() && !result_[0].sentence.empty();
-    finish = ctc_endpointer_->IsEndpoint(ctc_log_probs, decoded_sth) || finish;
+    if (finish) {
+      state = DecodeState::kEndFeats;
+    } else if (ctc_endpointer_->IsEndpoint(ctc_log_probs, decoded_sth)) {
+      LOG(INFO) << "Endpoint is detected at " << num_frames_;
+      state = DecodeState::kEndpoint;
+    }
 
     // 3. cache feature for next chunk
-    if (!finish) {
+    if (state == DecodeState::kEndBatch) {
       // TODO(Binbin Zhang): Only deal the case when
       // chunk_feats.size() > cached_feature_size_ here, and it's consistent
       // with our current model, refine it later if we have new model or
@@ -162,7 +166,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   }
 
   start_ = true;
-  return finish;
+  return state;
 }
 
 void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
@@ -182,7 +186,6 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
     DecodeResult path;
     path.score = likelihood[i];
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
-    int start = 0;
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_.Find(hypothesis[j]);
       path.sentence += word;

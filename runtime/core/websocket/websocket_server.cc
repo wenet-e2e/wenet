@@ -123,13 +123,27 @@ std::string ConnectionHandler::SerializeResult(bool finish) {
 
 void ConnectionHandler::DecodeThreadFunc() {
   while (true) {
-    bool finish = decoder_->Decode();
-    std::string result = SerializeResult(finish);
-    if (finish) {
+    DecodeState state = decoder_->Decode();
+    if (state == DecodeState::kEndFeats) {
+      decoder_->Rescoring();
+      std::string result = SerializeResult(true);
       OnFinalResult(result);
       stop_recognition_ = true;
       break;
+    } else if (state == DecodeState::kEndpoint) {
+      decoder_->Rescoring();
+      std::string result = SerializeResult(true);
+      OnFinalResult(result);
+      // If it's not continuous decoidng, continue to do next recognition
+      // otherwise stop the recognition
+      if (enable_continuous_decoding_) {
+        decoder_->ResetContinuousDecoding();
+      } else {
+        stop_recognition_ = true;
+        break;
+      }
     } else {
+      std::string result = SerializeResult(false);
       OnPartialResult(result);
     }
   }
