@@ -53,6 +53,7 @@ class ConnectionHandler {
   void OnSpeechStart();
   void OnSpeechEnd();
   void OnText(const std::string& message);
+  void OnFinish();
   void OnSpeechData(const beast::flat_buffer& buffer);
   void OnError(const std::string& message);
   void OnPartialResult(const std::string& result);

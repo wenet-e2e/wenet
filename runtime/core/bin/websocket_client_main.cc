@@ -45,6 +45,9 @@ int main(int argc, char *argv[]) {
   const float interval = 0.5;
   const int sample_interval = interval * sample_rate;
   for (int start = 0; start < num_sample; start += sample_interval) {
+    if (client.done()) {
+      break;
+    }
     int end = std::min(start + sample_interval, num_sample);
     // Convert to short
     std::vector<int16_t> data;
