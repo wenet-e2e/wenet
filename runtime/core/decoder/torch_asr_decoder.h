@@ -49,6 +49,12 @@ struct DecodeResult {
   }
 };
 
+enum DecodeState {
+  kEndBatch = 0x00,  // End of current decoding batch, normal case
+  kEndpoint = 0x01,  // Endpoint is detected
+  kEndFeats = 0x02   // All feature is decoded
+};
+
 // Torch ASR decoder
 class TorchAsrDecoder {
  public:
@@ -56,8 +62,8 @@ class TorchAsrDecoder {
                   std::shared_ptr<TorchAsrModel> model,
                   const SymbolTable& symbol_table, const DecodeOptions& opts);
 
-  // Return true if all feature has been decoded, else return false
-  bool Decode();
+  DecodeState Decode();
+  void Rescoring();
   void Reset();
   void ResetContinuousDecoding();
   int num_frames_in_current_chunk() const {
@@ -76,7 +82,7 @@ class TorchAsrDecoder {
 
  private:
   // Return true if we reach the end of the feature pipeline
-  bool AdvanceDecoding();
+  DecodeState AdvanceDecoding();
   void AttentionRescoring();
   void UpdateResult(const torch::Tensor& ctc_log_probs);
 

@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_result.empty()) {
     result.open(FLAGS_result, std::ios::out);
   }
-  std::ostream& buffer = FLAGS_result.empty() ? std::cout : result;
+  std::ostream &buffer = FLAGS_result.empty() ? std::cout : result;
 
   int total_waves_dur = 0;
   int total_decode_time = 0;
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
     int decode_time = 0;
     while (true) {
       auto start = std::chrono::steady_clock::now();
-      bool finish = decoder.Decode();
+      wenet::DecodeState state = decoder.Decode();
       auto end = std::chrono::steady_clock::now();
       auto chunk_decode_time =
           std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
@@ -93,7 +93,8 @@ int main(int argc, char *argv[]) {
       decode_time += chunk_decode_time;
       LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
 
-      if (finish) {
+      if (state == wenet::DecodeState::kEndFeats) {
+        decoder.Rescoring();
         break;
       } else if (FLAGS_chunk_size > 0 && FLAGS_simulate_streaming) {
         float frame_shift_in_ms =
