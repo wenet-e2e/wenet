@@ -136,7 +136,7 @@ void ConnectionHandler::DecodeThreadFunc() {
       OnFinalResult(result);
       // If it's not continuous decoidng, continue to do next recognition
       // otherwise stop the recognition
-      if (enable_continuous_decoding_) {
+      if (continuous_decoding_) {
         decoder_->ResetContinuousDecoding();
       } else {
         stop_recognition_ = true;
@@ -171,14 +171,13 @@ void ConnectionHandler::OnText(const std::string& message) {
             OnError("integer is expected for nbest option");
           }
         }
-        if (obj.find("enable_continuous_decoding") != obj.end()) {
-          if (obj["enable_continuous_decoding"].is_bool()) {
-            enable_continuous_decoding_ =
-                obj["enable_continuous_decoding"].as_bool();
+        if (obj.find("continuous_decoding") != obj.end()) {
+          if (obj["continuous_decoding"].is_bool()) {
+            continuous_decoding_ = obj["continuous_decoding"].as_bool();
           } else {
             OnError(
                 "boolean true or false is expected for "
-                "enable_continuous_decoding option");
+                "continuous_decoding option");
           }
         }
         OnSpeechStart();
