@@ -29,6 +29,8 @@ void TorchAsrDecoder::Reset() {
   start_ = false;
   result_.clear();
   offset_ = 0;
+  num_frames_ = 0;
+  global_frame_offset_ = 0;
   num_frames_in_current_chunk_ = 0;
   subsampling_cache_ = std::move(torch::jit::IValue());
   elayers_output_cache_ = std::move(torch::jit::IValue());
@@ -37,6 +39,20 @@ void TorchAsrDecoder::Reset() {
   cached_feature_.clear();
   ctc_prefix_beam_searcher_->Reset();
   feature_pipeline_->Reset();
+}
+
+void TorchAsrDecoder::ResetContinuousDecoding() {
+  global_frame_offset_ = num_frames_;
+  start_ = false;
+  result_.clear();
+  offset_ = 0;
+  num_frames_in_current_chunk_ = 0;
+  subsampling_cache_ = std::move(torch::jit::IValue());
+  elayers_output_cache_ = std::move(torch::jit::IValue());
+  conformer_cnn_cache_ = std::move(torch::jit::IValue());
+  encoder_outs_.clear();
+  cached_feature_.clear();
+  ctc_prefix_beam_searcher_->Reset();
 }
 
 bool TorchAsrDecoder::Decode() {
@@ -78,6 +94,7 @@ bool TorchAsrDecoder::AdvanceDecoding() {
   // If not okay, that means we reach the end of the input
   bool finish = !feature_pipeline_->Read(num_requried_frames, &chunk_feats);
   num_frames_in_current_chunk_ = chunk_feats.size();
+  num_frames_ += chunk_feats.size();
   LOG(INFO) << "Required " << num_requried_frames << " get "
             << chunk_feats.size();
   int num_frames = cached_feature_.size() + chunk_feats.size();
@@ -109,9 +126,9 @@ bool TorchAsrDecoder::AdvanceDecoding() {
                                               elayers_output_cache_,
                                               conformer_cnn_cache_};
     auto outputs = model_->torch_model()
-                          ->get_method("forward_encoder_chunk")(inputs)
-                          .toTuple()
-                          ->elements();
+                       ->get_method("forward_encoder_chunk")(inputs)
+                       .toTuple()
+                       ->elements();
     CHECK_EQ(outputs.size(), 4);
     torch::Tensor chunk_out = outputs[0].toTensor();
     subsampling_cache_ = outputs[1];
@@ -164,12 +181,14 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
 
     DecodeResult path;
     path.score = likelihood[i];
+    int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     int start = 0;
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_.Find(hypothesis[j]);
       path.sentence += word;
-
-      WordPiece word_piece(word, start, time_stamp[j] * frame_shift_in_ms());
+      int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
+      int end = time_stamp[j] * frame_shift_in_ms();
+      WordPiece word_piece(word, offset + start, offset + end);
       path.word_pieces.emplace_back(word_piece);
       start = word_piece.end;
     }
