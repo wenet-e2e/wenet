@@ -60,6 +60,7 @@ class ConnectionHandler {
   void DecodeThreadFunc();
   std::string SerializeResult(bool finish);
 
+  bool enable_continuous_decoding_ = false;
   int nbest_ = 1;
   websocket::stream<tcp::socket> ws_;
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
