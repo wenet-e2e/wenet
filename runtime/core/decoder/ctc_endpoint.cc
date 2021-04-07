@@ -33,7 +33,7 @@ static bool RuleActivated(const CtcEndpointRule& rule,
 }
 
 bool CtcEndpoint::IsEndpoint(const torch::Tensor& ctc_log_probs,
-                             bool decoded_sth) {
+                             bool decoded_something) {
   for (int t = 0; t < ctc_log_probs.size(0); ++t) {
     torch::Tensor logp_t = ctc_log_probs[t];
     float blank_prob = expf(logp_t[config_.blank].item<float>());
@@ -49,13 +49,13 @@ bool CtcEndpoint::IsEndpoint(const torch::Tensor& ctc_log_probs,
   CHECK_GT(frame_shift_in_ms_, 0);
   int utterance_length = num_frames_decoded_ * frame_shift_in_ms_;
   int trailing_silence = num_frames_trailing_blank_ * frame_shift_in_ms_;
-  if (RuleActivated(config_.rule1, "rule1", decoded_sth, trailing_silence,
+  if (RuleActivated(config_.rule1, "rule1", decoded_something, trailing_silence,
                     utterance_length))
     return true;
-  if (RuleActivated(config_.rule2, "rule2", decoded_sth, trailing_silence,
+  if (RuleActivated(config_.rule2, "rule2", decoded_something, trailing_silence,
                     utterance_length))
     return true;
-  if (RuleActivated(config_.rule3, "rule3", decoded_sth, trailing_silence,
+  if (RuleActivated(config_.rule3, "rule3", decoded_something, trailing_silence,
                     utterance_length))
     return true;
   return false;
