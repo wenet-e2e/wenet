@@ -5,8 +5,6 @@
 #include <iomanip>
 #include <utility>
 
-#include "gflags/gflags.h"
-#include "glog/logging.h"
 #include "torch/script.h"
 
 #include "decoder/symbol_table.h"
@@ -14,6 +12,8 @@
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
+#include "utils/flags.h"
+#include "utils/log.h"
 #include "utils/utils.h"
 
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");

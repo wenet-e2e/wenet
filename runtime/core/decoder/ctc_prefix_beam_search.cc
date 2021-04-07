@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <utility>
 
-#include "glog/logging.h"
+#include "utils/log.h"
 
 namespace wenet {
 
