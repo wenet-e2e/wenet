@@ -16,8 +16,8 @@
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
-#include "utils/log.h"
 #include "utils/flags.h"
+#include "utils/log.h"
 #include "websocket/websocket_server.h"
 
 DEFINE_int32(port, 10086, "websocket listening port");
