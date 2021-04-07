@@ -146,6 +146,7 @@ def main():
             a = []
             for j in b:
                 # we use "▁" to instead of blanks among english words
+                # warning: here is "▁", not "_"
                 for l in j.strip().split("▁"):
                     if not l.encode('UTF-8').isalpha():
                         a.append(l)
