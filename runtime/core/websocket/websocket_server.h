@@ -25,12 +25,12 @@
 #include "boost/asio/ip/tcp.hpp"
 #include "boost/beast/core.hpp"
 #include "boost/beast/websocket.hpp"
-#include "glog/logging.h"
 
 #include "decoder/symbol_table.h"
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "utils/log.h"
 
 namespace wenet {
 
