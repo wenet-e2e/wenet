@@ -147,8 +147,11 @@ void ConnectionHandler::DecodeThreadFunc() {
         break;
       }
     } else {
-      std::string result = SerializeResult(false);
-      OnPartialResult(result);
+      // When the 1best's length > 0, return the partial result
+      if (!decoder_->result()[0].sentence.empty()) {
+        std::string result = SerializeResult(false);
+        OnPartialResult(result);
+      }
     }
   }
 }
