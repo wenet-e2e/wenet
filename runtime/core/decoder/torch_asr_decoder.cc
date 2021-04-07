@@ -14,8 +14,8 @@ namespace wenet {
 
 TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
-    std::shared_ptr<TorchAsrModel> model, const SymbolTable& symbol_table,
-    const DecodeOptions& opts)
+    std::shared_ptr<TorchAsrModel> model,
+    std::shared_ptr<fst::SymbolTable> symbol_table, const DecodeOptions& opts)
     : feature_pipeline_(std::move(feature_pipeline)),
       model_(std::move(model)),
       symbol_table_(symbol_table),
@@ -187,7 +187,7 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
     path.score = likelihood[i];
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
-      std::string word = symbol_table_.Find(hypothesis[j]);
+      std::string word = symbol_table_->Find(hypothesis[j]);
       path.sentence += word;
       int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
       int end = time_stamp[j] * frame_shift_in_ms();
