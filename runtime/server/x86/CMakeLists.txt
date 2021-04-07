@@ -78,7 +78,7 @@ endif()
 
 # utils
 add_library(utils STATIC utils/utils.cc)
-target_link_libraries(utils PUBLIC glog)
+target_link_libraries(utils PUBLIC glog gflags)
 
 # frontend
 add_library(frontend STATIC
