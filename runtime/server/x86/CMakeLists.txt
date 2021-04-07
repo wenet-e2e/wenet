@@ -3,11 +3,16 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(wenet VERSION 0.1)
 
 include_directories(${CMAKE_SOURCE_DIR})
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 include(FetchContent)
+include(ExternalProject)
 set(FETCHCONTENT_QUIET off)
 get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
+
+# Keep the same with openfst, -fPIC or -fpic
+set(CMAKE_CXX_FLAGS "-fPIC")
 
 # third_party: gflags
 FetchContent_Declare(
@@ -15,6 +20,7 @@ FetchContent_Declare(
   URL      https://github.com/gflags/gflags/archive/v2.2.0.zip
   URL_HASH SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
 )
+FetchContent_MakeAvailable(gflags)
 
 # third_party: glog
 FetchContent_Declare(
@@ -22,6 +28,7 @@ FetchContent_Declare(
   URL      https://github.com/google/glog/archive/v0.4.0.zip
   URL_HASH SHA256=9e1b54eb2782f53cd8af107ecf08d2ab64b8d0dc2b7f5594472f3bd63ca85cdc
 )
+FetchContent_MakeAvailable(glog)
 
 # third_party: gtest
 FetchContent_Declare(
@@ -29,6 +36,7 @@ FetchContent_Declare(
   URL      https://github.com/google/googletest/archive/release-1.10.0.zip
   URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
 )
+FetchContent_MakeAvailable(googletest)
 
 # third_party: boost
 FetchContent_Declare(
@@ -36,6 +44,33 @@ FetchContent_Declare(
   URL      https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz
   URL_HASH SHA256=aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a
 )
+FetchContent_MakeAvailable(boost)
+include_directories(${boost_SOURCE_DIR})
+
+# third_party: openfst
+# openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch
+set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I${gflags_BINARY_DIR}/include")
+set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
+message(STATUS ${OPENFST_EXTRA_LIBS})
+set(openfst_SRC_DIR ${fc_base}/openfst-src)
+set(openfst_BUILD_DIR ${fc_base}/openfst-build)
+ExternalProject_Add(openfst
+URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
+URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
+SOURCE_DIR        ${openfst_SRC_DIR}
+BINARY_DIR        ${openfst_BUILD_DIR}
+CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${CMAKE_SOURCE_DIR}/openfst
+                      "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
+                      "LIBS=${OPENFST_EXTRA_LIBS}"
+COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst/log.h
+COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.h ${openfst_SRC_DIR}/src/include/fst/flags.h
+COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib/flags.cc
+BUILD_COMMAND     make -j 4
+INSTALL_COMMAND   make install
+)
+include_directories(${CMAKE_SOURCE_DIR}/openfst/include)
+link_directories(${CMAKE_SOURCE_DIR}/openfst/lib)
+add_dependencies(openfst gflags glog)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
@@ -58,10 +93,8 @@ FetchContent_Declare(
   URL      ${LIBTORCH_URL}
   URL_HASH ${URL_HASH}
 )
-
 set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
-FetchContent_MakeAvailable(gflags glog googletest boost libtorch)
-include_directories(${boost_SOURCE_DIR})
+FetchContent_MakeAvailable(libtorch)
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 if(MSVC)
   execute_process(COMMAND bootstrap.bat WORKING_DIRECTORY ${boost_SOURCE_DIR})
