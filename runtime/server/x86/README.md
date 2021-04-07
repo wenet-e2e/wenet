@@ -1,5 +1,7 @@
 # WeNet Server (x86) ASR Demo
 
+**[中文版:x86 平台上使用 WeNet 进行语音识别](./README_CN.md)**
+
 ## Build
 
 The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/server/x86` as your build directory, then type:
