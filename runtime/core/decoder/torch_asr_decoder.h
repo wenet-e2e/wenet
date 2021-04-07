@@ -111,7 +111,7 @@ class TorchAsrDecoder {
   std::vector<DecodeResult> result_;
 
  public:
-  DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
+  WENET_DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
 };
 
 }  // namespace wenet

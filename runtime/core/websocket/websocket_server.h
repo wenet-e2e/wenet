@@ -101,7 +101,7 @@ class WebSocketServer {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
-  DISALLOW_COPY_AND_ASSIGN(WebSocketServer);
+  WENET_DISALLOW_COPY_AND_ASSIGN(WebSocketServer);
 };
 
 }  // namespace wenet

@@ -88,7 +88,7 @@ class BlockingQueue {
   std::queue<T> queue_;
 
  public:
-  DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
+  WENET_DISALLOW_COPY_AND_ASSIGN(BlockingQueue);
 };
 
 }  // namespace wenet
