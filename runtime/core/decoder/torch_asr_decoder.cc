@@ -145,8 +145,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     encoder_outs_.push_back(std::move(chunk_out));
     UpdateResult(ctc_log_probs);
 
-    if (ctc_endpointer_->IsEndpoint(ctc_log_probs,
-                                           decoded_something())) {
+    if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
       LOG(INFO) << "Endpoint is detected at " << num_frames_;
       state = DecodeState::kEndpoint;
     }
@@ -200,7 +199,7 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
     result_.emplace_back(path);
   }
 
-  if (decoded_something()) {
+  if (DecodedSomething()) {
     VLOG(1) << "Partial CTC result " << result_[0].sentence;
   }
 }

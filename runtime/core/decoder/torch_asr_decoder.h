@@ -66,6 +66,9 @@ class TorchAsrDecoder {
   void Rescoring();
   void Reset();
   void ResetContinuousDecoding();
+  bool DecodedSomething() const {
+    return !result_.empty() && !result_[0].sentence.empty();
+  }
   int num_frames_in_current_chunk() const {
     return num_frames_in_current_chunk_;
   }
@@ -77,9 +80,6 @@ class TorchAsrDecoder {
   int feature_frame_shift_in_ms() const {
     return feature_pipeline_->config().frame_shift * 1000 /
            feature_pipeline_->config().sample_rate;
-  }
-  bool decoded_something() const {
-    return !result_.empty() && !result_[0].sentence.empty();
   }
   const std::vector<DecodeResult>& result() const { return result_; }
 
