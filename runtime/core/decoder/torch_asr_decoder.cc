@@ -92,7 +92,9 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   }
   std::vector<std::vector<float>> chunk_feats;
   // If not okay, that means we reach the end of the input
-  bool finish = !feature_pipeline_->Read(num_requried_frames, &chunk_feats);
+  if (!feature_pipeline_->Read(num_requried_frames, &chunk_feats)) {
+    state = DecodeState::kEndFeats;
+  }
   num_frames_in_current_chunk_ = chunk_feats.size();
   num_frames_ += chunk_feats.size();
   LOG(INFO) << "Required " << num_requried_frames << " get "
@@ -143,10 +145,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     encoder_outs_.push_back(std::move(chunk_out));
     UpdateResult(ctc_log_probs);
 
-    bool decoded_sth = !result_.empty() && !result_[0].sentence.empty();
-    if (finish) {
-      state = DecodeState::kEndFeats;
-    } else if (ctc_endpointer_->IsEndpoint(ctc_log_probs, decoded_sth)) {
+    if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
       LOG(INFO) << "Endpoint is detected at " << num_frames_;
       state = DecodeState::kEndpoint;
     }
@@ -199,7 +198,10 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
     path.sentence = ProcessBlank(path.sentence);
     result_.emplace_back(path);
   }
-  VLOG(1) << "Partial CTC result " << result_[0].sentence;
+
+  if (DecodedSomething()) {
+    VLOG(1) << "Partial CTC result " << result_[0].sentence;
+  }
 }
 
 void TorchAsrDecoder::AttentionRescoring() {

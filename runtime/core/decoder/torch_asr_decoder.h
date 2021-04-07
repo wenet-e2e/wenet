@@ -66,6 +66,9 @@ class TorchAsrDecoder {
   void Rescoring();
   void Reset();
   void ResetContinuousDecoding();
+  bool DecodedSomething() const {
+    return !result_.empty() && !result_[0].sentence.empty();
+  }
   int num_frames_in_current_chunk() const {
     return num_frames_in_current_chunk_;
   }

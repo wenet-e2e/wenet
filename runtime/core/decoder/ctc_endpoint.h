@@ -48,7 +48,7 @@ class CtcEndpoint {
   void Reset();
   /// This function returns true if this set of endpointing rules thinks we
   /// should terminate decoding.
-  bool IsEndpoint(const torch::Tensor& ctc_log_probs, bool decoded_sth);
+  bool IsEndpoint(const torch::Tensor& ctc_log_probs, bool decoded_something);
 
   void frame_shift_in_ms(int frame_shift_in_ms) {
     frame_shift_in_ms_ = frame_shift_in_ms;
