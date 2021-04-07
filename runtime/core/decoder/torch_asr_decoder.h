@@ -78,6 +78,9 @@ class TorchAsrDecoder {
     return feature_pipeline_->config().frame_shift * 1000 /
            feature_pipeline_->config().sample_rate;
   }
+  bool decoded_something() const {
+    return !result_.empty() && !result_[0].sentence.empty();
+  }
   const std::vector<DecodeResult>& result() const { return result_; }
 
  private:
