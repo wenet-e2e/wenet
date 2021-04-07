@@ -48,6 +48,7 @@ FetchContent_MakeAvailable(boost)
 include_directories(${boost_SOURCE_DIR})
 
 # third_party: openfst
+# openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch
 set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I${gflags_BINARY_DIR}/include")
 set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
 message(STATUS ${OPENFST_EXTRA_LIBS})
