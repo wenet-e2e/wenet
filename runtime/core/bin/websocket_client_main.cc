@@ -15,9 +15,9 @@
 #include <chrono>
 
 #include "gflags/gflags.h"
-#include "glog/logging.h"
 
 #include "frontend/wav.h"
+#include "utils/log.h"
 #include "websocket/websocket_client.h"
 
 DEFINE_string(host, "127.0.0.1", "host of websocket server");

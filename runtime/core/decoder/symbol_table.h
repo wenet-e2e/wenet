@@ -21,7 +21,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "glog/logging.h"
+#include "utils/log.h"
 
 namespace wenet {
 

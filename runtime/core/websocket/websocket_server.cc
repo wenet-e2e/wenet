@@ -19,7 +19,8 @@
 #include <vector>
 
 #include "boost/json/src.hpp"
-#include "glog/logging.h"
+
+#include "utils/log.h"
 
 namespace wenet {
 

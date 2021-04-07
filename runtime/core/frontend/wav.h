@@ -24,7 +24,7 @@
 
 #include <string>
 
-#include "glog/logging.h"
+#include "utils/log.h"
 
 namespace wenet {
 
