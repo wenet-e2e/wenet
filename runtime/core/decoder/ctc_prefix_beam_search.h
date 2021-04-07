@@ -80,7 +80,7 @@ class CtcPrefixBeamSearch {
   const CtcPrefixBeamSearchOptions& opts_;
 
  public:
-  DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
+  WENET_DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
 };
 
 }  // namespace wenet
