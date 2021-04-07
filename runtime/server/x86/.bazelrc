@@ -1,3 +1,0 @@
-build --cxxopt='-std=gnu++14' --copt='-DC10_USE_GLOG'
-test --cxxopt='-std=gnu++14' --copt='-DC10_USE_GLOG'
-run --cxxopt='-std=gnu++14' --copt='-DC10_USE_GLOG'
