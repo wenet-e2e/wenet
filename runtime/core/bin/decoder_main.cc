@@ -7,7 +7,6 @@
 
 #include "torch/script.h"
 
-#include "decoder/symbol_table.h"
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
@@ -33,7 +32,8 @@ int main(int argc, char *argv[]) {
 
   auto model = std::make_shared<wenet::TorchAsrModel>();
   model->Read(FLAGS_model_path, FLAGS_num_threads);
-  wenet::SymbolTable symbol_table(FLAGS_dict_path);
+  auto symbol_table = std::shared_ptr<fst::SymbolTable>(
+      fst::SymbolTable::ReadText(FLAGS_dict_path));
   wenet::DecodeOptions decode_config;
   decode_config.chunk_size = FLAGS_chunk_size;
   decode_config.num_left_chunks = FLAGS_num_left_chunks;
