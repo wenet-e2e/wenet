@@ -57,23 +57,18 @@ def get_frames_timestamp(alignment):
     # get frames level duration for each token
     start = 0
     end = 0
-    tmp = 0
-    while end <= len(alignment) - 1:
-        if alignment[end] == 0:
-            end += 1
-        else:
-            tmp = end
-            end += 1
-            while end <= len(alignment) - 1 and alignment[tmp] == alignment[
-                    end]:
-                end += 1
-            timestamp.append(alignment[start:end])
-            start = end
-    if start < len(alignment):
-        if alignment[start] != 0:
-            timestamp.append(alignment[start:])
-        else:
+    while end < len(alignment):
+        if end == len(
+                alignment) - 1 and alignment[start] == alignment[end] == 0:
             timestamp[-1] += alignment[start:]
+            break
+        while end < len(alignment) and alignment[end] == 0:
+            end += 1
+        end += 1
+        while end < len(alignment) and alignment[end - 1] == alignment[end]:
+            end += 1
+        timestamp.append(alignment[start:end])
+        start = end
     return timestamp
 
 
@@ -120,7 +115,7 @@ if __name__ == '__main__':
                         required=True,
                         help='alignment result file')
     parser.add_argument('--batch_size', type=int, default=1, help='batch size')
-    parser.add_argument('--use_praat',
+    parser.add_argument('--gen_praat',
                         action='store_true',
                         help='convert alignment to a praat format')
 
@@ -183,6 +178,8 @@ if __name__ == '__main__':
         for batch_idx, batch in enumerate(ali_data_loader):
             print("#" * 80)
             key, feat, target, feats_length, target_length = batch
+            print(key)
+
             feat = feat.to(device)
             target = target.to(device)
             feats_length = feats_length.to(device)

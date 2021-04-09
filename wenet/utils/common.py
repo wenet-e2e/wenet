@@ -124,12 +124,15 @@ def get_activation(act):
 
 
 def get_subsample(config):
-    if config["encoder_conf"]["input_layer"] == "conv2d":
+    input_layer = config["encoder_conf"]["input_layer"] 
+    assert input_layer in ["conv2d", "conv2d6", "conv2d8"]
+    if input_layer == "conv2d":
         return 4
-    elif config["encoder_conf"]["input_layer"] == "conv2d6":
+    elif input_layer == "conv2d6":
         return 6
-    else:
+    elif input_layer == "conv2d8":
         return 8
+
 
 def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
     new_hyp: List[int] = []
