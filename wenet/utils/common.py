@@ -123,6 +123,14 @@ def get_activation(act):
     return activation_funcs[act]()
 
 
+def get_subsample(config):
+    if config["encoder_conf"]["input_layer"] == "conv2d":
+        return 4
+    elif config["encoder_conf"]["input_layer"] == "conv2d6":
+        return 6
+    else:
+        return 8
+
 def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
