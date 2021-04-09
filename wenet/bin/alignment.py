@@ -183,6 +183,8 @@ if __name__ == '__main__':
         for batch_idx, batch in enumerate(ali_data_loader):
             print("#" * 80)
             key, feat, target, feats_length, target_length = batch
+            print(key)
+
             feat = feat.to(device)
             target = target.to(device)
             feats_length = feats_length.to(device)
