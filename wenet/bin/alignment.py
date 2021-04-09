@@ -198,7 +198,7 @@ if __name__ == '__main__':
             print(alignment)
             fout.write('{} {}\n'.format(key[0], alignment))
 
-            if args.use_praat:
+            if args.gen_praat:
                 timestamp = get_frames_timestamp(alignment)
                 print(timestamp)
                 subsample = get_subsample(configs)
