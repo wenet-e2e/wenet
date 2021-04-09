@@ -124,7 +124,7 @@ def get_activation(act):
 
 
 def get_subsample(config):
-    input_layer = config["encoder_conf"]["input_layer"] 
+    input_layer = config["encoder_conf"]["input_layer"]
     assert input_layer in ["conv2d", "conv2d6", "conv2d8"]
     if input_layer == "conv2d":
         return 4
