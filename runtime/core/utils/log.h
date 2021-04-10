@@ -15,6 +15,6 @@
 #ifndef UTILS_LOG_H_
 #define UTILS_LOG_H_
 
-#include "glog/logging.h"
+#include "fst/log.h"
 
 #endif  // UTILS_LOG_H_

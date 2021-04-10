@@ -15,6 +15,6 @@
 #ifndef UTILS_FLAGS_H_
 #define UTILS_FLAGS_H_
 
-#include "gflags/gflags.h"
+#include "fst/flags.h"
 
 #endif  // UTILS_FLAGS_H_
