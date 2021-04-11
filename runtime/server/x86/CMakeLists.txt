@@ -11,36 +11,36 @@ set(FETCHCONTENT_QUIET off)
 get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
 
-# Keep the same with openfst, -fPIC or -fpic
-set(CMAKE_CXX_FLAGS "-fPIC")
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  # Keep the same with openfst, -fPIC or -fpic
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
+endif()
 
 # third_party: gflags
-FetchContent_Declare(
-  gflags
+FetchContent_Declare(gflags
   URL      https://github.com/gflags/gflags/archive/v2.2.0.zip
   URL_HASH SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
 )
 FetchContent_MakeAvailable(gflags)
+include_directories(${gflags_BINARY_DIR}/include)
 
 # third_party: glog
-FetchContent_Declare(
-  glog
+FetchContent_Declare(glog
   URL      https://github.com/google/glog/archive/v0.4.0.zip
   URL_HASH SHA256=9e1b54eb2782f53cd8af107ecf08d2ab64b8d0dc2b7f5594472f3bd63ca85cdc
 )
 FetchContent_MakeAvailable(glog)
+include_directories(${glog_SOURCE_DIR}/src ${glog_BINARY_DIR})
 
 # third_party: gtest
-FetchContent_Declare(
-  googletest
+FetchContent_Declare(googletest
   URL      https://github.com/google/googletest/archive/release-1.10.0.zip
   URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
 )
 FetchContent_MakeAvailable(googletest)
 
 # third_party: boost
-FetchContent_Declare(
-  boost
+FetchContent_Declare(boost
   URL      https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz
   URL_HASH SHA256=aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a
 )
@@ -51,25 +51,25 @@ include_directories(${boost_SOURCE_DIR})
 # openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch
 set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I${gflags_BINARY_DIR}/include")
 set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
-message(STATUS ${OPENFST_EXTRA_LIBS})
 set(openfst_SRC_DIR ${fc_base}/openfst-src)
 set(openfst_BUILD_DIR ${fc_base}/openfst-build)
+set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
 ExternalProject_Add(openfst
-URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
-URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
-SOURCE_DIR        ${openfst_SRC_DIR}
-BINARY_DIR        ${openfst_BUILD_DIR}
-CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${CMAKE_SOURCE_DIR}/openfst
+  URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
+  URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
+  PREFIX            ${openfst_PREFIX_DIR}
+  SOURCE_DIR        ${openfst_SRC_DIR}
+  BINARY_DIR        ${openfst_BUILD_DIR}
+  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_PREFIX_DIR}
                       "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
                       "LIBS=${OPENFST_EXTRA_LIBS}"
-COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst/log.h
-COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.h ${openfst_SRC_DIR}/src/include/fst/flags.h
-COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib/flags.cc
-BUILD_COMMAND     make -j 4
-INSTALL_COMMAND   make install
+  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
+  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.h ${openfst_SRC_DIR}/src/include/fst
+  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib
+  BUILD_COMMAND     make -j 4
 )
-include_directories(${CMAKE_SOURCE_DIR}/openfst/include)
-link_directories(${CMAKE_SOURCE_DIR}/openfst/lib)
+include_directories(${openfst_PREFIX_DIR}/include)
+link_directories(${openfst_PREFIX_DIR}/lib)
 add_dependencies(openfst gflags glog)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
@@ -88,8 +88,7 @@ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
 else()
     message(FATAL_ERROR "Unsupported CMake System Name '${CMAKE_SYSTEM_NAME}' (expected 'Windows', 'Linux' or 'Darwin')")
 endif()
-FetchContent_Declare(
-  libtorch
+FetchContent_Declare(libtorch
   URL      ${LIBTORCH_URL}
   URL_HASH ${URL_HASH}
 )
@@ -105,13 +104,11 @@ if(MSVC)
 endif(MSVC)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread")
-endif()
 
 # utils
 add_library(utils STATIC utils/utils.cc)
-target_link_libraries(utils PUBLIC glog gflags)
+target_link_libraries(utils PUBLIC fst)
+add_dependencies(utils openfst)
 
 # frontend
 add_library(frontend STATIC
@@ -127,10 +124,10 @@ add_library(decoder STATIC
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC utils fst ${TORCH_LIBRARIES})
+target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} utils)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
-target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main decoder gmock)
+target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
 add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
 
 # websocket
@@ -138,7 +135,7 @@ add_library(websocket STATIC
   websocket/websocket_client.cc
   websocket/websocket_server.cc
 )
-target_link_libraries(websocket PUBLIC frontend decoder utils)
+target_link_libraries(websocket PUBLIC decoder frontend)
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
