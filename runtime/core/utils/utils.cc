@@ -121,13 +121,14 @@ bool SplitUTF8String(const std::string& str,
   return true;
 }
 
-std::string ProcessBlank(const std::string& str) {
+std::string ProcessBlank(const std::string& str, 
+                         const std::string& suffix_indicator) {
   std::string result;
   if (!str.empty()) {
     std::vector<std::string> characters;
     if (SplitUTF8String(str, &characters)) {
       for (std::string& character : characters) {
-        if (character != kSpaceSymbol) {
+        if (character != suffix_indicator) {
           result.append(character);
         } else {
           // Ignore consecutive space or located in head

@@ -28,6 +28,7 @@ struct DecodeOptions {
   int num_left_chunks = -1;
   CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_search_opts;
+  std::string suffix_indicator;
 };
 
 struct WordPiece {

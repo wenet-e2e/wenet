@@ -43,7 +43,8 @@ void SplitStringToVector(const std::string &full, const char* delim,
 bool SplitUTF8String(const std::string& str,
                      std::vector<std::string>* characters);
 
-std::string ProcessBlank(const std::string& str);
+std::string ProcessBlank(const std::string& str,
+                         const std::string& suffix_indicator);
 
 }  // namespace wenet
 
