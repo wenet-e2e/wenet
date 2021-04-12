@@ -23,7 +23,7 @@ DEFINE_int32(port, 10086, "websocket listening port");
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
 DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
-DEFINE_string(prefix_indicator, wenet::kSpaceSymbol, 
+DEFINE_string(prefix_indicator, wenet::kSpaceSymbol,
               "prefix indicator for subwords");
 DEFINE_string(model_path, "", "pytorch exported model path");
 DEFINE_string(wav_path, "", "wav path");
