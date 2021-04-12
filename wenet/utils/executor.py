@@ -24,7 +24,6 @@ class Executor:
         accum_grad = args.get('accum_grad', 1)
         is_distributed = args.get('is_distributed', True)
         use_amp = args.get('use_amp', False)
-        print(use_amp)
         logging.info('using accumulate grad, new batch size is {} times'
                      'larger than before'.format(accum_grad))
         if use_amp:
