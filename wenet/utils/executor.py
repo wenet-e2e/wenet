@@ -83,7 +83,7 @@ class Executor:
                 else:
                     grad_norm = clip_grad_norm_(model.parameters(), clip)
                     if torch.isfinite(grad_norm):
-                       optimizer.step()
+                        optimizer.step()
                 optimizer.zero_grad()
                 scheduler.step()
                 self.step += 1
