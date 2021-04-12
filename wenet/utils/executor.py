@@ -24,9 +24,9 @@ class Executor:
         accum_grad = args.get('accum_grad', 1)
         is_distributed = args.get('is_distributed', True)
         use_amp = args.get('use_amp', False)
+        print(use_amp)
         logging.info('using accumulate grad, new batch size is {} times'
                      'larger than before'.format(accum_grad))
-        print(use_amp)
         if use_amp:
             assert scaler is not None
         num_seen_utts = 0
@@ -67,24 +67,24 @@ class Executor:
             if batch_idx % accum_grad == 0:
                 if rank == 0 and writer is not None:
                     writer.add_scalar('train_loss', loss, self.step)
-
+                # Use mixed precision training
                 if use_amp:
                     scaler.unscale_(optimizer)
-                grad_norm = clip_grad_norm_(model.parameters(), clip)
+                    grad_norm = clip_grad_norm_(model.parameters(), clip)
 
-                if torch.isfinite(grad_norm):
-                    if use_amp:
+                    if torch.isfinite(grad_norm):
                         scaler.step(optimizer)
                         scaler.update()
+                    # this branch is used for avoid the following error:
+                    #      RuntimeError: unscale_() has already been called
+                    #      on this optimizer since the last update().
                     else:
-                        optimizer.step()
-                # this branch is used for avoid the following error:
-                #      RuntimeError: unscale_() has already been called
-                #      on this optimizer since the last update().
-                else:
-                    if use_amp:
                         scaler.step(optimizer)
                         scaler.update()
+                else:
+                    grad_norm = clip_grad_norm_(model.parameters(), clip)
+                    if torch.isfinite(grad_norm):
+                       optimizer.step()
                 optimizer.zero_grad()
                 scheduler.step()
                 self.step += 1
