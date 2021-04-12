@@ -121,7 +121,7 @@ bool SplitUTF8String(const std::string& str,
   return true;
 }
 
-std::string ProcessBlank(const std::string& str, 
+std::string ProcessBlank(const std::string& str,
                          const std::string& prefix_indicator) {
   std::string result;
   if (!str.empty()) {
