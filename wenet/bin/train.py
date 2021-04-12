@@ -75,7 +75,11 @@ if __name__ == '__main__':
                         action='store_true',
                         default=False,
                         help='Use pinned memory buffers used for reading')
+<<<<<<< HEAD
     parser.add_argument('--use_amp',
+=======
+    parser.add_argument('--fp16',
+>>>>>>> 9073a16e81007fcd22cbc6b92a7491fb9ca7a900
                         action='store_true',
                         default=False,
                         help='Use mixed precision training')
@@ -214,6 +218,7 @@ if __name__ == '__main__':
     # Start training loop
     executor.step = step
     scheduler.set_step(step)
+    # used for pytorch amp mixed precision training
     scaler = None
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()

@@ -51,6 +51,8 @@ class Executor:
                 context = nullcontext
             with context():
                 # autocast context
+                # The more details about amp can be found in
+                # https://pytorch.org/docs/stable/notes/amp_examples.html
                 with torch.cuda.amp.autocast(scaler is not None):
                     loss, loss_att, loss_ctc = model(feats,
                                                      feats_lengths,
@@ -87,7 +89,6 @@ class Executor:
                 optimizer.zero_grad()
                 scheduler.step()
                 self.step += 1
-
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
