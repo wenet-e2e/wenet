@@ -13,11 +13,11 @@ SoundRecognizer = {
     realTimeSendTryChunk: null,
     soundType: "wav",
     init: function (config) {
-        this.soundType = config.soundType||'wav';
-        this.SampleRate = config.sampleRate||16000;
-        this.recwaveElm = config.recwaveElm||'';
-        this.TransferUpload = config.translerCallBack||this.TransferProcess;
-        this.getRecorderRole();
+        this.soundType = config.soundType || 'wav';
+        this.SampleRate = config.sampleRate || 16000;
+        this.recwaveElm = config.recwaveElm || '';
+        this.TransferUpload = config.translerCallBack || this.TransferProcess;
+        this.initRecorder();
     },
     RealTimeSendTryReset: function (type) {
         this.realTimeSendTryType = type;
@@ -40,7 +40,7 @@ SoundRecognizer = {
         var number = ++this.realTimeSendTryNumber;
 
         //借用SampleData函数进行数据的连续处理，采样率转换是顺带的
-        var chunk = Recorder.SampleData(rec.buffers, rec.srcSampleRate, this.SampleRate, this.realTimeSendTryChunk, {frameType: isClose ? "" : this.realTimeSendTryType});
+        var chunk = Recorder.SampleData(rec.buffers, rec.srcSampleRate, this.SampleRate, this.realTimeSendTryChunk, { frameType: isClose ? "" : this.realTimeSendTryType });
 
         //清理已处理完的缓冲数据，释放内存以支持长时间录音，最后完成录音时不能调用stop，因为数据已经被清掉了
         for (var i = this.realTimeSendTryChunk ? this.realTimeSendTryChunk.index : 0; i < chunk.index; i++) {
@@ -82,22 +82,6 @@ SoundRecognizer = {
             console.log("不应该出现的错误:" + msg, 1);
         });
     },
-    getRecorderRole: function (callback) {
-        if (navigator.mediaDevices.getUserMedia) {
-            const constraints = {audio: true};
-            navigator.mediaDevices.getUserMedia(constraints).then(stream => {
-                if (callback)
-                    return callback();
-                else
-                    return this.initRecorder();
-            }, () => {
-                alert("麦克风授权失败！");
-            })
-        } else {
-            alert("无法打开麦克风，您的浏览器不支持 getUserMedia");
-            return false;
-        }
-    },
     recordClose: function () {
         try {
             this.rec.close(function () {
@@ -105,7 +89,7 @@ SoundRecognizer = {
             });
             this.RealTimeSendTry(this.rec, true);//最后一次发送
         } catch (ex) {
-            //recordClose();
+            // recordClose();
         }
     },
     recordEnd: function () {
@@ -143,7 +127,7 @@ SoundRecognizer = {
         });
         this.rec = rec;
     },
-    TransferProcess:function (number, blobOrNull, duration, blobRec, isClose) {
+    TransferProcess: function (number, blobOrNull, duration, blobRec, isClose) {
 
     }
 }
