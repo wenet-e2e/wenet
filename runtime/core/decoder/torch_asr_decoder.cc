@@ -195,7 +195,7 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
       path.word_pieces.emplace_back(word_piece);
       start = word_piece.end;
     }
-    path.sentence = ProcessBlank(path.sentence);
+    path.sentence = ProcessBlank(path.sentence, opts_.prefix_indicator);
     result_.emplace_back(path);
   }
 
