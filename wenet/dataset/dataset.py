@@ -154,7 +154,7 @@ def _load_wav_with_speed(wav_file, speed):
         return wav, sr
 
 def _extract_feature(batch, speed_perturb, wav_distortion_conf,
-                     feature_extraction_conf):
+                     feature_extraction_conf, use_ctc_ref=False):
     """ Extract acoustic fbank feature from origin waveform.
 
     Speed perturbation and wave amplitude distortion is optional.
@@ -216,10 +216,15 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
     labels = [x[2].split() for x in batch]
     labels = [np.fromiter(map(int, x), dtype=np.int32) for x in labels]
     sorted_labels = [labels[i] for i in order]
-    return sorted_keys, sorted_feats, sorted_labels
+    sorted_ctc_time_idx = None
+    if use_ctc_ref:
+        ctc_time_idx = [x[3].split() for x in batch]
+        sorted_ctc_time_idx = [np.fromiter(
+            map(int, x), dtype=np.int32) for x in ctc_time_idx]
+    return sorted_keys, sorted_feats, sorted_labels, sorted_ctc_time_idx
 
 
-def _load_feature(batch):
+def _load_feature(batch, use_ctc_ref=False):
     """ Load acoustic feature from files.
 
     The features have been prepared in previous step, usualy by Kaldi.
@@ -249,7 +254,12 @@ def _load_feature(batch):
     labels = [x[2].split() for x in batch]
     labels = [np.fromiter(map(int, x), dtype=np.int32) for x in labels]
     sorted_labels = [labels[i] for i in order]
-    return sorted_keys, sorted_feats, sorted_labels
+    sorted_ctc_time_idx = None
+    if use_ctc_ref:
+        ctc_time_idx = [x[3].split() for x in batch]
+        sorted_ctc_time_idx = [np.fromiter(
+            map(int, x), dtype=np.int32) for x in ctc_time_idx]
+    return sorted_keys, sorted_feats, sorted_labels, sorted_ctc_time_idx
 
 class CollateFunc(object):
     """ Collate function for AudioDataset
@@ -264,6 +274,7 @@ class CollateFunc(object):
                  raw_wav=True,
                  feature_extraction_conf=None,
                  wav_distortion_conf=None,
+                 use_ctc_ref=False,
                  ):
         """
         Args:
@@ -280,17 +291,20 @@ class CollateFunc(object):
         self.spec_aug_conf = spec_aug_conf
         self.spec_sub = spec_sub
         self.spec_sub_conf = spec_sub_conf
+        self.use_ctc_ref = use_ctc_ref
 
     def __call__(self, batch):
         assert (len(batch) == 1)
         if self.raw_wav:
-            keys, xs, ys = _extract_feature(batch[0],
-                                            self.speed_perturb,
-                                            self.wav_distortion_conf,
-                                            self.feature_extraction_conf)
+            keys, xs, ys, ctc_time_idx = _extract_feature(
+                batch[0],
+                self.speed_perturb,
+                self.wav_distortion_conf,
+                self.feature_extraction_conf,
+                self.use_ctc_ref)
 
         else:
-            keys, xs, ys = _load_feature(batch[0])
+            keys, xs, ys, ctc_time_idx = _load_feature(batch[0], self.use_ctc_ref)
 
         train_flag = True
         if ys is None:
@@ -319,19 +333,26 @@ class CollateFunc(object):
             xs_pad = pad_sequence([torch.from_numpy(x).float() for x in xs],
                                   True, 0)
         else:
-            xs_pad = torch.Tensor(xs)
+            xs_pad = torch.Tensor(xs)        
+
+        ys_time_idx = None
         if train_flag:
             ys_lengths = torch.from_numpy(
                 np.array([y.shape[0] for y in ys], dtype=np.int32))
             if len(ys) > 0:
                 ys_pad = pad_sequence([torch.from_numpy(y).int() for y in ys],
                                       True, IGNORE_ID)
+                if self.use_ctc_ref:
+                    ys_time_idx = pad_sequence([
+                        torch.from_numpy(y).long() for y in ctc_time_idx], True, IGNORE_ID)
             else:
                 ys_pad = torch.Tensor(ys)
+                if self.use_ctc_ref:
+                    ys_time_idx = torch.Tensor(ctc_time_idx).long()
         else:
             ys_pad = None
             ys_lengths = None
-        return keys, xs_pad, ys_pad, xs_lengths, ys_lengths
+        return keys, xs_pad, ys_pad, xs_lengths, ys_lengths, ys_time_idx
 
 
 class AudioDataset(Dataset):
@@ -343,7 +364,8 @@ class AudioDataset(Dataset):
                  batch_size=1,
                  max_frames_in_batch=0,
                  sort=True,
-                 raw_wav=True):
+                 raw_wav=True,
+                 ctc_ref=False):
         """Dataset for loading audio data.
 
         Attributes::
@@ -357,6 +379,7 @@ class AudioDataset(Dataset):
                     token: i <space> l o v e <space> y o u
                     tokenid: int id of this token
                     token_shape: M,N    # M is the number of token, N is vocab size
+                    token_time: t1 t2 t3 ... # the number is equal to token numbers
             max_length: drop utterance which is greater than max_length(10ms)
             min_length: drop utterance which is less than min_length(10ms)
             batch_type: static or dynamic, see max_frames_in_batch(dynamic)
@@ -381,7 +404,7 @@ class AudioDataset(Dataset):
         with codecs.open(data_file, 'r', encoding='utf-8') as f:
             for line in f:
                 arr = line.strip().split('\t')
-                if len(arr) != 7:
+                if len(arr) != 7 and not ctc_ref:
                     continue
                 key = arr[0].split(':')[1]
                 tokenid = arr[5].split(':')[1]
@@ -389,13 +412,21 @@ class AudioDataset(Dataset):
                 if raw_wav:
                     wav_path = ':'.join(arr[1].split(':')[1:])
                     duration = int(float(arr[2].split(':')[1]) * 1000 / 10)
-                    data.append((key, wav_path, duration, tokenid))
+                    if ctc_ref:
+                        ctc_ref_time = arr[7].split(':')[1]
+                        data.append((key, wav_path, duration, tokenid, ctc_ref_time))
+                    else:
+                        data.append((key, wav_path, duration, tokenid))
                 else:
                     feat_ark = ':'.join(arr[1].split(':')[1:])
                     feat_info = arr[2].split(':')[1].split(',')
                     feat_dim = int(feat_info[1].strip())
                     num_frames = int(feat_info[0].strip())
-                    data.append((key, feat_ark, num_frames, tokenid))
+                    if ctc_ref:
+                        ctc_ref_time = arr[7].split(':')[1]
+                        data.append((key, feat_ark, num_frames, tokenid, ctc_ref_time))
+                    else:
+                        data.append((key, feat_ark, num_frames, tokenid))
                     self.input_dim = feat_dim
                 self.output_dim = output_dim
         if sort:
@@ -423,7 +454,11 @@ class AudioDataset(Dataset):
                 if num_frames_in_batch > max_frames_in_batch:
                     self.minibatch.append([])
                     num_frames_in_batch = length
-                self.minibatch[-1].append((data[i][0], data[i][1], data[i][3]))
+                if ctc_ref:
+                    self.minibatch[-1].append((
+                        data[i][0], data[i][1], data[i][3], data[i][4]))
+                else:
+                    self.minibatch[-1].append((data[i][0], data[i][1], data[i][3]))
         # Static batch size
         else:
             cur = 0
@@ -431,7 +466,10 @@ class AudioDataset(Dataset):
                 end = min(cur + batch_size, num_data)
                 item = []
                 for i in range(cur, end):
-                    item.append((data[i][0], data[i][1], data[i][3]))
+                    if ctc_ref:
+                        item.append((data[i][0], data[i][1], data[i][3], data[i][4]))
+                    else:
+                        item.append((data[i][0], data[i][1], data[i][3]))
                 self.minibatch.append(item)
                 cur = end
 

@@ -24,14 +24,18 @@ class Executor:
         is_distributed = args.get('is_distributed', True)
         logging.info('using accumulate grad, new batch size is {} times'
                      'larger than before'.format(accum_grad))
+        ctc_align = args.get('ctc_align', False)
+        logging.info('ctc alignment info will be used: {}'.format(ctc_align))
         num_seen_utts = 0
         num_total_batch = len(data_loader)
         for batch_idx, batch in enumerate(data_loader):
-            key, feats, target, feats_lengths, target_lengths = batch
+            key, feats, target, feats_lengths, target_lengths, alignments = batch
             feats = feats.to(device)
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
+            if ctc_align:
+                alignments = alignments.to(device)
             num_utts = target_lengths.size(0)
             if num_utts == 0:
                 continue
@@ -49,7 +53,8 @@ class Executor:
                 loss, loss_att, loss_ctc = model(feats,
                                                  feats_lengths,
                                                  target,
-                                                 target_lengths)
+                                                 target_lengths,
+                                                 alignments)
                 loss = loss / accum_grad
                 loss.backward()
 

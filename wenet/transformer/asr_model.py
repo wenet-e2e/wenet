@@ -71,6 +71,7 @@ class ASRModel(torch.nn.Module):
         speech_lengths: torch.Tensor,
         text: torch.Tensor,
         text_lengths: torch.Tensor,
+        alignments: torch.Tensor = None,
     ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
 
@@ -502,6 +503,48 @@ class ASRModel(torch.nn.Module):
                 best_score = score
                 best_index = i
         return hyps[best_index][0]
+
+    def ctc_align(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.tensor,
+        tokens: torch.tensor,
+        blank_id: int = 0
+    ):
+        """
+        Perform force-alignment to derive the ctc alignment.
+
+        Args:
+            speech (torch.Tensor): speech data, (B, T)
+            speech_lengths (torch.tensor): speech length (B)
+            tokens (torch.tensor): token id seq, (B, L)
+        """
+        assert speech.size(0) == speech_lengths.size(0)
+        assert speech.size(0) == tokens.size(0)
+        device = speech.device
+        encoder_output, _ = self._forward_encoder(speech, speech_lengths)
+        ctc_align = []
+        align_idx = []
+        # process utterances one by one
+        fail_num = 0
+        for i in range(tokens.size(0)):
+            ctc_align.append(self.ctc.forced_align(
+                encoder_output[i][:speech_lengths[i]], tokens[i]))
+            first_symbol_idx = []
+            # find the time index where symbols first show
+            for j in range(len(ctc_align[i])):
+                if j > 0 and ctc_align[i][j] == ctc_align[i][j - 1]:
+                    continue
+                else:
+                    if j == 0 and ctc_align[i][j] == blank_id:
+                        continue
+                    first_symbol_idx.append(j)
+            if len(first_symbol_idx) != len(tokens[i]):
+                fail_num += 1
+                first_symbol_idx = []
+            align_idx.append(first_symbol_idx)
+
+        return ctc_align, align_idx, fail_num
 
     @torch.jit.export
     def subsampling_rate(self) -> int:

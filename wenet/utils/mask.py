@@ -4,6 +4,7 @@
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 import torch
+from torch._C import dtype
 
 
 def subsequent_mask(
@@ -81,7 +82,8 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
                             use_dynamic_chunk: bool,
                             use_dynamic_left_chunk: bool,
                             decoding_chunk_size: int, static_chunk_size: int,
-                            num_decoding_left_chunks: int):
+                            num_decoding_left_chunks: int,
+                            alignments: torch.Tensor = None):
     """ Apply optional mask for encoder.
 
     Args:
@@ -101,11 +103,14 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
             the chunk size is decoding_chunk_size.
             >=0: use num_decoding_left_chunks
             <0: use all left chunks
+        alignments: ctc alignment will be used for decoder masks.
+            And at first it only supports for static chunk size mode.
 
     Returns:
         torch.Tensor: chunk mask of the input xs.
     """
     # Whether to use chunk mask or not
+    dec_masks = None
     if use_dynamic_chunk:
         max_len = xs.size(1)
         if decoding_chunk_size < 0:
@@ -140,9 +145,29 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
                                             xs.device)  # (L, L)
         chunk_masks = chunk_masks.unsqueeze(0)  # (1, L, L)
         chunk_masks = masks & chunk_masks  # (B, L, L)
+        dec_masks = make_dec_mask(chunk_masks, alignments)  # (B, L, L)
     else:
         chunk_masks = masks
-    return chunk_masks
+    return chunk_masks, dec_masks
+
+
+def make_dec_mask(chunk_masks: torch.Tensor,
+                  alignments: torch.Tensor) -> torch.Tensor:
+    """Make masks for the cross-layer info used in the decoder.
+    Args:
+        chunk_masks: (B, L, L)
+        alignments: (B, token_length), dtype=long, for index selection.
+    Returns:
+        torch.Tensor: (B, token_length, L)
+    """
+    B, L, _ = chunk_masks.size()
+    token_num = alignments.size(1)
+    # token_num + 1 is for <eos>, and no masks are needed.
+    dec_masks = torch.zeros((B, token_num + 1, L), dtype=torch.bool)
+    for i in range(B):
+        dec_masks[i] = chunk_masks[i][alignments[i]]
+
+    return dec_masks
 
 
 def make_pad_mask(lengths: torch.Tensor) -> torch.Tensor:

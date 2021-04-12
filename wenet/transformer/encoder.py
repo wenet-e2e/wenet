@@ -123,6 +123,7 @@ class BaseEncoder(torch.nn.Module):
         xs_lens: torch.Tensor,
         decoding_chunk_size: int = 0,
         num_decoding_left_chunks: int = -1,
+        alignments: torch.Tensor = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 
@@ -137,6 +138,7 @@ class BaseEncoder(torch.nn.Module):
             the chunk size is decoding_chunk_size.
                 >=0: use num_decoding_left_chunks
                 <0: use all left chunks
+            alignments: alignment derived from ctc model
         Returns:
             encoder output tensor, lens and mask
         """
@@ -145,12 +147,13 @@ class BaseEncoder(torch.nn.Module):
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
         mask_pad = masks
-        chunk_masks = add_optional_chunk_mask(xs, masks,
-                                              self.use_dynamic_chunk,
-                                              self.use_dynamic_left_chunk,
-                                              decoding_chunk_size,
-                                              self.static_chunk_size,
-                                              num_decoding_left_chunks)
+        chunk_masks, dec_masks = add_optional_chunk_mask(xs, masks,
+                                                         self.use_dynamic_chunk,
+                                                         self.use_dynamic_left_chunk,
+                                                         decoding_chunk_size,
+                                                         self.static_chunk_size,
+                                                         num_decoding_left_chunks,
+                                                         alignments)
         for layer in self.encoders:
             xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:
