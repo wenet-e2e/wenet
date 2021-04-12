@@ -8,6 +8,7 @@ from contextlib import nullcontext
 import torch
 from torch.nn.utils import clip_grad_norm_
 
+
 class Executor:
     def __init__(self):
         self.step = 0
@@ -43,7 +44,7 @@ class Executor:
             # Disable gradient synchronizations across DDP processes.
             # Within this context, gradients will be accumulated on module
             # variables, which will later be synchronized.
-            if is_distributed and batch_idx % accum_grad != 0 :
+            if is_distributed and batch_idx % accum_grad != 0:
                 context = model.no_sync
             # Used for single gpu training and DDP gradient synchronization
             # processes.
@@ -51,11 +52,11 @@ class Executor:
                 context = nullcontext
             with context():
                 # autocast context
+                # The more details about amp can be found in
+                # https://pytorch.org/docs/stable/notes/amp_examples.html
                 with torch.cuda.amp.autocast(scaler is not None):
-                    loss, loss_att, loss_ctc = model(feats,
-                                                     feats_lengths,
-                                                     target,
-                                                     target_lengths)
+                    loss, loss_att, loss_ctc = model(feats, feats_lengths,
+                                                     target, target_lengths)
                     loss = loss / accum_grad
                 if use_amp:
                     scaler.scale(loss).backward()
@@ -87,7 +88,6 @@ class Executor:
                 optimizer.zero_grad()
                 scheduler.step()
                 self.step += 1
-
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
@@ -131,8 +131,8 @@ class Executor:
                         log_str += 'loss_att {:.6f} '.format(loss_att.item())
                     if loss_ctc is not None:
                         log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
-                    log_str += 'history loss {:.6f}'.format(
-                        total_loss / num_seen_utts)
+                    log_str += 'history loss {:.6f}'.format(total_loss /
+                                                            num_seen_utts)
                     logging.debug(log_str)
 
         return total_loss, num_seen_utts

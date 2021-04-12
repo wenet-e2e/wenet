@@ -32,7 +32,6 @@ from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--config', required=True, help='config file')
@@ -214,6 +213,7 @@ if __name__ == '__main__':
     # Start training loop
     executor.step = step
     scheduler.set_step(step)
+    # used for pytorch amp mixed precision training
     scaler = None
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
