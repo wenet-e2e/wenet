@@ -121,7 +121,7 @@
       if ("WebSocket" in window) {
         wenetWs = new WebSocket(url)
         wenetWs.onopen = function () {
-          console.log("Websocket 连接成功...")
+          console.log("Websocket 连接成功，开始识别")
           wenetWs.send(JSON.stringify({
             "signal": "start",
             "nbest": 1,
@@ -180,8 +180,17 @@
         $('#socketUrl').focus()
         return
       }
+      // init recorder
+      SoundRecognizer.init({
+        soundType: 'wav',
+        sampleRate: 16000,
+        recwaveElm: '.recwave',
+        translerCallBack: TransferUpload
+      })
+      openWebSocket(socketUrl)
+
       // Change button state
-      $(this).hide()
+      $('#beginBtn').hide()
       $('#endBtn, #timeBox').addClass('show')
       // Start countdown
       var seconds = 180
@@ -193,24 +202,16 @@
           stopRecording()
         }
       }, 1000)
-      // Start recording
-      SoundRecognizer.init({
-        soundType: 'wav',
-        sampleRate: 16000,
-        recwaveElm: '.recwave',
-        translerCallBack: TransferUpload
-      })
-      openWebSocket(socketUrl)
     }
 
     function stopRecording() {
+      wenetWs.send(JSON.stringify({ "signal": "end" }))
+      SoundRecognizer.recordClose()
+
       $('#endBtn').add($('#timeBox')).removeClass('show')
       $('#beginBtn').show()
       $('#timeCount').text('')
       clearInterval(timeLoop)
-
-      wenetWs.send(JSON.stringify({ "signal": "end" }))
-      SoundRecognizer.recordClose()
     }
   </script>
 </body>
