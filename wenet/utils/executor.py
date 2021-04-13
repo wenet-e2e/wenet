@@ -74,10 +74,8 @@ class Executor:
                     # iteration to avoid the following error:
                     #   RuntimeError: unscale_() has already been called
                     #   on this optimizer since the last update().
-                    # Note that if the gradient has inf/nan values,
-                    # scaler.step skips optimizer.step().
-                    # So we don't check grad here since that if the gradient has
-                    # inf/nan values, scaler.step skips optimizer.step().
+                    # We don't check grad here since that if the gradient has
+                    # inf/nan values, scaler.step will skip optimizer.step().
                     scaler.step(optimizer)
                     scaler.update()
                 else:
