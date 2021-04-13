@@ -77,7 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('--use_amp',
                         action='store_true',
                         default=False,
-                        help='Use mixed precision training')
+                        help='Use automatic mixed precision training')
     parser.add_argument('--cmvn', default=None, help='global cmvn file')
 
     args = parser.parse_args()
