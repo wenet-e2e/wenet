@@ -70,14 +70,14 @@ class Executor:
                 if use_amp:
                     scaler.unscale_(optimizer)
                     grad_norm = clip_grad_norm_(model.parameters(), clip)
-                    # Must invoke scaler.update() if unscale_() is used in the iteration
-                    # to avoid the following error:
+                    # Must invoke scaler.update() if unscale_() is used in the
+                    # iteration to avoid the following error:
                     #   RuntimeError: unscale_() has already been called
                     #   on this optimizer since the last update().
                     # Note that if the gradient has inf/nan values,
                     # scaler.step skips optimizer.step().
-                    # So we don't check grad here since that if the gradient has inf/nan values,
-                    # scaler.step skips optimizer.step().
+                    # So we don't check grad here since that if the gradient has
+                    # inf/nan values, scaler.step skips optimizer.step().
                     scaler.step(optimizer)
                     scaler.update()
                 else:
