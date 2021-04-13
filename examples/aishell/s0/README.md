@@ -63,16 +63,16 @@
 ## AMP Training Transformer Result
 
 * Feature info: using fbank feature, dither, cmvn, online speed perturb
-* Training info: lr 0.004, batch size, 4 gpus, acc_grad 4, 240 epochs, dither 0.1, warm up steps 25000
-* Decoding info: ctc_weight 0.5, average_num 10
-* Git hash: f6b1409023440da1998d31abbcc3826dd40aaf35
+* Training info: lr 0.002, batch size, 4 gpus, acc_grad 4, 240 epochs, dither 0.1, warm up steps 25000
+* Decoding info: ctc_weight 0.5, average_num 20
+* Git hash: 1bb4e5a269c535340fae5b0739482fa47733d2c1
 
 | decoding mode          | CER  |
 |------------------------|------|
-| attention decoder      | 5,75 |
-| ctc greedy search      | 5.93 |
-| ctc prefix beam search | 5.93 |
-| attention rescoring    | 5.35 |
+| attention decoder      | 5.73 |
+| ctc greedy search      | 5.92 |
+| ctc prefix beam search | 5.92 |
+| attention rescoring    | 5.31 |
 
 
 ## Muilti-machines Training Conformer Result
