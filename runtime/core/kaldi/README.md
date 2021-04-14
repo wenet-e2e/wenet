@@ -1,0 +1,17 @@
+We use Kaldi decoder to implement TLG based language model integration,
+so we copied related files to this directory.
+To minimize the change, we use the same directories tree as Kaldi.
+
+Add we replace Kaldi log system with glog in the following way.
+``` c++
+#define KALDI_WARN \
+  google::LogMessage(__FILE__, __LINE__, google::WARNING).stream()
+#define KALDI_ERR \
+  google::LogMessage(__FILE__, __LINE__, google::ERROR).stream()
+#define KALDI_INFO \
+  google::LogMessage(__FILE__, __LINE__, google::INFO).stream()
+#define KALDI_VLOG(v) VLOG(v)
+
+#define KALDI_ASSERT(condition) CHECK(condition)
+
+```
