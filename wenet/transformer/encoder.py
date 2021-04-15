@@ -143,8 +143,8 @@ class BaseEncoder(torch.nn.Module):
         masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, L)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
-        xs, pos_emb, masks = self.embed(xs, masks)
-        mask_pad = masks
+
+        xs, pos_emb, masks = self.embed(xs, xs_lens, masks)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               self.use_dynamic_left_chunk,
@@ -152,7 +152,7 @@ class BaseEncoder(torch.nn.Module):
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
         for layer in self.encoders:
-            xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+            xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb)
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
@@ -202,7 +202,7 @@ class BaseEncoder(torch.nn.Module):
         tmp_masks = tmp_masks.unsqueeze(1)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
-        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
+        xs, pos_emb, _ = self.embed(xs, xs, tmp_masks, offset)
         if subsampling_cache is not None:
             cache_size = subsampling_cache.size(1)
             xs = torch.cat((subsampling_cache, xs), dim=1)
