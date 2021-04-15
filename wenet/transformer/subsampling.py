@@ -18,6 +18,31 @@ class BaseSubsampling(torch.nn.Module):
         self.right_context = 0
         self.subsampling_rate = 1
 
+    def make_mask_by_length(self, xs: torch.Tensor,
+                            lens: torch.Tensor) -> torch.Tensor:
+        lens = lens.view(-1, 1)
+        lens = lens.long().to(xs.device)
+        bs, max_len = xs.size()[:2]
+
+        ranges = torch.arange(0, max_len).long().to(xs.device)
+        # print("ranges shape:", ranges.size())
+        ranges = ranges.unsqueeze(0).expand(bs, -1)
+        # print("ranges shape:", ranges.size())
+        lens_exp = lens.expand_as(ranges).to(xs.device)
+        # print("lens_exp shape:", lens_exp.size())
+        mask = ranges < lens_exp
+        return mask
+
+    def compute_conv_length(self,
+                            length: torch.Tensor,
+                            kernel_size: int = 3,
+                            stride: int = 2,
+                            dilation: int = 1,
+                            padding: int = 0) -> torch.Tensor:
+        length = torch.floor_divide((length + 2 * padding - dilation *
+                                     (kernel_size - 1) - 1), stride) + 1
+        return length
+
     def position_encoding(self, offset: int, size: int) -> torch.Tensor:
         return self.pos_enc.position_encoding(offset, size)
 
@@ -100,6 +125,7 @@ class Conv2dSubsampling4(BaseSubsampling):
             self,
             x: torch.Tensor,
             x_mask: torch.Tensor,
+            xlens: torch.Tensor,
             offset: int = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
@@ -121,7 +147,11 @@ class Conv2dSubsampling4(BaseSubsampling):
         b, c, t, f = x.size()
         x = self.out(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
-        return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-2:2]
+
+        xlens = self.compute_conv_length(xlens, kernel_size=3, stride=2)
+        xlens = self.compute_conv_length(xlens, kernel_size=3, stride=2)
+        x_mask = self.make_mask_by_length(x, xlens).unsqueeze(-2)
+        return x, pos_emb, x_mask  # x_mask[:, :, :-2:2][:, :, :-2:2]
 
 
 class Conv2dSubsampling6(BaseSubsampling):
@@ -153,6 +183,7 @@ class Conv2dSubsampling6(BaseSubsampling):
             self,
             x: torch.Tensor,
             x_mask: torch.Tensor,
+            xlens: torch.Tensor,
             offset: int = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
@@ -172,7 +203,10 @@ class Conv2dSubsampling6(BaseSubsampling):
         b, c, t, f = x.size()
         x = self.linear(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
-        return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-4:3]
+        xlens = self.compute_conv_length(xlens, kernel_size=3, stride=2)
+        xlens = self.compute_conv_length(xlens, kernel_size=5, stride=3)
+        x_mask = self.make_mask_by_length(x, xlens).unsqueeze(-2)
+        return x, pos_emb, x_mask  # x_mask[:, :, :-2:2][:, :, :-4:3]
 
 
 class Conv2dSubsampling8(BaseSubsampling):
@@ -206,7 +240,8 @@ class Conv2dSubsampling8(BaseSubsampling):
     def forward(
             self,
             x: torch.Tensor,
-            x_mask: torch.Tensor,
+            xlens: torch.Tensor,
+            xs_mask: torch.Tensor,
             offset: int = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
@@ -227,4 +262,8 @@ class Conv2dSubsampling8(BaseSubsampling):
         b, c, t, f = x.size()
         x = self.linear(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
-        return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-2:2][:, :, :-2:2]
+        xlens = self.compute_conv_length(xlens, kernel_size=3, stride=2)
+        xlens = self.compute_conv_length(xlens, kernel_size=3, stride=2)
+        xlens = self.compute_conv_length(xlens, kernel_size=3, stride=2)
+        x_mask = self.make_mask_by_length(x, xlens).unsqueeze(-2)
+        return x, pos_emb, x_mask  # x_mask[:, :, :-2:2][:, :, :-2:2][:, :, :-2:2]
