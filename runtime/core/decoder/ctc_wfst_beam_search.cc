@@ -41,10 +41,9 @@ int32 DecodableTensorScaled::NumIndices() const {
   return logp_.size(1);
 }
 
-CtcWfstBeamSearch::CtcWfstBeamSearch(
-    const fst::Fst<fst::StdArc>& fst,
-    const kaldi::LatticeFasterDecoderConfig& opts)
-    : decodable_(opts.acoustic_scale), decoder_(fst, opts) {
+CtcWfstBeamSearch::CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
+                                     const CtcWfstBeamSearchOptions& opts)
+    : decodable_(opts.acoustic_scale), decoder_(fst, opts), opts_(opts) {
   Reset();
 }
 
@@ -74,8 +73,10 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
   likelihood_.resize(1);
   inputs_[0].clear();
   outputs_[0].clear();
+  std::vector<int> alignment;
   kaldi::LatticeWeight weight;
-  fst::GetLinearSymbolSequence(lat, &inputs_[0], &outputs_[0], &weight);
+  fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
+  ConvertToInputs(alignment, &inputs_[0]);
   likelihood_[0] = weight.Value1();
 }
 
@@ -85,7 +86,7 @@ void CtcWfstBeamSearch::FinalizeSearch() {
   // Get N-best path by lattice
   kaldi::Lattice lat, nbest_lat;
   decoder_.GetRawLattice(&lat, true);
-  fst::ShortestPath(lat, &nbest_lat, 10);
+  fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
   std::vector<kaldi::Lattice> nbest_lats;
   fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
   int nbest = nbest_lats.size();
@@ -96,9 +97,21 @@ void CtcWfstBeamSearch::FinalizeSearch() {
     inputs_[i].clear();
     outputs_[i].clear();
     kaldi::LatticeWeight weight;
-    fst::GetLinearSymbolSequence(nbest_lats[i], &inputs_[i], &outputs_[i],
+    std::vector<int> alignment;
+    fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
                                  &weight);
+    ConvertToInputs(alignment, &inputs_[i]);
     likelihood_[i] = weight.Value1();
+  }
+}
+
+void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
+                                        std::vector<int>* input) {
+  input->clear();
+  for (size_t i = 0; i < alignment.size(); i++) {
+    if (alignment[i] - 1 > 0) {
+      input->push_back(alignment[i] - 1);
+    }
   }
 }
 

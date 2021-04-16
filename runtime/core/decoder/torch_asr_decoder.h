@@ -29,7 +29,7 @@ struct DecodeOptions {
   int num_left_chunks = -1;
   CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_prefix_search_opts;
-  kaldi::LatticeFasterDecoderConfig ctc_wfst_search_opts;
+  CtcWfstBeamSearchOptions ctc_wfst_search_opts;
 };
 
 struct WordPiece {
@@ -63,7 +63,8 @@ class TorchAsrDecoder {
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
                   std::shared_ptr<TorchAsrModel> model,
                   std::shared_ptr<fst::SymbolTable> symbol_table,
-                  const DecodeOptions& opts);
+                  const DecodeOptions& opts,
+                  std::shared_ptr<fst::StdVectorFst> fst = nullptr);
 
   DecodeState Decode();
   void Rescoring();
@@ -90,7 +91,7 @@ class TorchAsrDecoder {
   // Return true if we reach the end of the feature pipeline
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
-  void UpdateResult(const torch::Tensor& ctc_log_probs);
+  void UpdateResult();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
@@ -110,7 +111,7 @@ class TorchAsrDecoder {
   int num_frames_ = 0;
   int global_frame_offset_ = 0;
 
-  std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
+  std::unique_ptr<SearchInterface> searcher_;
   std::unique_ptr<CtcEndpoint> ctc_endpointer_;
 
   int num_frames_in_current_chunk_ = 0;

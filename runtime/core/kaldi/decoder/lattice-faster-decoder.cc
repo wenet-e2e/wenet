@@ -994,15 +994,21 @@ void LatticeFasterDecoderTpl<FST, Token>::TopSortTokens(
     (*topsorted_list)[iter->second] = iter->first;
 }
 
+
 // Instantiate the template for the combination of token types and FST types
 // that we'll need.
 template class LatticeFasterDecoderTpl<fst::Fst<fst::StdArc>, decoder::StdToken>;
-// template class LatticeFasterDecoderTpl<fst::VectorFst<fst::StdArc>, decoder::StdToken >;
-// template class LatticeFasterDecoderTpl<fst::ConstFst<fst::StdArc>, decoder::StdToken >;
-// 
-// template class LatticeFasterDecoderTpl<fst::Fst<fst::StdArc> , decoder::BackpointerToken>;
-// template class LatticeFasterDecoderTpl<fst::VectorFst<fst::StdArc>, decoder::BackpointerToken >;
-// template class LatticeFasterDecoderTpl<fst::ConstFst<fst::StdArc>, decoder::BackpointerToken >;
+template class LatticeFasterDecoderTpl<fst::VectorFst<fst::StdArc>, decoder::StdToken >;
+template class LatticeFasterDecoderTpl<fst::ConstFst<fst::StdArc>, decoder::StdToken >;
+
+//template class LatticeFasterDecoderTpl<fst::ConstGrammarFst, decoder::StdToken>;
+//template class LatticeFasterDecoderTpl<fst::VectorGrammarFst, decoder::StdToken>;
+
+template class LatticeFasterDecoderTpl<fst::Fst<fst::StdArc> , decoder::BackpointerToken>;
+template class LatticeFasterDecoderTpl<fst::VectorFst<fst::StdArc>, decoder::BackpointerToken >;
+template class LatticeFasterDecoderTpl<fst::ConstFst<fst::StdArc>, decoder::BackpointerToken >;
+//template class LatticeFasterDecoderTpl<fst::ConstGrammarFst, decoder::BackpointerToken>;
+//template class LatticeFasterDecoderTpl<fst::VectorGrammarFst, decoder::BackpointerToken>;
 
 
 } // end namespace kaldi.

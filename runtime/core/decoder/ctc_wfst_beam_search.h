@@ -38,10 +38,19 @@ class DecodableTensorScaled : public kaldi::DecodableInterface {
   torch::Tensor logp_;
 };
 
+// LatticeFasterDecoderConfig has the following key members
+// beam: decoding beam
+// max_active: Decoder max active states
+// lattice_beam: Lattice generation beam
+struct CtcWfstBeamSearchOptions : public kaldi::LatticeFasterDecoderConfig {
+  float acoustic_scale = 1.0;
+  float nbest = 10;
+};
+
 class CtcWfstBeamSearch : public SearchInterface {
  public:
   explicit CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
-                             const kaldi::LatticeFasterDecoderConfig& opts);
+                             const CtcWfstBeamSearchOptions& opts);
   void Search(const torch::Tensor& logp) override;
   void Reset() override;
   void FinalizeSearch() override;
@@ -56,11 +65,16 @@ class CtcWfstBeamSearch : public SearchInterface {
   const std::vector<std::vector<int>>& Times() const override { return times_; }
 
  private:
+  // Sub one and remove <blank>
+  void ConvertToInputs(const std::vector<int>& alignment,
+                       std::vector<int>* input);
+
   std::vector<std::vector<int>> inputs_, outputs_;
   std::vector<float> likelihood_;
   std::vector<std::vector<int>> times_;
   DecodableTensorScaled decodable_;
   kaldi::LatticeFasterOnlineDecoder decoder_;
+  const CtcWfstBeamSearchOptions& opts_;
 };
 
 }  // namespace wenet

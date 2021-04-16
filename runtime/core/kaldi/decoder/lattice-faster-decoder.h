@@ -56,9 +56,6 @@ struct LatticeFasterDecoderConfig {
   // example in the function DecodeUtteranceLatticeFaster.
   // fst::DeterminizeLatticePhonePrunedOptions det_opts;
  
-  // Added by WeNet, acoustic scale
-  BaseFloat acoustic_scale;
-
   LatticeFasterDecoderConfig(): beam(16.0),
                                 max_active(std::numeric_limits<int32>::max()),
                                 min_active(200),
@@ -67,8 +64,7 @@ struct LatticeFasterDecoderConfig {
                                 determinize_lattice(true),
                                 beam_delta(0.5),
                                 hash_ratio(2.0),
-                                prune_scale(0.1),
-                                acoustic_scale(1.0) { }
+                                prune_scale(0.1) {}
   // void Register(OptionsItf *opts) {
   //   det_opts.Register(opts);
   //   opts->Register("beam", &beam, "Decoding beam.  Larger->slower, more accurate.");
