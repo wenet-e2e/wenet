@@ -20,7 +20,8 @@ TorchAsrDecoder::TorchAsrDecoder(
       model_(std::move(model)),
       symbol_table_(symbol_table),
       opts_(opts),
-      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts)),
+      ctc_prefix_beam_searcher_(
+          new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts)),
       ctc_endpointer_(new CtcEndpoint(opts.ctc_endpoint_config)) {
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
 }

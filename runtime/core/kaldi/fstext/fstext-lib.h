@@ -24,7 +24,7 @@
 // #include "fstext/determinize-star.h"
 // #include "fstext/factor.h"
 // #include "fstext/fst-test-utils.h"
-// #include "fstext/fstext-utils.h"
+#include "fstext/fstext-utils.h"
 // #include "fstext/pre-determinize.h"
 // #include "fstext/table-matcher.h"
 // #include "fstext/trivial-factor-weight.h"

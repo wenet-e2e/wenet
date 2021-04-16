@@ -15,6 +15,7 @@
 
 #include "decoder/ctc_endpoint.h"
 #include "decoder/ctc_prefix_beam_search.h"
+#include "decoder/ctc_wfst_beam_search.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "utils/utils.h"
@@ -27,7 +28,8 @@ struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
   CtcEndpointConfig ctc_endpoint_config;
-  CtcPrefixBeamSearchOptions ctc_search_opts;
+  CtcPrefixBeamSearchOptions ctc_prefix_search_opts;
+  kaldi::LatticeFasterDecoderConfig ctc_wfst_search_opts;
 };
 
 struct WordPiece {
