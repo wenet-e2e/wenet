@@ -25,6 +25,7 @@ DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(dict_path, "", "dict path");
 DEFINE_string(result, "", "result output file");
+DEFINE_string(fst_path, "", "lm fst path");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
@@ -34,6 +35,10 @@ int main(int argc, char *argv[]) {
   model->Read(FLAGS_model_path, FLAGS_num_threads);
   auto symbol_table = std::shared_ptr<fst::SymbolTable>(
       fst::SymbolTable::ReadText(FLAGS_dict_path));
+  std::shared_ptr<fst::StdVectorFst> fst = nullptr;
+  if (!FLAGS_fst_path.empty()) {
+    fst.reset(fst::StdVectorFst::Read(FLAGS_fst_path));
+  }
   wenet::DecodeOptions decode_config;
   decode_config.chunk_size = FLAGS_chunk_size;
   decode_config.num_left_chunks = FLAGS_num_left_chunks;
@@ -79,7 +84,7 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
     wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
-                                   decode_config);
+                                   decode_config, fst);
 
     int wave_dur = wav_reader.num_sample() / sample_rate * 1000;
     int decode_time = 0;

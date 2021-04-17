@@ -194,28 +194,28 @@ bool LatticeFasterDecoderTpl<FST, Token>::GetRawLattice(
 // This function is now deprecated, since now we do determinization from outside
 // the LatticeFasterDecoder class.  Outputs an FST corresponding to the
 // lattice-determinized lattice (one path per word sequence).
-// template <typename FST, typename Token>
-// bool LatticeFasterDecoderTpl<FST, Token>::GetLattice(CompactLattice *ofst,
-//                                            bool use_final_probs) const {
-//   Lattice raw_fst;
-//   GetRawLattice(&raw_fst, use_final_probs);
-//   Invert(&raw_fst);  // make it so word labels are on the input.
-//   // (in phase where we get backward-costs).
-//   fst::ILabelCompare<LatticeArc> ilabel_comp;
-//   ArcSort(&raw_fst, ilabel_comp);  // sort on ilabel; makes
-//   // lattice-determinization more efficient.
-// 
-//   fst::DeterminizeLatticePrunedOptions lat_opts;
-//   lat_opts.max_mem = config_.det_opts.max_mem;
-// 
-//   DeterminizeLatticePruned(raw_fst, config_.lattice_beam, ofst, lat_opts);
-//   raw_fst.DeleteStates();  // Free memory-- raw_fst no longer needed.
-//   Connect(ofst);  // Remove unreachable states... there might be
-//   // a small number of these, in some cases.
-//   // Note: if something went wrong and the raw lattice was empty,
-//   // we should still get to this point in the code without warnings or failures.
-//   return (ofst->NumStates() != 0);
-// }
+template <typename FST, typename Token>
+bool LatticeFasterDecoderTpl<FST, Token>::GetLattice(CompactLattice *ofst,
+                                           bool use_final_probs) const {
+  Lattice raw_fst;
+  GetRawLattice(&raw_fst, use_final_probs);
+  Invert(&raw_fst);  // make it so word labels are on the input.
+  // (in phase where we get backward-costs).
+  fst::ILabelCompare<LatticeArc> ilabel_comp;
+  ArcSort(&raw_fst, ilabel_comp);  // sort on ilabel; makes
+  // lattice-determinization more efficient.
+
+  fst::DeterminizeLatticePrunedOptions lat_opts;
+  lat_opts.max_mem = config_.det_opts.max_mem;
+
+  DeterminizeLatticePruned(raw_fst, config_.lattice_beam, ofst, lat_opts);
+  raw_fst.DeleteStates();  // Free memory-- raw_fst no longer needed.
+  Connect(ofst);  // Remove unreachable states... there might be
+  // a small number of these, in some cases.
+  // Note: if something went wrong and the raw lattice was empty,
+  // we should still get to this point in the code without warnings or failures.
+  return (ofst->NumStates() != 0);
+}
 
 template <typename FST, typename Token>
 void LatticeFasterDecoderTpl<FST, Token>::PossiblyResizeHash(size_t num_toks) {

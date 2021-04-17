@@ -29,8 +29,8 @@
 // #include "fstext/table-matcher.h"
 // #include "fstext/trivial-factor-weight.h"
 #include "fstext/lattice-weight.h"
-// #include "fstext/lattice-utils.h"
-// #include "fstext/determinize-lattice.h"
+#include "fstext/lattice-utils.h"
+#include "fstext/determinize-lattice.h"
 // #include "fstext/deterministic-fst.h"
 // #include "fstext/kaldi-fst-io.h"
 #endif

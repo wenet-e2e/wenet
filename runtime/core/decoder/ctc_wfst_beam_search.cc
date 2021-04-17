@@ -83,9 +83,12 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
 void CtcWfstBeamSearch::FinalizeSearch() {
   decodable_.SetFinish();
   decoder_.FinalizeDecoding();
-  // Get N-best path by lattice
+  // Get N-best path by lattice(CompactLattice)
+  kaldi::CompactLattice clat;
+  decoder_.GetLattice(&clat, true);
   kaldi::Lattice lat, nbest_lat;
-  decoder_.GetRawLattice(&lat, true);
+  fst::ConvertLattice(clat, &lat);
+  // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
   fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
   std::vector<kaldi::Lattice> nbest_lats;
   fst::ConvertNbestToVector(nbest_lat, &nbest_lats);

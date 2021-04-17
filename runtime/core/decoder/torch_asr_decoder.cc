@@ -227,6 +227,7 @@ void TorchAsrDecoder::UpdateResult() {
       path.sentence += word;
     }
     path.sentence = ProcessBlank(path.sentence);
+    LOG(INFO) << i << " " << path.sentence;
     result_.emplace_back(path);
   }
 

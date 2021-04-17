@@ -32,7 +32,7 @@ namespace kaldi {
   google::LogMessage(__FILE__, __LINE__, google::WARNING).stream()
 #define KALDI_ERR \
   google::LogMessage(__FILE__, __LINE__, google::ERROR).stream()
-#define KALDI_INFO \
+#define KALDI_LOG \
   google::LogMessage(__FILE__, __LINE__, google::INFO).stream()
 #define KALDI_VLOG(v) VLOG(v)
 

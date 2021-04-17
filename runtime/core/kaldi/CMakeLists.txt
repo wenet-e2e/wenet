@@ -6,6 +6,8 @@ add_library(kaldi
 base/kaldi-math.cc
 decoder/lattice-faster-decoder.cc
 decoder/lattice-faster-online-decoder.cc
+lat/determinize-lattice-pruned.cc
+lat/lattice-functions.cc
 )
 
 target_link_libraries(kaldi PUBLIC utils)
