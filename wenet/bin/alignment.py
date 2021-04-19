@@ -58,12 +58,11 @@ def get_frames_timestamp(alignment):
     start = 0
     end = 0
     while end < len(alignment):
-        if end == len(
-                alignment) - 1 and alignment[start] == alignment[end] == 0:
-            timestamp[-1] += alignment[start:]
-            break
         while end < len(alignment) and alignment[end] == 0:
             end += 1
+        if end == len(alignment):
+            timestamp[-1] += alignment[start:]
+            break
         end += 1
         while end < len(alignment) and alignment[end - 1] == alignment[end]:
             end += 1
