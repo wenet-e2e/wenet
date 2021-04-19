@@ -124,6 +124,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     }
 
     // 2. Encoder chunk forward
+    auto forward_start = std::chrono::steady_clock::now();
     int requried_cache_size = opts_.chunk_size * opts_.num_left_chunks;
     torch::NoGradGuard no_grad;
     std::vector<torch::jit::IValue> inputs = {feats,
@@ -148,7 +149,17 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
                                       ->run_method("ctc_activation", chunk_out)
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
+    auto search_start = std::chrono::steady_clock::now();
     searcher_->Search(ctc_log_probs);
+    auto search_end = std::chrono::steady_clock::now();
+    VLOG(3) << "forward takes "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   search_start - forward_start)
+                   .count()
+            << " search takes "
+            << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   search_end - search_start)
+                   .count();
     UpdateResult();
 
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {

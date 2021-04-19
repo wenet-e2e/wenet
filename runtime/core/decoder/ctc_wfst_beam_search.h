@@ -36,6 +36,7 @@ class DecodableTensorScaled : public kaldi::DecodableInterface {
   float scale_ = 1.0;
   bool done_ = false;
   torch::Tensor logp_;
+  std::unique_ptr<torch::TensorAccessor<float, 2>> accessor_ = nullptr;
 };
 
 // LatticeFasterDecoderConfig has the following key members

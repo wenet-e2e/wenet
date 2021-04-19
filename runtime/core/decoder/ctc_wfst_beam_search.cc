@@ -20,15 +20,17 @@ void DecodableTensorScaled::AcceptPosterior(const torch::Tensor& logp) {
   num_frames_ready_ += logp.size(0);
   // TODO(Binbin Zhang): Avoid copy here
   logp_ = logp;
+  accessor_.reset(new torch::TensorAccessor<float, 2>(
+      logp_.data_ptr<float>(), logp_.sizes().data(), logp_.strides().data()));
 }
 
 float DecodableTensorScaled::LogLikelihood(int32 frame, int32 index) {
+  CHECK(accessor_ != nullptr);
   CHECK_GT(index, 0);
   CHECK_LE(index, logp_.size(1));
   CHECK_GE(frame, offset_);
   CHECK_LT(frame, num_frames_ready_);
-  CHECK_EQ(logp_.dim(), 2);
-  return scale_ * logp_[frame - offset_][index - 1].item<float>();
+  return scale_ * (*accessor_)[frame - offset_][index - 1];
 }
 
 bool DecodableTensorScaled::IsLastFrame(int32 frame) const {
@@ -78,6 +80,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
   fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
   ConvertToInputs(alignment, &inputs_[0]);
   likelihood_[0] = weight.Value1();
+  LOG(INFO) << weight.Value1() << " " << weight.Value2();
 }
 
 void CtcWfstBeamSearch::FinalizeSearch() {
