@@ -218,6 +218,10 @@ void TorchAsrDecoder::AttentionRescoring() {
   int eos = model_->eos();
   searcher_->FinalizeSearch();
   UpdateResult();
+  // Optional do rescoring
+  if (0.0 == opts_.rescoring_weight) {
+    return;
+  }
   // Inputs() returns N-best input id, which is the basic unit for rescoring
   // for CtcPrefixBeamSearch, inputs is the same to outputs
   const auto& hypotheses = searcher_->Inputs();
@@ -262,8 +266,8 @@ void TorchAsrDecoder::AttentionRescoring() {
       score += probs[i][j][hyp[j]].item<float>();
     }
     score += probs[i][hyp.size()][eos].item<float>();
-    // TODO(Binbin Zhang): Combine CTC and attention decoder score
-    result_[i].score = score;
+    result_[i].score = opts_.rescoring_weight * score +
+                       opts_.ctc_weight * result_[i].score;
   }
   std::sort(result_.begin(), result_.end(), DecodeResult::CompareFunc);
 }

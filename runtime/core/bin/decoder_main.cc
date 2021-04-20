@@ -25,10 +25,14 @@ DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(dict_path, "", "dict path");
 DEFINE_string(result, "", "result output file");
-DEFINE_string(fst_path, "", "lm fst path");
+DEFINE_string(fst_path, "", "TLG fst path");
 DEFINE_int32(max_active, 7000, "max active states in ctc wfst search");
 DEFINE_double(beam, 16.0, "beam in ctc wfst search");
 DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
+DEFINE_double(ctc_weight, 0.0,
+              "ctc weight when combing ctc score and rescoring score");
+DEFINE_double(rescoring_weight, 1.0,
+              "rescoring weight when combing ctc score and rescoring score");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
@@ -45,6 +49,8 @@ int main(int argc, char *argv[]) {
   wenet::DecodeOptions decode_config;
   decode_config.chunk_size = FLAGS_chunk_size;
   decode_config.num_left_chunks = FLAGS_num_left_chunks;
+  decode_config.ctc_weight = FLAGS_ctc_weight;
+  decode_config.rescoring_weight = FLAGS_rescoring_weight;
   decode_config.ctc_wfst_search_opts.max_active = FLAGS_max_active;
   decode_config.ctc_wfst_search_opts.beam = FLAGS_beam;
   decode_config.ctc_wfst_search_opts.lattice_beam = FLAGS_lattice_beam;
