@@ -186,42 +186,8 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   return state;
 }
 
-// void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
-//   searcher_->Search(ctc_log_probs);
-//   const auto& hypotheses = searcher_->hypotheses();
-//   const auto& likelihood = searcher_->likelihood();
-//   const auto& times = searcher_->times();
-//   result_.clear();
-//
-//   CHECK_EQ(hypotheses.size(), likelihood.size());
-//   CHECK_EQ(hypotheses.size(), times.size());
-//   for (size_t i = 0; i < hypotheses.size(); i++) {
-//     const std::vector<int>& hypothesis = hypotheses[i];
-//     const std::vector<int>& time_stamp = times[i];
-//     CHECK_EQ(hypothesis.size(), time_stamp.size());
-//
-//     DecodeResult path;
-//     path.score = likelihood[i];
-//     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
-//     for (size_t j = 0; j < hypothesis.size(); j++) {
-//       std::string word = symbol_table_->Find(hypothesis[j]);
-//       path.sentence += word;
-//       int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
-//       int end = time_stamp[j] * frame_shift_in_ms();
-//       WordPiece word_piece(word, offset + start, offset + end);
-//       path.word_pieces.emplace_back(word_piece);
-//       start = word_piece.end;
-//     }
-//     path.sentence = ProcessBlank(path.sentence);
-//     result_.emplace_back(path);
-//   }
-//
-//   if (DecodedSomething()) {
-//     VLOG(1) << "Partial CTC result " << result_[0].sentence;
-//   }
-// }
-
 void TorchAsrDecoder::UpdateResult() {
+  // TODO(Binbin Zhang): Add timestep back
   const auto& hypotheses = searcher_->Outputs();
   const auto& likelihood = searcher_->Likelihood();
   result_.clear();
@@ -238,7 +204,7 @@ void TorchAsrDecoder::UpdateResult() {
       path.sentence += word;
     }
     path.sentence = ProcessBlank(path.sentence);
-    LOG(INFO) << i << " " << path.sentence;
+    VLOG(3) << i << " " << path.sentence << " " << path.score;
     result_.emplace_back(path);
   }
 

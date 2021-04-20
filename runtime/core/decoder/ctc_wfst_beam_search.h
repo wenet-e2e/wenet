@@ -27,7 +27,7 @@ class DecodableTensorScaled : public kaldi::DecodableInterface {
   bool IsLastFrame(int32 frame) const override;
   float LogLikelihood(int32 frame, int32 index) override;
   int32 NumIndices() const override;
-  void AcceptPosterior(const torch::Tensor& logp);
+  void AcceptLoglikes(const torch::Tensor& logp);
   void SetFinish() { done_ = true; }
 
  private:

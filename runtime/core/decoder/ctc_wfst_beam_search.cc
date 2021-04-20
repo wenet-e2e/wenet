@@ -10,11 +10,11 @@ void DecodableTensorScaled::Reset() {
   num_frames_ready_ = 0;
   done_ = false;
   // Give an empty initialization, will throw error when
-  // AcceptPosterior is not called
+  // AcceptLoglikes is not called
   logp_ = torch::zeros({1});
 }
 
-void DecodableTensorScaled::AcceptPosterior(const torch::Tensor& logp) {
+void DecodableTensorScaled::AcceptLoglikes(const torch::Tensor& logp) {
   CHECK_EQ(logp.dim(), 2);
   offset_ = num_frames_ready_;
   num_frames_ready_ += logp.size(0);
@@ -65,7 +65,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
     return;
   }
   // Every time we get the log posterior, we decode it all before return
-  decodable_.AcceptPosterior(logp);
+  decodable_.AcceptLoglikes(logp);
   decoder_.AdvanceDecoding(&decodable_, logp.size(0));
   // Get the best path
   kaldi::Lattice lat;
@@ -79,8 +79,8 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
   kaldi::LatticeWeight weight;
   fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
   ConvertToInputs(alignment, &inputs_[0]);
-  likelihood_[0] = weight.Value1();
-  LOG(INFO) << weight.Value1() << " " << weight.Value2();
+  VLOG(3) << weight.Value1() << " " << weight.Value2();
+  likelihood_[0] = -weight.Value2();
 }
 
 void CtcWfstBeamSearch::FinalizeSearch() {
@@ -107,7 +107,7 @@ void CtcWfstBeamSearch::FinalizeSearch() {
     fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
                                  &weight);
     ConvertToInputs(alignment, &inputs_[i]);
-    likelihood_[i] = weight.Value1();
+    likelihood_[i] = -weight.Value2();
   }
 }
 
