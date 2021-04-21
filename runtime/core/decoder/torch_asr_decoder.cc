@@ -204,6 +204,30 @@ void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
   }
 }
 
+float TorchAsrDecoder::LeftToRightScore(const torch::Tensor& probs,
+                                        const std::vector<int>& hyp,
+					const size_t& num,
+                                        const int& eos) {
+    float score = 0.0f;
+    for (size_t j = 0; j < hyp.size(); ++j) {
+      score += probs[num][j][hyp[j]].item<float>();
+    }
+    score += probs[num][hyp.size()][eos].item<float>();
+    return score;
+}
+
+float TorchAsrDecoder::RightToLeftScore(const torch::Tensor& probs,
+                                        const std::vector<int>& hyp,
+					const size_t& num,
+                                        const int& eos) {
+    float score = 0.0f;
+    for (size_t j = 0; j < hyp.size(); ++j) {
+      score += probs[num][hyp.size() - j - 1][hyp[j]].item<float>();
+    }
+    score += probs[num][hyp.size()][eos].item<float>();
+    return score;
+}
+
 void TorchAsrDecoder::AttentionRescoring() {
   int sos = model_->sos();
   int eos = model_->eos();
@@ -231,24 +255,59 @@ void TorchAsrDecoder::AttentionRescoring() {
       hyps_tensor[i][j + 1] = hyp[j];
     }
   }
-
+  // Optional: Prepare inputs for right to left decoder
+  torch::Tensor r_hyps_tensor = torch::zeros({num_hyps, max_hyps_len},
+                                    torch::kLong);
+  if (opts_.reverse_weight > 0) {
+      // Check if model has a right to left decoder
+      CHECK(model_->is_bidirectional_decoder());
+      r_hyps_tensor =
+          torch::zeros({num_hyps, max_hyps_len}, torch::kLong);
+      for (size_t i = 0; i < num_hyps; ++i) {
+        const std::vector<int>& hyp = hypotheses[i];
+        r_hyps_tensor[i][max_hyps_len - 1] = eos;
+        size_t len = hyp.size();
+        for (int j = len - 1; j >= 0; j--) {
+          r_hyps_tensor[i][max_hyps_len  - len + j - 1] = hyp[j];
+        }
+      }
+  }
   // Step 2: forward attention decoder by hyps and corresponding encoder_outs_
   torch::Tensor encoder_out = torch::cat(encoder_outs_, 1);
-  torch::Tensor probs = model_->torch_model()
+  auto outputs = model_->torch_model()
                             ->run_method("forward_attention_decoder",
-                                         hyps_tensor, hyps_length, encoder_out)
-                            .toTensor();
+                                         hyps_tensor, hyps_length,
+                                         encoder_out, r_hyps_tensor, opts_.reverse_weight)
+                                         .toTuple()->elements();
+  auto probs = outputs[0].toTensor();
+  auto r_probs = outputs[1].toTensor();
   CHECK_EQ(probs.size(0), num_hyps);
   CHECK_EQ(probs.size(1), max_hyps_len);
-
+  if (opts_.reverse_weight > 0) {
+      CHECK_EQ(r_probs.size(0), num_hyps);
+      CHECK_EQ(r_probs.size(1), max_hyps_len);
+  }
   // Step 3: Compute rescoring score
   for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
-    float score = 0.0f;
-    for (size_t j = 0; j < hyp.size(); ++j) {
-      score += probs[i][j][hyp[j]].item<float>();
+    std::string sentence = "";
+    for (size_t j = 0; j < hyp.size(); j++) {
+        std::string word = symbol_table_->Find(hyp[j]);
+        sentence += word;
     }
-    score += probs[i][hyp.size()][eos].item<float>();
+    float score = 0.0f;
+    score = LeftToRightScore(probs, hyp, i, eos);
+    VLOG(1) << "this sentence is " << sentence << "and l_score is " << score;
+    // Optional: Used for right to left score
+    float r_score = 0.0f;
+    if (opts_.reverse_weight > 0) {
+        // Right to left score
+        r_score = RightToLeftScore(r_probs, hyp, i, eos);
+        VLOG(1) << "this sentence is " << sentence
+                << "and r_score is " << r_score;
+    }
+    score = (score * (1 - opts_.reverse_weight))
+                + (r_score * opts_.reverse_weight);
     // TODO(Binbin Zhang): Combine CTC and attention decoder score
     result_[i].score = score;
   }

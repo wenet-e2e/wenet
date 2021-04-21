@@ -26,6 +26,7 @@ using TorchModule = torch::jit::script::Module;
 struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
+  float reverse_weight = 0.0;
   CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_search_opts;
 };
@@ -89,6 +90,14 @@ class TorchAsrDecoder {
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
   void UpdateResult(const torch::Tensor& ctc_log_probs);
+  float LeftToRightScore(const torch::Tensor& probs,
+                         const std::vector<int>& hyp,
+                         const size_t& num,
+                         const int& eos);
+  float RightToLeftScore(const torch::Tensor& probs,
+                         const std::vector<int>& hyp,
+                         const size_t& num,
+                         const int& eos);
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;

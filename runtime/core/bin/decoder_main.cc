@@ -25,6 +25,7 @@ DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(dict_path, "", "dict path");
 DEFINE_string(result, "", "result output file");
+DEFINE_double(reverse_weight, 0.0, "right to left decoder score weight");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
@@ -37,6 +38,7 @@ int main(int argc, char *argv[]) {
   wenet::DecodeOptions decode_config;
   decode_config.chunk_size = FLAGS_chunk_size;
   decode_config.num_left_chunks = FLAGS_num_left_chunks;
+  decode_config.reverse_weight = FLAGS_reverse_weight;
   wenet::FeaturePipelineConfig feature_config;
   feature_config.num_bins = FLAGS_num_bins;
   const int sample_rate = 16000;
