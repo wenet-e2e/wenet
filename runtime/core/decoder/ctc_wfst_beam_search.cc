@@ -103,13 +103,22 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
 void CtcWfstBeamSearch::FinalizeSearch() {
   decodable_.SetFinish();
   decoder_.FinalizeDecoding();
-  // Get N-best path by lattice(CompactLattice)
-  kaldi::CompactLattice clat;
-  decoder_.GetLattice(&clat, true);
-  kaldi::Lattice lat, nbest_lat;
-  fst::ConvertLattice(clat, &lat);
-  // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
-  fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
+  kaldi::Lattice raw_lat, det_lat, nbest_lat;
+  // 1. Get raw lattice
+  decoder_.GetRawLattice(&raw_lat, true);
+  // 2. Determine lattice
+  fst::ILabelCompare<kaldi::LatticeArc> ilabel_comp;
+  // sort on ilabel; makes lattice-determinization more efficient.
+  fst::ArcSort(&raw_lat, ilabel_comp);
+  fst::DeterminizeLatticePrunedOptions lat_opts;
+  lat_opts.max_mem = opts_.det_opts.max_mem;
+  fst::DeterminizeLatticePruned(raw_lat, opts_.lattice_beam, &det_lat,
+                                lat_opts);
+  raw_lat.DeleteStates();  // Free memory-- raw_fst no longer needed.
+  fst::Connect(&det_lat);
+  // 3. Get N-best
+  fst::ShortestPath(det_lat, &nbest_lat, opts_.nbest);
+  det_lat.DeleteStates();
   std::vector<kaldi::Lattice> nbest_lats;
   fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
   int nbest = nbest_lats.size();
