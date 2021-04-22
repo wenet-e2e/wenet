@@ -6,7 +6,6 @@
 namespace wenet {
 
 void DecodableTensorScaled::Reset() {
-  offset_ = 0;
   num_frames_ready_ = 0;
   done_ = false;
   // Give an empty initialization, will throw error when
@@ -15,22 +14,20 @@ void DecodableTensorScaled::Reset() {
 }
 
 void DecodableTensorScaled::AcceptLoglikes(const torch::Tensor& logp) {
-  CHECK_EQ(logp.dim(), 2);
-  offset_ = num_frames_ready_;
-  num_frames_ready_ += logp.size(0);
+  CHECK_EQ(logp.dim(), 1);
+  ++num_frames_ready_;
   // TODO(Binbin Zhang): Avoid copy here
   logp_ = logp;
-  accessor_.reset(new torch::TensorAccessor<float, 2>(
+  accessor_.reset(new torch::TensorAccessor<float, 1>(
       logp_.data_ptr<float>(), logp_.sizes().data(), logp_.strides().data()));
 }
 
 float DecodableTensorScaled::LogLikelihood(int32 frame, int32 index) {
   CHECK(accessor_ != nullptr);
   CHECK_GT(index, 0);
-  CHECK_LE(index, logp_.size(1));
-  CHECK_GE(frame, offset_);
+  CHECK_LE(index, logp_.size(0));
   CHECK_LT(frame, num_frames_ready_);
-  return scale_ * (*accessor_)[frame - offset_][index - 1];
+  return scale_ * (*accessor_)[index - 1];
 }
 
 bool DecodableTensorScaled::IsLastFrame(int32 frame) const {
@@ -39,8 +36,8 @@ bool DecodableTensorScaled::IsLastFrame(int32 frame) const {
 }
 
 int32 DecodableTensorScaled::NumIndices() const {
-  CHECK_GT(logp_.size(0), 0);
-  return logp_.size(1);
+  LOG(FATAL) << "Not implement";
+  return 0;
 }
 
 CtcWfstBeamSearch::CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
@@ -50,6 +47,9 @@ CtcWfstBeamSearch::CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
 }
 
 void CtcWfstBeamSearch::Reset() {
+  num_frames_ = 0;
+  decoded_frames_mapping_.clear();
+  is_last_frame_blank_ = false;
   inputs_.clear();
   outputs_.clear();
   likelihood_.clear();
@@ -65,8 +65,25 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
     return;
   }
   // Every time we get the log posterior, we decode it all before return
-  decodable_.AcceptLoglikes(logp);
-  decoder_.AdvanceDecoding(&decodable_, logp.size(0));
+  auto accessor = logp.accessor<float, 2>();
+  for (int i = 0; i < logp.size(0); i++) {
+    float blank_score = std::exp(accessor[i][0]);
+    if (blank_score > opts_.blank_skip_thresh) {
+      VLOG(3) << "skipping frame " << num_frames_ << " score " << blank_score;
+      is_last_frame_blank_ = true;
+      last_frame_prob_ = logp[i];
+    } else {
+      if (is_last_frame_blank_) {
+        decodable_.AcceptLoglikes(last_frame_prob_);
+        decoder_.AdvanceDecoding(&decodable_, 1);
+      }
+      decodable_.AcceptLoglikes(logp[i]);
+      decoder_.AdvanceDecoding(&decodable_, 1);
+      decoded_frames_mapping_.push_back(num_frames_);
+      is_last_frame_blank_ = false;
+    }
+    num_frames_++;
+  }
   // Get the best path
   kaldi::Lattice lat;
   decoder_.GetBestPath(&lat, false);

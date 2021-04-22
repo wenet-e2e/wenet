@@ -31,12 +31,11 @@ class DecodableTensorScaled : public kaldi::DecodableInterface {
   void SetFinish() { done_ = true; }
 
  private:
-  int offset_ = 0;
   int num_frames_ready_ = 0;
   float scale_ = 1.0;
   bool done_ = false;
   torch::Tensor logp_;
-  std::unique_ptr<torch::TensorAccessor<float, 2>> accessor_ = nullptr;
+  std::unique_ptr<torch::TensorAccessor<float, 1>> accessor_ = nullptr;
 };
 
 // LatticeFasterDecoderConfig has the following key members
@@ -46,6 +45,9 @@ class DecodableTensorScaled : public kaldi::DecodableInterface {
 struct CtcWfstBeamSearchOptions : public kaldi::LatticeFasterDecoderConfig {
   float acoustic_scale = 1.0;
   float nbest = 10;
+  // When blank score is greater than this thresh, skip the frame in viterbi
+  // search
+  float blank_skip_thresh = 0.98;
 };
 
 class CtcWfstBeamSearch : public SearchInterface {
@@ -70,6 +72,11 @@ class CtcWfstBeamSearch : public SearchInterface {
   void ConvertToInputs(const std::vector<int>& alignment,
                        std::vector<int>* input);
 
+  int num_frames_ = 0;
+  std::vector<int> decoded_frames_mapping_;
+
+  torch::Tensor last_frame_prob_;
+  bool is_last_frame_blank_ = false;
   std::vector<std::vector<int>> inputs_, outputs_;
   std::vector<float> likelihood_;
   std::vector<std::vector<int>> times_;

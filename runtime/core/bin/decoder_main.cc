@@ -33,6 +33,9 @@ DEFINE_double(ctc_weight, 0.0,
               "ctc weight when combing ctc score and rescoring score");
 DEFINE_double(rescoring_weight, 1.0,
               "rescoring weight when combing ctc score and rescoring score");
+DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
+DEFINE_double(blank_skip_thresh, 1.0,
+              "blank skip thresh for ctc wfst search, 1.0 means no skip");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
@@ -54,6 +57,9 @@ int main(int argc, char *argv[]) {
   decode_config.ctc_wfst_search_opts.max_active = FLAGS_max_active;
   decode_config.ctc_wfst_search_opts.beam = FLAGS_beam;
   decode_config.ctc_wfst_search_opts.lattice_beam = FLAGS_lattice_beam;
+  decode_config.ctc_wfst_search_opts.acoustic_scale = FLAGS_acoustic_scale;
+  decode_config.ctc_wfst_search_opts.blank_skip_thresh =
+      FLAGS_blank_skip_thresh;
   wenet::FeaturePipelineConfig feature_config;
   feature_config.num_bins = FLAGS_num_bins;
   const int sample_rate = 16000;
@@ -81,7 +87,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_result.empty()) {
     result.open(FLAGS_result, std::ios::out);
   }
-  std::ostream& buffer = FLAGS_result.empty() ? std::cout : result;
+  std::ostream &buffer = FLAGS_result.empty() ? std::cout : result;
 
   int total_waves_dur = 0;
   int total_decode_time = 0;
