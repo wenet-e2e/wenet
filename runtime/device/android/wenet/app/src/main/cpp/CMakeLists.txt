@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 include(ExternalProject)
 
 include_directories(${CMAKE_SOURCE_DIR})
+set(CMAKE_VERBOSE_MAKEFILE on)
 
 # Pytorch
 set(build_DIR ${CMAKE_SOURCE_DIR}/../../../build)
@@ -35,13 +36,12 @@ set(ANDROID_CMAKE_ARGS
   -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
   -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
   -DBUILD_TESTING=OFF
-  -DBUILD_SHARED_LIBS=ON
 )
 
 # third party: gflags
 set(GFLAGS_SRC_DIR ${build_DIR}/gflags-src)
 set(GFLAGS_BUILD_DIR ${CMAKE_BINARY_DIR}/gflags-build)
-set(GFLAGS_LIB_PATH ${GFLAGS_BUILD_DIR}/lib/libgflags.so)
+set(GFLAGS_LIB_PATH ${GFLAGS_BUILD_DIR}/lib/libgflags_nothreads.a)
 ExternalProject_Add(gflags
   URL              https://github.com/gflags/gflags/archive/v2.2.0.zip
   URL_HASH         SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
@@ -53,26 +53,53 @@ ExternalProject_Add(gflags
 )
 include_directories(${GFLAGS_BUILD_DIR}/include)
 
+# third_party: openfst
+# openfst is compiled with gflags to avoid log and flag conflicts with flags in wenet/libtorch
+set(openfst_SRC_DIR ${build_DIR}/openfst-src)
+set(openfst_BUILD_DIR ${CMAKE_BINARY_DIR}/openfst-build)
+ExternalProject_Add(openfst
+  URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
+  URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
+  SOURCE_DIR        ${openfst_SRC_DIR}
+  BINARY_DIR        ${openfst_BUILD_DIR}
+  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --disable-bin --host=${CMAKE_LIBRARY_ARCHITECTURE}
+                        "CXX=${ANDROID_CXX_COMPILER} -target ${CMAKE_LIBRARY_ARCHITECTURE}${ANDROID_NATIVE_API_LEVEL}"
+                        "CPPFLAGS=-fPIC -I${CMAKE_SOURCE_DIR} -I${GFLAGS_BUILD_DIR}/include"
+                        "LIBS=${GFLAGS_LIB_PATH} -ldl"
+  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
+  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.h ${openfst_SRC_DIR}/src/include/fst
+  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib
+  BUILD_COMMAND     make -j 4
+  INSTALL_COMMAND   ""
+)
+include_directories(${openfst_SRC_DIR}/src/include)
+link_directories(${openfst_BUILD_DIR}/src/lib/.libs)
+add_dependencies(openfst gflags)
+
+link_libraries(${GFLAGS_LIB_PATH} log fst)
+
 # utils
 add_library(utils STATIC utils/utils.cc)
+add_dependencies(utils openfst)
 
 # frontend
 add_library(frontend STATIC
-    frontend/feature_pipeline.cc
-    frontend/fft.cc)
-target_link_libraries(frontend PUBLIC log)
+  frontend/feature_pipeline.cc
+  frontend/fft.cc
+)
+target_link_libraries(frontend PUBLIC utils)
 
 # decoder
 add_library(decoder STATIC
-    utils/utils.cc
-    decoder/ctc_prefix_beam_search.cc
-    decoder/torch_asr_decoder.cc
-    decoder/torch_asr_model.cc)
-target_link_libraries(decoder PUBLIC log ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY})
-link_libraries(frontend decoder android)
+  decoder/ctc_endpoint.cc
+  decoder/ctc_prefix_beam_search.cc
+  decoder/torch_asr_decoder.cc
+  decoder/torch_asr_model.cc
+)
+target_link_libraries(decoder PUBLIC utils ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY})
 
+link_libraries(utils frontend decoder android)
 add_library(${TARGET} SHARED wenet.cc)
 
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main ${GFLAGS_LIB_PATH} utils libc++_shared.so)
-add_dependencies(decoder_main gflags)
+target_link_libraries(decoder_main PUBLIC libc++_shared.so)

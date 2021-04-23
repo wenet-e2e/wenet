@@ -60,7 +60,7 @@ ExternalProject_Add(openfst
   PREFIX            ${openfst_PREFIX_DIR}
   SOURCE_DIR        ${openfst_SRC_DIR}
   BINARY_DIR        ${openfst_BUILD_DIR}
-  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_PREFIX_DIR}
+  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_PREFIX_DIR} --disable-bin
                       "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
                       "LIBS=${OPENFST_EXTRA_LIBS}"
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
