@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(wenet VERSION 0.1)
 
-include_directories(${CMAKE_SOURCE_DIR})
+include_directories(
+${CMAKE_SOURCE_DIR}
+${CMAKE_SOURCE_DIR}/kaldi  # for not changing c++ header names in kaldi source dir
+)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 include(FetchContent)
@@ -116,6 +119,9 @@ add_library(frontend STATIC
   frontend/fft.cc
 )
 target_link_libraries(frontend PUBLIC utils)
+
+# kaldi: wfst based decoder
+add_subdirectory(kaldi)
 
 # decoder
 add_library(decoder STATIC
