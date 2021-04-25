@@ -278,7 +278,8 @@ void TorchAsrDecoder::AttentionRescoring() {
     }
     score += probs[i][hyp.size()][eos].item<float>();
     // TODO(Binbin Zhang): Combine CTC and attention decoder score
-    result_[i].score = score;
+    result_[i].score = opts_.rescoring_weight * score +
+                       opts_.ctc_weight * result_[i].score;
   }
   std::sort(result_.begin(), result_.end(), DecodeResult::CompareFunc);
 }
