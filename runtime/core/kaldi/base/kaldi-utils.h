@@ -89,32 +89,32 @@ inline int MachineIsLittleEndian() {
 // to sleep for a possibly fractional
 // number of seconds.  On Windows it's only accurate to microseconds.
 void Sleep(float seconds);
-}
+}  // namespace kaldi
 
 #define KALDI_SWAP8(a) do { \
   int t = (reinterpret_cast<char*>(&a))[0];\
           (reinterpret_cast<char*>(&a))[0]=(reinterpret_cast<char*>(&a))[7];\
-          (reinterpret_cast<char*>(&a))[7]=t;\
+          (reinterpret_cast<char*>(&a))[7] = t;\
       t = (reinterpret_cast<char*>(&a))[1];\
           (reinterpret_cast<char*>(&a))[1]=(reinterpret_cast<char*>(&a))[6];\
-          (reinterpret_cast<char*>(&a))[6]=t;\
+          (reinterpret_cast<char*>(&a))[6] = t;\
       t = (reinterpret_cast<char*>(&a))[2];\
           (reinterpret_cast<char*>(&a))[2]=(reinterpret_cast<char*>(&a))[5];\
-          (reinterpret_cast<char*>(&a))[5]=t;\
+          (reinterpret_cast<char*>(&a))[5] = t;\
       t = (reinterpret_cast<char*>(&a))[3];\
           (reinterpret_cast<char*>(&a))[3]=(reinterpret_cast<char*>(&a))[4];\
-          (reinterpret_cast<char*>(&a))[4]=t;} while (0)
+          (reinterpret_cast<char*>(&a))[4] = t;} while (0)
 #define KALDI_SWAP4(a) do { \
   int t = (reinterpret_cast<char*>(&a))[0];\
           (reinterpret_cast<char*>(&a))[0]=(reinterpret_cast<char*>(&a))[3];\
-          (reinterpret_cast<char*>(&a))[3]=t;\
+          (reinterpret_cast<char*>(&a))[3] = t;\
       t = (reinterpret_cast<char*>(&a))[1];\
           (reinterpret_cast<char*>(&a))[1]=(reinterpret_cast<char*>(&a))[2];\
           (reinterpret_cast<char*>(&a))[2]=t;} while (0)
 #define KALDI_SWAP2(a) do { \
   int t = (reinterpret_cast<char*>(&a))[0];\
           (reinterpret_cast<char*>(&a))[0]=(reinterpret_cast<char*>(&a))[1];\
-          (reinterpret_cast<char*>(&a))[1]=t;} while (0)
+          (reinterpret_cast<char*>(&a))[1] = t;} while (0)
 
 
 // Makes copy constructor and operator= private.
