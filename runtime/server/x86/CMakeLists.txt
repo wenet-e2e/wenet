@@ -126,11 +126,12 @@ add_subdirectory(kaldi)
 # decoder
 add_library(decoder STATIC
   decoder/ctc_prefix_beam_search.cc
+  decoder/ctc_wfst_beam_search.cc
   decoder/ctc_endpoint.cc
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} utils)
+target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi utils)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
