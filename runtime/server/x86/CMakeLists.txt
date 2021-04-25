@@ -2,7 +2,10 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(wenet VERSION 0.1)
 
-include_directories(${CMAKE_SOURCE_DIR})
+include_directories(
+${CMAKE_SOURCE_DIR}
+${CMAKE_SOURCE_DIR}/kaldi
+)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 include(FetchContent)
@@ -117,14 +120,17 @@ add_library(frontend STATIC
 )
 target_link_libraries(frontend PUBLIC utils)
 
+add_subdirectory(kaldi)
+
 # decoder
 add_library(decoder STATIC
-  decoder/ctc_prefix_beam_search.cc
   decoder/ctc_endpoint.cc
+  decoder/ctc_prefix_beam_search.cc
+  decoder/ctc_wfst_beam_search.cc
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} utils)
+target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi utils)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
@@ -145,4 +151,3 @@ target_link_libraries(websocket_client_main PUBLIC websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)
 target_link_libraries(websocket_server_main PUBLIC websocket)
 
-add_subdirectory(kaldi)

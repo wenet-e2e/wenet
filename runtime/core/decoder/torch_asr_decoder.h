@@ -27,7 +27,7 @@ using TorchModule = torch::jit::script::Module;
 struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
-  // The final_score = rescoring_score + ctc_weight * ctc_score;
+  // final_score = rescoring_weight * rescoring_score + ctc_weight * ctc_score;
   // Please note the concept of ctc_scores in the following two search
   // methods are different.
   // For CtcPrefixBeamSearch, it's a sum(prefix) score
