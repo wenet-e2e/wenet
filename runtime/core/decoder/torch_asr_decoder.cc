@@ -149,8 +149,8 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     timer.Reset();
     searcher_->Search(ctc_log_probs);
     int search_time = timer.Elapsed();
-    VLOG(3) << "forward takes " << forward_time << " search takes "
-            << search_time;
+    VLOG(3) << "forward takes " << forward_time << " ms, search takes "
+            << search_time << " ms";
     UpdateResult();
 
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
