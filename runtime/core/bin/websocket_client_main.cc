@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <chrono>
-
 #include "frontend/wav.h"
 #include "utils/flags.h"
 #include "utils/log.h"
+#include "utils/timer.h"
 #include "websocket/websocket_client.h"
 
 DEFINE_string(host, "127.0.0.1", "host of websocket server");
@@ -61,13 +60,9 @@ int main(int argc, char *argv[]) {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(static_cast<int>(interval * 1000)));
   }
-  auto start = std::chrono::steady_clock::now();
+  wenet::Timer timer;
   client.SendEndSignal();
   client.Join();
-  auto end = std::chrono::steady_clock::now();
-  VLOG(2) << "Total latency: "
-          << std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-                 .count()
-          << "ms.";
+  VLOG(2) << "Total latency: " << timer.Elapsed() << "ms.";
   return 0;
 }
