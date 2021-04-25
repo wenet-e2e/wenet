@@ -26,9 +26,9 @@ DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(dict_path, "", "dict path");
 DEFINE_string(result, "", "result output file");
 DEFINE_double(ctc_weight, 0.0,
-              "ctc weight when combing ctc score and rescoring score");
+              "ctc weight when combining ctc score and rescoring score");
 DEFINE_double(rescoring_weight, 1.0,
-              "rescoring weight when combing ctc score and rescoring score");
+              "rescoring weight when combining ctc score and rescoring score");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
