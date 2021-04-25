@@ -27,6 +27,14 @@ using TorchModule = torch::jit::script::Module;
 struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
+  // final_score = rescoring_weight * rescoring_score + ctc_weight * ctc_score;
+  // Please note the concept of ctc_scores in the following two search
+  // methods are different.
+  // For CtcPrefixBeamSearch, it's a sum(prefix) score
+  // For CtcWfstBeamSearch, it's a max(viterbi) path score
+  // So we should carefully setting ctc_weight in terms of search methods.
+  float ctc_weight = 0.0;
+  float rescoring_weight = 1.0;
   CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_prefix_search_opts;
 };
