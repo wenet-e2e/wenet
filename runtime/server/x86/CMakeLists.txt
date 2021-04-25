@@ -4,7 +4,7 @@ project(wenet VERSION 0.1)
 
 include_directories(
 ${CMAKE_SOURCE_DIR}
-${CMAKE_SOURCE_DIR}/kaldi  # for not changing c++ header names in kaldi source dir
+${CMAKE_SOURCE_DIR}/kaldi  # for not changing c++ header names in kaldi source files
 )
 set(CMAKE_VERBOSE_MAKEFILE on)
 
