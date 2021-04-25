@@ -18,6 +18,9 @@ DEFINE_string(model_path, "", "pytorch exported model path");
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
 
+// TLG fst
+DEFINE_string(fst_path, "", "TLG fst path");
+
 // DecodeOptions flags
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
 DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
@@ -25,6 +28,12 @@ DEFINE_double(ctc_weight, 0.0,
               "ctc weight when combining ctc score and rescoring score");
 DEFINE_double(rescoring_weight, 1.0,
               "rescoring weight when combining ctc score and rescoring score");
+DEFINE_int32(max_active, 7000, "max active states in ctc wfst search");
+DEFINE_double(beam, 16.0, "beam in ctc wfst search");
+DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
+DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
+DEFINE_double(blank_skip_thresh, 1.0,
+              "blank skip thresh for ctc wfst search, 1.0 means no skip");
 
 // SymbolTable flags
 DEFINE_string(dict_path, "", "dict path");
@@ -43,12 +52,26 @@ std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
   return feature_config;
 }
 
+std::shared_ptr<fst::StdVectorFst> InitFstFromFlags() {
+  std::shared_ptr<fst::StdVectorFst> fst = nullptr;
+  if (!FLAGS_fst_path.empty()) {
+    fst.reset(fst::StdVectorFst::Read(FLAGS_fst_path));
+  }
+  return fst;
+}
+
 std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   auto decode_config = std::make_shared<DecodeOptions>();
   decode_config->chunk_size = FLAGS_chunk_size;
   decode_config->num_left_chunks = FLAGS_num_left_chunks;
   decode_config->ctc_weight = FLAGS_ctc_weight;
   decode_config->rescoring_weight = FLAGS_rescoring_weight;
+  decode_config->ctc_wfst_search_opts.max_active = FLAGS_max_active;
+  decode_config->ctc_wfst_search_opts.beam = FLAGS_beam;
+  decode_config->ctc_wfst_search_opts.lattice_beam = FLAGS_lattice_beam;
+  decode_config->ctc_wfst_search_opts.acoustic_scale = FLAGS_acoustic_scale;
+  decode_config->ctc_wfst_search_opts.blank_skip_thresh =
+      FLAGS_blank_skip_thresh;
   return decode_config;
 }
 
