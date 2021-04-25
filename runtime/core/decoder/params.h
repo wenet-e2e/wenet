@@ -4,6 +4,8 @@
 #ifndef DECODER_PARAMS_H_
 #define DECODER_PARAMS_H_
 
+#include <memory>
+
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
