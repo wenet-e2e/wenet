@@ -4,11 +4,11 @@
 #include "decoder/torch_asr_decoder.h"
 
 #include <algorithm>
-#include <chrono>
 #include <limits>
 #include <utility>
 
 #include "decoder/ctc_endpoint.h"
+#include "utils/timer.h"
 
 namespace wenet {
 
@@ -67,14 +67,9 @@ DecodeState TorchAsrDecoder::Decode() { return this->AdvanceDecoding(); }
 
 void TorchAsrDecoder::Rescoring() {
   // Do attention rescoring
-  auto start = std::chrono::steady_clock::now();
+  Timer timer;
   AttentionRescoring();
-  auto end = std::chrono::steady_clock::now();
-  LOG(INFO) << "Rescoring cost latency: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end -
-                                                                     start)
-                   .count()
-            << "ms.";
+  LOG(INFO) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
 }
 
 DecodeState TorchAsrDecoder::AdvanceDecoding() {
@@ -124,7 +119,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
       feats[0][cached_feature_.size() + i] = std::move(row);
     }
 
-    auto forward_start = std::chrono::steady_clock::now();
+    Timer timer;
     // 2. Encoder chunk forward
     int requried_cache_size = opts_.chunk_size * opts_.num_left_chunks;
     torch::NoGradGuard no_grad;
@@ -150,17 +145,12 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
                                       ->run_method("ctc_activation", chunk_out)
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
-    auto search_start = std::chrono::steady_clock::now();
+    int forward_time = timer.Elapsed();
+    timer.Reset();
     searcher_->Search(ctc_log_probs);
-    auto search_end = std::chrono::steady_clock::now();
-    VLOG(3) << "forward takes "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(
-                   search_start - forward_start)
-                   .count()
-            << " search takes "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(
-                   search_end - search_start)
-                   .count();
+    int search_time = timer.Elapsed();
+    VLOG(3) << "forward takes " << forward_time << " ms, search takes "
+            << search_time << " ms";
     UpdateResult();
 
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
@@ -278,8 +268,8 @@ void TorchAsrDecoder::AttentionRescoring() {
     }
     score += probs[i][hyp.size()][eos].item<float>();
     // TODO(Binbin Zhang): Combine CTC and attention decoder score
-    result_[i].score = opts_.rescoring_weight * score +
-                       opts_.ctc_weight * result_[i].score;
+    result_[i].score =
+        opts_.rescoring_weight * score + opts_.ctc_weight * result_[i].score;
   }
   std::sort(result_.begin(), result_.end(), DecodeResult::CompareFunc);
 }

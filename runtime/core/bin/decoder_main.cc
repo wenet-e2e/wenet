@@ -1,7 +1,6 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
-#include <chrono>
 #include <iomanip>
 #include <utility>
 
@@ -11,6 +10,7 @@
 #include "frontend/wav.h"
 #include "utils/flags.h"
 #include "utils/log.h"
+#include "utils/timer.h"
 #include "utils/utils.h"
 
 DEFINE_bool(simulate_streaming, false, "simulate streaming input");
@@ -71,15 +71,12 @@ int main(int argc, char *argv[]) {
     int wave_dur = wav_reader.num_sample() / sample_rate * 1000;
     int decode_time = 0;
     while (true) {
-      auto start = std::chrono::steady_clock::now();
+      wenet::Timer timer;
       wenet::DecodeState state = decoder.Decode();
       if (state == wenet::DecodeState::kEndFeats) {
         decoder.Rescoring();
       }
-      auto end = std::chrono::steady_clock::now();
-      auto chunk_decode_time =
-          std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-              .count();
+      int chunk_decode_time = timer.Elapsed();
       decode_time += chunk_decode_time;
       if (decoder.DecodedSomething()) {
         LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
