@@ -12,34 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "decoder/torch_asr_decoder.h"
-#include "decoder/torch_asr_model.h"
-#include "frontend/feature_pipeline.h"
-#include "utils/flags.h"
+#include "decoder/params.h"
 #include "utils/log.h"
 #include "websocket/websocket_server.h"
 
 DEFINE_int32(port, 10086, "websocket listening port");
-DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
-DEFINE_int32(chunk_size, 16, "decoding chunk size");
-DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
-DEFINE_string(model_path, "", "pytorch exported model path");
-DEFINE_string(wav_path, "", "wav path");
-DEFINE_string(dict_path, "", "dict path");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
-  auto feature_config = std::make_shared<wenet::FeaturePipelineConfig>();
-  feature_config->num_bins = FLAGS_num_bins;
-  auto decode_config = std::make_shared<wenet::DecodeOptions>();
-  decode_config->chunk_size = FLAGS_chunk_size;
-  decode_config->num_left_chunks = FLAGS_num_left_chunks;
-  auto symbol_table = std::shared_ptr<fst::SymbolTable>(
-      fst::SymbolTable::ReadText(FLAGS_dict_path));
-  auto model = std::make_shared<wenet::TorchAsrModel>();
-  model->Read(FLAGS_model_path);
+  auto model = wenet::InitTorchAsrModelFromFlags();
+  auto symbol_table = wenet::InitSymbolTableFromFlags();
+  auto decode_config = wenet::InitDecodeOptionsFromFlags();
+  auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
 
   wenet::WebSocketServer server(FLAGS_port, feature_config, decode_config,
                                 symbol_table, model);
