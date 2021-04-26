@@ -27,6 +27,7 @@ from torch.utils.data import DataLoader
 from wenet.dataset.dataset import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
+import k2
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='recognize with your model')
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode',
                         choices=[
                             'attention', 'ctc_greedy_search',
-                            'ctc_prefix_beam_search', 'attention_rescoring'],
+                            'ctc_prefix_beam_search', 'attention_rescoring', 'wfst_based_decoding'],
                         default='attention',
                         help='decoding mode')
     parser.add_argument('--ctc_weight',
@@ -117,6 +118,8 @@ if __name__ == '__main__':
 
     # Init asr model from configs
     model = init_asr_model(configs)
+    use_cuda = args.gpu >= 0 and torch.cuda.is_available()
+    device = torch.device('cuda' if use_cuda else 'cpu')
 
     # Load dict
     char_dict = {}
@@ -126,6 +129,19 @@ if __name__ == '__main__':
             assert len(arr) == 2
             char_dict[int(arr[1])] = arr[0]
     eos = len(char_dict) - 1
+    #Load HLG  for wfst-based decoding
+    if args.mode == 'wfst_based_decoding':
+        d = torch.load('data/graph/HLG.pt')
+        HLG = k2.Fsa.from_dict(d)
+        HLG = HLG.to(device)
+        HLG.aux_labels = k2.ragged.remove_values_eq(HLG.aux_labels, 0)
+        HLG.requires_grad_(False)
+        words_dict = {}
+        with open('data/graph/words.txt', 'r') as fin:
+            for line in fin:
+                arr = line.strip().split()
+                assert len(arr) == 2
+                words_dict[int(arr[1])] = arr[0]
 
     load_checkpoint(model, args.checkpoint)
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
@@ -180,11 +196,23 @@ if __name__ == '__main__':
                     ctc_weight=args.ctc_weight,
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp]
+            elif args.mode == 'wfst_based_decoding':
+                hyps = model.wfst_based_decoding(
+                    feats,
+                    feats_lengths,
+                    HLG,
+                    args.beam_size,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming)
             for i, key in enumerate(keys):
                 content = ''
                 for w in hyps[i]:
                     if w == eos:
                         break
-                    content += char_dict[w]
+                    elif args.mode == 'wfst_based_decoding':
+                        content += words_dict[w]
+                    else:
+                        content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))

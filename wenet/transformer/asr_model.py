@@ -31,6 +31,8 @@ from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
 
+import k2
+from k2 import Fsa
 
 class ASRModel(torch.nn.Module):
     """CTC-attention hybrid Encoder-Decoder model"""
@@ -502,6 +504,69 @@ class ASRModel(torch.nn.Module):
                 best_score = score
                 best_index = i
         return hyps[best_index][0]
+
+    def wfst_based_decoding(
+            self,
+            speech: torch.Tensor,
+            speech_lengths: torch.Tensor,
+            HLG: Fsa,
+            beam_size: int = 10,
+            decoding_chunk_size: int = -1,
+            num_decoding_left_chunks: int = -1,
+            simulate_streaming: bool = False,
+    ) -> List[List[int]]:
+        """ Apply wfst based decoding
+    
+        Args:
+            speech (torch.Tensor): (batch, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            HLG(Fsa) Fsa for wfst-based decoding
+            beam_size (int): beam size for wfst-based decoding
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
+            simulate_streaming (bool): whether do encoder forward in a
+                streaming fashion
+        Returns:
+            List[List[int]]: best path result
+        """
+        assert speech.shape[0] == speech_lengths.shape[0]
+        assert decoding_chunk_size != 0
+        batch_size = speech.shape[0]
+        # Let's assume B = batch_size
+        encoder_out, encoder_mask = self._forward_encoder(
+            speech, speech_lengths, decoding_chunk_size,
+            num_decoding_left_chunks,
+            simulate_streaming)  # (B, maxlen, encoder_dim)
+        maxlen = encoder_out.size(1)
+        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
+        log_probs = self.ctc.log_softmax(
+            encoder_out)    
+        log_probs[:, :, 0] += -1
+        dense_fsa_vec_seg = torch.stack(
+             (torch.tensor(range(encoder_out_lens.shape[0])),
+             torch.zeros(encoder_out_lens.shape[0]),
+             encoder_out_lens.to("cpu")), 1).to(torch.int32)
+        indices = torch.argsort(dense_fsa_vec_seg[:, 2], descending=True)
+        dense_fsa_vec_seg = dense_fsa_vec_seg[indices]
+        dense_fsa_vec = k2.DenseFsaVec(log_probs, dense_fsa_vec_seg)
+        lattices = k2.intersect_dense_pruned(HLG, dense_fsa_vec, 30.0, 7.0, beam_size, 10000)
+        best_paths = k2.shortest_path(lattices, use_double_scores=True)
+        labels = k2.ragged.remove_values_leq(best_paths.aux_labels, 0)
+        shape = k2.ragged.compose_ragged_shapes(best_paths.arcs.shape(),
+                                                    labels.shape())
+        shape = k2.ragged.remove_axis(k2.ragged.remove_axis(shape, 1),1)
+        labels = k2.RaggedInt(shape, labels.values())
+        assert (labels.num_axes() == 2)
+        ans = torch.zeros(indices.shape, device=indices.device, dtype=torch.long)
+        ans[indices] = torch.arange(0, indices.shape[0], device=indices.device)
+        labels, _ = k2.ragged.index(labels,
+                        ans.to(dtype=torch.int32,
+                        device=best_paths.device))
+        hyps = k2.ragged.to_list(labels)
+        return hyps
 
     @torch.jit.export
     def subsampling_rate(self) -> int:
