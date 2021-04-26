@@ -91,7 +91,8 @@ if __name__ == '__main__':
             all_number += number
             wav_number += batch_size
             if wav_number % 1000 == 0:
-                print(f'processed {wav_number} wavs, {all_number} frames',
+                print(
+                    f'processed {wav_number} wavs, {all_number} frames',
                     file=sys.stderr,
                     flush=True)
 
