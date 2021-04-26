@@ -74,9 +74,9 @@ If you can not access the QR image, please access it on [gitee](https://gitee.co
 
 ## Acknowledge
 
-We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
-and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
-for batch inference.
+1. We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet) for transform based modeling.
+2. We borrowed a lot of code from [Kaldi](http://kaldi-asr.org/) for WFST based decoding for LM integration.
+3. We refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/) for python batch inference of e2e models.
 
 ## Citations
 
