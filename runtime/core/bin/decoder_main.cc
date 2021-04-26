@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
   auto symbol_table = wenet::InitSymbolTableFromFlags();
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
+  auto fst = wenet::InitFstFromFlags();
   const int sample_rate = 16000;
   auto feature_pipeline =
       std::make_shared<wenet::FeaturePipeline>(*feature_config);
@@ -66,7 +67,7 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
     wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
-                                   *decode_config);
+                                   *decode_config, fst);
 
     int wave_dur = wav_reader.num_sample() / sample_rate * 1000;
     int decode_time = 0;

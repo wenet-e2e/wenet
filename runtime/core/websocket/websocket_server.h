@@ -45,7 +45,8 @@ class ConnectionHandler {
                     std::shared_ptr<FeaturePipelineConfig> feature_config,
                     std::shared_ptr<DecodeOptions> decode_config,
                     std::shared_ptr<fst::SymbolTable> symbol_table,
-                    std::shared_ptr<TorchAsrModel> model);
+                    std::shared_ptr<TorchAsrModel> model,
+                    std::shared_ptr<fst::StdVectorFst> fst);
   void operator()();
 
  private:
@@ -67,6 +68,7 @@ class ConnectionHandler {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<fst::StdVectorFst> fst_;
 
   bool got_start_tag_ = false;
   bool got_end_tag_ = false;
@@ -83,12 +85,14 @@ class WebSocketServer {
                   std::shared_ptr<FeaturePipelineConfig> feature_config,
                   std::shared_ptr<DecodeOptions> decode_config,
                   std::shared_ptr<fst::SymbolTable> symbol_table,
-                  std::shared_ptr<TorchAsrModel> model)
+                  std::shared_ptr<TorchAsrModel> model,
+                  std::shared_ptr<fst::StdVectorFst> fst)
       : port_(port),
         feature_config_(std::move(feature_config)),
         decode_config_(std::move(decode_config)),
         symbol_table_(std::move(symbol_table)),
-        model_(std::move(model)) {}
+        model_(std::move(model)),
+        fst_(std::move(fst)) {}
 
   void Start();
 
@@ -100,6 +104,7 @@ class WebSocketServer {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<fst::StdVectorFst> fst_;
   WENET_DISALLOW_COPY_AND_ASSIGN(WebSocketServer);
 };
 
