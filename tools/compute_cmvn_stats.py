@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+import sys
 import argparse
 import json
 import codecs
@@ -90,7 +91,10 @@ if __name__ == '__main__':
             all_number += number
             wav_number += batch_size
             if wav_number % 1000 == 0:
-                print('process {} wavs,{} frames'.format(wav_number, all_number))
+                print(
+                    f'processed {wav_number} wavs, {all_number} frames',
+                    file=sys.stderr,
+                    flush=True)
 
     cmvn_info = {'mean_stat' : list(all_mean_stat.tolist()),
                  'var_stat' : list(all_var_stat.tolist()),
