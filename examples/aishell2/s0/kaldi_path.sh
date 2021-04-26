@@ -1,3 +1,4 @@
+# TODO(Binbin): Will remove this dependency and file in the future
 export KALDI_ROOT=/export/tools/kaldi-tools/
 [ -f $KALDI_ROOT/tools/env.sh ] && . $KALDI_ROOT/tools/env.sh
 export PATH=$PWD/utils/:$KALDI_ROOT/tools/openfst/bin:$PWD:$PATH
