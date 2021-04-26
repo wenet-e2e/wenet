@@ -24,7 +24,7 @@
 
 #include <string>
 
-#include "glog/logging.h"
+#include "utils/log.h"
 
 namespace wenet {
 
@@ -65,7 +65,17 @@ class WavReader {
       fread(header.data, 8, sizeof(char), fp);
     }
     // check "riff" "WAVE" "fmt " "data"
-    // only support one sub data chunk
+
+    // Skip any subchunks between "fmt" and "data".  Usually there will
+    // be a single "fact" subchunk, but on Windows there can also be a
+    // "list" subchunk.
+    while (0 != strncmp(header.data, "data", 4)) {
+      // We will just ignore the data in these chunks.
+      fseek(fp, header.data_size, SEEK_CUR);
+      // read next subchunk
+      fread(header.data, 8, sizeof(char), fp);
+    }
+
     num_channel_ = header.channels;
     sample_rate_ = header.sample_rate;
     bits_per_sample_ = header.bit;

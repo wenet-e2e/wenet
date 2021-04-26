@@ -12,23 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <chrono>
-
-#include "gflags/gflags.h"
-#include "glog/logging.h"
-
 #include "frontend/wav.h"
+#include "utils/flags.h"
+#include "utils/log.h"
+#include "utils/timer.h"
 #include "websocket/websocket_client.h"
 
 DEFINE_string(host, "127.0.0.1", "host of websocket server");
 DEFINE_int32(port, 10086, "port of websocket server");
 DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
+DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
-  wenet::WebSocketClient client(FLAGS_host, FLAGS_port, FLAGS_nbest);
+  wenet::WebSocketClient client(FLAGS_host, FLAGS_port);
+  client.set_nbest(FLAGS_nbest);
+  client.set_continuous_decoding(FLAGS_continuous_decoding);
   client.SendStartSignal();
 
   wenet::WavReader wav_reader(FLAGS_wav_path);
@@ -42,6 +43,9 @@ int main(int argc, char *argv[]) {
   const float interval = 0.5;
   const int sample_interval = interval * sample_rate;
   for (int start = 0; start < num_sample; start += sample_interval) {
+    if (client.done()) {
+      break;
+    }
     int end = std::min(start + sample_interval, num_sample);
     // Convert to short
     std::vector<int16_t> data;
@@ -56,13 +60,9 @@ int main(int argc, char *argv[]) {
     std::this_thread::sleep_for(
         std::chrono::milliseconds(static_cast<int>(interval * 1000)));
   }
-  auto start = std::chrono::steady_clock::now();
+  wenet::Timer timer;
   client.SendEndSignal();
   client.Join();
-  auto end = std::chrono::steady_clock::now();
-  VLOG(2) << "Total latency: "
-          << std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-                 .count()
-          << "ms.";
+  VLOG(2) << "Total latency: " << timer.Elapsed() << "ms.";
   return 0;
 }

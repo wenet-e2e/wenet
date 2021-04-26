@@ -60,6 +60,21 @@
 | ctc prefix beam search   | 6.28 | 6.98 | 7.40 | 7.89 |
 | attention rescoring      | 5.52 | 6.05 | 6.28 | 6.62 |
 
+## AMP Training Transformer Result
+
+* Feature info: using fbank feature, dither, cmvn, online speed perturb
+* Training info: lr 0.002, batch size, 4 gpus, acc_grad 4, 240 epochs, dither 0.1, warm up steps 25000
+* Decoding info: ctc_weight 0.5, average_num 20
+* Git hash: 1bb4e5a269c535340fae5b0739482fa47733d2c1
+
+| decoding mode          | CER  |
+|------------------------|------|
+| attention decoder      | 5.73 |
+| ctc greedy search      | 5.92 |
+| ctc prefix beam search | 5.92 |
+| attention rescoring    | 5.31 |
+
+
 ## Muilti-machines Training Conformer Result
 
 * Feature info: using fbank feature, dither, cmvn, online speed perturb

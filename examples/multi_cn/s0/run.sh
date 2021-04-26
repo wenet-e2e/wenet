@@ -132,6 +132,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     done
 
     # Unified data format for char and bpe modelding. Here we use ▁ for blank among english words
+    # Warning : it is "▁" symbol, not "_" symbol
     for x in train dev; do
         cp ${feat_dir}_${en_modeling_unit}/${x}/text ${feat_dir}_${en_modeling_unit}/${x}/text.org
         paste -d " " <(cut -f 1 -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org) <(cut -f 2- -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org \

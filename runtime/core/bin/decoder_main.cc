@@ -1,47 +1,34 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
-#include <chrono>
 #include <iomanip>
 #include <utility>
 
-#include "gflags/gflags.h"
-#include "glog/logging.h"
 #include "torch/script.h"
 
-#include "decoder/symbol_table.h"
-#include "decoder/torch_asr_decoder.h"
-#include "decoder/torch_asr_model.h"
-#include "frontend/feature_pipeline.h"
+#include "decoder/params.h"
 #include "frontend/wav.h"
+#include "utils/flags.h"
+#include "utils/log.h"
+#include "utils/timer.h"
 #include "utils/utils.h"
 
-DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
-DEFINE_int32(chunk_size, 16, "decoding chunk size");
-DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
-DEFINE_int32(num_threads, 1, "num threads for device");
 DEFINE_bool(simulate_streaming, false, "simulate streaming input");
-DEFINE_string(model_path, "", "pytorch exported model path");
 DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
-DEFINE_string(dict_path, "", "dict path");
 DEFINE_string(result, "", "result output file");
 
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
-  auto model = std::make_shared<wenet::TorchAsrModel>();
-  model->Read(FLAGS_model_path, FLAGS_num_threads);
-  wenet::SymbolTable symbol_table(FLAGS_dict_path);
-  wenet::DecodeOptions decode_config;
-  decode_config.chunk_size = FLAGS_chunk_size;
-  decode_config.num_left_chunks = FLAGS_num_left_chunks;
-  wenet::FeaturePipelineConfig feature_config;
-  feature_config.num_bins = FLAGS_num_bins;
+  auto model = wenet::InitTorchAsrModelFromFlags();
+  auto symbol_table = wenet::InitSymbolTableFromFlags();
+  auto decode_config = wenet::InitDecodeOptionsFromFlags();
+  auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
   const int sample_rate = 16000;
   auto feature_pipeline =
-      std::make_shared<wenet::FeaturePipeline>(feature_config);
+      std::make_shared<wenet::FeaturePipeline>(*feature_config);
 
   if (FLAGS_wav_path.empty() && FLAGS_wav_scp.empty()) {
     LOG(FATAL) << "Please provide the wave path or the wav scp.";
@@ -64,7 +51,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_result.empty()) {
     result.open(FLAGS_result, std::ios::out);
   }
-  std::ostream& buffer = FLAGS_result.empty() ? std::cout : result;
+  std::ostream &buffer = FLAGS_result.empty() ? std::cout : result;
 
   int total_waves_dur = 0;
   int total_decode_time = 0;
@@ -79,25 +66,28 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
     wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
-                                   decode_config);
+                                   *decode_config);
 
     int wave_dur = wav_reader.num_sample() / sample_rate * 1000;
     int decode_time = 0;
     while (true) {
-      auto start = std::chrono::steady_clock::now();
-      bool finish = decoder.Decode();
-      auto end = std::chrono::steady_clock::now();
-      auto chunk_decode_time =
-          std::chrono::duration_cast<std::chrono::milliseconds>(end - start)
-              .count();
+      wenet::Timer timer;
+      wenet::DecodeState state = decoder.Decode();
+      if (state == wenet::DecodeState::kEndFeats) {
+        decoder.Rescoring();
+      }
+      int chunk_decode_time = timer.Elapsed();
       decode_time += chunk_decode_time;
-      LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
+      if (decoder.DecodedSomething()) {
+        LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
+      }
 
-      if (finish) {
+      if (state == wenet::DecodeState::kEndFeats) {
         break;
       } else if (FLAGS_chunk_size > 0 && FLAGS_simulate_streaming) {
         float frame_shift_in_ms =
-            static_cast<float>(feature_config.frame_shift) / sample_rate * 1000;
+            static_cast<float>(feature_config->frame_shift) / sample_rate *
+            1000;
         auto wait_time =
             decoder.num_frames_in_current_chunk() * frame_shift_in_ms -
             chunk_decode_time;

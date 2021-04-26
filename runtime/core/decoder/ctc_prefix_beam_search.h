@@ -10,6 +10,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
+#include "decoder/search_interface.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -51,12 +52,15 @@ struct PrefixHash {
   }
 };
 
-class CtcPrefixBeamSearch {
+class CtcPrefixBeamSearch : public SearchInterface {
  public:
   explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts);
 
-  void Search(const torch::Tensor& logp);
-  void Reset();
+  void Search(const torch::Tensor& logp) override;
+  void Reset() override;
+  // CtcPrefixBeamSearch do nothing at FinalizeSearch
+  void FinalizeSearch() override {}
+  SearchType Type() const override { return SearchType::kPrefixBeamSearch; }
 
   const std::vector<std::vector<int>>& hypotheses() const {
     return hypotheses_;
@@ -66,21 +70,30 @@ class CtcPrefixBeamSearch {
     return viterbi_likelihood_;
   }
   const std::vector<std::vector<int>>& times() const { return times_; }
+  // For CTC prefix beam search, both inputs and outputs are hypotheses_
+  const std::vector<std::vector<int>>& Inputs() const override {
+    return hypotheses_;
+  }
+  const std::vector<std::vector<int>>& Outputs() const override {
+    return hypotheses_;
+  }
+  const std::vector<float>& Likelihood() const override { return likelihood_; }
+  const std::vector<std::vector<int>>& Times() const override { return times_; }
 
  private:
-  int abs_time_step_;
-  std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> cur_hyps_;
+  int abs_time_step_ = 0;
 
-  // Nbest list and corresponding likelihood_, in sorted order
+  // N-best list and corresponding likelihood_, in sorted order
   std::vector<std::vector<int>> hypotheses_;
   std::vector<float> likelihood_;
   std::vector<float> viterbi_likelihood_;
   std::vector<std::vector<int>> times_;
 
+  std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> cur_hyps_;
   const CtcPrefixBeamSearchOptions& opts_;
 
  public:
-  DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
+  WENET_DISALLOW_COPY_AND_ASSIGN(CtcPrefixBeamSearch);
 };
 
 }  // namespace wenet

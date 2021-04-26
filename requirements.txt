@@ -5,3 +5,4 @@ sentencepiece
 tensorboard
 tensorboardX
 typeguard
+textgrid

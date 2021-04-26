@@ -111,6 +111,7 @@
   <script>
     var wenetWs = null
     var timeLoop = null
+    var result = ""
     $(document).ready(function () {
       $('#beginBtn').on('click', startRecording)
       $('#endBtn').on('click', stopRecording)
@@ -120,11 +121,24 @@
       if ("WebSocket" in window) {
         wenetWs = new WebSocket(url)
         wenetWs.onopen = function () {
-          console.log("Websocket 连接成功...")
-          wenetWs.send(JSON.stringify({ "signal": "start" }))
+          console.log("Websocket 连接成功，开始识别")
+          wenetWs.send(JSON.stringify({
+            "signal": "start",
+            "nbest": 1,
+            "continuous_decoding": true
+          }))
         }
         wenetWs.onmessage = function (_msg) { parseResult(_msg.data) }
-        wenetWs.onclose = function () { console.log("WebSocket 连接断开") }
+        wenetWs.onclose = function () {
+          console.log("WebSocket 连接断开")
+          if (result.length > 0) {
+            if (result.endsWith("，")) {
+              result = result.slice(0, -1)
+            }
+            $("#resultPanel").html(result + "。")
+            result = ""
+          }
+        }
         wenetWs.onerror = function () { console.log("WebSocket 连接失败") }
       }
     }
@@ -135,15 +149,16 @@
         nbest = JSON.parse(data.nbest)
         var sentence = nbest[0].sentence
         if (sentence.length > 0) {
-          $("#resultPanel").html(sentence)
+          $("#resultPanel").html(result + sentence)
         }
       } else if (data.type == 'final_result') {
         nbest = JSON.parse(data.nbest)
         var sentence = nbest[0].sentence
         if (sentence.length > 0) {
-          $("#resultPanel").html(sentence)
+          result += sentence + "，"
+          $("#resultPanel").html(result)
         }
-        console.log(nbest[0].word_pieces)
+        console.log(nbest)
       }
     }
 
@@ -165,11 +180,20 @@
         $('#socketUrl').focus()
         return
       }
+      // init recorder
+      SoundRecognizer.init({
+        soundType: 'wav',
+        sampleRate: 16000,
+        recwaveElm: '.recwave',
+        translerCallBack: TransferUpload
+      })
+      openWebSocket(socketUrl)
+
       // Change button state
-      $(this).hide()
+      $('#beginBtn').hide()
       $('#endBtn, #timeBox').addClass('show')
       // Start countdown
-      var seconds = 60
+      var seconds = 180
       $('#timeCount').text(seconds)
       timeLoop = setInterval(function () {
         seconds--
@@ -178,24 +202,16 @@
           stopRecording()
         }
       }, 1000)
-      // Start recording
-      SoundRecognizer.init({
-        soundType: 'wav',
-        sampleRate: 16000,
-        recwaveElm: '.recwave',
-        translerCallBack: TransferUpload
-      })
-      openWebSocket(socketUrl)
     }
 
     function stopRecording() {
+      wenetWs.send(JSON.stringify({ "signal": "end" }))
+      SoundRecognizer.recordClose()
+
       $('#endBtn').add($('#timeBox')).removeClass('show')
       $('#beginBtn').show()
       $('#timeCount').text('')
       clearInterval(timeLoop)
-
-      wenetWs.send(JSON.stringify({ "signal": "end" }))
-      SoundRecognizer.recordClose()
     }
   </script>
 </body>

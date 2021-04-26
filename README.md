@@ -28,11 +28,13 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
   with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi,
   which simplifies installation and usage.
 
-## Performance Benchmark
+## Pretrained Models & Performance Benchmark
 
-Please see `examples/$dataset/s0/README.md` for WeNet benchmark on different speech datasets.
+ We release various pretrained models. Please see `examples/$dataset/s0/README.md` for model download links and WeNet benchmark on different speech datasets.
 * [AIShell-1](examples/aishell/s0/README.md)
+* [AIShell-2](examples/aishell2/s0/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
+* [Multi-Chinese](examples/multi_cn/s0/README.md) trained using all open source Chinese corpus.
 
 ## Installation
 
@@ -45,10 +47,17 @@ git clone https://github.com/mobvoi/wenet.git
 - Create Conda env: (**PyTorch 1.6.0** is recommended. We met some error on NCCL when using 1.7.0 on 2080 Ti.)
 
 ``` sh
+# [option 1]
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.60 -c pytorch
+conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
+
+# [option 2: working on machine with GPU 3090]
+conda create -n wenet python=3.8
+conda activate wenet
+pip install -r requirements.txt
+conda install pytorch torchvision torchaudio=0.8.0 cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 ## Discussion & Communication
@@ -65,9 +74,9 @@ If you can not access the QR image, please access it on [gitee](https://gitee.co
 
 ## Acknowledge
 
-We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet),
-and we refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/blob/master/otrans/recognizer.py)
-for batch inference.
+1. We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet) for transform based modeling.
+2. We borrowed a lot of code from [Kaldi](http://kaldi-asr.org/) for WFST based decoding for LM integration.
+3. We refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/) for python batch inference of e2e models.
 
 ## Citations
 
