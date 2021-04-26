@@ -1,4 +1,4 @@
-// Copyright 2020 Mobvoi Inc. All Rights Reserved.
+// Copyright 2021 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
 #include "decoder/ctc_wfst_beam_search.h"

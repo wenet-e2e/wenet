@@ -1,9 +1,10 @@
-// Copyright 2020 Mobvoi Inc. All Rights Reserved.
+// Copyright 2021 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
 #ifndef DECODER_CTC_WFST_BEAM_SEARCH_H_
 #define DECODER_CTC_WFST_BEAM_SEARCH_H_
 
+#include <memory>
 #include <vector>
 
 #include "torch/script.h"
@@ -35,7 +36,7 @@ class DecodableTensorScaled : public kaldi::DecodableInterface {
   float scale_ = 1.0;
   bool done_ = false;
   torch::Tensor logp_;
-  std::unique_ptr<torch::TensorAccessor<float, 1>> accessor_ = nullptr;
+  std::unique_ptr<torch::TensorAccessor<float, 1>> accessor_;
 };
 
 // LatticeFasterDecoderConfig has the following key members
