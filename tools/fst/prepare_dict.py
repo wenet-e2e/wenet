@@ -5,7 +5,7 @@ import sys
 
 # sys.argv[1]: e2e model unit file(lang_char.txt)
 # sys.argv[2]: raw lexicon file
-# sys.argv[1]: output lexicon file
+# sys.argv[3]: output lexicon file
 
 unit_table = set()
 with open(sys.argv[1], 'r', encoding='utf8') as fin:
