@@ -41,6 +41,6 @@ with open(sys.argv[2], 'r', encoding='utf8') as fin, \
             # TODO(Binbin Zhang): support BPE by sentencepiece
             if word.encode('utf8').isalpha() and '▁' in unit_table:
                 word = '▁' + word
-            chars = ' '.join([ch for ch in word])
+            chars = ' '.join(word)  # word is a char list
             fout.write('{} {}\n'.format(word, chars))
             lexicon_table.add(word)
