@@ -61,7 +61,7 @@ conda install pytorch torchvision torchaudio=0.8.0 cudatoolkit=11.1 -c pytorch -
 ```
 
 - Optionally, if you want to use x86 runtime or language model(LM),
-You have to built the runtime as follows. Otherwise, you can just ignore this step.
+you have to build the runtime as follows. Otherwise, you can just ignore this step.
 
 ``` sh
 # runtime build requires cmake 3.14 or above
