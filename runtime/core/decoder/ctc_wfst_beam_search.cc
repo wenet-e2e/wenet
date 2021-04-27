@@ -92,8 +92,6 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
     inputs_.resize(1);
     outputs_.resize(1);
     likelihood_.resize(1);
-    inputs_[0].clear();
-    outputs_[0].clear();
     kaldi::Lattice lat;
     decoder_.GetBestPath(&lat, false);
     std::vector<int> alignment;
@@ -126,8 +124,6 @@ void CtcWfstBeamSearch::FinalizeSearch() {
     outputs_.resize(nbest);
     likelihood_.resize(nbest);
     for (int i = 0; i < nbest; i++) {
-      inputs_[i].clear();
-      outputs_[i].clear();
       kaldi::LatticeWeight weight;
       std::vector<int> alignment;
       fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
