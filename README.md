@@ -60,6 +60,16 @@ pip install -r requirements.txt
 conda install pytorch torchvision torchaudio=0.8.0 cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
+- Optionally, if you want to use x86 runtime or language model(LM),
+you have to build the runtime as follows. Otherwise, you can just ignore this step.
+
+``` sh
+# runtime build requires cmake 3.14 or above
+cd runtime/server/x86
+mkdir build && cd build && cmake .. && cmake --build .
+```
+
+
 ## Discussion & Communication
 
 In addition to discussing in [Github Issues](https://github.com/mobvoi/wenet/issues), we created a WeChat group for better discussion and quicker response.
