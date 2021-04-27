@@ -85,46 +85,56 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
     num_frames_++;
   }
   // Get the best path
-  kaldi::Lattice lat;
-  decoder_.GetBestPath(&lat, false);
-  inputs_.resize(1);
-  outputs_.resize(1);
-  likelihood_.resize(1);
-  inputs_[0].clear();
-  outputs_[0].clear();
-  std::vector<int> alignment;
-  kaldi::LatticeWeight weight;
-  fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
-  ConvertToInputs(alignment, &inputs_[0]);
-  VLOG(3) << weight.Value1() << " " << weight.Value2();
-  likelihood_[0] = -weight.Value2();
+  inputs_.clear();
+  outputs_.clear();
+  likelihood_.clear();
+  if (decoded_frames_mapping_.size() > 0) {
+    inputs_.resize(1);
+    outputs_.resize(1);
+    likelihood_.resize(1);
+    inputs_[0].clear();
+    outputs_[0].clear();
+    kaldi::Lattice lat;
+    decoder_.GetBestPath(&lat, false);
+    std::vector<int> alignment;
+    kaldi::LatticeWeight weight;
+    fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
+    ConvertToInputs(alignment, &inputs_[0]);
+    VLOG(3) << weight.Value1() << " " << weight.Value2();
+    likelihood_[0] = -weight.Value2();
+  }
 }
 
 void CtcWfstBeamSearch::FinalizeSearch() {
   decodable_.SetFinish();
   decoder_.FinalizeDecoding();
-  // Get N-best path by lattice(CompactLattice)
-  kaldi::CompactLattice clat;
-  decoder_.GetLattice(&clat, true);
-  kaldi::Lattice lat, nbest_lat;
-  fst::ConvertLattice(clat, &lat);
-  // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
-  fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
-  std::vector<kaldi::Lattice> nbest_lats;
-  fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
-  int nbest = nbest_lats.size();
-  inputs_.resize(nbest);
-  outputs_.resize(nbest);
-  likelihood_.resize(nbest);
-  for (int i = 0; i < nbest; i++) {
-    inputs_[i].clear();
-    outputs_[i].clear();
-    kaldi::LatticeWeight weight;
-    std::vector<int> alignment;
-    fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
-                                 &weight);
-    ConvertToInputs(alignment, &inputs_[i]);
-    likelihood_[i] = -weight.Value2();
+  inputs_.clear();
+  outputs_.clear();
+  likelihood_.clear();
+  if (decoded_frames_mapping_.size() > 0) {
+    // Get N-best path by lattice(CompactLattice)
+    kaldi::CompactLattice clat;
+    decoder_.GetLattice(&clat, true);
+    kaldi::Lattice lat, nbest_lat;
+    fst::ConvertLattice(clat, &lat);
+    // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
+    fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
+    std::vector<kaldi::Lattice> nbest_lats;
+    fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
+    int nbest = nbest_lats.size();
+    inputs_.resize(nbest);
+    outputs_.resize(nbest);
+    likelihood_.resize(nbest);
+    for (int i = 0; i < nbest; i++) {
+      inputs_[i].clear();
+      outputs_[i].clear();
+      kaldi::LatticeWeight weight;
+      std::vector<int> alignment;
+      fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
+                                   &weight);
+      ConvertToInputs(alignment, &inputs_[i]);
+      likelihood_[i] = -weight.Value2();
+    }
   }
 }
 
