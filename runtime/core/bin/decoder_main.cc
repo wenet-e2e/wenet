@@ -69,7 +69,8 @@ int main(int argc, char *argv[]) {
     wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
                                    *decode_config, fst);
 
-    int wave_dur = wav_reader.num_sample() / sample_rate * 1000;
+    int wave_dur = static_cast<int>(static_cast<float>(
+                wav_reader.num_sample()) / sample_rate * 1000);
     int decode_time = 0;
     while (true) {
       wenet::Timer timer;
