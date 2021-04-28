@@ -213,6 +213,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   unit_file=$dict
   download_dir=data/local/DaCiDian
   git clone https://github.com/aishell-foundation/DaCiDian.git $download_dir
+  mkdir -p data/local/dict
   cp $unit_file data/local/dict/units.txt
   tools/fst/prepare_dict.py $unit_file $download_dir/word_to_pinyin.txt \
       data/local/dict/lexicon.txt
