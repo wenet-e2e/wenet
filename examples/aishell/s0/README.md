@@ -8,12 +8,13 @@
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210204_conformer_exp.tar.gz
 
-| decoding mode          | CER  |
-|------------------------|------|
-| attention decoder      | 5.18 |
-| ctc greedy search      | 4.94 |
-| ctc prefix beam search | 4.94 |
-| attention rescoring    | 4.61 |
+| decoding mode             | CER   |
+|---------------------------|-------|
+| attention decoder         | 5.18  |
+| ctc greedy search         | 4.94  |
+| ctc prefix beam search    | 4.94  |
+| attention rescoring       | 4.61  |
+| LM + attention rescoring  | 4.36  |
 
 ## Unified Conformer Result
 
@@ -23,12 +24,13 @@
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210203_unified_conformer_exp.tar.gz
 
-| decoding mode/chunk size | full | 16   | 8    | 4    |
-|--------------------------|------|------|------|------|
-| attention decoder        | 5.40 | 5.60 | 5.74 | 5.86 |
-| ctc greedy search        | 5.56 | 6.29 | 6.68 | 7.10 |
-| ctc prefix beam search   | 5.57 | 6.30 | 6.67 | 7.10 |
-| attention rescoring      | 5.05 | 5.45 | 5.69 | 5.91 |
+| decoding mode/chunk size  | full  | 16    | 8     | 4     |
+|---------------------------|-------|-------|-------|-------|
+| attention decoder         | 5.40  | 5.60  | 5.74  | 5.86  |
+| ctc greedy search         | 5.56  | 6.29  | 6.68  | 7.10  |
+| ctc prefix beam search    | 5.57  | 6.30  | 6.67  | 7.10  |
+| attention rescoring       | 5.05  | 5.45  | 5.69  | 5.91  |
+| LM + attention rescoring  | 4.73  | 5.08  | 5.22  | 5.38  |
 
 ## Transformer Result
 
@@ -38,12 +40,13 @@
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210204_transformer_exp.tar.gz
 
-| decoding mode          | CER  |
-|------------------------|------|
-| attention decoder      | 5.69 |
-| ctc greedy search      | 5.92 |
-| ctc prefix beam search | 5.91 |
-| attention rescoring    | 5.30 |
+| decoding mode             | CER   |
+|---------------------------|-------|
+| attention decoder         | 5.69  |
+| ctc greedy search         | 5.92  |
+| ctc prefix beam search    | 5.91  |
+| attention rescoring       | 5.30  |
+| LM + attention rescoring  | 5.04  |
 
 ## Unified Transformer Result
 
@@ -53,12 +56,13 @@
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210204_unified_transformer_exp.tar.gz
 
-| decoding mode/chunk size | full | 16   | 8    | 4    |
-|--------------------------|------|------|------|------|
-| attention decoder        | 6.04 | 6.35 | 6.45 | 6.70 |
-| ctc greedy search        | 6.28 | 6.99 | 7.39 | 7.89 |
-| ctc prefix beam search   | 6.28 | 6.98 | 7.40 | 7.89 |
-| attention rescoring      | 5.52 | 6.05 | 6.28 | 6.62 |
+| decoding mode/chunk size  | full  | 16    | 8     | 4     |
+|---------------------------|-------|-------|-------|-------|
+| attention decoder         | 6.04  | 6.35  | 6.45  | 6.70  |
+| ctc greedy search         | 6.28  | 6.99  | 7.39  | 7.89  |
+| ctc prefix beam search    | 6.28  | 6.98  | 7.40  | 7.89  |
+| attention rescoring       | 5.52  | 6.05  | 6.28  | 6.62  |
+| LM + attention rescoring  | 5.11  | 5.59  | 5.86  | 6.17  |
 
 ## AMP Training Transformer Result
 

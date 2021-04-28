@@ -12,7 +12,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
 stage=0 # start from 0 if you need to start from data preparation
-stop_stage=5
+stop_stage=6
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
 # NFS will be needed if you want run multi-machine training
@@ -22,7 +22,7 @@ num_nodes=1
 # the third one set node_rank 2, and so on. Default 0
 node_rank=0
 # data
-data=/export/expts4/chaoyang/
+data=/export/data/asr-data/OpenSLR/33/
 data_url=www.openslr.org/resources/33
 
 nj=16
@@ -207,20 +207,50 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         --output_quant_file $dir/final_quant.zip
 fi
 
+# Optionally, you can add LM and test it with runtime.
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
-    # Test model, please specify the model you want to use by --checkpoint
-        # alignment input
-        ali_format=$feat_dir/test/format.data
-        # alignment output
-        ali_result=$dir/ali
-        python wenet/bin/alignment.py --gpu -1 \
-            --config $dir/train.yaml \
-            --input_file $ali_format \
-            --checkpoint $checkpoint \
-            --batch_size 1 \
-            --dict $dict \
-            --result_file $ali_result \
-            --gen_praat
+    # Include kaldi path
+    # TODO(Binbin Zhang): remove kaldi dependency in this part
+    . kaldi_path.sh || exit 1;
+    # 7.1 Prepare dict
+    unit_file=$dict
+    mkdir -p data/local/dict
+    cp $unit_file data/local/dict/units.txt
+    tools/fst/prepare_dict.py $unit_file ${data}/resource_aishell/lexicon.txt \
+        data/local/dict/lexicon.txt
+    # 7.2 Train lm
+    lm=data/local/lm
+    mkdir -p $lm
+    tools/filter_scp.pl data/train/text \
+         $data/data_aishell/transcript/aishell_transcript_v0.8.txt > $lm/text
+    local/aishell_train_lms.sh
+    # 7.3 Build decoding TLG
+    tools/fst/compile_lexicon_token_fst.sh \
+        data/local/dict data/local/tmp data/local/lang
+    tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+    # 7.4 Decoding with runtime
+    ./tools/decode.sh --nj 16 \
+        --beam 15.0 --lattice_beam 7.5 --max_active 7000 \
+        --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
+        --fst_path data/lang_test/TLG.fst \
+        data/test/wav.scp data/test/text $dir/final.zip \
+        data/lang_test/words.txt $dir/lm_with_runtime
+    # See $dir/lm_with_runtime for wer
+fi
 
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+    # Test model, please specify the model you want to use by --checkpoint
+    # alignment input
+    ali_format=$feat_dir/test/format.data
+    # alignment output
+    ali_result=$dir/ali
+    python wenet/bin/alignment.py --gpu -1 \
+        --config $dir/train.yaml \
+        --input_file $ali_format \
+        --checkpoint $checkpoint \
+        --batch_size 1 \
+        --dict $dict \
+        --result_file $ali_result \
+        --gen_praat
 fi
 
