@@ -214,6 +214,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     . kaldi_path.sh || exit 1;
     # 7.1 Prepare dict
     unit_file=$dict
+    mkdir -p data/local/dict
     cp $unit_file data/local/dict/units.txt
     tools/fst/prepare_dict.py $unit_file ${data}/resource_aishell/lexicon.txt \
         data/local/dict/lexicon.txt
