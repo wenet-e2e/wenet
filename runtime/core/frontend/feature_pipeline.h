@@ -31,9 +31,9 @@ struct FeaturePipelineConfig {
   int sample_rate;
   int frame_length;
   int frame_shift;
-  FeaturePipelineConfig()
-      : num_bins(80),         // 80 dim fbank
-        sample_rate(16000) {  // 16k sample rate
+  FeaturePipelineConfig(int num_bins, int sample_rate)
+      : num_bins(num_bins),         // 80 dim fbank
+        sample_rate(sample_rate) {  // 16k sample rate
     frame_length = sample_rate / 1000 * 25;  // frame length 25ms
     frame_shift = sample_rate / 1000 * 10;   // frame shift 10ms
   }
