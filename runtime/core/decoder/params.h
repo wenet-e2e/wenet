@@ -17,6 +17,7 @@ DEFINE_string(model_path, "", "pytorch exported model path");
 
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
+DEFINE_int32(sample_rate, 16000, "sample rate for audio");
 
 // TLG fst
 DEFINE_string(fst_path, "", "TLG fst path");
@@ -47,8 +48,8 @@ std::shared_ptr<TorchAsrModel> InitTorchAsrModelFromFlags() {
 }
 
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
-  auto feature_config = std::make_shared<FeaturePipelineConfig>();
-  feature_config->num_bins = FLAGS_num_bins;
+  auto feature_config = std::make_shared<FeaturePipelineConfig>(FLAGS_num_bins,
+    FLAGS_sample_rate);
   return feature_config;
 }
 

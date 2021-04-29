@@ -27,7 +27,6 @@ int main(int argc, char *argv[]) {
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
   auto fst = wenet::InitFstFromFlags();
-  const int sample_rate = 16000;
   auto feature_pipeline =
       std::make_shared<wenet::FeaturePipeline>(*feature_config);
 
@@ -58,7 +57,7 @@ int main(int argc, char *argv[]) {
   int total_decode_time = 0;
   for (auto &wav : waves) {
     wenet::WavReader wav_reader(wav.second);
-    CHECK_EQ(wav_reader.sample_rate(), sample_rate);
+    CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
 
     feature_pipeline->Reset();
     feature_pipeline->AcceptWaveform(std::vector<float>(
@@ -70,7 +69,7 @@ int main(int argc, char *argv[]) {
                                    *decode_config, fst);
 
     int wave_dur = static_cast<int>(static_cast<float>(
-                wav_reader.num_sample()) / sample_rate * 1000);
+                wav_reader.num_sample()) / wav_reader.sample_rate() * 1000);
     int decode_time = 0;
     while (true) {
       wenet::Timer timer;
@@ -88,8 +87,8 @@ int main(int argc, char *argv[]) {
         break;
       } else if (FLAGS_chunk_size > 0 && FLAGS_simulate_streaming) {
         float frame_shift_in_ms =
-            static_cast<float>(feature_config->frame_shift) / sample_rate *
-            1000;
+            static_cast<float>(feature_config->frame_shift) /
+            wav_reader.sample_rate() * 1000;
         auto wait_time =
             decoder.num_frames_in_current_chunk() * frame_shift_in_ms -
             chunk_decode_time;
