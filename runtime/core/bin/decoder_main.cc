@@ -99,11 +99,14 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    LOG(INFO) << "Final result: " << decoder.result()[0].sentence;
+    std::string final_result;
+    if (decoder.DecodedSomething()) {
+      final_result = decoder.result()[0].sentence;
+    }
+    LOG(INFO) << wav.first << " Final result: " << final_result << std::endl;
     LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time
               << "ms.";
-    buffer << wav.first << " " << decoder.result()[0].sentence << std::endl;
-
+    buffer << wav.first << " " << final_result << std::endl;
     total_waves_dur += wave_dur;
     total_decode_time += decode_time;
   }
