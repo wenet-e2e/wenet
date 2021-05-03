@@ -89,6 +89,7 @@ if [ -n "${feat}" ]; then
                 if [ ! -f $dir/segments ]; then
                     echo "$0: No such file segments" && exit 1;
 		else
+                    echo "generate segmentaed wav.scp"
                     mv $dir/wav.scp $dir/wav_ori.scp
                     tools/segment.py --segments $dir/segments --input $dir/wav_ori.scp \
                         --output $dir/wav.scp
