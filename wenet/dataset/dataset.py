@@ -199,10 +199,22 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
         # speed = random.choice(speeds)
     for i, x in enumerate(batch):
         try:
+            wav = x[1]
+            value = wav.strip().split(":")
+            assert len(value) >= 1
+            wav_path = value[0]
+            sample_rate = torchaudio.backend.sox_backend.info(wav_path)[0].rate
             if speed_perturb:
-                waveform, sample_rate = _load_wav_with_speed(x[1], speed)
+                assert len(value) == 1
+                waveform, sample_rate = _load_wav_with_speed(wav_path, speed)
             else:
-                waveform, sample_rate = torchaudio.load_wav(x[1])
+                if len(value) == 2:
+                    start_frame = int(float(value[1].split(",")[0]) * sample_rate)
+                    end_rame = int(float(value[1].split(",")[1]) * sample_rate)
+                    waveform, sample_rate = torchaudio.backend.sox_backend.load(filepath=wav_path,
+                                                        num_frames=end_rame-start_frame, offset=start_frame)
+                else:
+                    waveform, sample_rate = torchaudio.load_wav(wav_path)
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
