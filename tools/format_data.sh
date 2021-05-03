@@ -79,20 +79,21 @@ if [ -n "${feat}" ]; then
                 --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
         elif [ ${feat_type} == "wav" ] || [ ${feat_type} == "flac" ] || [ ${feat_type} == "opus" ]; then
             if [ ! -f $dir/utt2dur ]; then
-		echo "no utt2dur file, will generate it"
+                echo "no utt2dur file, will generate it"
                 tools/wav_to_duration.sh --nj ${nj} \
                     ${feat} ${tmpdir}/input_${i}/shape.scp
-	    else
+            else
                 cp $dir/utt2dur ${tmpdir}/input_${i}/shape.scp
-	    fi
+            fi
             if ${segment}; then
                 if [ ! -f $dir/segments ]; then
                     echo "$0: No such file segments" && exit 1;
-		else
+                else
+                    echo "generate segmentaed wav.scp"
                     mv $dir/wav.scp $dir/wav_ori.scp
                     tools/segment.py --segments $dir/segments --input $dir/wav_ori.scp \
                         --output $dir/wav.scp
-		fi
+                fi
             fi
         fi
     done
