@@ -24,7 +24,7 @@
 #include "util/parse-options.h"
 
 int main(int argc, char *argv[]) {
-  using namespace kaldi;
+  using namespace kaldi;  // NOLINT
   try {
     const char *usage =
         "Convert an ARPA format language model into an FST\n"
