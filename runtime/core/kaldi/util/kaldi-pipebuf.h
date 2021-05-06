@@ -17,7 +17,6 @@
 // See the Apache 2 License for the specific language governing permissions and
 // limitations under the License.
 
-
 /** @file kaldi-pipebuf.h
  *  This is an Kaldi C++ Library header.
  */
@@ -25,7 +24,7 @@
 #ifndef KALDI_UTIL_KALDI_PIPEBUF_H_
 #define KALDI_UTIL_KALDI_PIPEBUF_H_
 
-#include<string>
+#include <string>
 #if !defined(_LIBCPP_VERSION)  // libc++
 #include <fstream>
 #else
@@ -41,10 +40,10 @@ namespace kaldi {
 
 #ifdef _MSC_VER
 #elif defined(_LIBCPP_VERSION)  // libc++
-template<class CharType, class Traits = std::char_traits<CharType> >
+template <class CharType, class Traits = std::char_traits<CharType> >
 class basic_pipebuf : public basic_filebuf<CharType, Traits> {
  public:
-  typedef basic_pipebuf<CharType, Traits>   ThisType;
+  typedef basic_pipebuf<CharType, Traits> ThisType;
 
  public:
   basic_pipebuf(FILE *fptr, std::ios_base::openmode mode)
@@ -58,10 +57,10 @@ class basic_pipebuf : public basic_filebuf<CharType, Traits> {
   }
 };  // class basic_pipebuf
 #else
-template<class CharType, class Traits = std::char_traits<CharType> >
+template <class CharType, class Traits = std::char_traits<CharType> >
 class basic_pipebuf : public std::basic_filebuf<CharType, Traits> {
  public:
-  typedef basic_pipebuf<CharType, Traits>   ThisType;
+  typedef basic_pipebuf<CharType, Traits> ThisType;
 
  public:
   basic_pipebuf(FILE *fptr, std::ios_base::openmode mode)

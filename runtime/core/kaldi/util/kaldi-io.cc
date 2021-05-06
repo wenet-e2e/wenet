@@ -18,17 +18,18 @@
 // See the Apache 2 License for the specific language governing permissions and
 // limitations under the License.
 #include "util/kaldi-io.h"
+
 #include <errno.h>
-#include <cstdlib>
-#include "base/kaldi-math.h"
-#include "base/io-funcs.h"
-#include "util/text-utils.h"
-#include "util/parse-options.h"
-// #include "util/kaldi-holder.h"
-#include "util/kaldi-pipebuf.h"
-// #include "util/kaldi-table.h"  // for Classify{W,R}specifier
 #include <stdio.h>
 #include <stdlib.h>
+
+#include <cstdlib>
+
+#include "base/io-funcs.h"
+#include "base/kaldi-math.h"
+#include "util/kaldi-pipebuf.h"
+#include "util/parse-options.h"
+#include "util/text-utils.h"
 
 #ifdef KALDI_CYGWIN_COMPAT
 #include "util/kaldi-cygwin-io-inl.h"
@@ -37,9 +38,8 @@
 #define MapOsPath(x) x
 #endif  // KALDI_CYGWIN_COMPAT
 
-
 #if defined(_MSC_VER)
-static FILE *popen(const char* command, const char* mode) {
+static FILE *popen(const char *command, const char *mode) {
 #ifdef KALDI_CYGWIN_COMPAT
   return kaldi::CygwinCompatPopen(command, mode);
 #else  // KALDI_CYGWIN_COMPAT
@@ -55,7 +55,7 @@ namespace kaldi {
 // Would mean we could use less of our own code.
 typedef basic_pipebuf<char> PipebufType;
 #endif
-}
+}  // namespace kaldi
 
 namespace kaldi {
 
@@ -70,7 +70,6 @@ std::string PrintableRxfilename(const std::string &rxfilename) {
   }
 }
 
-
 std::string PrintableWxfilename(const std::string &wxfilename) {
   if (wxfilename == "" || wxfilename == "-") {
     return "standard output";
@@ -82,34 +81,41 @@ std::string PrintableWxfilename(const std::string &wxfilename) {
   }
 }
 
-
 OutputType ClassifyWxfilename(const std::string &filename) {
   const char *c = filename.c_str();
   size_t length = filename.length();
   char first_char = c[0],
-      last_char = (length == 0 ? '\0' : c[filename.length()-1]);
+       last_char = (length == 0 ? '\0' : c[filename.length() - 1]);
 
   // if 'filename' is "" or "-", return kStandardOutput.
-  if (length == 0 || (length == 1 && first_char == '-'))
+  if (length == 0 || (length == 1 && first_char == '-')) {
     return kStandardOutput;
-  else if (first_char == '|') return kPipeOutput;  // An output pipe like "|blah".
-  else if (isspace(first_char) || isspace(last_char) || last_char == '|') {
-      return kNoOutput;  // Leading or trailing space: can't interpret this.
-                         // Final '|' would represent an input pipe, not an
-                         // output pipe.
-  // } else if ((first_char == 'a' || first_char == 's') &&
-  //            strchr(c, ':') != NULL &&
-  //            (ClassifyWspecifier(filename, NULL, NULL, NULL) != kNoWspecifier ||
-  //             ClassifyRspecifier(filename, NULL, NULL) != kNoRspecifier)) {
-  //   // e.g. ark:something or scp:something... this is almost certainly a
-  //   // scripting error, so call it an error rather than treating it as a file.
-  //   // In practice in modern kaldi scripts all (r,w)filenames begin with "ark"
-  //   // or "scp", even though technically speaking options like "b", "t", "s" or
-  //   // "cs" can appear before the ark or scp, like "b,ark".  For efficiency,
-  //   // and because this code is really just a nicety to catch errors earlier
-  //   // than they would otherwise be caught, we only call those extra functions
-  //   // for filenames beginning with 'a' or 's'.
-  //   return kNoOutput;
+  } else if (first_char == '|') {
+    return kPipeOutput;  // An output pipe like "|blah".
+  } else if (isspace(first_char) || isspace(last_char) || last_char == '|') {
+    return kNoOutput;  // Leading or trailing space: can't interpret this.
+                       // Final '|' would represent an input pipe, not an
+                       // output pipe.
+    // } else if ((first_char == 'a' || first_char == 's') &&
+    //            strchr(c, ':') != NULL &&
+    //            (ClassifyWspecifier(filename, NULL, NULL, NULL) !=
+    //            kNoWspecifier ||
+    //             ClassifyRspecifier(filename, NULL, NULL) != kNoRspecifier)) {
+    //   // e.g. ark:something or scp:something... this is almost certainly a
+    //   // scripting error, so call it an error rather than treating it as a
+    //   file.
+    //   // In practice in modern kaldi scripts all (r,w)filenames begin with
+    //   "ark"
+    //   // or "scp", even though technically speaking options like "b", "t",
+    //   "s" or
+    //   // "cs" can appear before the ark or scp, like "b,ark".  For
+    //   efficiency,
+    //   // and because this code is really just a nicety to catch errors
+    //   earlier
+    //   // than they would otherwise be caught, we only call those extra
+    //   functions
+    //   // for filenames beginning with 'a' or 's'.
+    //   return kNoOutput;
   } else if (isdigit(last_char)) {
     // This could be a file, but we have to see if it's an offset into a file
     // (like foo.ark:4314328), which is not allowed for writing (but is
@@ -128,19 +134,18 @@ OutputType ClassifyWxfilename(const std::string &filename) {
   // classified.
   if (strchr(c, '|') != NULL) {
     KALDI_WARN << "Trying to classify wxfilename with pipe symbol in the"
-        " wrong place (pipe without | at the beginning?): " <<
-        filename;
+                  " wrong place (pipe without | at the beginning?): "
+               << filename;
     return kNoOutput;
   }
   return kFileOutput;  // It matched no other pattern: assume it's a filename.
 }
 
-
 InputType ClassifyRxfilename(const std::string &filename) {
   const char *c = filename.c_str();
   size_t length = filename.length();
   char first_char = c[0],
-      last_char = (length == 0 ? '\0' : c[filename.length()-1]);
+       last_char = (length == 0 ? '\0' : c[filename.length() - 1]);
 
   // if 'filename' is "" or "-", return kStandardInput.
   if (length == 0 || (length == 1 && first_char == '-')) {
@@ -152,27 +157,34 @@ InputType ClassifyRxfilename(const std::string &filename) {
     return kPipeInput;
   } else if (isspace(first_char) || isspace(last_char)) {
     return kNoInput;  // We don't allow leading or trailing space in a filename.
-  // } else if ((first_char == 'a' || first_char == 's') &&
-  //            strchr(c, ':') != NULL &&
-  //           (ClassifyWspecifier(filename, NULL, NULL, NULL) != kNoWspecifier ||
-  //            ClassifyRspecifier(filename, NULL, NULL) != kNoRspecifier)) {
-  //   // e.g. ark:something or scp:something... this is almost certainly a
-  //   // scripting error, so call it an error rather than treating it as a file.
-  //   // In practice in modern kaldi scripts all (r,w)filenames begin with "ark"
-  //   // or "scp", even though technically speaking options like "b", "t", "s" or
-  //   // "cs" can appear before the ark or scp, like "b,ark".  For efficiency,
-  //   // and because this code is really just a nicety to catch errors earlier
-  //   // than they would otherwise be caught, we only call those extra functions
-  //   // for filenames beginning with 'a' or 's'.
-  //   return kNoInput;
+    // } else if ((first_char == 'a' || first_char == 's') &&
+    //            strchr(c, ':') != NULL &&
+    //           (ClassifyWspecifier(filename, NULL, NULL, NULL) !=
+    //           kNoWspecifier ||
+    //            ClassifyRspecifier(filename, NULL, NULL) != kNoRspecifier)) {
+    //   // e.g. ark:something or scp:something... this is almost certainly a
+    //   // scripting error, so call it an error rather than treating it as a
+    //   file.
+    //   // In practice in modern kaldi scripts all (r,w)filenames begin with
+    //   "ark"
+    //   // or "scp", even though technically speaking options like "b", "t",
+    //   "s" or
+    //   // "cs" can appear before the ark or scp, like "b,ark".  For
+    //   efficiency,
+    //   // and because this code is really just a nicety to catch errors
+    //   earlier
+    //   // than they would otherwise be caught, we only call those extra
+    //   functions
+    //   // for filenames beginning with 'a' or 's'.
+    //   return kNoInput;
   } else if (isdigit(last_char)) {
     const char *d = c + length - 1;
     while (isdigit(*d) && d > c) d--;
-    if (*d == ':') return kOffsetFileInput;  // Filename is like
-                                             // some_file:12345
+    if (*d == ':')
+      return kOffsetFileInput;  // Filename is like
+                                // some_file:12345
     // otherwise it could still be a filename; continue to the next check.
   }
-
 
   // At this point it matched no other pattern so we assume a filename, but
   // we check for '|' as it's a common source of errors to have pipe
@@ -180,7 +192,8 @@ InputType ClassifyRxfilename(const std::string &filename) {
   // classified in this case.
   if (strchr(c, '|') != NULL) {
     KALDI_WARN << "Trying to classify rxfilename with pipe symbol in the"
-        " wrong place (pipe without | at the end?): " << filename;
+                  " wrong place (pipe without | at the end?): "
+               << filename;
     return kNoInput;
   }
   return kFileInput;  // It matched no other pattern: assume it's a filename.
@@ -193,15 +206,15 @@ class OutputImplBase {
   virtual bool Open(const std::string &filename, bool binary) = 0;
   virtual std::ostream &Stream() = 0;
   virtual bool Close() = 0;
-  virtual ~OutputImplBase() { }
+  virtual ~OutputImplBase() {}
 };
 
-
-class FileOutputImpl: public OutputImplBase {
+class FileOutputImpl : public OutputImplBase {
  public:
   virtual bool Open(const std::string &filename, bool binary) {
-    if (os_.is_open()) KALDI_ERR << "FileOutputImpl::Open(), "
-                                << "open called on already open file.";
+    if (os_.is_open())
+      KALDI_ERR << "FileOutputImpl::Open(), "
+                << "open called on already open file.";
     filename_ = filename;
     os_.open(MapOsPath(filename_).c_str(),
              binary ? std::ios_base::out | std::ios_base::binary
@@ -212,7 +225,7 @@ class FileOutputImpl: public OutputImplBase {
   virtual std::ostream &Stream() {
     if (!os_.is_open())
       KALDI_ERR << "FileOutputImpl::Stream(), file is not open.";
-      // I believe this error can only arise from coding error.
+    // I believe this error can only arise from coding error.
     return os_;
   }
 
@@ -226,22 +239,23 @@ class FileOutputImpl: public OutputImplBase {
   virtual ~FileOutputImpl() {
     if (os_.is_open()) {
       os_.close();
-      if (os_.fail())
-        KALDI_ERR << "Error closing output file " << filename_;
+      if (os_.fail()) KALDI_ERR << "Error closing output file " << filename_;
     }
   }
+
  private:
   std::string filename_;
   std::ofstream os_;
 };
 
-class StandardOutputImpl: public OutputImplBase {
+class StandardOutputImpl : public OutputImplBase {
  public:
-  StandardOutputImpl(): is_open_(false) { }
+  StandardOutputImpl() : is_open_(false) {}
 
   virtual bool Open(const std::string &filename, bool binary) {
-    if (is_open_) KALDI_ERR << "StandardOutputImpl::Open(), "
-                     "open called on already open file.";
+    if (is_open_)
+      KALDI_ERR << "StandardOutputImpl::Open(), "
+                   "open called on already open file.";
 #ifdef _MSC_VER
     _setmode(_fileno(stdout), binary ? _O_BINARY : _O_TEXT);
 #endif
@@ -266,17 +280,17 @@ class StandardOutputImpl: public OutputImplBase {
   virtual ~StandardOutputImpl() {
     if (is_open_) {
       std::cout << std::flush;
-      if (std::cout.fail())
-        KALDI_ERR << "Error writing to standard output";
+      if (std::cout.fail()) KALDI_ERR << "Error writing to standard output";
     }
   }
+
  private:
   bool is_open_;
 };
 
-class PipeOutputImpl: public OutputImplBase {
+class PipeOutputImpl : public OutputImplBase {
  public:
-  PipeOutputImpl(): f_(NULL), os_(NULL) { }
+  PipeOutputImpl() : f_(NULL), os_(NULL) {}
 
   virtual bool Open(const std::string &wxfilename, bool binary) {
     filename_ = wxfilename;
@@ -290,17 +304,16 @@ class PipeOutputImpl: public OutputImplBase {
     f_ = popen(cmd_name.c_str(), "w");
 #endif
     if (!f_) {  // Failure.
-      KALDI_WARN << "Failed opening pipe for writing, command is: "
-                 << cmd_name << ", errno is " << strerror(errno);
+      KALDI_WARN << "Failed opening pipe for writing, command is: " << cmd_name
+                 << ", errno is " << strerror(errno);
       return false;
     } else {
 #ifndef _MSC_VER
       fb_ = new PipebufType(f_,  // Using this constructor won't make the
                                  // destructor try to close the stream when
                                  // we're done.
-                                  (binary ? std::ios_base::out|
-                                   std::ios_base::binary
-                                   :std::ios_base::out));
+                            (binary ? std::ios_base::out | std::ios_base::binary
+                                    : std::ios_base::out));
       KALDI_ASSERT(fb_ != NULL);  // or would be alloc error.
       os_ = new std::ostream(fb_);
 #else
@@ -311,8 +324,9 @@ class PipeOutputImpl: public OutputImplBase {
   }
 
   virtual std::ostream &Stream() {
-    if (os_ == NULL) KALDI_ERR << "PipeOutputImpl::Stream(),"
-                                  " object not initialized.";
+    if (os_ == NULL)
+      KALDI_ERR << "PipeOutputImpl::Stream(),"
+                   " object not initialized.";
     // I believe this error can only arise from coding error.
     return *os_;
   }
@@ -346,6 +360,7 @@ class PipeOutputImpl: public OutputImplBase {
         KALDI_ERR << "Error writing to pipe " << PrintableWxfilename(filename_);
     }
   }
+
  private:
   std::string filename_;
   FILE *f_;
@@ -354,8 +369,6 @@ class PipeOutputImpl: public OutputImplBase {
 #endif
   std::ostream *os_;
 };
-
-
 
 class InputImplBase {
  public:
@@ -376,17 +389,18 @@ class InputImplBase {
                                    // call Open twice
   // (has efficiency benefits).
 
-  virtual ~InputImplBase() { }
+  virtual ~InputImplBase() {}
 };
 
-class FileInputImpl: public InputImplBase {
+class FileInputImpl : public InputImplBase {
  public:
   virtual bool Open(const std::string &filename, bool binary) {
-    if (is_.is_open()) KALDI_ERR << "FileInputImpl::Open(), "
-                                << "open called on already open file.";
-    is_.open(MapOsPath(filename).c_str(),
-             binary ? std::ios_base::in | std::ios_base::binary
-                    : std::ios_base::in);
+    if (is_.is_open())
+      KALDI_ERR << "FileInputImpl::Open(), "
+                << "open called on already open file.";
+    is_.open(
+        MapOsPath(filename).c_str(),
+        binary ? std::ios_base::in | std::ios_base::binary : std::ios_base::in);
     return is_.is_open();
   }
 
@@ -412,18 +426,19 @@ class FileInputImpl: public InputImplBase {
     // Stream will automatically be closed, and we don't care about
     // whether it fails.
   }
+
  private:
   std::ifstream is_;
 };
 
-
-class StandardInputImpl: public InputImplBase {
+class StandardInputImpl : public InputImplBase {
  public:
-  StandardInputImpl(): is_open_(false) { }
+  StandardInputImpl() : is_open_(false) {}
 
   virtual bool Open(const std::string &filename, bool binary) {
-    if (is_open_) KALDI_ERR << "StandardInputImpl::Open(), "
-                     "open called on already open file.";
+    if (is_open_)
+      KALDI_ERR << "StandardInputImpl::Open(), "
+                   "open called on already open file.";
     is_open_ = true;
 #ifdef _MSC_VER
     _setmode(_fileno(stdin), binary ? _O_BINARY : _O_TEXT);
@@ -446,21 +461,23 @@ class StandardInputImpl: public InputImplBase {
     is_open_ = false;
     return 0;
   }
-  virtual ~StandardInputImpl() { }
+  virtual ~StandardInputImpl() {}
+
  private:
   bool is_open_;
 };
 
-class PipeInputImpl: public InputImplBase {
+class PipeInputImpl : public InputImplBase {
  public:
-  PipeInputImpl(): f_(NULL), is_(NULL) { }
+  PipeInputImpl() : f_(NULL), is_(NULL) {}
 
   virtual bool Open(const std::string &rxfilename, bool binary) {
     filename_ = rxfilename;
     KALDI_ASSERT(f_ == NULL);  // Make sure closed.
     KALDI_ASSERT(rxfilename.length() != 0 &&
-           rxfilename[rxfilename.length()-1] == '|');  // should end with '|'
-    std::string cmd_name(rxfilename, 0, rxfilename.length()-1);
+                 rxfilename[rxfilename.length() - 1] ==
+                     '|');  // should end with '|'
+    std::string cmd_name(rxfilename, 0, rxfilename.length() - 1);
 #if defined(_MSC_VER) || defined(__CYGWIN__)
     f_ = popen(cmd_name.c_str(), (binary ? "rb" : "r"));
 #else
@@ -468,16 +485,15 @@ class PipeInputImpl: public InputImplBase {
 #endif
 
     if (!f_) {  // Failure.
-      KALDI_WARN << "Failed opening pipe for reading, command is: "
-                 << cmd_name << ", errno is " << strerror(errno);
+      KALDI_WARN << "Failed opening pipe for reading, command is: " << cmd_name
+                 << ", errno is " << strerror(errno);
       return false;
     } else {
 #ifndef _MSC_VER
       fb_ = new PipebufType(f_,  // Using this constructor won't lead the
                                  // destructor to close the stream.
-                                 (binary ? std::ios_base::in|
-                                  std::ios_base::binary
-                                  :std::ios_base::in));
+                            (binary ? std::ios_base::in | std::ios_base::binary
+                                    : std::ios_base::in));
       KALDI_ASSERT(fb_ != NULL);  // or would be alloc error.
       is_ = new std::istream(fb_);
 #else
@@ -486,8 +502,7 @@ class PipeInputImpl: public InputImplBase {
       if (is_->fail() || is_->bad()) return false;
       if (is_->eof()) {
         KALDI_WARN << "Pipe opened with command "
-                   << PrintableRxfilename(rxfilename)
-                   << " is empty.";
+                   << PrintableRxfilename(rxfilename) << " is empty.";
         // don't return false: empty may be valid.
       }
       return true;
@@ -502,8 +517,7 @@ class PipeInputImpl: public InputImplBase {
   }
 
   virtual int32 Close() {
-    if (is_ == NULL)
-      KALDI_ERR << "PipeInputImpl::Close(), file is not open.";
+    if (is_ == NULL) KALDI_ERR << "PipeInputImpl::Close(), file is not open.";
     delete is_;
     is_ = NULL;
     int32 status;
@@ -523,10 +537,10 @@ class PipeInputImpl: public InputImplBase {
     return status;
   }
   virtual ~PipeInputImpl() {
-    if (is_)
-      Close();
+    if (is_) Close();
   }
   virtual InputType MyType() { return kPipeInput; }
+
  private:
   std::string filename_;
   FILE *f_;
@@ -554,21 +568,20 @@ class PipeInputImpl: public InputImplBase {
 #endif
 */
 
-class OffsetFileInputImpl: public InputImplBase {
+class OffsetFileInputImpl : public InputImplBase {
   // This class is a bit more complicated than the
 
  public:
   // splits a filename like /my/file:123 into /my/file and the
   // number 123.  Crashes if not this format.
   static void SplitFilename(const std::string &rxfilename,
-                            std::string *filename,
-                            size_t *offset) {
+                            std::string *filename, size_t *offset) {
     size_t pos = rxfilename.find_last_of(':');
     KALDI_ASSERT(pos != std::string::npos);  // would indicate error in calling
     // code, as the filename is supposed to be of the correct form at this
     // point.
     *filename = std::string(rxfilename, 0, pos);
-    std::string number(rxfilename, pos+1);
+    std::string number(rxfilename, pos + 1);
     bool ans = ConvertStringToInteger(number, offset);
     if (!ans)
       KALDI_ERR << "Cannot get offset from filename " << rxfilename
@@ -578,12 +591,12 @@ class OffsetFileInputImpl: public InputImplBase {
 
   bool Seek(size_t offset) {
     size_t cur_pos = is_.tellg();
-    if (cur_pos == offset) return true;
-    else if (cur_pos<offset && cur_pos+100 > offset) {
+    if (cur_pos == offset) {
+      return true;
+    } else if (cur_pos < offset && cur_pos + 100 > offset) {
       // We're close enough that it may be faster to just
       // read that data, rather than seek.
-      for (size_t i = cur_pos; i < offset; i++)
-        is_.get();
+      for (size_t i = cur_pos; i < offset; i++) is_.get();
       return (is_.tellg() == std::streampos(offset));
     }
     // Try to actually seek.
@@ -617,7 +630,8 @@ class OffsetFileInputImpl: public InputImplBase {
         is_.open(MapOsPath(filename_).c_str(),
                  binary ? std::ios_base::in | std::ios_base::binary
                         : std::ios_base::in);
-        if (!is_.is_open()) return false;
+        if (!is_.is_open())
+          return false;
         else
           return Seek(offset);
       }
@@ -626,9 +640,10 @@ class OffsetFileInputImpl: public InputImplBase {
       SplitFilename(rxfilename, &filename_, &offset);
       binary_ = binary;
       is_.open(MapOsPath(filename_).c_str(),
-                binary ? std::ios_base::in | std::ios_base::binary
+               binary ? std::ios_base::in | std::ios_base::binary
                       : std::ios_base::in);
-      if (!is_.is_open()) return false;
+      if (!is_.is_open())
+        return false;
       else
         return Seek(offset);
     }
@@ -656,22 +671,22 @@ class OffsetFileInputImpl: public InputImplBase {
     // Stream will automatically be closed, and we don't care about
     // whether it fails.
   }
+
  private:
   std::string filename_;  // the actual filename
-  bool binary_;  // true if was opened in binary mode.
+  bool binary_;           // true if was opened in binary mode.
   std::ifstream is_;
 };
 
-
-Output::Output(const std::string &wxfilename, bool binary,
-               bool write_header):impl_(NULL) {
+Output::Output(const std::string &wxfilename, bool binary, bool write_header)
+    : impl_(NULL) {
   if (!Open(wxfilename, binary, write_header)) {
     if (impl_) {
       delete impl_;
       impl_ = NULL;
     }
-    KALDI_ERR << "Error opening output stream " <<
-        PrintableWxfilename(wxfilename);
+    KALDI_ERR << "Error opening output stream "
+              << PrintableWxfilename(wxfilename);
   }
 }
 
@@ -694,8 +709,9 @@ Output::~Output() {
     if (!ok)
       KALDI_ERR << "Error closing output file "
                 << PrintableWxfilename(filename_)
-                << (ClassifyWxfilename(filename_) == kFileOutput ?
-                    " (disk full?)" : "");
+                << (ClassifyWxfilename(filename_) == kFileOutput
+                        ? " (disk full?)"
+                        : "");
   }
 }
 
@@ -720,22 +736,22 @@ bool Output::Open(const std::string &wxfn, bool binary, bool header) {
   OutputType type = ClassifyWxfilename(wxfn);
   KALDI_ASSERT(impl_ == NULL);
 
-  if (type ==  kFileOutput) {
+  if (type == kFileOutput) {
     impl_ = new FileOutputImpl();
   } else if (type == kStandardOutput) {
     impl_ = new StandardOutputImpl();
   } else if (type == kPipeOutput) {
     impl_ = new PipeOutputImpl();
   } else {  // type == kNoOutput
-    KALDI_WARN << "Invalid output filename format "<<
-        PrintableWxfilename(wxfn);
+    KALDI_WARN << "Invalid output filename format "
+               << PrintableWxfilename(wxfn);
     return false;
   }
   if (!impl_->Open(wxfn, binary)) {
     delete impl_;
     impl_ = NULL;
     return false;  // failed to open.
-  } else {  // successfully opened it.
+  } else {         // successfully opened it.
     if (header) {
       InitKaldiOutputStream(impl_->Stream(), binary);
       bool ok = impl_->Stream().good();  // still OK?
@@ -751,8 +767,7 @@ bool Output::Open(const std::string &wxfn, bool binary, bool header) {
   }
 }
 
-
-Input::Input(const std::string &rxfilename, bool *binary): impl_(NULL) {
+Input::Input(const std::string &rxfilename, bool *binary) : impl_(NULL) {
   if (!Open(rxfilename, binary)) {
     KALDI_ERR << "Error opening input stream "
               << PrintableRxfilename(rxfilename);
@@ -770,8 +785,7 @@ int32 Input::Close() {
   }
 }
 
-bool Input::OpenInternal(const std::string &rxfilename,
-                         bool file_binary,
+bool Input::OpenInternal(const std::string &rxfilename, bool file_binary,
                          bool *contents_binary) {
   InputType type = ClassifyRxfilename(rxfilename);
   if (IsOpen()) {
@@ -795,7 +809,7 @@ bool Input::OpenInternal(const std::string &rxfilename,
       // and fall through to code below which actually opens the file.
     }
   }
-  if (type ==  kFileInput) {
+  if (type == kFileInput) {
     impl_ = new FileInputImpl();
   } else if (type == kStandardInput) {
     impl_ = new StandardInputImpl();
@@ -804,8 +818,8 @@ bool Input::OpenInternal(const std::string &rxfilename,
   } else if (type == kOffsetFileInput) {
     impl_ = new OffsetFileInputImpl();
   } else {  // type == kNoInput
-    KALDI_WARN << "Invalid input filename format "<<
-        PrintableRxfilename(rxfilename);
+    KALDI_WARN << "Invalid input filename format "
+               << PrintableRxfilename(rxfilename);
     return false;
   }
   if (!impl_->Open(rxfilename, file_binary)) {  // true is binary mode--
@@ -820,15 +834,14 @@ bool Input::OpenInternal(const std::string &rxfilename,
     return true;
 }
 
-
-Input::~Input() { if (impl_) Close(); }
-
+Input::~Input() {
+  if (impl_) Close();
+}
 
 std::istream &Input::Stream() {
   if (!IsOpen()) KALDI_ERR << "Input::Stream(), not open.";
   return impl_->Stream();
 }
-
 
 // template <> void ReadKaldiObject(const std::string &filename,
 //                                  Matrix<float> *m) {
@@ -837,7 +850,8 @@ std::istream &Input::Stream() {
 //     // (the bit in square brackets is the range).
 //     std::string rxfilename, range;
 //     if (!ExtractRangeSpecifier(filename, &rxfilename, &range)) {
-//       KALDI_ERR << "Could not make sense of possible range specifier in filename "
+//       KALDI_ERR << "Could not make sense of possible range specifier in
+//       filename "
 //                 << "while reading matrix: " << filename;
 //     }
 //     Matrix<float> temp;
@@ -862,7 +876,8 @@ std::istream &Input::Stream() {
 //     // (the bit in square brackets is the range).
 //     std::string rxfilename, range;
 //     if (!ExtractRangeSpecifier(filename, &rxfilename, &range)) {
-//       KALDI_ERR << "Could not make sense of possible range specifier in filename "
+//       KALDI_ERR << "Could not make sense of possible range specifier in
+//       filename "
 //                 << "while reading matrix: " << filename;
 //     }
 //     Matrix<double> temp;
@@ -879,7 +894,5 @@ std::istream &Input::Stream() {
 //     m->Read(ki.Stream(), binary_in);
 //   }
 // }
-
-
 
 }  // end namespace kaldi

@@ -22,32 +22,31 @@
 
 namespace kaldi {
 
-template<>
+template <>
 void WriteBasicType<bool>(std::ostream &os, bool binary, bool b) {
-  os << (b ? "T":"F");
+  os << (b ? "T" : "F");
   if (!binary) os << " ";
-  if (os.fail())
-    KALDI_ERR << "Write failure in WriteBasicType<bool>";
+  if (os.fail()) KALDI_ERR << "Write failure in WriteBasicType<bool>";
 }
 
-template<>
+template <>
 void ReadBasicType<bool>(std::istream &is, bool binary, bool *b) {
   KALDI_PARANOID_ASSERT(b != NULL);
   if (!binary) is >> std::ws;  // eat up whitespace.
   char c = is.peek();
   if (c == 'T') {
-      *b = true;
-      is.get();
+    *b = true;
+    is.get();
   } else if (c == 'F') {
-      *b = false;
-      is.get();
+    *b = false;
+    is.get();
   } else {
     KALDI_ERR << "Read failure in ReadBasicType<bool>, file position is "
               << is.tellg() << ", next char is " << CharToString(c);
   }
 }
 
-template<>
+template <>
 void WriteBasicType<float>(std::ostream &os, bool binary, float f) {
   if (binary) {
     char c = sizeof(f);
@@ -58,7 +57,7 @@ void WriteBasicType<float>(std::ostream &os, bool binary, float f) {
   }
 }
 
-template<>
+template <>
 void WriteBasicType<double>(std::ostream &os, bool binary, double f) {
   if (binary) {
     char c = sizeof(f);
@@ -69,7 +68,7 @@ void WriteBasicType<double>(std::ostream &os, bool binary, double f) {
   }
 }
 
-template<>
+template <>
 void ReadBasicType<float>(std::istream &is, bool binary, float *f) {
   KALDI_PARANOID_ASSERT(f != NULL);
   if (binary) {
@@ -77,7 +76,7 @@ void ReadBasicType<float>(std::istream &is, bool binary, float *f) {
     int c = is.peek();
     if (c == sizeof(*f)) {
       is.get();
-      is.read(reinterpret_cast<char*>(f), sizeof(*f));
+      is.read(reinterpret_cast<char *>(f), sizeof(*f));
     } else if (c == sizeof(d)) {
       ReadBasicType(is, binary, &d);
       *f = d;
@@ -94,7 +93,7 @@ void ReadBasicType<float>(std::istream &is, bool binary, float *f) {
   }
 }
 
-template<>
+template <>
 void ReadBasicType<double>(std::istream &is, bool binary, double *d) {
   KALDI_PARANOID_ASSERT(d != NULL);
   if (binary) {
@@ -102,7 +101,7 @@ void ReadBasicType<double>(std::istream &is, bool binary, double *d) {
     int c = is.peek();
     if (c == sizeof(*d)) {
       is.get();
-      is.read(reinterpret_cast<char*>(d), sizeof(*d));
+      is.read(reinterpret_cast<char *>(d), sizeof(*d));
     } else if (c == sizeof(f)) {
       ReadBasicType(is, binary, &f);
       *d = f;
@@ -120,8 +119,7 @@ void ReadBasicType<double>(std::istream &is, bool binary, double *d) {
 }
 
 void CheckToken(const char *token) {
-  if (*token == '\0')
-    KALDI_ERR << "Token is empty (not a valid token)";
+  if (*token == '\0') KALDI_ERR << "Token is empty (not a valid token)";
   const char *orig_token = token;
   while (*token != '\0') {
     if (::isspace(*token))
@@ -147,7 +145,7 @@ int Peek(std::istream &is, bool binary) {
   return is.peek();
 }
 
-void WriteToken(std::ostream &os, bool binary, const std::string & token) {
+void WriteToken(std::ostream &os, bool binary, const std::string &token) {
   WriteToken(os, binary, token.c_str());
 }
 
@@ -187,11 +185,10 @@ int PeekToken(std::istream &is, bool binary) {
   return ans;
 }
 
-
 void ExpectToken(std::istream &is, bool binary, const char *token) {
   int pos_at_start = is.tellg();
   KALDI_ASSERT(token != NULL);
-  CheckToken(token);  // make sure it's valid (can be read back)
+  CheckToken(token);           // make sure it's valid (can be read back)
   if (!binary) is >> std::ws;  // consume whitespace.
   std::string str;
   is >> str;
@@ -206,8 +203,8 @@ void ExpectToken(std::istream &is, bool binary, const char *token) {
   // is.clear() in PeekToken() for an explanation.
   if (strcmp(str.c_str(), token) != 0 &&
       !(token[0] == '<' && strcmp(str.c_str(), token + 1) == 0)) {
-    KALDI_ERR << "Expected token \"" << token << "\", got instead \""
-              << str <<"\".";
+    KALDI_ERR << "Expected token \"" << token << "\", got instead \"" << str
+              << "\".";
   }
 }
 

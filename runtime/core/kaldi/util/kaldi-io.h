@@ -21,8 +21,8 @@
 #define KALDI_UTIL_KALDI_IO_H_
 
 #ifdef _MSC_VER
-# include <fcntl.h>
-# include <io.h>
+#include <fcntl.h>
+#include <io.h>
 #endif
 #include <cctype>  // For isspace.
 #include <limits>
@@ -30,11 +30,10 @@
 #include "base/kaldi-common.h"
 // #include "matrix/kaldi-matrix.h"
 
-
 namespace kaldi {
 
 class OutputImplBase;  // Forward decl; defined in a .cc file
-class InputImplBase;  // Forward decl; defined in a .cc file
+class InputImplBase;   // Forward decl; defined in a .cc file
 
 /// \addtogroup io_group
 /// @{
@@ -71,7 +70,6 @@ class InputImplBase;  // Forward decl; defined in a .cc file
 //    a program that creates them for arbitrary files]
 //
 
-
 // Typical usage:
 // ...
 // bool binary;
@@ -84,14 +82,7 @@ class InputImplBase;  // Forward decl; defined in a .cc file
 //    MyObject2.Write(ko.Stream(), binary);
 // }
 
-
-
-enum OutputType {
-  kNoOutput,
-  kFileOutput,
-  kStandardOutput,
-  kPipeOutput
-};
+enum OutputType { kNoOutput, kFileOutput, kStandardOutput, kPipeOutput };
 
 /// ClassifyWxfilename interprets filenames as follows:
 ///  - kNoOutput: invalid filenames (leading or trailing space, things that look
@@ -120,7 +111,6 @@ enum InputType {
 ///  - kOffsetFileInput: offsets into files, e.g.  /some/filename:12970
 InputType ClassifyRxfilename(const std::string &rxfilename);
 
-
 class Output {
  public:
   // The normal constructor, provided for convenience.
@@ -128,7 +118,7 @@ class Output {
   // with these arguments.
   Output(const std::string &filename, bool binary, bool write_header = true);
 
-  Output(): impl_(NULL) {}
+  Output() : impl_(NULL) {}
 
   /// This opens the stream, with the given mode (binary or text).  It returns
   /// true on success and false on failure.  However, it will throw if something
@@ -162,7 +152,6 @@ class Output {
   KALDI_DISALLOW_COPY_AND_ASSIGN(Output);
 };
 
-
 // bool binary_in;
 // Input ki(some_filename, &binary_in);
 // MyObject.Read(ki.Stream(), binary_in);
@@ -178,7 +167,6 @@ class Output {
 // Note that to catch errors you need to use try.. catch.
 // Input communicates errors by throwing exceptions.
 
-
 // Input interprets four kinds of filenames:
 //  (1) Normal filenames
 //  (2) The empty string or "-", interpreted as standard output
@@ -186,16 +174,15 @@ class Output {
 //  (4) Offsets into [real] files, e.g. "/my/filename:12049"
 // The last one has no correspondence in Output.
 
-
 class Input {
  public:
   /// The normal constructor.  Opens the stream in binary mode.
   /// Equivalent to calling the default constructor followed by Open(); then, if
   /// binary != NULL, it calls ReadHeader(), putting the output in "binary"; it
   /// throws on error.
-  Input(const std::string &rxfilename, bool *contents_binary = NULL);
+  explicit Input(const std::string &rxfilename, bool *contents_binary = NULL);
 
-  Input(): impl_(NULL) {}
+  Input() : impl_(NULL) {}
 
   // Open opens the stream for reading (the mode, where relevant, is binary; use
   // OpenTextMode for text-mode, we made this a separate function rather than a
@@ -229,6 +216,7 @@ class Input {
   // Destructor does not throw: input streams may legitimately fail so we
   // don't worry about the status when we close them.
   ~Input();
+
  private:
   bool OpenInternal(const std::string &rxfilename, bool file_binary,
                     bool *contents_binary);
@@ -236,8 +224,8 @@ class Input {
   KALDI_DISALLOW_COPY_AND_ASSIGN(Input);
 };
 
-template <class C> void ReadKaldiObject(const std::string &filename,
-                                        C *c) {
+template <class C>
+void ReadKaldiObject(const std::string &filename, C *c) {
   bool binary_in;
   Input ki(filename, &binary_in);
   c->Read(ki.Stream(), binary_in);
@@ -252,11 +240,9 @@ template <class C> void ReadKaldiObject(const std::string &filename,
 // template <> void ReadKaldiObject(const std::string &filename,
 //                                  Matrix<double> *m);
 
-
-
-template <class C> inline void WriteKaldiObject(const C &c,
-                                                const std::string &filename,
-                                                bool binary) {
+template <class C>
+inline void WriteKaldiObject(const C &c, const std::string &filename,
+                             bool binary) {
   Output ko(filename, binary);
   c.Write(ko.Stream(), binary);
 }
