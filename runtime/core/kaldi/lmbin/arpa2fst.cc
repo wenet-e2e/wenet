@@ -20,14 +20,13 @@
 #include <string>
 
 #include "lm/arpa-lm-compiler.h"
-// #include "util/kaldi-io.h"
+#include "util/kaldi-io.h"
 #include "util/parse-options.h"
-
 
 int main(int argc, char *argv[]) {
   using namespace kaldi;
   try {
-    const char *usage  =
+    const char *usage =
         "Convert an ARPA format language model into an FST\n"
         "Usage: arpa2fst [opts] <input-arpa> <output-fst>\n"
         " e.g.: arpa2fst --disambig-symbol=#0 --read-symbol-table="
@@ -50,10 +49,8 @@ int main(int argc, char *argv[]) {
     bool keep_symbols = false;
     bool ilabel_sort = true;
 
-    po.Register("bos-symbol", &bos_symbol,
-                "Beginning of sentence symbol");
-    po.Register("eos-symbol", &eos_symbol,
-                "End of sentence symbol");
+    po.Register("bos-symbol", &bos_symbol, "Beginning of sentence symbol");
+    po.Register("eos-symbol", &eos_symbol, "End of sentence symbol");
     po.Register("disambig-symbol", &disambig_symbol,
                 "Disambiguator. If provided (e. g. #0), used on input side of "
                 "backoff links, and <s> and </s> are replaced with epsilons");
@@ -65,8 +62,7 @@ int main(int argc, char *argv[]) {
                 "Store symbol table with FST. Symbols always saved to FST if "
                 "symbol tables are neither read or written (otherwise symbols "
                 "would be lost entirely)");
-    po.Register("ilabel-sort", &ilabel_sort,
-                "Ilabel-sort the output FST");
+    po.Register("ilabel-sort", &ilabel_sort, "Ilabel-sort the output FST");
 
     po.Read(argc, argv);
 
@@ -75,74 +71,74 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
     std::string arpa_rxfilename = po.GetArg(1),
-        fst_wxfilename = po.GetOptArg(2);
+                fst_wxfilename = po.GetOptArg(2);
 
     int64 disambig_symbol_id = 0;
 
-  //  fst::SymbolTable* symbols;
-  //  if (!read_syms_filename.empty()) {
-  //    // Use existing symbols. Required symbols must be in the table.
-  //    kaldi::Input kisym(read_syms_filename);
-  //    symbols = fst::SymbolTable::ReadText(
-  //        kisym.Stream(), PrintableWxfilename(read_syms_filename));
-  //    if (symbols == NULL)
-  //      KALDI_ERR << "Could not read symbol table from file "
-  //                << read_syms_filename;
+    fst::SymbolTable *symbols;
+    if (!read_syms_filename.empty()) {
+      // Use existing symbols. Required symbols must be in the table.
+      kaldi::Input kisym(read_syms_filename);
+      symbols = fst::SymbolTable::ReadText(
+          kisym.Stream(), PrintableWxfilename(read_syms_filename));
+      if (symbols == NULL)
+        KALDI_ERR << "Could not read symbol table from file "
+                  << read_syms_filename;
 
-  //    options.oov_handling = ArpaParseOptions::kSkipNGram;
-  //    if (!disambig_symbol.empty()) {
-  //      disambig_symbol_id = symbols->Find(disambig_symbol);
-  //      if (disambig_symbol_id == -1) // fst::kNoSymbol
-  //        KALDI_ERR << "Symbol table " << read_syms_filename
-  //                  << " has no symbol for " << disambig_symbol;
-  //    }
-  //  } else {
-  //    // Create a new symbol table and populate it from ARPA file.
-  //    symbols = new fst::SymbolTable(PrintableWxfilename(fst_wxfilename));
-  //    options.oov_handling = ArpaParseOptions::kAddToSymbols;
-  //    symbols->AddSymbol("<eps>", 0);
-  //    if (!disambig_symbol.empty()) {
-  //      disambig_symbol_id = symbols->AddSymbol(disambig_symbol);
-  //    }
-  //  }
+      options.oov_handling = ArpaParseOptions::kSkipNGram;
+      if (!disambig_symbol.empty()) {
+        disambig_symbol_id = symbols->Find(disambig_symbol);
+        if (disambig_symbol_id == -1)  // fst::kNoSymbol
+          KALDI_ERR << "Symbol table " << read_syms_filename
+                    << " has no symbol for " << disambig_symbol;
+      }
+    } else {
+      // Create a new symbol table and populate it from ARPA file.
+      symbols = new fst::SymbolTable(PrintableWxfilename(fst_wxfilename));
+      options.oov_handling = ArpaParseOptions::kAddToSymbols;
+      symbols->AddSymbol("<eps>", 0);
+      if (!disambig_symbol.empty()) {
+        disambig_symbol_id = symbols->AddSymbol(disambig_symbol);
+      }
+    }
 
-  //  // Add or use existing BOS and EOS.
-  //  options.bos_symbol = symbols->AddSymbol(bos_symbol);
-  //  options.eos_symbol = symbols->AddSymbol(eos_symbol);
+    // Add or use existing BOS and EOS.
+    options.bos_symbol = symbols->AddSymbol(bos_symbol);
+    options.eos_symbol = symbols->AddSymbol(eos_symbol);
 
-  //  // If producing new (not reading existing) symbols and not saving them,
-  //  // need to keep symbols with FST, otherwise they would be lost.
-  //  if (read_syms_filename.empty() && write_syms_filename.empty())
-  //    keep_symbols = true;
+    // If producing new (not reading existing) symbols and not saving them,
+    // need to keep symbols with FST, otherwise they would be lost.
+    if (read_syms_filename.empty() && write_syms_filename.empty())
+      keep_symbols = true;
 
-  //  // Actually compile LM.
-  //  KALDI_ASSERT (symbols != NULL);
-  //  ArpaLmCompiler lm_compiler(options, disambig_symbol_id, symbols);
-  //  {
-  //    Input ki(arpa_rxfilename);
-  //    lm_compiler.Read(ki.Stream());
-  //  }
+    // Actually compile LM.
+    KALDI_ASSERT(symbols != NULL);
+    ArpaLmCompiler lm_compiler(options, disambig_symbol_id, symbols);
+    {
+      Input ki(arpa_rxfilename);
+      lm_compiler.Read(ki.Stream());
+    }
 
-  //  // Sort the FST in-place if requested by options.
-  //  if (ilabel_sort) {
-  //    fst::ArcSort(lm_compiler.MutableFst(), fst::StdILabelCompare());
-  //  }
+    // Sort the FST in-place if requested by options.
+    if (ilabel_sort) {
+      fst::ArcSort(lm_compiler.MutableFst(), fst::StdILabelCompare());
+    }
 
-  //  // Write symbols if requested.
-  //  if (!write_syms_filename.empty()) {
-  //    kaldi::Output kosym(write_syms_filename, false);
-  //    symbols->WriteText(kosym.Stream());
-  //  }
+    // Write symbols if requested.
+    if (!write_syms_filename.empty()) {
+      kaldi::Output kosym(write_syms_filename, false);
+      symbols->WriteText(kosym.Stream());
+    }
 
-  //  // Write LM FST.
-  //  bool write_binary = true, write_header = false;
-  //  kaldi::Output kofst(fst_wxfilename, write_binary, write_header);
-  //  fst::FstWriteOptions wopts(PrintableWxfilename(fst_wxfilename));
-  //  wopts.write_isymbols = wopts.write_osymbols = keep_symbols;
-  //  lm_compiler.Fst().Write(kofst.Stream(), wopts);
+    // Write LM FST.
+    bool write_binary = true, write_header = false;
+    kaldi::Output kofst(fst_wxfilename, write_binary, write_header);
+    fst::FstWriteOptions wopts(PrintableWxfilename(fst_wxfilename));
+    wopts.write_isymbols = wopts.write_osymbols = keep_symbols;
+    lm_compiler.Fst().Write(kofst.Stream(), wopts);
 
-  //  delete symbols;
-  } catch(const std::exception &e) {
+    delete symbols;
+  } catch (const std::exception &e) {
     std::cerr << e.what();
     return -1;
   }

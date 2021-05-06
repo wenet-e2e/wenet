@@ -36,17 +36,20 @@ namespace kaldi {
 */
 struct ArpaParseOptions {
   enum OovHandling {
-    kRaiseError,     ///< Abort on OOV words
-    kAddToSymbols,   ///< Add novel words to the symbol table.
+    kRaiseError,      ///< Abort on OOV words
+    kAddToSymbols,    ///< Add novel words to the symbol table.
     kReplaceWithUnk,  ///< Replace OOV words with <unk>.
-    kSkipNGram       ///< Skip n-gram with OOV word and continue.
+    kSkipNGram        ///< Skip n-gram with OOV word and continue.
   };
 
-  ArpaParseOptions():
-      bos_symbol(-1), eos_symbol(-1), unk_symbol(-1),
-      oov_handling(kRaiseError), max_warnings(30) { }
+  ArpaParseOptions()
+      : bos_symbol(-1),
+        eos_symbol(-1),
+        unk_symbol(-1),
+        oov_handling(kRaiseError),
+        max_warnings(30) {}
 
-  void Register(OptionsItf *opts) {
+  void Register(OptionsItf* opts) {
     // Registering only the max_warnings count, since other options are
     // treated differently by client programs: some want integer symbols,
     // while other are passed words in their command line.
@@ -59,14 +62,14 @@ struct ArpaParseOptions {
   int32 eos_symbol;  ///< Symbol for </s>, Required non-epsilon.
   int32 unk_symbol;  ///< Symbol for <unk>, Required for kReplaceWithUnk.
   OovHandling oov_handling;  ///< How to handle OOV words in the file.
-  int32 max_warnings;  ///< Maximum warnings to report, <0 unlimited.
+  int32 max_warnings;        ///< Maximum warnings to report, <0 unlimited.
 };
 
 /**
    A parsed n-gram from ARPA LM file.
 */
 struct NGram {
-  NGram() : logprob(0.0), backoff(0.0) { }
+  NGram() : logprob(0.0), backoff(0.0) {}
   std::vector<int32> words;  ///< Symbols in left to right order.
   float logprob;             ///< Log-prob of the n-gram.
   float backoff;             ///< log-backoff weight of the n-gram.
@@ -93,7 +96,7 @@ class ArpaFileParser {
   virtual ~ArpaFileParser();
 
   /// Read ARPA LM file from a stream.
-  void Read(std::istream &is);
+  void Read(std::istream& is);
 
   /// Parser options.
   const ArpaParseOptions& Options() const { return options_; }
@@ -101,11 +104,11 @@ class ArpaFileParser {
  protected:
   /// Override called before reading starts. This is the point to prepare
   /// any state in the derived class.
-  virtual void ReadStarted() { }
+  virtual void ReadStarted() {}
 
   /// Override function called to signal that ARPA header with the expected
   /// number of n-grams has been read, and ngram_counts() is now valid.
-  virtual void HeaderAvailable() { }
+  virtual void HeaderAvailable() {}
 
   /// Pure override that must be implemented to process current n-gram. The
   /// n-grams are sent in the file order, which guarantees that all
@@ -113,7 +116,7 @@ class ArpaFileParser {
   virtual void ConsumeNGram(const NGram&) = 0;
 
   /// Override function called after the last n-gram has been consumed.
-  virtual void ReadComplete() { }
+  virtual void ReadComplete() {}
 
   /// Read-only access to symbol table. Not owned, do not make public.
   const fst::SymbolTable* Symbols() const { return symbols_; }

@@ -33,9 +33,7 @@ class ArpaLmCompiler : public ArpaFileParser {
  public:
   ArpaLmCompiler(const ArpaParseOptions& options, int sub_eps,
                  fst::SymbolTable* symbols)
-      : ArpaFileParser(options, symbols),
-        sub_eps_(sub_eps), impl_(NULL) {
-  }
+      : ArpaFileParser(options, symbols), sub_eps_(sub_eps), impl_(NULL) {}
   ~ArpaLmCompiler();
 
   const fst::StdVectorFst& Fst() const { return fst_; }
@@ -47,7 +45,6 @@ class ArpaLmCompiler : public ArpaFileParser {
   virtual void ConsumeNGram(const NGram& ngram);
   virtual void ReadComplete();
 
-
  private:
   // this function removes states that only have a backoff arc coming
   // out of them.
@@ -57,7 +54,8 @@ class ArpaLmCompiler : public ArpaFileParser {
   int sub_eps_;
   ArpaLmCompilerImplInterface* impl_;  // Owned.
   fst::StdVectorFst fst_;
-  template <class HistKey> friend class ArpaLmCompilerImpl;
+  template <class HistKey>
+  friend class ArpaLmCompilerImpl;
 };
 
 }  // namespace kaldi

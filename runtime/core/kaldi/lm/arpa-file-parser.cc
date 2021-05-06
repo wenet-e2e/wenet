@@ -31,18 +31,18 @@ namespace kaldi {
 
 ArpaFileParser::ArpaFileParser(const ArpaParseOptions& options,
                                fst::SymbolTable* symbols)
-    : options_(options), symbols_(symbols),
-      line_number_(0), warning_count_(0) {
-}
+    : options_(options),
+      symbols_(symbols),
+      line_number_(0),
+      warning_count_(0) {}
 
-ArpaFileParser::~ArpaFileParser() {
-}
+ArpaFileParser::~ArpaFileParser() {}
 
-void TrimTrailingWhitespace(std::string *str) {
+void TrimTrailingWhitespace(std::string* str) {
   str->erase(str->find_last_not_of(" \n\r\t") + 1);
 }
 
-void ArpaFileParser::Read(std::istream &is) {
+void ArpaFileParser::Read(std::istream& is) {
   // Argument sanity checks.
   if (options_.bos_symbol <= 0 || options_.eos_symbol <= 0 ||
       options_.bos_symbol == options_.eos_symbol)
@@ -52,8 +52,7 @@ void ArpaFileParser::Read(std::istream &is) {
               << " EOS=" << options_.eos_symbol;
   if (symbols_ != NULL &&
       options_.oov_handling == ArpaParseOptions::kReplaceWithUnk &&
-      (options_.unk_symbol <= 0 ||
-       options_.unk_symbol == options_.bos_symbol ||
+      (options_.unk_symbol <= 0 || options_.unk_symbol == options_.bos_symbol ||
        options_.unk_symbol == options_.eos_symbol))
     KALDI_ERR << "When symbol table is given and OOV mode is kReplaceWithUnk, "
               << "UNK symbol is required, must not be epsilon, and "
@@ -179,8 +178,7 @@ void ArpaFileParser::Read(std::istream &is) {
       std::vector<std::string> col;
       SplitStringToVector(current_line_, " \t", true, &col);
 
-      if (col.size() < 1 + cur_order ||
-          col.size() > 2 + cur_order ||
+      if (col.size() < 1 + cur_order || col.size() > 2 + cur_order ||
           (cur_order == ngram_counts_.size() && col.size() != 1 + cur_order)) {
         PARSE_ERR << "Invalid n-gram data line";
       }
@@ -209,7 +207,7 @@ void ArpaFileParser::Read(std::istream &is) {
             word = symbols_->AddSymbol(col[1 + index]);
           } else {
             word = symbols_->Find(col[1 + index]);
-            if (word == -1) { // fst::kNoSymbol
+            if (word == -1) {  // fst::kNoSymbol
               switch (options_.oov_handling) {
                 case ArpaParseOptions::kReplaceWithUnk:
                   word = options_.unk_symbol;
@@ -221,7 +219,7 @@ void ArpaFileParser::Read(std::istream &is) {
                   skip_ngram = true;
                   break;
                 default:
-                  PARSE_ERR << "word '"  << col[1 + index]
+                  PARSE_ERR << "word '" << col[1 + index]
                             << "' not in symbol table";
               }
             }
@@ -275,7 +273,7 @@ std::string ArpaFileParser::LineReference() const {
 
 bool ArpaFileParser::ShouldWarn() {
   return (warning_count_ != -1) &&
-    (++warning_count_ <= static_cast<uint32>(options_.max_warnings));
+         (++warning_count_ <= static_cast<uint32>(options_.max_warnings));
 }
 
 }  // namespace kaldi

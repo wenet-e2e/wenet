@@ -20,21 +20,24 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <sstream>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "base/kaldi-math.h"
+#include "fstext/remove-eps-local.h"
 #include "lm/arpa-lm-compiler.h"
 #include "util/stl-utils.h"
 #include "util/text-utils.h"
-#include "fstext/remove-eps-local.h"
 
 namespace kaldi {
 
 class ArpaLmCompilerImplInterface {
  public:
-  virtual ~ArpaLmCompilerImplInterface() { }
+  virtual ~ArpaLmCompilerImplInterface() {}
   virtual void ConsumeNGram(const NGram& ngram, bool is_highest) = 0;
 };
 
@@ -48,10 +51,10 @@ typedef int32 Symbol;
 class GeneralHistKey {
  public:
   // Construct key from being and end iterators.
-  template<class InputIt>
-  GeneralHistKey(InputIt begin, InputIt end) : vector_(begin, end) { }
+  template <class InputIt>
+  GeneralHistKey(InputIt begin, InputIt end) : vector_(begin, end) {}
   // Construct empty history key.
-  GeneralHistKey() : vector_() { }
+  GeneralHistKey() : vector_() {}
   // Return tails of the key as a GeneralHistKey. The tails of an n-gram
   // w[1..n] is the sequence w[2..n] (and the heads is w[1..n-1], but the
   // key class does not need this operartion).
@@ -86,16 +89,14 @@ class OptimizedHistKey {
     kShift = 21,  // 21 * 3 = 63 bits for data.
     kMaxData = (1 << kShift) - 1
   };
-  template<class InputIt>
+  template <class InputIt>
   OptimizedHistKey(InputIt begin, InputIt end) : data_(0) {
     for (uint32 shift = 0; begin != end; ++begin, shift += kShift) {
       data_ |= static_cast<uint64>(*begin) << shift;
     }
   }
-  OptimizedHistKey() : data_(0) { }
-  OptimizedHistKey Tails() const {
-    return OptimizedHistKey(data_ >> kShift);
-  }
+  OptimizedHistKey() : data_(0) {}
+  OptimizedHistKey Tails() const { return OptimizedHistKey(data_ >> kShift); }
   friend bool operator==(const OptimizedHistKey& a, const OptimizedHistKey& b) {
     return a.data_ == b.data_;
   }
@@ -104,7 +105,7 @@ class OptimizedHistKey {
   };
 
  private:
-  explicit OptimizedHistKey(uint64 data) : data_(data) { }
+  explicit OptimizedHistKey(uint64 data) : data_(data) {}
   uint64 data_;
 };
 
@@ -116,29 +117,33 @@ class ArpaLmCompilerImpl : public ArpaLmCompilerImplInterface {
   ArpaLmCompilerImpl(ArpaLmCompiler* parent, fst::StdVectorFst* fst,
                      Symbol sub_eps);
 
-  virtual void ConsumeNGram(const NGram &ngram, bool is_highest);
+  virtual void ConsumeNGram(const NGram& ngram, bool is_highest);
 
  private:
   StateId AddStateWithBackoff(HistKey key, float backoff);
   void CreateBackoff(HistKey key, StateId state, float weight);
 
-  ArpaLmCompiler *parent_;  // Not owned.
+  ArpaLmCompiler* parent_;  // Not owned.
   fst::StdVectorFst* fst_;  // Not owned.
   Symbol bos_symbol_;
   Symbol eos_symbol_;
   Symbol sub_eps_;
 
   StateId eos_state_;
-  typedef unordered_map<HistKey, StateId,
-                        typename HistKey::HashType> HistoryMap;
+  typedef unordered_map<HistKey, StateId, typename HistKey::HashType>
+      HistoryMap;
   HistoryMap history_;
 };
 
 template <class HistKey>
-ArpaLmCompilerImpl<HistKey>::ArpaLmCompilerImpl(
-    ArpaLmCompiler* parent, fst::StdVectorFst* fst, Symbol sub_eps)
-    : parent_(parent), fst_(fst), bos_symbol_(parent->Options().bos_symbol),
-      eos_symbol_(parent->Options().eos_symbol), sub_eps_(sub_eps) {
+ArpaLmCompilerImpl<HistKey>::ArpaLmCompilerImpl(ArpaLmCompiler* parent,
+                                                fst::StdVectorFst* fst,
+                                                Symbol sub_eps)
+    : parent_(parent),
+      fst_(fst),
+      bos_symbol_(parent->Options().bos_symbol),
+      eos_symbol_(parent->Options().eos_symbol),
+      sub_eps_(sub_eps) {
   // The algorithm maintains state per history. The 0-gram is a special state
   // for empty history. All unigrams (including BOS) backoff into this state.
   StateId zerogram = fst_->AddState();
@@ -154,7 +159,7 @@ ArpaLmCompilerImpl<HistKey>::ArpaLmCompilerImpl(
 }
 
 template <class HistKey>
-void ArpaLmCompilerImpl<HistKey>::ConsumeNGram(const NGram &ngram,
+void ArpaLmCompilerImpl<HistKey>::ConsumeNGram(const NGram& ngram,
                                                bool is_highest) {
   // Generally, we do the following. Suppose we are adding an n-gram "A B
   // C". Then find the node for "A B", add a new node for "A B C", and connect
@@ -196,7 +201,8 @@ void ArpaLmCompilerImpl<HistKey>::ConsumeNGram(const NGram &ngram,
   Symbol sym = ngram.words.back();
   float weight = -ngram.logprob;
   if (sym == sub_eps_ || sym == 0) {
-    KALDI_ERR << " <eps> or disambiguation symbol " << sym << "found in the ARPA file. ";
+    KALDI_ERR << " <eps> or disambiguation symbol " << sym
+              << "found in the ARPA file. ";
   }
   if (sym == eos_symbol_) {
     if (sub_eps_ == 0) {
@@ -214,8 +220,7 @@ void ArpaLmCompilerImpl<HistKey>::ConsumeNGram(const NGram &ngram,
     // in the grammar, which cannot be reliably detected if highest order,
     // so we better do not do that at all).
     dest = AddStateWithBackoff(
-        HistKey(ngram.words.begin() + (is_highest ? 1 : 0),
-                ngram.words.end()),
+        HistKey(ngram.words.begin() + (is_highest ? 1 : 0), ngram.words.end()),
         -ngram.backoff);
   }
 
@@ -262,8 +267,9 @@ StateId ArpaLmCompilerImpl<HistKey>::AddStateWithBackoff(HistKey key,
 // the lower order model, and all the way down until one is found (since the
 // 0-gram model is always present, the search is guaranteed to terminate).
 template <class HistKey>
-inline void ArpaLmCompilerImpl<HistKey>::CreateBackoff(
-    HistKey key, StateId state, float weight) {
+inline void ArpaLmCompilerImpl<HistKey>::CreateBackoff(HistKey key,
+                                                       StateId state,
+                                                       float weight) {
   typename HistoryMap::iterator dest_it = history_.find(key);
   while (dest_it == history_.end()) {
     key = key.Tails();
@@ -277,8 +283,7 @@ inline void ArpaLmCompilerImpl<HistKey>::CreateBackoff(
 }
 
 ArpaLmCompiler::~ArpaLmCompiler() {
-  if (impl_ != NULL)
-    delete impl_;
+  if (impl_ != NULL) delete impl_;
 }
 
 void ArpaLmCompiler::HeaderAvailable() {
@@ -286,8 +291,7 @@ void ArpaLmCompiler::HeaderAvailable() {
   // Use optimized implementation if the grammar is 4-gram or less, and the
   // maximum attained symbol id will fit into the optimized range.
   int64 max_symbol = 0;
-  if (Symbols() != NULL)
-    max_symbol = Symbols()->AvailableKey() - 1;
+  if (Symbols() != NULL) max_symbol = Symbols()->AvailableKey() - 1;
   // If augmenting the symbol table, assume the worst case when all words in
   // the model being read are novel.
   if (Options().oov_handling == ArpaParseOptions::kAddToSymbols)
@@ -303,12 +307,12 @@ void ArpaLmCompiler::HeaderAvailable() {
   }
 }
 
-void ArpaLmCompiler::ConsumeNGram(const NGram &ngram) {
+void ArpaLmCompiler::ConsumeNGram(const NGram& ngram) {
   // <s> is invalid in tails, </s> in heads of an n-gram.
   for (int i = 0; i < ngram.words.size(); ++i) {
     if ((i > 0 && ngram.words[i] == Options().bos_symbol) ||
-        (i + 1 < ngram.words.size()
-         && ngram.words[i] == Options().eos_symbol)) {
+        (i + 1 < ngram.words.size() &&
+         ngram.words[i] == Options().eos_symbol)) {
       if (ShouldWarn())
         KALDI_WARN << LineReference()
                    << " skipped: n-gram has invalid BOS/EOS placement";
@@ -337,11 +341,11 @@ void ArpaLmCompiler::RemoveRedundantStates() {
 
   fst::StdArc::StateId num_states = fst_.NumStates();
 
-
   // replace the #0 symbols on the input of arcs out of redundant states (states
   // that are not final and have only a backoff arc leaving them), with <eps>.
   for (fst::StdArc::StateId state = 0; state < num_states; state++) {
-    if (fst_.NumArcs(state) == 1 && fst_.Final(state) == fst::TropicalWeight::Zero()) {
+    if (fst_.NumArcs(state) == 1 &&
+        fst_.Final(state) == fst::TropicalWeight::Zero()) {
       fst::MutableArcIterator<fst::StdVectorFst> iter(&fst_, state);
       fst::StdArc arc = iter.Value();
       if (arc.ilabel == backoff_symbol) {
