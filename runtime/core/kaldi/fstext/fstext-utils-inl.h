@@ -39,7 +39,7 @@
 #include "util/text-utils.h"
 // #include "util/kaldi-io.h"
 // #include "fstext/factor.h"
-// #include "fstext/pre-determinize.h"
+#include "fstext/pre-determinize.h"
 #include "fstext/determinize-star.h"
 
 namespace fst {

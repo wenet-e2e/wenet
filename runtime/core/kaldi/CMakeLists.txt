@@ -11,6 +11,7 @@ target_link_libraries(kaldi-base PUBLIC utils)
 add_library(kaldi-util
 util/kaldi-io.cc
 util/parse-options.cc
+util/simple-io-funcs.cc
 util/text-utils.cc
 )
 target_link_libraries(kaldi-util PUBLIC kaldi-base)
@@ -46,3 +47,6 @@ target_link_libraries(fstisstochastic PUBLIC kaldi-fstext)
 
 add_executable(fstdeterminizestar fstbin/fstdeterminizestar.cc)
 target_link_libraries(fstdeterminizestar PUBLIC kaldi-fstext)
+
+add_executable(fstaddselfloops fstbin/fstaddselfloops.cc)
+target_link_libraries(fstaddselfloops PUBLIC kaldi-fstext)
