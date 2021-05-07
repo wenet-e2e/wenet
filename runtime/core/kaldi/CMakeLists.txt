@@ -44,3 +44,5 @@ target_link_libraries(arpa2fst PUBLIC kaldi-lm)
 add_executable(fstisstochastic fstbin/fstisstochastic.cc)
 target_link_libraries(fstisstochastic PUBLIC kaldi-fstext)
 
+add_executable(fstdeterminizestar fstbin/fstdeterminizestar.cc)
+target_link_libraries(fstdeterminizestar PUBLIC kaldi-fstext)

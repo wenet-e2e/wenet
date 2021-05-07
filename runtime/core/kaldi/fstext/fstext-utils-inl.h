@@ -40,7 +40,7 @@
 // #include "util/kaldi-io.h"
 // #include "fstext/factor.h"
 // #include "fstext/pre-determinize.h"
-// #include "fstext/determinize-star.h"
+#include "fstext/determinize-star.h"
 
 namespace fst {
 
@@ -414,42 +414,42 @@ void NbestAsFsts(const Fst<Arc> &fst, size_t n,
 //   MinimizeEncoded(ofst, delta);
 // }
 //
-// inline void DeterminizeStarInLog(VectorFst<StdArc> *fst, float delta,
-//                                  bool *debug_ptr, int max_states) {
-//   // DeterminizeStarInLog determinizes 'fst' in the log semiring, using
-//   // the DeterminizeStar algorithm (which also removes epsilons).
-//
-//   ArcSort(fst, ILabelCompare<StdArc>());  // helps DeterminizeStar to be faster.
-//   VectorFst<LogArc> *fst_log =
-//       new VectorFst<LogArc>;  // Want to determinize in log semiring.
-//   Cast(*fst, fst_log);
-//   VectorFst<StdArc> tmp;
-//   *fst = tmp;  // make fst empty to free up memory. [actually may make no
-//                // difference..]
-//   VectorFst<LogArc> *fst_det_log = new VectorFst<LogArc>;
-//   DeterminizeStar(*fst_log, fst_det_log, delta, debug_ptr, max_states);
-//   Cast(*fst_det_log, fst);
-//   delete fst_log;
-//   delete fst_det_log;
-// }
-//
-// inline void DeterminizeInLog(VectorFst<StdArc> *fst) {
-//   // DeterminizeInLog determinizes 'fst' in the log semiring.
-//
-//   ArcSort(fst, ILabelCompare<StdArc>());  // helps DeterminizeStar to be faster.
-//   VectorFst<LogArc> *fst_log =
-//       new VectorFst<LogArc>;  // Want to determinize in log semiring.
-//   Cast(*fst, fst_log);
-//   VectorFst<StdArc> tmp;
-//   *fst = tmp;  // make fst empty to free up memory. [actually may make no
-//                // difference..]
-//   VectorFst<LogArc> *fst_det_log = new VectorFst<LogArc>;
-//   Determinize(*fst_log, fst_det_log);
-//   Cast(*fst_det_log, fst);
-//   delete fst_log;
-//   delete fst_det_log;
-// }
-//
+inline void DeterminizeStarInLog(VectorFst<StdArc> *fst, float delta,
+                                 bool *debug_ptr, int max_states) {
+  // DeterminizeStarInLog determinizes 'fst' in the log semiring, using
+  // the DeterminizeStar algorithm (which also removes epsilons).
+
+  ArcSort(fst, ILabelCompare<StdArc>());  // helps DeterminizeStar to be faster.
+  VectorFst<LogArc> *fst_log =
+      new VectorFst<LogArc>;  // Want to determinize in log semiring.
+  Cast(*fst, fst_log);
+  VectorFst<StdArc> tmp;
+  *fst = tmp;  // make fst empty to free up memory. [actually may make no
+               // difference..]
+  VectorFst<LogArc> *fst_det_log = new VectorFst<LogArc>;
+  DeterminizeStar(*fst_log, fst_det_log, delta, debug_ptr, max_states);
+  Cast(*fst_det_log, fst);
+  delete fst_log;
+  delete fst_det_log;
+}
+
+inline void DeterminizeInLog(VectorFst<StdArc> *fst) {
+  // DeterminizeInLog determinizes 'fst' in the log semiring.
+
+  ArcSort(fst, ILabelCompare<StdArc>());  // helps DeterminizeStar to be faster.
+  VectorFst<LogArc> *fst_log =
+      new VectorFst<LogArc>;  // Want to determinize in log semiring.
+  Cast(*fst, fst_log);
+  VectorFst<StdArc> tmp;
+  *fst = tmp;  // make fst empty to free up memory. [actually may make no
+               // difference..]
+  VectorFst<LogArc> *fst_det_log = new VectorFst<LogArc>;
+  Determinize(*fst_log, fst_det_log);
+  Cast(*fst_det_log, fst);
+  delete fst_log;
+  delete fst_det_log;
+}
+
 // // make it inline to avoid having to put it in a .cc file.
 // // destructive algorithm (changes ifst as well as ofst).
 // inline void SafeDeterminizeMinimizeWrapperInLog(VectorFst<StdArc> *ifst,

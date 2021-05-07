@@ -22,7 +22,7 @@
 #define KALDI_FSTEXT_FSTEXT_LIB_H_
 #include "fst/fstlib.h"
 // #include "fstext/context-fst.h"
-// #include "fstext/determinize-star.h"
+#include "fstext/determinize-star.h"
 // #include "fstext/factor.h"
 // #include "fstext/fst-test-utils.h"
 #include "fstext/fstext-utils.h"
@@ -34,4 +34,5 @@
 #include "fstext/lattice-weight.h"
 // #include "fstext/deterministic-fst.h"
 #include "fstext/kaldi-fst-io.h"
-#endif
+
+#endif  // KALDI_FSTEXT_FSTEXT_LIB_H_
