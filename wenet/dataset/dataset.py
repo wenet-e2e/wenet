@@ -223,6 +223,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                         filepath=wav_path,
                         num_frames=end_frame - start_frame,
                         offset=start_frame)
+                    waveform = waveform * (1 << 15)
                 else:
                     waveform, sample_rate = torchaudio.load_wav(wav_path)
             if wav_distortion_rate > 0.0:
