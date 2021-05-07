@@ -1,0 +1,1 @@
+../../aishell2/s0/kaldi_path.sh
