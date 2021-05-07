@@ -230,3 +230,66 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         --output_file $dir/final.zip
 fi
 
+# Optionally, you can add LM and test it with runtime.
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    # Include kaldi path
+    # TODO(Binbin Zhang): remove kaldi dependency in this part
+    . kaldi_path.sh || exit 1;
+    lm=data/local/lm
+    lexicon=data/local/dict/lexicon.txt
+    mkdir -p $lm
+    mkdir -p data/local/dict
+
+    # 7.1 Download & format LM
+    which_lm=3-gram.pruned.3e-7.arpa.gz
+    if [ ! -e ${lm}/${which_lm} ]; then
+        wget http://www.openslr.org/resources/11/${which_lm} -P ${lm}
+    fi
+    echo "unzip lm($which_lm)..."
+    gunzip -k ${lm}/${which_lm} -c > ${lm}/lm.arpa.tmp
+    # expand each word with prefix '▁', i.e., from 'hello' to '▁hello'
+    tools/fst/add_prefix_for_lmarpa.py ▁ ${lm}/lm.arpa.tmp ${lm}/lm.arpa
+    echo "Lm saved as ${lm}/lm.arpa"
+
+    # 7.2 Prepare dict
+    unit_file=$dict # use $dir/words.txt if you download pretrained librispeech conformer model
+    cp $unit_file data/local/dict/units.txt
+    if [ ! -e ${lm}/librispeech-lexicon.txt ]; then
+        wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P ${lm}
+    fi
+    echo "build lexicon..."
+    awk '{print $1}' ${lm}/librispeech-lexicon.txt | uniq > ${lm}/librispeech-vocab.txt
+    cat ${lm}/librispeech-vocab.txt | tools/spm_encode --model=${bpemodel}.model  --output_format=piece |\
+        awk -v lex=$unit_file 'BEGIN{ while((getline<lex) >0) { seen[$1]=1; } } {
+            for (n=1; n<=NF; n++) {
+                if(seen[$n] != 1) {
+                    printf("<unk>");
+                } else {
+                    printf $n;
+                }
+                if (n < NF) printf(" ")
+            }
+            print "";
+        }' > $lexicon.tmp || exit 1;
+    awk '{printf("▁%s\n", $1)}' ${lm}/librispeech-vocab.txt |\
+        paste -d ' ' - $lexicon.tmp > $lexicon
+    echo "lexicon saved as '$lexicon'"
+
+    # 7.3 Build decoding TLG
+    tools/fst/compile_lexicon_token_fst.sh \
+       data/local/dict data/local/tmp data/local/lang
+    tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+
+    # 7.4 Decoding with runtime
+    fst_dir=data/lang_test
+    for test in test_clean; do
+        ./tools/decode.sh --nj 6 \
+            --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
+            --ctc_weight 1.0 --rescoring_weight 0.0 \
+            --fst_path $fst_dir/TLG.fst \
+            data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
+            $dir/lm_with_runtime_${test}
+        tail $dir/lm_with_runtime_${test}/wer
+    done
+fi
+
