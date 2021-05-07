@@ -241,7 +241,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     mkdir -p data/local/dict
 
     # 7.1 Download & format LM
-    which_lm=3-gram.pruned.3e-7.arpa.gz
+    which_lm=3-gram.pruned.1e-7.arpa.gz
     if [ ! -e ${lm}/${which_lm} ]; then
         wget http://www.openslr.org/resources/11/${which_lm} -P ${lm}
     fi
@@ -267,7 +267,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
                 } else {
                     printf $n;
                 }
-                if (n < NF) printf(" ")
+                if (n < NF) printf(" ");
             }
             print "";
         }' > $lexicon.tmp || exit 1;
@@ -285,7 +285,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     for test in test_clean; do
         ./tools/decode.sh --nj 6 \
             --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
-            --ctc_weight 1.0 --rescoring_weight 0.0 \
+            --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
             --fst_path $fst_dir/TLG.fst \
             data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
             $dir/lm_with_runtime_${test}
