@@ -20,19 +20,15 @@
 
 #ifndef KALDI_FSTEXT_FSTEXT_LIB_H_
 #define KALDI_FSTEXT_FSTEXT_LIB_H_
+
 #include "fst/fstlib.h"
-// #include "fstext/context-fst.h"
-#include "fstext/determinize-star.h"
-// #include "fstext/factor.h"
-// #include "fstext/fst-test-utils.h"
-#include "fstext/fstext-utils.h"
-#include "fstext/pre-determinize.h"
-#include "fstext/table-matcher.h"
-// #include "fstext/trivial-factor-weight.h"
 #include "fstext/determinize-lattice.h"
+#include "fstext/determinize-star.h"
+#include "fstext/fstext-utils.h"
+#include "fstext/kaldi-fst-io.h"
 #include "fstext/lattice-utils.h"
 #include "fstext/lattice-weight.h"
-// #include "fstext/deterministic-fst.h"
-#include "fstext/kaldi-fst-io.h"
+#include "fstext/pre-determinize.h"
+#include "fstext/table-matcher.h"
 
 #endif  // KALDI_FSTEXT_FSTEXT_LIB_H_

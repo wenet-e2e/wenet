@@ -48,6 +48,7 @@ set(FST_BINS
 fstaddselfloops
 fstdeterminizestar
 fstisstochastic
+fstminimizeencoded
 fsttablecompose
 )
 

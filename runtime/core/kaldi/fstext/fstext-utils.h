@@ -23,13 +23,16 @@
 
 #ifndef KALDI_FSTEXT_FSTEXT_UTILS_H_
 #define KALDI_FSTEXT_FSTEXT_UTILS_H_
+
 #include <fst/fst-decl.h>
 #include <fst/fstlib.h>
+
 #include <algorithm>
 #include <map>
 #include <set>
 #include <vector>
-// #include "fstext/determinize-star.h"
+
+#include "fstext/determinize-star.h"
 #include "fstext/remove-eps-local.h"
 #include "base/kaldi-common.h"  // for error reporting macros.
 #include "util/text-utils.h"  // for SplitStringToVector
