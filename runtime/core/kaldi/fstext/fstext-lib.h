@@ -27,7 +27,7 @@
 // #include "fstext/fst-test-utils.h"
 #include "fstext/fstext-utils.h"
 #include "fstext/pre-determinize.h"
-// #include "fstext/table-matcher.h"
+#include "fstext/table-matcher.h"
 // #include "fstext/trivial-factor-weight.h"
 #include "fstext/determinize-lattice.h"
 #include "fstext/lattice-utils.h"

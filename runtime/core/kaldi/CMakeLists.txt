@@ -39,14 +39,19 @@ fstext/kaldi-fst-io.cc
 )
 target_link_libraries(kaldi-fstext PUBLIC kaldi-util)
 
+# Arpa binary
 add_executable(arpa2fst lmbin/arpa2fst.cc)
 target_link_libraries(arpa2fst PUBLIC kaldi-lm)
 
-add_executable(fstisstochastic fstbin/fstisstochastic.cc)
-target_link_libraries(fstisstochastic PUBLIC kaldi-fstext)
+# FST tools binary
+set(FST_BINS
+fstaddselfloops
+fstdeterminizestar
+fstisstochastic
+fsttablecompose
+)
 
-add_executable(fstdeterminizestar fstbin/fstdeterminizestar.cc)
-target_link_libraries(fstdeterminizestar PUBLIC kaldi-fstext)
-
-add_executable(fstaddselfloops fstbin/fstaddselfloops.cc)
-target_link_libraries(fstaddselfloops PUBLIC kaldi-fstext)
+foreach(name IN LISTS FST_BINS)
+  add_executable(${name} fstbin/${name}.cc)
+  target_link_libraries(${name} PUBLIC kaldi-fstext)
+endforeach()
