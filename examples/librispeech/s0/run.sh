@@ -252,17 +252,20 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     echo "Lm saved as ${lm}/lm.arpa"
 
     # 7.2 Prepare dict
-    unit_file=$dict # use $dir/words.txt if you download pretrained librispeech conformer model
+    unit_file=$dict
+    # use $dir/words.txt (unit_file) and $dir/train_960_unigram5000.model (bpemodel)
+    # if you download pretrained librispeech conformer model
     cp $unit_file data/local/dict/units.txt
     if [ ! -e ${lm}/librispeech-lexicon.txt ]; then
         wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P ${lm}
     fi
     echo "build lexicon..."
     awk '{print $1}' ${lm}/librispeech-lexicon.txt | uniq > ${lm}/librispeech-vocab.txt
-    cat ${lm}/librispeech-vocab.txt | tools/spm_encode --model=${bpemodel}.model  --output_format=piece |\
+    cat ${lm}/librispeech-vocab.txt |\
+        tools/spm_encode --model=${bpemodel}.model  --output_format=piece |\
         awk -v lex=$unit_file 'BEGIN{ while((getline<lex) >0) { seen[$1]=1; } } {
             for (n=1; n<=NF; n++) {
-                if(seen[$n] != 1) {
+                if (seen[$n] != 1) {
                     printf("<unk>");
                 } else {
                     printf $n;
