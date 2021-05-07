@@ -30,9 +30,9 @@
 #include <set>
 #include <vector>
 // #include "fstext/determinize-star.h"
-// #include "fstext/remove-eps-local.h"
+#include "fstext/remove-eps-local.h"
 #include "base/kaldi-common.h"  // for error reporting macros.
-// #include "util/text-utils.h" // for SplitStringToVector
+#include "util/text-utils.h" // for SplitStringToVector
 #include "fst/script/print-impl.h"
 
 namespace fst {

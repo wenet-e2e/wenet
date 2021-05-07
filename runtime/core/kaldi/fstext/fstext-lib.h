@@ -1,6 +1,7 @@
 // fstext/fstext-lib.h
 
-// Copyright 2009-2012  Microsoft Corporation  Johns Hopkins University (author: Daniel Povey)
+// Copyright 2009-2012  Microsoft Corporation  Johns Hopkins University (author:
+// Daniel Povey)
 
 // See ../../COPYING for clarification regarding multiple authors
 //
@@ -28,9 +29,9 @@
 // #include "fstext/pre-determinize.h"
 // #include "fstext/table-matcher.h"
 // #include "fstext/trivial-factor-weight.h"
-#include "fstext/lattice-weight.h"
-#include "fstext/lattice-utils.h"
 #include "fstext/determinize-lattice.h"
+#include "fstext/lattice-utils.h"
+#include "fstext/lattice-weight.h"
 // #include "fstext/deterministic-fst.h"
-// #include "fstext/kaldi-fst-io.h"
+#include "fstext/kaldi-fst-io.h"
 #endif
