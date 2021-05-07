@@ -78,6 +78,10 @@ if [ -n "${feat}" ]; then
                 --preprocess-conf "${preprocess_conf}" \
                 --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
         elif [ ${feat_type} == "wav" ] || [ ${feat_type} == "flac" ] || [ ${feat_type} == "opus" ]; then
+            if [ -f $dir/segments ]; then
+                # used for segmented wav.scp
+                awk '{print $1" "$4-$3}' $dir/segments > $dir/utt2dur
+            fi
             if [ ! -f $dir/utt2dur ]; then
                 tools/wav_to_duration.sh --nj ${nj} \
                     ${feat} ${tmpdir}/input_${i}/shape.scp
