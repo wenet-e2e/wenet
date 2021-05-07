@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Copyright 2017 Johns Hopkins University (Shinji Watanabe)
+#                Mobvoi Corporation (Author: Di Wu)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 echo "$0 $*" >&2 # Print the command line for logging
