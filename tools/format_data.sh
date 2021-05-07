@@ -64,7 +64,7 @@ if [ -n "${feat}" ]; then
         feat=${feat_scps[$((i-1))]}
         mkdir -p ${tmpdir}/input_${i}
         input+="input_${i} "
-	cat ${feat} > ${tmpdir}/input_${i}/feat.scp
+        cat ${feat} > ${tmpdir}/input_${i}/feat.scp
 
         # Dump in the "legacy" style JSON format
         if [ -n "${filetype}" ]; then
@@ -81,6 +81,7 @@ if [ -n "${feat}" ]; then
             if [ ! -f $dir/utt2dur ]; then
                 tools/wav_to_duration.sh --nj ${nj} \
                     ${feat} ${tmpdir}/input_${i}/shape.scp
+            # use the existed utt2dur as shape.scp directly
             else
                 cp $dir/utt2dur ${tmpdir}/input_${i}/shape.scp
             fi
