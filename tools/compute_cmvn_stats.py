@@ -27,11 +27,11 @@ class CollateFunc(object):
         number = 0
         for item in batch:
             value = item[1].strip().split(",")
+            assert len(value) == 3 or len(value) == 1
             wav_path = value[0]
             sample_rate = torchaudio.backend.sox_backend.info(wav_path)[0].rate
             # len(value) == 3 means segmented wav.scp,
             # len(value) == 1 means original wa.scp
-            assert len(value) == 3 or len(value) == 1
             if len(value) == 3:
                 start_frame = int(float(value[1]) * sample_rate)
                 end_frame = int(float(value[2]) * sample_rate)
