@@ -214,7 +214,8 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                 assert len(value) == 1
                 waveform, sample_rate = _load_wav_with_speed(wav_path, speed)
             else:
-                # value length 2 means using segmented wav.scp
+                # value length 3 means using segmented wav.scp
+                # incluede .wav, start time, end time
                 if len(value) == 3:
                     start_frame = int(float(value[1]) * sample_rate)
                     end_frame = int(float(value[2]) * sample_rate)
