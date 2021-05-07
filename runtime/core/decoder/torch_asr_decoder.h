@@ -16,6 +16,7 @@
 
 #include "decoder/ctc_endpoint.h"
 #include "decoder/ctc_prefix_beam_search.h"
+#include "decoder/ctc_wfst_beam_search.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "utils/utils.h"
@@ -37,6 +38,7 @@ struct DecodeOptions {
   float rescoring_weight = 1.0;
   CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_prefix_search_opts;
+  CtcWfstBeamSearchOptions ctc_wfst_search_opts;
 };
 
 struct WordPiece {

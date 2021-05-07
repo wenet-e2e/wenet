@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   auto symbol_table = wenet::InitSymbolTableFromFlags();
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
-  const int sample_rate = 16000;
+  auto fst = wenet::InitFstFromFlags();
   auto feature_pipeline =
       std::make_shared<wenet::FeaturePipeline>(*feature_config);
 
@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
   int total_decode_time = 0;
   for (auto &wav : waves) {
     wenet::WavReader wav_reader(wav.second);
-    CHECK_EQ(wav_reader.sample_rate(), sample_rate);
+    CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
 
     feature_pipeline->Reset();
     feature_pipeline->AcceptWaveform(std::vector<float>(
@@ -66,9 +66,10 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
     wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
-                                   *decode_config);
+                                   *decode_config, fst);
 
-    int wave_dur = wav_reader.num_sample() / sample_rate * 1000;
+    int wave_dur = static_cast<int>(static_cast<float>(
+                wav_reader.num_sample()) / wav_reader.sample_rate() * 1000);
     int decode_time = 0;
     while (true) {
       wenet::Timer timer;
@@ -86,8 +87,8 @@ int main(int argc, char *argv[]) {
         break;
       } else if (FLAGS_chunk_size > 0 && FLAGS_simulate_streaming) {
         float frame_shift_in_ms =
-            static_cast<float>(feature_config->frame_shift) / sample_rate *
-            1000;
+            static_cast<float>(feature_config->frame_shift) /
+            wav_reader.sample_rate() * 1000;
         auto wait_time =
             decoder.num_frames_in_current_chunk() * frame_shift_in_ms -
             chunk_decode_time;
@@ -98,11 +99,14 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    LOG(INFO) << "Final result: " << decoder.result()[0].sentence;
+    std::string final_result;
+    if (decoder.DecodedSomething()) {
+      final_result = decoder.result()[0].sentence;
+    }
+    LOG(INFO) << wav.first << " Final result: " << final_result << std::endl;
     LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time
               << "ms.";
-    buffer << wav.first << " " << decoder.result()[0].sentence << std::endl;
-
+    buffer << wav.first << " " << final_result << std::endl;
     total_waves_dur += wave_dur;
     total_decode_time += decode_time;
   }

@@ -26,9 +26,10 @@ int main(int argc, char *argv[]) {
   auto symbol_table = wenet::InitSymbolTableFromFlags();
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
+  auto fst = wenet::InitFstFromFlags();
 
   wenet::WebSocketServer server(FLAGS_port, feature_config, decode_config,
-                                symbol_table, model);
+                                symbol_table, model, fst);
   LOG(INFO) << "Listening at port " << FLAGS_port;
   server.Start();
   return 0;

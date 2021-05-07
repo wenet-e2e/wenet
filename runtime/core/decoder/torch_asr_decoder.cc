@@ -25,8 +25,7 @@ TorchAsrDecoder::TorchAsrDecoder(
   if (nullptr == fst) {
     searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts));
   } else {
-    // TODO(Binbin): Add implementation
-    LOG(FATAL) << "Not implement now";
+    searcher_.reset(new CtcWfstBeamSearch(*fst, opts.ctc_wfst_search_opts));
   }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
 }
@@ -220,6 +219,9 @@ void TorchAsrDecoder::UpdateResult() {
 void TorchAsrDecoder::AttentionRescoring() {
   searcher_->FinalizeSearch();
   UpdateResult();
+  if (0.0 == opts_.rescoring_weight) {
+    return;
+  }
 
   int sos = model_->sos();
   int eos = model_->eos();
