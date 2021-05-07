@@ -54,5 +54,6 @@ fsttablecompose
 
 foreach(name IN LISTS FST_BINS)
   add_executable(${name} fstbin/${name}.cc)
-  target_link_libraries(${name} PUBLIC kaldi-fstext)
+  # dl is for dynamic linking, otherwise there is a linking error on linux
+  target_link_libraries(${name} PUBLIC kaldi-fstext dl)
 endforeach()
