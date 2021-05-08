@@ -164,7 +164,7 @@ if __name__ == '__main__':
     # Init asr model from configs
     model = init_asr_model(configs)
     print(model)
-    num_params = sum(p.numel() for p in model.prameters())
+    num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {}'.format(num_params))
 
     # !!!IMPORTANT!!!
