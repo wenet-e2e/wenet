@@ -70,7 +70,6 @@ class TransformerDecoder(torch.nn.Module):
         self.use_output_layer = use_output_layer
         self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
         self.num_blocks = num_blocks
-
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
@@ -115,7 +114,6 @@ class TransformerDecoder(torch.nn.Module):
         l_result = torch.tensor([0.0])
         r_result = torch.tensor([0.0])
         tgt = ys_in_pad
-        r_tgt = r_ys_in_pad
 
         if not reverse:
             # tgt_mask: (B, 1, L)
@@ -126,12 +124,11 @@ class TransformerDecoder(torch.nn.Module):
             # tgt_mask: (B, L, L)
             tgt_mask = tgt_mask & m
         else:
-            assert r_tgt is not None
+            assert ys_in_pad is not None
             # in order to unify data type
             x = torch.tensor([0.0])
             tgt_mask = torch.tensor([0.0])
             # used for right to left
-            assert r_tgt is not None
             # r_tgt_mask: (B, 1, L)
             tgt_mask = (~make_pad_mask_right(ys_in_lens).unsqueeze(1)).to(
                 tgt.device)
@@ -141,6 +138,7 @@ class TransformerDecoder(torch.nn.Module):
 
             # r_tgt_mask: (B, L, L)
             tgt_mask = tgt_mask & m
+
         x, _ = self.embed(tgt)
         for layer in self.decoders:
             x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
@@ -149,6 +147,7 @@ class TransformerDecoder(torch.nn.Module):
             x = self.after_norm(x)
         if self.use_output_layer:
             x = self.output_layer(x)
+
         if not reverse:
             l_result = x
         else:
@@ -201,7 +200,6 @@ class TransformerDecoder(torch.nn.Module):
             y = torch.log_softmax(self.output_layer(y), dim=-1)
         return y, new_cache
 
-
 class BiTransformerDecoder(torch.nn.Module):
     """Base class of Transfomer decoder module.
 
@@ -230,7 +228,7 @@ class BiTransformerDecoder(torch.nn.Module):
         attention_heads: int = 4,
         linear_units: int = 2048,
         num_blocks: int = 6,
-        r_num_blocks: int = 0,
+        r_num_blocks: int = 3,
         dropout_rate: float = 0.1,
         positional_dropout_rate: float = 0.1,
         self_attention_dropout_rate: float = 0.0,
@@ -251,7 +249,7 @@ class BiTransformerDecoder(torch.nn.Module):
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
-            num_blocks, dropout_rate, positional_dropout_rate,
+            r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before, concat_after)
 
@@ -261,8 +259,8 @@ class BiTransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         ys_in_pad: torch.Tensor,
         ys_in_lens: torch.Tensor,
-        r_ys_in_pad: Optional[torch.Tensor] = None,
-        reverse_weight: float = 0.0,
+        r_ys_in_pad: torch.Tensor,
+        reverse: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward decoder.
 
@@ -281,7 +279,7 @@ class BiTransformerDecoder(torch.nn.Module):
                 olens: (batch, )
         """
         l_x, _, olens = self.left_decoder(memory, memory_mask, ys_in_pad,
-                                          ys_in_lens, r_ys_in_pad, False)
-        _, r_x, olens = self.right_decoder(memory, memory_mask, ys_in_pad,
-                                           ys_in_lens, r_ys_in_pad, True)
+                                          ys_in_lens, reverse=False)
+        _, r_x, olens = self.right_decoder(memory, memory_mask, r_ys_in_pad,
+                                           ys_in_lens, reverse=True)
         return l_x, r_x, olens
