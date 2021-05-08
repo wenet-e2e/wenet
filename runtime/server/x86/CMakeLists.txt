@@ -56,14 +56,14 @@ set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I$
 set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
 set(openfst_SRC_DIR ${fc_base}/openfst-src)
 set(openfst_BUILD_DIR ${fc_base}/openfst-build)
-set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
+set(openfst_INSTALL_DIR ${CMAKE_SOURCE_DIR}/build/openfst)
 ExternalProject_Add(openfst
   URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
   URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
-  PREFIX            ${openfst_PREFIX_DIR}
+  PREFIX            ${fc_base}/openfst-prefix
   SOURCE_DIR        ${openfst_SRC_DIR}
   BINARY_DIR        ${openfst_BUILD_DIR}
-  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_PREFIX_DIR}
+  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_INSTALL_DIR}
                       "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
                       "LIBS=${OPENFST_EXTRA_LIBS}"
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
@@ -71,8 +71,8 @@ ExternalProject_Add(openfst
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib
   BUILD_COMMAND     make -j 4
 )
-include_directories(${openfst_PREFIX_DIR}/include)
-link_directories(${openfst_PREFIX_DIR}/lib)
+include_directories(${openfst_INSTALL_DIR}/include)
+link_directories(${openfst_INSTALL_DIR}/lib)
 add_dependencies(openfst gflags glog)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
