@@ -144,7 +144,7 @@ class ASRModel(torch.nn.Module):
         decoder_out, r_decoder_out, _ = self.decoder(encoder_out, encoder_mask,
                                                      ys_in_pad, ys_in_lens,
                                                      r_ys_in_pad,
-                                                     self.reverse_weight)
+                                                     )
         # 2. Compute attention loss
         l_loss_att = self.criterion_att(decoder_out, ys_out_pad)
 
@@ -507,7 +507,7 @@ class ASRModel(torch.nn.Module):
                                     self.ignore_id)
         # used for right to left
         r_hyps_pad = torch.tensor([0.0])
-        if self.decoder.r_num_blocks > 0 and reverse_weight > 0:
+        if reverse_weight > 0 and  hasattr(self.decoder, 'right_decoder'):
             r_hyps_pad, r_out = add_eos_sos(hyps_pad, self.sos, self.eos,
                                             self.ignore_id)
         hyps_lens = hyps_lens + 1  # Add <sos> at begining
@@ -517,13 +517,23 @@ class ASRModel(torch.nn.Module):
                                   encoder_out.size(1),
                                   dtype=torch.bool,
                                   device=device)
-        decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, l_hyps_pad, hyps_lens, r_hyps_pad,
-            reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
+        if hasattr(self.decoder, 'left_decoder'):
+            decoder_out, _, _ = self.decoder.left_decoder(
+                encoder_out, encoder_mask, hyps_pad,
+                hyps_lens)  # (beam_size, max_hyps_len, vocab_size)
+        else:
+            decoder_out, _ = self.decoder(
+                encoder_out, encoder_mask, hyps_pad,
+                hyps_lens)  # (beam_size, max_hyps_len, vocab_size)
+
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
 
-        if self.decoder.r_num_blocks > 0 and reverse_weight > 0:
+
+        if reverse_weight > 0 and  hasattr(self.decoder, 'right_decoder'):
+            r_decoder_out, _, _ = self.decoder.right_decoder(
+                encoder_out, encoder_mask, r_hyps_pad, hyps_lens, reverse=True 
+                )  # (beam_size, max_hyps_len, vocab_size)
             r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out,
                                                             dim=-1)
             r_decoder_out = r_decoder_out.cpu().numpy()
@@ -538,7 +548,7 @@ class ASRModel(torch.nn.Module):
 
             # used for right to left score
             r_score = 0.0
-            if self.decoder.r_num_blocks > 0 and reverse_weight > 0:
+            if reverse_weight > 0:
                 # skip padding part, find real start
                 t = 0
                 t = r_decoder_out.shape[1] - len(hyp[0])
@@ -579,12 +589,6 @@ class ASRModel(torch.nn.Module):
         """ Export interface for c++ call, return eos symbol id of the model
         """
         return self.eos
-
-    @torch.jit.export
-    def reverse_num_blocks(self) -> int:
-        """ Export interface for c++ call, return the num of the right to left decoder
-        """
-        return self.decoder.right_decoder.num_blocks
 
     @torch.jit.export
     def forward_encoder_chunk(
@@ -665,11 +669,26 @@ class ASRModel(torch.nn.Module):
                                   encoder_out.size(1),
                                   dtype=torch.bool,
                                   device=encoder_out.device)
-        decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, hyps, hyps_lens, r_hyps,
-            reverse_weight)  # (num_hyps, max_hyps_len, vocab_size)
+        if hasattr(self.decoder, 'left_decoder') and hasattr(
+                self.decoder, 'right_decoder'):
+            decoder_out, _, _ = self.decoder.left_decoder(
+                encoder_out, encoder_mask, hyps,
+                hyps_lens, reverse=False)  # (num_hyps, max_hyps_len, vocab_size)
+        else:
+            decoder_out, _, _ = self.decoder(
+                encoder_out, encoder_mask, hyps,
+                hyps_lens)  # (num_hyps, max_hyps_len, vocab_sizu)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
-        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
+
+        r_decoder_out = torch.tensor(0.0)
+        # right to left decoder may be not used during decoding process, which depends on reverse_weight param.
+        if  r_hyps is not None and hasattr(self.decoder, 'right_decoder') and reverse_weight > 0:
+            r_decoder_out, _, _ = self.decoder.right_decoder(
+                encoder_out, encoder_mask, r_hyps,
+                hyps_lens, reverse=True)  # (num_hyps, max_hyps_len, vocab_size)
+            r_decoder_out = torch.nn.functional.log_softmax(decoder_out,
+                                                            dim=-1)
+
         return decoder_out, r_decoder_out
 
 
@@ -703,6 +722,8 @@ def init_asr_model(configs):
         decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                      **configs['decoder_conf'])
     else:
+        assert configs['model_conf']['reverse_weight'] > 0
+        assert configs['decoder_conf']['r_num_blocks'] > 0
         decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
                                        **configs['decoder_conf'])
 
