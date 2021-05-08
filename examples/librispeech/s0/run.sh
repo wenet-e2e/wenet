@@ -232,9 +232,6 @@ fi
 
 # Optionally, you can add LM and test it with runtime.
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
-    # Include kaldi path
-    # TODO(Binbin Zhang): remove kaldi dependency in this part
-    . kaldi_path.sh || exit 1;
     lm=data/local/lm
     lexicon=data/local/dict/lexicon.txt
     mkdir -p $lm
@@ -253,7 +250,8 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
 
     # 7.2 Prepare dict
     unit_file=$dict
-    # use $dir/words.txt (unit_file) and $dir/train_960_unigram5000.model (bpemodel)
+    bpemodel=$bpemodel
+    # use $dir/words.txt (unit_file) and $dir/train_960_unigram5000 (bpemodel)
     # if you download pretrained librispeech conformer model
     cp $unit_file data/local/dict/units.txt
     if [ ! -e ${lm}/librispeech-lexicon.txt ]; then
@@ -285,7 +283,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
 
     # 7.4 Decoding with runtime
     fst_dir=data/lang_test
-    for test in test_clean; do
+    for test in ${recog_set}; do
         ./tools/decode.sh --nj 6 \
             --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
             --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
