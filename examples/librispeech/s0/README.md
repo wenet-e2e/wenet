@@ -30,6 +30,7 @@ test clean
 | ctc prefix beam search   | 4.26 | 5.00 |
 | attention decoder        | 3.05 | 3.44 |
 | attention rescoring      | 3.72 | 4.10 |
+| LM + attention rescoring | 3.56 | 4.02 |
 
 test other
 | decoding mode            | full  | 16    |
@@ -37,3 +38,4 @@ test other
 | ctc prefix beam search   | 10.87 | 12.87 |
 | attention decoder        | 9.07  | 10.44 |
 | attention rescoring      | 9.74  | 11.61 |
+| LM + attention rescoring | 8.78  | 10.26 |
