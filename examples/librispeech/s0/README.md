@@ -23,6 +23,7 @@
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 90d9a559840e765e82119ab72a11a1f7c1a01b78
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210215_unified_conformer_exp.tar.gz
+* Default LM: [3-gram.pruned.1e-7.arpa.gz](http://www.openslr.org/resources/11/3-gram.pruned.1e-7.arpa.gz)
 
 test clean
 | decoding mode            | full | 16   |
