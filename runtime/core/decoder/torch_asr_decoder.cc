@@ -192,7 +192,7 @@ void TorchAsrDecoder::UpdateResult() {
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_->Find(hypothesis[j]);
-      path.sentence += word;
+      path.sentence += (j == 0 ? word : ' ' + word);
     }
     // TimeStamp is only supported in CtcPrefixBeamSearch now
     if (searcher_->Type() == SearchType::kPrefixBeamSearch) {
