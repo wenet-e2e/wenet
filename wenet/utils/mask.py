@@ -39,6 +39,30 @@ def subsequent_mask(
     return torch.tril(ret, out=ret)
 
 
+def subsequent_mask_right_to_left(
+        size: int,
+        device: torch.device = torch.device("cpu"),
+) -> torch.Tensor:
+    """Create mask for subsequent steps (size, size).
+
+    Args:
+        size (int): size of mask
+        str device (str): "cpu" or "cuda" or torch.Tensor.device
+        dtype (torch.device): result dtype
+
+    Returns:
+        torch.Tensor: mask
+
+    Examples:
+        >>> subsequent_mask(3)
+        [[1, 1, 1],
+         [0, 1, 1],
+         [0, 0, 1]]
+    """
+    ret = torch.ones(size, size, device=device, dtype=torch.bool)
+    return torch.triu(ret, out=ret)
+
+
 def subsequent_chunk_mask(
         size: int,
         chunk_size: int,

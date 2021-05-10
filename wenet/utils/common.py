@@ -84,6 +84,52 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
     return pad_list(ys_in, eos), pad_list(ys_out, ignore_id)
 
 
+def add_eos_sos(ys_pad: torch.Tensor, sos: int, eos: int,
+                ignore_id: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Add <sos> and <eos> labels.
+
+    Args:
+        ys_pad (torch.Tensor): batch of padded target sequences (B, Lmax)
+        sos (int): index of <sos>
+        eos (int): index of <eeos>
+        ignore_id (int): index of padding
+
+    Returns:
+        ys_in (torch.Tensor) : (B, Lmax + 1)
+        ys_out (torch.Tensor) : (B, Lmax + 1)
+
+    Examples:
+        >>> sos_id = 10
+        >>> eos_id = 11
+        >>> ignore_id = -1
+        >>> ys_pad
+        tensor([[ 1,  2,  3,  4,  5],
+                [ 4,  5,  6, -1, -1],
+                [ 7,  8,  9, -1, -1]], dtype=torch.int32)
+        >>> ys_in,ys_out=add_sos_eos(ys_pad, sos_id , eos_id, ignore_id)
+        >>> ys_out
+        tensor([[11,  1,  2,  3,  4,  5],
+                [11,  4,  5,  6, -1, -1],
+                [11,  7,  8,  9, -1, -1]])
+        >>> ys_in
+        tensor([[ 1,  2,  3,  4,  5, 10],
+                [ 4,  5,  6, 10, 10, 10],
+                [ 7,  8,  9, 10, 10, 10]])
+    """
+    _sos = torch.tensor([sos],
+                        dtype=torch.long,
+                        requires_grad=False,
+                        device=ys_pad.device)
+    _eos = torch.tensor([eos],
+                        dtype=torch.long,
+                        requires_grad=False,
+                        device=ys_pad.device)
+    ys = [y[y != ignore_id] for y in ys_pad]  # parse padded ys
+    ys_out = [torch.cat([_eos, y], dim=0) for y in ys]
+    ys_in = [torch.cat([y, _sos], dim=0) for y in ys]
+    return pad_list(ys_in, sos), pad_list(ys_out, ignore_id)
+
+
 def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
                 ignore_label: int) -> float:
     """Calculate accuracy.
