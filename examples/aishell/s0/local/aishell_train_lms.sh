@@ -11,6 +11,14 @@ for f in "$text" "$lexicon"; do
   [ ! -f $x ] && echo "$0: No such file $f" && exit 1;
 done
 
+# Check SRILM tools
+if ! which ngram-count > /dev/null; then
+    echo "srilm tools are not found, please download it and install it from: "
+    echo "http://www.speech.sri.com/projects/srilm/download.html"
+    echo "Then add the tools to your PATH"
+    exit 1
+fi
+
 # This script takes no arguments.  It assumes you have already run
 # aishell_data_prep.sh.
 # It takes as input the files
