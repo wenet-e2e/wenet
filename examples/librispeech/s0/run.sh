@@ -243,9 +243,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
         wget http://www.openslr.org/resources/11/${which_lm} -P ${lm}
     fi
     echo "unzip lm($which_lm)..."
-    gunzip -k ${lm}/${which_lm} -c > ${lm}/lm.arpa.tmp
-    # expand each word with prefix '▁', i.e., from 'hello' to '▁hello'
-    tools/fst/add_prefix_for_lmarpa.py ▁ ${lm}/lm.arpa.tmp ${lm}/lm.arpa
+    gunzip -k ${lm}/${which_lm} -c > ${lm}/lm.arpa
     echo "Lm saved as ${lm}/lm.arpa"
 
     # 7.2 Prepare dict
@@ -258,22 +256,8 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
         wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P ${lm}
     fi
     echo "build lexicon..."
-    awk '{print $1}' ${lm}/librispeech-lexicon.txt | uniq > ${lm}/librispeech-vocab.txt
-    cat ${lm}/librispeech-vocab.txt |\
-        tools/spm_encode --model=${bpemodel}.model  --output_format=piece |\
-        awk -v lex=$unit_file 'BEGIN{ while((getline<lex) >0) { seen[$1]=1; } } {
-            for (n=1; n<=NF; n++) {
-                if (seen[$n] != 1) {
-                    printf("<unk>");
-                } else {
-                    printf $n;
-                }
-                if (n < NF) printf(" ");
-            }
-            print "";
-        }' > $lexicon.tmp || exit 1;
-    awk '{printf("▁%s\n", $1)}' ${lm}/librispeech-vocab.txt |\
-        paste -d ' ' - $lexicon.tmp > $lexicon
+    tools/fst/prepare_dict.py $unit_file ${lm}/librispeech-lexicon.txt \
+        $lexicon $bpemodel.model
     echo "lexicon saved as '$lexicon'"
 
     # 7.3 Build decoding TLG
