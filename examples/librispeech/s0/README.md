@@ -8,13 +8,13 @@
 * Git hash: 90d9a559840e765e82119ab72a11a1f7c1a01b78
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210216_conformer_exp.tar.gz
 
-| decoding mode            | test clean | test other |
-|--------------------------|------------|------------|
-| ctc greedy search        | 3.51       | 9.57       |
-| ctc prefix beam search   | 3.51       | 9.56       |
-| attention decoder        | 3.05       | 8.72       |
-| attention rescoring      | 3.18       | 8.36       |
-
+| decoding mode                 | test clean | test other |
+|-------------------------------|------------|------------|
+| ctc greedy search             | 3.51       | 9.57       |
+| ctc prefix beam search        | 3.51       | 9.56       |
+| attention decoder             | 3.05       | 8.36       |
+| attention rescoring           | 3.18       | 8.72       |
+| attention rescoring (beam 50) | 3.12       | 8.55       |
 
 ## Conformer U2 Result
 
@@ -25,15 +25,17 @@
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210215_unified_conformer_exp.tar.gz
 
 test clean
-| decoding mode            | full | 16   |
-|--------------------------|------|------|
-| ctc prefix beam search   | 4.26 | 5.00 |
-| attention decoder        | 3.05 | 3.44 |
-| attention rescoring      | 3.72 | 4.10 |
+| decoding mode                 | full | 16   |
+|-------------------------------|------|------|
+| ctc prefix beam search        | 4.26 | 5.00 |
+| attention decoder             | 3.05 | 3.44 |
+| attention rescoring           | 3.72 | 4.10 |
+| attention rescoring (beam 50) | 3.57 | 3.95 |
 
 test other
-| decoding mode            | full  | 16    |
-|--------------------------|-------|-------|
-| ctc prefix beam search   | 10.87 | 12.87 |
-| attention decoder        | 9.07  | 10.44 |
-| attention rescoring      | 9.74  | 11.61 |
+| decoding mode                 | full  | 16    |
+|-------------------------------|-------|-------|
+| ctc prefix beam search        | 10.87 | 12.87 |
+| attention decoder             | 9.07  | 10.44 |
+| attention rescoring           | 9.74  | 11.61 |
+| attention rescoring (beam 50) | 9.34  | 11.13 |
