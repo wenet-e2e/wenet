@@ -43,8 +43,11 @@ with open(sys.argv[2], 'r', encoding='utf8') as fin, \
             if bpemode:
                 pieces = sp.EncodeAsPieces(word)
                 if contain_oov(pieces):
-                    print('Words {} contains oov unit, replace oov unit with \"<unk>\"'.format(
-                        ''.join(word).strip('▁')))
+                    print(
+                        "Words {} contains oov unit, replace oov "
+                        "unit with \"<unk>\"".format(
+                            ''.join(word).strip('▁'))
+                    )
                 chars = ' '.join(
                     [p if p in unit_table else '<unk>' for p in pieces])
             else:
