@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#include <ctype.h>
 
 #include "decoder/ctc_endpoint.h"
 #include "utils/timer.h"
@@ -188,11 +189,30 @@ void TorchAsrDecoder::UpdateResult() {
     const std::vector<int>& hypothesis = hypotheses[i];
 
     DecodeResult path;
+    bool is_englishword_prev = false;
+    auto CheckEnglishWord = [](std::string &word){
+      // special words in lm.arpa: sos/eos, <UNK>, ...
+      if (word == "<UNK>" || word == "<unk>" ||
+          word == "</s>" || word == "<s>") {
+        return true;
+      }
+      for (size_t k = 0; k < word.size(); k++) {
+        // english words may contain apostrophe, i.e., "He's"
+        if (word[k] == '\'') continue;
+        if (!isalpha(word[k])) return false;
+      }
+      return true;
+    };
     path.score = likelihood[i];
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_->Find(hypothesis[j]);
-      path.sentence += (j == 0 ? word : ' ' + word);
+      if (is_englishword_prev && CheckEnglishWord(word)) {
+        path.sentence += (' ' + word);
+      } else {
+        path.sentence += (word);
+      }
+      is_englishword_prev = CheckEnglishWord(word);
     }
     // TimeStamp is only supported in CtcPrefixBeamSearch now
     if (searcher_->Type() == SearchType::kPrefixBeamSearch) {
