@@ -1,0 +1,344 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>LM for WeNet &mdash; Wenet  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Runtime for WeNet" href="runtime.html" />
+    <link rel="prev" title="Tutorial" href="tutorial.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Wenet
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Tutorial:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">LM for WeNet</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#motivation">Motivation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#system-design">System Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation">Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#results">Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-use">How to use?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wenet</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>LM for WeNet</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/lm.md.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="lm-for-wenet">
+<h1>LM for WeNet<a class="headerlink" href="#lm-for-wenet" title="Permalink to this headline">¶</a></h1>
+<p>WeNet uses n-gram based statistical language model and the WFST framework to support the custom language model.
+And LM is only supported in runtime of WeNet.</p>
+<div class="section" id="motivation">
+<h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline">¶</a></h2>
+<p>Why n-gram based LM? This may be the first question many people will ask.
+Now that LM based on RNN and Transformer is in full swing, why does WeNet go backward?
+The reason is simple, it is for productivity.
+The n-gram-based language model has mature and complete training tools,
+any amount of corpus can be trained, the training is very fast, the hotfix is easy,
+and it has a wide range of mature applications in actual products.</p>
+<p>Why WFST? It may be the second question many people will ask.
+Since both industry and research have been working so hard to abandon traditional speech recognition,
+especially the complex decoding technology. Why does WeNet back?
+The reason is also very simple, it is for productivity.
+WFST is a standard and powerful tool in traditional speech recognition.
+And based on this solution, we have mature and complete bug fix solutions and product solutions,
+such as that we can use the replace function in WFST for class-based personalization such as contact recognition.</p>
+<p>Therefore, just like WeNet’s design goal “Production first and Production Ready”,
+LM in WeNet also puts productivity as the first priority.
+So it draws on many very productive tools and solutions accumulated in traditional speech recognition.
+The difference to traditional speech recognition are:</p>
+<ol class="simple">
+<li><p>The training in WeNet is pure end to end.</p></li>
+<li><p>As described below, LM is optional in decoding, you can choose whether to use LM according to your needs and application scenarios.</p></li>
+</ol>
+</div>
+<div class="section" id="system-design">
+<h2>System Design<a class="headerlink" href="#system-design" title="Permalink to this headline">¶</a></h2>
+<p>The whole system is shown in the bellowing picture. There are two ways to generate N-best.</p>
+<p><img alt="LM System Design" src="_images/lm_system.png" /></p>
+<ol class="simple">
+<li><p>Without LM, we use CTC prefix beam search to generate N-best.</p></li>
+<li><p>With LM, we use CTC WFST search to generate N-best and CTC WFST search is the traditional WFST based decoder.</p></li>
+</ol>
+<p>There are two main parts of the CTC WFST based search.</p>
+<p>The first is building the decoding graph, which is to compose the model unit T, the lexicon L and the language model G into one unified graph TLG. And in which:</p>
+<ol class="simple">
+<li><p>T is the model unit in E2E training. Typically it’s char in Chinese, char or BPE in English.</p></li>
+<li><p>L is the lexicon, the lexicon is very simple. What we need to do is just split a word into its modeling unit sequence.
+For example, the word “我们” is split into two chars “我 们”, and the word “APPLE” is split into five letters “A P P L E”.
+We can see there is no phonemes and there is no need to design pronunciation on purpose.</p></li>
+<li><p>G is the language model, namely compiling the n-gram to standard WFST representation.</p></li>
+</ol>
+<p>The second is the decoder, which is the same as the traditional decoder, which uses the standard Viterbi beam search algorithm in decoding.</p>
+</div>
+<div class="section" id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this headline">¶</a></h2>
+<p>WeNet draws on the decoder and related tools in Kaldi to support LM and WFST based decoding.
+For ease of using and keeping independence, we directly migrated the code related to decoding in Kaldi to <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/core/kaldi">this directory</a> in WeNet runtime.
+And modify and organize according to the following principles:</p>
+<ol class="simple">
+<li><p>To minimize changes, the migrated code remains the same directory structure as the original.</p></li>
+<li><p>We use GLOG to replace the log system in Kaldi.</p></li>
+<li><p>We modify the code format to meet the lint requirements of the code style in WeNet.</p></li>
+</ol>
+<p>The core code is https://github.com/mobvoi/wenet/blob/main/runtime/core/decoder/ctc_wfst_beam_search.cc,
+which wraps the LatticeFasterDecoder in Kaldi.
+And we use blank frame skipping to speed up decoding.</p>
+<p>In addition, WeNet also migrated related tools for building the decoding graph,
+such as arpa2fst, fstdeterminizestar, fsttablecompose, fstminimizeencoded, and other tools.
+So all the tools related to LM are built-in tools and can be used out of the box.</p>
+</div>
+<div class="section" id="results">
+<h2>Results<a class="headerlink" href="#results" title="Permalink to this headline">¶</a></h2>
+<p>We get consistent gain (3%~10%) on different datasets,
+including aishell, aishell2, and librispeech,
+please go to the corresponding example dataset for the details.</p>
+</div>
+<div class="section" id="how-to-use">
+<h2>How to use?<a class="headerlink" href="#how-to-use" title="Permalink to this headline">¶</a></h2>
+<p>Here is an example from aishell, which shows how to prepare the dictionary, how to train the LM,
+how to build the graph, and how to decode with the runtime.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># 7.1 Prepare dict</span>
+<span class="nv">unit_file</span><span class="o">=</span><span class="nv">$dict</span>
+mkdir -p data/local/dict
+cp <span class="nv">$unit_file</span> data/local/dict/units.txt
+tools/fst/prepare_dict.py <span class="nv">$unit_file</span> <span class="si">${</span><span class="nv">data</span><span class="si">}</span>/resource_aishell/lexicon.txt <span class="se">\</span>
+    data/local/dict/lexicon.txt
+<span class="c1"># 7.2 Train lm</span>
+<span class="nv">lm</span><span class="o">=</span>data/local/lm
+mkdir -p <span class="nv">$lm</span>
+tools/filter_scp.pl data/train/text <span class="se">\</span>
+     <span class="nv">$data</span>/data_aishell/transcript/aishell_transcript_v0.8.txt &gt; <span class="nv">$lm</span>/text
+local/aishell_train_lms.sh
+<span class="c1"># 7.3 Build decoding TLG</span>
+tools/fst/compile_lexicon_token_fst.sh <span class="se">\</span>
+    data/local/dict data/local/tmp data/local/lang
+tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span>
+<span class="c1"># 7.4 Decoding with runtime</span>
+./tools/decode.sh --nj <span class="m">16</span> <span class="se">\</span>
+    --beam <span class="m">15</span>.0 --lattice_beam <span class="m">7</span>.5 --max_active <span class="m">7000</span> <span class="se">\</span>
+    --blank_skip_thresh <span class="m">0</span>.98 --ctc_weight <span class="m">0</span>.5 --rescoring_weight <span class="m">1</span>.0 <span class="se">\</span>
+    --fst_path data/lang_test/TLG.fst <span class="se">\</span>
+    data/test/wav.scp data/test/text <span class="nv">$dir</span>/final.zip <span class="se">\</span>
+    data/lang_test/words.txt <span class="nv">$dir</span>/lm_with_runtime
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="runtime.html" class="btn btn-neutral float-right" title="Runtime for WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="tutorial.html" class="btn btn-neutral float-left" title="Tutorial" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, wenet-team.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
