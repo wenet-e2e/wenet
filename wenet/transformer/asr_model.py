@@ -128,8 +128,7 @@ class ASRModel(torch.nn.Module):
         ys_in_lens = ys_pad_lens + 1
         r_ys_in_pad = torch.tensor(0.0)
         r_ys_out_pad = torch.tensor(0.0)
-        if self.reverse_weight > 0:
-            assert hasattr(self.decoder, 'right_decoder')
+        if self.reverse_weight > 0 and hasattr(self.decoder, 'right_decoder'):
             # used fo right to left decoder
             r_ys_in_pad, r_ys_out_pad = add_eos_sos(ys_pad, self.sos, self.eos,
                                                     self.ignore_id)
@@ -524,8 +523,8 @@ class ASRModel(torch.nn.Module):
         decoder_out = decoder_out.cpu().numpy()
         if reverse_weight > 0:
             r_decoder_out, _, _ = self.decoder.right_decoder(
-                encoder_out, encoder_mask, hyps_pad, r_hyps_pad,
-                hyps_lens)  # (beam_size, max_hyps_len, vocab_size)
+                encoder_out, encoder_mask, hyps_pad, hyps_lens, True, r_hyps_pad,
+                )  # (beam_size, max_hyps_len, vocab_size)
             r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out,
                                                             dim=-1)
             r_decoder_out = r_decoder_out.cpu().numpy()
@@ -671,9 +670,7 @@ class ASRModel(torch.nn.Module):
 
         r_decoder_out = torch.tensor(0.0)
         # right to left decoder may be not used during decoding process, which depends on reverse_weight param.
-        if reverse_weight > 0:
-            assert r_hyps is not None and hasattr(self.decoder,
-                                                  'right_decoder')
+        if reverse_weight > 0 and r_hyps is not None and hasattr(self.decoder, 'right_decoder'):
             r_decoder_out, _, _ = self.decoder.right_decoder(
                 encoder_out, encoder_mask, r_hyps,
                 hyps_lens)  # (num_hyps, max_hyps_len, vocab_size)

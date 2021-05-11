@@ -89,8 +89,8 @@ class TransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         ys_in_pad: torch.Tensor,
         ys_in_lens: torch.Tensor,
+        r_ys_in_pad: Optional[torch.Tensor] = None,
         reverse: bool = False,
-        r_ys_in_pad: Optional[List[torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward decoder.
 
@@ -265,7 +265,7 @@ class BiTransformerDecoder(torch.nn.Module):
         """
 
         l_x, _, olens = self.left_decoder(memory, memory_mask, ys_in_pad,
-                                          ys_in_lens, False)
+                                          ys_in_lens, reverse=False)
         r_x, _, olens = self.right_decoder(memory, memory_mask, r_ys_in_pad,
-                                           ys_in_lens, True)
+                                           ys_in_lens, reverse=True)
         return l_x, r_x, olens
