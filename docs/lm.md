@@ -1,6 +1,7 @@
 # LM for WeNet
 
 WeNet use n-gram based statistical lanuage model and WFST framework to support custom language model.
+And LM is only supported in runtime in WeNet.
 
 ## Motivation
 
@@ -57,13 +58,48 @@ And modify and organize according to the following principles:
 2. We use GLOG to replace the log system in Kaldi.
 3. We modify the code format to meet the lint requirements of the code style in WeNet.
 
-The core code is https://github.com/mobvoi/wenet/blob/main/runtime/core/decoder/ctc_wfst_beam_search.cc, which wraps the LatticeFasterDecoder in Kaldi. And we use blank frame skipping to speed up decoding.
+The core code is https://github.com/mobvoi/wenet/blob/main/runtime/core/decoder/ctc_wfst_beam_search.cc,
+which wraps the LatticeFasterDecoder in Kaldi.
+And we use blank frame skipping to speed up decoding.
 
 In addition, WeNet also migrated related tools for building the decoding graph,
 such as arpa2fst, fstdeterminizestar, fsttablecompose, fstminimizeencoded and other tools.
 So all the tools related to LM are built-in tools, and can be used out of box.
 
 
-## Experiments
+## Results
 
-We get consistent gain(3%~10%) on different datasets, including aishell, aishell2 and librispeech, please go to the corresponding example dataset for the details. 
+We get consistent gain(3%~10%) on different datasets,
+including aishell, aishell2 and librispeech,
+please go to the corresponding example dataset for the details.
+
+## How to use?
+
+Here is an example from aishell, which shows how to prepare dict, how to train LM,
+how to build the graph, and how to decode with runtime.
+
+``` sh
+# 7.1 Prepare dict
+unit_file=$dict
+mkdir -p data/local/dict
+cp $unit_file data/local/dict/units.txt
+tools/fst/prepare_dict.py $unit_file ${data}/resource_aishell/lexicon.txt \
+    data/local/dict/lexicon.txt
+# 7.2 Train lm
+lm=data/local/lm
+mkdir -p $lm
+tools/filter_scp.pl data/train/text \
+     $data/data_aishell/transcript/aishell_transcript_v0.8.txt > $lm/text
+local/aishell_train_lms.sh
+# 7.3 Build decoding TLG
+tools/fst/compile_lexicon_token_fst.sh \
+    data/local/dict data/local/tmp data/local/lang
+tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+# 7.4 Decoding with runtime
+./tools/decode.sh --nj 16 \
+    --beam 15.0 --lattice_beam 7.5 --max_active 7000 \
+    --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
+    --fst_path data/lang_test/TLG.fst \
+    data/test/wav.scp data/test/text $dir/final.zip \
+    data/lang_test/words.txt $dir/lm_with_runtime
+```
