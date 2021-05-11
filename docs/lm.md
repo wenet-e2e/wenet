@@ -47,7 +47,7 @@ For example, the word "我们" is split into two chars "我 们", and the word "
 We can see there is no phonemes and there is no need to design pronunciation on purpose.
 3. G is the language model, namely compiling the n-gram to standard WFST representation.
 
-The second is the decoder, which is same as the traditional decoder, which uses the standard viterbi beam search algorithm in decoding.
+The second is the decoder, which is the same as the traditional decoder, which uses the standard Viterbi beam search algorithm in decoding.
 
 ## Implementation
 
