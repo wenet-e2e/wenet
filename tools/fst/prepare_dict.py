@@ -22,14 +22,14 @@ def contain_oov(units):
     return False
 
 
+bpemode = len(sys.argv) > 4
+if bpemode:
+    import sentencepiece as spm
+    sp = spm.SentencePieceProcessor()
+    sp.Load(sys.argv[4])
 lexicon_table = set()
 with open(sys.argv[2], 'r', encoding='utf8') as fin, \
         open(sys.argv[3], 'w', encoding='utf8') as fout:
-    bpemode = len(sys.argv) > 4
-    if bpemode:
-        import sentencepiece as spm
-        sp = spm.SentencePieceProcessor()
-        sp.Load(sys.argv[4])
     for line in fin:
         word = line.split()[0]
         if word == 'SIL' and not bpemode:  # `sil` might be a valid piece in bpemodel
