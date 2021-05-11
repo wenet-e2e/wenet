@@ -3,10 +3,11 @@
 
 #include "decoder/torch_asr_decoder.h"
 
+#include <ctype.h>
+
 #include <algorithm>
 #include <limits>
 #include <utility>
-#include <ctype.h>
 
 #include "decoder/ctc_endpoint.h"
 #include "utils/timer.h"
