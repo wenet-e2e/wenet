@@ -264,8 +264,14 @@ class BiTransformerDecoder(torch.nn.Module):
                 olens: (batch, )
         """
 
-        l_x, _, olens = self.left_decoder(memory, memory_mask, ys_in_pad,
-                                          ys_in_lens, reverse=False)
-        r_x, _, olens = self.right_decoder(memory, memory_mask, r_ys_in_pad,
-                                           ys_in_lens, reverse=True)
+        l_x, _, olens = self.left_decoder(memory,
+                                          memory_mask,
+                                          ys_in_pad,
+                                          ys_in_lens,
+                                          reverse=False)
+        r_x, _, olens = self.right_decoder(memory,
+                                           memory_mask,
+                                           r_ys_in_pad,
+                                           ys_in_lens,
+                                           reverse=True)
         return l_x, r_x, olens
