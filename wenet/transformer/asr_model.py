@@ -646,7 +646,8 @@ class ASRModel(torch.nn.Module):
             encoder_out (torch.Tensor): corresponding encoder output
             r_hyps (torch.Tensor): hyps from ctc prefix beam search, already
                 pad eos at the begining which is used fo right to left decoder
-            reverse_weight: used for verfing whether used right to left decoder, > 0 will use.
+            reverse_weight: used for verfing whether used right to left
+                decoder, > 0 will use.
 
         Returns:
             torch.Tensor: decoder output
@@ -674,7 +675,8 @@ class ASRModel(torch.nn.Module):
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
 
         r_decoder_out = torch.tensor(0.0)
-        # right to left decoder may be not used during decoding process, which depends on reverse_weight param.
+        # right to left decoder may be not used during decoding process,
+        # which depends on reverse_weight param.
         if reverse_weight > 0 and r_hyps is not None and hasattr(
                 self.decoder, 'right_decoder'):
             r_decoder_out, _, _ = self.decoder.right_decoder(

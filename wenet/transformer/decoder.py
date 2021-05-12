@@ -10,7 +10,8 @@ from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.utils.mask import subsequent_mask, make_pad_mask, subsequent_mask_right_to_left
+from wenet.utils.mask import (subsequent_mask, make_pad_mask,
+                              subsequent_mask_right_to_left)
 
 
 class TransformerDecoder(torch.nn.Module):
@@ -99,13 +100,14 @@ class TransformerDecoder(torch.nn.Module):
             memory_mask: encoder memory mask, (batch, 1, maxlen_in)
             ys_in_pad: padded input token ids, int64 (batch, maxlen_out)
             ys_in_lens: input lengths of this batch (batch)
-            r_ys_in_pad: padded input token ids, int64 (batch, maxlen_out), used for right to left decoder
+            r_ys_in_pad: padded input token ids, int64 (batch, maxlen_out),
+                used for right to left decoder
             reverse: does not use, used for unified api
         Returns:
             (tuple): tuple containing:
-                x: decoded token score before softmax (batch, maxlen_out, vocab_size)
-                    if use_output_layer is True,
-                r_x: not used, used fo unified api
+                x: decoded token score before softmax (batch, maxlen_out,
+                    vocab_size) if use_output_layer is True,
+                r_x: not used, used for unified api
                 olens: (batch, )
         """
         tgt = ys_in_pad
@@ -257,9 +259,10 @@ class BiTransformerDecoder(torch.nn.Module):
             reverse: does not use, used for unified api
         Returns:
             (tuple): tuple containing:
-                x: decoded token score before softmax (batch, maxlen_out, vocab_size)
-                    if use_output_layer is True,
-                r_x: decoded token score (right to left decoder) before softmax (batch, maxlen_out, vocab_size)
+                x: decoded token score before softmax (batch, maxlen_out,
+                    vocab_size) if use_output_layer is True,
+                r_x: decoded token score (right to left decoder) before
+                    softmax (batch, maxlen_out, vocab_size)
                     if use_output_layer is True,
                 olens: (batch, )
         """
