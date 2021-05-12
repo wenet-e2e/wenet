@@ -502,7 +502,8 @@ class ASRModel(torch.nn.Module):
         hyps_lens = torch.tensor([len(hyp[0]) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
-        hyps_pad, r_hyps_pad = add_sos_eos(hyps_pad, self.sos, self.eos,
+        ori_hyps_pad = hyps_pad
+        hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos,
                                            self.ignore_id)
         hyps_lens = hyps_lens + 1  # Add <sos> at begining
         encoder_out = encoder_out.repeat(beam_size, 1, 1)
@@ -521,14 +522,16 @@ class ASRModel(torch.nn.Module):
                 hyps_lens)  # (beam_size, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
-        if reverse_weight > 0:
+        if self.reverse_weight > 0 and hasattr(self.decoder, 'right_decoder'):
+            # used fo right to left decoder
+            r_hyps_pad, _ = add_eos_sos(ori_hyps_pad, self.sos, self.eos,
+                                                    self.ignore_id)
             r_decoder_out, _, _ = self.decoder.right_decoder(
                 encoder_out,
                 encoder_mask,
-                hyps_pad,
-                hyps_lens,
-                True,
                 r_hyps_pad,
+                hyps_lens,
+                reverse=True
             )  # (beam_size, max_hyps_len, vocab_size)
             r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out,
                                                             dim=-1)
@@ -547,7 +550,7 @@ class ASRModel(torch.nn.Module):
                 r_score = 0.0
                 r_score += decoder_out[i][0][self.eos]
                 for j, w in enumerate(hyp[0]):
-                    r_score += r_decoder_out[i][j][w]
+                    r_score += r_decoder_out[i][j + 1][w]
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
             # add ctc score
             score += hyp[1] * ctc_weight
@@ -681,7 +684,7 @@ class ASRModel(torch.nn.Module):
                 self.decoder, 'right_decoder'):
             r_decoder_out, _, _ = self.decoder.right_decoder(
                 encoder_out, encoder_mask, r_hyps,
-                hyps_lens)  # (num_hyps, max_hyps_len, vocab_size)
+                hyps_lens, reverse=True)  # (num_hyps, max_hyps_len, vocab_size)
             r_decoder_out = torch.nn.functional.log_softmax(decoder_out,
                                                             dim=-1)
 
