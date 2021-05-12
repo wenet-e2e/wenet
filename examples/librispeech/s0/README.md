@@ -49,4 +49,4 @@ test other
 | attention rescoring (beam 50)  | 9.34  | 11.13 |
 | LM + attention rescoring       | 8.78  | 10.26 |
 | LM-tgbig + attention rescoring | 8.34  | 9.74  |
-| LM-fgbig + attention rescoring | 8.17  | 9.44  
+| LM-fgbig + attention rescoring | 8.17  | 9.44  |
