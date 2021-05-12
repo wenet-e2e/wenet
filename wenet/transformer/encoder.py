@@ -14,6 +14,7 @@ from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.embedding import RelPositionalEncoding
+from wenet.transformer.embedding import NoPositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
@@ -61,7 +62,7 @@ class BaseEncoder(torch.nn.Module):
             input_layer (str): input layer type.
                 optional [linear, conv2d, conv2d6, conv2d8]
             pos_enc_layer_type (str): Encoder positional encoding layer type.
-                opitonal [abs_pos, scaled_abs_pos, rel_pos]
+                opitonal [abs_pos, scaled_abs_pos, rel_pos, conv_module_pos]
             normalize_before (bool):
                 True: use layer_norm before each sub-block of a layer.
                 False: use layer_norm after each sub-block of a layer.
@@ -86,6 +87,8 @@ class BaseEncoder(torch.nn.Module):
             pos_enc_class = PositionalEncoding
         elif pos_enc_layer_type == "rel_pos":
             pos_enc_class = RelPositionalEncoding
+        elif pos_enc_layer_type == "conv_module_pos":
+            pos_enc_class = NoPositionalEncoding
         else:
             raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
 
@@ -406,7 +409,10 @@ class ConformerEncoder(BaseEncoder):
         activation = get_activation(activation_type)
 
         # self-attention module definition
-        encoder_selfattn_layer = RelPositionMultiHeadedAttention
+        if "conv_module_pos" == pos_enc_layer_type:
+            encoder_selfattn_layer = MultiHeadedAttention
+        else:
+            encoder_selfattn_layer = RelPositionMultiHeadedAttention
         encoder_selfattn_layer_args = (
             attention_heads,
             output_size,
@@ -437,5 +443,6 @@ class ConformerEncoder(BaseEncoder):
                 dropout_rate,
                 normalize_before,
                 concat_after,
+                "conv_module_pos" == pos_enc_layer_type,
             ) for _ in range(num_blocks)
         ])

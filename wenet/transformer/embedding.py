@@ -109,3 +109,31 @@ class RelPositionalEncoding(PositionalEncoding):
         x = x * self.xscale
         pos_emb = self.pe[:, offset:offset + x.size(1)]
         return self.dropout(x), self.dropout(pos_emb)
+
+
+class NoPositionalEncoding(torch.nn.Module):
+    """Not using positional encoding, but keep the same API of "PositionalEncoding".
+
+    :param int d_model: embedding dim
+    :param float dropout_rate: dropout rate
+    """
+    def __init__(self,
+                 d_model: int,
+                 dropout_rate: float):
+        """Construct an NoPositionalEncoding object."""
+        super().__init__()
+
+    def forward(self,
+                x: torch.Tensor,
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Add positional encoding.
+
+        Args:
+            x (torch.Tensor): Input. Its shape is (batch, time, ...)
+            offset (int): position offset, for compatibility to RelPositionalEncoding
+
+        Returns:
+            torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
+            None: for compatibility to RelPositionalEncoding
+        """
+        return x, None
