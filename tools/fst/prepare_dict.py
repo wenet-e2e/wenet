@@ -52,7 +52,7 @@ with open(sys.argv[2], 'r', encoding='utf8') as fin, \
                     [p if p in unit_table else '<unk>' for p in pieces])
             else:
                 # ignore words with OOV
-                if contains_oov(word):
+                if contain_oov(word):
                     print('Ignoring words {}, which contains oov unit'.format(word))
                     continue
                 # Optional, append ▁ in front of english word
