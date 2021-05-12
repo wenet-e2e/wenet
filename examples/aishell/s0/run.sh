@@ -209,9 +209,6 @@ fi
 
 # Optionally, you can add LM and test it with runtime.
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
-    # Include kaldi path
-    # TODO(Binbin Zhang): remove kaldi dependency in this part
-    . kaldi_path.sh || exit 1;
     # 7.1 Prepare dict
     unit_file=$dict
     mkdir -p data/local/dict

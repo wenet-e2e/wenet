@@ -3,6 +3,8 @@
 
 #include "decoder/torch_asr_decoder.h"
 
+#include <ctype.h>
+
 #include <algorithm>
 #include <limits>
 #include <utility>
@@ -176,6 +178,21 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   return state;
 }
 
+// TODO(Xingchen Song): support UTF-8
+static bool CheckEnglishWord(const std::string &word) {
+  // special words in lm.arpa: sos/eos, <UNK>, ...
+  if (word == "<UNK>" || word == "<unk>" ||
+      word == "</s>" || word == "<s>") {
+    return true;
+  }
+  for (size_t k = 0; k < word.size(); k++) {
+    // english words may contain apostrophe, i.e., "He's"
+    if (word[k] == '\'') continue;
+    if (!isalpha(word[k])) return false;
+  }
+  return true;
+}
+
 void TorchAsrDecoder::UpdateResult() {
   const auto& hypotheses = searcher_->Outputs();
   const auto& likelihood = searcher_->Likelihood();
@@ -188,11 +205,18 @@ void TorchAsrDecoder::UpdateResult() {
     const std::vector<int>& hypothesis = hypotheses[i];
 
     DecodeResult path;
+    bool is_englishword_prev = false;
     path.score = likelihood[i];
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_->Find(hypothesis[j]);
-      path.sentence += word;
+      bool is_englishword_now = CheckEnglishWord(word);
+      if (is_englishword_prev && is_englishword_now) {
+        path.sentence += (' ' + word);
+      } else {
+        path.sentence += (word);
+      }
+      is_englishword_prev = is_englishword_now;
     }
     // TimeStamp is only supported in CtcPrefixBeamSearch now
     if (searcher_->Type() == SearchType::kPrefixBeamSearch) {
