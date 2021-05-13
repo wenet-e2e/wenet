@@ -13,10 +13,10 @@
 |--------------------------------|------------|------------|
 | ctc greedy search              | 3.51       | 9.57       |
 | ctc prefix beam search         | 3.51       | 9.56       |
-| attention decoder              | 3.05       | 8.72       |
-| attention rescoring            | 3.18       | 8.36       |
+| attention decoder              | 3.05       | 8.36       |
+| attention rescoring            | 3.18       | 8.72       |
+| attention rescoring (beam 50)  | 3.12       | 8.55       |
 | LM-fgbig + attention rescoring | 3.09       | 7.40       |
-
 
 ## Conformer U2 Result
 
@@ -35,6 +35,7 @@ test clean
 | ctc prefix beam search         | 4.26 | 5.00 |
 | attention decoder              | 3.05 | 3.44 |
 | attention rescoring            | 3.72 | 4.10 |
+| attention rescoring (beam 50)  | 3.57 | 3.95 |
 | LM + attention rescoring       | 3.56 | 4.02 |
 | LM-tgbig + attention rescoring | 3.40 | 3.82 |
 | LM-fgbig + attention rescoring | 3.38 | 3.74 |
@@ -45,6 +46,7 @@ test other
 | ctc prefix beam search         | 10.87 | 12.87 |
 | attention decoder              | 9.07  | 10.44 |
 | attention rescoring            | 9.74  | 11.61 |
+| attention rescoring (beam 50)  | 9.34  | 11.13 |
 | LM + attention rescoring       | 8.78  | 10.26 |
 | LM-tgbig + attention rescoring | 8.34  | 9.74  |
 | LM-fgbig + attention rescoring | 8.17  | 9.44  |
