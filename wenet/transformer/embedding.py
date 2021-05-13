@@ -109,3 +109,49 @@ class RelPositionalEncoding(PositionalEncoding):
         x = x * self.xscale
         pos_emb = self.pe[:, offset:offset + x.size(1)]
         return self.dropout(x), self.dropout(pos_emb)
+
+
+class NoPositionalEncoding(PositionalEncoding):
+    """Not using positional encoding, but keep the same API of "PositionalEncoding".
+
+    :param int d_model: embedding dim
+    :param float dropout_rate: dropout rate
+    """
+    def __init__(self,
+                 d_model: int,
+                 dropout_rate: float):
+        """Construct an NoPositionalEncoding object."""
+        super(PositionalEncoding, self).__init__()
+
+    def forward(self,
+                x: torch.Tensor,
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Add positional encoding.
+
+        Args:
+            x (torch.Tensor): Input. Its shape is (batch, time, ...)
+            offset (int): position offset, for compatibility to RelPositionalEncoding
+
+        Returns:
+            torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
+            None: for compatibility to RelPositionalEncoding
+        """
+        return x, torch.empty(0)
+
+    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
+        """ For getting encoding in a streaming fashion
+
+        Attention!!!!!
+        we apply dropout only once at the whole utterance level in a none
+        streaming way, but will call this function several times with
+        increasing input size in a streaming scenario, so the dropout will
+        be applied several times.
+
+        Args:
+            offset (int): start offset
+            size (int): requried size of position encoding
+
+        Returns:
+            torch.Tensor: Corresponding encoding
+        """
+        return torch.empty(0)

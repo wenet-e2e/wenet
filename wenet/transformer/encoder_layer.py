@@ -140,6 +140,10 @@ class ConformerEncoderLayer(nn.Module):
             output.
             True: x -> x + linear(concat(x, att(x)))
             False: x -> x + att(x)
+        swap_conv_module_and_attention (bool):
+            True: swapping the order of the convolution module and the multi-head self-attention module,
+                 as described in https://arxiv.org/pdf/2011.10798.pdf.
+            False: keep the original order of the convolution module and the multi-head self-attention module.
     """
     def __init__(
         self,
@@ -151,6 +155,7 @@ class ConformerEncoderLayer(nn.Module):
         dropout_rate: float = 0.1,
         normalize_before: bool = True,
         concat_after: bool = False,
+        swap_conv_module_and_attention: bool = False,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -175,6 +180,7 @@ class ConformerEncoderLayer(nn.Module):
         self.normalize_before = normalize_before
         self.concat_after = concat_after
         self.concat_linear = nn.Linear(size + size, size)
+        self.swap_conv_module_and_attention = swap_conv_module_and_attention
 
     def forward(
         self,
@@ -211,6 +217,20 @@ class ConformerEncoderLayer(nn.Module):
             if not self.normalize_before:
                 x = self.norm_ff_macaron(x)
 
+        new_cnn_cache = torch.tensor([0.0], dtype=x.dtype, device=x.device)
+        if self.swap_conv_module_and_attention:
+            # convolution module
+            # Fake new cnn cache here, and then change it in conv_module
+            if self.conv_module is not None:
+                residual = x
+                if self.normalize_before:
+                    x = self.norm_conv(x)
+                x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
+                x = residual + self.dropout(x)
+
+                if not self.normalize_before:
+                    x = self.norm_conv(x)
+
         # multi-headed self-attention module
         residual = x
         if self.normalize_before:
@@ -227,7 +247,7 @@ class ConformerEncoderLayer(nn.Module):
             residual = residual[:, -chunk:, :]
             mask = mask[:, -chunk:, :]
 
-        x_att = self.self_attn(x_q, x, x, pos_emb, mask)
+        x_att = self.self_attn(x_q, x, x, mask, pos_emb)
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
             x = residual + self.concat_linear(x_concat)
@@ -236,18 +256,18 @@ class ConformerEncoderLayer(nn.Module):
         if not self.normalize_before:
             x = self.norm_mha(x)
 
-        # convolution module
-        # Fake new cnn cache here, and then change it in conv_module
-        new_cnn_cache = torch.tensor([0.0], dtype=x.dtype, device=x.device)
-        if self.conv_module is not None:
-            residual = x
-            if self.normalize_before:
-                x = self.norm_conv(x)
-            x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
-            x = residual + self.dropout(x)
+        if not self.swap_conv_module_and_attention:
+            # convolution module
+            # Fake new cnn cache here, and then change it in conv_module
+            if self.conv_module is not None:
+                residual = x
+                if self.normalize_before:
+                    x = self.norm_conv(x)
+                x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
+                x = residual + self.dropout(x)
 
-            if not self.normalize_before:
-                x = self.norm_conv(x)
+                if not self.normalize_before:
+                    x = self.norm_conv(x)
 
         # feed forward module
         residual = x
