@@ -681,8 +681,9 @@ class ASRModel(torch.nn.Module):
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
 
         r_decoder_out = torch.tensor(0.0)
-        # right to left decoder may be not used during decoding process, which depends on reverse_weight param.
-        if  r_hyps is not None and hasattr(self.decoder, 'right_decoder') and reverse_weight > 0:
+        # right to left decoder may be not used during decoding process,
+        # which depends on reverse_weight param.
+        if r_hyps is not None and hasattr(self.decoder, 'right_decoder') and reverse_weight > 0:
             r_decoder_out, _, _ = self.decoder.right_decoder(
                 encoder_out, encoder_mask, r_hyps,
                 hyps_lens, reverse=True)  # (num_hyps, max_hyps_len, vocab_size)
