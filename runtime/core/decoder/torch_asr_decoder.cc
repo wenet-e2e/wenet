@@ -180,11 +180,6 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
 
 // TODO(Xingchen Song): support UTF-8
 static bool CheckEnglishWord(const std::string &word) {
-  // special words in lm.arpa: sos/eos, <UNK>, ...
-  if (word == "<UNK>" || word == "<unk>" ||
-      word == "</s>" || word == "<s>") {
-    return true;
-  }
   for (size_t k = 0; k < word.size(); k++) {
     // english words may contain apostrophe, i.e., "He's"
     if (word[k] == '\'') continue;
