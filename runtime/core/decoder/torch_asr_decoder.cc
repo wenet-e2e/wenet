@@ -182,23 +182,23 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
 // support multilingual recipe in the future, in which characters of
 // different languages are all encoded in UTF-8 format.
 // UTF-8 REF: https://en.wikipedia.org/wiki/UTF-8#Encoding
-void SplitEachChar(const std::string &word, std::vector<std::string> &chars) {
-  chars.clear();
+void SplitEachChar(const std::string &word, std::vector<std::string> *chars) {
+  chars->clear();
   size_t i = 0;
   while (i < word.length()) {
-    assert ((word[i] & 0xF8) <= 0xF0);
+    assert((word[i] & 0xF8) <= 0xF0);
     int bytes_ = 1;
     if ((word[i] & 0x80) == 0x00) {
-      // The first 128 characters (US-ASCII) in UTF-8 format only need one byte
+      // The first 128 characters (US-ASCII) in UTF-8 format only need one byte.
       bytes_ = 1;
     } else if ((word[i] & 0xE0) == 0xC0) {
       // The next 1,920 characters need two bytes to encode,
-      // which covers the remainder of almost all Latin-script alphabets
+      // which covers the remainder of almost all Latin-script alphabets.
       bytes_ = 2;
     } else if ((word[i] & 0xF0) == 0xE0) {
-      // Three bytes are needed for characters in the rest of the Basic Multilingual Plane,
-      // which contains virtually all characters in common use,
-      // including most Chinese, Japanese and Korean characters.
+      // Three bytes are needed for characters in the rest of
+      // the Basic Multilingual Plane, which contains virtually all characters
+      // in common use, including most Chinese, Japanese and Korean characters.
       bytes_ = 3;
     } else if ((word[i] & 0xF8) == 0xF0) {
       // Four bytes are needed for characters in the other planes of Unicode,
@@ -206,15 +206,15 @@ void SplitEachChar(const std::string &word, std::vector<std::string> &chars) {
       // mathematical symbols, and emoji (pictographic symbols).
       bytes_ = 4;
     }
-    chars.push_back(word.substr(i, bytes_));
+    chars->push_back(word.substr(i, bytes_));
     i += bytes_;
   }
-  return ;
+  return;
 }
 
 static bool CheckEnglishWord(const std::string &word) {
   std::vector<std::string> chars;
-  SplitEachChar(word, chars);
+  SplitEachChar(word, &chars);
   for (size_t k = 0; k < chars.size(); k++) {
     // all english characters should be encoded in one byte
     if (chars[k].size() > 1) return false;
