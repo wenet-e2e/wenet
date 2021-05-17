@@ -15,6 +15,7 @@
 #ifndef FRONTEND_FBANK_H_
 #define FRONTEND_FBANK_H_
 
+#include <cstring>
 #include <limits>
 #include <random>
 #include <utility>
