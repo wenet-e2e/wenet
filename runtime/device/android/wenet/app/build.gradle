@@ -20,7 +20,6 @@ android {
     }
     packagingOptions {
         pickFirst 'lib/arm64-v8a/libc++_shared.so'
-        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
     }
     configurations {
         extractForNativeBuild
@@ -45,7 +44,7 @@ android {
 
         ndkVersion '21.1.6352462'
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            abiFilters 'arm64-v8a', 'x86_64'
         }
     }
 
