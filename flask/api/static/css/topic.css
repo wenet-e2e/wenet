@@ -1,0 +1,251 @@
+/*去掉所有元素间的间距*/
+html,body,div,dl,dt,dd,ul,ol,li,h1,h2,h3,h4,h5,h6,pre,form,fieldset,input,textarea,p,blockquote,th,td b,object{margin:0; padding:0;}
+
+header {
+    height:10%;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    display: table;
+}
+
+div.middle {
+    margin: 0;
+    padding: 20px;
+    height: 80%;
+    overflow: auto;
+}
+
+footer {
+    display: table;
+    background-color: #f6f4f0;
+    padding: 10px;
+    margin: 0;
+    text-align: center;
+    width: 100%;
+    height:10%;
+    clear: both;
+}
+
+html, body {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    height:100%;
+}
+
+
+body {
+    font: 15px/1.5 "Microsoft Yahei", sans-serif;
+    text-align: center;
+}
+
+div.background {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    height:100%;
+}
+
+div.cell {
+    display: table-cell;
+    text-align: center;
+    vertical-align: middle;
+}
+
+div.content {
+    text-align: left;
+	word-break:break-all;
+	word-wrap:break-word;
+}
+
+div.comment {
+    margin-top: 30px;
+    text-align: left;
+}
+
+div.clearfloat {
+    clear: both;
+}
+
+h1 {
+    text-shadow: 5px 5px 5px #d4d4d4;
+    font-size: 25px;
+}
+
+.remark{
+    height: auto;
+    font-size: 18px;
+    font-weight: bold;
+    background: lightgoldenrodyellow;
+    text-align: left;
+    vertical-align: middle;
+    padding: 10px;
+}
+
+.remark:after {
+    clear: both;
+}
+
+div.comment-list {
+    height: auto;
+    width: 100%;
+    padding: 10px;
+}
+
+div.btn-line {
+    display: table;
+    width: 100%;
+    margin: 0 auto;
+    text-align: center;
+    vertical-align: middle;
+}
+
+div.btn-left {
+    display: table-cell;
+    text-align: left;
+}
+
+div.btn-right {
+    display: table-cell;
+    text-align: right;
+}
+
+div.post-comment {
+    border-radius: 20px;
+}
+
+div.post-head {
+    border-radius: 20px;
+}
+
+div.btn-left > p {
+    color: #FFFFFF;
+    line-height: 100%;
+}
+
+.author{
+    color: orange;
+    margin-right: 20px;
+}
+
+p {
+    font: 15px/1.5 "Microsoft Yahei", sans-serif;
+}
+
+textarea {
+    height: 90%;
+    border-radius: 10px;
+}
+
+
+
+/**
+ *
+ * Pull down styles
+ *
+ */
+
+#wrapper {
+    z-index: 1;
+	top: 0px;
+    bottom: 48px;
+    left: 0;
+    width: 100%;
+    background: #ccc;
+    overflow: hidden;
+}
+
+#scroller {
+    position: relative;
+    z-index: 1;
+    -webkit-tap-highlight-color: rgba(0,0,0,0);
+    width: 100%;
+    -webkit-transform: translateZ(0);
+    -moz-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    -o-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-text-size-adjust: none;
+    -moz-text-size-adjust: none;
+    -ms-text-size-adjust: none;
+    -o-text-size-adjust: none;
+    text-size-adjust: none;
+}
+
+
+ul {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    text-align: left;
+}
+
+li{
+    width: 100%;
+    border-bottom: 1px solid lightgrey;
+    padding: 10px;
+    height: auto;
+}
+
+#pullDown, #pullUp {
+    background:#fff;
+    height:40px;
+    line-height:40px;
+    padding:5px 10px;
+    border-bottom:1px solid #ccc;
+    font-weight:bold;
+    font-size:14px;
+    color:#888;
+    text-align: center;
+}
+#pullDown .pullDownIcon, #pullUp .pullUpIcon  {
+    display:block; float:left;
+    width:40px; height:40px;
+    -webkit-background-size:40px 80px; background-size:40px 80px;
+    -webkit-transition-property:-webkit-transform;
+    -webkit-transition-duration:250ms;
+}
+#pullDown .pullDownIcon {
+    -webkit-transform:rotate(0deg) translateZ(0);
+}
+#pullUp .pullUpIcon  {
+    -webkit-transform:rotate(-180deg) translateZ(0);
+}
+
+#pullDown.flip .pullDownIcon {
+    -webkit-transform:rotate(-180deg) translateZ(0);
+}
+
+#pullUp.flip .pullUpIcon {
+    -webkit-transform:rotate(0deg) translateZ(0);
+}
+
+#pullDown.loading .pullDownIcon, #pullUp.loading .pullUpIcon {
+    background-position:0 100%;
+    -webkit-transform:rotate(0deg) translateZ(0);
+    -webkit-transition-duration:0ms;
+
+    -webkit-animation-name:loading;
+    -webkit-animation-duration:2s;
+    -webkit-animation-iteration-count:infinite;
+    -webkit-animation-timing-function:linear;
+}
+
+@-webkit-keyframes loading {
+    from { -webkit-transform:rotate(0deg) translateZ(0); }
+    to { -webkit-transform:rotate(360deg) translateZ(0); }
+}
+
+iframe {
+    width: 100%;
+    height: 400px;
+    margin: 0;
+    padding: 0%;
+    border: 0;
+}

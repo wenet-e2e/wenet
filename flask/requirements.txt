@@ -1,0 +1,10 @@
+cffi
+Flask
+gunicorn
+requests
+gevent
+jieba
+librosa
+numpy
+numba
+pymongo
