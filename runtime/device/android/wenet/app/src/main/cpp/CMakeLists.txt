@@ -83,14 +83,15 @@ ExternalProject_Add(openfst
   URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
   SOURCE_DIR        ${openfst_SRC_DIR}
   BINARY_DIR        ${openfst_BUILD_DIR}
-  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --disable-bin --host=${CMAKE_LIBRARY_ARCHITECTURE}
+  CONFIGURE_COMMAND PATH=${CMAKE_PREFIX_PATH}/bin:$ENV{PATH} ${openfst_SRC_DIR}/configure
+                      --disable-bin --host=${CMAKE_LIBRARY_ARCHITECTURE}
                       "CXX=${ANDROID_CXX_COMPILER} -target ${CMAKE_LIBRARY_ARCHITECTURE}${ANDROID_NATIVE_API_LEVEL}"
-                      "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
+                      "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR} -fPIC"
                       "LIBS=${OPENFST_EXTRA_LIBS}"
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.h ${openfst_SRC_DIR}/src/include/fst
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib
-  BUILD_COMMAND     make -j 4
+  BUILD_COMMAND     PATH=${CMAKE_PREFIX_PATH}/bin:$ENV{PATH} make -j 4
   INSTALL_COMMAND   ""
 )
 include_directories(${openfst_SRC_DIR}/src/include)
