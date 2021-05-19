@@ -65,7 +65,6 @@ class WenetInterface:
                 status, feat = self.compute_feature(pcm, sr)
                 if not status:
                     raise Exception(feat)
-                # print(feat.size())
                 batchs = self.split_feat(feat)
                 for item in batchs:
                     feats, feats_lengths = item
@@ -78,7 +77,6 @@ class WenetInterface:
                             num_decoding_left_chunks=-1,
                             ctc_weight=0.5,
                             simulate_streaming=False)
-                    print(hyp)
                     all_hyps.extend(list(hyp))
                 content = ''
                 for w in all_hyps:
@@ -160,7 +158,6 @@ class WenetInterface:
             feature = torch.from_numpy(feature).float()
         mean = torch.mean(feature)
         std = torch.std(feature)
-        # print(std)
         if std < 0.5:
             return False, "the variance is too low, maybe sil or noise"
         else:

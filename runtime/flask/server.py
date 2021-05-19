@@ -21,9 +21,9 @@ from api import server
 server.debug = False
 
 if __name__ == '__main__':
-    context = (server_config.crt, server_config.key)
+    #  context = (server_config.crt, server_config.key)
     port = int(server_config.port)
     host = '0.0.0.0'
     # ssl for chrome audio recorder
-    server.run(host=host, port=port, ssl_context=context)
-    # server.run(host=host, port=port)
+    #  server.run(host=host, port=port, ssl_context=context)
+    server.run(host=host, port=port)

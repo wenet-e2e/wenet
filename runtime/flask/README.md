@@ -10,10 +10,9 @@ pip install -r requirements.txt
 导入python的目录环境
 . ./pypath.sh
 
-需要修改config下的配置文件相应选项
-chrome录音需要用https服务，所以需要ssl证书
-python3 server.py
-
 gunicorn http启动
 gunicorn -c config/gunicorn.py server:server
+
+测试脚本
+python3 bin/qps.py --concurrent=1 ${wav_dir} ${times} http://${ip}:${port}/
 ```
