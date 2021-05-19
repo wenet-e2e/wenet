@@ -72,9 +72,11 @@ mkdir build && cd build && cmake .. && cmake --build .
 
 ## Discussion & Communication
 
-In addition to discussing in [Github Issues](https://github.com/mobvoi/wenet/issues), we created a WeChat group for better discussion and quicker response.
-Please scan the following QR code in WeChat to join the chat group.
-If it fails, please scan the personal QR code on the right with contact info like "wenet", and we will invite you to the chat group.
+Please scan the QR code on the left to follow the offical account of WeNet.
+
+In addition to discussing in [Github Issues](https://github.com/mobvoi/wenet/issues),
+we created a WeChat group for better discussion and quicker response.
+Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 
 If you can not access the QR image, please access it on [gitee](https://gitee.com/robin1001/qr/tree/master).
 
