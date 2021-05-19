@@ -31,7 +31,8 @@ std::shared_ptr<FeaturePipeline> feature_pipeline;
 std::shared_ptr<fst::SymbolTable> symbol_table;
 std::shared_ptr<TorchAsrModel> model;
 std::shared_ptr<TorchAsrDecoder> decoder;
-DecodeState state = DecodeState::kEndBatch;
+DecodeState state = kEndBatch;
+std::string total_result;  // NOLINT
 
 void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   model = std::make_shared<TorchAsrModel>();
@@ -59,7 +60,8 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
 void reset(JNIEnv *env, jobject) {
   LOG(INFO) << "wenet reset";
   decoder->Reset();
-  state = DecodeState::kEndBatch;
+  state = kEndBatch;
+  total_result = "";
 }
 
 void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
@@ -79,17 +81,24 @@ void set_input_finished() {
 
 void decode_thread_func() {
   while (true) {
-    DecodeState state = decoder->Decode();
+    state = decoder->Decode();
+    if (state == kEndFeats || state == kEndpoint) {
+      decoder->Rescoring();
+    }
 
     std::string result;
     if (decoder->DecodedSomething()) {
       result = decoder->result()[0].sentence;
     }
 
-    if (state == DecodeState::kEndFeats) {
-      decoder->Rescoring();
-      LOG(INFO) << "wenet final result: " << result;
+    if (state == kEndFeats) {
+      LOG(INFO) << "wenet endfeats final result: " << result;
+      total_result += result;
       break;
+    } else if (state == kEndpoint) {
+      LOG(INFO) << "wenet endpoint final result: " << result;
+      total_result += result + "，";
+      decoder->ResetContinuousDecoding();
     } else {
       if (decoder->DecodedSomething()) {
         LOG(INFO) << "wenet partial result: " << result;
@@ -104,7 +113,7 @@ void start_decode() {
 }
 
 jboolean get_finished(JNIEnv *env, jobject) {
-  if (state == DecodeState::kEndFeats) {
+  if (state == kEndFeats) {
     LOG(INFO) << "wenet recognize finished";
     return JNI_TRUE;
   }
@@ -115,9 +124,9 @@ jstring get_result(JNIEnv *env, jobject) {
   std::string result;
   if (decoder->DecodedSomething()) {
     result = decoder->result()[0].sentence;
-    LOG(INFO) << "wenet ui result: " << result;
   }
-  return env->NewStringUTF(result.c_str());
+  LOG(INFO) << "wenet ui result: " << total_result + result;
+  return env->NewStringUTF((total_result + result).c_str());
 }
 }  // namespace wenet
 
