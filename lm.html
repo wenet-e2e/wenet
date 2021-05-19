@@ -241,14 +241,14 @@ We can see there is no phonemes and there is no need to design pronunciation on 
 <div class="section" id="implementation">
 <h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this headline">¶</a></h2>
 <p>WeNet draws on the decoder and related tools in Kaldi to support LM and WFST based decoding.
-For ease of using and keeping independence, we directly migrated the code related to decoding in Kaldi to <a class="reference external" href="https://github.com/mobvoi/wenet/tree/main/runtime/core/kaldi">this directory</a> in WeNet runtime.
+For ease of using and keeping independence, we directly migrated the code related to decoding in Kaldi to <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/core/kaldi">this directory</a> in WeNet runtime.
 And modify and organize according to the following principles:</p>
 <ol class="simple">
 <li><p>To minimize changes, the migrated code remains the same directory structure as the original.</p></li>
 <li><p>We use GLOG to replace the log system in Kaldi.</p></li>
 <li><p>We modify the code format to meet the lint requirements of the code style in WeNet.</p></li>
 </ol>
-<p>The core code is https://github.com/mobvoi/wenet/blob/main/runtime/core/decoder/ctc_wfst_beam_search.cc,
+<p>The core code is https://github.com/wenet-e2e/wenet/blob/main/runtime/core/decoder/ctc_wfst_beam_search.cc,
 which wraps the LatticeFasterDecoder in Kaldi.
 And we use blank frame skipping to speed up decoding.</p>
 <p>In addition, WeNet also migrated related tools for building the decoding graph,
