@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_package = "ex.grpc";
+option objc_class_prefix = "wenet";
+
+package wenet;
+
+service ASR{
+  rpc Recognize(stream Request) returns (stream Response) {}
+}
+
+message Request{
+  int32 nbest = 1;
+  bool continuous_decoding = 2;
+  bytes audio_data = 3;
+}
+
+message Response{
+  string response_json = 1;
+}
