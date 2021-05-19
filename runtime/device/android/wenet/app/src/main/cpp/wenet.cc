@@ -32,7 +32,7 @@ std::shared_ptr<fst::SymbolTable> symbol_table;
 std::shared_ptr<TorchAsrModel> model;
 std::shared_ptr<TorchAsrDecoder> decoder;
 DecodeState state = kEndBatch;
-std::string total_result;
+std::string total_result;  // NOLINT
 
 void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   model = std::make_shared<TorchAsrModel>();

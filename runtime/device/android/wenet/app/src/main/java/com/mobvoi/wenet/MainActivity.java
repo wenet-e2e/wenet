@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
   private boolean startRecord = false;
   private AudioRecord record = null;
   private int miniBufferSize = 0;  // 1280 bytes 648 byte 40ms, 0.04s
-  private BlockingQueue<short[]> bufferQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
+  private final BlockingQueue<short[]> bufferQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
 
   public static String assetFilePath(Context context, String assetName) {
     File file = new File(context.getFilesDir(), assetName);
