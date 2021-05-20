@@ -43,10 +43,10 @@ echo Preparing transcriptions
 sed -e 's/\.wav//' $tmp_dir/wav.flist | awk -F '/' '{print $NF}' > $train_dir/utt.list
 sed -e 's/\.wav//' $tmp_dir/wav.flist | awk -F '/' '{printf("%s %s\n",$NF,$NF)}' > $train_dir/utt2spk
 paste -d' ' $train_dir/utt.list $tmp_dir/wav.flist > $train_dir/wav.scp
-cat $tal_mix_text  | grep -Ev '^\s*$' > $train_dir/transcript.txt
+cat $tal_mix_text  | grep -Ev '^\s*$' | awk '{if(NF>1) print $0}' > $train_dir/transcript.txt
 #cp $tal_mix_text $train_dir
 
-wc -l $train_dir/transcripts.txt
+wc -l $train_dir/transcript.txt
 echo filtering
 tools/filter_scp.pl -f 1 $train_dir/utt.list $train_dir/transcript.txt | \
   sed 's/Ａ/A/g' | sed 's/Ｃ/C/g' | sed 's/Ｄ/D/g' | sed 's/Ｇ/G/g' | \
