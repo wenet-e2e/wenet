@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Ximalaya Inc (Xiang Lyu)
+// Copyright (c) 2021 Ximalaya Inc (Xiang Lyu)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "boost/json/src.hpp"
-#include "grpc_server.h"
+#include "grpc/grpc_server.h"
 
 namespace wenet {
 
-namespace json = boost::json;
 using grpc::ServerReaderWriter;
 using wenet::Request;
 using wenet::Response;
 
 GrpcConnectionHandler::GrpcConnectionHandler(
     ServerReaderWriter<Response, Request>* stream,
-    std::shared_ptr<Request> request,
-    std::shared_ptr<Response> response,
+    std::shared_ptr<Request> request, std::shared_ptr<Response> response,
     std::shared_ptr<FeaturePipelineConfig> feature_config,
     std::shared_ptr<DecodeOptions> decode_config,
     std::shared_ptr<fst::SymbolTable> symbol_table,
@@ -38,14 +35,13 @@ GrpcConnectionHandler::GrpcConnectionHandler(
       decode_config_(std::move(decode_config)),
       symbol_table_(std::move(symbol_table)),
       model_(std::move(model)),
-      fst_(std::move(fst)) {
-}
+      fst_(std::move(fst)) {}
 
 void GrpcConnectionHandler::OnSpeechStart() {
   LOG(INFO) << "Recieved speech start signal, start reading speech";
   got_start_tag_ = true;
-  json::value rv = {{"status", "ok"}, {"type", "server_ready"}};
-  response_->set_response_json(json::serialize(rv));
+  response_->set_status(Response::ok);
+  response_->set_type(Response::server_ready);
   stream_->Write(*response_);
   feature_pipeline_ = std::make_shared<FeaturePipeline>(*feature_config_);
   decoder_ = std::make_shared<TorchAsrDecoder>(
@@ -62,32 +58,31 @@ void GrpcConnectionHandler::OnSpeechEnd() {
   got_end_tag_ = true;
 }
 
-void GrpcConnectionHandler::OnPartialResult(const std::string& result) {
-  LOG(INFO) << "Partial result: " << result;
-  json::value rv = {
-      {"status", "ok"}, {"type", "partial_result"}, {"nbest", result}};
-  response_->set_response_json(json::serialize(rv));
+void GrpcConnectionHandler::OnPartialResult() {
+  LOG(INFO) << "Partial result";
+  response_->set_status(Response::ok);
+  response_->set_type(Response::partial_result);
   stream_->Write(*response_);
 }
 
-void GrpcConnectionHandler::OnFinalResult(const std::string& result) {
-  LOG(INFO) << "Final result: " << result;
-  json::value rv = {
-      {"status", "ok"}, {"type", "final_result"}, {"nbest", result}};
-  response_->set_response_json(json::serialize(rv));
+void GrpcConnectionHandler::OnFinalResult() {
+  LOG(INFO) << "Final result";
+  response_->set_status(Response::ok);
+  response_->set_type(Response::final_result);
   stream_->Write(*response_);
 }
 
 void GrpcConnectionHandler::OnFinish() {
   // Send finish tag
-  json::value rv = {{"status", "ok"}, {"type", "speech_end"}};
-  response_->set_response_json(json::serialize(rv));
+  response_->set_status(Response::ok);
+  response_->set_type(Response::speech_end);
   stream_->Write(*response_);
 }
 
 void GrpcConnectionHandler::OnSpeechData() {
   // Read binary PCM data
-  const int16_t* pdata = (int16_t*)request_->audio_data().c_str();
+  const int16_t* pdata =
+      reinterpret_cast<const int16_t*>(request_->audio_data().c_str());
   int num_samples = request_->audio_data().length() / sizeof(int16_t);
   std::vector<float> pcm_data(num_samples);
   for (int i = 0; i < num_samples; i++) {
@@ -100,43 +95,42 @@ void GrpcConnectionHandler::OnSpeechData() {
   feature_pipeline_->AcceptWaveform(pcm_data);
 }
 
-std::string GrpcConnectionHandler::SerializeResult(bool finish) {
-  json::array nbest;
+void GrpcConnectionHandler::SerializeResult(bool finish) {
   for (const DecodeResult& path : decoder_->result()) {
-    json::object jpath({{"sentence", path.sentence}});
+    Response_OneBest* one_best_ = response_->add_nbest();
+    one_best_->set_sentence(path.sentence);
     if (finish) {
-      json::array word_pieces;
+      Response_OnePiece* one_piece_ = one_best_->add_wordpieces();
       for (const WordPiece& word_piece : path.word_pieces) {
-        json::object jword_piece({{"word", word_piece.word},
-                                  {"start", word_piece.start},
-                                  {"end", word_piece.end}});
-        word_pieces.emplace_back(jword_piece);
+        one_piece_->set_word(word_piece.word);
+        one_piece_->set_start(word_piece.start);
+        one_piece_->set_end(word_piece.end);
       }
-      jpath.emplace("word_pieces", word_pieces);
     }
-    nbest.emplace_back(jpath);
-
-    if (nbest.size() == nbest_) {
+    if (response_->nbest_size() == nbest_) {
       break;
     }
   }
-  return json::serialize(nbest);
+  return;
 }
 
 void GrpcConnectionHandler::DecodeThreadFunc() {
   while (true) {
     DecodeState state = decoder_->Decode();
+    response_->clear_status();
+    response_->clear_type();
+    response_->clear_nbest();
     if (state == DecodeState::kEndFeats) {
       decoder_->Rescoring();
-      std::string result = SerializeResult(true);
-      OnFinalResult(result);
+      SerializeResult(true);
+      OnFinalResult();
       OnFinish();
       stop_recognition_ = true;
       break;
     } else if (state == DecodeState::kEndpoint) {
       decoder_->Rescoring();
-      std::string result = SerializeResult(true);
-      OnFinalResult(result);
+      SerializeResult(true);
+      OnFinalResult();
       // If it's not continuous decoidng, continue to do next recognition
       // otherwise stop the recognition
       if (continuous_decoding_) {
@@ -148,8 +142,8 @@ void GrpcConnectionHandler::DecodeThreadFunc() {
       }
     } else {
       if (decoder_->DecodedSomething()) {
-        std::string result = SerializeResult(false);
-        OnPartialResult(result);
+        SerializeResult(false);
+        OnPartialResult();
       }
     }
   }
@@ -159,11 +153,13 @@ void GrpcConnectionHandler::operator()() {
   try {
     while (stream_->Read(request_.get())) {
       if (!got_start_tag_) {
-        nbest_ = (int)request_->nbest();
-        continuous_decoding_ = (bool)request_->continuous_decoding();
+        nbest_ = request_->decode_config().nbest_config();
+        continuous_decoding_ =
+            request_->decode_config().continuous_decoding_config();
         OnSpeechStart();
+      } else {
+        OnSpeechData();
       }
-      OnSpeechData();
     }
     OnSpeechEnd();
     LOG(INFO) << "Read all pcm data, wait for decoding thread";

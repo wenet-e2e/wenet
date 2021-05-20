@@ -20,10 +20,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
 endif()
 
-# third_party: grpc 
+# third_party: grpc
 # On how to build grpc, you may refer to https://github.com/grpc/grpc
 # We recommend manually recursive clone the repo to avoid internet connection problem
-execute_process(COMMAND apt-get install -y build-essential autoconf libtool pkg-config)
 FetchContent_Declare(gRPC
   GIT_REPOSITORY https://github.com/grpc/grpc
   GIT_TAG        v1.37.1
@@ -163,14 +162,13 @@ add_custom_command(
          ${PROTO_DIR}/wenet.grpc.pb.cc
          ${PROTO_DIR}/wenet.grpc.pb.h
   COMMAND ${protobuf_BINARY_DIR}/protoc
-  ARGS --grpc_out "${PROTO_DIR}" 
-    --cpp_out "${PROTO_DIR}" 
+  ARGS --grpc_out "${PROTO_DIR}"
+    --cpp_out "${PROTO_DIR}"
     -I "${PROTO_DIR}"
     --plugin=protoc-gen-grpc=${grpc_BINARY_DIR}/grpc_cpp_plugin
     wenet.proto)
 
 # grpc_server/client
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 link_directories(${protobuf_BINARY_DIR}/lib)
 add_library(wenet_grpc STATIC grpc/grpc_client.cc grpc/grpc_server.cc grpc/wenet.pb.cc grpc/wenet.grpc.pb.cc)
 target_link_libraries(wenet_grpc PUBLIC grpc++ grpc++_reflection decoder frontend)

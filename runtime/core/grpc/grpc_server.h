@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Ximalaya Inc (Xiang Lyu)
+// Copyright (c) 2021 Ximalaya Inc (Xiang Lyu)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_SERVER_H_
-#define GRPC_SERVER_H_
+#ifndef GRPC_GRPC_SERVER_H_
+#define GRPC_GRPC_SERVER_H_
 
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "utils/log.h"
 
-#include "wenet.grpc.pb.h"
+#include "grpc/wenet.grpc.pb.h"
 
 namespace wenet {
 
@@ -54,10 +55,10 @@ class GrpcConnectionHandler {
   void OnSpeechEnd();
   void OnFinish();
   void OnSpeechData();
-  void OnPartialResult(const std::string &result);
-  void OnFinalResult(const std::string &result);
+  void OnPartialResult();
+  void OnFinalResult();
   void DecodeThreadFunc();
-  std::string SerializeResult(bool finish);
+  void SerializeResult(bool finish);
 
   bool continuous_decoding_ = false;
   int nbest_ = 1;
@@ -105,4 +106,4 @@ class GrpcServer final : public ASR::Service {
 
 }  // namespace wenet
 
-#endif  // GRPC_SERVER_H_
+#endif  // GRPC_GRPC_SERVER_H_

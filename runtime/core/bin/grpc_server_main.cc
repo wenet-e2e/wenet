@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Ximalaya Inc (Xiang Lyu)
+// Copyright (c) 2021 Ximalaya Inc (Xiang Lyu)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #include <grpcpp/health_check_service_interface.h>
 
 #include "decoder/params.h"
-#include "grpc_server.h"
+#include "grpc/grpc_server.h"
 #include "utils/log.h"
 
 DEFINE_int32(port, 10086, "grpc listening port");

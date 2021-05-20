@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Ximalaya Inc (Xiang Lyu)
+// Copyright (c) 2021 Ximalaya Inc (Xiang Lyu)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "frontend/wav.h"
-#include "grpc_client.h"
+#include "grpc/grpc_client.h"
 #include "utils/flags.h"
 #include "utils/log.h"
 #include "utils/timer.h"
@@ -27,9 +27,8 @@ DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
-  wenet::GrpcClient client(FLAGS_host, FLAGS_port);
-  client.set_nbest(FLAGS_nbest);
-  client.set_continuous_decoding(FLAGS_continuous_decoding);
+  wenet::GrpcClient client(FLAGS_host, FLAGS_port, FLAGS_nbest,
+                           FLAGS_continuous_decoding);
 
   wenet::WavReader wav_reader(FLAGS_wav_path);
   const int sample_rate = 16000;

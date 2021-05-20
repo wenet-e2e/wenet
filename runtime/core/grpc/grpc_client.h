@@ -1,4 +1,4 @@
-// Copyright (c) 2020 Ximalaya Inc (Xiang Lyu)
+// Copyright (c) 2021 Ximalaya Inc (Xiang Lyu)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,20 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef GRPC_CLIENT_H_
-#define GRPC_CLIENT_H_
+#ifndef GRPC_GRPC_CLIENT_H_
+#define GRPC_GRPC_CLIENT_H_
+
+#include <grpc/grpc.h>
+#include <grpcpp/channel.h>
+#include <grpcpp/client_context.h>
+#include <grpcpp/create_channel.h>
 
 #include <iostream>
 #include <memory>
 #include <string>
 #include <thread>
 
-#include <grpc/grpc.h>
-#include <grpcpp/channel.h>
-#include <grpcpp/client_context.h>
-#include <grpcpp/create_channel.h>
 #include "utils/utils.h"
-#include "wenet.grpc.pb.h"
+#include "grpc/wenet.grpc.pb.h"
 
 namespace wenet {
 
@@ -38,15 +39,12 @@ using wenet::Response;
 
 class GrpcClient {
  public:
-  GrpcClient(const std::string& host, int port);
+  GrpcClient(const std::string& host, int port, int nbest,
+             bool continuous_decoding);
 
   void SendBinaryData(const void* data, size_t size);
   void ReadLoopFunc();
   void Join();
-  void set_nbest(int nbest) { nbest_ = nbest; }
-  void set_continuous_decoding(bool continuous_decoding) {
-    continuous_decoding_ = continuous_decoding;
-  }
   bool done() const { return done_; }
 
  private:
