@@ -26,8 +26,22 @@ class CollateFunc(object):
         var_stat = torch.zeros(self.feat_dim)
         number = 0
         for item in batch:
-            key = item[0]
-            waveform, sample_rate = torchaudio.load_wav(item[1])
+            value = item[1].strip().split(",")
+            assert len(value) == 3 or len(value) == 1
+            wav_path = value[0]
+            sample_rate = torchaudio.backend.sox_backend.info(wav_path)[0].rate
+            # len(value) == 3 means segmented wav.scp,
+            # len(value) == 1 means original wa.scp
+            if len(value) == 3:
+                start_frame = int(float(value[1]) * sample_rate)
+                end_frame = int(float(value[2]) * sample_rate)
+                waveform, sample_rate = torchaudio.backend.sox_backend.load(
+                    filepath=wav_path,
+                    num_frames=end_frame - start_frame,
+                    offset=start_frame)
+                waveform = waveform * (1 << 15)
+            else:
+                waveform, sample_rate = torchaudio.load_wav(item[1])
             mat = kaldi.fbank(waveform,
                               num_mel_bins=self.feat_dim,
                               dither=0.0,
@@ -36,6 +50,7 @@ class CollateFunc(object):
             var_stat += torch.sum(torch.square(mat), axis=0)
             number += mat.shape[0]
         return number, mean_stat, var_stat
+
 
 class AudioDataset(Dataset):
     def __init__(self, data_file):
@@ -51,15 +66,20 @@ class AudioDataset(Dataset):
     def __getitem__(self, idx):
         return self.items[idx]
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='extract CMVN stats')
     parser.add_argument('--num_workers',
                         default=0,
                         type=int,
                         help='num of subprocess workers for processing')
-    parser.add_argument('--train_config', default='', help='training yaml conf')
+    parser.add_argument('--train_config',
+                        default='',
+                        help='training yaml conf')
     parser.add_argument('--in_scp', default=None, help='wav scp file')
-    parser.add_argument('--out_cmvn', default='global_cmvn', help='global cmvn file')
+    parser.add_argument('--out_cmvn',
+                        default='global_cmvn',
+                        help='global cmvn file')
 
     args = parser.parse_args()
 
@@ -77,8 +97,6 @@ if __name__ == '__main__':
                              num_workers=args.num_workers,
                              collate_fn=collate_func)
 
-
-
     with torch.no_grad():
         all_number = 0
         all_mean_stat = torch.zeros(feat_dim)
@@ -91,14 +109,15 @@ if __name__ == '__main__':
             all_number += number
             wav_number += batch_size
             if wav_number % 1000 == 0:
-                print(
-                    f'processed {wav_number} wavs, {all_number} frames',
-                    file=sys.stderr,
-                    flush=True)
+                print(f'processed {wav_number} wavs, {all_number} frames',
+                      file=sys.stderr,
+                      flush=True)
 
-    cmvn_info = {'mean_stat' : list(all_mean_stat.tolist()),
-                 'var_stat' : list(all_var_stat.tolist()),
-                 'frame_num' : all_number}
+    cmvn_info = {
+        'mean_stat': list(all_mean_stat.tolist()),
+        'var_stat': list(all_var_stat.tolist()),
+        'frame_num': all_number
+    }
 
     with open(args.out_cmvn, 'w') as fout:
         fout.write(json.dumps(cmvn_info))
