@@ -96,6 +96,39 @@ model, websocket server and websocket client enable streaming ASR.
 
 ![Runtime server demo](../../../docs/images/runtime_server.gif)
 
+## Run grpc streaming ASR demo
+
+Why grpc? You may find your answer in https://grpc.io/
+
+### Server
+
+First, run the server by:
+
+``` sh
+export GLOG_logtostderr=1
+export GLOG_v=2
+model_dir=your_model_dir
+./build/grpc_server_main \
+    --port 10086 \
+    --workers 4 \
+    --chunk_size 16 \
+    --model_path $model_dir/final.zip \
+    --dict_path $model_dir/words.txt 2>&1 | tee server.log
+```
+
+### Client
+
+Then, you can run the client in the command line by:
+
+```sh
+export GLOG_logtostderr=1
+export GLOG_v=2
+wav_path=your_test_wav_path
+./build/grpc_client_main \
+    --host 127.0.0.1 --port 10086 \
+    --wav_path $wav_path 2>&1 | tee client.log
+```
+
 ## Run the demo in Docker
 
 When you encounter an issue trying to run the demo, we encourage you to run the demo in
