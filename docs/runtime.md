@@ -11,9 +11,9 @@ WeNet runtime uses [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
 The WeNet runtime supports the following platforms.
 
 * Server
-  * [x86](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
+  * [x86](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
 * Device
-  * [android](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
+  * [android](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet)
 
 ## Architecture and Implementation
 
@@ -31,7 +31,7 @@ We can group $C$ continuous frames $x_t, x_{t+1}, x_{t+C}$ as one chunk for the 
 
 ### Interface Design
 
-We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by @torch.jit.export (see [asr_model.py](https://github.com/mobvoi/wenet/tree/main/wenet/transformer/asr_model.py)), which are required and used in C++ runtime in [torch_asr_model.cc](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc) and [torch_asr_decoder.cc](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc). Here we just list the interface and give a brief introduction.
+We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by @torch.jit.export (see [asr_model.py](https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/asr_model.py)), which are required and used in C++ runtime in [torch_asr_model.cc](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc) and [torch_asr_decoder.cc](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc). Here we just list the interface and give a brief introduction.
 
 | interface                        | description                             |
 |----------------------------------|-----------------------------------------|
@@ -51,7 +51,7 @@ For streaming scenario, the *Shared Encoder* module works in an incremental way.
 * Conformer CNN cache: if conformer is used, we should cache the left context for causal CNN computation in Conformer.
 * Subsampling cache: cache the output of subsampling layer, which is the input of the first encoder layer.
 
-Please see [encoder.py:forward_chunk()](https://github.com/mobvoi/wenet/tree/main/wenet/transformer/encoder.py) and [torch_asr_decoder.cc](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc) for details of the caches.
+Please see [encoder.py:forward_chunk()](https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/encoder.py) and [torch_asr_decoder.cc](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc) for details of the caches.
 
 In practice, CNN is also used in the subsampling. We should handle the CNN cache in subsampling. However, since there are serveral CNN layers in subsampling with different left contexts, right contexts and strides, which makes it tircky to directly implement the CNN cache in subsampling. In our implementation, we simply overlap the input to avoid subsampling CNN cache. It is simple and straightforward with negligible additional cost since subsampling CNN only costs a very small fraction of the whole computation. The following picture shows how it works, where the blue color is for the overlap part of current inputs and previous inputs.
 

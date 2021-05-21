@@ -52,13 +52,13 @@ The second is the decoder, which is the same as the traditional decoder, which u
 ## Implementation
 
 WeNet draws on the decoder and related tools in Kaldi to support LM and WFST based decoding.
-For ease of using and keeping independence, we directly migrated the code related to decoding in Kaldi to [this directory](https://github.com/mobvoi/wenet/tree/main/runtime/core/kaldi) in WeNet runtime.
+For ease of using and keeping independence, we directly migrated the code related to decoding in Kaldi to [this directory](https://github.com/wenet-e2e/wenet/tree/main/runtime/core/kaldi) in WeNet runtime.
 And modify and organize according to the following principles:
 1. To minimize changes, the migrated code remains the same directory structure as the original.
 2. We use GLOG to replace the log system in Kaldi.
 3. We modify the code format to meet the lint requirements of the code style in WeNet.
 
-The core code is https://github.com/mobvoi/wenet/blob/main/runtime/core/decoder/ctc_wfst_beam_search.cc,
+The core code is https://github.com/wenet-e2e/wenet/blob/main/runtime/core/decoder/ctc_wfst_beam_search.cc,
 which wraps the LatticeFasterDecoder in Kaldi.
 And we use blank frame skipping to speed up decoding.
 
