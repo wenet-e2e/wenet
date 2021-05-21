@@ -28,7 +28,10 @@ def worker(index, filename, sample_rate, host):
 
         start = time.time()
         r = requests.post('{}/asr'.format(host.rstrip('/')),
-            data=data, files=files, verify=False, timeout=10)
+                          data=data,
+                          files=files,
+                          verify=False,
+                          timeout=10)
         elapsed = time.time() - start
         print('elapsed time:{}s'.format(elapsed), file=sys.stderr)
 
@@ -43,13 +46,23 @@ def worker(index, filename, sample_rate, host):
         if int(ret['ret_code']) != 1:
             raise Exception('Error status:{} message:{}'.format(
                 ret['ret_code'], ret['ret_msg']))
-        print('filename: {}, index: {} text: {}, duration: {}s\nrtf:{}'.format(
-            filename, index, ret['result'], wave_time, rtf), file=sys.stderr)
+        print('filename: {}, index: {} text: {}, duration: {}s \
+              \nrtf:{}'.format(
+                               filename,
+                               index,
+                               ret['result'],
+                               wave_time,
+                               rtf
+                               ), file=sys.stderr)
         print('{} process finished'.format(index), file=sys.stderr)
         return rtf, os.path.basename(filename).rsplit('.', 1)[0], ret['result']
     except Exception as e:
-        print('{} process, filename: {}, worker error:{}'.format(
-            index, filename, str(e)), file=sys.stderr)
+        print('{} process, filename: {}, \
+              worker error:{}'.format(
+                                      index,
+                                      filename,
+                                      str(e)
+                                      ), file=sys.stderr)
         return -1, "", ""
 
 
@@ -58,14 +71,15 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('audio_dir', type=str,
-            help="the input dir of audio")
+                        help="the input dir of audio")
     parser.add_argument('times', type=int, help='the times of test')
     parser.add_argument('host', type=str)
     parser.add_argument('--concurrent', type=int,
-            dest="concurrent", default=1,
-            help='the number of concurrent.use 1 if the test is rtf')
+                        dest="concurrent", default=1,
+                        help='the number of concurrent.use 1 \
+                        if the test is rtf')
     parser.add_argument('--sample-rate', type=int, dest="sample_rate",
-            default=8000, help='the sample rate of wavs')
+                        default=8000, help='the sample rate of wavs')
     args = parser.parse_args()
     file_list = os.listdir(args.audio_dir)
     freeze_support()
@@ -79,8 +93,8 @@ if __name__ == "__main__":
     result = []
     for i in range(args.times):
         filename = os.path.join(args.audio_dir, file_list[i % divide])
-        result.append(pool.apply_async(func=worker, args=(
-            i, filename, args.sample_rate, args.host, )))
+        result.append(pool.apply_async(
+            func=worker, args=(i, filename, args.sample_rate, args.host, )))
         if (i + 1) % args.concurrent == 0:
             print('time sleep 1s', file=sys.stderr)
             time.sleep(1)
@@ -110,5 +124,4 @@ if __name__ == "__main__":
     elapsed = time.time() - start
     print("total cost time: {}s".format(elapsed), file=sys.stderr)
     print('times: {}, success: {}, ratio: {}'.format(
-        args.times, num_success, num_success / args.times),
-        file=sys.stderr)
+        args.times, num_success, num_success / args.times), file=sys.stderr)

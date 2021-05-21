@@ -10,11 +10,11 @@ from config.config import ServerConfig
 server_config = ServerConfig()
 from interface.WenetInterface import WenetInterface
 wenet_handler = WenetInterface(
-        server_config.yaml_path,
-        server_config.vocab_path,
-        server_config.checkpoint,
-        server_config.sample_rate,
-        server_config.beam_size)
+    server_config.yaml_path,
+    server_config.vocab_path,
+    server_config.checkpoint,
+    server_config.sample_rate,
+    server_config.beam_size)
 
 def decode_strict_wav(data, sr):
     pcm = data[44:]
@@ -33,8 +33,8 @@ def ASRRequest():
             except Exception:
                 ip = ""
             info_json = {'forward-ip': ip,
-                        'remote_addr': request.remote_addr,
-                        'url': request.url}
+                         'remote_addr': request.remote_addr,
+                         'url': request.url}
             info = json.dumps(info_json)
             print(info)
             sample_rate = int(request.values.get('sample_rate', None))
@@ -53,7 +53,6 @@ def ASRRequest():
                             data = bytes(audio[0].read())
                         else:
                             data = bytes(audio.read())
-                        break
                 else:
                     data = bytes(audio_data)
                 if len(data) > 0:
@@ -76,8 +75,8 @@ def ASRRequest():
                     ret['ret_code'] = status
                 else:
                     status_code = -100
-                    raise Exception('Not allowed audio file, \
-                    upload amr or wav file please')
+                    raise Exception(
+                        'Not allowed audio file, upload amr or wav file please')
         except Exception as e:
             if status_code > -1000:
                 ret['ret_code'] = status_code
@@ -88,4 +87,3 @@ def ASRRequest():
             ret_str = json.dumps(ret, ensure_ascii=False)
             print(ret_str)
             return ret_str
-

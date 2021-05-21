@@ -177,3 +177,4 @@ class WenetInterface:
             _id = int(items[1])
             ret_dict[phone] = _id
         return ret_dict
+        

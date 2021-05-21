@@ -1,4 +1,3 @@
-import logging
 import os
 
 # worker config
@@ -16,4 +15,3 @@ max_requests = 1024
 backlog = 65535
 
 chdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
