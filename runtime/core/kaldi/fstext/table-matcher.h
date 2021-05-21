@@ -143,7 +143,8 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
       for (aiter.Seek(0); !aiter.Done(); aiter.Next(), pos++) {
         Label label = (match_type_ == MATCH_OUTPUT ? aiter.Value().olabel
                                                    : aiter.Value().ilabel);
-        assert((size_t)label <= (size_t)highest_label);  // also checks >= 0.
+        assert(static_cast<size_t>(label) <=
+               static_cast<size_t>(highest_label));  // also checks >= 0.
         if ((*this_table_)[label] == kNoStateId) (*this_table_)[label] = pos;
         // set this_table_[label] to first position where arc has this
         // label.
