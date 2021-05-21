@@ -14,5 +14,5 @@ gunicorn http启动
 gunicorn -c config/gunicorn.py server:server
 
 测试脚本
-python3 bin/qps.py --concurrent=1 ${wav_dir} ${times} http://${ip}:${port}/
+python3 bin/qps.py --concurrent=1 --sample-rate 8000 ${wav_dir} ${times} http://${ip}:${port}/
 ```

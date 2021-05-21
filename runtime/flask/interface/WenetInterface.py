@@ -1,4 +1,4 @@
-#coding=utf-8
+# coding=utf-8
 
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
@@ -18,7 +18,7 @@ class WenetInterface:
             vocab_path,
             checkpoint,
             sample_rate=8000,
-            beam_size=10):       
+            beam_size=10):
         os.environ['PYTORCH_JIT'] = '0'
         os.environ['OMP_NUM_THREADS'] = '1'
         os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -50,11 +50,11 @@ class WenetInterface:
 
         # control max memory usage
         self.beam_size = beam_size
-        self.max_decode_length = 1500
-        self.trunc_length = 1000
+        self.max_decode_length = 5000
+        self.trunc_length = 4000
 
         self.feat_hparams = self.configs['collate_conf']['feature_extraction_conf']
-        
+
         print(self.feat_hparams)
         print("finish init wenet interface")
 
@@ -86,7 +86,6 @@ class WenetInterface:
                 return True, content
         except Exception as e:
             return False, str(e)
-        
 
     def change_sample_rate(self, src_data, src_sample_rate, dst_sample_rate):
         '''
@@ -94,11 +93,15 @@ class WenetInterface:
             out type: bytes
         '''
         if isinstance(src_data, bytes):
-            src_data = np.frombuffer(src_data, dtype=np.int16).astype(np.float32)
-        dst_data = librosa.resample(src_data, src_sample_rate, dst_sample_rate, res_type='polyphase')
+            src_data = np.frombuffer(
+                src_data, dtype=np.int16).astype(np.float32)
+        dst_data = librosa.resample(
+                src_data,
+                src_sample_rate,
+                dst_sample_rate,
+                res_type='polyphase')
         dst_data = dst_data.astype(np.int16).tobytes()
         return dst_data
-
 
     # modify this function by self
     def compute_feature(self, pcm, sr):
@@ -106,7 +109,6 @@ class WenetInterface:
             pcm = self.change_sample_rate(pcm, sr, self.sample_rate)
         if isinstance(pcm, bytes):
             pcm = np.frombuffer(pcm, dtype=np.int16).astype(np.float32)
-        pcm = pcm
         if isinstance(pcm, np.ndarray):
             audios = torch.FloatTensor(pcm)
         else:
@@ -116,9 +118,8 @@ class WenetInterface:
         else:
             audios = audios.unsqueeze(0)
         fbank = self.fbank(audios)
-        # status, fbank = self.normalize(fbank)
         return True, fbank
-    
+
     def split_feat(self, feat):
         if torch.is_tensor(feat):
             feat = feat.detach().cpu().numpy()
@@ -128,17 +129,22 @@ class WenetInterface:
         while True:
             if feat_length - start < self.max_decode_length:
                 sub_feat = np.asarray([feat[start:]])
-                sub_feat_lens = np.asarray([[sub_feat.shape[1]]], dtype=np.int32)
+                sub_feat_lens = np.asarray(
+                    [[sub_feat.shape[1]]], dtype=np.int32)
                 sub_feats_torch = torch.from_numpy(sub_feat).float()
-                sub_feat_lens_torch = torch.from_numpy(sub_feat_lens).long()
+                sub_feat_lens_torch = torch.from_numpy(
+                    sub_feat_lens).long()
                 batchs.append([sub_feats_torch, sub_feat_lens_torch])
                 break
             else:
-                sub_feat = np.asarray([feat[start:(start + self.trunc_length)]])
+                sub_feat = np.asarray(
+                    [feat[start:(start + self.trunc_length)]])
                 start += self.trunc_length
-                sub_feat_lens = np.asarray([[sub_feat.shape[1]]], dtype=np.int32)
+                sub_feat_lens = np.asarray(
+                    [[sub_feat.shape[1]]], dtype=np.int32)
                 sub_feats_torch = torch.from_numpy(sub_feat).float()
-                sub_feat_lens_torch = torch.from_numpy(sub_feat_lens).long()
+                sub_feat_lens_torch = torch.from_numpy(
+                    sub_feat_lens).long()
                 batchs.append([sub_feats_torch, sub_feat_lens_torch])
         return batchs
 
@@ -163,7 +169,6 @@ class WenetInterface:
         else:
             return True, ((feature - mean) / std)
 
-    
     def read_label_dict(self, path):
         ret_dict = {}
         for line in open(path, 'rt'):

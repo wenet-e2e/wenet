@@ -17,6 +17,8 @@ beam=15.0
 lattice_beam=12.0
 max_active=7000
 blank_skip_thresh=1.0
+sample_rate=16000
+num_bins=80
 
 . tools/parse_options.sh || exit 1;
 if [ $# != 5 ]; then
@@ -58,6 +60,8 @@ fi
 for n in $(seq ${nj}); do
 {
   decoder_main \
+     --sample_rate ${sample_rate} \
+     --num_bins ${num_bins} \
      --rescoring_weight $rescoring_weight \
      --ctc_weight $ctc_weight \
      --chunk_size $chunk_size \

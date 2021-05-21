@@ -1,25 +1,20 @@
-#coding=utf-8
+# coding=utf-8
 
 import json
 import uuid
-import os
-from flask import request, session, redirect, render_template, url_for, make_response
+from flask import request
 from api import server
 
 import time
-import requests
-import urllib
 from config.config import ServerConfig
 server_config = ServerConfig()
 from interface.WenetInterface import WenetInterface
 wenet_handler = WenetInterface(
-                    server_config.yaml_path,
-                    server_config.vocab_path,
-                    server_config.checkpoint,
-                    server_config.sample_rate,
-                    server_config.beam_size)
-
-SAMPLE_RATE_JS = 16000
+        server_config.yaml_path,
+        server_config.vocab_path,
+        server_config.checkpoint,
+        server_config.sample_rate,
+        server_config.beam_size)
 
 def decode_strict_wav(data, sr):
     pcm = data[44:]
@@ -35,9 +30,11 @@ def ASRRequest():
         try:
             try:
                 ip = request.headers['X-Forwarded-For']
-            except:
+            except Exception:
                 ip = ""
-            info_json = {'forward-ip': ip, 'remote_addr': request.remote_addr, 'url': request.url}
+            info_json = {'forward-ip': ip,
+                        'remote_addr': request.remote_addr,
+                        'url': request.url}
             info = json.dumps(info_json)
             print(info)
             sample_rate = int(request.values.get('sample_rate', None))
@@ -63,7 +60,8 @@ def ASRRequest():
                     ret['sn'] = request_id
                     decode_start = time.time()
                     pcm, duration = decode_strict_wav(data, sample_rate)
-                    status, result = wenet_handler.recognize(pcm, sample_rate)
+                    status, result = wenet_handler.recognize(
+                        pcm, sample_rate)
                     if not status:
                         status_code = -200
                         raise Exception(result)
@@ -78,7 +76,8 @@ def ASRRequest():
                     ret['ret_code'] = status
                 else:
                     status_code = -100
-                    raise Exception('Not allowed audio file, upload amr or wav file please')
+                    raise Exception('Not allowed audio file, \
+                    upload amr or wav file please')
         except Exception as e:
             if status_code > -1000:
                 ret['ret_code'] = status_code
