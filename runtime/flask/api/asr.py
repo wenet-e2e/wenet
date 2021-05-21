@@ -77,14 +77,15 @@ def ASRRequest():
                     status_code = -100
                     raise Exception(
                         'Not allowed audio file, upload amr or wav file please')
+            ret_str = json.dumps(ret, ensure_ascii=False)
+            print(ret_str)
+            return ret_str
         except Exception as e:
             if status_code > -1000:
                 ret['ret_code'] = status_code
             else:
                 ret['ret_code'] = -2000
             ret['ret_msg'] = str(e)
-        finally:
             ret_str = json.dumps(ret, ensure_ascii=False)
             print(ret_str)
             return ret_str
-
