@@ -13,4 +13,5 @@ random_secret = create_secret()
 server.secret_key = random_secret
 
 # api
+# flake8: noqa
 from api.asr import *

@@ -14,11 +14,11 @@ import librosa
 # decode mode is attention rescoring
 class WenetInterface:
     def __init__(self,
-            yaml_path,
-            vocab_path,
-            checkpoint,
-            sample_rate=8000,
-            beam_size=10):
+                 yaml_path,
+                 vocab_path,
+                 checkpoint,
+                 sample_rate=8000,
+                 beam_size=10):
         os.environ['PYTORCH_JIT'] = '0'
         os.environ['OMP_NUM_THREADS'] = '1'
         os.environ['OPENBLAS_NUM_THREADS'] = '1'
@@ -70,13 +70,11 @@ class WenetInterface:
                     feats, feats_lengths = item
                     feats_lengths = feats_lengths.view(-1)
                     hyp = self.model.attention_rescoring(
-                            feats,
-                            feats_lengths,
-                            self.beam_size,
-                            decoding_chunk_size=-1,
-                            num_decoding_left_chunks=-1,
-                            ctc_weight=0.5,
-                            simulate_streaming=False)
+                        feats, feats_lengths, self.beam_size,
+                        decoding_chunk_size=-1,
+                        num_decoding_left_chunks=-1,
+                        ctc_weight=0.5,
+                        simulate_streaming=False)
                     all_hyps.extend(list(hyp))
                 content = ''
                 for w in all_hyps:
@@ -96,10 +94,7 @@ class WenetInterface:
             src_data = np.frombuffer(
                 src_data, dtype=np.int16).astype(np.float32)
         dst_data = librosa.resample(
-                src_data,
-                src_sample_rate,
-                dst_sample_rate,
-                res_type='polyphase')
+            src_data, src_sample_rate, dst_sample_rate, res_type='polyphase')
         dst_data = dst_data.astype(np.int16).tobytes()
         return dst_data
 
@@ -149,14 +144,14 @@ class WenetInterface:
         return batchs
 
     def fbank(self, pcm):
-        feat = torchaudio.compliance.kaldi.fbank(pcm,
-                num_mel_bins=self.feat_hparams['mel_bins'],
-                frame_length=self.feat_hparams['frame_length'],
-                frame_shift=self.feat_hparams['frame_shift'],
-                dither=0.0,
-                energy_floor=0.0,
-                sample_frequency=self.sample_rate
-                )
+        feat = torchaudio.compliance.kaldi.fbank(
+            pcm,
+            num_mel_bins=self.feat_hparams['mel_bins'],
+            frame_length=self.feat_hparams['frame_length'],
+            frame_shift=self.feat_hparams['frame_shift'],
+            dither=0.0,
+            energy_floor=0.0,
+            sample_frequency=self.sample_rate)
         return feat
 
     def normalize(self, feature):
@@ -177,4 +172,3 @@ class WenetInterface:
             _id = int(items[1])
             ret_dict[phone] = _id
         return ret_dict
-        

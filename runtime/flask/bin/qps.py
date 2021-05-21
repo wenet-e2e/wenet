@@ -46,23 +46,16 @@ def worker(index, filename, sample_rate, host):
         if int(ret['ret_code']) != 1:
             raise Exception('Error status:{} message:{}'.format(
                 ret['ret_code'], ret['ret_msg']))
-        print('filename: {}, index: {} text: {}, duration: {}s \
-              \nrtf:{}'.format(
-                               filename,
-                               index,
-                               ret['result'],
-                               wave_time,
-                               rtf
-                               ), file=sys.stderr)
+        print('filename: {}'.format(filename))
+        print('index: {}'.format(index))
+        print('text: {}'.format(ret['result']))
+        print('duration: {}'.format(wave_time))
+        print('rtf: {}'.format(rtf))
         print('{} process finished'.format(index), file=sys.stderr)
         return rtf, os.path.basename(filename).rsplit('.', 1)[0], ret['result']
     except Exception as e:
-        print('{} process, filename: {}, \
-              worker error:{}'.format(
-                                      index,
-                                      filename,
-                                      str(e)
-                                      ), file=sys.stderr)
+        print('{} process, filename: {}, worker error:{}'.format
+              (index, filename, str(e)), file=sys.stderr)
         return -1, "", ""
 
 
