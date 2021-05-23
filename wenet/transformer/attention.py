@@ -166,7 +166,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         return x
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
-                value: torch.Tensor, mask: Optional[torch.Tensor], 
+                value: torch.Tensor, mask: Optional[torch.Tensor],
                 pos_emb: torch.Tensor):
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
