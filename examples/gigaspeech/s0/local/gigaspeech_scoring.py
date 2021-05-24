@@ -2,11 +2,17 @@
 import os
 import argparse
 
-conversational_filler = ['UH', 'UHH', 'UM', 'EH', 'MM', 'HM', 'AH', 'HUH', 'HA', 'ER', 'OOF', 'HEE' , 'ACH', 'EEE', 'EW']
+conversational_filler = [
+    'UH', 'UHH', 'UM', 'EH', 'MM', 'HM', 'AH', 'HUH', 'HA', 'ER', 'OOF', 'HEE',
+    'ACH', 'EEE', 'EW'
+]
 unk_tags = ['<UNK>', '<unk>']
-gigaspeech_punctuations = ['<COMMA>', '<PERIOD>', '<QUESTIONMARK>', '<EXCLAMATIONPOINT>']
+gigaspeech_punctuations = [
+    '<COMMA>', '<PERIOD>', '<QUESTIONMARK>', '<EXCLAMATIONPOINT>'
+]
 gigaspeech_garbage_utterance_tags = ['<SIL>', '<NOISE>', '<MUSIC>', '<OTHER>']
-non_scoring_words = conversational_filler + unk_tags + gigaspeech_punctuations + gigaspeech_garbage_utterance_tags
+non_scoring_words = conversational_filler + unk_tags + \
+    gigaspeech_punctuations + gigaspeech_garbage_utterance_tags
 
 def asr_text_post_processing(text):
     # 1. convert to uppercase
@@ -25,10 +31,19 @@ def asr_text_post_processing(text):
 
     return ' '.join(remaining_words)
 
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="This script evaluates GigaSpeech ASR result via SCTK's tool sclite")
-    parser.add_argument('ref', type=str, help="sclite's standard transcription(trn) reference file")
-    parser.add_argument('hyp', type=str, help="sclite's standard transcription(trn) hypothesis file")
+    parser = argparse.ArgumentParser(
+        description='''This script evaluates GigaSpeech ASR
+                     result via SCTK's tool sclite''')
+    parser.add_argument(
+        'ref',
+        type=str,
+        help="sclite's standard transcription(trn) reference file")
+    parser.add_argument(
+        'hyp',
+        type=str,
+        help="sclite's standard transcription(trn) hypothesis file")
     parser.add_argument('work_dir', type=str, help='working dir')
     args = parser.parse_args()
 
@@ -40,7 +55,10 @@ if __name__ == '__main__':
     RESULT = os.path.join(args.work_dir, 'RESULT')
 
     for io in [(args.ref, REF), (args.hyp, HYP)]:
-        with open(io[0], 'r', encoding='utf8') as fi, open(io[1], 'w+', encoding='utf8') as fo:
+        with open(io[0],
+                  'r', encoding='utf8') as fi, open(io[1],
+                                                    'w+',
+                                                    encoding='utf8') as fo:
             for line in fi:
                 line = line.strip()
                 if line:
@@ -49,4 +67,5 @@ if __name__ == '__main__':
                     uttid_field = cols[-1]
                     print(F'{text} {uttid_field}', file=fo)
 
-    os.system(F'sclite -r {REF} trn -h {HYP} trn -i swb | tee {RESULT}')  # GigaSpeech's uttid comforms to swb
+    os.system(F'sclite -r {REF} trn -h {HYP} trn -i swb | tee {RESULT}'
+              )  # GigaSpeech's uttid comforms to swb

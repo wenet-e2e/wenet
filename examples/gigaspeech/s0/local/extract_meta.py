@@ -49,14 +49,12 @@ def meta_analysis(input_json, output_dir):
                         assert ('opus' == long_audio['format'])
                         assert (16000 == long_audio['sample_rate'])
                     except AssertionError:
-                        print(
-                            f'Warning: {aid} something is wrong, maybe AssertionError, skipped'
-                        )
+                        print(f'Warning: {aid} something is wrong, maybe'
+                              'AssertionError, skipped')
                         continue
                     except Warning:
-                        print(
-                            f'Warning: {aid} something is wrong, maybe the error path: {long_audio_path}, skipped'
-                        )
+                        print(f'Warning: {aid} something is wrong, maybe the'
+                              'error path: {long_audio_path}, skipped')
                         continue
                     else:
                         wavscp.write(f'{aid}\t{long_audio_path}\n')
@@ -70,9 +68,8 @@ def meta_analysis(input_json, output_dir):
                                 text = segment_file['text_tn']
                                 segment_subsets = segment_file["subsets"]
                             except Warning:
-                                print(
-                                    f'Warning: {segment_file} something is wrong, skipped'
-                                )
+                                print(f'Warning: {segment_file} something is'
+                                      'wrong, skipped')
                                 continue
                             else:
                                 utt2text.write(f'{sid}\t{text}\n')

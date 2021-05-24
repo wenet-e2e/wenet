@@ -8,12 +8,6 @@
 * Git hash: 11aaea7195ffe1014a4bbd16a1fb47ec7dbee2ac
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210115_conformer_exp.tar.gz
 
-# the raw scoring version wer
-| decoding mode                 | test  |
-|-------------------------------|-------|
-| ctc greedy search             | 13.38 |
-| attention rescoring           | 12.80 |
-
 # gigaspeech scoring
 
 | SPKR          | # Snt  # Wrd | Corr    Sub    Del    Ins    Err  S.Err |
@@ -24,3 +18,8 @@
 |     S.D.      |142.3  2839.0 |  6.2    4.7    1.8    1.2    7.1   16.8 |
 |    Median     |108.0  2000.0 | 91.8    5.8    2.2    1.4    9.5   66.7 |
 
+# the raw scoring version wer
+| decoding mode                 | test  |
+|-------------------------------|-------|
+| ctc greedy search             | 13.38 |
+| attention rescoring           | 12.80 |
