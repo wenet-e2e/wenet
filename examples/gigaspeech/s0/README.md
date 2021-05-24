@@ -19,6 +19,7 @@
 |    Median     |108.0  2000.0 | 91.8    5.8    2.2    1.4    9.5   66.7 |
 
 # the raw scoring version wer
+
 | decoding mode                 | test  |
 |-------------------------------|-------|
 | ctc greedy search             | 13.38 |
