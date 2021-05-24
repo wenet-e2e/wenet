@@ -67,7 +67,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
   // Every time we get the log posterior, we decode it all before return
   auto accessor = logp.accessor<float, 2>();
   for (int i = 0; i < logp.size(0); i++) {
-    float blank_score = std::exp(accessor[i][0]);
+    float blank_score = expf(accessor[i][0]);
     if (blank_score > opts_.blank_skip_thresh) {
       VLOG(3) << "skipping frame " << num_frames_ << " score " << blank_score;
       is_last_frame_blank_ = true;
