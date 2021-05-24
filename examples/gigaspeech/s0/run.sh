@@ -7,8 +7,8 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-stage=6 # start from 0 if you need to start from data preparation
-stop_stage=6
+stage=1 # start from 0 if you need to start from data preparation
+stop_stage=5
 
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
@@ -45,7 +45,7 @@ decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=3
 decode_modes="attention_rescoring ctc_greedy_search"
-decode_modes="attention_rescoring"
+
 . tools/parse_options.sh || exit 1;
 
 # bpemode (unigram or bpe)
@@ -246,29 +246,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-    echo "gigaspeech scoring"
-    test=test
-    test_dir=$dir/test_${decode_modes}
-    ctc_weight=0.5
- 
-    cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
-    cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
-
-    tools/spm_decode --model=${bpemodel}.model --input_format=piece < $test_dir/text_bpe_value_tmp | sed -e "s/▁/ /g" > $test_dir/text_value
-    paste -d " " $test_dir/text_bpe_key_tmp $test_dir/text_value > $test_dir/text
-    # a raw version wer without refining processs
-    python tools/compute-wer.py --char=1 --v=1 \
-        $wave_data/gigaspeech_$test/text $test_dir/text > $test_dir/wer
-
-    # for gigaspeech scoring
-    cat $test_dir/text_bpe_key_tmp | sed -e "s/^/(/g" | sed -e "s/$/)/g" > $test_dir/hyp_key
-    paste -d " " $test_dir/text_value $test_dir/hyp_key > $test_dir/hyp
-    paste -d " " <(cut -f2- -d " " $wave_data/gigaspeech_$test/text) <(cut -f1 -d " " $wave_data/gigaspeech_$test/text | sed -e "s/^/(/g" | sed -e "s/$/)/g") > ref
-    local/gigaspeech_scoring.py ref $test_dir/hyp $test_dir
-
-fi
-
-if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     # Export the best model you want
     python wenet/bin/export_jit.py \
         --config $dir/train.yaml \
