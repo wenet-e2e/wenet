@@ -69,7 +69,6 @@ cd runtime/server/x86
 mkdir build && cd build && cmake .. && cmake --build .
 ```
 
-
 ## Discussion & Communication
 
 Please scan the QR code on the left to follow the offical account of WeNet.
@@ -80,9 +79,13 @@ Please scan the personal QR code on the right, and the guy is responsible for in
 
 If you can not access the QR image, please access it on [gitee](https://gitee.com/robin1001/qr/tree/master).
 
-| ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/wenet.jpeg) | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/binbin.jpeg) |
-|-------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| <img src="https://github.com/robin1001/qr/blob/master/wenet.jpeg" width="250px"> | <img src="https://github.com/robin1001/qr/blob/master/binbin.jpeg" width="250px"> |
+| ---- | ---- |
 
+## Contributors
+
+| <a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="250px"></a> | <a href="http://lxie.npu-aslp.org" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/colleges/nwpu.png" width="250px"></a> | <a href="http://www.aishelltech.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/aishelltech.png" width="250px"></a> | <a href="http://www.ximalaya.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/ximalaya.png" width="250px"></a> |
+| ---- | ---- | ---- | ---- |
 
 ## Acknowledge
 
@@ -92,7 +95,7 @@ If you can not access the QR image, please access it on [gitee](https://gitee.co
 
 ## Citations
 
-```
+``` bibtex
 @article{zhang2021wenet,
   title={WeNet: Production First and Production Ready End-to-End Speech Recognition Toolkit},
   author={Zhang, Binbin and Wu, Di and Yang, Chao and Chen, Xiaoyu and Peng, Zhendong and Wang, Xiangming and Yao, Zhuoyuan and Wang, Xiong and Yu, Fan and Xie, Lei and others},
