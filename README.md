@@ -34,6 +34,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 * [AIShell-1](examples/aishell/s0/README.md)
 * [AIShell-2](examples/aishell2/s0/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
+* [GigaSpeech](examples/gigaspeech/s0/README.md)
 * [Multi-Chinese](examples/multi_cn/s0/README.md) trained using all open source Chinese corpus.
 
 ## Installation
