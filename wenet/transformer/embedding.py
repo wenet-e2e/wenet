@@ -109,3 +109,23 @@ class RelPositionalEncoding(PositionalEncoding):
         x = x * self.xscale
         pos_emb = self.pe[:, offset:offset + x.size(1)]
         return self.dropout(x), self.dropout(pos_emb)
+
+
+class NoPositionalEncoding(torch.nn.Module):
+    """ No position encoding
+    """
+    def __init__(self, d_model: int, dropout_rate: float):
+        super().__init__()
+        self.d_model = d_model
+        self.dropout = torch.nn.Dropout(p=dropout_rate)
+
+    def forward(self,
+                x: torch.Tensor,
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Just return zero vector for interface compatibility
+        """
+        pos_emb = torch.zeros(1, x.size(1), self.d_model).to(x.device)
+        return self.dropout(x), pos_emb
+
+    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
+        return torch.zeros(1, size, self.d_model)
