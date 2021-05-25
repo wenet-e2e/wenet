@@ -516,15 +516,18 @@ class ASRModel(torch.nn.Module):
                                   dtype=torch.bool,
                                   device=device)
         if hasattr(self.decoder, 'left_decoder'):
+            # bitransformer decoder, the left to right decoder
             decoder_out, _, _ = self.decoder.left_decoder(
                 encoder_out, encoder_mask, hyps_pad,
                 hyps_lens)  # (beam_size, max_hyps_len, vocab_size)
         else:
+            # transformer decoder
             decoder_out, _, _ = self.decoder(
                 encoder_out, encoder_mask, hyps_pad,
                 hyps_lens)  # (beam_size, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
+
         # used for right to left decoder
         if reverse_weight > 0:
             assert hasattr(self.decoder, 'right_decoder')
@@ -655,7 +658,8 @@ class ASRModel(torch.nn.Module):
             encoder_out (torch.Tensor): corresponding encoder output
             r_hyps (torch.Tensor): hyps from ctc prefix beam search, already
                 pad eos at the begining which is used fo right to left decoder
-            reverse_weight: used for verfing whether used right to left decoder, > 0 will use.
+            reverse_weight: used for verfing whether used right to left decoder,
+            > 0 will use.
 
         Returns:
             torch.Tensor: decoder output
@@ -711,6 +715,7 @@ def init_asr_model(configs):
 
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')
+
     if encoder_type == 'conformer':
         encoder = ConformerEncoder(input_dim,
                                    global_cmvn=global_cmvn,
