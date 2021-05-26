@@ -25,6 +25,7 @@ class TorchAsrModel {
   int sos() const { return sos_; }
   int eos() const { return eos_; }
   bool is_bidirectional_decoder() const { return is_bidirectional_decoder_; }
+
   std::shared_ptr<TorchModule> torch_model() const { return module_; }
 
  private:
