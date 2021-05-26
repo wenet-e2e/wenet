@@ -295,10 +295,6 @@ void TorchAsrDecoder::AttentionRescoring() {
                 << "and r_score is " << r_score;
     }
     score += probs[i][hyp.size()][eos].item<float>();
-<<<<<<< HEAD
-=======
-    VLOG(1) << "this sentence is " << sentence << "and l_score is " << score;
->>>>>>> e0ea253102c8a01460652b4f209d028dc94bd70f
 
     score = (score * (1 - opts_.reverse_weight))
                 + (r_score * opts_.reverse_weight);
