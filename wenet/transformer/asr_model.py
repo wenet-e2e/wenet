@@ -43,7 +43,7 @@ class ASRModel(torch.nn.Module):
         ctc: CTC,
         ctc_weight: float = 0.5,
         ignore_id: int = IGNORE_ID,
-        reverse_weight: float = 0.3,
+        reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
     ):
@@ -137,12 +137,8 @@ class ASRModel(torch.nn.Module):
                                     True, -1.0)
             r_ys_in_pad, r_ys_out_pad = add_sos_eos(r_ys_pad, self.sos,
                                                     self.eos, self.ignore_id)
-        if self.reverse_weight > 0:
-            decoder_out, r_decoder_out, _ = self.decoder(
-                encoder_out, encoder_mask, ys_in_pad, ys_in_lens, r_ys_in_pad)
-        else:
-            decoder_out, r_decoder_out, _ = self.decoder(
-                encoder_out, encoder_mask, ys_in_pad, ys_in_lens, r_ys_in_pad)
+        decoder_out, r_decoder_out, _ = self.decoder(
+            encoder_out, encoder_mask, ys_in_pad, ys_in_lens, r_ys_in_pad)
         # 2. Compute attention loss
         loss_att = self.criterion_att(decoder_out, ys_out_pad)
         r_loss_att = torch.tensor(0.0)
@@ -245,14 +241,14 @@ class ASRModel(torch.nn.Module):
             hyps_mask = subsequent_mask(i).unsqueeze(0).repeat(
                 running_size, 1, 1).to(device)  # (B*N, i, i)
             # logp: (B*N, vocab)
-            if hasattr(self.decoder, 'left_decoder'):
-                # for bitransformer decoder
-                logp, cache = self.decoder.left_decoder.forward_one_step(
-                    encoder_out, encoder_mask, hyps, hyps_mask, cache)
-            else:
+            #if hasattr(self.decoder, 'left_decoder'):
+            #    # for bitransformer decoder
+            #    logp, cache = self.decoder.left_decoder.forward_one_step(
+            #        encoder_out, encoder_mask, hyps, hyps_mask, cache)
+            #else:
                 # for transformer decoder
-                logp, cache = self.decoder.forward_one_step(
-                    encoder_out, encoder_mask, hyps, hyps_mask, cache)
+            logp, cache = self.decoder.forward_one_step(
+                encoder_out, encoder_mask, hyps, hyps_mask, cache)
             # 2.2 First beam prune: select topk best prob at current time
             top_k_logp, top_k_index = logp.topk(beam_size)  # (B*N, N)
             top_k_logp = mask_finished_scores(top_k_logp, end_flag)
@@ -641,12 +637,22 @@ class ASRModel(torch.nn.Module):
         return self.ctc.log_softmax(xs)
 
     @torch.jit.export
+    def is_bidirectional_decoder(self) -> bool:
+        """
+        Returns:
+            torch.Tensor: decoder output
+        """
+        if hasattr(self.decoder, 'right_decoder'):
+            return True
+        else:
+            return False
+
+    @torch.jit.export
     def forward_attention_decoder(
         self,
         hyps: torch.Tensor,
         hyps_lens: torch.Tensor,
         encoder_out: torch.Tensor,
-        r_hyps: Optional[torch.Tensor] = None,
         reverse_weight: float = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Export interface for c++ call, forward decoder with multiple
@@ -687,16 +693,16 @@ class ASRModel(torch.nn.Module):
         r_decoder_out = torch.tensor(0.0)
         # right to left decoder may be not used during decoding process,
         # which depends on reverse_weight param.
-        if reverse_weight > 0 and r_hyps is not None and hasattr(
+        if reverse_weight > 0 and hasattr(
                 self.decoder, 'right_decoder'):
-            r_hyps = pad_sequence([(torch.flip(y.int()[:i], [0]))
+            r_hyps = pad_sequence([(torch.flip(y.int()[1:i], [0]))
                                    for y, i in zip(hyps, hyps_lens)], True,
                                   -1.0)
             r_hyps, _ = add_sos_eos(r_hyps, self.sos, self.eos, self.ignore_id)
             r_decoder_out, _, _ = self.decoder.right_decoder(
                 encoder_out, encoder_mask, r_hyps,
                 hyps_lens)  # (num_hyps, max_hyps_len, vocab_size)
-            r_decoder_out = torch.nn.functional.log_softmax(decoder_out,
+            r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out,
                                                             dim=-1)
         return decoder_out, r_decoder_out
 
@@ -728,6 +734,8 @@ def init_asr_model(configs):
         decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                      **configs['decoder_conf'])
     else:
+        assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
+        assert configs['decoder_conf']['r_num_blocks'] > 0
         decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
                                        **configs['decoder_conf'])
     ctc = CTC(vocab_size, encoder.output_size())

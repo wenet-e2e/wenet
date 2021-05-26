@@ -252,3 +252,29 @@ class BiTransformerDecoder(torch.nn.Module):
         r_x, _, olens = self.right_decoder(memory, memory_mask, r_ys_in_pad,
                                            ys_in_lens)
         return l_x, r_x, olens
+
+    def forward_one_step(
+        self,
+        memory: torch.Tensor,
+        memory_mask: torch.Tensor,
+        tgt: torch.Tensor,
+        tgt_mask: torch.Tensor,
+        cache: Optional[List[torch.Tensor]] = None,
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        """Forward one step.
+            This is only used for decoding.
+        Args:
+            memory: encoded memory, float32  (batch, maxlen_in, feat)
+            memory_mask: encoded memory mask, (batch, 1, maxlen_in)
+            tgt: input token ids, int64 (batch, maxlen_out)
+            tgt_mask: input token mask,  (batch, maxlen_out)
+                      dtype=torch.uint8 in PyTorch 1.2-
+                      dtype=torch.bool in PyTorch 1.2+ (include 1.2)
+            cache: cached output list of (batch, max_time_out-1, size)
+        Returns:
+            y, cache: NN output value and cache per `self.decoders`.
+            y.shape` is (batch, maxlen_out, token)
+        """
+        return self.left_decoder.forward_one_step(memory, memory_mask, tgt,
+                                                  tgt_mask, cache)
+        
