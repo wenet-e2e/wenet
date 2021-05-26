@@ -94,7 +94,7 @@ class TorchAsrDecoder {
                          const std::vector<int>& hyp,
                          const size_t& num,
                          const int& eos);
-  float RightToLeftScore(const torch::Tensor& probs,
+  float RightToLeftScore(const torch::Tensor& r_probs,
                          const std::vector<int>& hyp,
                          const size_t& num,
                          const int& eos);
