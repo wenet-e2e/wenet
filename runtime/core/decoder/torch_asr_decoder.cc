@@ -216,15 +216,15 @@ float TorchAsrDecoder::LeftToRightScore(const torch::Tensor& probs,
     return score;
 }
 
-float TorchAsrDecoder::RightToLeftScore(const torch::Tensor& probs,
+float TorchAsrDecoder::RightToLeftScore(const torch::Tensor& r_probs,
                                         const std::vector<int>& hyp,
 					const size_t& num,
                                         const int& eos) {
     float score = 0.0f;
     for (size_t j = 0; j < hyp.size(); ++j) {
-      score += probs[num][hyp.size() - j - 1][hyp[j]].item<float>();
+      score += r_probs[num][hyp.size() - j -1][hyp[j]].item<float>();
     }
-    score += probs[num][hyp.size()][eos].item<float>();
+    score += r_probs[num][hyp.size()][eos].item<float>();
     return score;
 }
 
@@ -285,7 +285,8 @@ void TorchAsrDecoder::AttentionRescoring() {
     }
     float score = 0.0f;
     score = LeftToRightScore(probs, hyp, i, eos);
-    VLOG(1) << "this sentence is " << sentence << "and l_score is " << score;
+    VLOG(1) << "this sentence is " << sentence
+                << "and l_score is " << score;
     // Optional: Used for right to left score
     float r_score = 0.0f;
     if (opts_.reverse_weight > 0) {
