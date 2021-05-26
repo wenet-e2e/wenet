@@ -641,12 +641,22 @@ class ASRModel(torch.nn.Module):
         return self.ctc.log_softmax(xs)
 
     @torch.jit.export
+    def is_bidirectional_decoder(self) -> bool:
+        """
+        Returns:
+            torch.Tensor: decoder output
+        """
+        if hasattr(self.decoder, 'right_decoder'):
+            return True
+        else:
+            return False
+
+    @torch.jit.export
     def forward_attention_decoder(
         self,
         hyps: torch.Tensor,
         hyps_lens: torch.Tensor,
         encoder_out: torch.Tensor,
-        r_hyps: Optional[torch.Tensor] = None,
         reverse_weight: float = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Export interface for c++ call, forward decoder with multiple
@@ -687,16 +697,16 @@ class ASRModel(torch.nn.Module):
         r_decoder_out = torch.tensor(0.0)
         # right to left decoder may be not used during decoding process,
         # which depends on reverse_weight param.
-        if reverse_weight > 0 and r_hyps is not None and hasattr(
+        if reverse_weight > 0 and hasattr(
                 self.decoder, 'right_decoder'):
-            r_hyps = pad_sequence([(torch.flip(y.int()[:i], [0]))
+            r_hyps = pad_sequence([(torch.flip(y.int()[1:i], [0]))
                                    for y, i in zip(hyps, hyps_lens)], True,
                                   -1.0)
             r_hyps, _ = add_sos_eos(r_hyps, self.sos, self.eos, self.ignore_id)
             r_decoder_out, _, _ = self.decoder.right_decoder(
                 encoder_out, encoder_mask, r_hyps,
                 hyps_lens)  # (num_hyps, max_hyps_len, vocab_size)
-            r_decoder_out = torch.nn.functional.log_softmax(decoder_out,
+            r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out,
                                                             dim=-1)
         return decoder_out, r_decoder_out
 
