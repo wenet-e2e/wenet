@@ -5,6 +5,7 @@ project(wenet VERSION 0.1)
 include_directories(
 ${CMAKE_SOURCE_DIR}
 ${CMAKE_SOURCE_DIR}/kaldi  # for not changing c++ header names in kaldi source files
+${CMAKE_SOURCE_DIR}/grpc
 )
 set(CMAKE_VERBOSE_MAKEFILE on)
 
@@ -18,6 +19,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   # Keep the same with openfst, -fPIC or -fpic
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
 endif()
+
+# third_party: grpc
+# On how to build grpc, you may refer to https://github.com/grpc/grpc
+# We recommend manually recursive clone the repo to avoid internet connection problem
+FetchContent_Declare(gRPC
+  GIT_REPOSITORY https://github.com/grpc/grpc
+  GIT_TAG        v1.37.1
+)
+FetchContent_MakeAvailable(gRPC)
 
 # third_party: gflags
 FetchContent_Declare(gflags
@@ -56,14 +66,14 @@ set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I$
 set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
 set(openfst_SRC_DIR ${fc_base}/openfst-src)
 set(openfst_BUILD_DIR ${fc_base}/openfst-build)
-set(openfst_INSTALL_DIR ${CMAKE_SOURCE_DIR}/build/openfst)
+set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
 ExternalProject_Add(openfst
   URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
   URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
-  PREFIX            ${fc_base}/openfst-prefix
+  PREFIX            ${openfst_PREFIX_DIR}
   SOURCE_DIR        ${openfst_SRC_DIR}
   BINARY_DIR        ${openfst_BUILD_DIR}
-  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_INSTALL_DIR}
+  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_PREFIX_DIR}
                       "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
                       "LIBS=${OPENFST_EXTRA_LIBS}"
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
@@ -71,8 +81,8 @@ ExternalProject_Add(openfst
   COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib
   BUILD_COMMAND     make -j 4
 )
-include_directories(${openfst_INSTALL_DIR}/include)
-link_directories(${openfst_INSTALL_DIR}/lib)
+include_directories(${openfst_PREFIX_DIR}/include)
+link_directories(${openfst_PREFIX_DIR}/lib)
 add_dependencies(openfst gflags glog)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
@@ -144,6 +154,26 @@ add_library(websocket STATIC
 )
 target_link_libraries(websocket PUBLIC decoder frontend)
 
+# compile wenet.proto
+set(PROTO_DIR "${CMAKE_SOURCE_DIR}/grpc")
+add_custom_command(
+  OUTPUT ${PROTO_DIR}/wenet.pb.cc
+         ${PROTO_DIR}/wenet.pb.h
+         ${PROTO_DIR}/wenet.grpc.pb.cc
+         ${PROTO_DIR}/wenet.grpc.pb.h
+  COMMAND ${protobuf_BINARY_DIR}/protoc
+  ARGS --grpc_out "${PROTO_DIR}"
+    --cpp_out "${PROTO_DIR}"
+    -I "${PROTO_DIR}"
+    --plugin=protoc-gen-grpc=${grpc_BINARY_DIR}/grpc_cpp_plugin
+    wenet.proto)
+
+# grpc_server/client
+link_directories(${protobuf_BINARY_DIR}/lib)
+add_library(wenet_grpc STATIC grpc/grpc_client.cc grpc/grpc_server.cc grpc/wenet.pb.cc grpc/wenet.grpc.pb.cc)
+target_link_libraries(wenet_grpc PUBLIC grpc++ grpc++_reflection decoder frontend)
+
+
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
 target_link_libraries(decoder_main PUBLIC frontend decoder)
@@ -151,3 +181,7 @@ add_executable(websocket_client_main bin/websocket_client_main.cc)
 target_link_libraries(websocket_client_main PUBLIC websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)
 target_link_libraries(websocket_server_main PUBLIC websocket)
+add_executable(grpc_server_main bin/grpc_server_main.cc)
+target_link_libraries(grpc_server_main PUBLIC wenet_grpc)
+add_executable(grpc_client_main bin/grpc_client_main.cc)
+target_link_libraries(grpc_client_main PUBLIC wenet_grpc)

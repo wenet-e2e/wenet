@@ -79,8 +79,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
     # remove utt having more than 3000 frames
     # remove utt having more than 400 characters
-    tools/remove_longshortdata.sh --maxframes 3000 --maxchars 400 data/${train_set}_org data/${train_set}
-    tools/remove_longshortdata.sh --maxframes 3000 --maxchars 400 data/${train_dev}_org data/${train_dev}
+    tools/remove_longshortdata.py --maxframes 3000 --maxchars 400 data/${train_set}_org data/${train_set}
+    tools/remove_longshortdata.py --maxframes 3000 --maxchars 400 data/${train_dev}_org data/${train_dev}
 
     # compute global CMVN
     compute-cmvn-stats --binary=false scp:data/${train_set}/feats.scp data/${train_set}/global_cmvn

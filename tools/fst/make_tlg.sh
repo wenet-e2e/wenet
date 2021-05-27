@@ -20,7 +20,7 @@ cat $arpa_lm | \
    grep -v '</s> </s>' | \
    grep -v -i '<unk>' | \
    grep -v -i '<spoken_noise>' | \
-   arpa2fst - | fstprint | \
+   arpa2fst --read-symbol-table=$tgt_lang/words.txt --keep-symbols=true - | fstprint | \
    tools/fst/eps2disambig.pl | tools/fst/s2eps.pl | fstcompile --isymbols=$tgt_lang/words.txt \
      --osymbols=$tgt_lang/words.txt  --keep_isymbols=false --keep_osymbols=false | \
     fstrmepsilon | fstarcsort --sort_type=ilabel > $tgt_lang/G.fst

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Copyright 2017 Johns Hopkins University (Shinji Watanabe)
+#                Mobvoi Corporation (Author: Di Wu)
 #  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 
 echo "$0 $*" >&2 # Print the command line for logging
@@ -76,9 +77,18 @@ if [ -n "${feat}" ]; then
                 --filetype "${filetype}" \
                 --preprocess-conf "${preprocess_conf}" \
                 --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
-        elif [ ${feat_type} == "wav" ] || [ ${feat_type} == "flac" ]; then
-            tools/wav_to_duration.sh --nj ${nj} \
-                ${feat} ${tmpdir}/input_${i}/shape.scp
+        elif [ ${feat_type} == "wav" ] || [ ${feat_type} == "flac" ] || [ ${feat_type} == "opus" ]; then
+            if [ -f $dir/segments ]; then
+                # used for segmented wav.scp
+                awk '{print $1" "$4-$3}' $dir/segments > $dir/utt2dur
+            fi
+            if [ ! -f $dir/utt2dur ]; then
+                tools/wav_to_duration.sh --nj ${nj} \
+                    ${feat} ${tmpdir}/input_${i}/shape.scp
+            # use the existed utt2dur as shape.scp directly
+            else
+                cp $dir/utt2dur ${tmpdir}/input_${i}/shape.scp
+            fi
         fi
     done
 fi

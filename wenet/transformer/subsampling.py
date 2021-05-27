@@ -9,8 +9,6 @@ from typing import Tuple
 
 import torch
 
-from wenet.transformer.embedding import PositionalEncoding
-
 
 class BaseSubsampling(torch.nn.Module):
     def __init__(self):
@@ -32,7 +30,7 @@ class LinearNoSubsampling(BaseSubsampling):
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: PositionalEncoding):
+                 pos_enc_class: torch.nn.Module):
         """Construct an linear object."""
         super().__init__()
         self.out = torch.nn.Sequential(
@@ -78,7 +76,7 @@ class Conv2dSubsampling4(BaseSubsampling):
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: PositionalEncoding):
+                 pos_enc_class: torch.nn.Module):
         """Construct an Conv2dSubsampling4 object."""
         super().__init__()
         self.conv = torch.nn.Sequential(
@@ -133,7 +131,7 @@ class Conv2dSubsampling6(BaseSubsampling):
         pos_enc (torch.nn.Module): Custom position encoding layer.
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: PositionalEncoding):
+                 pos_enc_class: torch.nn.Module):
         """Construct an Conv2dSubsampling6 object."""
         super().__init__()
         self.conv = torch.nn.Sequential(
@@ -185,7 +183,7 @@ class Conv2dSubsampling8(BaseSubsampling):
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: PositionalEncoding):
+                 pos_enc_class: torch.nn.Module):
         """Construct an Conv2dSubsampling8 object."""
         super().__init__()
         self.conv = torch.nn.Sequential(

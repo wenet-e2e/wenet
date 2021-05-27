@@ -44,10 +44,10 @@ with open(sys.argv[2], 'r', encoding='utf8') as fin, \
                 pieces = sp.EncodeAsPieces(word)
                 if contain_oov(pieces):
                     print(
-                        "Words {} contains oov unit, replace oov "
-                        "unit with \"<unk>\"".format(
+                        'Ignoring words {}, which contains oov unit'.format(
                             ''.join(word).strip('▁'))
                     )
+                    continue
                 chars = ' '.join(
                     [p if p in unit_table else '<unk>' for p in pieces])
             else:
