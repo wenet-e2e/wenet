@@ -117,8 +117,8 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
             --max_input_len 20 \
             --max_output_len 400 \
             --max_output_input_ratio 10.0 \
-            --data_file $wave_data/$x/format.data.tmp \
-            --output_data_file $wave_data/$x/format.data
+            --data_file data/$x/format.data.tmp \
+            --output_data_file data/$x/format.data
 
     done
 fi
