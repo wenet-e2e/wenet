@@ -215,9 +215,9 @@ class Conv2dSubsampling8(BaseSubsampling):
 
         Returns:
             torch.Tensor: Subsampled tensor (#batch, time', odim),
-                where time' = time // 4.
+                where time' = time // 8.
             torch.Tensor: Subsampled mask (#batch, 1, time'),
-                where time' = time // 4.
+                where time' = time // 8.
             torch.Tensor: positional encoding
         """
         x = x.unsqueeze(1)  # (b, c, t, f)
