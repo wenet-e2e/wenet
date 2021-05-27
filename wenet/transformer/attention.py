@@ -100,7 +100,7 @@ class MultiHeadedAttention(nn.Module):
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor,
                 mask: Optional[torch.Tensor],
-                pos_emb: torch.Tensor=torch.empty(0),) -> torch.Tensor:
+                pos_emb: torch.Tensor = torch.empty(0),) -> torch.Tensor:
         """Compute scaled dot product attention.
 
         Args:
