@@ -141,10 +141,10 @@ class ConformerEncoderLayer(nn.Module):
             True: x -> x + linear(concat(x, att(x)))
             False: x -> x + att(x)
         swap_conv_module_and_attention (bool):
-            True: swapping the order of the convolution module 
+            True: swapping the order of the convolution module
                   and the multi-head self-attention module,
                   as described in https://arxiv.org/pdf/2011.10798.pdf.
-            False: keep the original order of the convolution module 
+            False: keep the original order of the convolution module
                   and the multi-head self-attention module.
     """
     def __init__(
