@@ -148,15 +148,9 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             torch.Tensor: Output tensor.
         """
 
-        zero_pad = torch.zeros((x.size()[0], x.size()[1], x.size()[2], 1),
-                               device=x.device,
-                               dtype=x.dtype)
-        x_padded = torch.cat([zero_pad, x], dim=-1)
-
-        x_padded = x_padded.view(x.size()[0],
-                                 x.size()[1],
-                                 x.size(3) + 1, x.size(2))
-        x = x_padded[:, :, 1:].view_as(x)
+        x_padded = torch.nn.functional.pad(x, (1,0))
+        x_padded = x_padded.reshape_as(x_padded.transpose(-1, -2))
+        x = x_padded[:, :, 1:]
 
         if zero_triu:
             ones = torch.ones((x.size(2), x.size(3)))
