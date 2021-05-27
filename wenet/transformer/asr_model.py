@@ -241,12 +241,6 @@ class ASRModel(torch.nn.Module):
             hyps_mask = subsequent_mask(i).unsqueeze(0).repeat(
                 running_size, 1, 1).to(device)  # (B*N, i, i)
             # logp: (B*N, vocab)
-            #if hasattr(self.decoder, 'left_decoder'):
-            #    # for bitransformer decoder
-            #    logp, cache = self.decoder.left_decoder.forward_one_step(
-            #        encoder_out, encoder_mask, hyps, hyps_mask, cache)
-            #else:
-                # for transformer decoder
             logp, cache = self.decoder.forward_one_step(
                 encoder_out, encoder_mask, hyps, hyps_mask, cache)
             # 2.2 First beam prune: select topk best prob at current time
