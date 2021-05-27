@@ -109,7 +109,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     for x in dev ${recog_set} ${train_set}; do
         tools/format_data.sh --nj ${nj} --feat data/$x/feats.scp --bpecode ${bpemodel}.model \
             data/$x ${dict} > data/$x/format.data.tmp
-            
+
         # remove utt having more than 3000 frames
         # remove utt having more than 400 characters
         tools/remove_longshortdata.py \
