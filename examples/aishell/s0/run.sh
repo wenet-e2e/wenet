@@ -35,6 +35,7 @@ train_set=train
 # 2. conf/train_conformer.yaml: Standard conformer
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 # 4. conf/train_unified_transformer.yaml: Unified dynamic chunk transformer
+# 5. conf/train_conformer_no_pos.yaml: Conformer without relative positional encoding
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
