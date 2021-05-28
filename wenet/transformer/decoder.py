@@ -277,4 +277,3 @@ class BiTransformerDecoder(torch.nn.Module):
         """
         return self.left_decoder.forward_one_step(memory, memory_mask, tgt,
                                                   tgt_mask, cache)
-        
