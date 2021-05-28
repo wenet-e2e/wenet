@@ -62,7 +62,7 @@ class BaseEncoder(torch.nn.Module):
             input_layer (str): input layer type.
                 optional [linear, conv2d, conv2d6, conv2d8]
             pos_enc_layer_type (str): Encoder positional encoding layer type.
-                opitonal [abs_pos, scaled_abs_pos, rel_pos]
+                opitonal [abs_pos, scaled_abs_pos, rel_pos, no_pos]
             normalize_before (bool):
                 True: use layer_norm before each sub-block of a layer.
                 False: use layer_norm after each sub-block of a layer.
@@ -409,7 +409,10 @@ class ConformerEncoder(BaseEncoder):
         activation = get_activation(activation_type)
 
         # self-attention module definition
-        encoder_selfattn_layer = RelPositionMultiHeadedAttention
+        if pos_enc_layer_type == "no_pos":
+            encoder_selfattn_layer = MultiHeadedAttention
+        else:
+            encoder_selfattn_layer = RelPositionMultiHeadedAttention
         encoder_selfattn_layer_args = (
             attention_heads,
             output_size,
