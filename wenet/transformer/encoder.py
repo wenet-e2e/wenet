@@ -217,7 +217,7 @@ class BaseEncoder(torch.nn.Module):
         elif required_cache_size == 0:
             next_cache_start = xs.size(1)
         else:
-            next_cache_start = xs.size(1) - required_cache_size
+            next_cache_start = max(xs.size(1) - required_cache_size, 0)
         r_subsampling_cache = xs[:, next_cache_start:, :]
         # Real mask for transformer/conformer layers
         masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
