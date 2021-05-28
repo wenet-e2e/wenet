@@ -89,6 +89,7 @@ class TransformerDecoder(torch.nn.Module):
         ys_in_pad: torch.Tensor,
         ys_in_lens: torch.Tensor,
         r_ys_in_pad: Optional[torch.Tensor] = None,
+        reverse_weight: float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward decoder.
         Args:
@@ -98,10 +99,13 @@ class TransformerDecoder(torch.nn.Module):
             ys_in_lens: input lengths of this batch (batch)
             r_ys_in_pad: not used in transformer decoder, in order to unify api
                 with bidirectional decoder
+            reverse_weight: not used in transformer decoder, in order to unify
+                api with bidirectional decode
         Returns:
             (tuple): tuple containing:
                 x: decoded token score before softmax (batch, maxlen_out,
                     vocab_size) if use_output_layer is True,
+                torch.tensor(0.0), in order to unify api with bidirectional decoder
                 olens: (batch, )
         """
         tgt = ys_in_pad
@@ -228,6 +232,7 @@ class BiTransformerDecoder(torch.nn.Module):
         ys_in_pad: torch.Tensor,
         ys_in_lens: torch.Tensor,
         r_ys_in_pad: torch.Tensor,
+        reverse_weight: float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward decoder.
         Args:
@@ -249,8 +254,10 @@ class BiTransformerDecoder(torch.nn.Module):
         """
         l_x, _, olens = self.left_decoder(memory, memory_mask, ys_in_pad,
                                           ys_in_lens)
-        r_x, _, olens = self.right_decoder(memory, memory_mask, r_ys_in_pad,
-                                           ys_in_lens)
+        r_x = torch.tensor(0.0)
+        if reverse_weight > 0.0:
+            r_x, _, olens = self.right_decoder(memory, memory_mask, r_ys_in_pad,
+                                               ys_in_lens)
         return l_x, r_x, olens
 
     def forward_one_step(
