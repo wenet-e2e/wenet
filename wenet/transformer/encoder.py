@@ -411,7 +411,9 @@ class ConformerEncoder(BaseEncoder):
         activation = get_activation(activation_type)
 
         # self-attention module definition
-        if "conv_module_pos" == pos_enc_layer_type:
+        if pos_enc_layer_type == "conv_module_pos":
+            encoder_selfattn_layer = MultiHeadedAttention
+        elif pos_enc_layer_type == "no_pos":
             encoder_selfattn_layer = MultiHeadedAttention
         else:
             encoder_selfattn_layer = RelPositionMultiHeadedAttention
