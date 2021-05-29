@@ -1,5 +1,6 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
+//         di.wu@mobvoi.com (Di Wu)
 
 #ifndef DECODER_TORCH_ASR_MODEL_H_
 #define DECODER_TORCH_ASR_MODEL_H_
