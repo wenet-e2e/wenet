@@ -134,10 +134,12 @@ class ASRModel(torch.nn.Module):
                                                     self.eos, self.ignore_id)
         # 1. Forward decoder
         decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, ys_in_pad, ys_in_lens, r_ys_in_pad)
+            encoder_out, encoder_mask, ys_in_pad, ys_in_lens, r_ys_in_pad, self.reverse_weight)
         # 2. Compute attention loss
         loss_att = self.criterion_att(decoder_out, ys_out_pad)
-        r_loss_att = self.criterion_att(r_decoder_out, r_ys_out_pad)
+        r_loss_att = torch.tensor(0.0)
+        if self.reverse_weight > 0.0:
+            r_loss_att = self.criterion_att(r_decoder_out, r_ys_out_pad)
         loss_att = loss_att * (
             1 - self.reverse_weight) + r_loss_att * self.reverse_weight
         acc_att = th_accuracy(
