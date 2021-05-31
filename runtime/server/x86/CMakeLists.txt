@@ -2,7 +2,11 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
 project(wenet VERSION 0.1)
 
-include_directories(${CMAKE_SOURCE_DIR})
+include_directories(
+${CMAKE_SOURCE_DIR}
+${CMAKE_SOURCE_DIR}/kaldi  # for not changing c++ header names in kaldi source files
+${CMAKE_SOURCE_DIR}/grpc
+)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 include(FetchContent)
@@ -15,6 +19,15 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   # Keep the same with openfst, -fPIC or -fpic
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
 endif()
+
+# third_party: grpc
+# On how to build grpc, you may refer to https://github.com/grpc/grpc
+# We recommend manually recursive clone the repo to avoid internet connection problem
+FetchContent_Declare(gRPC
+  GIT_REPOSITORY https://github.com/grpc/grpc
+  GIT_TAG        v1.37.1
+)
+FetchContent_MakeAvailable(gRPC)
 
 # third_party: gflags
 FetchContent_Declare(gflags
@@ -41,7 +54,7 @@ FetchContent_MakeAvailable(googletest)
 
 # third_party: boost
 FetchContent_Declare(boost
-  URL      https://dl.bintray.com/boostorg/release/1.75.0/source/boost_1_75_0.tar.gz
+  URL      https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz
   URL_HASH SHA256=aeb26f80e80945e82ee93e5939baebdca47b9dee80a07d3144be1e1a6a66dd6a
 )
 FetchContent_MakeAvailable(boost)
@@ -117,14 +130,18 @@ add_library(frontend STATIC
 )
 target_link_libraries(frontend PUBLIC utils)
 
+# kaldi: wfst based decoder
+add_subdirectory(kaldi)
+
 # decoder
 add_library(decoder STATIC
   decoder/ctc_prefix_beam_search.cc
+  decoder/ctc_wfst_beam_search.cc
   decoder/ctc_endpoint.cc
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} utils)
+target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi-decoder utils)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
@@ -137,6 +154,26 @@ add_library(websocket STATIC
 )
 target_link_libraries(websocket PUBLIC decoder frontend)
 
+# compile wenet.proto
+set(PROTO_DIR "${CMAKE_SOURCE_DIR}/grpc")
+add_custom_command(
+  OUTPUT ${PROTO_DIR}/wenet.pb.cc
+         ${PROTO_DIR}/wenet.pb.h
+         ${PROTO_DIR}/wenet.grpc.pb.cc
+         ${PROTO_DIR}/wenet.grpc.pb.h
+  COMMAND ${protobuf_BINARY_DIR}/protoc
+  ARGS --grpc_out "${PROTO_DIR}"
+    --cpp_out "${PROTO_DIR}"
+    -I "${PROTO_DIR}"
+    --plugin=protoc-gen-grpc=${grpc_BINARY_DIR}/grpc_cpp_plugin
+    wenet.proto)
+
+# grpc_server/client
+link_directories(${protobuf_BINARY_DIR}/lib)
+add_library(wenet_grpc STATIC grpc/grpc_client.cc grpc/grpc_server.cc grpc/wenet.pb.cc grpc/wenet.grpc.pb.cc)
+target_link_libraries(wenet_grpc PUBLIC grpc++ grpc++_reflection decoder frontend)
+
+
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
 target_link_libraries(decoder_main PUBLIC frontend decoder)
@@ -144,3 +181,7 @@ add_executable(websocket_client_main bin/websocket_client_main.cc)
 target_link_libraries(websocket_client_main PUBLIC websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)
 target_link_libraries(websocket_server_main PUBLIC websocket)
+add_executable(grpc_server_main bin/grpc_server_main.cc)
+target_link_libraries(grpc_server_main PUBLIC wenet_grpc)
+add_executable(grpc_client_main bin/grpc_client_main.cc)
+target_link_libraries(grpc_client_main PUBLIC wenet_grpc)

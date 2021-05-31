@@ -10,12 +10,14 @@
 #include <utility>
 #include <vector>
 
+#include "fst/fstlib.h"
 #include "fst/symbol-table.h"
 #include "torch/script.h"
 #include "torch/torch.h"
 
 #include "decoder/ctc_endpoint.h"
 #include "decoder/ctc_prefix_beam_search.h"
+#include "decoder/ctc_wfst_beam_search.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "utils/utils.h"
@@ -27,9 +29,21 @@ using TorchModule = torch::jit::script::Module;
 struct DecodeOptions {
   int chunk_size = 16;
   int num_left_chunks = -1;
+
+  // final_score = rescoring_weight * rescoring_score + ctc_weight * ctc_score;
+  // rescoring_score = left_to_right_score * (1 - reverse_weight) +
+  // right_to_left_score * reverse_weight
+  // Please note the concept of ctc_scores in the following two search
+  // methods are different.
+  // For CtcPrefixBeamSearch, it's a sum(prefix) score
+  // For CtcWfstBeamSearch, it's a max(viterbi) path score
+  // So we should carefully setting ctc_weight in terms of search methods.
+  float ctc_weight = 0.0;
+  float rescoring_weight = 1.0;
   float reverse_weight = 0.0;
   CtcEndpointConfig ctc_endpoint_config;
-  CtcPrefixBeamSearchOptions ctc_search_opts;
+  CtcPrefixBeamSearchOptions ctc_prefix_search_opts;
+  CtcWfstBeamSearchOptions ctc_wfst_search_opts;
 };
 
 struct WordPiece {
@@ -63,7 +77,8 @@ class TorchAsrDecoder {
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
                   std::shared_ptr<TorchAsrModel> model,
                   std::shared_ptr<fst::SymbolTable> symbol_table,
-                  const DecodeOptions& opts);
+                  const DecodeOptions& opts,
+                  std::shared_ptr<fst::StdVectorFst> fst = nullptr);
 
   DecodeState Decode();
   void Rescoring();
@@ -90,7 +105,7 @@ class TorchAsrDecoder {
   // Return true if we reach the end of the feature pipeline
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
-  void UpdateResult(const torch::Tensor& ctc_log_probs);
+
   float LeftToRightScore(const torch::Tensor& probs,
                          const std::vector<int>& hyp,
                          const size_t& num,
@@ -99,6 +114,7 @@ class TorchAsrDecoder {
                          const std::vector<int>& hyp,
                          const size_t& num,
                          const int& eos);
+  void UpdateResult();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
@@ -118,7 +134,7 @@ class TorchAsrDecoder {
   int num_frames_ = 0;
   int global_frame_offset_ = 0;
 
-  std::unique_ptr<CtcPrefixBeamSearch> ctc_prefix_beam_searcher_;
+  std::unique_ptr<SearchInterface> searcher_;
   std::unique_ptr<CtcEndpoint> ctc_endpointer_;
 
   int num_frames_in_current_chunk_ = 0;

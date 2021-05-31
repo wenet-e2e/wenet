@@ -4,25 +4,32 @@
 
 #include "decoder/torch_asr_decoder.h"
 
+#include <ctype.h>
+
 #include <algorithm>
-#include <chrono>
 #include <limits>
 #include <utility>
 
 #include "decoder/ctc_endpoint.h"
+#include "utils/timer.h"
 
 namespace wenet {
 
 TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
     std::shared_ptr<TorchAsrModel> model,
-    std::shared_ptr<fst::SymbolTable> symbol_table, const DecodeOptions& opts)
+    std::shared_ptr<fst::SymbolTable> symbol_table, const DecodeOptions& opts,
+    std::shared_ptr<fst::StdVectorFst> fst)
     : feature_pipeline_(std::move(feature_pipeline)),
       model_(std::move(model)),
       symbol_table_(symbol_table),
       opts_(opts),
-      ctc_prefix_beam_searcher_(new CtcPrefixBeamSearch(opts.ctc_search_opts)),
       ctc_endpointer_(new CtcEndpoint(opts.ctc_endpoint_config)) {
+  if (nullptr == fst) {
+    searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts));
+  } else {
+    searcher_.reset(new CtcWfstBeamSearch(*fst, opts.ctc_wfst_search_opts));
+  }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
 }
 
@@ -38,7 +45,7 @@ void TorchAsrDecoder::Reset() {
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
   encoder_outs_.clear();
   cached_feature_.clear();
-  ctc_prefix_beam_searcher_->Reset();
+  searcher_->Reset();
   feature_pipeline_->Reset();
   ctc_endpointer_->Reset();
 }
@@ -54,7 +61,7 @@ void TorchAsrDecoder::ResetContinuousDecoding() {
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
   encoder_outs_.clear();
   cached_feature_.clear();
-  ctc_prefix_beam_searcher_->Reset();
+  searcher_->Reset();
   ctc_endpointer_->Reset();
 }
 
@@ -62,14 +69,9 @@ DecodeState TorchAsrDecoder::Decode() { return this->AdvanceDecoding(); }
 
 void TorchAsrDecoder::Rescoring() {
   // Do attention rescoring
-  auto start = std::chrono::steady_clock::now();
+  Timer timer;
   AttentionRescoring();
-  auto end = std::chrono::steady_clock::now();
-  LOG(INFO) << "Rescoring cost latency: "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(end -
-                                                                     start)
-                   .count()
-            << "ms.";
+  LOG(INFO) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
 }
 
 DecodeState TorchAsrDecoder::AdvanceDecoding() {
@@ -119,6 +121,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
       feats[0][cached_feature_.size() + i] = std::move(row);
     }
 
+    Timer timer;
     // 2. Encoder chunk forward
     int requried_cache_size = opts_.chunk_size * opts_.num_left_chunks;
     torch::NoGradGuard no_grad;
@@ -144,7 +147,13 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
                                       ->run_method("ctc_activation", chunk_out)
                                       .toTensor()[0];
     encoder_outs_.push_back(std::move(chunk_out));
-    UpdateResult(ctc_log_probs);
+    int forward_time = timer.Elapsed();
+    timer.Reset();
+    searcher_->Search(ctc_log_probs);
+    int search_time = timer.Elapsed();
+    VLOG(3) << "forward takes " << forward_time << " ms, search takes "
+            << search_time << " ms";
+    UpdateResult();
 
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
       LOG(INFO) << "Endpoint is detected at " << num_frames_;
@@ -170,31 +179,90 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   return state;
 }
 
-void TorchAsrDecoder::UpdateResult(const torch::Tensor& ctc_log_probs) {
-  ctc_prefix_beam_searcher_->Search(ctc_log_probs);
-  const auto& hypotheses = ctc_prefix_beam_searcher_->hypotheses();
-  const auto& likelihood = ctc_prefix_beam_searcher_->likelihood();
-  const auto& times = ctc_prefix_beam_searcher_->times();
+// NOTE(Xingchen Song): we add this function to make it possible to
+// support multilingual recipe in the future, in which characters of
+// different languages are all encoded in UTF-8 format.
+// UTF-8 REF: https://en.wikipedia.org/wiki/UTF-8#Encoding
+void SplitEachChar(const std::string &word, std::vector<std::string> *chars) {
+  chars->clear();
+  size_t i = 0;
+  while (i < word.length()) {
+    assert((word[i] & 0xF8) <= 0xF0);
+    int bytes_ = 1;
+    if ((word[i] & 0x80) == 0x00) {
+      // The first 128 characters (US-ASCII) in UTF-8 format only need one byte.
+      bytes_ = 1;
+    } else if ((word[i] & 0xE0) == 0xC0) {
+      // The next 1,920 characters need two bytes to encode,
+      // which covers the remainder of almost all Latin-script alphabets.
+      bytes_ = 2;
+    } else if ((word[i] & 0xF0) == 0xE0) {
+      // Three bytes are needed for characters in the rest of
+      // the Basic Multilingual Plane, which contains virtually all characters
+      // in common use, including most Chinese, Japanese and Korean characters.
+      bytes_ = 3;
+    } else if ((word[i] & 0xF8) == 0xF0) {
+      // Four bytes are needed for characters in the other planes of Unicode,
+      // which include less common CJK characters, various historic scripts,
+      // mathematical symbols, and emoji (pictographic symbols).
+      bytes_ = 4;
+    }
+    chars->push_back(word.substr(i, bytes_));
+    i += bytes_;
+  }
+  return;
+}
+
+static bool CheckEnglishWord(const std::string &word) {
+  std::vector<std::string> chars;
+  SplitEachChar(word, &chars);
+  for (size_t k = 0; k < chars.size(); k++) {
+    // all english characters should be encoded in one byte
+    if (chars[k].size() > 1) return false;
+    // english words may contain apostrophe, i.e., "He's"
+    if (chars[k][0] == '\'') continue;
+    if (!isalpha(chars[k][0])) return false;
+  }
+  return true;
+}
+
+void TorchAsrDecoder::UpdateResult() {
+  const auto& hypotheses = searcher_->Outputs();
+  const auto& likelihood = searcher_->Likelihood();
+  const auto& times = searcher_->Times();
   result_.clear();
 
   CHECK_EQ(hypotheses.size(), likelihood.size());
-  CHECK_EQ(hypotheses.size(), times.size());
+  // CHECK_EQ(hypotheses.size(), times.size());
   for (size_t i = 0; i < hypotheses.size(); i++) {
     const std::vector<int>& hypothesis = hypotheses[i];
-    const std::vector<int>& time_stamp = times[i];
-    CHECK_EQ(hypothesis.size(), time_stamp.size());
 
     DecodeResult path;
+    bool is_englishword_prev = false;
     path.score = likelihood[i];
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_->Find(hypothesis[j]);
-      path.sentence += word;
-      int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
-      int end = time_stamp[j] * frame_shift_in_ms();
-      WordPiece word_piece(word, offset + start, offset + end);
-      path.word_pieces.emplace_back(word_piece);
-      start = word_piece.end;
+      bool is_englishword_now = CheckEnglishWord(word);
+      if (is_englishword_prev && is_englishword_now) {
+        path.sentence += (' ' + word);
+      } else {
+        path.sentence += (word);
+      }
+      is_englishword_prev = is_englishword_now;
+    }
+    // TimeStamp is only supported in CtcPrefixBeamSearch now
+    if (searcher_->Type() == SearchType::kPrefixBeamSearch) {
+      const std::vector<int>& time_stamp = times[i];
+      CHECK_EQ(hypothesis.size(), time_stamp.size());
+      for (size_t j = 0; j < hypothesis.size(); j++) {
+        std::string word = symbol_table_->Find(hypothesis[j]);
+        int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
+        int end = time_stamp[j] * frame_shift_in_ms();
+        WordPiece word_piece(word, offset + start, offset + end);
+        path.word_pieces.emplace_back(word_piece);
+        start = word_piece.end;
+      }
     }
     path.sentence = ProcessBlank(path.sentence);
     result_.emplace_back(path);
@@ -230,9 +298,17 @@ float TorchAsrDecoder::RightToLeftScore(const torch::Tensor& r_probs,
 }
 
 void TorchAsrDecoder::AttentionRescoring() {
+  searcher_->FinalizeSearch();
+  UpdateResult();
+  if (0.0 == opts_.rescoring_weight) {
+    return;
+  }
+
   int sos = model_->sos();
   int eos = model_->eos();
-  const auto& hypotheses = ctc_prefix_beam_searcher_->hypotheses();
+  // Inputs() returns N-best input id, which is the basic unit for rescoring
+  // for CtcPrefixBeamSearch, inputs is the same to outputs
+  const auto& hypotheses = searcher_->Inputs();
   int num_hyps = hypotheses.size();
   if (num_hyps <= 0) {
     return;
@@ -301,7 +377,8 @@ void TorchAsrDecoder::AttentionRescoring() {
     score = (score * (1 - opts_.reverse_weight))
                 + (r_score * opts_.reverse_weight);
     // TODO(Binbin Zhang): Combine CTC and attention decoder score
-    result_[i].score = score;
+    result_[i].score =
+        opts_.rescoring_weight * score + opts_.ctc_weight * result_[i].score;
   }
   std::sort(result_.begin(), result_.end(), DecodeResult::CompareFunc);
 }

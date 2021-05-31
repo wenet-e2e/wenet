@@ -204,3 +204,38 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         --output_quant_file $dir/final_quant.zip
 fi
 
+# Optionally, you can add LM and test it with runtime.
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+  # 7.1 Prepare dict
+  unit_file=$dict
+  download_dir=data/local/DaCiDian
+  git clone https://github.com/aishell-foundation/DaCiDian.git $download_dir
+  mkdir -p data/local/dict
+  cp $unit_file data/local/dict/units.txt
+  tools/fst/prepare_dict.py $unit_file $download_dir/word_to_pinyin.txt \
+      data/local/dict/lexicon.txt
+  # 7.2 Segment text
+  pip install jieba
+  lm=data/local/lm
+  mkdir -p $lm
+  awk '{print $1}' data/local/dict/lexicon.txt | \
+      awk '{print $1,99}' > $lm/word_seg_vocab.txt
+  python local/word_segmentation.py $lm/word_seg_vocab.txt \
+      data/train/text > $lm/text
+  # 7.3 Train lm
+  local/train_lms.sh
+  # 7.4 Build decoding TLG
+  tools/fst/compile_lexicon_token_fst.sh \
+      data/local/dict data/local/tmp data/local/lang
+  tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+  # 7.5 Decoding with runtime
+  ./tools/decode.sh --nj 16 \
+      --beam 15.0 --lattice_beam 7.5 --max_active 7000 --blank_skip_thresh 0.98 \
+      --ctc_weight 0.5 --rescoring_weight 1.0 \
+      --fst_path data/lang_test/TLG.fst \
+      data/test/wav.scp data/test/text $dir/final.zip data/lang_test/words.txt \
+      $dir/lm_with_runtime
+  # See $dir/lm_with_runtime for wer
+  tail $dir/lm_with_runtime/wer
+fi
+
