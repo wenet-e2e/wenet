@@ -16,7 +16,7 @@
 
 # This script compiles the lexicon and CTC tokens into FSTs. FST compiling slightly differs between the
 # phoneme and character-based lexicons.
-
+set -eo pipefail
 . tools/parse_options.sh
 
 if [ $# -ne 3 ]; then

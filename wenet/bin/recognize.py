@@ -54,7 +54,8 @@ if __name__ == '__main__':
     parser.add_argument('--mode',
                         choices=[
                             'attention', 'ctc_greedy_search',
-                            'ctc_prefix_beam_search', 'attention_rescoring'],
+                            'ctc_prefix_beam_search', 'attention_rescoring'
+                        ],
                         default='attention',
                         help='decoding mode')
     parser.add_argument('--ctc_weight',
@@ -72,10 +73,14 @@ if __name__ == '__main__':
                         type=int,
                         default=-1,
                         help='number of left chunks for decoding')
-
     parser.add_argument('--simulate_streaming',
                         action='store_true',
                         help='simulate streaming inference')
+    parser.add_argument('--reverse_weight',
+                        type=float,
+                        default=0.0,
+                        help='''right to left weight for attention rescoring
+                                decode mode''')
     args = parser.parse_args()
     print(args)
     logging.basicConfig(level=logging.DEBUG,
@@ -102,13 +107,14 @@ if __name__ == '__main__':
     test_collate_conf['speed_perturb'] = False
     if raw_wav:
         test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    test_collate_func = CollateFunc(**test_collate_conf,
-                                    raw_wav=raw_wav)
+    test_collate_func = CollateFunc(**test_collate_conf, raw_wav=raw_wav)
     dataset_conf = configs.get('dataset_conf', {})
     dataset_conf['batch_size'] = args.batch_size
     dataset_conf['batch_type'] = 'static'
     dataset_conf['sort'] = False
-    test_dataset = AudioDataset(args.test_data, **dataset_conf, raw_wav=raw_wav)
+    test_dataset = AudioDataset(args.test_data,
+                                **dataset_conf,
+                                raw_wav=raw_wav)
     test_data_loader = DataLoader(test_dataset,
                                   collate_fn=test_collate_func,
                                   shuffle=False,
@@ -178,7 +184,8 @@ if __name__ == '__main__':
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     ctc_weight=args.ctc_weight,
-                    simulate_streaming=args.simulate_streaming)
+                    simulate_streaming=args.simulate_streaming,
+                    reverse_weight=args.reverse_weight)
                 hyps = [hyp]
             for i, key in enumerate(keys):
                 content = ''

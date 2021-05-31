@@ -34,6 +34,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 * [AIShell-1](examples/aishell/s0/README.md)
 * [AIShell-2](examples/aishell2/s0/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
+* [GigaSpeech](examples/gigaspeech/s0/README.md)
 * [Multi-Chinese](examples/multi_cn/s0/README.md) trained using all open source Chinese corpus.
 
 ## Installation
@@ -69,7 +70,6 @@ cd runtime/server/x86
 mkdir build && cd build && cmake .. && cmake --build .
 ```
 
-
 ## Discussion & Communication
 
 Please scan the QR code on the left to follow the offical account of WeNet.
@@ -80,19 +80,24 @@ Please scan the personal QR code on the right, and the guy is responsible for in
 
 If you can not access the QR image, please access it on [gitee](https://gitee.com/robin1001/qr/tree/master).
 
-| ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/wenet.jpeg) | ![ Wenet chat group ](https://github.com/robin1001/qr/blob/master/binbin.jpeg) |
-|-------------------------------------------------------------------------------|--------------------------------------------------------------------------------|
+| <img src="https://github.com/robin1001/qr/blob/master/wenet.jpeg" width="250px"> | <img src="https://github.com/robin1001/qr/blob/master/binbin.jpeg" width="250px"> |
+| ---- | ---- |
 
+## Contributors
+
+| <a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="250px"></a> | <a href="http://lxie.npu-aslp.org" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/colleges/nwpu.png" width="250px"></a> | <a href="http://www.aishelltech.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/aishelltech.png" width="250px"></a> | <a href="http://www.ximalaya.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/ximalaya.png" width="250px"></a> | <a href="https://www.jd.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/jd.jpeg" width="250px"></a> |
+| ---- | ---- | ---- | ---- | ---- |
 
 ## Acknowledge
 
 1. We borrowed a lot of code from [ESPnet](https://github.com/espnet/espnet) for transformer based modeling.
 2. We borrowed a lot of code from [Kaldi](http://kaldi-asr.org/) for WFST based decoding for LM integration.
-3. We refered to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/) for python batch inference of e2e models.
+3. We referred [EESEN](https://github.com/srvk/eesen) for building TLG based graph for LM integration.
+4. We referred to [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/) for python batch inference of e2e models.
 
 ## Citations
 
-```
+``` bibtex
 @article{zhang2021wenet,
   title={WeNet: Production First and Production Ready End-to-End Speech Recognition Toolkit},
   author={Zhang, Binbin and Wu, Di and Yang, Chao and Chen, Xiaoyu and Peng, Zhendong and Wang, Xiangming and Yao, Zhuoyuan and Wang, Xiong and Yu, Fan and Xie, Lei and others},

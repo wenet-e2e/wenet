@@ -227,7 +227,7 @@ class ConformerEncoderLayer(nn.Module):
             residual = residual[:, -chunk:, :]
             mask = mask[:, -chunk:, :]
 
-        x_att = self.self_attn(x_q, x, x, pos_emb, mask)
+        x_att = self.self_attn(x_q, x, x, mask, pos_emb)
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
             x = residual + self.concat_linear(x_concat)
