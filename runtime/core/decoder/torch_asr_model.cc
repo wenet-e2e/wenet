@@ -40,7 +40,7 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
 
   LOG(INFO) << "torch model info subsampling_rate " << subsampling_rate_
             << " right context " << right_context_ << " sos " << sos_ << " eos "
-            << eos_ << "is bidirectional decoder " << is_bidirectional_decoder_;
+            << eos_ << " is bidirectional decoder " << is_bidirectional_decoder_;
 }
 
 }  // namespace wenet

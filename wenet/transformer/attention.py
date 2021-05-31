@@ -99,7 +99,8 @@ class MultiHeadedAttention(nn.Module):
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor,
-                mask: Optional[torch.Tensor]) -> torch.Tensor:
+                mask: Optional[torch.Tensor],
+                pos_emb: torch.Tensor = torch.empty(0),) -> torch.Tensor:
         """Compute scaled dot product attention.
 
         Args:
@@ -165,17 +166,17 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         return x
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
-                value: torch.Tensor, pos_emb: torch.Tensor,
-                mask: Optional[torch.Tensor]):
+                value: torch.Tensor, mask: Optional[torch.Tensor],
+                pos_emb: torch.Tensor):
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
             key (torch.Tensor): Key tensor (#batch, time2, size).
             value (torch.Tensor): Value tensor (#batch, time2, size).
-            pos_emb (torch.Tensor): Positional embedding tensor
-                (#batch, time2, size).
             mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
                 (#batch, time1, time2).
+            pos_emb (torch.Tensor): Positional embedding tensor
+                (#batch, time2, size).
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
         """

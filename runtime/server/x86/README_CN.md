@@ -30,7 +30,7 @@ mkdir build && cd build && cmake .. && cmake --build .
 ``` sh
 # 当前目录为 wenet/runtime/server/x86
 wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210327_unified_transformer_exp_server.tar.gz
-tar -xf http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210327_unified_transformer_exp_server.tar.gz
+tar -xf 20210327_unified_transformer_exp_server.tar.gz
 ```
 
 

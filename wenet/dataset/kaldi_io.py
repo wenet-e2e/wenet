@@ -474,6 +474,11 @@ def _read_compressed_mat(fd, format):
 
   return mat.T # transpose! col-major -> row-major,
 
+def write_ark_scp(key, mat, ark_fout, scp_out):
+  mat_offset = write_mat(ark_fout, mat, key)
+  scp_line = '{}\t{}:{}'.format(key, ark_fout.name, mat_offset)
+  scp_out.write(scp_line)
+  scp_out.write('\n')
 
 # Writing,
 def write_mat(file_or_fd, m, key=''):
@@ -492,10 +497,12 @@ def write_mat(file_or_fd, m, key=''):
      for key,mat in dict.iteritems():
        kaldi_io.write_mat(f, mat, key=key)
   """
+  mat_offset = 0
   fd = open_or_fd(file_or_fd, mode='wb')
   if sys.version_info[0] == 3: assert(fd.mode == 'wb')
   try:
     if key != '' : fd.write((key+' ').encode("latin1")) # ark-files have keys (utterance-id),
+    mat_offset = fd.tell()
     fd.write('\0B'.encode()) # we write binary!
     # Data-type,
     if m.dtype == 'float32': fd.write('FM '.encode())
@@ -510,7 +517,7 @@ def write_mat(file_or_fd, m, key=''):
     fd.write(m.tobytes())
   finally:
     if fd is not file_or_fd : fd.close()
-
+  return mat_offset
 
 #################################################
 # 'Posterior' kaldi type (posteriors, confusion network, nnet1 training targets, ...)
