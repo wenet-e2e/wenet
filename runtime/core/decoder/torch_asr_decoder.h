@@ -110,6 +110,9 @@ class TorchAsrDecoder {
   std::vector<std::vector<float>> cached_feature_;
   bool start_ = false;
 
+  // word piece start with space symbol["▁" (U+2581)] or not
+  bool wp_start_with_space_symbol_ = false;
+
   torch::jit::IValue subsampling_cache_;
   // transformer/conformer encoder layers output cache
   torch::jit::IValue elayers_output_cache_;
