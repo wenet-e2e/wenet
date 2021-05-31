@@ -81,6 +81,7 @@ class WenetInterface:
                     if w == self.eos:
                         break
                     content += self.char_dict[w]
+                content = content.replace('▁', ' ')
                 return True, content
         except Exception as e:
             return False, str(e)
