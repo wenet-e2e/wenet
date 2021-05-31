@@ -23,7 +23,7 @@ def worker(index, filename, sample_rate, host):
         audio.close()
 
         data = {
-            'sample_rate': 16000,
+            'sample_rate': sample_rate,
         }
 
         start = time.time()
@@ -31,7 +31,7 @@ def worker(index, filename, sample_rate, host):
                           data=data,
                           files=files,
                           verify=False,
-                          timeout=10)
+                          timeout=60)
         elapsed = time.time() - start
         print('elapsed time:{}s'.format(elapsed), file=sys.stderr)
 

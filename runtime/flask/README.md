@@ -10,6 +10,13 @@ pip install -r requirements.txt
 导入python的目录环境
 . ./pypath.sh
 
+配置文件
+1.首先需要修改模型配置文件train.yaml中global_cmvn的path
+2.修改config/config.py中的模型路径checkpoint,yaml_path,vocab_path
+3.修改config/config.py中的port，用python3 server.py测试是否能正常启动
+4.修改config/gunicorn.py中bind的ip和port为自己需要的地址。
+
+
 gunicorn http启动
 gunicorn -c config/gunicorn.py server:server
 
