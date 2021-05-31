@@ -106,12 +106,9 @@ class TorchAsrDecoder {
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
 
-  float LeftToRightScore(const torch::Tensor& prob,
-                         const std::vector<int>& hyp,
-                         const int& eos);
-  float RightToLeftScore(const torch::Tensor& r_prob,
-                         const std::vector<int>& hyp,
-                         const int& eos);
+  float AttentionDecoderScore(const torch::Tensor& prob,
+                              const std::vector<int>& hyp,
+                              const int eos);
   void UpdateResult();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
