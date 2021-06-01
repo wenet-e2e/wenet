@@ -10,6 +10,13 @@ The build requires cmake 3.14 or above. For building, please first change to `we
 mkdir build && cd build && cmake .. && cmake --build .
 ```
 
+Or please use the following command to build with gRPC.
+
+``` sh
+mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
+```
+
+
 ## Pretrained model
 
 You can run the following on your trained model, or using our pretrained model. Click the following link to download the pretrained model.

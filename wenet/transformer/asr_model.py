@@ -508,7 +508,8 @@ class ASRModel(torch.nn.Module):
                                   device=device)
         # used for right to left decoder
         r_hyps_pad = reverse_pad_list(ori_hyps_pad, hyps_lens, self.ignore_id)
-
+        r_hyps_pad, _ = add_sos_eos(r_hyps_pad, self.sos, self.eos,
+                                    self.ignore_id)
         decoder_out, r_decoder_out, _ = self.decoder(
             encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
             reverse_weight)  # (beam_size, max_hyps_len, vocab_size)

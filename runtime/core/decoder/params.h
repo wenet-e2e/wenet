@@ -1,5 +1,6 @@
 // Copyright 2021 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
+//         di.wu@mobvoi.com (Di Wu)
 
 #ifndef DECODER_PARAMS_H_
 #define DECODER_PARAMS_H_
@@ -29,6 +30,10 @@ DEFINE_double(ctc_weight, 0.0,
               "ctc weight when combining ctc score and rescoring score");
 DEFINE_double(rescoring_weight, 1.0,
               "rescoring weight when combining ctc score and rescoring score");
+DEFINE_double(reverse_weight, 0.0,
+              "used for bitransformer rescoring. it must be 0.0 if decoder is"
+              "conventional transformer decoder, and only reverse_weight > 0.0"
+              "dose the right to left decoder will be calculated and used");
 DEFINE_int32(max_active, 7000, "max active states in ctc wfst search");
 DEFINE_double(beam, 16.0, "beam in ctc wfst search");
 DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
@@ -66,6 +71,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->chunk_size = FLAGS_chunk_size;
   decode_config->num_left_chunks = FLAGS_num_left_chunks;
   decode_config->ctc_weight = FLAGS_ctc_weight;
+  decode_config->reverse_weight = FLAGS_reverse_weight;
   decode_config->rescoring_weight = FLAGS_rescoring_weight;
   decode_config->ctc_wfst_search_opts.max_active = FLAGS_max_active;
   decode_config->ctc_wfst_search_opts.beam = FLAGS_beam;
