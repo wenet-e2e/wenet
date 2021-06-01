@@ -21,8 +21,8 @@ mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
 
 You can run the following on your trained model, or using our pretrained model. Click the following link to download the pretrained model.
 
-* [Chinese model trained on AIShell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210221_unified_transformer_server.tar.gz)
-* [Model trained on AISHELL-2](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210327_unified_transformer_exp_server.tar.gz)
+* [Chinese model trained on AIShell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_server.tar.gz)
+* [Model trained on AISHELL-2](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz)
 * [TODO: add English model trained on Librispeech](link)
 
 ## Run offline ASR demo
