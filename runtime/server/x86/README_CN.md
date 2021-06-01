@@ -11,6 +11,10 @@ Wenet支持linux/macos/windows三种平台上的编译。需要安装cmake 3.14�
 # 当前目录为 wenet/runtime/server/x86
 mkdir build && cd build && cmake .. && cmake --build .
 ```
+或者使用命令编译以支持gRPC。
+``` sh
+mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
+```
 
 编译好的可执行程序在`wenet/runtime/server/x86/build/`下：
 
