@@ -508,14 +508,15 @@ class ASRModel(torch.nn.Module):
                                   device=device)
         # used for right to left decoder
         r_hyps_pad = reverse_pad_list(ori_hyps_pad, hyps_lens, self.ignore_id)
-
+        r_hyps_pad, _ = add_sos_eos(r_hyps_pad, self.sos, self.eos,
+                                    self.ignore_id)
         decoder_out, r_decoder_out, _ = self.decoder(
             encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
             reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
-        # r_dccoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a conventiaonl
-        # transformer decoder.
+        # r_dccoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a
+        # conventiaonltransformer decoder.
         r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         r_decoder_out = r_decoder_out.cpu().numpy()
         # Only use decoder score for rescoring
