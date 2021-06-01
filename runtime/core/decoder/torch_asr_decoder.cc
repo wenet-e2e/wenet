@@ -279,7 +279,7 @@ void TorchAsrDecoder::UpdateResult() {
 
 float TorchAsrDecoder::AttentionDecoderScore(const torch::Tensor& prob,
                                              const std::vector<int>& hyp,
-                                             const int eos) {
+                                             int eos) {
   float score = 0.0f;
   auto accessor = prob.accessor<float, 2>();
   for (size_t j = 0; j < hyp.size(); ++j) {
@@ -347,10 +347,8 @@ void TorchAsrDecoder::AttentionRescoring() {
       // Right to left score
       CHECK_EQ(r_probs.size(0), num_hyps);
       CHECK_EQ(r_probs.size(1), max_hyps_len);
-      std::vector<int> r_hyp;
-      for (size_t j = 0; j < hyp.size(); ++j) {
-        r_hyp.push_back(hyp[hyp.size() - j - 1]);
-      }
+      std::vector<int> r_hyp(hyp.size());
+      std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
       r_score = AttentionDecoderScore(r_probs[i], r_hyp, eos);
     }
     score += probs[i][hyp.size()][eos].item<float>();

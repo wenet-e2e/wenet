@@ -107,7 +107,7 @@ class TorchAsrDecoder {
   void AttentionRescoring();
 
   float AttentionDecoderScore(const torch::Tensor& prob,
-                              const std::vector<int>& hyp, const int eos);
+                              const std::vector<int>& hyp, int eos);
   void UpdateResult();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
