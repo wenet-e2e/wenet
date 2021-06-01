@@ -278,8 +278,8 @@ void TorchAsrDecoder::UpdateResult() {
 }
 
 float TorchAsrDecoder::AttentionDecoderScore(const torch::Tensor& prob,
-                                        const std::vector<int>& hyp,
-                                        const int eos) {
+                                             const std::vector<int>& hyp,
+                                             const int eos) {
   float score = 0.0f;
   auto accessor = prob.accessor<float, 2>();
   for (size_t j = 0; j < hyp.size(); ++j) {
