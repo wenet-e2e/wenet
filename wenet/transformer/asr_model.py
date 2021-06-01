@@ -516,7 +516,7 @@ class ASRModel(torch.nn.Module):
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
         # r_dccoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a
-        # conventiaonltransformer decoder.
+        # conventiaonl transformer decoder.
         r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         r_decoder_out = r_decoder_out.cpu().numpy()
         # Only use decoder score for rescoring
