@@ -26,15 +26,15 @@ mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
 
 除了使用自己训练好的语音识别模型，Wenet官方也提供了一些预训练好的模型。
 
-* [AIShell数据训练的中文模型](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210221_unified_transformer_server.tar.gz)
-* [AIShell-2数据训练的中文模型](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210327_unified_transformer_exp_server.tar.gz)
+* [AIShell数据训练的中文模型](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210602_unified_transformer_server.tar.gz)
+* [AIShell-2数据训练的中文模型](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz)
 * [TODO: Librispeech数据训练的英文模型](link)
 
 下载预训练模型
 ``` sh
 # 当前目录为 wenet/runtime/server/x86
-wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210327_unified_transformer_exp_server.tar.gz
-tar -xf 20210327_unified_transformer_exp_server.tar.gz
+wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_exp_server.tar.gz
+tar -xf 20210602_unified_transformer_exp_server.tar.gz
 ```
 
 
