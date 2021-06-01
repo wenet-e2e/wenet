@@ -130,11 +130,13 @@ class ASRModel(torch.nn.Module):
 
         # reverse the seq, used for right to left decoder
         r_ys_pad = reverse_pad_list(ys_pad, ys_pad_lens, float(self.ignore_id))
-        r_ys_in_pad, r_ys_out_pad = add_sos_eos(r_ys_pad, self.sos,
-                                                    self.eos, self.ignore_id)
+        r_ys_in_pad, r_ys_out_pad = add_sos_eos(r_ys_pad, self.sos, self.eos,
+                                                self.ignore_id)
         # 1. Forward decoder
-        decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, ys_in_pad, ys_in_lens, r_ys_in_pad, self.reverse_weight)
+        decoder_out, r_decoder_out, _ = self.decoder(encoder_out, encoder_mask,
+                                                     ys_in_pad, ys_in_lens,
+                                                     r_ys_in_pad,
+                                                     self.reverse_weight)
         # 2. Compute attention loss
         loss_att = self.criterion_att(decoder_out, ys_out_pad)
         r_loss_att = torch.tensor(0.0)
@@ -508,14 +510,13 @@ class ASRModel(torch.nn.Module):
         r_hyps_pad = reverse_pad_list(ori_hyps_pad, hyps_lens, self.ignore_id)
 
         decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, hyps_pad,
-            hyps_lens, r_hyps_pad, reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
+            encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
+            reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
         # r_dccoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a conventiaonl
         # transformer decoder.
-        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out,
-                                                            dim=-1)
+        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         r_decoder_out = r_decoder_out.cpu().numpy()
         # Only use decoder score for rescoring
         best_score = -float('inf')
@@ -663,15 +664,14 @@ class ASRModel(torch.nn.Module):
         r_hyps = reverse_pad_list(r_hyps, r_hyps_lens, float(self.ignore_id))
         r_hyps, _ = add_sos_eos(r_hyps, self.sos, self.eos, self.ignore_id)
         decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, hyps,
-            hyps_lens, r_hyps, reverse_weight)  # (num_hyps, max_hyps_len, vocab_size)
+            encoder_out, encoder_mask, hyps, hyps_lens, r_hyps,
+            reverse_weight)  # (num_hyps, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
 
         # right to left decoder may be not used during decoding process,
         # which depends on reverse_weight param.
         # r_dccoder_out will be 0.0, if reverse_weight is 0.0
-        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out,
-                                                        dim=-1)
+        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         return decoder_out, r_decoder_out
 
 
