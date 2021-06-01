@@ -1,5 +1,6 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
+//         di.wu@mobvoi.com (Di Wu)
 
 #include "decoder/torch_asr_decoder.h"
 
@@ -24,6 +25,10 @@ TorchAsrDecoder::TorchAsrDecoder(
       symbol_table_(symbol_table),
       opts_(opts),
       ctc_endpointer_(new CtcEndpoint(opts.ctc_endpoint_config)) {
+  if (opts_.reverse_weight > 0) {
+    // Check if model has a right to left decoder
+    CHECK(model_->is_bidirectional_decoder());
+  }
   if (nullptr == fst) {
     searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts));
   } else {
@@ -194,7 +199,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
 // support multilingual recipe in the future, in which characters of
 // different languages are all encoded in UTF-8 format.
 // UTF-8 REF: https://en.wikipedia.org/wiki/UTF-8#Encoding
-void SplitEachChar(const std::string &word, std::vector<std::string> *chars) {
+void SplitEachChar(const std::string& word, std::vector<std::string>* chars) {
   chars->clear();
   size_t i = 0;
   while (i < word.length()) {
@@ -224,7 +229,7 @@ void SplitEachChar(const std::string &word, std::vector<std::string> *chars) {
   return;
 }
 
-static bool CheckEnglishWord(const std::string &word) {
+static bool CheckEnglishWord(const std::string& word) {
   std::vector<std::string> chars;
   SplitEachChar(word, &chars);
   for (size_t k = 0; k < chars.size(); k++) {
@@ -288,6 +293,18 @@ void TorchAsrDecoder::UpdateResult() {
   }
 }
 
+float TorchAsrDecoder::AttentionDecoderScore(const torch::Tensor& prob,
+                                             const std::vector<int>& hyp,
+                                             int eos) {
+  float score = 0.0f;
+  auto accessor = prob.accessor<float, 2>();
+  for (size_t j = 0; j < hyp.size(); ++j) {
+    score += accessor[j][hyp[j]];
+  }
+  score += accessor[hyp.size()][eos];
+  return score;
+}
+
 void TorchAsrDecoder::AttentionRescoring() {
   searcher_->FinalizeSearch();
   UpdateResult();
@@ -323,25 +340,38 @@ void TorchAsrDecoder::AttentionRescoring() {
       hyps_tensor[i][j + 1] = hyp[j];
     }
   }
-
   // Step 2: forward attention decoder by hyps and corresponding encoder_outs_
   torch::Tensor encoder_out = torch::cat(encoder_outs_, 1);
-  torch::Tensor probs = model_->torch_model()
-                            ->run_method("forward_attention_decoder",
-                                         hyps_tensor, hyps_length, encoder_out)
-                            .toTensor();
+  auto outputs =
+      model_->torch_model()
+          ->run_method("forward_attention_decoder", hyps_tensor, hyps_length,
+                       encoder_out, opts_.reverse_weight)
+          .toTuple()
+          ->elements();
+  auto probs = outputs[0].toTensor();
+  auto r_probs = outputs[1].toTensor();
   CHECK_EQ(probs.size(0), num_hyps);
   CHECK_EQ(probs.size(1), max_hyps_len);
-
   // Step 3: Compute rescoring score
   for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
     float score = 0.0f;
-    for (size_t j = 0; j < hyp.size(); ++j) {
-      score += probs[i][j][hyp[j]].item<float>();
+    score = AttentionDecoderScore(probs[i], hyp, eos);
+    // Optional: Used for right to left score
+    float r_score = 0.0f;
+    if (opts_.reverse_weight > 0) {
+      // Right to left score
+      CHECK_EQ(r_probs.size(0), num_hyps);
+      CHECK_EQ(r_probs.size(1), max_hyps_len);
+      std::vector<int> r_hyp(hyp.size());
+      std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
+      r_score = AttentionDecoderScore(r_probs[i], r_hyp, eos);
     }
     score += probs[i][hyp.size()][eos].item<float>();
-    // TODO(Binbin Zhang): Combine CTC and attention decoder score
+    // combined reverse attention score
+    score =
+        (score * (1 - opts_.reverse_weight)) + (r_score * opts_.reverse_weight);
+    // combined ctc score
     result_[i].score =
         opts_.rescoring_weight * score + opts_.ctc_weight * result_[i].score;
   }
