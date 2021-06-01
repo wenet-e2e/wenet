@@ -30,6 +30,18 @@ TorchAsrDecoder::TorchAsrDecoder(
     searcher_.reset(new CtcWfstBeamSearch(*fst, opts.ctc_wfst_search_opts));
   }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
+
+  fst::SymbolTableIterator iter(*symbol_table_);
+  std::string space_symbol = kSpaceSymbol;
+  while (!iter.Done()) {
+    if (iter.Symbol().size() > space_symbol.size() &&
+        std::equal(space_symbol.begin(), space_symbol.end(),
+                   iter.Symbol().begin())) {
+      wp_start_with_space_symbol_ = true;
+      break;
+    }
+    iter.Next();
+  }
 }
 
 void TorchAsrDecoder::Reset() {
@@ -242,6 +254,10 @@ void TorchAsrDecoder::UpdateResult() {
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_->Find(hypothesis[j]);
+      if (wp_start_with_space_symbol_) {
+        path.sentence += word;
+        continue;
+      }
       bool is_englishword_now = CheckEnglishWord(word);
       if (is_englishword_prev && is_englishword_now) {
         path.sentence += (' ' + word);
