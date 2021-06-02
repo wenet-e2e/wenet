@@ -78,7 +78,7 @@ class TorchAsrDecoder {
                   std::shared_ptr<TorchAsrModel> model,
                   std::shared_ptr<fst::SymbolTable> symbol_table,
                   const DecodeOptions& opts,
-                  std::shared_ptr<fst::StdVectorFst> fst = nullptr);
+                  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr);
 
   DecodeState Decode();
   void Rescoring();

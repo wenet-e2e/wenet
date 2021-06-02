@@ -36,7 +36,7 @@ ConnectionHandler::ConnectionHandler(
     std::shared_ptr<DecodeOptions> decode_config,
     std::shared_ptr<fst::SymbolTable> symbol_table,
     std::shared_ptr<TorchAsrModel> model,
-    std::shared_ptr<fst::StdVectorFst> fst)
+    std::shared_ptr<fst::Fst<fst::StdArc>> fst)
     : ws_(std::move(socket)),
       feature_config_(std::move(feature_config)),
       decode_config_(std::move(decode_config)),

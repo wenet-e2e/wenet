@@ -19,7 +19,7 @@ TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
     std::shared_ptr<TorchAsrModel> model,
     std::shared_ptr<fst::SymbolTable> symbol_table, const DecodeOptions& opts,
-    std::shared_ptr<fst::StdVectorFst> fst)
+    std::shared_ptr<fst::Fst<fst::StdArc>> fst)
     : feature_pipeline_(std::move(feature_pipeline)),
       model_(std::move(model)),
       symbol_table_(symbol_table),
