@@ -58,10 +58,11 @@ std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
   return feature_config;
 }
 
-std::shared_ptr<fst::StdVectorFst> InitFstFromFlags() {
-  std::shared_ptr<fst::StdVectorFst> fst = nullptr;
+std::shared_ptr<fst::Fst<fst::StdArc>> InitFstFromFlags() {
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   if (!FLAGS_fst_path.empty()) {
-    fst.reset(fst::StdVectorFst::Read(FLAGS_fst_path));
+    fst.reset(fst::Fst<fst::StdArc>::Read(FLAGS_fst_path));
+    CHECK(fst != nullptr);
   }
   return fst;
 }
