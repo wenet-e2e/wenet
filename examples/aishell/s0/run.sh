@@ -175,6 +175,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # -1 for full chunk
     decoding_chunk_size=
     ctc_weight=0.5
+    reverse_weight=0.0
     for mode in ${decode_modes}; do
     {
         test_dir=$dir/test_${mode}
@@ -189,6 +190,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --penalty 0.0 \
             --dict $dict \
             --ctc_weight $ctc_weight \
+            --reverse_weight $reverse_weight \
             --result_file $test_dir/text \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
          python tools/compute-wer.py --char=1 --v=1 \

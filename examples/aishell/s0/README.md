@@ -16,6 +16,20 @@
 | attention rescoring       | 4.61  |
 | LM + attention rescoring  | 4.36  |
 
+## U2++ Conformer Result
+
+* Feature info: using fbank feature, dither=1.0, cmvn, oneline speed perturb
+* Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 360 epochs
+* Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30
+* Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_u2pp_conformer_exp.tar.gz
+
+| decoding mode/chunk size  | full  | 16    |
+|---------------------------|-------|-------|
+| ctc greedy search         | 5.19  | 5.81  |
+| ctc prefix beam search    | 5.17  | 5.81  |
+| attention rescoring       | 4.63  | 5.05  |
+
 ## Unified Conformer Result
 
 * Feature info: using fbank feature, dither=0, cmvn, oneline speed perturb
