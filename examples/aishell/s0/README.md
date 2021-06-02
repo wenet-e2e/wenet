@@ -22,7 +22,7 @@
 * Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 360 epochs
 * Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30
 * Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_u2++_conformer_exp.tar.gz
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_u2pp_conformer_exp.tar.gz
 
 | decoding mode/chunk size  | full  | 16    |
 |---------------------------|-------|-------|
