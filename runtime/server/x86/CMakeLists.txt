@@ -18,7 +18,10 @@ set(FETCHCONTENT_BASE_DIR ${fc_base})
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   # Keep the same with openfst, -fPIC or -fpic
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC -ldl")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ldl")
+  endif()
 endif()
 
 
