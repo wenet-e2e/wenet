@@ -84,7 +84,7 @@ ExternalProject_Add(openfst
   SOURCE_DIR        ${openfst_SRC_DIR}
   BINARY_DIR        ${openfst_BUILD_DIR}
   CONFIGURE_COMMAND PATH=${CMAKE_PREFIX_PATH}/bin:$ENV{PATH} ${openfst_SRC_DIR}/configure
-                      --disable-bin --host=${CMAKE_LIBRARY_ARCHITECTURE}
+                      --disable-bin --disable-shared --host=${CMAKE_LIBRARY_ARCHITECTURE}
                       "CXX=${ANDROID_CXX_COMPILER} -target ${CMAKE_LIBRARY_ARCHITECTURE}${ANDROID_NATIVE_API_LEVEL}"
                       "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR} -fPIC"
                       "LIBS=${OPENFST_EXTRA_LIBS}"
