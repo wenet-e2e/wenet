@@ -50,6 +50,7 @@ void CtcWfstBeamSearch::Reset() {
   num_frames_ = 0;
   decoded_frames_mapping_.clear();
   is_last_frame_blank_ = false;
+  last_best_ = 0;
   inputs_.clear();
   outputs_.clear();
   likelihood_.clear();
@@ -73,10 +74,17 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
       is_last_frame_blank_ = true;
       last_frame_prob_ = logp[i];
     } else {
-      if (is_last_frame_blank_) {
+      // Get the best symbol
+      int cur_best = logp[i].argmax().item<int>();
+      // Optional, adding one blank frame if we has skipped it in two same
+      // symbols
+      if (cur_best != 0 && is_last_frame_blank_ && cur_best == last_best_) {
         decodable_.AcceptLoglikes(last_frame_prob_);
         decoder_.AdvanceDecoding(&decodable_, 1);
+        VLOG(2) << "Adding blank frame at symbol " << cur_best;
       }
+      last_best_ = cur_best;
+
       decodable_.AcceptLoglikes(logp[i]);
       decoder_.AdvanceDecoding(&decodable_, 1);
       decoded_frames_mapping_.push_back(num_frames_);
