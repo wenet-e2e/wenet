@@ -35,6 +35,7 @@ from wenet.dataset.wav_distortion import distort_wav_conf
 from wenet.utils.common import IGNORE_ID
 torchaudio.set_audio_backend("sox")
 
+from tools.process_pipe_input import _process_pipe_input
 
 def _spec_augmentation(x,
                        warp_for_time=False,
@@ -206,26 +207,38 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             # 1 for general wav.scp, 3 for segmented wav.scp
             assert len(value) == 1 or len(value) == 3
             wav_path = value[0]
-            sample_rate = torchaudio.backend.sox_backend.info(wav_path)[0].rate
+            if wav_path.endswith("|"): # if wav_path is a shell command
+                waveform, sample_rate = _process_pipe_input(wav_path)
+            else:
+                sample_rate = torchaudio.backend.sox_backend.info(wav_path)[0].rate
             if speed_perturb:
                 if len(value) == 3:
                     logging.error(
                         "speed perturb does not support segmented wav.scp now")
                 assert len(value) == 1
-                waveform, sample_rate = _load_wav_with_speed(wav_path, speed)
+                if wav_path.endswith("|"): # if wav_path is a shell command
+                    waveform, sample_rate = _process_pipe_input(wav_path,speed=speed)
+                else:
+                    waveform, sample_rate = _load_wav_with_speed(wav_path, speed)
             else:
                 # value length 3 means using segmented wav.scp
                 # incluede .wav, start time, end time
                 if len(value) == 3:
                     start_frame = int(float(value[1]) * sample_rate)
                     end_frame = int(float(value[2]) * sample_rate)
-                    waveform, sample_rate = torchaudio.backend.sox_backend.load(
-                        filepath=wav_path,
-                        num_frames=end_frame - start_frame,
-                        offset=start_frame)
-                    waveform = waveform * (1 << 15)
+                    if wav_path.endswith("|"):  # if wav_path is a shell command
+                        waveform, sample_rate = _process_pipe_input(wav_path,num_frames=end_frame - start_frame,frame_offset=start_frame)
+                    else:
+                        waveform, sample_rate = torchaudio.backend.sox_backend.load(
+                            filepath=wav_path,
+                            num_frames=end_frame - start_frame,
+                            offset=start_frame)
+                        waveform = waveform * (1 << 15) # change the data to [-2^15,2^15]
                 else:
-                    waveform, sample_rate = torchaudio.load_wav(wav_path)
+                    if wav_path.endswith("|"): # if wav_path is a shell command
+                        waveform, sample_rate = _process_pipe_input(wav_path)
+                    else:
+                        waveform, sample_rate = torchaudio.load_wav(wav_path)
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
