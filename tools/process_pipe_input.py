@@ -50,7 +50,7 @@ def _process_pipe_input(
     return torch.Tensor(waveform),sample_rate
 
 if __name__ == '__main__':
-    pipestr="cat /NASdata/AudioData/AISHELL-ASR-SSB/SPEECHDATA/SSB0001/SSB00010010.wav | sox -t wav - -r 16000 -c 1 -b 16 -t wav - |"
+    pipestr="cat ./SSB00010010.wav | sox -t wav - -r 16000 -c 1 -b 16 -t wav - |"
     waveform1, sample_rate1 = _process_pipe_input(pipestr,speed=1.0)
     waveform2, sample_rate2 = _process_pipe_input(pipestr,speed=1.1)
     print("")
