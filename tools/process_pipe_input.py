@@ -29,7 +29,8 @@ def _process_pipe_input(
     if speed == 1.0:
         input_commend=pipestr+" cat - "
     else:
-        input_commend=pipestr+" cat - |"+" sox -t wav - -t wav - stretch " + format(speed, '.1f')
+        input_commend=pipestr+" cat - |"+" sox -t wav - -t wav - speed " + format(speed, '.1f')
+        # input_commend=pipestr+" cat - |"+" sox -t wav - -t wav - stretch " + format(speed, '.1f')
         # here will output a warning "sox WARN wav: Length in output .wav header will be wrong since can't seek to fix it"
     p=subprocess.Popen(input_commend,shell=True,stdout=subprocess.PIPE)
     out=p.stdout.read()
