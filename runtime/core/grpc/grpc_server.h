@@ -47,7 +47,7 @@ class GrpcConnectionHandler {
                         std::shared_ptr<DecodeOptions> decode_config,
                         std::shared_ptr<fst::SymbolTable> symbol_table,
                         std::shared_ptr<TorchAsrModel> model,
-                        std::shared_ptr<fst::StdVectorFst> fst);
+                        std::shared_ptr<fst::Fst<fst::StdArc>> fst);
   void operator()();
 
  private:
@@ -69,7 +69,7 @@ class GrpcConnectionHandler {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
-  std::shared_ptr<fst::StdVectorFst> fst_;
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst_;
 
   bool got_start_tag_ = false;
   bool got_end_tag_ = false;
@@ -86,7 +86,7 @@ class GrpcServer final : public ASR::Service {
              std::shared_ptr<DecodeOptions> decode_config,
              std::shared_ptr<fst::SymbolTable> symbol_table,
              std::shared_ptr<TorchAsrModel> model,
-             std::shared_ptr<fst::StdVectorFst> fst)
+             std::shared_ptr<fst::Fst<fst::StdArc>> fst)
       : feature_config_(std::move(feature_config)),
         decode_config_(std::move(decode_config)),
         symbol_table_(std::move(symbol_table)),
@@ -100,7 +100,7 @@ class GrpcServer final : public ASR::Service {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
-  std::shared_ptr<fst::StdVectorFst> fst_;
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst_;
   DISALLOW_COPY_AND_ASSIGN(GrpcServer);
 };
 
