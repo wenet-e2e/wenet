@@ -3,15 +3,12 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <shared_mutex>
-#include <unordered_map>
-#include <vector>
 
 #include "frontend/fft.h"
 
 namespace wenet {
 
-static void make_sintbl(int n, float* sintbl) {
+void make_sintbl(int n, float* sintbl) {
   int i, n2, n4, n8;
   float c, s, dc, ds, t;
 
@@ -37,7 +34,7 @@ static void make_sintbl(int n, float* sintbl) {
   for (i = 0; i < n2 + n4; ++i) sintbl[i + n2] = -sintbl[i];
 }
 
-static void make_bitrev(int n, int* bitrev) {
+void make_bitrev(int n, int* bitrev) {
   int i, j, k, n2;
 
   n2 = n / 2;
@@ -54,6 +51,11 @@ static void make_bitrev(int n, int* bitrev) {
   }
 }
 
+// bitrev: bit reversal table
+// sintbl: trigonometric function table
+// x:real part
+// y:image part
+// n: fft length
 int fft(const int* bitrev, const float* sintbl, float* x, float* y, int n) {
   int i, j, k, ik, h, d, k2, n4, inverse;
   float t, s, c, dx, dy;
@@ -114,64 +116,6 @@ int fft(const int* bitrev, const float* sintbl, float* x, float* y, int n) {
     }
   }
   return 0; /* finished successfully */
-}
-
-class FftHelper {
- public:
-  struct FftTables {
-    // bit reversal table
-    std::vector<int> bitrev;
-    // trigonometric function table
-    std::vector<float> sintbl;
-  };
-
-  FftHelper() = default;
-
-  // thread safe
-  int DoFft(float* x, float* y, const int n) {
-    {
-      std::shared_lock<std::shared_timed_mutex> reader_lock(mu_);
-      // No thread wants to modify `fft_length_to_tables_`, it can be used
-      // safely
-      const auto iter = fft_length_to_tables_.find(n);
-      if (iter != fft_length_to_tables_.end()) {
-        return fft(iter->second.bitrev.data(), iter->second.sintbl.data(), x, y,
-                   n);
-      }
-    }
-
-    // prepare tables for fft length = n
-    int n4 = n / 4;
-    FftTables tables;
-    tables.bitrev.resize(n);
-    tables.sintbl.resize(n + n4);
-    make_sintbl(n, tables.sintbl.data());
-    make_bitrev(n, tables.bitrev.data());
-    int ret = fft(tables.bitrev.data(), tables.sintbl.data(), x, y, n);
-
-    {
-      // lock to write
-      std::unique_lock<std::shared_timed_mutex> writer_lock(mu_);
-      // All other threads are not reading `fft_length_to_tables_`, we can
-      // modify it now
-      fft_length_to_tables_[n] = tables;
-    }
-    return ret;
-  }
-
- private:
-  std::shared_timed_mutex mu_;
-  std::unordered_map<int, FftTables> fft_length_to_tables_;
-
-  // Not copyable
-  FftHelper(const FftHelper&) = delete;
-  FftHelper& operator=(const FftHelper&) = delete;
-};
-
-// x:real part y:image part  n: fft length
-int fft(float* x, float* y, int n) {
-  static FftHelper fft_helper;
-  return fft_helper.DoFft(x, y, n);
 }
 
 }  // namespace wenet
