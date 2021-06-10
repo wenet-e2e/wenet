@@ -74,7 +74,7 @@ dataset_conf:
     max_length: 3500
     min_length: 0
     batch_type: 'static' # static or dynamic
-    # the size of batch_size should be set according to your gpu memory size, here we used titan xp gpu whose memory size is 12GB
+    # the size of batch_size should be set according to your gpu memory size, here we used v100 gpu whose memory size is 32GB
     batch_size: 12
     sort: true
 
