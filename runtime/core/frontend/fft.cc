@@ -8,7 +8,7 @@
 
 namespace wenet {
 
-static void make_sintbl(int n, float* sintbl) {
+void make_sintbl(int n, float* sintbl) {
   int i, n2, n4, n8;
   float c, s, dc, ds, t;
 
@@ -34,7 +34,7 @@ static void make_sintbl(int n, float* sintbl) {
   for (i = 0; i < n2 + n4; ++i) sintbl[i + n2] = -sintbl[i];
 }
 
-static void make_bitrev(int n, int* bitrev) {
+void make_bitrev(int n, int* bitrev) {
   int i, j, k, n2;
 
   n2 = n / 2;
@@ -51,11 +51,12 @@ static void make_bitrev(int n, int* bitrev) {
   }
 }
 
-// x:real part y:image part  n: fft length
-int fft(float* x, float* y, int n) {
-  static int last_n = 0;       /* previous n */
-  static int* bitrev = NULL;   /* bit reversal table */
-  static float* sintbl = NULL; /* trigonometric function table */
+// bitrev: bit reversal table
+// sintbl: trigonometric function table
+// x:real part
+// y:image part
+// n: fft length
+int fft(const int* bitrev, const float* sintbl, float* x, float* y, int n) {
   int i, j, k, ik, h, d, k2, n4, inverse;
   float t, s, c, dx, dy;
 
@@ -67,19 +68,8 @@ int fft(float* x, float* y, int n) {
     inverse = 0;
   }
   n4 = n / 4;
-  if (n != last_n || n == 0) {
-    last_n = n;
-    if (sintbl != NULL) free(sintbl);
-    if (bitrev != NULL) free(bitrev);
-    if (n == 0) return 0; /* free the memory */
-    sintbl = reinterpret_cast<float*>(malloc((n + n4) * sizeof(float)));
-    bitrev = reinterpret_cast<int*>(malloc(n * sizeof(int)));
-    if (sintbl == NULL || bitrev == NULL) {
-      // Error("%s in %f(%d): out of memory\n", __func__, __FILE__, __LINE__);
-      return 1;
-    }
-    make_sintbl(n, sintbl);
-    make_bitrev(n, bitrev);
+  if (n == 0) {
+    return 0;
   }
 
   /* bit reversal */
