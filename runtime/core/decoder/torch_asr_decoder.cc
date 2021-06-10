@@ -356,6 +356,7 @@ void TorchAsrDecoder::AttentionRescoring() {
   for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hypotheses[i];
     float score = 0.0f;
+    // left to right decoder score
     score = AttentionDecoderScore(probs[i], hyp, eos);
     // Optional: Used for right to left score
     float r_score = 0.0f;
@@ -365,9 +366,9 @@ void TorchAsrDecoder::AttentionRescoring() {
       CHECK_EQ(r_probs.size(1), max_hyps_len);
       std::vector<int> r_hyp(hyp.size());
       std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
+      // right to left decoder score
       r_score = AttentionDecoderScore(r_probs[i], r_hyp, eos);
     }
-    score += probs[i][hyp.size()][eos].item<float>();
     // combined reverse attention score
     score =
         (score * (1 - opts_.reverse_weight)) + (r_score * opts_.reverse_weight);
