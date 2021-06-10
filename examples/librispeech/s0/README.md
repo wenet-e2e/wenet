@@ -10,7 +10,7 @@
 
 | decoding mode                  | test clean | test other |
 |--------------------------------|------------|------------|
-| ctc prefix beam search         | 2.96       | 7,14       |
+| ctc prefix beam search         | 2.96       | 7.14       |
 | attention rescoring            | 2.66       | 6.53       |
 
 ## Conformer Result
