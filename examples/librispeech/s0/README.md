@@ -16,7 +16,7 @@
 ## Conformer Result
 
 * Feature info: using fbank feature, cmvn, dither, online speed perturb
-* Training info: train_conformer.yaml, kernel size 31, lr 0.002, batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+* Training info: train_conformer.yaml, kernel size 31, lr 0.004, batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 90d9a559840e765e82119ab72a11a1f7c1a01b78
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210216_conformer_exp.tar.gz
