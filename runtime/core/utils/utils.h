@@ -43,6 +43,7 @@ void SplitStringToVector(const std::string &full, const char* delim,
 bool SplitUTF8String(const std::string& str,
                      std::vector<std::string>* characters);
 
+// Remove head,tail and consecutive space.
 std::string ProcessBlank(const std::string& str);
 
 }  // namespace wenet
