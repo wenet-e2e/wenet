@@ -114,6 +114,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   if (!feature_pipeline_->Read(num_requried_frames, &chunk_feats)) {
     state = DecodeState::kEndFeats;
   }
+
   num_frames_in_current_chunk_ = chunk_feats.size();
   num_frames_ += chunk_feats.size();
   LOG(INFO) << "Required " << num_requried_frames << " get "
@@ -121,7 +122,8 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   int num_frames = cached_feature_.size() + chunk_feats.size();
   // The total frames should be big enough to get just one output
   if (num_frames >= right_context + 1) {
-    // 1. Prepare libtorch requried data, splice cached_feature_ and chunk_feats
+    // 1. Prepare libtorch required data, splice cached_feature_ and chunk_feats
+    // The first dimension is for batchsize, which is 1.
     torch::Tensor feats =
         torch::zeros({1, num_frames, feature_dim}, torch::kFloat);
     for (size_t i = 0; i < cached_feature_.size(); ++i) {
@@ -147,6 +149,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
                                               subsampling_cache_,
                                               elayers_output_cache_,
                                               conformer_cnn_cache_};
+    // Refer interfaces in wenet/transformer/asr_model.py
     auto outputs = model_->torch_model()
                        ->get_method("forward_encoder_chunk")(inputs)
                        .toTuple()
@@ -157,8 +160,8 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     elayers_output_cache_ = outputs[2];
     conformer_cnn_cache_ = outputs[3];
     offset_ += chunk_out.size(1);
-    // The first dimension is a fake dimension, it's 1 for one utterance,
-    // so just ignore it here.
+
+    // The first dimension of returned value is for batchsize, which is 1
     torch::Tensor ctc_log_probs = model_->torch_model()
                                       ->run_method("ctc_activation", chunk_out)
                                       .toTensor()[0];
@@ -176,7 +179,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
       state = DecodeState::kEndpoint;
     }
 
-    // 3. cache feature for next chunk
+    // 3. Cache feature for next chunk
     if (state == DecodeState::kEndBatch) {
       // TODO(Binbin Zhang): Only deal the case when
       // chunk_feats.size() > cached_feature_size_ here, and it's consistent
@@ -314,8 +317,8 @@ void TorchAsrDecoder::AttentionRescoring() {
 
   int sos = model_->sos();
   int eos = model_->eos();
-  // Inputs() returns N-best input id, which is the basic unit for rescoring
-  // for CtcPrefixBeamSearch, inputs is the same to outputs
+  // Inputs() returns N-best input ids, which is the basic unit for rescoring
+  // In CtcPrefixBeamSearch, inputs are the same to outputs
   const auto& hypotheses = searcher_->Inputs();
   int num_hyps = hypotheses.size();
   if (num_hyps <= 0) {
@@ -340,7 +343,8 @@ void TorchAsrDecoder::AttentionRescoring() {
       hyps_tensor[i][j + 1] = hyp[j];
     }
   }
-  // Step 2: forward attention decoder by hyps and corresponding encoder_outs_
+
+  // Step 2: Forward attention decoder by hyps and corresponding encoder_outs_
   torch::Tensor encoder_out = torch::cat(encoder_outs_, 1);
   auto outputs =
       model_->torch_model()

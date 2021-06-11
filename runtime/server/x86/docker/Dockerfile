@@ -9,4 +9,3 @@ RUN wget -P /home http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishe
 RUN tar -xzf /home/$model -C /home
 ARG build=/home/wenet/runtime/server/x86/build
 RUN mkdir $build && cd $build && cmake .. && cmake --build .
-

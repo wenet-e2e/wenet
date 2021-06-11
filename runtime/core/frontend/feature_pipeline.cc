@@ -62,8 +62,9 @@ bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
   } else {
     std::unique_lock<std::mutex> lock(mutex_);
     while (!input_finished_) {
+      // This will release the lock and wait for notify_one()
+      // from AcceptWaveform() or set_input_finished()
       finish_condition_.wait(lock);
-      // Notified by AcceptWaveform, new data comes
       if (!feature_queue_.Empty()) {
         *feat = std::move(feature_queue_.Pop());
         return true;

@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
 
 project(kaldi)
 
+# include_directories() is called in the root CMakeLists.txt
+
 add_library(kaldi-base
 base/kaldi-error.cc
 base/kaldi-math.cc
