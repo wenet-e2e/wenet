@@ -143,7 +143,7 @@ class BaseEncoder(torch.nn.Module):
         Returns:
             encoder output tensor xs, and subsampled masks
             xs: padded output tensor (B, T' ~= T/subsample_rate, D)
-            masks: torch.Tensor batch padding mask after subsample 
+            masks: torch.Tensor batch padding mask after subsample
                 (B, 1, T' ~= T/subsample_rate)
         """
         masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, T)

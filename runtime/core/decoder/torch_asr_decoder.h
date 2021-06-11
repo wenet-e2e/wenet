@@ -27,9 +27,9 @@ namespace wenet {
 using TorchModule = torch::jit::script::Module;
 
 struct DecodeOptions {
-  // chunk_size is the frame number of one chunk, this size is after subsampling.
-  // e.g. if subsample rate is 4 and chunk_size = 16, the frames in one chunk are
-  // 64 = 16*4
+  // chunk_size is the frame number of one chunk after subsampling.
+  // e.g. if subsample rate is 4 and chunk_size = 16, the frames in
+  // one chunk are 64 = 16*4
   int chunk_size = 16;
   int num_left_chunks = -1;
 
