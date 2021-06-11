@@ -116,7 +116,7 @@ class MultiHeadedAttention(nn.Module):
                 3.When applying self attention of decoder,
                 the mask is in (#batch, L, L)  shape.
                 4.If the different position in decoder see different block
-                of the encoder, such as Mocha, the passed in mash could be
+                of the encoder, such as Mocha, the passed in mask could be
                 in (#batch, L, T) shape. But there is no such case in current
                 Wenet.
 

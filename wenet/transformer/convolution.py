@@ -94,7 +94,7 @@ class ConvolutionModule(nn.Module):
             torch.Tensor: Output tensor (#batch, time, channels).
         """
         # exchange the temporal dimension and the feature dimension
-        x = x.transpose(1, 2) # (#batch, channels, time)
+        x = x.transpose(1, 2)  # (#batch, channels, time)
 
         # mask batch padding
         if mask_pad is not None:

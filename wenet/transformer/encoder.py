@@ -142,15 +142,15 @@ class BaseEncoder(torch.nn.Module):
                 <0: use all left chunks
         Returns:
             encoder output tensor xs, and subsampled masks
-            xs: padded output tensor (B, T' ~= T/ subsample_rate, D)
+            xs: padded output tensor (B, T' ~= T/subsample_rate, D)
             masks: torch.Tensor batch padding mask after subsample 
-                (B, 1, T' ~= T/ subsample_rate)
+                (B, 1, T' ~= T/subsample_rate)
         """
         masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, T)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
-        mask_pad = masks # (B, 1, T/subsample_rate)
+        mask_pad = masks  # (B, 1, T/subsample_rate)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               self.use_dynamic_left_chunk,
