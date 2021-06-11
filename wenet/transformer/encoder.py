@@ -150,11 +150,7 @@ class BaseEncoder(torch.nn.Module):
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
-<<<<<<< HEAD
         mask_pad = masks  # (B, 1, T/subsample_rate)
-=======
-        mask_pad = masks # (B, 1, T/subsample_rate)
->>>>>>> ed84c7759308895ad1a2b3c7329a4c1ea4984bfe
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               self.use_dynamic_left_chunk,
