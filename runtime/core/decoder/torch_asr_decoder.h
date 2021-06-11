@@ -27,6 +27,9 @@ namespace wenet {
 using TorchModule = torch::jit::script::Module;
 
 struct DecodeOptions {
+  // chunk_size is the frame number of one chunk after subsampling.
+  // e.g. if subsample rate is 4 and chunk_size = 16, the frames in
+  // one chunk are 64 = 16*4
   int chunk_size = 16;
   int num_left_chunks = -1;
 
@@ -37,7 +40,7 @@ struct DecodeOptions {
   // methods are different.
   // For CtcPrefixBeamSearch, it's a sum(prefix) score
   // For CtcWfstBeamSearch, it's a max(viterbi) path score
-  // So we should carefully setting ctc_weight in terms of search methods.
+  // So we should carefully set ctc_weight according to the search methods.
   float ctc_weight = 0.0;
   float rescoring_weight = 1.0;
   float reverse_weight = 0.0;
@@ -87,6 +90,8 @@ class TorchAsrDecoder {
   bool DecodedSomething() const {
     return !result_.empty() && !result_[0].sentence.empty();
   }
+
+  // This method is used for time benchmark
   int num_frames_in_current_chunk() const {
     return num_frames_in_current_chunk_;
   }

@@ -45,26 +45,45 @@ struct FeaturePipelineConfig {
   }
 };
 
-// Typically, FeaturePipeline is used in two threads: one thread call
-// AcceptWaveform() to add raw wav data, another thread call Read() to read
-// feature. so it is important to make it thread safe, and the Read() call
-// should be a blocking call when there is no feature in feature_queue_ while
-// the input is not finished.
+// Typically, FeaturePipeline is used in two threads: one thread A calls
+// AcceptWaveform() to add raw wav data and set_input_finished() to notice
+// the end of input wav, another thread B (decoder thread) calls Read() to
+// consume features.So a BlockingQueue is used to make this class thread safe.
+
+// The Read() is designed as a blocking method when there is no feature
+// in feature_queue_ and the input is not finished.
+
+// See bin/decoder_main.cc, websocket/websocket_server.cc and
+// decoder/torch_asr_decoder.cc for usage
 
 class FeaturePipeline {
  public:
   explicit FeaturePipeline(const FeaturePipelineConfig& config);
 
+  // The feature extraction is done in AcceptWaveform().
   void AcceptWaveform(const std::vector<float>& wav);
+
+  // Current extracted frames number.
   int num_frames() const { return num_frames_; }
   int feature_dim() const { return feature_dim_; }
   const FeaturePipelineConfig& config() const { return config_; }
+
+  // The caller should call this method when speech input is end.
+  // Never call AcceptWaveform() after calling set_input_finished() !
   void set_input_finished();
 
-  // Return false if input_finished_ and there is no feature left in
-  // feature_queue_
+  // Return False if input is finished and no feature could be read.
+  // Return True if a feature is read.
+  // This function is a blocking method. It will block the thread when
+  // there is no feature in feature_queue_ and the input is not finished.
   bool ReadOne(std::vector<float>* feat);
-  // Return value is the same to ReadOne
+
+  // Read #num_frames frame features.
+  // Return False if less then #num_frames features are read and the
+  // input is finished.
+  // Return True if #num_frames features are read.
+  // This function is a blocking method when there is no feature
+  // in feature_queue_ and the input is not finished.
   bool Read(int num_frames, std::vector<std::vector<float>>* feats);
 
   void Reset();
@@ -80,8 +99,15 @@ class FeaturePipeline {
   BlockingQueue<std::vector<float>> feature_queue_;
   int num_frames_;
   bool input_finished_;
+
+  // The feature extraction is done in AcceptWaveform().
+  // This wavefrom sample points are consumed by frame size.
+  // The residual wavefrom sample points after framing are
+  // kept to be used in next AcceptWaveform() calling.
   std::vector<float> remained_wav_;
 
+  // Used to block the Read when there is no feature in feature_queue_
+  // and the input is not finished.
   mutable std::mutex mutex_;
   std::condition_variable finish_condition_;
 };
