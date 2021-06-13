@@ -21,22 +21,14 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
 endif()
 
-
-# third_party: gflags
-FetchContent_Declare(gflags
-  URL      https://github.com/gflags/gflags/archive/v2.2.0.zip
-  URL_HASH SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
+# third_party: openfst built with gflags and glog
+FetchContent_Declare(openfst
+  URL      https://github.com/pengzhendong/openfst/archive/refs/tags/1.0.0.tar.gz
+  URL_HASH SHA256=e719417adaa49eab87dbb441d68ad8044d4637dd085e2f3ba755ff707459bc20
 )
-FetchContent_MakeAvailable(gflags)
-include_directories(${gflags_BINARY_DIR}/include)
-
-# third_party: glog
-FetchContent_Declare(glog
-  URL      https://github.com/google/glog/archive/v0.4.0.zip
-  URL_HASH SHA256=9e1b54eb2782f53cd8af107ecf08d2ab64b8d0dc2b7f5594472f3bd63ca85cdc
-)
-FetchContent_MakeAvailable(glog)
-include_directories(${glog_SOURCE_DIR}/src ${glog_BINARY_DIR})
+FetchContent_MakeAvailable(openfst)
+include_directories(${openfst_BINARY_DIR}/include)
+link_directories(${openfst_BINARY_DIR})
 
 # third_party: gtest
 FetchContent_Declare(googletest
@@ -52,31 +44,6 @@ FetchContent_Declare(boost
 )
 FetchContent_MakeAvailable(boost)
 include_directories(${boost_SOURCE_DIR})
-
-# third_party: openfst
-# openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch
-set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I${gflags_BINARY_DIR}/include")
-set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
-set(openfst_SRC_DIR ${fc_base}/openfst-src)
-set(openfst_BUILD_DIR ${fc_base}/openfst-build)
-set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
-ExternalProject_Add(openfst
-  URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
-  URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
-  PREFIX            ${openfst_PREFIX_DIR}
-  SOURCE_DIR        ${openfst_SRC_DIR}
-  BINARY_DIR        ${openfst_BUILD_DIR}
-  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_PREFIX_DIR}
-                      "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
-                      "LIBS=${OPENFST_EXTRA_LIBS}"
-  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
-  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.h ${openfst_SRC_DIR}/src/include/fst
-  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib
-  BUILD_COMMAND     make -j 4
-)
-include_directories(${openfst_PREFIX_DIR}/include)
-link_directories(${openfst_PREFIX_DIR}/lib)
-add_dependencies(openfst gflags glog)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
@@ -146,7 +113,6 @@ add_library(websocket STATIC
   websocket/websocket_server.cc
 )
 target_link_libraries(websocket PUBLIC decoder frontend)
-
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
