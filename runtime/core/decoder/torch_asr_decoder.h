@@ -1,5 +1,6 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
+//         di.wu@mobvoi.com (Di Wu)
 
 #ifndef DECODER_TORCH_ASR_DECODER_H_
 #define DECODER_TORCH_ASR_DECODER_H_
@@ -26,16 +27,23 @@ namespace wenet {
 using TorchModule = torch::jit::script::Module;
 
 struct DecodeOptions {
+  // chunk_size is the frame number of one chunk after subsampling.
+  // e.g. if subsample rate is 4 and chunk_size = 16, the frames in
+  // one chunk are 64 = 16*4
   int chunk_size = 16;
   int num_left_chunks = -1;
+
   // final_score = rescoring_weight * rescoring_score + ctc_weight * ctc_score;
+  // rescoring_score = left_to_right_score * (1 - reverse_weight) +
+  // right_to_left_score * reverse_weight
   // Please note the concept of ctc_scores in the following two search
   // methods are different.
   // For CtcPrefixBeamSearch, it's a sum(prefix) score
   // For CtcWfstBeamSearch, it's a max(viterbi) path score
-  // So we should carefully setting ctc_weight in terms of search methods.
+  // So we should carefully set ctc_weight according to the search methods.
   float ctc_weight = 0.0;
   float rescoring_weight = 1.0;
+  float reverse_weight = 0.0;
   CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_prefix_search_opts;
   CtcWfstBeamSearchOptions ctc_wfst_search_opts;
@@ -73,7 +81,7 @@ class TorchAsrDecoder {
                   std::shared_ptr<TorchAsrModel> model,
                   std::shared_ptr<fst::SymbolTable> symbol_table,
                   const DecodeOptions& opts,
-                  std::shared_ptr<fst::StdVectorFst> fst = nullptr);
+                  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr);
 
   DecodeState Decode();
   void Rescoring();
@@ -82,6 +90,8 @@ class TorchAsrDecoder {
   bool DecodedSomething() const {
     return !result_.empty() && !result_[0].sentence.empty();
   }
+
+  // This method is used for time benchmark
   int num_frames_in_current_chunk() const {
     return num_frames_in_current_chunk_;
   }
@@ -100,6 +110,9 @@ class TorchAsrDecoder {
   // Return true if we reach the end of the feature pipeline
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
+
+  float AttentionDecoderScore(const torch::Tensor& prob,
+                              const std::vector<int>& hyp, int eos);
   void UpdateResult();
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
@@ -109,6 +122,9 @@ class TorchAsrDecoder {
   // cache feature
   std::vector<std::vector<float>> cached_feature_;
   bool start_ = false;
+
+  // word piece start with space symbol["▁" (U+2581)] or not
+  bool wp_start_with_space_symbol_ = false;
 
   torch::jit::IValue subsampling_cache_;
   // transformer/conformer encoder layers output cache

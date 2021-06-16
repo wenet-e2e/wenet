@@ -27,7 +27,7 @@ GrpcConnectionHandler::GrpcConnectionHandler(
     std::shared_ptr<DecodeOptions> decode_config,
     std::shared_ptr<fst::SymbolTable> symbol_table,
     std::shared_ptr<TorchAsrModel> model,
-    std::shared_ptr<fst::StdVectorFst> fst)
+    std::shared_ptr<fst::Fst<fst::StdArc>> fst)
     : stream_(std::move(stream)),
       request_(std::move(request)),
       response_(std::move(response)),

@@ -4,6 +4,7 @@ import math
 from typing import Tuple, List
 
 import torch
+from torch.nn.utils.rnn import pad_sequence
 
 IGNORE_ID = -1
 
@@ -82,6 +83,34 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
     ys_in = [torch.cat([_sos, y], dim=0) for y in ys]
     ys_out = [torch.cat([y, _eos], dim=0) for y in ys]
     return pad_list(ys_in, eos), pad_list(ys_out, ignore_id)
+
+
+def reverse_pad_list(ys_pad: torch.Tensor,
+                     ys_lens: torch.Tensor,
+                     pad_value: float = -1.0) -> torch.Tensor:
+    """Reverse padding for the list of tensors.
+
+    Args:
+        ys_pad (tensor): The padded tensor (B, Tokenmax).
+        ys_lens (tensor): The lens of token seqs (B)
+        pad_value (int): Value for padding.
+
+    Returns:
+        Tensor: Padded tensor (B, Tokenmax).
+
+    Examples:
+        >>> x
+        tensor([[1, 2, 3, 4], [5, 6, 7, 0], [8, 9, 0, 0]])
+        >>> pad_list(x, 0)
+        tensor([[4, 3, 2, 1],
+                [7, 6, 5, 0],
+                [9, 8, 0, 0]])
+
+    """
+    r_ys_pad = pad_sequence([(torch.flip(y.int()[:i], [0]))
+                             for y, i in zip(ys_pad, ys_lens)], True,
+                            pad_value)
+    return r_ys_pad
 
 
 def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,

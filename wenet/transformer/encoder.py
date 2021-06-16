@@ -130,7 +130,7 @@ class BaseEncoder(torch.nn.Module):
         """Embed positions in tensor.
 
         Args:
-            xs: padded input tensor (B, L, D)
+            xs: padded input tensor (B, T, D)
             xs_lens: input length (B)
             decoding_chunk_size: decoding chunk size for dynamic chunk
                 0: default for training, use random dynamic chunk.
@@ -141,13 +141,16 @@ class BaseEncoder(torch.nn.Module):
                 >=0: use num_decoding_left_chunks
                 <0: use all left chunks
         Returns:
-            encoder output tensor, lens and mask
+            encoder output tensor xs, and subsampled masks
+            xs: padded output tensor (B, T' ~= T/subsample_rate, D)
+            masks: torch.Tensor batch padding mask after subsample
+                (B, 1, T' ~= T/subsample_rate)
         """
-        masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, L)
+        masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, T)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
-        mask_pad = masks
+        mask_pad = masks  # (B, 1, T/subsample_rate)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               self.use_dynamic_left_chunk,
