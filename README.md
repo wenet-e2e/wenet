@@ -98,12 +98,13 @@ If you can not access the QR image, please access it on [gitee](https://gitee.co
 ## Citations
 
 ``` bibtex
-@article{yao2021wenet,
+@inproceedings{yao2021wenet,
   title={WeNet: Production oriented Streaming and Non-streaming End-to-End Speech Recognition Toolkit},
   author={Yao, Zhuoyuan and Wu, Di and Wang, Xiong and Zhang, Binbin and Yu, Fan and Yang, Chao and Peng, Zhendong and Chen, Xiaoyu and Xie, Lei and Lei, Xin},
-  journal={arXiv e-prints},
-  pages={arXiv--2102},
-  year={2021}
+  booktitle={Proc. Interspeech},
+  year={2021},
+  address={Brno, Czech Republic }
+  organization={IEEE}
 }
 
 @article{zhang2020unified,
