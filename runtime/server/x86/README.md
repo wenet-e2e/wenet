@@ -2,32 +2,76 @@
 
 **[中文版:x86 平台上使用 WeNet 进行语音识别](./README_CN.md)**
 
-## Build
+## Run with Prebuilt Docker
 
-The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/server/x86` as your build directory, then type:
+* Step 1. Download pretrained model(see the following link) or prepare your trained model.
+
+[AISHELL-1](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_server.tar.gz)
+| [AISHELL-2](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz)
+
+* Step 2. Start docker websocket server. Here is a demo.
+
+``` sh
+model_dir=$PWD/20210327_unified_transformer_exp_server  # absolute path
+docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenet:mini bash /home/run.sh
+```
+
+* Step 3. Test with web browser. Open runtime/server/x86/web/templates/index.html in the browser directly, input your `WebSocket URL`, it will request some permissions, and start to record to test, as the following graph shows.
+
+![Runtime web](../../../docs/images/runtime_web.png)
+
+## Run in Docker Build
+
+We recommend using the docker environment to build the c++ binary to avoid
+system and environment problems.
+
+* Step 1. Build your docker image.
+
+``` sh
+cd docker
+docker build --no-cache -t wenet:latest .
+```
+
+* Step 2. Put all the resources, like model, test wavs into a docker resource dir.
+
+``` sh
+mkdir -p docker_resource
+cp -r <your_model_dir> docker_resource/model
+cp <your_test_wav> docker_resource/test.wav
+```
+
+* Step 3. Start docker container.
+``` sh
+docker run --rm -v $PWD/docker_resource:/home/wenet/runtime/server/x86/docker_resource -it wenet bash
+```
+
+* Step 4. Testing in docker container
+```
+cd /home/wenet/runtime/server/x86
+export GLOG_logtostderr=1
+export GLOG_v=2
+wav_path=docker_resource/test.wav
+model_dir=docker_resource/model
+./build/decoder_main \
+    --chunk_size -1 \
+    --wav_path $wav_path \
+    --model_path $model_dir/final.zip \
+    --dict_path $model_dir/words.txt 2>&1 | tee log.txt
+```
+
+Or you can do the WebSocket server/client testing as described in the `WebSocket` section.
+
+## Run with Local Build
+
+* Step 1. Download or prepare your pretrained model.
+
+* Step 2. Build. The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/server/x86` as your build directory, then type:
 
 ``` sh
 mkdir build && cd build && cmake .. && cmake --build .
 ```
 
-Or please use the following command to build with gRPC.
-
-``` sh
-mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
-```
-
-
-## Pretrained model
-
-You can run the following on your trained model, or using our pretrained model. Click the following link to download the pretrained model.
-
-* [Chinese model trained on AIShell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_server.tar.gz)
-* [Model trained on AISHELL-2](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz)
-* [TODO: add English model trained on Librispeech](link)
-
-## Run offline ASR demo
-
-You can run the offline demo with the following commands
+* Step 3. Testing, the RTF(real time factor) is shown in the console.
 
 ``` sh
 export GLOG_logtostderr=1
@@ -41,15 +85,14 @@ model_dir=your_model_dir
     --dict_path $model_dir/words.txt 2>&1 | tee log.txt
 ```
 
-After decoding, the average RTF of the waves will display on the console.
 
-## Run Websocket streaming ASR demo
+## Advanced Usage
 
-We build a Websocket demo to show how WeNet U2 model works in a streaming fashion.
+### WebSocket
 
-### Server
-
-First, run the server by:
+* Step 1. Download or prepare your pretrained model.
+* Step 2. Build as in `Run with Local Build`
+* Step 3. Start WebSocket server.
 
 ``` sh
 export GLOG_logtostderr=1
@@ -61,25 +104,7 @@ model_dir=your_model_dir
     --model_path $model_dir/final.zip \
     --dict_path $model_dir/words.txt 2>&1 | tee server.log
 ```
-
-### Web Client
-
-Then, run the web client to communicate with the `websocket_server_main`. There are
-two ways to run the web client. Open `web/templates/index.html` in the browser directly, or
-start up a web server by Flask as follows:
-
-``` sh
-pip install Flask
-python web/app.py
-```
-
-Input the `WebSocket URL`, it will request some permissions, and start to record.
-
-![Runtime web](../../../docs/images/runtime_web.png)
-
-### Client
-
-Also, you could run the client in the command line by:
+* Step 4. Start WebSocket client.
 
 ```sh
 export GLOG_logtostderr=1
@@ -90,26 +115,23 @@ wav_path=your_test_wav_path
     --wav_path $wav_path 2>&1 | tee client.log
 ```
 
-Once finished decoding, compute the average rescoring cost latency by:
+You can also start WebSocket client by web browser as described before.
 
-``` sh
-grep "Rescoring cost latency" server.log | awk '{sum += $NF}; END {print sum/NR}'
-```
-
-Moreover, the total latency of decoding `your_test_wav_path` will display on the console.
-
-Here is a gif demo using our pretrained AIShell unified E2E model, which shows how our
-model, websocket server and websocket client enable streaming ASR.
+Here is a demo for command line based websocket server/client interaction.
 
 ![Runtime server demo](../../../docs/images/runtime_server.gif)
 
-## Run grpc streaming ASR demo
+### gRPC
 
-Why grpc? You may find your answer in https://grpc.io/
+Why grpc? You may find your answer in https://grpc.io/.
+Please follow the following steps to try gRPC.
 
-### Server
-
-First, run the server by:
+* Step 1. Download or prepare your pretrained model.
+* Step 2. Build
+``` sh
+mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
+```
+* Step 3. Start gRPC server
 
 ``` sh
 export GLOG_logtostderr=1
@@ -123,9 +145,7 @@ model_dir=your_model_dir
     --dict_path $model_dir/words.txt 2>&1 | tee server.log
 ```
 
-### Client
-
-Then, you can run the client in the command line by:
+* Step 4. Start gRPC client.
 
 ```sh
 export GLOG_logtostderr=1
@@ -136,36 +156,3 @@ wav_path=your_test_wav_path
     --wav_path $wav_path 2>&1 | tee client.log
 ```
 
-## Run the demo in Docker
-
-When you encounter an issue trying to run the demo, we encourage you to run the demo in
-the Docker container.
-
-The image contains the prebuilt code, and the pretrained model. Just run it as follows:
-
-``` sh
-docker run --rm -it mobvoiwenet/wenet:v0.5.0 bash
-```
-
-The pretrained model folder is located at `/home/wenet`, and the binary is located at `/home/wenet/runtime/server/x86/build`. Run it as previous mentioned.
-
-If you just want to try the demo, you could use the mini image, which only contains the `websocket_server_main`.
-
-``` sh
-model_dir=./20210327_unified_transformer_exp_server
-docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenet:mini bash /home/run.sh
-```
-
-`$model_dir` is the model directory of the host. It will map to `/home/wenet/model` of the container，and start the web server.
-
-You only need to open `web/templates/index.html` in the browser，type in `ws://127.0.0.1:10086` to enjoy it.
-
-### Build the Docker image
-
-Or build the Dockerfile yourself, and run it by:
-
-``` sh
-cd docker
-docker build --no-cache -t wenet:latest .
-docker run --rm -it wenet bash
-```
