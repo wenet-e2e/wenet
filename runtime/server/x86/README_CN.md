@@ -139,17 +139,7 @@ grep "Rescoring cost latency" server.log | awk '{sum += $NF}; END {print sum/NR}
 
 ## 在 Docker 环境中使用
 
-如果遇到问题比如无法编译，我们提供了 Dockerfile，可以自己构建一个 docker 镜像，参考 `docker/Dockerfile` 文件。
-
-``` sh
-cd docker
-docker build --no-cache -t wenet:latest .
-docker run --rm -it wenet bash
-```
-
-### 使用预构建的 Docker 镜像
-
-我们也提供了 docker 镜像用于直接执行示例。需要先安装好 docker，运行如下命令，进入 docker 容器环境。
+如果遇到问题比如无法编译，我们提供了 docker 镜像用于直接执行示例。需要先安装好 docker，运行如下命令，进入 docker 容器环境。
 
 ``` sh
 docker run --rm -it mobvoiwenet/wenet:v0.5.0 bash
@@ -159,7 +149,7 @@ docker run --rm -it mobvoiwenet/wenet:v0.5.0 bash
 
 预训练模型在 `/home/model` 目录, 可执行程序在 `/home/wenet/runtime/server/x86/build` 目录。
 
-若只想体验效果，可使用只包含 `websocket_server_main` 的 mini 镜像，快速启动服务。
+也可使用只包含 `server` 程序 `websocket_server_main` 的体积更小的镜像`wenet:mini`，从外部加载训练好的模型。
 
 ``` sh
 model_dir=./20210327_unified_transformer_exp_server
@@ -169,3 +159,13 @@ docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenet:mini ba
 `$model_dir` 是模型在本机的目录，将被映射到容器的 `/home/wenet/model` 目录，然后启动 web 服务。
 
 在本机浏览器中直接打开 `web/templates/index.html`，输入 `ws://127.0.0.1:10086` 即可录音识别。
+
+### 构建 Docker 镜像
+
+我们也提供了 Dockerfile，可以自己构建一个 docker 镜像，参考 `docker/Dockerfile` 文件。
+
+``` sh
+cd docker
+docker build --no-cache -t wenet:latest .
+docker run --rm -it wenet bash
+```
