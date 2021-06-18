@@ -10,7 +10,7 @@ Wenet 基于 pytorch 框架进行语音识别模型训练，而在使用训练�
 下面的命令先下载官方提供的预训练模型，并启动 docker 服务，加载模型，提供 websocket 协议的语音识别服务。
 ``` sh
 cd wenet/runtime/server/x86
-wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_exp_server.tar.gz
+wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz
 tar -xf 20210602_unified_transformer_server.tar.gz
 model_dir=$PWD/20210602_unified_transformer_server
 docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/wenet:mini bash /home/run.sh
