@@ -139,19 +139,33 @@ wav_path=your_test_wav_path
 ## Run the demo in Docker
 
 When you encounter an issue trying to run the demo, we encourage you to run the demo in
-the Docker container. The image contains the latest release, a shell script and
-several waves to run the demo. Just run it as follows:
+the Docker container.
+
+The image contains the prebuilt code, and the pretrained model. Just run it as follows:
 
 ``` sh
-docker run --rm -it mobvoiwenet/wenet:v0.1.0 bash
+docker run --rm -it mobvoiwenet/wenet:v0.5.0 bash
 ```
+
+The pretrained model folder is located at `/home/wenet`, and the binary is located at `/home/wenet/runtime/server/x86/build`. Run it as previous mentioned.
+
+If you just want to try the demo, you could use the mini image, which only contains the `websocket_server_main`.
+
+``` sh
+model_dir=./20210327_unified_transformer_exp_server
+docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenet:mini bash /home/run.sh
+```
+
+`$model_dir` is the model directory of the host. It will map to `/home/wenet/model` of the container，and start the web server.
+
+You only need to open `web/templates/index.html` in the browser，type in `ws://127.0.0.1:10086` to enjoy it.
+
+### Build the Docker image
 
 Or build the Dockerfile yourself, and run it by:
 
 ``` sh
-DOCKER_BUILDKIT=1 docker build --no-cache -t wenet:latest .
+cd docker
+docker build --no-cache -t wenet:latest .
 docker run --rm -it wenet bash
-cmake --build /home/wenet/runtime/server/x86/build
 ```
-
-The pretrained model folder is located at `/home`, and the binary is located at `/home/wenet/runtime/server/x86/build`. Run it as previous mentioned.
