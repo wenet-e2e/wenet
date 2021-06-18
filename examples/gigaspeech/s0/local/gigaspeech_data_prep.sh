@@ -12,7 +12,7 @@ garbage_utterance_tags="<SIL> <MUSIC> <NOISE> <OTHER>"
 punctuation_tags="<COMMA> <EXCLAMATIONPOINT> <PERIOD> <QUESTIONMARK>"
 train_subset=XL
 
-. ./utils/parse_options.sh || exit 1;
+. ./tools/parse_options.sh || exit 1;
 
 filter_by_id () {
   idlist=$1

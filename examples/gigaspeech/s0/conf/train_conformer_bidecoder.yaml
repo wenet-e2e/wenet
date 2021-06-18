@@ -13,17 +13,18 @@ encoder_conf:
     normalize_before: true
     cnn_module_kernel: 31
     use_cnn_module: True
+    cnn_module_norm: 'layer_norm'
     activation_type: 'swish'
     pos_enc_layer_type: 'rel_pos'
     selfattention_layer_type: 'rel_selfattn'
-    cnn_module_norm: 'layer_norm' # using nn.LayerNorm makes model converge faster
 
 # decoder related
-decoder: transformer
+decoder: bitransformer
 decoder_conf:
     attention_heads: 8
     linear_units: 2048
-    num_blocks: 6
+    num_blocks: 3
+    r_num_blocks: 3
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     self_attention_dropout_rate: 0.1
@@ -32,6 +33,7 @@ decoder_conf:
 # hybrid CTC/attention
 model_conf:
     ctc_weight: 0.3
+    reverse_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
 
@@ -66,27 +68,25 @@ collate_conf:
     spec_sub: true
     spec_sub_conf:
         num_t_sub: 3
-        max_t: 20
+        max_t: 30
 
 # dataset related
 dataset_conf:
     max_length: 2000
-    min_length: 100
-    token_max_length: 160
-    token_min_length: 1
+    min_length: 0
     batch_type: 'static' # static or dynamic
     # the size of batch_size should be set according to your gpu memory size, here we used titan xp gpu whose memory size is 12GB
-    batch_size: 48
+    batch_size: 24
     sort: true
 
 grad_clip: 5
-accum_grad: 4
+accum_grad: 1
 max_epoch: 30
 log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.001
+    lr: 0.002
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
-    warmup_steps: 100000
+    warmup_steps: 80000

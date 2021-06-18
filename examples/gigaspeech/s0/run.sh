@@ -121,9 +121,9 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
-    for x in $train_dev; do
+    for x in $train_dev $train_set $recog_set; do
         tools/format_data.sh --nj ${nj} \
-            --feat-type opus --feat $wave_data/gigaspeech_$x/wav.scp --bpecode ${bpemodel}.model --segment true \
+            --feat-type opus --feat $wave_data/gigaspeech_$x/wav.scp --bpecode ${bpemodel}.model \
             $wave_data/gigaspeech_$x ${dict} > $wave_data/gigaspeech_$x/format.data
 
     done
