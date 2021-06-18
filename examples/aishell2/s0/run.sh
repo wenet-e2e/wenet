@@ -229,9 +229,12 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
       data/local/dict data/local/tmp data/local/lang
   tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
   # 7.5 Decoding with runtime
-  ./tools/decode.sh --nj 16 \
+  # reverse_weight only works for u2++ model and only left to right decoder is used when it is set to 0.0.
+  reverse_weight=0.0
+  chunk_size=-1
+  ./tools/decode.sh --nj 16 --chunk_size $chunk_size\
       --beam 15.0 --lattice_beam 7.5 --max_active 7000 --blank_skip_thresh 0.98 \
-      --ctc_weight 0.5 --rescoring_weight 1.0 \
+      --ctc_weight 0.3 --rescoring_weight 1.0 --reverse_weight $reverse_weight\
       --fst_path data/lang_test/TLG.fst \
       data/test/wav.scp data/test/text $dir/final.zip data/lang_test/words.txt \
       $dir/lm_with_runtime
