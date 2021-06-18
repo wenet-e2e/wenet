@@ -2,9 +2,31 @@
 
 Wenet 基于 pytorch 框架进行语音识别模型训练，而在使用训练好的 Wenet 模型进行真实场景的语音识别任务时，需要更高效的执行效率和一些外围组件。因此我们提供了一套基于 C++ 实现的 Wenet 的语音识别工具和在线服务。
 
-## 识别工具的编译
 
-Wenet 支持 linux/macos/windows 三种平台上的编译。需要安装 cmake 3.14 或者更高版本。
+## 使用docker启动语音识别服务
+
+最简单的使用 Wenet 的方式是通过官方提供的 docker 镜像 `mobvoiwenet/wenet:mini` 来启动服务。
+
+下面的命令先下载官方提供的预训练模型，并启动 docker 服务，加载模型，提供 websocket 协议的语音识别服务。
+``` sh
+cd wenet/runtime/server/x86
+wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_exp_server.tar.gz
+tar -xf 20210602_unified_transformer_server.tar.gz
+model_dir=$PWD/20210602_unified_transformer_server
+docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/wenet:mini bash /home/run.sh
+```
+
+`$model_dir` 是模型在本机的目录，将被映射到容器的 `/home/wenet/model` 目录，然后启动 web 服务。
+
+**实时识别**
+
+使用浏览器打开文件`web/templates/index.html`，在 `WebSocket URL：`填入 `ws://127.0.0.1:10086`, 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
+
+![Runtime web](../../../docs/images/runtime_web.png)
+
+## 自行编译运行时程序
+
+如果想使用非 docker 方式，需要自行编译。Wenet 支持 linux/macos/windows 三种平台上的编译。需要安装 cmake 3.14 或者更高版本。
 
 运行如下命令，完成编译。
 
@@ -24,20 +46,13 @@ mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
 * websocket_server_main 基于websocket协议的识别服务端
 * websocket_client_main 基于websocket协议的识别客户端
 
-## 预训练模型
-
-除了使用自己训练好的语音识别模型，Wenet 官方也提供了一些预训练好的模型。
-
-* [AIShell数据训练的中文模型](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_server.tar.gz)
-* [AIShell-2数据训练的中文模型](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz)
-* [TODO: Librispeech数据训练的英文模型](link)
 
 下载预训练模型
 
 ``` sh
 # 当前目录为 wenet/runtime/server/x86
-wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_exp_server.tar.gz
-tar -xf 20210602_unified_transformer_exp_server.tar.gz
+wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz
+tar -xf 20210602_unified_transformer_server.tar.gz
 ```
 
 ## 本地wav文件识别
@@ -48,12 +63,14 @@ tar -xf 20210602_unified_transformer_exp_server.tar.gz
 
 ``` sh
 # 当前目录为 wenet/runtime/server/x86
-# 已经下载并解压20210327_unified_transformer_exp_server.tar.gz到当前目录
+# 已经下载并解压20210602_unified_transformer_server.tar.gz到当前目录
+# 准备好一个16k采样率，单通道，16bits的音频文件test.wav
 
 export GLOG_logtostderr=1
 export GLOG_v=2
-wav_path=./20210327_unified_transformer_exp_server/BAC009S0764W0121.wav
-model_dir=./20210327_unified_transformer_exp_server
+wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/test.wav
+wav_path=./test.wav
+model_dir=./20210602_unified_transformer_server
 ./build/decoder_main \
     --chunk_size -1 \
     --wav_path $wav_path \
@@ -80,7 +97,7 @@ model_dir=./20210327_unified_transformer_exp_server
 ``` sh
 export GLOG_logtostderr=1
 export GLOG_v=2
-model_dir=./20210327_unified_transformer_exp_server
+model_dir=./20210602_unified_transformer_server
 ./build/websocket_server_main \
     --port 10086 \
     --chunk_size 16 \
@@ -101,7 +118,8 @@ model_dir=./20210327_unified_transformer_exp_server
 ```sh
 export GLOG_logtostderr=1
 export GLOG_v=2
-wav_path=./20210327_unified_transformer_exp_server/BAC009S0764W0121.wav
+wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/test.wav
+wav_path=./test.wav
 ./build/websocket_client_main \
     --host 127.0.0.1 --port 10086 \
     --wav_path $wav_path 2>&1 | tee client.log
@@ -117,17 +135,9 @@ wav_path=./20210327_unified_transformer_exp_server/BAC009S0764W0121.wav
 
 **网页版 websocket 客户端**
 
-网页版客户端支持麦克风的语音输入。运行如下命令启动 web 客户端。
+网页版客户端支持麦克风的语音输入。
 
-``` sh
-pip install Flask
-python web/app.py --port 19999
-```
-
-然后在浏览器里输入地址 `localhost:19999` 进入 web 客户端。
-
-在 `Websoket URL` 里设置 websoket 识别服务的地址，比如 `ws://localhost:10086`, 点击开始识别。
-![Runtime web](../../../docs/images/runtime_web.png)
+使用浏览器打开文件 `web/templates/index.html`, 在 `Websoket URL` 里设置 websoket 识别服务的地址，比如 `ws://localhost:10086`, 点击开始识别。
 
 **时延信息计算**
 
@@ -149,20 +159,9 @@ docker run --rm -it mobvoiwenet/wenet:v0.5.0 bash
 
 预训练模型在 `/home/model` 目录, 可执行程序在 `/home/wenet/runtime/server/x86/build` 目录。
 
-也可使用只包含 `server` 程序 `websocket_server_main` 的体积更小的镜像`wenet:mini`，从外部加载训练好的模型。
-
-``` sh
-model_dir=./20210327_unified_transformer_exp_server
-docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenet:mini bash /home/run.sh
-```
-
-`$model_dir` 是模型在本机的目录，将被映射到容器的 `/home/wenet/model` 目录，然后启动 web 服务。
-
-在本机浏览器中直接打开 `web/templates/index.html`，输入 `ws://127.0.0.1:10086` 即可录音识别。
-
 ### 构建 Docker 镜像
 
-我们也提供了 Dockerfile，可以自己构建一个 docker 镜像，参考 `docker/Dockerfile` 文件。
+我们也提供了 Dockerfile，可以自己构建 docker 镜像，参考 `docker/Dockerfile` 文件。
 
 ``` sh
 cd docker
