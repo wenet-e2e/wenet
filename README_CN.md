@@ -7,15 +7,15 @@
 
 [**文档**](https://mobvoi.github.io/wenet/)
 | [**训练模型教程**](https://mobvoi.github.io/wenet/tutorial.html)
-| [**Wenet论文**](https://mobvoi.github.io/wenet/papers.html)
-| [**x86识别服务**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
-| [**android本地识别**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
+| [**WeNet 论文**](https://mobvoi.github.io/wenet/papers.html)
+| [**x86 识别服务**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
+| [**android 本地识别**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
 
 
 
 ## 核心功能
 
-Wenet是一款面向工业落地应用的语音识别工具包，提供了从语音识别模型的训练到部署的一条龙服务，其主要特点如下：
+WeNet 是一款面向工业落地应用的语音识别工具包，提供了从语音识别模型的训练到部署的一条龙服务，其主要特点如下：
 
 * 使用 conformer 网络结构和 CTC/attention loss 联合优化方法，统一的流式/非流式语音识别方案，具有业界一流的识别效果。
 * 提供云上和端上直接部署的方案，最小化模型训练和产品落地之间的工程工作。
@@ -24,7 +24,7 @@ Wenet是一款面向工业落地应用的语音识别工具包，提供了从语
 * 支持时间戳，对齐，端点检测，语言模型等相关功能。
 
 
-## 1分钟Demo
+## 1分钟 Demo
 
 **使用预训练模型和 docker 进行语音识别，1分钟（如果网速够快）搭建一个语音识别系统**
 
@@ -79,9 +79,9 @@ bash run.sh --stage -1
 细节请阅读 [**训练模型教程**](https://mobvoi.github.io/wenet/tutorial.html)
 
 
-## Wenet性能
+## WeNet 性能
 
-Wenet提供了一些开源数据集的脚本，具体的模型性能如下，注意**其中提供的预训练模型为pytorch训练时使用的模型，并非runtime模型**。runtime模型需要进行导出操作。
+WeNet 提供了一些开源数据集的脚本，具体的模型性能如下，注意**其中提供的预训练模型为 pytorch 训练时使用的模型，并非 runtime 模型**。runtime 模型需要进行导出操作。
 * [AIShell-1](examples/aishell/s0/README.md) 中文模型。
 * [AIShell-2](examples/aishell2/s0/README.md) 中文模型。
 * [LibriSpeech](examples/librispeech/s0/README.md) 英文模型。
@@ -90,7 +90,7 @@ Wenet提供了一些开源数据集的脚本，具体的模型性能如下，注
 
 ## 技术支持
 
-欢迎在 [Github Issues](https://github.com/mobvoi/wenet/issues)中提交问题。
+欢迎在 [Github Issues](https://github.com/mobvoi/wenet/issues) 中提交问题。
 
 欢迎扫二维码加入微信讨论群，如果群人数较多，请添加右侧个人微信入群。
 
@@ -104,7 +104,7 @@ Wenet提供了一些开源数据集的脚本，具体的模型性能如下，注
 
 ## 致谢
 
-Wenet借鉴了一些优秀的开源项目，包括
+WeNet 借鉴了一些优秀的开源项目，包括
 
 1. Transformer 建模 [ESPnet](https://github.com/espnet/espnet)
 2. WFST 解码 [Kaldi](http://kaldi-asr.org/)
