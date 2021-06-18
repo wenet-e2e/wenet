@@ -5,7 +5,7 @@
 * Feature info: using fbank feature, with cmvn, no speed perturb, dither
 * Training info: lr 0.001, batch size 32, 8 gpus, acc_grad 1, 240 epochs, dither 1.0
 * Decoding info: ctc_weight 0.1, reverse_weight 0.4, average_num 30
-* Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95 
+* Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
 * Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210618_u2pp_conformer_exp.tar.gz
 
 | decoding mode/chunk size  | full  | 16    |
