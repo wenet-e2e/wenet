@@ -40,12 +40,12 @@ cp -r <your_model_dir> docker_resource/model
 cp <your_test_wav> docker_resource/test.wav
 ```
 
-* Step 3.
+* Step 3. Start docker container.
 ``` sh
 docker run --rm -v $PWD/docker_resource:/home/wenet/runtime/server/x86/docker_resource -it wenet bash
 ```
 
-* Step 4. Testing
+* Step 4. Testing in docker container
 ```
 cd /home/wenet/runtime/server/x86
 export GLOG_logtostderr=1
