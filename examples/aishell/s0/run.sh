@@ -36,6 +36,8 @@ train_set=train
 # 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
 # 4. conf/train_unified_transformer.yaml: Unified dynamic chunk transformer
 # 5. conf/train_conformer_no_pos.yaml: Conformer without relative positional encoding
+# 6. conf/train_u2++_conformer.yaml: U2++ conformer
+# 7. conf/train_u2++_transformer.yaml: U2++ transformer
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
@@ -229,9 +231,13 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
         data/local/dict data/local/tmp data/local/lang
     tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
     # 7.4 Decoding with runtime
+    # reverse_weight only works for u2++ model and only left to right decoder is used when it is set to 0.0.
+    reverse_weight=0.0
+    chunk_size=-1
     ./tools/decode.sh --nj 16 \
         --beam 15.0 --lattice_beam 7.5 --max_active 7000 \
         --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
+        --reverse_weight $reverse_weight --chunk_size $chunk_size \
         --fst_path data/lang_test/TLG.fst \
         data/test/wav.scp data/test/text $dir/final.zip \
         data/lang_test/words.txt $dir/lm_with_runtime

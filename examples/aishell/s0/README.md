@@ -29,6 +29,7 @@
 | ctc greedy search         | 5.19  | 5.81  |
 | ctc prefix beam search    | 5.17  | 5.81  |
 | attention rescoring       | 4.63  | 5.05  |
+| LM + attention rescoring  | 4.40  | 4.75  |
 
 ## Unified Conformer Result
 
@@ -59,6 +60,7 @@
 | ctc greedy search         | 6.05  | 6.92  |
 | ctc prefix beam search    | 6.05  | 6.90  |
 | attention rescoring       | 5.11  | 5.63  |
+| LM + attention rescoring  | 4.82  | 5.24  |
 
 ## Transformer Result
 
