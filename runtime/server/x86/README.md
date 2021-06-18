@@ -13,7 +13,7 @@
 
 ``` sh
 model_dir=$PWD/20210327_unified_transformer_exp_server  # absolute path
-docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenet:mini bash /home/run.sh
+docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/wenet:mini bash /home/run.sh
 ```
 
 * Step 3. Test with web browser. Open runtime/server/x86/web/templates/index.html in the browser directly, input your `WebSocket URL`, it will request some permissions, and start to record to test, as the following graph shows.
