@@ -9,6 +9,7 @@ set -e
 nj=1
 chunk_size=-1
 ctc_weight=0.0
+reverse_weight=0.0
 rescoring_weight=1.0
 # For CTC WFST based decoding
 fst_path=
@@ -60,6 +61,7 @@ for n in $(seq ${nj}); do
   decoder_main \
      --rescoring_weight $rescoring_weight \
      --ctc_weight $ctc_weight \
+     --reverse_weight $reverse_weight \
      --chunk_size $chunk_size \
      --wav_scp ${dir}/split${nj}/wav.${n}.scp \
      --model_path $model_file \
