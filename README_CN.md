@@ -106,10 +106,10 @@ Wenet提供了一些开源数据集的脚本，具体的模型性能如下，注
 
 Wenet借鉴了一些优秀的开源项目，包括
 
-1. Transformer 建模 [ESPnet](https://github.com/espnet/espnet) 
+1. Transformer 建模 [ESPnet](https://github.com/espnet/espnet)
 2. WFST 解码 [Kaldi](http://kaldi-asr.org/)
 3. TLG 构图 [EESEN](https://github.com/srvk/eesen)
-4. Python Batch 推理 [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/) 
+4. Python Batch 推理 [OpenTransformer](https://github.com/ZhengkunTian/OpenTransformer/)
 
 ## 引用
 
