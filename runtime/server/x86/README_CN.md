@@ -137,7 +137,7 @@ wav_path=./test.wav
 
 网页版客户端支持麦克风的语音输入。 
 
-使用浏览器打开文件`web/templates/index.html`, 在 `Websoket URL` 里设置 websoket 识别服务的地址，比如 `ws://localhost:10086`, 点击开始识别。
+使用浏览器打开文件 `web/templates/index.html`, 在 `Websoket URL` 里设置 websoket 识别服务的地址，比如 `ws://localhost:10086`, 点击开始识别。
 
 **时延信息计算**
 
@@ -161,7 +161,7 @@ docker run --rm -it mobvoiwenet/wenet:v0.5.0 bash
 
 ### 构建 Docker 镜像
 
-我们也提供了 Dockerfile，可以自己构建docker 镜像，参考 `docker/Dockerfile` 文件。
+我们也提供了 Dockerfile，可以自己构建 docker 镜像，参考 `docker/Dockerfile` 文件。
 
 ``` sh
 cd docker
