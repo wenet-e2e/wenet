@@ -28,9 +28,9 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
   with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi,
   which simplifies installation and usage.
 
-## Pretrained Models & Performance Benchmark
+## Performance Benchmark
 
- We release various pretrained models. Please see `examples/$dataset/s0/README.md` for model download links and WeNet benchmark on different speech datasets.
+Please see `examples/$dataset/s0/README.md` for benchmark on different speech datasets.
 * [AIShell-1](examples/aishell/s0/README.md)
 * [AIShell-2](examples/aishell2/s0/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
