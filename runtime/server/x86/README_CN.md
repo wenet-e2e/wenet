@@ -135,7 +135,7 @@ wav_path=./test.wav
 
 **网页版 websocket 客户端**
 
-网页版客户端支持麦克风的语音输入。 
+网页版客户端支持麦克风的语音输入。
 
 使用浏览器打开文件 `web/templates/index.html`, 在 `Websoket URL` 里设置 websoket 识别服务的地址，比如 `ws://localhost:10086`, 点击开始识别。
 
