@@ -230,3 +230,51 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         --output_file $dir/final.zip
 fi
 
+# Optionally, you can add LM and test it with runtime.
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    lm=data/local/lm
+    lexicon=data/local/dict/lexicon.txt
+    mkdir -p $lm
+    mkdir -p data/local/dict
+
+    # 7.1 Download & format LM
+    which_lm=3-gram.pruned.1e-7.arpa.gz
+    if [ ! -e ${lm}/${which_lm} ]; then
+        wget http://www.openslr.org/resources/11/${which_lm} -P ${lm}
+    fi
+    echo "unzip lm($which_lm)..."
+    gunzip -k ${lm}/${which_lm} -c > ${lm}/lm.arpa
+    echo "Lm saved as ${lm}/lm.arpa"
+
+    # 7.2 Prepare dict
+    unit_file=$dict
+    bpemodel=$bpemodel
+    # use $dir/words.txt (unit_file) and $dir/train_960_unigram5000 (bpemodel)
+    # if you download pretrained librispeech conformer model
+    cp $unit_file data/local/dict/units.txt
+    if [ ! -e ${lm}/librispeech-lexicon.txt ]; then
+        wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P ${lm}
+    fi
+    echo "build lexicon..."
+    tools/fst/prepare_dict.py $unit_file ${lm}/librispeech-lexicon.txt \
+        $lexicon $bpemodel.model
+    echo "lexicon saved as '$lexicon'"
+
+    # 7.3 Build decoding TLG
+    tools/fst/compile_lexicon_token_fst.sh \
+       data/local/dict data/local/tmp data/local/lang
+    tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+
+    # 7.4 Decoding with runtime
+    fst_dir=data/lang_test
+    for test in ${recog_set}; do
+        ./tools/decode.sh --nj 6 \
+            --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
+            --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
+            --fst_path $fst_dir/TLG.fst \
+            data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
+            $dir/lm_with_runtime_${test}
+        tail $dir/lm_with_runtime_${test}/wer
+    done
+fi
+

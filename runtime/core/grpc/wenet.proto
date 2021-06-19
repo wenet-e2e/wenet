@@ -1,0 +1,66 @@
+// Copyright (c) 2021 Ximalaya Speech Team (Xiang Lyu)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+syntax = "proto3";
+
+option java_package = "ex.grpc";
+option objc_class_prefix = "wenet";
+
+package wenet;
+
+service ASR {
+  rpc Recognize (stream Request) returns (stream Response) {}
+}
+
+message Request {
+
+  message DecodeConfig {
+    int32 nbest_config = 1;
+    bool continuous_decoding_config = 2;
+  }
+
+  oneof RequestPayload {
+    DecodeConfig decode_config = 1;
+    bytes audio_data = 2;
+  }
+}
+
+message Response {
+
+  message OneBest {
+    string sentence = 1;
+    repeated OnePiece wordpieces = 2;
+  }
+
+  message OnePiece {
+    string word = 1;
+    int32 start = 2;
+    int32 end = 3;
+  }
+
+  enum Status {
+    ok = 0;
+    failed = 1;
+  }
+
+  enum Type {
+    server_ready = 0;
+    partial_result = 1;
+    final_result = 2;
+    speech_end = 3;
+  }
+
+  Status status = 1;
+  Type type = 2;
+  repeated OneBest nbest = 3;
+}

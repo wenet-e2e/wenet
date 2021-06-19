@@ -14,7 +14,11 @@ namespace wenet {
 
 // Fast Fourier Transform
 
-int fft(float* x, float* y, int n);
+void make_sintbl(int n, float* sintbl);
+
+void make_bitrev(int n, int* bitrev);
+
+int fft(const int* bitrev, const float* sintbl, float* x, float* y, int n);
 
 }  // namespace wenet
 

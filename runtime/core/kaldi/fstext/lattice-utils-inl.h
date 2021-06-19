@@ -1,6 +1,7 @@
 // fstext/lattice-utils-inl.h
 
-// Copyright 2009-2012  Microsoft Corporation  Johns Hopkins University (Author: Daniel Povey)
+// Copyright 2009-2012  Microsoft Corporation  Johns Hopkins University (Author:
+// Daniel Povey)
 
 // See ../../COPYING for clarification regarding multiple authors
 //
@@ -21,15 +22,16 @@
 #define KALDI_FSTEXT_LATTICE_UTILS_INL_H_
 // Do not include this file directly.  It is included by lattice-utils.h
 
+#include <utility>
+#include <vector>
 
 namespace fst {
-
 
 /* Convert from FST with arc-type Weight, to one with arc-type
    CompactLatticeWeight.  Uses FactorFst to identify chains
    of states which can be turned into a single output arc. */
 
-template<class Weight, class Int>
+template <class Weight, class Int>
 void ConvertLattice(
     const ExpandedFst<ArcTpl<Weight> > &ifst,
     MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > *ofst,
@@ -41,16 +43,16 @@ void ConvertLattice(
 
   VectorFst<ArcTpl<Weight> > ffst;
   std::vector<std::vector<Int> > labels;
-  if (invert) // normal case: want the ilabels as sequences on the arcs of
+  if (invert) {  // normal case: want the ilabels as sequences on the arcs of
     Factor(ifst, &ffst, &labels);  // the output... Factor makes seqs of
                                    // ilabels.
-  else {
+  } else {
     VectorFst<ArcTpl<Weight> > invfst(ifst);
     Invert(&invfst);
-    Factor(invfst, &ffst,  &labels);
+    Factor(invfst, &ffst, &labels);
   }
 
-  TopSort(&ffst); // Put the states in ffst in topological order, which is
+  TopSort(&ffst);  // Put the states in ffst in topological order, which is
   // easier on the eye when reading the text-form lattices and corresponds to
   // what we get when we generate the lattices in the decoder.
 
@@ -70,8 +72,7 @@ void ConvertLattice(
       CompactWeight final_compact_weight(final_weight, std::vector<Int>());
       ofst->SetFinal(s, final_compact_weight);
     }
-    for (ArcIterator<ExpandedFst<Arc> > iter(ffst, s);
-         !iter.Done();
+    for (ArcIterator<ExpandedFst<Arc> > iter(ffst, s); !iter.Done();
          iter.Next()) {
       const Arc &arc = iter.Value();
       KALDI_PARANOID_ASSERT(arc.weight != Weight::Zero());
@@ -85,11 +86,10 @@ void ConvertLattice(
   }
 }
 
-template<class Weight, class Int>
+template <class Weight, class Int>
 void ConvertLattice(
     const ExpandedFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > &ifst,
-    MutableFst<ArcTpl<Weight> > *ofst,
-    bool invert) {
+    MutableFst<ArcTpl<Weight> > *ofst, bool invert) {
   typedef ArcTpl<Weight> Arc;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Label Label;
@@ -114,8 +114,7 @@ void ConvertLattice(
         StateId next_state = ofst->AddState();
         Label ilabel = 0;
         Arc arc(ilabel, final_weight.String()[n],
-                (n == 0 ? final_weight.Weight() : Weight::One()),
-                next_state);
+                (n == 0 ? final_weight.Weight() : Weight::One()), next_state);
         if (invert) std::swap(arc.ilabel, arc.olabel);
         ofst->AddArc(cur_state, arc);
         cur_state = next_state;
@@ -123,18 +122,17 @@ void ConvertLattice(
       ofst->SetFinal(cur_state,
                      string_length > 0 ? Weight::One() : final_weight.Weight());
     }
-    for (ArcIterator<ExpandedFst<CompactArc> > iter(ifst, s);
-         !iter.Done();
+    for (ArcIterator<ExpandedFst<CompactArc> > iter(ifst, s); !iter.Done();
          iter.Next()) {
       const CompactArc &arc = iter.Value();
       size_t string_length = arc.weight.String().size();
       StateId cur_state = s;
       // for all but the last element in the string--
       // add a temporary state.
-      for (size_t n = 0 ; n+1 < string_length; n++) {
+      for (size_t n = 0; n + 1 < string_length; n++) {
         StateId next_state = ofst->AddState();
         Label ilabel = (n == 0 ? arc.ilabel : 0),
-            olabel = static_cast<Label>(arc.weight.String()[n]);
+              olabel = static_cast<Label>(arc.weight.String()[n]);
         Weight weight = (n == 0 ? arc.weight.Weight() : Weight::One());
         Arc new_arc(ilabel, olabel, weight, next_state);
         if (invert) std::swap(new_arc.ilabel, new_arc.olabel);
@@ -142,8 +140,10 @@ void ConvertLattice(
         cur_state = next_state;
       }
       Label ilabel = (string_length <= 1 ? arc.ilabel : 0),
-          olabel = (string_length > 0 ? arc.weight.String()[string_length-1] : 0);
-      Weight weight = (string_length <= 1 ? arc.weight.Weight() : Weight::One());
+            olabel = (string_length > 0 ? arc.weight.String()[string_length - 1]
+                                        : 0);
+      Weight weight =
+          (string_length <= 1 ? arc.weight.Weight() : Weight::One());
       Arc new_arc(ilabel, olabel, weight, arc.nextstate);
       if (invert) std::swap(new_arc.ilabel, new_arc.olabel);
       ofst->AddArc(cur_state, new_arc);
@@ -153,10 +153,9 @@ void ConvertLattice(
 
 // This function converts lattices between float and double;
 // it works for both CompactLatticeWeight and LatticeWeight.
-template<class WeightIn, class WeightOut>
-void ConvertLattice(
-    const ExpandedFst<ArcTpl<WeightIn> > &ifst,
-    MutableFst<ArcTpl<WeightOut> > *ofst) {
+template <class WeightIn, class WeightOut>
+void ConvertLattice(const ExpandedFst<ArcTpl<WeightIn> > &ifst,
+                    MutableFst<ArcTpl<WeightOut> > *ofst) {
   typedef ArcTpl<WeightIn> ArcIn;
   typedef ArcTpl<WeightOut> ArcOut;
   typedef typename ArcIn::StateId StateId;
@@ -176,8 +175,7 @@ void ConvertLattice(
       ConvertLatticeWeight(final_iweight, &final_oweight);
       ofst->SetFinal(s, final_oweight);
     }
-    for (ArcIterator<ExpandedFst<ArcIn> > iter(ifst, s);
-         !iter.Done();
+    for (ArcIterator<ExpandedFst<ArcIn> > iter(ifst, s); !iter.Done();
          iter.Next()) {
       ArcIn arc = iter.Value();
       KALDI_PARANOID_ASSERT(arc.weight != WeightIn::Zero());
@@ -191,23 +189,18 @@ void ConvertLattice(
   }
 }
 
-
-
-template<class Weight, class ScaleFloat>
-void ScaleLattice(
-    const std::vector<std::vector<ScaleFloat> > &scale,
-    MutableFst<ArcTpl<Weight> > *fst) {
+template <class Weight, class ScaleFloat>
+void ScaleLattice(const std::vector<std::vector<ScaleFloat> > &scale,
+                  MutableFst<ArcTpl<Weight> > *fst) {
   assert(scale.size() == 2 && scale[0].size() == 2 && scale[1].size() == 2);
-  if (scale == DefaultLatticeScale()) // nothing to do.
+  if (scale == DefaultLatticeScale())  // nothing to do.
     return;
   typedef ArcTpl<Weight> Arc;
   typedef MutableFst<Arc> Fst;
   typedef typename Arc::StateId StateId;
   StateId num_states = fst->NumStates();
   for (StateId s = 0; s < num_states; s++) {
-    for (MutableArcIterator<Fst> aiter(fst, s);
-         !aiter.Done();
-         aiter.Next()) {
+    for (MutableArcIterator<Fst> aiter(fst, s); !aiter.Done(); aiter.Next()) {
       Arc arc = aiter.Value();
       arc.weight = Weight(ScaleTupleWeight(arc.weight, scale));
       aiter.SetValue(arc);
@@ -218,7 +211,7 @@ void ScaleLattice(
   }
 }
 
-template<class Weight, class Int>
+template <class Weight, class Int>
 void RemoveAlignmentsFromCompactLattice(
     MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > *fst) {
   typedef CompactLatticeWeightTpl<Weight, Int> W;
@@ -227,9 +220,7 @@ void RemoveAlignmentsFromCompactLattice(
   typedef typename Arc::StateId StateId;
   StateId num_states = fst->NumStates();
   for (StateId s = 0; s < num_states; s++) {
-    for (MutableArcIterator<Fst> aiter(fst, s);
-         !aiter.Done();
-         aiter.Next()) {
+    for (MutableArcIterator<Fst> aiter(fst, s); !aiter.Done(); aiter.Next()) {
       Arc arc = aiter.Value();
       arc.weight = W(arc.weight.Weight(), std::vector<Int>());
       aiter.SetValue(arc);
@@ -240,7 +231,7 @@ void RemoveAlignmentsFromCompactLattice(
   }
 }
 
-template<class Weight, class Int>
+template <class Weight, class Int>
 bool CompactLatticeHasAlignment(
     const ExpandedFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > &fst) {
   typedef CompactLatticeWeightTpl<Weight, Int> W;
@@ -249,9 +240,7 @@ bool CompactLatticeHasAlignment(
   typedef typename Arc::StateId StateId;
   StateId num_states = fst.NumStates();
   for (StateId s = 0; s < num_states; s++) {
-    for (ArcIterator<Fst> aiter(fst, s);
-         !aiter.Done();
-         aiter.Next()) {
+    for (ArcIterator<Fst> aiter(fst, s); !aiter.Done(); aiter.Next()) {
       const Arc &arc = aiter.Value();
       if (!arc.weight.String().empty()) return true;
     }
@@ -261,22 +250,18 @@ bool CompactLatticeHasAlignment(
   return false;
 }
 
-
 template <class Real>
-void ConvertFstToLattice(
-    const ExpandedFst<ArcTpl<TropicalWeight> > &ifst,
-    MutableFst<ArcTpl<LatticeWeightTpl<Real> > > *ofst) {
+void ConvertFstToLattice(const ExpandedFst<ArcTpl<TropicalWeight> > &ifst,
+                         MutableFst<ArcTpl<LatticeWeightTpl<Real> > > *ofst) {
   int32 num_states_cache = 50000;
   fst::CacheOptions cache_opts(true, num_states_cache);
   fst::MapFstOptions mapfst_opts(cache_opts);
   StdToLatticeMapper<Real> mapper;
-  MapFst<StdArc, ArcTpl<LatticeWeightTpl<Real> >,
-         StdToLatticeMapper<Real> > map_fst(ifst, mapper, mapfst_opts);
+  MapFst<StdArc, ArcTpl<LatticeWeightTpl<Real> >, StdToLatticeMapper<Real> >
+      map_fst(ifst, mapper, mapfst_opts);
   *ofst = map_fst;
 }
 
+}  // namespace fst
 
-}
-
-
-#endif
+#endif  // KALDI_FSTEXT_LATTICE_UTILS_INL_H_

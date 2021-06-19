@@ -15,6 +15,7 @@
 #ifndef FRONTEND_FBANK_H_
 #define FRONTEND_FBANK_H_
 
+#include <cstring>
 #include <limits>
 #include <random>
 #include <utility>
@@ -40,6 +41,13 @@ class Fbank {
         distribution_(0, 1.0),
         dither_(0.0) {
     fft_points_ = UpperPowerOfTwo(frame_length_);
+    // generate bit reversal table and trigonometric function table
+    const int fft_points_4 = fft_points_ / 4;
+    bitrev_.resize(fft_points_);
+    sintbl_.resize(fft_points_ + fft_points_4);
+    make_sintbl(fft_points_, sintbl_.data());
+    make_bitrev(fft_points_, bitrev_.data());
+
     int num_fft_bins = fft_points_ / 2;
     float fft_bin_width = static_cast<float>(sample_rate_) / fft_points_;
     int low_freq = 20, high_freq = sample_rate_ / 2;
@@ -157,7 +165,8 @@ class Fbank {
       memset(fft_real.data() + frame_length_, 0,
              sizeof(float) * (fft_points_ - frame_length_));
       memcpy(fft_real.data(), data.data(), sizeof(float) * frame_length_);
-      fft(fft_real.data(), fft_img.data(), fft_points_);
+      fft(bitrev_.data(), sintbl_.data(), fft_real.data(), fft_img.data(),
+          fft_points_);
       // power
       for (int j = 0; j < fft_points_ / 2; ++j) {
         power[j] = fft_real[j] * fft_real[j] + fft_img[j] * fft_img[j];
@@ -199,6 +208,11 @@ class Fbank {
   std::default_random_engine generator_;
   std::normal_distribution<float> distribution_;
   float dither_;
+
+  // bit reversal table
+  std::vector<int> bitrev_;
+  // trigonometric function table
+  std::vector<float> sintbl_;
 };
 
 }  // namespace wenet

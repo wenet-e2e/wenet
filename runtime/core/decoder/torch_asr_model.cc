@@ -1,5 +1,6 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
+//         di.wu@mobvoi.com (Di Wu)
 
 #include "decoder/torch_asr_model.h"
 
@@ -33,9 +34,14 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   torch::jit::IValue o4 = module_->run_method("eos_symbol");
   CHECK_EQ(o4.isInt(), true);
   eos_ = o4.toInt();
+  torch::jit::IValue o5 = module_->run_method("is_bidirectional_decoder");
+  CHECK_EQ(o5.isBool(), true);
+  is_bidirectional_decoder_ = o5.toBool();
+
   LOG(INFO) << "torch model info subsampling_rate " << subsampling_rate_
             << " right context " << right_context_ << " sos " << sos_ << " eos "
-            << eos_;
+            << eos_ << " is bidirectional decoder "
+            << is_bidirectional_decoder_;
 }
 
 }  // namespace wenet

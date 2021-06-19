@@ -14,6 +14,7 @@ from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.embedding import RelPositionalEncoding
+from wenet.transformer.embedding import NoPositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
@@ -61,7 +62,7 @@ class BaseEncoder(torch.nn.Module):
             input_layer (str): input layer type.
                 optional [linear, conv2d, conv2d6, conv2d8]
             pos_enc_layer_type (str): Encoder positional encoding layer type.
-                opitonal [abs_pos, scaled_abs_pos, rel_pos]
+                opitonal [abs_pos, scaled_abs_pos, rel_pos, no_pos]
             normalize_before (bool):
                 True: use layer_norm before each sub-block of a layer.
                 False: use layer_norm after each sub-block of a layer.
@@ -86,6 +87,8 @@ class BaseEncoder(torch.nn.Module):
             pos_enc_class = PositionalEncoding
         elif pos_enc_layer_type == "rel_pos":
             pos_enc_class = RelPositionalEncoding
+        elif pos_enc_layer_type == "no_pos":
+            pos_enc_class = NoPositionalEncoding
         else:
             raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
 
@@ -127,7 +130,7 @@ class BaseEncoder(torch.nn.Module):
         """Embed positions in tensor.
 
         Args:
-            xs: padded input tensor (B, L, D)
+            xs: padded input tensor (B, T, D)
             xs_lens: input length (B)
             decoding_chunk_size: decoding chunk size for dynamic chunk
                 0: default for training, use random dynamic chunk.
@@ -138,13 +141,16 @@ class BaseEncoder(torch.nn.Module):
                 >=0: use num_decoding_left_chunks
                 <0: use all left chunks
         Returns:
-            encoder output tensor, lens and mask
+            encoder output tensor xs, and subsampled masks
+            xs: padded output tensor (B, T' ~= T/subsample_rate, D)
+            masks: torch.Tensor batch padding mask after subsample
+                (B, 1, T' ~= T/subsample_rate)
         """
-        masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, L)
+        masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, T)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
-        mask_pad = masks
+        mask_pad = masks  # (B, 1, T/subsample_rate)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
                                               self.use_dynamic_left_chunk,
@@ -214,7 +220,7 @@ class BaseEncoder(torch.nn.Module):
         elif required_cache_size == 0:
             next_cache_start = xs.size(1)
         else:
-            next_cache_start = xs.size(1) - required_cache_size
+            next_cache_start = max(xs.size(1) - required_cache_size, 0)
         r_subsampling_cache = xs[:, next_cache_start:, :]
         # Real mask for transformer/conformer layers
         masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
@@ -406,7 +412,10 @@ class ConformerEncoder(BaseEncoder):
         activation = get_activation(activation_type)
 
         # self-attention module definition
-        encoder_selfattn_layer = RelPositionMultiHeadedAttention
+        if pos_enc_layer_type == "no_pos":
+            encoder_selfattn_layer = MultiHeadedAttention
+        else:
+            encoder_selfattn_layer = RelPositionMultiHeadedAttention
         encoder_selfattn_layer_args = (
             attention_heads,
             output_size,

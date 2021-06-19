@@ -87,14 +87,14 @@ class ConvolutionModule(nn.Module):
         """Compute convolution module.
         Args:
             x (torch.Tensor): Input tensor (#batch, time, channels).
-            mask_pad (torch.Tensor): used for batch padding
+            mask_pad (torch.Tensor): used for batch padding (#batch, 1, time)
             cache (torch.Tensor): left context cache, it is only
                 used in causal convolution
         Returns:
             torch.Tensor: Output tensor (#batch, time, channels).
         """
         # exchange the temporal dimension and the feature dimension
-        x = x.transpose(1, 2)
+        x = x.transpose(1, 2)  # (#batch, channels, time)
 
         # mask batch padding
         if mask_pad is not None:

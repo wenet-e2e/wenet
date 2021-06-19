@@ -21,12 +21,10 @@
 #ifndef KALDI_FSTEXT_REMOVE_EPS_LOCAL_H_
 #define KALDI_FSTEXT_REMOVE_EPS_LOCAL_H_
 
-
-#include <fst/fstlib.h>
 #include <fst/fst-decl.h>
+#include <fst/fstlib.h>
 
 namespace fst {
-
 
 /// RemoveEpsLocal remove some (but not necessarily all) epsilons in an FST,
 /// using an algorithm that is guaranteed to never increase the number of arcs
@@ -37,24 +35,23 @@ namespace fst {
 /// The algorithm preserves equivalence and stochasticity in the given semiring.
 /// If you want to preserve stochasticity in a different semiring (e.g. log),
 /// then use RemoveEpsLocalSpecial, which only works for StdArc but which
-/// preserves stochasticity, where possible (*) in the LogArc sense.  The reason that we can't
-/// just cast to a different semiring is that in that case we would no longer
-/// be able to guarantee equivalence in the original semiring (this arises from
-/// what happens when we combine identical arcs).
+/// preserves stochasticity, where possible (*) in the LogArc sense.  The reason
+/// that we can't just cast to a different semiring is that in that case we
+/// would no longer be able to guarantee equivalence in the original semiring
+/// (this arises from what happens when we combine identical arcs).
 /// (*) by "where possible".. there are situations where we wouldn't be able to
 /// preserve stochasticity in the LogArc sense while maintaining equivalence in
 /// the StdArc sense, so in these situations we maintain equivalence.
 
-template<class Arc>
+template <class Arc>
 void RemoveEpsLocal(MutableFst<Arc> *fst);
 
 /// As RemoveEpsLocal but takes care to preserve stochasticity
 /// when cast to LogArc.
 inline void RemoveEpsLocalSpecial(MutableFst<StdArc> *fst);
 
-
 }  // namespace fst
 
-#include "remove-eps-local-inl.h"
+#include "fstext/remove-eps-local-inl.h"
 
-#endif
+#endif  // KALDI_FSTEXT_REMOVE_EPS_LOCAL_H_

@@ -25,10 +25,10 @@ struct CtcPrefixBeamSearchOptions {
 };
 
 struct PrefixScore {
-  float s = -kFloatMax;               // blank endding score
+  float s = -kFloatMax;               // blank ending score
   float ns = -kFloatMax;              // none blank ending score
-  float v_s = -kFloatMax;             // viterbi blank endding score
-  float v_ns = -kFloatMax;            // viterbi none blank endding score
+  float v_s = -kFloatMax;             // viterbi blank ending score
+  float v_ns = -kFloatMax;            // viterbi none blank ending score
   float cur_token_prob = -kFloatMax;  // prob of current token
   std::vector<int> times_s;           // times of viterbi blank path
   std::vector<int> times_ns;          // times of viterbi none blank path

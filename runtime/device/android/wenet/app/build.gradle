@@ -20,7 +20,6 @@ android {
     }
     packagingOptions {
         pickFirst 'lib/arm64-v8a/libc++_shared.so'
-        pickFirst 'lib/armeabi-v7a/libc++_shared.so'
     }
     configurations {
         extractForNativeBuild
@@ -45,7 +44,7 @@ android {
 
         ndkVersion '21.1.6352462'
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            abiFilters 'arm64-v8a', 'x86_64'
         }
     }
 
@@ -78,6 +77,9 @@ dependencies {
 
     implementation 'org.pytorch:pytorch_android:1.6.0'
     extractForNativeBuild 'org.pytorch:pytorch_android:1.6.0'
+
+    implementation 'com.github.pengzhendong:wenet-openfst-android:1.0.0'
+    extractForNativeBuild 'com.github.pengzhendong:wenet-openfst-android:1.0.0'
 }
 
 task extractAARForNativeBuild {

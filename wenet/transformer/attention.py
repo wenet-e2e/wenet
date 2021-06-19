@@ -99,7 +99,8 @@ class MultiHeadedAttention(nn.Module):
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor,
-                mask: Optional[torch.Tensor]) -> torch.Tensor:
+                mask: Optional[torch.Tensor],
+                pos_emb: torch.Tensor = torch.empty(0),) -> torch.Tensor:
         """Compute scaled dot product attention.
 
         Args:
@@ -108,6 +109,17 @@ class MultiHeadedAttention(nn.Module):
             value (torch.Tensor): Value tensor (#batch, time2, size).
             mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
                 (#batch, time1, time2).
+                1.When applying cross attention between decoder and encoder,
+                the batch padding mask for input is in (#batch, 1, T) shape.
+                2.When applying self attention of encoder,
+                the mask is in (#batch, T, T)  shape.
+                3.When applying self attention of decoder,
+                the mask is in (#batch, L, L)  shape.
+                4.If the different position in decoder see different block
+                of the encoder, such as Mocha, the passed in mask could be
+                in (#batch, L, T) shape. But there is no such case in current
+                Wenet.
+
 
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
@@ -165,17 +177,17 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         return x
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
-                value: torch.Tensor, pos_emb: torch.Tensor,
-                mask: Optional[torch.Tensor]):
+                value: torch.Tensor, mask: Optional[torch.Tensor],
+                pos_emb: torch.Tensor):
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
             key (torch.Tensor): Key tensor (#batch, time2, size).
             value (torch.Tensor): Value tensor (#batch, time2, size).
-            pos_emb (torch.Tensor): Positional embedding tensor
-                (#batch, time2, size).
             mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
                 (#batch, time1, time2).
+            pos_emb (torch.Tensor): Positional embedding tensor
+                (#batch, time2, size).
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
         """

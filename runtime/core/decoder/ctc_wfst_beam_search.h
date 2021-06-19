@@ -77,6 +77,7 @@ class CtcWfstBeamSearch : public SearchInterface {
   int num_frames_ = 0;
   std::vector<int> decoded_frames_mapping_;
 
+  int last_best_ = 0;  // last none blank best id
   torch::Tensor last_frame_prob_;
   bool is_last_frame_blank_ = false;
   std::vector<std::vector<int>> inputs_, outputs_;
