@@ -15,6 +15,21 @@
 | attention rescoring       | 5.39  | 5.78  |
 | LM + attention rescoring  | 5.35  | 5.73  |
 
+## U2++ Transformer Result
+
+* Feature info: using fbank feature, with cmvn, no speed perturb
+* Training info: lr 0.002, batch size 22, 8 gpus, acc_grad 1, 240 epochs, dither 0.0
+* Decoding info: ctc_weight 0.1, reverse_weight 0.5, average_num 30
+* Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210621_u2pp_transformer_exp.tar.gz
+
+| decoding mode/chunk size  | full  | 16    |
+|---------------------------|-------|-------|
+| ctc greedy search         | 7.35  | 8.23  |
+| ctc prefix beam search    | 7.36  | 8.23  |
+| attention rescoring       | 6.09  | 6.70  |
+| LM + attention rescoring  | 6.07  | 6.55  |
+
 ## Unified Conformer Result
 
 * Feature info: using fbank feature, with cmvn, no speed perturb.
