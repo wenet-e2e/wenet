@@ -84,7 +84,7 @@ dataset_conf:
     min_length: 0
     batch_type: 'static' # static or dynamic
     # the size of batch_size should be set according to your gpu memory size, here we used titan xp gpu whose memory size is 12GB
-    batch_size: 22 
+    batch_size: 22
     sort: true
 
 grad_clip: 5
