@@ -62,6 +62,57 @@ magic results
 | attention rescoring      | 3.07 | 3.68 |
 
 ## Unified Conformer Result
+### data info:
+* Aidatatang (140 hours)
+* Aishell (151 hours)
+* MagicData (712 hours)
+* Primewords (99 hours)
+* ST-CMDS (110 hours)
+* THCHS-30 (26 hours)
+
+* Feature info: using fbank feature, with cmvn, speed perturb.
+* Training info: lr 0.001, batch size 8, 1 machines, 1*8 = 8 gpu, acc_grad 12, 60 epochs
+* Decoding info: ctc_weight 0.5, average_num 10
+* Git hash: 5bdf436e671ef4c696d1b039f29cc33109e072fa
+* Model link: 
+
+aishell results
+
+| decoding mode/chunk size | 16   |
+|--------------------------|------|
+| attention decoder        | 4.77 |
+| ctc greedy search        | 5.77 |
+| ctc prefix beam search   | 5.77 |
+| attention rescoring      | 4.85 |
+
+aidatatang results
+
+| decoding mode/chunk size | 16   |
+|--------------------------|------|
+| attention decoder        | 4.45 |
+| ctc greedy search        | 5.73 |
+| ctc prefix beam search   | 5.73 |
+| attention rescoring      | 4.75 |
+
+thcs30 results
+
+| decoding mode/chunk size | 16   |
+|--------------------------|------|
+| attention decoder        | 13.78 |
+| ctc greedy search        | 15.10 |
+| ctc prefix beam search   | 15.08 |
+| attention rescoring      | 13.90 |
+
+magic results
+
+| decoding mode/chunk size | 16   |
+|--------------------------|------|
+| attention decoder        | 2.81 |
+| ctc greedy search        | 3.88 |
+| ctc prefix beam search   | 3.86 |
+| attention rescoring      | 3.08 |
+
+## Unified Conformer Result
 
 ### data info:
 * Aidatatang (140 hours)
