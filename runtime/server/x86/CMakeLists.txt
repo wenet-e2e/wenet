@@ -24,8 +24,8 @@ endif()
 
 # third_party: gflags
 FetchContent_Declare(gflags
-  URL      https://github.com/gflags/gflags/archive/v2.2.0.zip
-  URL_HASH SHA256=99f9e8b63ea53e4b23f0fd0f68a6f1e397d5512be36716c17cc75966a90f0d57
+  URL      https://github.com/gflags/gflags/archive/v2.2.1.zip
+  URL_HASH SHA256=4e44b69e709c826734dbbbd5208f61888a2faf63f239d73d8ba0011b2dccc97a
 )
 FetchContent_MakeAvailable(gflags)
 include_directories(${gflags_BINARY_DIR}/include)
