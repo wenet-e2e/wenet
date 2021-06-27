@@ -32,6 +32,8 @@
 #include "gflags/gflags.h"
 #include "glog/logging.h"
 
+using std::string;
+
 // FLAGS USAGE:
 //
 // Definition example:
@@ -50,145 +52,142 @@
 // ShowUsage() can be used to print out command and flag usage.
 
 // #define DECLARE_bool(name) extern bool FLAGS_ ## name
-// #define DECLARE_string(name) extern std::string FLAGS_##name
+// #define DECLARE_string(name) extern string FLAGS_ ## name
 // #define DECLARE_int32(name) extern int32 FLAGS_ ## name
 // #define DECLARE_int64(name) extern int64 FLAGS_ ## name
-// #define DECLARE_uint64(name) extern uint64 FLAGS_##name
 // #define DECLARE_double(name) extern double FLAGS_ ## name
 
 template <typename T>
 struct FlagDescription {
-    FlagDescription(T *addr, const char *doc, const char *type,
-                    const char *file, const T val)
-            : address(addr),
-              doc_string(doc),
-              type_name(type),
-              file_name(file),
-              default_value(val) {}
+  FlagDescription(T *addr, const char *doc, const char *type,
+		  const char *file, const T val)
+      : address(addr),
+    doc_string(doc),
+    type_name(type),
+    file_name(file),
+    default_value(val) {}
 
-    T *address;
-    const char *doc_string;
-    const char *type_name;
-    const char *file_name;
-    const T default_value;
+  T *address;
+  const char *doc_string;
+  const char *type_name;
+  const char *file_name;
+  const T default_value;
 };
 
 template <typename T>
 class FlagRegister {
-public:
-    static FlagRegister<T> *GetRegister() {
-      static auto reg = new FlagRegister<T>;
-      return reg;
-    }
+ public:
+  static FlagRegister<T> *GetRegister() {
+    static auto reg = new FlagRegister<T>;
+    return reg;
+  }
 
-    const FlagDescription<T> &GetFlagDescription(const std::string &name) const {
-      fst::MutexLock l(&flag_lock_);
-      auto it = flag_table_.find(name);
-      return it != flag_table_.end() ? it->second : 0;
-    }
+  const FlagDescription<T> &GetFlagDescription(const string &name) const {
+    fst::MutexLock l(&flag_lock_);
+    auto it = flag_table_.find(name);
+    return it != flag_table_.end() ? it->second : 0;
+  }
 
-    void SetDescription(const std::string &name, const FlagDescription<T> &desc) {
-      fst::MutexLock l(&flag_lock_);
-      flag_table_.insert(make_pair(name, desc));
-    }
+  void SetDescription(const string &name,
+                      const FlagDescription<T> &desc) {
+    fst::MutexLock l(&flag_lock_);
+    flag_table_.insert(make_pair(name, desc));
+  }
 
-    bool SetFlag(const std::string &val, bool *address) const {
-      if (val == "true" || val == "1" || val.empty()) {
-        *address = true;
-        return true;
-      } else if (val == "false" || val == "0") {
-        *address = false;
-        return true;
-      }
-      else {
-        return false;
-      }
-    }
-
-    bool SetFlag(const std::string &val, std::string *address) const {
-      *address = val;
+  bool SetFlag(const string &val, bool *address) const {
+    if (val == "true" || val == "1" || val.empty()) {
+      *address = true;
+      return true;
+    } else if (val == "false" || val == "0") {
+      *address = false;
       return true;
     }
-
-    bool SetFlag(const std::string &val, int32 *address) const {
-      char *p = nullptr;
-      *address = strtol(val.c_str(), &p, 0);
-      return !val.empty() && *p == '\0';
-    }
-
-    bool SetFlag(const std::string &val, int64 *address) const {
-      char *p = nullptr;
-      *address = strtoll(val.c_str(), &p, 0);
-      return !val.empty() && *p == '\0';
-    }
-
-    bool SetFlag(const std::string &val, uint64 *address) const {
-      char *p = 0;
-      *address = strtoull(val.c_str(), &p, 0);
-      return !val.empty() && *p == '\0';
-    }
-
-    bool SetFlag(const std::string &val, double *address) const {
-      char *p = nullptr;
-      *address = strtod(val.c_str(), &p);
-      return !val.empty() && *p == '\0';
-    }
-
-    bool SetFlag(const std::string &arg, const std::string &val) const {
-      for (const auto &kv : flag_table_) {
-        const auto &name = kv.first;
-        const FlagDescription<T> &desc = kv.second;
-        if (arg == name) return SetFlag(val, desc.address);
-      }
+    else {
       return false;
     }
+  }
 
-    void GetUsage(
-            std::set<std::pair<std::string, std::string>> *usage_set) const {
-      for (auto it = flag_table_.begin(); it != flag_table_.end(); ++it) {
-        const auto &name = it->first;
-        const FlagDescription<T> &desc = it->second;
-        std::string usage = "  --" + name;
-        usage += ": type = ";
-        usage += desc.type_name;
-        usage += ", default = ";
-        usage += GetDefault(desc.default_value) + "\n  ";
-        usage += desc.doc_string;
-        usage_set->insert(make_pair(desc.file_name, usage));
-      }
+  bool SetFlag(const string &val, string *address) const {
+    *address = val;
+    return true;
+  }
+
+  bool SetFlag(const string &val, int32 *address) const {
+    char *p = 0;
+    *address = strtol(val.c_str(), &p, 0);
+    return !val.empty() && *p == '\0';
+  }
+
+  bool SetFlag(const string &val, int64 *address) const {
+    char *p = 0;
+    *address = strtoll(val.c_str(), &p, 0);
+    return !val.empty() && *p == '\0';
+  }
+
+  bool SetFlag(const string &val, double *address) const {
+    char *p = 0;
+    *address = strtod(val.c_str(), &p);
+    return !val.empty() && *p == '\0';
+  }
+
+  bool SetFlag(const string &arg, const string &val) const {
+    for (typename std::map< string, FlagDescription<T> >::const_iterator it =
+           flag_table_.begin();
+         it != flag_table_.end();
+         ++it) {
+      const string &name = it->first;
+      const FlagDescription<T> &desc = it->second;
+      if (arg == name)
+        return SetFlag(val, desc.address);
     }
+    return false;
+  }
 
-private:
-    std::string GetDefault(bool default_value) const {
-      return default_value ? "true" : "false";
+  void GetUsage(std::set<std::pair<string, string>> *usage_set) const {
+    for (auto it = flag_table_.begin(); it != flag_table_.end(); ++it) {
+      const string &name = it->first;
+      const FlagDescription<T> &desc = it->second;
+      string usage = "  --" + name;
+      usage += ": type = ";
+      usage += desc.type_name;
+      usage += ", default = ";
+      usage += GetDefault(desc.default_value) + "\n  ";
+      usage += desc.doc_string;
+      usage_set->insert(make_pair(desc.file_name, usage));
     }
+  }
 
-    std::string GetDefault(const std::string &default_value) const {
-      return "\"" + default_value + "\"";
-    }
+ private:
+  string GetDefault(bool default_value) const {
+    return default_value ? "true" : "false";
+  }
 
-    template <class V>
-    std::string GetDefault(const V &default_value) const {
-      std::ostringstream strm;
-      strm << default_value;
-      return strm.str();
-    }
+  string GetDefault(const string &default_value) const {
+    return "\"" + default_value + "\"";
+  }
 
-    mutable fst::Mutex flag_lock_;        // Multithreading lock.
-    std::map<std::string, FlagDescription<T>> flag_table_;
+  template <class V>
+  string GetDefault(const V &default_value) const {
+    std::ostringstream strm;
+    strm << default_value;
+    return strm.str();
+  }
+
+  mutable fst::Mutex flag_lock_;        // Multithreading lock.
+  std::map<string, FlagDescription<T>> flag_table_;
 };
 
 template <typename T>
 class FlagRegisterer {
-public:
-    FlagRegisterer(const std::string &name, const FlagDescription<T> &desc) {
-      auto registr = FlagRegister<T>::GetRegister();
-      registr->SetDescription(name, desc);
-    }
+ public:
+  FlagRegisterer(const string &name, const FlagDescription<T> &desc) {
+    auto registr = FlagRegister<T>::GetRegister();
+    registr->SetDescription(name, desc);
+  }
 
-private:
-    FlagRegisterer(const FlagRegisterer &) = delete;
-    FlagRegisterer &operator=(const FlagRegisterer &) = delete;
+ private:
+  FlagRegisterer(const FlagRegisterer &) = delete;
+  FlagRegisterer &operator=(const FlagRegisterer &) = delete;
 };
 
 
@@ -203,10 +202,9 @@ private:
 
 // #define DEFINE_bool(name, value, doc) DEFINE_VAR(bool, name, value, doc)
 // #define DEFINE_string(name, value, doc) \
-//   DEFINE_VAR(std::string, name, value, doc)
+//   DEFINE_VAR(string, name, value, doc)
 // #define DEFINE_int32(name, value, doc) DEFINE_VAR(int32, name, value, doc)
 // #define DEFINE_int64(name, value, doc) DEFINE_VAR(int64, name, value, doc)
-// #define DEFINE_uint64(name, value, doc) DEFINE_VAR(uint64, name, value, doc)
 // #define DEFINE_double(name, value, doc) DEFINE_VAR(double, name, value, doc)
 
 

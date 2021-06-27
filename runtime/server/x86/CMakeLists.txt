@@ -21,7 +21,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
 endif()
 
-
 # third_party: gflags
 FetchContent_Declare(gflags
   URL      https://github.com/gflags/gflags/archive/v2.2.1.zip
@@ -53,27 +52,6 @@ FetchContent_Declare(boost
 FetchContent_MakeAvailable(boost)
 include_directories(${boost_SOURCE_DIR})
 
-# third_party: openfst
-# openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch
-set(openfst_SOURCE_DIR ${fc_base}/openfst-src)
-set(openfst_BINARY_DIR ${fc_base}/openfst-build)
-ExternalProject_Add(openfst
-  URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
-  URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
-  SOURCE_DIR        ${openfst_SOURCE_DIR}
-  BINARY_DIR        ${openfst_BINARY_DIR}
-  CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure
-                      "CPPFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR}"
-                      "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR}"
-                      "LIBS=-lgflags_nothreads -lglog -lpthread"
-  COMMAND           ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
-  BUILD_COMMAND     make -j 4
-  INSTALL_COMMAND   ""
-)
-include_directories(${openfst_SOURCE_DIR}/src/include)
-link_directories(${openfst_BINARY_DIR}/src/lib/.libs)
-add_dependencies(openfst gflags glog)
-
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
 set(PYTORCH_VERSION "1.6.0")
@@ -97,20 +75,50 @@ FetchContent_Declare(libtorch
 set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
 FetchContent_MakeAvailable(libtorch)
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
+
+# utils
+add_library(utils STATIC utils/utils.cc)
+
 if(MSVC)
   execute_process(COMMAND bootstrap.bat WORKING_DIRECTORY ${boost_SOURCE_DIR})
   execute_process(COMMAND b2.exe WORKING_DIRECTORY ${boost_SOURCE_DIR})
   link_directories(${boost_SOURCE_DIR}/stage/lib)
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
-endif(MSVC)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
-
-# utils
-add_library(utils STATIC utils/utils.cc)
-target_link_libraries(utils PUBLIC fst dl)
-add_dependencies(utils openfst)
+  # third_party: openfst
+  # openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch
+  FetchContent_Declare(openfst
+    URL      https://github.com.cnpmjs.org/kkm000/openfst/archive/refs/tags/win/1.6.5.1.tar.gz
+    URL_HASH SHA256=02c49b559c3976a536876063369efc0e41ab374be1035918036474343877046e
+  )
+  FetchContent_MakeAvailable(openfst)
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR})
+  add_dependencies(fst gflags glog)
+  target_link_libraries(fst PUBLIC gflags_nothreads_static glog)
+  target_link_libraries(utils PUBLIC fst)
+else()
+  set(openfst_SOURCE_DIR ${fc_base}/openfst-src)
+  set(openfst_BINARY_DIR ${fc_base}/openfst-build)
+  ExternalProject_Add(openfst
+    URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
+    URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
+    SOURCE_DIR        ${openfst_SOURCE_DIR}
+    BINARY_DIR        ${openfst_BINARY_DIR}
+    CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure
+                        "CPPFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR}"
+                        "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR}"
+                        "LIBS=-lgflags_nothreads -lglog -lpthread"
+    COMMAND           ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
+    BUILD_COMMAND     make -j 4
+    INSTALL_COMMAND   ""
+  )
+  add_dependencies(openfst gflags glog)
+  add_dependencies(utils openfst)
+  link_directories(${openfst_BINARY_DIR}/src/lib/.libs)
+  target_link_libraries(utils PUBLIC fst dl)
+endif()
+include_directories(${openfst_SOURCE_DIR}/src/include)
 
 # frontend
 add_library(frontend STATIC
