@@ -60,7 +60,7 @@ using std::string;
 template <typename T>
 struct FlagDescription {
   FlagDescription(T *addr, const char *doc, const char *type,
-		  const char *file, const T val)
+      const char *file, const T val)
       : address(addr),
     doc_string(doc),
     type_name(type),

@@ -87,7 +87,7 @@ void SetFlags(const char *usage, int *argc, char ***argv,
 // defined in file 'src' and 'in_src' is false, then print usage.
 static void
 ShowUsageRestrict(const std::set<pair<string, string>> &usage_set,
-		  const string &src, bool in_src, bool show_file) {
+      const string &src, bool in_src, bool show_file) {
   string old_file;
   bool file_out = false;
   bool usage_out = false;
@@ -99,7 +99,7 @@ ShowUsageRestrict(const std::set<pair<string, string>> &usage_set,
     if (file != old_file) {
       if (show_file) {
         if (file_out) cout << "\n";
-	    cout << "Flags from: " << file << "\n";
+      cout << "Flags from: " << file << "\n";
         file_out = true;
       }
       old_file = file;
