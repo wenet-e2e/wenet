@@ -55,27 +55,23 @@ include_directories(${boost_SOURCE_DIR})
 
 # third_party: openfst
 # openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch
-set(OPENFST_EXTRA_INCLUDE_DIR "-I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I${gflags_BINARY_DIR}/include")
-set(OPENFST_EXTRA_LIBS "${glog_BINARY_DIR}/libglog.a ${gflags_BINARY_DIR}/libgflags_nothreads.a -lpthread")
-set(openfst_SRC_DIR ${fc_base}/openfst-src)
-set(openfst_BUILD_DIR ${fc_base}/openfst-build)
-set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
+set(openfst_SOURCE_DIR ${fc_base}/openfst-src)
+set(openfst_BINARY_DIR ${fc_base}/openfst-build)
 ExternalProject_Add(openfst
   URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
   URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
-  PREFIX            ${openfst_PREFIX_DIR}
-  SOURCE_DIR        ${openfst_SRC_DIR}
-  BINARY_DIR        ${openfst_BUILD_DIR}
-  CONFIGURE_COMMAND ${openfst_SRC_DIR}/configure --prefix=${openfst_PREFIX_DIR}
-                      "CPPFLAGS=${OPENFST_EXTRA_INCLUDE_DIR}"
-                      "LIBS=${OPENFST_EXTRA_LIBS}"
-  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/log.h ${openfst_SRC_DIR}/src/include/fst
-  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.h ${openfst_SRC_DIR}/src/include/fst
-  COMMAND           cp ${CMAKE_SOURCE_DIR}/patch/openfst/flags.cc ${openfst_SRC_DIR}/src/lib
+  SOURCE_DIR        ${openfst_SOURCE_DIR}
+  BINARY_DIR        ${openfst_BINARY_DIR}
+  CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure
+                      "CPPFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR}"
+                      "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR}"
+                      "LIBS=-lgflags_nothreads -lglog -lpthread"
+  COMMAND           ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
   BUILD_COMMAND     make -j 4
+  INSTALL_COMMAND   ""
 )
-include_directories(${openfst_PREFIX_DIR}/include)
-link_directories(${openfst_PREFIX_DIR}/lib)
+include_directories(${openfst_SOURCE_DIR}/src/include)
+link_directories(${openfst_BINARY_DIR}/src/lib/.libs)
 add_dependencies(openfst gflags glog)
 
 # third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
