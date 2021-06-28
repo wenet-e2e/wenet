@@ -13,7 +13,11 @@
 // Google-style flag handling definitions.
 
 #include <cstring>
-#include <string>
+
+#if _MSC_VER
+#include <io.h>
+#include <fcntl.h>
+#endif
 
 #include <fst/compat.h>
 #include <fst/flags.h>
@@ -23,15 +27,34 @@ static const char *private_tmpdir = getenv("TMPDIR");
 // DEFINE_int32(v, 0, "verbosity level");
 // DEFINE_bool(help, false, "show usage information");
 // DEFINE_bool(helpshort, false, "show brief usage information");
+#ifndef _MSC_VER
 DEFINE_string(tmpdir, private_tmpdir ? private_tmpdir : "/tmp",
-"temporary directory");
+              "temporary directory");
+#else
+DEFINE_string(tmpdir, private_tmpdir ? private_tmpdir : getenv("TEMP"),
+              "temporary directory");
+#endif // !_MSC_VER
 
-static std::string flag_usage;
-static std::string prog_src;
+using namespace std;
+
+static string flag_usage;
+static string prog_src;
 
 // Sets prog_src to src.
 static void SetProgSrc(const char *src) {
   prog_src = src;
+#if _MSC_VER
+  // This common code is invoked by all FST binaries, and only by them. Switch
+  // stdin and stdout into "binary" mode, so that 0x0A won't be translated into
+  // a 0x0D 0x0A byte pair in a pipe or a shell redirect. Other streams are
+  // already using ios::binary where binary files are read or written.
+  // Kudos to @daanzu for the suggested fix.
+  //    https://github.com/kkm000/openfst/issues/20
+  //    https://github.com/kkm000/openfst/pull/23
+  //    https://github.com/kkm000/openfst/pull/32
+  _setmode(_fileno(stdin), O_BINARY);
+  _setmode(_fileno(stdout), O_BINARY);
+#endif
   // Remove "-main" in src filename. Flags are defined in fstx.cc but SetFlags()
   // is called in fstx-main.cc, which results in a filename mismatch in
   // ShowUsageRestrict() below.
@@ -49,30 +72,32 @@ void SetFlags(const char *usage, int *argc, char ***argv,
 
   int index = 1;
   for (; index < *argc; ++index) {
-    std::string argval = (*argv)[index];
+    string argval = (*argv)[index];
     if (argval[0] != '-' || argval == "-") break;
     while (argval[0] == '-') argval = argval.substr(1);  // Removes initial '-'.
-    std::string arg = argval;
-    std::string val = "";
+    string arg = argval;
+    string val = "";
     // Splits argval (arg=val) into arg and val.
     auto pos = argval.find("=");
-    if (pos != std::string::npos) {
+    if (pos != string::npos) {
       arg = argval.substr(0, pos);
       val = argval.substr(pos + 1);
     }
     auto bool_register = FlagRegister<bool>::GetRegister();
     if (bool_register->SetFlag(arg, val))
       continue;
-    auto string_register = FlagRegister<std::string>::GetRegister();
-    if (string_register->SetFlag(arg, val)) continue;
+    auto string_register = FlagRegister<string>::GetRegister();
+    if (string_register->SetFlag(arg, val))
+      continue;
     auto int32_register = FlagRegister<int32>::GetRegister();
-    if (int32_register->SetFlag(arg, val)) continue;
+    if (int32_register->SetFlag(arg, val))
+      continue;
     auto int64_register = FlagRegister<int64>::GetRegister();
-    if (int64_register->SetFlag(arg, val)) continue;
-    auto uint64_register = FlagRegister<uint64>::GetRegister();
-    if (uint64_register->SetFlag(arg, val)) continue;
+    if (int64_register->SetFlag(arg, val))
+      continue;
     auto double_register = FlagRegister<double>::GetRegister();
-    if (double_register->SetFlag(arg, val)) continue;
+    if (double_register->SetFlag(arg, val))
+      continue;
     LOG(FATAL) << "SetFlags: Bad option: " << (*argv)[index];
   }
   if (remove_flags) {
@@ -93,10 +118,10 @@ void SetFlags(const char *usage, int *argc, char ***argv,
 
 // If flag is defined in file 'src' and 'in_src' true or is not
 // defined in file 'src' and 'in_src' is false, then print usage.
-static void ShowUsageRestrict(
-        const std::set<std::pair<std::string, std::string>> &usage_set,
-        const std::string &src, bool in_src, bool show_file) {
-  std::string old_file;
+static void
+ShowUsageRestrict(const std::set<pair<string, string>> &usage_set,
+                  const string &src, bool in_src, bool show_file) {
+  string old_file;
   bool file_out = false;
   bool usage_out = false;
   for (const auto &pair : usage_set) {
@@ -106,44 +131,36 @@ static void ShowUsageRestrict(
     if ((match && !in_src) || (!match && in_src)) continue;
     if (file != old_file) {
       if (show_file) {
-        if (file_out) std::cout << std::endl;;
-        std::cout << "Flags from: " << file << std::endl;
+        if (file_out) cout << "\n";
+        cout << "Flags from: " << file << "\n";
         file_out = true;
       }
       old_file = file;
     }
-    std::cout << usage << std::endl;
-    ;
+    cout << usage << "\n";
     usage_out = true;
   }
-  if (usage_out) std::cout << std::endl;
-  ;
+  if (usage_out) cout << "\n";
 }
 
 void ShowUsage(bool long_usage) {
-  std::set<std::pair<std::string, std::string>> usage_set;
-  std::cout << flag_usage << std::endl;
-  ;
+  std::set<pair<string, string>> usage_set;
+  cout << flag_usage << "\n";
   auto bool_register = FlagRegister<bool>::GetRegister();
   bool_register->GetUsage(&usage_set);
-  auto string_register = FlagRegister<std::string>::GetRegister();
+  auto string_register = FlagRegister<string>::GetRegister();
   string_register->GetUsage(&usage_set);
   auto int32_register = FlagRegister<int32>::GetRegister();
   int32_register->GetUsage(&usage_set);
   auto int64_register = FlagRegister<int64>::GetRegister();
   int64_register->GetUsage(&usage_set);
-  auto uint64_register = FlagRegister<uint64>::GetRegister();
-  uint64_register->GetUsage(&usage_set);
   auto double_register = FlagRegister<double>::GetRegister();
   double_register->GetUsage(&usage_set);
   if (!prog_src.empty()) {
-    std::cout << "PROGRAM FLAGS:" << std::endl << std::endl;
-    ;
+    cout << "PROGRAM FLAGS:\n\n";
     ShowUsageRestrict(usage_set, prog_src, true, false);
   }
   if (!long_usage) return;
-  if (!prog_src.empty()) {
-    std::cout << "LIBRARY FLAGS:" << std::endl << std::endl;
-  }
+  if (!prog_src.empty()) cout << "LIBRARY FLAGS:\n\n";
   ShowUsageRestrict(usage_set, prog_src, false, true);
 }

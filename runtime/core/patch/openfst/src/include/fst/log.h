@@ -25,30 +25,32 @@
 #include <fst/types.h>
 #include <fst/flags.h>
 
+using std::string;
+
 DECLARE_int32(v);
 
 class LogMessage {
-public:
-    LogMessage(const std::string &type) : fatal_(type == "FATAL") {
-      std::cerr << type << ": ";
-    }
-    ~LogMessage() {
-      std::cerr << std::endl;
-      if(fatal_)
-        exit(1);
-    }
-    std::ostream &stream() { return std::cerr; }
+ public:
+  LogMessage(const string &type) : fatal_(type == "FATAL") {
+    std::cerr << type << ": ";
+  }
+  ~LogMessage() {
+    std::cerr << std::endl;
+    if(fatal_)
+      exit(1);
+  }
+  std::ostream &stream() { return std::cerr; }
 
-private:
-    bool fatal_;
+ private:
+  bool fatal_;
 };
 
-//#define LOG(type) LogMessage(#type).stream()
-//#define VLOG(level) if ((level) <= FLAGS_v) LOG(INFO)
+// #define LOG(type) LogMessage(#type).stream()
+// #define VLOG(level) if ((level) <= FLAGS_v) LOG(INFO)
 
 // Checks
 inline void FstCheck(bool x, const char* expr,
-                     const char *file, int line) {
+                const char *file, int line) {
   if (!x) {
     LOG(FATAL) << "Check failed: \"" << expr
                << "\" file: " << file
