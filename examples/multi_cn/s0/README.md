@@ -96,8 +96,8 @@ aidatatang results
 
 thcs30 results
 
-| decoding mode/chunk size | 16   |
-|--------------------------|------|
+| decoding mode/chunk size | 16    |
+|--------------------------|-------|
 | attention decoder        | 13.78 |
 | ctc greedy search        | 15.10 |
 | ctc prefix beam search   | 15.08 |
