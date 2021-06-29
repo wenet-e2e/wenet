@@ -100,8 +100,8 @@ void GrpcConnectionHandler::SerializeResult(bool finish) {
     Response_OneBest* one_best_ = response_->add_nbest();
     one_best_->set_sentence(path.sentence);
     if (finish) {
-      Response_OnePiece* one_piece_ = one_best_->add_wordpieces();
       for (const WordPiece& word_piece : path.word_pieces) {
+        Response_OnePiece* one_piece_ = one_best_->add_wordpieces();
         one_piece_->set_word(word_piece.word);
         one_piece_->set_start(word_piece.start);
         one_piece_->set_end(word_piece.end);

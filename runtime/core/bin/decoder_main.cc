@@ -20,7 +20,7 @@ DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(result, "", "result output file");
 
 int main(int argc, char *argv[]) {
-  google::ParseCommandLineFlags(&argc, &argv, false);
+  gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
   auto model = wenet::InitTorchAsrModelFromFlags();
