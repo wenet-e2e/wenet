@@ -74,7 +74,7 @@ magic results
 * Training info: lr 0.001, batch size 8, 1 machines, 1*8 = 8 gpu, acc_grad 12, 60 epochs
 * Decoding info: ctc_weight 0.5, average_num 10
 * Git hash: 5bdf436e671ef4c696d1b039f29cc33109e072fa
-* Model link: 
+* Model link:
 
 aishell results
 
