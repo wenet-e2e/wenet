@@ -45,11 +45,11 @@ aidatatang results
 
 thcs30 results
 
-| decoding mode/chunk size | full | 16   |
-|--------------------------|------|------|
+| decoding mode/chunk size | full  | 16    |
+|--------------------------|-------|-------|
 | attention decoder        | 16.68 | 17.47 |
 | ctc greedy search        | 15.46 | 16.81 |
-| ctc prefix beam search   | 15,46 | 16.82 |
+| ctc prefix beam search   | 15.46 | 16.82 |
 | attention rescoring      | 14.38 | 15.63 |
 
 magic results
@@ -78,39 +78,39 @@ magic results
 
 aishell results
 
-| decoding mode/chunk size | 16   |
-|--------------------------|------|
-| attention decoder        | 4.77 |
-| ctc greedy search        | 5.77 |
-| ctc prefix beam search   | 5.77 |
-| attention rescoring      | 4.85 |
+| decoding mode/chunk size | full | 16   |
+|--------------------------|------|------|
+| attention decoder        | 4.49 | 4.77 |
+| ctc greedy search        | 5.07 | 5.77 |
+| ctc prefix beam search   | 5.05 | 5.77 |
+| attention rescoring      | 4.43 | 4.85 |
 
 aidatatang results
 
-| decoding mode/chunk size | 16   |
-|--------------------------|------|
-| attention decoder        | 4.45 |
-| ctc greedy search        | 5.73 |
-| ctc prefix beam search   | 5.73 |
-| attention rescoring      | 4.75 |
+| decoding mode/chunk size | full | 16   |
+|--------------------------|------|------|
+| attention decoder        | 4.12 | 4.45 |
+| ctc greedy search        | 4.97 | 5.73 |
+| ctc prefix beam search   | 4.97 | 5.73 |
+| attention rescoring      | 4.22 | 4.75 |
 
 thcs30 results
 
-| decoding mode/chunk size | 16    |
-|--------------------------|-------|
-| attention decoder        | 13.78 |
-| ctc greedy search        | 15.10 |
-| ctc prefix beam search   | 15.08 |
-| attention rescoring      | 13.90 |
+| decoding mode/chunk size | full  | 16    |
+|--------------------------|-------|-------|
+| attention decoder        | 13.55 | 13.78 |
+| ctc greedy search        | 13.75 | 15.10 |
+| ctc prefix beam search   | 13.76 | 15.08 |
+| attention rescoring      | 12.72 | 13.90 |
 
 magic results
 
-| decoding mode/chunk size | 16   |
-|--------------------------|------|
-| attention decoder        | 2.81 |
-| ctc greedy search        | 3.88 |
-| ctc prefix beam search   | 3.86 |
-| attention rescoring      | 3.08 |
+| decoding mode/chunk size | full | 16   |
+|--------------------------|------|------|
+| attention decoder        | 2.55 | 2.81 |
+| ctc greedy search        | 3.07 | 3.88 |
+| ctc prefix beam search   | 3.05 | 3.86 |
+| attention rescoring      | 2.59 | 3.08 |
 
 ## Unified Conformer Result
 
@@ -150,8 +150,8 @@ aidatatang results
 
 thcs30 results
 
-| decoding mode/chunk size | full | 16   |
-|--------------------------|------|------|
+| decoding mode/chunk size | full  | 16    |
+|--------------------------|-------|-------|
 | attention decoder        | 9.67  | 10.07 |
 | ctc greedy search        | 10.94 | 11.95 |
 | ctc prefix beam search   | 10.94 | 11.96 |
