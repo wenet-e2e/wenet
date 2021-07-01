@@ -5,9 +5,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/mobvoi/wenet)
 
-[**文档**](https://mobvoi.github.io/wenet/)
-| [**训练模型教程**](https://mobvoi.github.io/wenet/tutorial.html)
-| [**WeNet 论文**](https://mobvoi.github.io/wenet/papers.html)
+[**文档**](https://wenet-e2e.github.io/wenet/)
+| [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial.html)
+| [**WeNet 论文**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**x86 识别服务**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
 | [**android 本地识别**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
 
