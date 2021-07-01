@@ -10,6 +10,7 @@ include_directories(
 )
 set(CMAKE_VERBOSE_MAKEFILE on)
 set(build_DIR ${CMAKE_SOURCE_DIR}/../../../build)
+string(REPLACE "-Wl,--exclude-libs,libgcc_real.a" "" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 
 set(openfst_BINARY_DIR ${build_DIR}/wenet-openfst-android-1.0.0.aar/jni)
 include_directories(${openfst_BINARY_DIR}/include)
