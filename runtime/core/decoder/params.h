@@ -13,7 +13,7 @@
 #include "utils/flags.h"
 
 // TorchAsrModel flags
-DEFINE_int32(num_threads, 1, "num threads for device");
+DEFINE_int32(num_threads, 1, "num threads for GEMM");
 DEFINE_string(model_path, "", "pytorch exported model path");
 
 // FeaturePipelineConfig flags
