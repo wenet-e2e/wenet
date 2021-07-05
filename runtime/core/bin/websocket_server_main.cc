@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "decoder/params.h"
+#include "backend/params.h"
 #include "utils/log.h"
 #include "websocket/websocket_server.h"
 
@@ -27,9 +28,11 @@ int main(int argc, char *argv[]) {
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
   auto fst = wenet::InitFstFromFlags();
+  auto inverse_text_normalizer = wenet::InitInverseTextNormalizerFromFlags();
 
   wenet::WebSocketServer server(FLAGS_port, feature_config, decode_config,
-                                symbol_table, model, fst);
+                                symbol_table, model,
+                                inverse_text_normalizer, fst);
   LOG(INFO) << "Listening at port " << FLAGS_port;
   server.Start();
   return 0;

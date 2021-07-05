@@ -36,12 +36,14 @@ ConnectionHandler::ConnectionHandler(
     std::shared_ptr<DecodeOptions> decode_config,
     std::shared_ptr<fst::SymbolTable> symbol_table,
     std::shared_ptr<TorchAsrModel> model,
+    std::shared_ptr<InverseTextNormalizer> inverse_tn,
     std::shared_ptr<fst::Fst<fst::StdArc>> fst)
     : ws_(std::move(socket)),
       feature_config_(std::move(feature_config)),
       decode_config_(std::move(decode_config)),
       symbol_table_(std::move(symbol_table)),
       model_(std::move(model)),
+      inverse_tn_(std::move(inverse_tn)),
       fst_(std::move(fst)) {}
 
 void ConnectionHandler::OnSpeechStart() {
@@ -74,9 +76,13 @@ void ConnectionHandler::OnPartialResult(const std::string& result) {
 }
 
 void ConnectionHandler::OnFinalResult(const std::string& result) {
-  LOG(INFO) << "Final result: " << result;
+  std::string final_result = result;
+  if (inverse_tn_ != nullptr) {
+    final_result = inverse_tn_->ProcessInput(result);
+  }
+  LOG(INFO) << "Final result: " << final_result;
   json::value rv = {
-      {"status", "ok"}, {"type", "final_result"}, {"nbest", result}};
+      {"status", "ok"}, {"type", "final_result"}, {"nbest", final_result}};
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
 }
@@ -256,7 +262,8 @@ void WebSocketServer::Start() {
       acceptor.accept(socket);
       // Launch the session, transferring ownership of the socket
       ConnectionHandler handler(std::move(socket), feature_config_,
-                                decode_config_, symbol_table_, model_, fst_);
+                                decode_config_, symbol_table_, model_,
+                                inverse_tn_, fst_);
       std::thread t(std::move(handler));
       t.detach();
     }

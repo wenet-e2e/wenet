@@ -29,6 +29,7 @@
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "backend/inverse_text_normalizer.h"
 #include "utils/log.h"
 
 namespace wenet {
@@ -46,6 +47,7 @@ class ConnectionHandler {
                     std::shared_ptr<DecodeOptions> decode_config,
                     std::shared_ptr<fst::SymbolTable> symbol_table,
                     std::shared_ptr<TorchAsrModel> model,
+                    std::shared_ptr<InverseTextNormalizer> inverse_tn,
                     std::shared_ptr<fst::Fst<fst::StdArc>> fst);
   void operator()();
 
@@ -68,6 +70,7 @@ class ConnectionHandler {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<InverseTextNormalizer> inverse_tn_;
   std::shared_ptr<fst::Fst<fst::StdArc>> fst_;
 
   bool got_start_tag_ = false;
@@ -86,12 +89,14 @@ class WebSocketServer {
                   std::shared_ptr<DecodeOptions> decode_config,
                   std::shared_ptr<fst::SymbolTable> symbol_table,
                   std::shared_ptr<TorchAsrModel> model,
+                  std::shared_ptr<InverseTextNormalizer> inverse_tn,
                   std::shared_ptr<fst::Fst<fst::StdArc>> fst)
       : port_(port),
         feature_config_(std::move(feature_config)),
         decode_config_(std::move(decode_config)),
         symbol_table_(std::move(symbol_table)),
         model_(std::move(model)),
+        inverse_tn_(std::move(inverse_tn)),
         fst_(std::move(fst)) {}
 
   void Start();
@@ -104,6 +109,7 @@ class WebSocketServer {
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<InverseTextNormalizer> inverse_tn_;
   std::shared_ptr<fst::Fst<fst::StdArc>> fst_;
   WENET_DISALLOW_COPY_AND_ASSIGN(WebSocketServer);
 };

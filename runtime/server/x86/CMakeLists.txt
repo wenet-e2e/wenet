@@ -93,7 +93,9 @@ if(NOT MSVC)
     URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
     SOURCE_DIR        ${openfst_SOURCE_DIR}
     BINARY_DIR        ${openfst_BINARY_DIR}
-    CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure --prefix=${openfst_PREFIX_DIR}
+    # far, pdt and mpdt should be enabled for thrax
+    # details see https://stackoverflow.com/questions/29253913/error-while-instaling-open-grm-thrax
+    CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure --prefix=${openfst_PREFIX_DIR} --enable-far --enable-pdt --enable-mpdt
                         "CPPFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR}"
                         "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR}"
                         "LIBS=-lgflags_nothreads -lglog -lpthread"
@@ -122,12 +124,57 @@ else()
 endif()
 include_directories(${openfst_SOURCE_DIR}/src/include)
 
+# third_party: thrax 1.2.9 and chinese_text_normalization
+if(NOT MSVC)
+  # thrax
+  set(thrax_SOURCE_DIR ${fc_base}/thrax-src)
+  set(thrax_BINARY_DIR ${fc_base}/thrax-build)
+  ExternalProject_Add(thrax
+    URL               http://www.openfst.org/twiki/pub/GRM/ThraxDownload/thrax-1.2.9.tar.gz
+    URL_HASH          SHA256=3cfbc003609d208d50d98659166086d4a6dd341ce6697e16370f5f7ae414f2b0
+    SOURCE_DIR        ${thrax_SOURCE_DIR}
+    BINARY_DIR        ${thrax_BINARY_DIR}
+    CONFIGURE_COMMAND ${thrax_SOURCE_DIR}/configure
+                        "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR} -L${openfst_PREFIX_DIR}/lib"
+                        "CXXFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} -I${openfst_SOURCE_DIR}/src/include"
+                        "LIBS=-lgflags_nothreads -lglog -lpthread"
+    BUILD_COMMAND     make -j 4
+    INSTALL_COMMAND   ""
+  )
+  add_dependencies(thrax openfst)
+  target_link_libraries(utils PUBLIC ${thrax_BINARY_DIR}/src/lib/.libs/libthrax.a)
+  # chinese_text_normalization
+  set(chinese_text_normalization_SOURCE_DIR ${fc_base}/chinese_text_normalization-src)
+  ExternalProject_Add(chinese_text_normalization
+    GIT_REPOSITORY    https://github.com/speechio/chinese_text_normalization.git
+    GIT_TAG           9e92c7bf2d6b5a7974305406d8e240045beac51c
+    SOURCE_DIR        ${chinese_text_normalization_SOURCE_DIR}
+    BUILD_IN_SOURCE   1
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND     cd thrax/src/cn && PATH=${thrax_BINARY_DIR}/src/bin:/usr/bin make -j 4
+    INSTALL_COMMAND   ""
+  )
+  add_dependencies(chinese_text_normalization thrax)
+endif()
+include_directories(${thrax_SOURCE_DIR}/src/include)
+
 # frontend
 add_library(frontend STATIC
   frontend/feature_pipeline.cc
   frontend/fft.cc
 )
 target_link_libraries(frontend PUBLIC utils)
+
+if(NOT MSVC)
+  # backend
+  add_library(backend STATIC
+    backend/inverse_text_normalizer.cc
+  )
+  target_link_libraries(backend PUBLIC utils)
+  add_executable(inverse_text_normalizer_test backend/inverse_text_normalizer_test.cc)
+  target_link_libraries(inverse_text_normalizer_test PUBLIC backend gtest_main gmock)
+  add_test(INVERSE_TEXT_NORMALIZER_TEST inverse_text_normalizer_test)
+endif()
 
 # kaldi: wfst based decoder
 add_subdirectory(kaldi)
@@ -152,7 +199,9 @@ add_library(websocket STATIC
   websocket/websocket_server.cc
 )
 target_link_libraries(websocket PUBLIC decoder frontend)
-
+if(NOT MSVC)
+  target_link_libraries(websocket PUBLIC backend)
+endif()
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
