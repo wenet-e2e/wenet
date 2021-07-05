@@ -87,22 +87,22 @@ add_library(utils STATIC utils/utils.cc)
 if(NOT MSVC)
   set(openfst_SOURCE_DIR ${fc_base}/openfst-src)
   set(openfst_BINARY_DIR ${fc_base}/openfst-build)
+  set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
   ExternalProject_Add(openfst
     URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
     URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
     SOURCE_DIR        ${openfst_SOURCE_DIR}
     BINARY_DIR        ${openfst_BINARY_DIR}
-    CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure
+    CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure --prefix=${openfst_PREFIX_DIR}
                         "CPPFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR}"
                         "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR}"
                         "LIBS=-lgflags_nothreads -lglog -lpthread"
     COMMAND           ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
     BUILD_COMMAND     make -j 4
-    INSTALL_COMMAND   ""
   )
   add_dependencies(openfst gflags glog)
   add_dependencies(utils openfst)
-  link_directories(${openfst_BINARY_DIR}/src/lib/.libs)
+  link_directories(${openfst_PREFIX_DIR}/lib)
   target_link_libraries(utils PUBLIC fst dl)
 else()
   execute_process(COMMAND bootstrap.bat WORKING_DIRECTORY ${boost_SOURCE_DIR})
