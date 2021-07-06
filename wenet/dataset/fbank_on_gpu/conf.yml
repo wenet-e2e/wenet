@@ -1,0 +1,81 @@
+# model conf
+encoder: conformer
+encoder_conf:
+  output_size: 256    # dimension of attention
+  attention_heads: 4
+  linear_units: 2048
+  num_blocks: 12
+  dropout_rate: 0.1
+  positional_dropout_rate: 0.1
+  attention_dropout_rate: 0.0
+  input_layer: conv2d
+  normalize_before: true
+  cnn_module_kernel: 15
+  use_cnn_module: true
+  activation_type: 'swish'
+  pos_enc_layer_type: 'rel_pos'
+  selfattention_layer_type: 'rel_selfattn'
+# hybrid CTC/attention
+model_conf:
+  ctc_weight: 1.0
+  lsm_weight: 0.1     # label smoothing option
+  length_normalized_loss: false
+cmvn_file:   # CMVN path
+is_json_cmvn: true
+############################################################
+# solver conf
+preset:
+  gpus: [0,1,2,3]
+  data_home: /root/ftp/datas
+  load_pre_params: -5
+  save_log_num: 20
+train:
+  valid_num_losses: 3
+  batch_size: 64
+  epochs: 150
+  num_workers: 16
+  only_se_step: 5
+scheduler:
+  factor: 0.75
+  patience: 3
+  stop_patience: 15
+optim:
+  lr: 0.0001
+  weight_decay: 0.
+# data limit
+train_data_file: /root/ftp/datas/train_info.json
+valid_data_file: /root/ftp/datas/dev_info.json
+dataset_conf:
+  max_length: 40960
+  min_length: 0
+  token_max_length: 200
+  token_min_length: 1
+  sort: true
+# filter conf
+stft_conf:
+  win_len: 400
+  win_hop: 160
+  n_fft: 512
+  win_type: povey
+fbank_conf:
+  n_bin: 80
+  sr: 16000.0
+  low_freq: 20.0
+  high_freq: 0.0
+  vtln_low: 100.0
+  vtln_high: -500.0
+  vtln_wrap: 1.0
+  use_log_fbank: true
+  preemphasis_coefficient: 0.97
+# data aug for ASR
+wav_dither: 0.0
+speed_perturb: false
+spec_aug: true
+spec_aug_conf:
+  num_t_mask: 2
+  num_f_mask: 2
+  max_t: 50
+  max_f: 10
+  max_w: 80
+
+
