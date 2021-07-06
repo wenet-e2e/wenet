@@ -124,7 +124,7 @@ else()
 endif()
 include_directories(${openfst_SOURCE_DIR}/src/include)
 
-# third_party: thrax 1.2.9 and chinese_text_normalization
+# third_party: thrax 1.2.9 and fst archive(far) for inverse_text_normalization
 if(NOT MSVC)
   # thrax
   set(thrax_SOURCE_DIR ${fc_base}/thrax-src)
@@ -143,6 +143,8 @@ if(NOT MSVC)
   )
   add_dependencies(thrax openfst)
   target_link_libraries(utils PUBLIC ${thrax_BINARY_DIR}/src/lib/.libs/libthrax.a)
+  # download pre-built fst_archive (far)
+  execute_process(COMMAND wget https://github.com.cnpmjs.org/xingchensong/FST_ARCHIVE_FOR_ITN/releases/download/2021.07.06/itn.far -O itn.far WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
 endif()
 include_directories(${thrax_SOURCE_DIR}/src/include)
 
