@@ -89,8 +89,8 @@ if(NOT MSVC)
   set(openfst_BINARY_DIR ${fc_base}/openfst-build)
   set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
   ExternalProject_Add(openfst
-    URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
-    URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
+    URL               https://github.com/mjansche/openfst/archive/1.6.7.zip
+    URL_HASH          SHA256=6ad450057ca4958de6c09358c66e2a137c5a1cbd2cb365b47866bf905fca72e2
     SOURCE_DIR        ${openfst_SOURCE_DIR}
     BINARY_DIR        ${openfst_BINARY_DIR}
     # far, pdt and mpdt should be enabled for thrax
@@ -143,18 +143,6 @@ if(NOT MSVC)
   )
   add_dependencies(thrax openfst)
   target_link_libraries(utils PUBLIC ${thrax_BINARY_DIR}/src/lib/.libs/libthrax.a)
-  # chinese_text_normalization
-  set(chinese_text_normalization_SOURCE_DIR ${fc_base}/chinese_text_normalization-src)
-  ExternalProject_Add(chinese_text_normalization
-    GIT_REPOSITORY    https://github.com/speechio/chinese_text_normalization.git
-    GIT_TAG           9e92c7bf2d6b5a7974305406d8e240045beac51c
-    SOURCE_DIR        ${chinese_text_normalization_SOURCE_DIR}
-    BUILD_IN_SOURCE   1
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND     cd thrax/src/cn && PATH=${thrax_BINARY_DIR}/src/bin:/usr/bin make -j 4
-    INSTALL_COMMAND   ""
-  )
-  add_dependencies(chinese_text_normalization thrax)
 endif()
 include_directories(${thrax_SOURCE_DIR}/src/include)
 
@@ -170,6 +158,7 @@ if(NOT MSVC)
   add_library(backend STATIC
     backend/inverse_text_normalizer.cc
   )
+  add_dependencies(backend thrax)
   target_link_libraries(backend PUBLIC utils)
   add_executable(inverse_text_normalizer_test backend/inverse_text_normalizer_test.cc)
   target_link_libraries(inverse_text_normalizer_test PUBLIC backend gtest_main gmock)

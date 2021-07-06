@@ -20,8 +20,7 @@
 #include "gtest/gtest.h"
 
 TEST(InverseTextNormalizeTest, TestCases53) {
-  const std::string far_path =
-      "../fc_base/chinese_text_normalization-src/thrax/src/cn/itn.far";
+  const std::string far_path = "itn.far";
   std::unique_ptr<wenet::InverseTextNormalizer> model(
       new wenet::InverseTextNormalizer());
   model->Initialize(far_path, FLAGS_rules, FLAGS_input_mode, FLAGS_output_mode);
