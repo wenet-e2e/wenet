@@ -27,7 +27,7 @@ using grpc::Server;
 using grpc::ServerBuilder;
 
 int main(int argc, char *argv[]) {
-  google::ParseCommandLineFlags(&argc, &argv, false);
+  gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
   auto model = wenet::InitTorchAsrModelFromFlags();
