@@ -32,7 +32,7 @@ recog_set=test
 wave_data=data
 nj=16
 # Optional train_config
-# 1. conf/train_transformer.yaml: Standard Conformer 
+# 1. conf/train_transformer.yaml: Standard Conformer
 # 2. conf/train_transformer_bidecoder.yaml: Bidecoder Conformer
 train_config=conf/train_conformer_bidecoder.yaml
 checkpoint=
