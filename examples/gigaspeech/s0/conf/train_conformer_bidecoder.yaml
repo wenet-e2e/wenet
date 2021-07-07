@@ -54,6 +54,7 @@ collate_conf:
         frame_shift: 10
         frame_length: 25
         using_pitch: false
+        resample: 16000
     # spec level config
     # spec_swap: false
     feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
