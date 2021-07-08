@@ -4,7 +4,7 @@ import math
 
 import torchaudio
 import torch
-torchaudio.set_audio_backend("sox")
+torchaudio.set_audio_backend("sox_io")
 
 
 def db2amp(db):
