@@ -34,7 +34,7 @@ import wenet.dataset.kaldi_io as kaldi_io
 from wenet.dataset.wav_distortion import distort_wav_conf
 from wenet.utils.common import IGNORE_ID
 
-torchaudio.set_audio_backend("sox")
+torchaudio.set_audio_backend("sox_io")
 
 
 def _spec_augmentation(x,
@@ -148,7 +148,7 @@ def _load_wav_with_speed(wav_file, speed):
         augmented feature
     """
     if speed == 1.0:
-        return torchaudio.load_wav(wav_file)
+        wav, sr = torchaudio.load(wav_file)
     else:
         si, _ = torchaudio.info(wav_file)
 
@@ -169,9 +169,9 @@ def _load_wav_with_speed(wav_file, speed):
                 wav_file,
                 [['speed', str(speed)], ['rate', str(si.rate)]])
 
-        # sox will normalize the waveform, scale to [-32768, 32767]
-        wav = wav * (1 << 15)
-        return wav, sr
+    # sox will normalize the waveform, scale to [-32768, 32767]
+    wav = wav * (1 << 15)
+    return wav, sr
 
 
 def _extract_feature(batch, speed_perturb, wav_distortion_conf,
@@ -207,8 +207,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             # 1 for general wav.scp, 3 for segmented wav.scp
             assert len(value) == 1 or len(value) == 3
             wav_path = value[0]
-            sample_rate = torchaudio.backend.sox_backend.info(wav_path)[0].rate
-            resample_rate = sample_rate
+            sample_rate = torchaudio.backend.sox_io_backend.info(wav_path).sample_rate
             if 'resample' in feature_extraction_conf:
                 resample_rate = feature_extraction_conf['resample']
             if speed_perturb:
@@ -223,16 +222,17 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                 if len(value) == 3:
                     start_frame = int(float(value[1]) * sample_rate)
                     end_frame = int(float(value[2]) * sample_rate)
-                    waveform, sample_rate = torchaudio.backend.sox_backend.load(
+                    waveform, sample_rate = torchaudio.backend.sox_io_backend.load(
                         filepath=wav_path,
                         num_frames=end_frame - start_frame,
                         offset=start_frame)
-                    waveform = waveform * (1 << 15)
                 else:
-                    waveform, sample_rate = torchaudio.load_wav(wav_path)
+                    waveform, sample_rate = torchaudio.load(wav_path)
+            waveform = waveform * (1 << 15)
             if resample_rate != sample_rate:
                 waveform = torchaudio.transforms.Resample(
                     orig_freq=sample_rate, new_freq=resample_rate)(waveform)
+
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
                 if r < wav_distortion_rate:
