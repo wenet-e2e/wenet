@@ -23,6 +23,8 @@ num_nodes=1
 node_rank=0
 
 # modify this to your AISHELL-2 data path
+# Note: the evaluation data (dev & test) is available at AISHELL.
+# Please download it from http://aishell-eval.oss-cn-beijing.aliyuncs.com/TEST%26DEV%20DATA.zip
 trn_set=/ssd/nfs06/open_source_data/AISHELL-2/iOS/data
 dev_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/dev
 tst_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/test
