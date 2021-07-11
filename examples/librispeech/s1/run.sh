@@ -7,13 +7,13 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES="0"
 stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
 # data
 data_url=www.openslr.org/resources/12
 # use your own data path
-datadir=/nfsa/diwu/open-dir
+datadir=/mnt/dsk2/librispeech
 nj=16
 # Optional train_config
 # 1. conf/train_transformer_large.yaml: Standard transformer
@@ -114,7 +114,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
         # remove utt having more than 400 characters
         tools/remove_longshortdata.py \
             --min_input_len 0.5 \
-            --max_input_len 20 \
+            --max_input_len 3000 \
             --max_output_len 400 \
             --max_output_input_ratio 10.0 \
             --data_file data/$x/format.data.tmp \
