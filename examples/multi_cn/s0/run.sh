@@ -298,8 +298,10 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             else
                 cat $test_dir/text_${en_modeling_unit} | sed -e "s/▁/ /g" > $test_dir/text
             fi
+            cat ${feat_dir}_${en_modeling_unit}/test_${x}/text | sed -e "s/▁/ /g" > ${feat_dir}_${en_modeling_unit}/test_${x}/text.tmp
             python tools/compute-wer.py --char=1 --v=1 \
-                ${feat_dir}_${en_modeling_unit}/test_${x}/text $test_dir/text > $test_dir/wer
+                ${feat_dir}_${en_modeling_unit}/test_${x}/text.tmp $test_dir/text > $test_dir/wer
+            rm ${feat_dir}_${en_modeling_unit}/test_${x}/text.tmp
         }
         done
     } &
