@@ -7,7 +7,7 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-stage=1 # start from 0 if you need to start from data preparation
+stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
 
 # The num of nodes or machines used for multi-machine training
@@ -32,8 +32,9 @@ recog_set=test
 wave_data=data
 nj=16
 # Optional train_config
-# 1. conf/train_transformer_large.yaml: Standard transformer
-train_config=conf/train_conformer.yaml
+# 1. conf/train_transformer.yaml: Standard Conformer
+# 2. conf/train_transformer_bidecoder.yaml: Bidecoder Conformer
+train_config=conf/train_conformer_bidecoder.yaml
 checkpoint=
 cmvn=false
 do_delta=false
@@ -168,9 +169,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.world_size $world_size \
             --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
-            --num_workers 32 \
-            $cmvn_opts \
-            --use_amp
+            --num_workers 16 \
+            $cmvn_opts
     } &
     done
     wait

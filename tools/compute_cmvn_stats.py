@@ -11,14 +11,16 @@ import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 from torch.utils.data import Dataset, DataLoader
+
 torchaudio.set_audio_backend("sox_io")
 
 
 class CollateFunc(object):
     ''' Collate function for AudioDataset
     '''
-    def __init__(self, feat_dim):
+    def __init__(self, feat_dim, resample_rate):
         self.feat_dim = feat_dim
+        self.resample_rate = resample_rate
         pass
 
     def __call__(self, batch):
@@ -30,6 +32,7 @@ class CollateFunc(object):
             assert len(value) == 3 or len(value) == 1
             wav_path = value[0]
             sample_rate = torchaudio.backend.sox_io_backend.info(wav_path).sample_rate
+            resample_rate = sample_rate
             # len(value) == 3 means segmented wav.scp,
             # len(value) == 1 means original wa.scp
             if len(value) == 3:
@@ -43,11 +46,16 @@ class CollateFunc(object):
                 waveform, sample_rate = torchaudio.load(item[1])
 
             waveform = waveform * (1 << 15)
+            if self.resample_rate != 0 and self.resample_rate != sample_rate:
+                resample_rate = self.resample_rate
+                waveform = torchaudio.transforms.Resample(
+                    orig_freq=sample_rate, new_freq=resample_rate)(waveform)
 
             mat = kaldi.fbank(waveform,
                               num_mel_bins=self.feat_dim,
                               dither=0.0,
-                              energy_floor=0.0)
+                              energy_floor=0.0,
+                              sample_frequency=resample_rate)
             mean_stat += torch.sum(mat, axis=0)
             var_stat += torch.sum(torch.square(mat), axis=0)
             number += mat.shape[0]
@@ -88,8 +96,12 @@ if __name__ == '__main__':
     with open(args.train_config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
     feat_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
+    resample_rate = 0
+    if 'resample' in configs['collate_conf']['feature_extraction_conf']:
+        resample_rate = configs['collate_conf']['feature_extraction_conf']['resample']
+        print('using resample and new sample rate is {}'.format(resample_rate))
 
-    collate_func = CollateFunc(feat_dim)
+    collate_func = CollateFunc(feat_dim, resample_rate)
     dataset = AudioDataset(args.in_scp)
     batch_size = 20
     data_loader = DataLoader(dataset,

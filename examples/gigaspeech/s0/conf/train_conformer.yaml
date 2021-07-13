@@ -52,6 +52,7 @@ collate_conf:
         frame_shift: 10
         frame_length: 25
         using_pitch: false
+        resample: 16000
     # spec level config
     # spec_swap: false
     feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
@@ -76,7 +77,7 @@ dataset_conf:
     token_min_length: 1
     batch_type: 'static' # static or dynamic
     # the size of batch_size should be set according to your gpu memory size, here we used v100 gpu whose memory size is 32GB
-    batch_size: 48
+    batch_size: 28
     sort: true
 
 grad_clip: 5

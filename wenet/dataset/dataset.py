@@ -33,6 +33,7 @@ from torch.utils.data import Dataset, DataLoader
 import wenet.dataset.kaldi_io as kaldi_io
 from wenet.dataset.wav_distortion import distort_wav_conf
 from wenet.utils.common import IGNORE_ID
+
 torchaudio.set_audio_backend("sox_io")
 
 
@@ -207,6 +208,8 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             assert len(value) == 1 or len(value) == 3
             wav_path = value[0]
             sample_rate = torchaudio.backend.sox_io_backend.info(wav_path).sample_rate
+            if 'resample' in feature_extraction_conf:
+                resample_rate = feature_extraction_conf['resample']
             if speed_perturb:
                 if len(value) == 3:
                     logging.error(
@@ -225,7 +228,10 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                         offset=start_frame)
                 else:
                     waveform, sample_rate = torchaudio.load(wav_path)
-                waveform = waveform * (1 << 15)
+            waveform = waveform * (1 << 15)
+            if resample_rate != sample_rate:
+                waveform = torchaudio.transforms.Resample(
+                    orig_freq=sample_rate, new_freq=resample_rate)(waveform)
 
             if wav_distortion_rate > 0.0:
                 r = random.uniform(0, 1)
@@ -241,7 +247,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                 frame_shift=feature_extraction_conf['frame_shift'],
                 dither=wav_dither,
                 energy_floor=0.0,
-                sample_frequency=sample_rate)
+                sample_frequency=resample_rate)
             mat = mat.detach().numpy()
             feats.append(mat)
             keys.append(x[0])
