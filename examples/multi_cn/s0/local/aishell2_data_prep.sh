@@ -44,7 +44,7 @@ tools/filter_scp.pl -f 1 $tmp/wav_utt.list $tmp/trans_utt.list > $tmp/utt.list
 awk -F'\t' -v path_prefix=$corpus '{printf("AISHELL2_%s %s/%s\n",$1,path_prefix,$2)}' $corpus/wav.scp > $tmp/tmp_wav.scp
 tools/filter_scp.pl -f 1 $tmp/utt.list $tmp/tmp_wav.scp | sort -k 1 | uniq > $tmp/wav.scp
 
-awk -F'\t' '{print "AISHELL2_"$0}' $corpus/trans.txt > $tmp/tmp_trans.txt
+awk -F'\t' '{printf("AISHELL2_%s %s\n",$1,$2)}' $corpus/trans.txt > $tmp/tmp_trans.txt
 tools/filter_scp.pl -f 1 $tmp/utt.list $tmp/tmp_trans.txt | sort -k 1 | uniq > $tmp/trans.txt
 
 # text has ' sed "s/'//g"
