@@ -35,6 +35,7 @@ DEFINE_double(reverse_weight, 0.0,
               "conventional transformer decoder, and only reverse_weight > 0.0"
               "dose the right to left decoder will be calculated and used");
 DEFINE_int32(max_active, 7000, "max active states in ctc wfst search");
+DEFINE_int32(min_active, 200, "min active states in ctc wfst search");
 DEFINE_double(beam, 16.0, "beam in ctc wfst search");
 DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
 DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
@@ -75,6 +76,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->reverse_weight = FLAGS_reverse_weight;
   decode_config->rescoring_weight = FLAGS_rescoring_weight;
   decode_config->ctc_wfst_search_opts.max_active = FLAGS_max_active;
+  decode_config->ctc_wfst_search_opts.min_active = FLAGS_min_active;
   decode_config->ctc_wfst_search_opts.beam = FLAGS_beam;
   decode_config->ctc_wfst_search_opts.lattice_beam = FLAGS_lattice_beam;
   decode_config->ctc_wfst_search_opts.acoustic_scale = FLAGS_acoustic_scale;

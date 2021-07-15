@@ -16,6 +16,7 @@ fst_path=
 acoustic_scale=1.0
 beam=15.0
 lattice_beam=12.0
+min_active=200
 max_active=7000
 blank_skip_thresh=1.0
 
@@ -52,6 +53,7 @@ if [ ! -z $fst_path ]; then
   wfst_decode_opts="$wfst_decode_opts --beam $beam"
   wfst_decode_opts="$wfst_decode_opts --lattice_beam $lattice_beam"
   wfst_decode_opts="$wfst_decode_opts --max_active $max_active"
+  wfst_decode_opts="$wfst_decode_opts --min_active $min_active"
   wfst_decode_opts="$wfst_decode_opts --acoustic_scale $acoustic_scale"
   wfst_decode_opts="$wfst_decode_opts --blank_skip_thresh $blank_skip_thresh"
   echo $wfst_decode_opts > $dir/config
