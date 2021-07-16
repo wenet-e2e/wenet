@@ -150,6 +150,7 @@ def _load_wav_with_speed(wav_file, speed):
     if speed == 1.0:
         wav, sr = torchaudio.load(wav_file)
     else:
+        torchaudio.set_audio_backend("sox")
         si, _ = torchaudio.info(wav_file)
 
         # get torchaudio version
@@ -210,6 +211,8 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
             sample_rate = torchaudio.backend.sox_io_backend.info(wav_path).sample_rate
             if 'resample' in feature_extraction_conf:
                 resample_rate = feature_extraction_conf['resample']
+            else:
+                resample_rate = sample_rate
             if speed_perturb:
                 if len(value) == 3:
                     logging.error(
