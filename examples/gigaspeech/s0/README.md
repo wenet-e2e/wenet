@@ -5,30 +5,29 @@ A Large, modern and evolving dataset for automatic speech recognition. More deta
 
 ## Conformer bidecoder Result
 
-* Feature info: using fbank feature, dither 1.0, no cmvn, 16k
+* Feature info: using fbank feature, dither 1.0, cmvn, 16k
 * Training info: conf/train_conformer_bidecoder.yaml, kernel size 31, lr 0.002, batch size 28, 8 gpu, acc_grad 4, 40 epochs
 * Decoding info: ctc_weight 0.3, reverse_weight 0.5, average_num 10
 * Git hash: 9a0c270f9f976d7e887f777690e6c358a45a1c27
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210705_conformer_bidecoder_exp.tar.gz
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210720_conformer_bidecoder_exp.tar.gz
 
 ## test set gigaspeech scoring
 
 | SPKR      | # Snt |  # Wrd | Corr | Sub | Del | Ins | Err  | S.Err |
 |-----------|-------|--------|------|-----|-----|-----|------|-------|
-| Sum/Avg   |19928  | 390656 | 91.1 | 6.6 | 2.2 | 2.0 | 10.9 | 64.3  |
-| Mean      | 152.1 | 2982.1 | 91.0 | 6.6 | 2.4 | 1.7 | 10.7 | 65.0  |
-| S.D.      | 142.2 | 2838.1 |  5.6 | 4.2 | 1.6 | 1.3 |  6.5 | 16.7  |
-| Median    | 108.0 | 2000.0 | 92.3 | 5.6 | 2.0 | 1.4 |  8.8 | 65.6  |
-
+| Sum/Avg   | 19928 | 390656 | 91.3 | 6.4 | 2.3 | 2.0 | 10.7 | 63.3  |
+|  Mean     | 152.1 | 2982.1 | 91.2 | 6.4 | 2.4 | 1.6 | 10.4 | 64.0  |
+|  S.D.     | 142.2 | 2838.1 |  5.5 | 4.2 | 1.6 | 1.2 |  6.4 | 17.3  |
+| Median    | 108.0 | 2000.0 | 92.6 | 5.4 | 2.0 | 1.3 |  8.6 | 65.8  |
 
 ## dev set gigaspeech scoring
 
 | SPKR      | # Snt |  # Wrd | Corr | Sub | Del | Ins | Err  | S.Err |
 |-----------|-------|--------|------|-----|-----|-----|------|-------|
-| Sum/Avg   | 5715  | 127790 | 91.9 | 6.0 | 2.1 | 2.8 | 11.0 | 70.5  |
-| Mean      | 204.1 | 4563.9 | 92.6 | 5.5 | 1.9 | 2.1 |  9.5 | 70.4  |
-| S.D.      | 269.7 | 4551.6 |  3.6 | 2.9 | 0.9 | 1.7 |  4.9 | 16.5  |
-| Median    | 151.5 | 3314.0 | 93.7 | 4.7 | 1.6 | 1.6 |  8.1 | 72.6  |
+| Sum/Avg   | 5715  | 127790 | 92.0 | 5.8 | 2.2 | 2.7 | 10.7 |  70.4 |
+|  Mean     | 204.1 | 4563.9 | 92.8 | 5.3 | 1.9 | 2.0 |  9.2 |  70.1 |
+|  S.D.     | 269.7 | 4551.6 |  3.4 | 2.8 | 0.9 | 1.6 |  4.7 |  15.9 |
+| Median    | 151.5 | 3314.0 | 93.9 | 4.3 | 1.6 | 1.5 |  7.7 |  70.7 |
 
 ## Conformer Result
 
