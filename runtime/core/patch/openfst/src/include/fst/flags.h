@@ -215,7 +215,8 @@ void SetFlags(const char *usage, int *argc, char ***argv, bool remove_flags,
               const char *src = "");
 
 #define SET_FLAGS(usage, argc, argv, rmflags) \
-SetFlags(usage, argc, argv, rmflags, __FILE__)
+gflags::ParseCommandLineFlags(argc, argv, true)
+// SetFlags(usage, argc, argv, rmflags, __FILE__)
 
 // Deprecated; for backward compatibility.
 inline void InitFst(const char *usage, int *argc, char ***argv, bool rmflags) {
