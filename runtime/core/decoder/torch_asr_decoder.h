@@ -114,6 +114,7 @@ class TorchAsrDecoder {
   const std::vector<DecodeResult>& result() const { return result_; }
 
  private:
+  void InitPostProcessing();
   // Return true if we reach the end of the feature pipeline
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
