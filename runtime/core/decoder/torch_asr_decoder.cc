@@ -311,7 +311,12 @@ float TorchAsrDecoder::AttentionDecoderScore(const torch::Tensor& prob,
 void TorchAsrDecoder::AttentionRescoring() {
   searcher_->FinalizeSearch();
   UpdateResult();
+  // No need to do rescoring
   if (0.0 == opts_.rescoring_weight) {
+    return;
+  }
+  // No encoder output
+  if (encoder_outs_.size() == 0) {
     return;
   }
 
