@@ -83,6 +83,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
       if (cur_best != 0 && is_last_frame_blank_ && cur_best == last_best_) {
         decodable_.AcceptLoglikes(last_frame_prob_);
         decoder_.AdvanceDecoding(&decodable_, 1);
+        decoded_frames_mapping_.push_back(num_frames_ - 1);
         VLOG(2) << "Adding blank frame at symbol " << cur_best;
       }
       last_best_ = cur_best;
@@ -119,6 +120,7 @@ void CtcWfstBeamSearch::FinalizeSearch() {
   inputs_.clear();
   outputs_.clear();
   likelihood_.clear();
+  times_.clear();
   if (decoded_frames_mapping_.size() > 0) {
     std::vector<kaldi::Lattice> nbest_lats;
     if (opts_.nbest == 1) {
@@ -139,23 +141,39 @@ void CtcWfstBeamSearch::FinalizeSearch() {
     inputs_.resize(nbest);
     outputs_.resize(nbest);
     likelihood_.resize(nbest);
+    times_.resize(nbest);
     for (int i = 0; i < nbest; i++) {
       kaldi::LatticeWeight weight;
       std::vector<int> alignment;
       fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
                                    &weight);
-      ConvertToInputs(alignment, &inputs_[i]);
+      ConvertToInputs(alignment, &inputs_[i], &times_[i]);
       likelihood_[i] = -weight.Value2();
     }
   }
 }
 
 void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
-                                        std::vector<int>* input) {
+                                        std::vector<int>* input,
+                                        std::vector<int>* time) {
   input->clear();
-  for (size_t i = 0; i < alignment.size(); i++) {
-    if (alignment[i] - 1 > 0) {
-      input->push_back(alignment[i] - 1);
+  if (time != nullptr) time->clear();
+  int cur = 0;
+  while (cur < alignment.size()) {
+    // ignore blank
+    while (cur < alignment.size() && alignment[cur] - 1 == 0) {
+      ++cur;
+    }
+    // merge continuous same label
+    while (cur - 1 < alignment.size() && alignment[cur + 1] == alignment[cur]) {
+      ++cur;
+    }
+    if (cur < alignment.size()) {
+      input->push_back(alignment[cur] - 1);
+      if (time != nullptr) {
+        time->push_back(decoded_frames_mapping_[cur]);
+      }
+      ++cur;
     }
   }
 }

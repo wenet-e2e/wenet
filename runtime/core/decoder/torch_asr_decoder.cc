@@ -23,6 +23,7 @@ TorchAsrDecoder::TorchAsrDecoder(
       model_(resource->model),
       symbol_table_(resource->symbol_table),
       fst_(resource->fst),
+      unit_table_(resource->unit_table),
       opts_(opts),
       ctc_endpointer_(new CtcEndpoint(opts.ctc_endpoint_config)) {
   if (opts_.reverse_weight > 0) {
@@ -198,14 +199,14 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   return state;
 }
 
-void TorchAsrDecoder::UpdateResult() {
+void TorchAsrDecoder::UpdateResult(bool finish) {
   const auto& hypotheses = searcher_->Outputs();
+  const auto& inputs = searcher_->Inputs();
   const auto& likelihood = searcher_->Likelihood();
   const auto& times = searcher_->Times();
   result_.clear();
 
   CHECK_EQ(hypotheses.size(), likelihood.size());
-  // CHECK_EQ(hypotheses.size(), times.size());
   for (size_t i = 0; i < hypotheses.size(); i++) {
     const std::vector<int>& hypothesis = hypotheses[i];
 
@@ -227,12 +228,18 @@ void TorchAsrDecoder::UpdateResult() {
       }
       is_englishword_prev = is_englishword_now;
     }
-    // TimeStamp is only supported in CtcPrefixBeamSearch now
-    if (searcher_->Type() == SearchType::kPrefixBeamSearch) {
+
+    // TimeStamp is only supported in final result
+    // TimeStamp of the output of CtcWfstBeamSearch may be inaccurate due to
+    // various FST operations when building the decoding graph. So here we use
+    // time stamp of the input(e2e model unit), which is more accurate, and it
+    // requires the symbol table of the e2e model used in training.
+    if (unit_table_ != nullptr && finish) {
+      const std::vector<int>& input = inputs[i];
       const std::vector<int>& time_stamp = times[i];
-      CHECK_EQ(hypothesis.size(), time_stamp.size());
-      for (size_t j = 0; j < hypothesis.size(); j++) {
-        std::string word = symbol_table_->Find(hypothesis[j]);
+      CHECK_EQ(input.size(), time_stamp.size());
+      for (size_t j = 0; j < input.size(); j++) {
+        std::string word = unit_table_->Find(input[j]);
         int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
         int end = time_stamp[j] * frame_shift_in_ms();
         WordPiece word_piece(word, offset + start, offset + end);
@@ -263,7 +270,7 @@ float TorchAsrDecoder::AttentionDecoderScore(const torch::Tensor& prob,
 
 void TorchAsrDecoder::AttentionRescoring() {
   searcher_->FinalizeSearch();
-  UpdateResult();
+  UpdateResult(true);
   // No need to do rescoring
   if (0.0 == opts_.rescoring_weight) {
     return;
