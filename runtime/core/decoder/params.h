@@ -41,6 +41,7 @@ DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
 DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
 DEFINE_double(blank_skip_thresh, 1.0,
               "blank skip thresh for ctc wfst search, 1.0 means no skip");
+DEFINE_int32(nbest, 10, "nbest for ctc wfst search");
 
 // SymbolTable flags
 DEFINE_string(dict_path, "", "dict path");
@@ -54,8 +55,8 @@ std::shared_ptr<TorchAsrModel> InitTorchAsrModelFromFlags() {
 }
 
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
-  auto feature_config = std::make_shared<FeaturePipelineConfig>(FLAGS_num_bins,
-    FLAGS_sample_rate);
+  auto feature_config = std::make_shared<FeaturePipelineConfig>(
+      FLAGS_num_bins, FLAGS_sample_rate);
   return feature_config;
 }
 
@@ -82,6 +83,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->ctc_wfst_search_opts.acoustic_scale = FLAGS_acoustic_scale;
   decode_config->ctc_wfst_search_opts.blank_skip_thresh =
       FLAGS_blank_skip_thresh;
+  decode_config->ctc_wfst_search_opts.nbest = FLAGS_nbest;
   return decode_config;
 }
 

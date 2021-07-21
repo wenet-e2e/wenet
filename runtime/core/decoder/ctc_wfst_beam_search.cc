@@ -3,6 +3,8 @@
 
 #include "decoder/ctc_wfst_beam_search.h"
 
+#include <utility>
+
 namespace wenet {
 
 void DecodableTensorScaled::Reset() {
@@ -118,15 +120,21 @@ void CtcWfstBeamSearch::FinalizeSearch() {
   outputs_.clear();
   likelihood_.clear();
   if (decoded_frames_mapping_.size() > 0) {
-    // Get N-best path by lattice(CompactLattice)
-    kaldi::CompactLattice clat;
-    decoder_.GetLattice(&clat, true);
-    kaldi::Lattice lat, nbest_lat;
-    fst::ConvertLattice(clat, &lat);
-    // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
-    fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
     std::vector<kaldi::Lattice> nbest_lats;
-    fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
+    if (opts_.nbest == 1) {
+      kaldi::Lattice lat;
+      decoder_.GetBestPath(&lat, true);
+      nbest_lats.push_back(std::move(lat));
+    } else {
+      // Get N-best path by lattice(CompactLattice)
+      kaldi::CompactLattice clat;
+      decoder_.GetLattice(&clat, true);
+      kaldi::Lattice lat, nbest_lat;
+      fst::ConvertLattice(clat, &lat);
+      // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
+      fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
+      fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
+    }
     int nbest = nbest_lats.size();
     inputs_.resize(nbest);
     outputs_.resize(nbest);
