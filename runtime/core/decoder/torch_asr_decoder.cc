@@ -18,22 +18,21 @@ namespace wenet {
 
 TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
-    std::shared_ptr<TorchAsrModel> model,
-    std::shared_ptr<fst::SymbolTable> symbol_table, const DecodeOptions& opts,
-    std::shared_ptr<fst::Fst<fst::StdArc>> fst)
+    std::shared_ptr<DecodeResource> resource, const DecodeOptions& opts)
     : feature_pipeline_(std::move(feature_pipeline)),
-      model_(std::move(model)),
-      symbol_table_(symbol_table),
+      model_(resource->model),
+      symbol_table_(resource->symbol_table),
+      fst_(resource->fst),
       opts_(opts),
       ctc_endpointer_(new CtcEndpoint(opts.ctc_endpoint_config)) {
   if (opts_.reverse_weight > 0) {
     // Check if model has a right to left decoder
     CHECK(model_->is_bidirectional_decoder());
   }
-  if (nullptr == fst) {
+  if (nullptr == fst_) {
     searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts));
   } else {
-    searcher_.reset(new CtcWfstBeamSearch(*fst, opts.ctc_wfst_search_opts));
+    searcher_.reset(new CtcWfstBeamSearch(*fst_, opts.ctc_wfst_search_opts));
   }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
 
