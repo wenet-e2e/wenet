@@ -40,6 +40,9 @@ void SplitEachChar(const std::string& word, std::vector<std::string>* chars);
 
 bool CheckEnglishWord(const std::string& word);
 
+std::string JoinString(const std::string& c,
+                       const std::vector<std::string>& strs);
+
 }  // namespace wenet
 
 #endif  // UTILS_STRING_H_

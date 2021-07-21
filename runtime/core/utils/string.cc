@@ -188,4 +188,16 @@ bool CheckEnglishWord(const std::string& word) {
   return true;
 }
 
+std::string JoinString(const std::string& c,
+                       const std::vector<std::string>& strs) {
+  std::string result;
+  if (strs.size() > 0) {
+    for (int i = 0; i < strs.size() - 1; i++) {
+      result += (strs[i] + c);
+    }
+    result += strs.back();
+  }
+  return result;
+}
+
 }  // namespace wenet
