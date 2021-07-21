@@ -44,7 +44,12 @@ DEFINE_double(blank_skip_thresh, 1.0,
 DEFINE_int32(nbest, 10, "nbest for ctc wfst search");
 
 // SymbolTable flags
-DEFINE_string(dict_path, "", "dict path");
+DEFINE_string(dict_path, "",
+              "dict symbol table path, it's same as unit_path when we don't "
+              "use LM in decoding");
+DEFINE_string(
+    unit_path, "",
+    "e2e model unit symbol table, used for get timestamp of the result");
 
 namespace wenet {
 
@@ -92,6 +97,18 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto symbol_table = std::shared_ptr<fst::SymbolTable>(
       fst::SymbolTable::ReadText(FLAGS_dict_path));
   resource->symbol_table = symbol_table;
+
+  std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
+  if (!FLAGS_unit_path.empty()) {
+    LOG(INFO) << "Reading unit table " << FLAGS_unit_path;
+    unit_table = std::shared_ptr<fst::SymbolTable>(
+        fst::SymbolTable::ReadText(FLAGS_unit_path));
+    CHECK(unit_table != nullptr);
+  } else if (fst == nullptr) {
+    LOG(INFO) << "Use symbol table as unit table";
+    unit_table = symbol_table;
+  }
+  resource->unit_table = unit_table;
 
   return resource;
 }

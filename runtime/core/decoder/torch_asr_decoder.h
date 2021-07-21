@@ -80,6 +80,7 @@ struct DecodeResource {
   std::shared_ptr<TorchAsrModel> model = nullptr;
   std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
+  std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
 };
 
 // Torch ASR decoder
@@ -119,7 +120,7 @@ class TorchAsrDecoder {
 
   float AttentionDecoderScore(const torch::Tensor& prob,
                               const std::vector<int>& hyp, int eos);
-  void UpdateResult();
+  void UpdateResult(bool finish = false);
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
@@ -127,6 +128,8 @@ class TorchAsrDecoder {
   std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
   // output symbol table
   std::shared_ptr<fst::SymbolTable> symbol_table_;
+  // e2e unit symbol table
+  std::shared_ptr<fst::SymbolTable> unit_table_ = nullptr;
   const DecodeOptions& opts_;
   // cache feature
   std::vector<std::vector<float>> cached_feature_;

@@ -72,7 +72,8 @@ class CtcWfstBeamSearch : public SearchInterface {
  private:
   // Sub one and remove <blank>
   void ConvertToInputs(const std::vector<int>& alignment,
-                       std::vector<int>* input);
+                       std::vector<int>* input,
+                       std::vector<int>* time = nullptr);
 
   int num_frames_ = 0;
   std::vector<int> decoded_frames_mapping_;
