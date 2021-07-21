@@ -74,14 +74,20 @@ enum DecodeState {
   kEndFeats = 0x02   // All feature is decoded
 };
 
+// DecodeResource is thread safe, which can be shared for multiple
+// decoding threads
+struct DecodeResource {
+  std::shared_ptr<TorchAsrModel> model = nullptr;
+  std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
+};
+
 // Torch ASR decoder
 class TorchAsrDecoder {
  public:
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
-                  std::shared_ptr<TorchAsrModel> model,
-                  std::shared_ptr<fst::SymbolTable> symbol_table,
-                  const DecodeOptions& opts,
-                  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr);
+                  std::shared_ptr<DecodeResource> resource,
+                  const DecodeOptions& opts);
 
   DecodeState Decode();
   void Rescoring();
@@ -117,6 +123,9 @@ class TorchAsrDecoder {
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
+
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
+  // output symbol table
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   const DecodeOptions& opts_;
   // cache feature

@@ -24,13 +24,9 @@ int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
-  auto model = wenet::InitTorchAsrModelFromFlags();
-  auto symbol_table = wenet::InitSymbolTableFromFlags();
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
-  auto fst = wenet::InitFstFromFlags();
-  auto feature_pipeline =
-      std::make_shared<wenet::FeaturePipeline>(*feature_config);
+  auto decode_resource = wenet::InitDecodeResourceFromFlags();
 
   if (FLAGS_wav_path.empty() && FLAGS_wav_scp.empty()) {
     LOG(FATAL) << "Please provide the wave path or the wav scp.";
@@ -61,14 +57,15 @@ int main(int argc, char *argv[]) {
     wenet::WavReader wav_reader(wav.second);
     CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
 
-    feature_pipeline->Reset();
+    auto feature_pipeline =
+        std::make_shared<wenet::FeaturePipeline>(*feature_config);
     feature_pipeline->AcceptWaveform(std::vector<float>(
         wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
     feature_pipeline->set_input_finished();
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
-    wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
-                                   *decode_config, fst);
+    wenet::TorchAsrDecoder decoder(feature_pipeline, decode_resource,
+                                   *decode_config);
 
     int wave_dur =
         static_cast<int>(static_cast<float>(wav_reader.num_sample()) /

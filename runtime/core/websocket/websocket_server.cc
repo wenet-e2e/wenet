@@ -34,15 +34,11 @@ namespace json = boost::json;
 ConnectionHandler::ConnectionHandler(
     tcp::socket&& socket, std::shared_ptr<FeaturePipelineConfig> feature_config,
     std::shared_ptr<DecodeOptions> decode_config,
-    std::shared_ptr<fst::SymbolTable> symbol_table,
-    std::shared_ptr<TorchAsrModel> model,
-    std::shared_ptr<fst::Fst<fst::StdArc>> fst)
+    std::shared_ptr<DecodeResource> decode_resource)
     : ws_(std::move(socket)),
       feature_config_(std::move(feature_config)),
       decode_config_(std::move(decode_config)),
-      symbol_table_(std::move(symbol_table)),
-      model_(std::move(model)),
-      fst_(std::move(fst)) {}
+      decode_resource_(std::move(decode_resource)) {}
 
 void ConnectionHandler::OnSpeechStart() {
   LOG(INFO) << "Recieved speech start signal, start reading speech";
@@ -52,7 +48,7 @@ void ConnectionHandler::OnSpeechStart() {
   ws_.write(asio::buffer(json::serialize(rv)));
   feature_pipeline_ = std::make_shared<FeaturePipeline>(*feature_config_);
   decoder_ = std::make_shared<TorchAsrDecoder>(
-      feature_pipeline_, model_, symbol_table_, *decode_config_, fst_);
+      feature_pipeline_, decode_resource_, *decode_config_);
   // Start decoder thread
   decode_thread_ =
       std::make_shared<std::thread>(&ConnectionHandler::DecodeThreadFunc, this);
@@ -256,7 +252,7 @@ void WebSocketServer::Start() {
       acceptor.accept(socket);
       // Launch the session, transferring ownership of the socket
       ConnectionHandler handler(std::move(socket), feature_config_,
-                                decode_config_, symbol_table_, model_, fst_);
+                                decode_config_, decode_resource_);
       std::thread t(std::move(handler));
       t.detach();
     }

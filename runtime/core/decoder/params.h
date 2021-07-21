@@ -48,25 +48,10 @@ DEFINE_string(dict_path, "", "dict path");
 
 namespace wenet {
 
-std::shared_ptr<TorchAsrModel> InitTorchAsrModelFromFlags() {
-  auto model = std::make_shared<TorchAsrModel>();
-  model->Read(FLAGS_model_path, FLAGS_num_threads);
-  return model;
-}
-
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
   auto feature_config = std::make_shared<FeaturePipelineConfig>(
       FLAGS_num_bins, FLAGS_sample_rate);
   return feature_config;
-}
-
-std::shared_ptr<fst::Fst<fst::StdArc>> InitFstFromFlags() {
-  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
-  if (!FLAGS_fst_path.empty()) {
-    fst.reset(fst::Fst<fst::StdArc>::Read(FLAGS_fst_path));
-    CHECK(fst != nullptr);
-  }
-  return fst;
 }
 
 std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
@@ -87,10 +72,28 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   return decode_config;
 }
 
-std::shared_ptr<fst::SymbolTable> InitSymbolTableFromFlags() {
+std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
+  auto resource = std::make_shared<DecodeResource>();
+
+  LOG(INFO) << "Reading model " << FLAGS_model_path;
+  auto model = std::make_shared<TorchAsrModel>();
+  model->Read(FLAGS_model_path, FLAGS_num_threads);
+  resource->model = model;
+
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
+  if (!FLAGS_fst_path.empty()) {
+    LOG(INFO) << "Reading fst " << FLAGS_fst_path;
+    fst.reset(fst::Fst<fst::StdArc>::Read(FLAGS_fst_path));
+    CHECK(fst != nullptr);
+  }
+  resource->fst = fst;
+
+  LOG(INFO) << "Reading symbol table " << FLAGS_dict_path;
   auto symbol_table = std::shared_ptr<fst::SymbolTable>(
       fst::SymbolTable::ReadText(FLAGS_dict_path));
-  return symbol_table;
+  resource->symbol_table = symbol_table;
+
+  return resource;
 }
 
 }  // namespace wenet
