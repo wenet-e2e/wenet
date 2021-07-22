@@ -84,7 +84,7 @@ class WebSocketServer {
       : port_(port),
         feature_config_(std::move(feature_config)),
         decode_config_(std::move(decode_config)),
-        decode_resource_(std::move(decode_resource_)) {}
+        decode_resource_(std::move(decode_resource)) {}
 
   void Start();
 
