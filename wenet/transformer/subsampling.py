@@ -89,9 +89,9 @@ class Conv2dSubsampling4(BaseSubsampling):
             torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2), odim))
         self.pos_enc = pos_enc_class
         # The right context for every conv layer is computed by:
-        # (kernel_size - 1) / 2 * stride  * frame_rate_of_this_layer
+        # (kernel_size - 1) * frame_rate_of_this_layer
         self.subsampling_rate = 4
-        # 6 = (3 - 1) / 2 * 2 * 1 + (3 - 1) / 2 * 2 * 2
+        # 6 = (3 - 1) * 1 + (3 - 1) * 2
         self.right_context = 6
 
     def forward(
@@ -143,9 +143,9 @@ class Conv2dSubsampling6(BaseSubsampling):
         self.linear = torch.nn.Linear(odim * (((idim - 1) // 2 - 2) // 3),
                                       odim)
         self.pos_enc = pos_enc_class
-        # 14 = (3 - 1) / 2 * 2 * 1 + (5 - 1) / 2 * 3 * 2
+        # 10 = (3 - 1) * 1 + (5 - 1) * 2
         self.subsampling_rate = 6
-        self.right_context = 14
+        self.right_context = 10
 
     def forward(
             self,
@@ -198,7 +198,7 @@ class Conv2dSubsampling8(BaseSubsampling):
             odim * ((((idim - 1) // 2 - 1) // 2 - 1) // 2), odim)
         self.pos_enc = pos_enc_class
         self.subsampling_rate = 8
-        # 14 = (3 - 1) / 2 * 2 * 1 + (3 - 1) / 2 * 2 * 2 + (3 - 1) / 2 * 2 * 4
+        # 14 = (3 - 1) * 1 + (3 - 1) * 2 + (3 - 1) * 4
         self.right_context = 14
 
     def forward(
