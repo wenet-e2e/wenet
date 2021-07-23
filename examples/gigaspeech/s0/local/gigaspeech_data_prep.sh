@@ -100,7 +100,7 @@ if [ $stage -le 1 ]; then
   # Files to be created:
   # wav.scp text segments utt2dur
   python3 local/extract_meta.py \
-     $gigaspeech_dir/GigaSpeech.json $corpus_dir | exit 1;
+     $gigaspeech_dir/GigaSpeech.json $corpus_dir || exit 1;
 fi
 
 if [ $stage -le 2 ]; then
