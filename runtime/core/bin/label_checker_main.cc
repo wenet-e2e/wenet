@@ -100,33 +100,24 @@ void CompileAlignFst(std::vector<int> labels,
   }
   ofst->AddArc(filler_end, fst::StdArc(0, 0, 0.0, filler_start));
 
-  // Optional start filler
-  int cur = ofst->AddState();
-  ofst->AddArc(start, fst::StdArc(0, 0, 0.0, cur));
-  ofst->AddArc(start, fst::StdArc(0, insertion_start, 0.0, filler_start));
-  ofst->AddArc(filler_end, fst::StdArc(0, insertion_end, 0.0, cur));
-
-  int prev = cur;
+  int prev = start;
   // Alignment path and optional filler
   for (size_t i = 0; i < labels.size(); i++) {
-    cur = ofst->AddState();
-    // 1. Correct
-    ofst->AddArc(prev, fst::StdArc(labels[i], labels[i], 0.0, cur));
-    // 2. Deletion
-    ofst->AddArc(prev, fst::StdArc(0, deletion, FLAGS_del_penalty, cur));
-    // 3. Insertion or Substitution
+    int cur = ofst->AddState();
+    // 1. Insertion or Substitution
     ofst->AddArc(prev, fst::StdArc(0, insertion_start, 0.0, filler_start));
-    ofst->AddArc(filler_end, fst::StdArc(0, insertion_end, 0.0, cur));
+    ofst->AddArc(filler_end, fst::StdArc(0, insertion_end, 0.0, prev));
+    // 2. Correct
+    ofst->AddArc(prev, fst::StdArc(labels[i], labels[i], 0.0, cur));
+    // 3. Deletion
+    ofst->AddArc(prev, fst::StdArc(0, deletion, FLAGS_del_penalty, cur));
+
     prev = cur;
   }
-
-  // Optional end filler
-  cur = ofst->AddState();
-  ofst->AddArc(prev, fst::StdArc(0, 0, 0.0, cur));
+  // Optional add endding filler
   ofst->AddArc(prev, fst::StdArc(0, insertion_start, 0.0, filler_start));
-  ofst->AddArc(filler_end, fst::StdArc(0, insertion_end, 0.0, cur));
-
-  ofst->SetFinal(cur, fst::StdArc::Weight::One());
+  ofst->AddArc(filler_end, fst::StdArc(0, insertion_end, 0.0, prev));
+  ofst->SetFinal(prev, fst::StdArc::Weight::One());
   fst::ArcSort(ofst, fst::StdILabelCompare());
 }
 
