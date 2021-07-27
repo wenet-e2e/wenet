@@ -28,7 +28,7 @@ import yaml
 from PIL import Image
 from PIL.Image import BICUBIC
 from torch.nn.utils.rnn import pad_sequence
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Sampler
 
 import wenet.dataset.kaldi_io as kaldi_io
 from wenet.dataset.wav_distortion import distort_wav_conf
@@ -382,10 +382,26 @@ class CollateFunc(object):
             ys_lengths = None
         return keys, xs_pad, ys_pad, xs_lengths, ys_lengths
 
+class RandomSampler(Sampler):    
+    """Samples elements randomly, without replacement.
+    Arguments:
+        data_source (Dataset): dataset to sample from
+    """
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __iter__(self):
+        return iter(torch.randperm(len(self.dataset)).tolist())
+
+    def __len__(self):
+        return len(self.dataset)
+
 
 class AudioDataset(Dataset):
     def __init__(self,
                  data_file,
+                 rank=0,
+                 world_size=1,
                  max_length=10240,
                  min_length=0,
                  token_max_length=200,
@@ -433,25 +449,28 @@ class AudioDataset(Dataset):
 
         # Open in utf8 mode since meet encoding problem
         with codecs.open(data_file, 'r', encoding='utf-8') as f:
+            num_utt = 0
             for line in f:
-                arr = line.strip().split('\t')
-                if len(arr) != 7:
-                    continue
-                key = arr[0].split(':')[1]
-                tokenid = arr[5].split(':')[1]
-                output_dim = int(arr[6].split(':')[1].split(',')[1])
-                if raw_wav:
-                    wav_path = ':'.join(arr[1].split(':')[1:])
-                    duration = int(float(arr[2].split(':')[1]) * 1000 / 10)
-                    data.append((key, wav_path, duration, tokenid))
-                else:
-                    feat_ark = ':'.join(arr[1].split(':')[1:])
-                    feat_info = arr[2].split(':')[1].split(',')
-                    feat_dim = int(feat_info[1].strip())
-                    num_frames = int(feat_info[0].strip())
-                    data.append((key, feat_ark, num_frames, tokenid))
-                    self.input_dim = feat_dim
-                self.output_dim = output_dim
+                if num_utt % world_size == rank:
+                    arr = line.strip().split('\t')
+                    if len(arr) != 7:
+                        continue
+                    key = arr[0].split(':')[1]
+                    tokenid = arr[5].split(':')[1]
+                    output_dim = int(arr[6].split(':')[1].split(',')[1])
+                    if raw_wav:
+                        wav_path = ':'.join(arr[1].split(':')[1:])
+                        duration = int(float(arr[2].split(':')[1]) * 1000 / 10)
+                        data.append((key, wav_path, duration, tokenid))
+                    else:
+                        feat_ark = ':'.join(arr[1].split(':')[1:])
+                        feat_info = arr[2].split(':')[1].split(',')
+                        feat_dim = int(feat_info[1].strip())
+                        num_frames = int(feat_info[0].strip())
+                        data.append((key, feat_ark, num_frames, tokenid))
+                        self.input_dim = feat_dim
+                    self.output_dim = output_dim
+                num_utt += 1
         if sort:
             data = sorted(data, key=lambda x: x[2])
         valid_data = []
@@ -471,6 +490,7 @@ class AudioDataset(Dataset):
         data = valid_data
         self.minibatch = []
         num_data = len(data)
+        print("rank {} num_data {}".format(rank, num_data))
         # Dynamic batch size
         if batch_type == 'dynamic':
             assert (max_frames_in_batch > 0)

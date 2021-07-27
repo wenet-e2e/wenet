@@ -26,7 +26,7 @@ import yaml
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.dataset.dataset import AudioDataset, CollateFunc, RandomSampler
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
@@ -110,9 +110,15 @@ if __name__ == '__main__':
 
     dataset_conf = configs.get('dataset_conf', {})
     train_dataset = AudioDataset(args.train_data,
+                                 world_size=args.world_size,
+                                 rank=args.rank,
                                  **dataset_conf,
                                  raw_wav=raw_wav)
-    cv_dataset = AudioDataset(args.cv_data, **dataset_conf, raw_wav=raw_wav)
+    cv_dataset = AudioDataset(args.cv_data,
+                              **dataset_conf,
+                              world_size=args.world_size,
+                              rank=args.rank,
+                              raw_wav=raw_wav)
 
     if distributed:
         logging.info('training on multiple gpus, this gpu {}'.format(args.gpu))
@@ -120,10 +126,12 @@ if __name__ == '__main__':
                                 init_method=args.init_method,
                                 world_size=args.world_size,
                                 rank=args.rank)
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_dataset, shuffle=True)
-        cv_sampler = torch.utils.data.distributed.DistributedSampler(
-            cv_dataset, shuffle=False)
+        # train_sampler = torch.utils.data.distributed.DistributedSampler(
+        #    train_dataset, shuffle=True)
+        # cv_sampler = torch.utils.data.distributed.DistributedSampler(
+        #     cv_dataset, shuffle=False)
+        train_sampler = RandomSampler(train_dataset)
+        cv_sampler = RandomSampler(cv_dataset)
     else:
         train_sampler = None
         cv_sampler = None
@@ -142,7 +150,7 @@ if __name__ == '__main__':
                                 batch_size=1,
                                 pin_memory=args.pin_memory,
                                 num_workers=args.num_workers)
-
+    print("after loader")
     if raw_wav:
         input_dim = configs['collate_conf']['feature_extraction_conf'][
             'mel_bins']
@@ -163,7 +171,7 @@ if __name__ == '__main__':
 
     # Init asr model from configs
     model = init_asr_model(configs)
-    print(model)
+    # print(model)
     num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {}'.format(num_params))
 
@@ -221,8 +229,8 @@ if __name__ == '__main__':
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
     for epoch in range(start_epoch, num_epochs):
-        if distributed:
-            train_sampler.set_epoch(epoch)
+        #if distributed:
+        #    train_sampler.set_epoch(epoch)
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
