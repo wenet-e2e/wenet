@@ -29,6 +29,32 @@ A Large, modern and evolving dataset for automatic speech recognition. More deta
 |  S.D.     | 269.7 | 4551.6 |  3.4 | 2.8 | 0.9 | 1.6 |  4.7 |  15.9 |
 | Median    | 151.5 | 3314.0 | 93.9 | 4.3 | 1.6 | 1.5 |  7.7 |  70.7 |
 
+## Conformer U2++ Result
+
+* Feature info: using fbank feature, dither 1.0, cmvn, 16k
+* Training info: conf/train_conformer_bidecoder.yaml, subsample 6, kernel size 31, lr 0.001, batch size 28, 8 gpu, acc_grad 1, 50 epochs
+* Decoding info: ctc_weight 0.3, reverse_weight 0.5, average_num 10
+* Git hash: 9a0c270f9f976d7e887f777690e6c358a45a1c27
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210728_u2pp_conformer_exp.tar.gz
+
+## test set gigaspeech scoring, full chunk (non-streaming)
+
+| SPKR      | # Snt |  # Wrd | Corr | Sub | Del | Ins | Err  | S.Err |
+|-----------|-------|--------|------|-----|-----|-----|------|-------|
+| Sum/Avg   | 19928 | 390656 | 90.7 | 6.8 | 2.6 | 2.0 | 11.3 |  66.9 |
+|  Mean     | 152.1 | 2982.1 | 90.6 | 6.8 | 2.7 | 1.6 | 11.1 |  67.1 |
+|  S.D.     | 142.2 | 2838.1 |  5.8 | 4.3 | 1.9 | 1.2 |  6.7 |  16.5 |
+| Median    | 108.0 | 2000.0 | 92.1 | 5.7 | 2.2 | 1.3 |  9.0 |  68.9 |
+
+## test set gigaspeech scoring, chunk 8 (latency range from 0 to 480ms)
+
+| SPKR      | # Snt |  # Wrd | Corr | Sub | Del | Ins | Err  | S.Err |
+|-----------|-------|--------|------|-----|-----|-----|------|-------|
+| Sum/Avg   | 19928 | 390656 | 89.6 | 7.5 | 2.9 | 2.0 | 12.5 |  70.1 |
+|  Mean     | 152.1 | 2982.1 | 89.3 | 7.6 | 3.1 | 1.7 | 12.4 |  70.6 |
+|  S.D.     | 142.2 | 2838.1 |  6.5 | 4.9 | 2.1 | 1.2 |  7.3 |  15.8 |
+| Median    | 108.0 | 2000.0 | 91.1 | 6.3 | 2.5 | 1.4 | 10.2 |  72.2 |
+
 ## Conformer Result
 
 * Feature info: using fbank feature, dither 1.0, no cmvn, 48k
