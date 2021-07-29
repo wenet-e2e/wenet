@@ -26,17 +26,14 @@ void SplitStringToVector(const std::string& full, const char* delim,
                          bool omit_empty_strings,
                          std::vector<std::string>* out);
 
-bool SplitUTF8String(const std::string& str,
-                     std::vector<std::string>* characters);
-
-// Remove head,tail and consecutive space.
-std::string ProcessBlank(const std::string& str);
-
 // NOTE(Xingchen Song): we add this function to make it possible to
 // support multilingual recipe in the future, in which characters of
 // different languages are all encoded in UTF-8 format.
 // UTF-8 REF: https://en.wikipedia.org/wiki/UTF-8#Encoding
-void SplitEachChar(const std::string& word, std::vector<std::string>* chars);
+void SplitUTF8String(const std::string& word, std::vector<std::string>* chars);
+
+// Replace ▁ with space, then remove head, tail and consecutive space.
+std::string ProcessBlank(const std::string& str);
 
 bool CheckEnglishWord(const std::string& word);
 

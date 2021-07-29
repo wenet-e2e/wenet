@@ -24,6 +24,7 @@ namespace wenet {
   Type &operator=(const Type &) = delete;
 
 const float kFloatMax = std::numeric_limits<float>::max();
+// kSpaceSymbol in UTF-8 is: ▁
 const char kSpaceSymbol[] = "\xe2\x96\x81";
 
 // Return the sum of two probabilities in log scale
