@@ -20,6 +20,9 @@
 
 namespace wenet {
 
+const char WHITESPACE[] = " \n\r\t\f\v";
+
+// Split the string with space or tab.
 void SplitString(const std::string& str, std::vector<std::string>* strs);
 
 void SplitStringToVector(const std::string& full, const char* delim,
@@ -30,12 +33,28 @@ void SplitStringToVector(const std::string& full, const char* delim,
 // support multilingual recipe in the future, in which characters of
 // different languages are all encoded in UTF-8 format.
 // UTF-8 REF: https://en.wikipedia.org/wiki/UTF-8#Encoding
-void SplitUTF8String(const std::string& word, std::vector<std::string>* chars);
+// Split the UTF-8 string into chars.
+void SplitUTF8StringToChars(const std::string& str,
+                            std::vector<std::string>* chars);
+
+// Check whether the UTF-8 char is alphabet or '.
+bool CheckEnglishChar(const std::string& ch);
+
+// Check whether the UTF-8 word is only contains alphabet or '.
+bool CheckEnglishWord(const std::string& word);
+
+// Split the UTF-8 string into words.
+void SplitUTF8StringToWords(const std::string& str,
+                            std::vector<std::string>* words);
 
 // Replace ▁ with space, then remove head, tail and consecutive space.
 std::string ProcessBlank(const std::string& str);
 
-bool CheckEnglishWord(const std::string& word);
+std::string ltrim(const std::string& str);
+
+std::string rtrim(const std::string& str);
+
+std::string trim(const std::string& str);
 
 }  // namespace wenet
 

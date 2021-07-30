@@ -24,7 +24,7 @@
 namespace wenet {
 
 void SplitString(const std::string& str, std::vector<std::string>* strs) {
-  SplitStringToVector(str, " \t", true, strs);
+  SplitStringToVector(trim(str), " \t", true, strs);
 }
 
 void SplitStringToVector(const std::string& full, const char* delim,
@@ -41,41 +41,92 @@ void SplitStringToVector(const std::string& full, const char* delim,
   }
 }
 
-void SplitUTF8String(const std::string& word, std::vector<std::string>* chars) {
+void SplitUTF8StringToChars(const std::string& str,
+                            std::vector<std::string>* chars) {
   chars->clear();
   size_t i = 0;
-  while (i < word.length()) {
-    assert((word[i] & 0xF8) <= 0xF0);
+  while (i < str.length()) {
+    assert((str[i] & 0xF8) <= 0xF0);
     int bytes_ = 1;
-    if ((word[i] & 0x80) == 0x00) {
+    if ((str[i] & 0x80) == 0x00) {
       // The first 128 characters (US-ASCII) in UTF-8 format only need one byte.
       bytes_ = 1;
-    } else if ((word[i] & 0xE0) == 0xC0) {
+    } else if ((str[i] & 0xE0) == 0xC0) {
       // The next 1,920 characters need two bytes to encode,
       // which covers the remainder of almost all Latin-script alphabets.
       bytes_ = 2;
-    } else if ((word[i] & 0xF0) == 0xE0) {
+    } else if ((str[i] & 0xF0) == 0xE0) {
       // Three bytes are needed for characters in the rest of
       // the Basic Multilingual Plane, which contains virtually all characters
       // in common use, including most Chinese, Japanese and Korean characters.
       bytes_ = 3;
-    } else if ((word[i] & 0xF8) == 0xF0) {
+    } else if ((str[i] & 0xF8) == 0xF0) {
       // Four bytes are needed for characters in the other planes of Unicode,
       // which include less common CJK characters, various historic scripts,
       // mathematical symbols, and emoji (pictographic symbols).
       bytes_ = 4;
     }
-    chars->push_back(word.substr(i, bytes_));
+    chars->push_back(str.substr(i, bytes_));
     i += bytes_;
   }
-  return;
+}
+
+bool CheckEnglishChar(const std::string& ch) {
+  // all english characters should be encoded in one byte
+  if (ch.size() != 1) return false;
+  // english words may contain apostrophe, i.e., "He's"
+  return isalpha(ch[0]) || ch[0] == '\'';
+}
+
+bool CheckEnglishWord(const std::string& word) {
+  std::vector<std::string> chars;
+  SplitUTF8StringToChars(word, &chars);
+  for (size_t k = 0; k < chars.size(); k++) {
+    if (CheckEnglishChar(chars[k])) {
+      continue;
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+void SplitUTF8StringToWords(const std::string& str,
+                            std::vector<std::string>* words) {
+  std::vector<std::string> chars;
+  SplitUTF8StringToChars(trim(str), &chars);
+
+  words->clear();
+  std::ostringstream oss;
+  // concat english chars into word
+  bool is_english_current = false;
+  for (const std::string& ch : chars) {
+    if (ch.empty() || ch[0] == ' ') continue;
+    if (CheckEnglishChar(ch)) {
+      is_english_current = true;
+      oss << ch;
+    } else {
+      // push back the complete english word to words
+      if (is_english_current) {
+        is_english_current = false;
+        words->push_back(oss.str());
+        oss.str("");
+      }
+      words->push_back(ch);
+    }
+  }
+  // push back the last english word to words
+  if (is_english_current) {
+    words->push_back(oss.str());
+  }
 }
 
 std::string ProcessBlank(const std::string& str) {
   std::string result;
   if (!str.empty()) {
     std::vector<std::string> characters;
-    SplitUTF8String(str, &characters);
+    SplitUTF8StringToChars(trim(str), &characters);
+
     for (std::string& character : characters) {
       if (character != kSpaceSymbol) {
         result.append(character);
@@ -97,17 +148,18 @@ std::string ProcessBlank(const std::string& str) {
   return result;
 }
 
-bool CheckEnglishWord(const std::string& word) {
-  std::vector<std::string> chars;
-  SplitUTF8String(word, &chars);
-  for (size_t k = 0; k < chars.size(); k++) {
-    // all english characters should be encoded in one byte
-    if (chars[k].size() > 1) return false;
-    // english words may contain apostrophe, i.e., "He's"
-    if (chars[k][0] == '\'') continue;
-    if (!isalpha(chars[k][0])) return false;
-  }
-  return true;
+std::string ltrim(const std::string& str) {
+  size_t start = str.find_first_not_of(WHITESPACE);
+  return (start == std::string::npos) ? "" : str.substr(start);
+}
+
+std::string rtrim(const std::string& str) {
+  size_t end = str.find_last_not_of(WHITESPACE);
+  return (end == std::string::npos) ? "" : str.substr(0, end + 1);
+}
+
+std::string trim(const std::string& str) {
+  return rtrim(ltrim(str));
 }
 
 }  // namespace wenet
