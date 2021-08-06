@@ -84,7 +84,6 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
     # Set random seed
     torch.manual_seed(777)
     print(args)
@@ -194,10 +193,11 @@ if __name__ == '__main__':
     if distributed:
         assert (torch.cuda.is_available())
         # cuda model is required for nn.parallel.DistributedDataParallel
-        model.cuda()
+        torch.cuda.set_device(args.rank)
+        model.cuda(args.rank)
         model = torch.nn.parallel.DistributedDataParallel(
-            model, find_unused_parameters=True)
-        device = torch.device("cuda")
+            model, device_ids=[args.rank], find_unused_parameters=True)
+        device = torch.device(args.rank)
     else:
         use_cuda = args.gpu >= 0 and torch.cuda.is_available()
         device = torch.device('cuda' if use_cuda else 'cpu')
