@@ -17,7 +17,7 @@ class LabelSmoothingLoss(nn.Module):
     [
         [1.0, 0.0, 0.0],
         [0.0, 1.0, 0.0],
-        [1.0, 0.0, 1.0],
+        [0.0, 0.0, 1.0],
     ]
 
     In the smoothing version CE Loss,some probabilities
