@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
   while (std::getline(text_is, line)) {
     std::vector<std::string> strs;
     wenet::SplitString(line, &strs);
-    CHECK_GE(strs.size(), 2);
+    if (strs.size() < 2) continue;
     std::string key = strs[0];
     LOG(INFO) << "Processing " << key;
     if (wav_table.find(key) != wav_table.end()) {
@@ -181,7 +181,11 @@ int main(int argc, char *argv[]) {
       fst::Compose(ctc_fst, align_fst, decoding_fst.get());
       // decoding_fst->Write("decoding.fst");
       // Preapre feature pipeline
-      wenet::WavReader wav_reader(wav_table[key]);
+      wenet::WavReader wav_reader;
+      if (!wav_reader.Open(wav_table[key])) {
+        LOG(WARNING) << "Error in reading " << wav_table[key];
+        continue;
+      }
       CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
       auto feature_pipeline =
           std::make_shared<wenet::FeaturePipeline>(*feature_config);
