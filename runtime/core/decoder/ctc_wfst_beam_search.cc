@@ -165,7 +165,7 @@ void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
       ++cur;
     }
     // merge continuous same label
-    while (cur - 1 < alignment.size() && alignment[cur + 1] == alignment[cur]) {
+    while (cur + 1 < alignment.size() && alignment[cur + 1] == alignment[cur]) {
       ++cur;
     }
     if (cur < alignment.size()) {
