@@ -24,7 +24,7 @@
 namespace wenet {
 
 void SplitString(const std::string& str, std::vector<std::string>* strs) {
-  SplitStringToVector(trim(str), " \t", true, strs);
+  SplitStringToVector(Trim(str), " \t", true, strs);
 }
 
 void SplitStringToVector(const std::string& full, const char* delim,
@@ -82,9 +82,7 @@ bool CheckEnglishWord(const std::string& word) {
   std::vector<std::string> chars;
   SplitUTF8StringToChars(word, &chars);
   for (size_t k = 0; k < chars.size(); k++) {
-    if (CheckEnglishChar(chars[k])) {
-      continue;
-    } else {
+    if (!CheckEnglishChar(chars[k])) {
       return false;
     }
   }
@@ -125,7 +123,7 @@ std::string ProcessBlank(const std::string& str) {
   std::string result;
   if (!str.empty()) {
     std::vector<std::string> characters;
-    SplitUTF8StringToChars(trim(str), &characters);
+    SplitUTF8StringToChars(Trim(str), &characters);
 
     for (std::string& character : characters) {
       if (character != kSpaceSymbol) {
@@ -148,18 +146,18 @@ std::string ProcessBlank(const std::string& str) {
   return result;
 }
 
-std::string ltrim(const std::string& str) {
+std::string Ltrim(const std::string& str) {
   size_t start = str.find_first_not_of(WHITESPACE);
   return (start == std::string::npos) ? "" : str.substr(start);
 }
 
-std::string rtrim(const std::string& str) {
+std::string Rtrim(const std::string& str) {
   size_t end = str.find_last_not_of(WHITESPACE);
   return (end == std::string::npos) ? "" : str.substr(0, end + 1);
 }
 
-std::string trim(const std::string& str) {
-  return rtrim(ltrim(str));
+std::string Trim(const std::string& str) {
+  return Rtrim(Ltrim(str));
 }
 
 }  // namespace wenet
