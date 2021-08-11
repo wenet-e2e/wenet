@@ -8,8 +8,8 @@ encoder_conf:
     num_blocks: 12      # the number of encoder blocks
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
-    attention_dropout_rate: 0.1
-    input_layer: conv2d6 # encoder input type, you can chose conv2d, conv2d6 and conv2d8
+    attention_dropout_rate: 0.0
+    input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
     cnn_module_kernel: 31
     use_cnn_module: True
@@ -27,8 +27,8 @@ decoder_conf:
     r_num_blocks: 3
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
-    self_attention_dropout_rate: 0.1
-    src_attention_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.0
+    src_attention_dropout_rate: 0.0
 
 # hybrid CTC/attention
 model_conf:
@@ -54,13 +54,12 @@ collate_conf:
         frame_shift: 10
         frame_length: 25
         using_pitch: false
-        resample: 16000
     # spec level config
     # spec_swap: false
     feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
     spec_aug: true
     spec_aug_conf:
-        warp_for_time: False
+        warp_for_time: True
         num_t_mask: 3
         num_f_mask: 2
         max_t: 50
@@ -69,25 +68,25 @@ collate_conf:
     spec_sub: true
     spec_sub_conf:
         num_t_sub: 3
-        max_t: 30
+        max_t: 20
 
 # dataset related
 dataset_conf:
     max_length: 2000
-    min_length: 0
+    min_length: 10
     batch_type: 'static' # static or dynamic
     # the size of batch_size should be set according to your gpu memory size, here we used v100 gpu whose memory size is 32GB
-    batch_size: 28
+    batch_size: 20
     sort: true
 
 grad_clip: 5
 accum_grad: 4
-max_epoch: 30
+max_epoch: 50
 log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.002
+    lr: 0.001
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 100000
