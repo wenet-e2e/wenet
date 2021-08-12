@@ -243,11 +243,14 @@ void TorchAsrDecoder::UpdateResult(bool finish) {
       CHECK_EQ(input.size(), time_stamp.size());
       for (size_t j = 0; j < input.size(); j++) {
         std::string word = unit_table_->Find(input[j]);
-        int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
-        int end = time_stamp[j] * frame_shift_in_ms();
+        int start = j > 0 ? ((time_stamp[j - 1] + time_stamp[j]) / 2 *
+                             frame_shift_in_ms())
+                          : 0;
+        int end = j < input.size() - 1 ? ((time_stamp[j] + time_stamp[j + 1]) /
+                                          2 * frame_shift_in_ms())
+                                       : offset_ * frame_shift_in_ms();
         WordPiece word_piece(word, offset + start, offset + end);
         path.word_pieces.emplace_back(word_piece);
-        start = word_piece.end;
       }
     }
     path.sentence = ProcessBlank(path.sentence);

@@ -43,6 +43,9 @@ bool CheckEnglishChar(const std::string& ch);
 // Check whether the UTF-8 word is only contains alphabet or '.
 bool CheckEnglishWord(const std::string& word);
 
+std::string JoinString(const std::string& c,
+                       const std::vector<std::string>& strs);
+
 // Split the UTF-8 string into words.
 void SplitUTF8StringToWords(const std::string& str,
                             std::vector<std::string>* words);
