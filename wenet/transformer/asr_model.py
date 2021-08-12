@@ -245,7 +245,7 @@ class ASRModel(torch.nn.Module):
             top_k_logp, top_k_index = logp.topk(beam_size)  # (B*N, N)
             top_k_logp = mask_finished_scores(top_k_logp, end_flag)
             top_k_index = mask_finished_preds(top_k_index, end_flag, self.eos)
-            # 2.3 Seconde beam prune: select topk score with history
+            # 2.3 Second beam prune: select topk score with history
             scores = scores + top_k_logp  # (B*N, N), broadcast add
             scores = scores.view(batch_size, beam_size * beam_size)  # (B, N*N)
             scores, offset_k_index = scores.topk(k=beam_size)  # (B, N)

@@ -34,7 +34,10 @@ include_directories(
 )
 
 # utils
-add_library(utils STATIC utils/utils.cc)
+add_library(utils STATIC
+  utils/string.cc
+  utils/utils.cc
+)
 
 # frontend
 add_library(frontend STATIC

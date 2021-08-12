@@ -39,7 +39,7 @@ static bool PrefixScoreCompare(
   return a.second.score() > b.second.score();
 }
 
-// Please refer https://robin1001.github.io/2020/12/11/ctc-search/
+// Please refer https://robin1001.github.io/2020/12/11/ctc-search
 // for how CTC prefix beam search works, and there is a simple graph demo in it.
 void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   CHECK_EQ(logp.dtype(), torch::kFloat);

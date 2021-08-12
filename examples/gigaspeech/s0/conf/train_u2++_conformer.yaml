@@ -9,10 +9,12 @@ encoder_conf:
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     attention_dropout_rate: 0.0
-    input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
+    input_layer: conv2d6 # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
-    cnn_module_kernel: 31
+    cnn_module_kernel: 8
     use_cnn_module: True
+    causal: true
+    use_dynamic_chunk: true
     cnn_module_norm: 'layer_norm'
     activation_type: 'swish'
     pos_enc_layer_type: 'rel_pos'
@@ -76,11 +78,11 @@ dataset_conf:
     min_length: 10
     batch_type: 'static' # static or dynamic
     # the size of batch_size should be set according to your gpu memory size, here we used v100 gpu whose memory size is 32GB
-    batch_size: 20
+    batch_size: 28
     sort: true
 
 grad_clip: 5
-accum_grad: 4
+accum_grad: 1
 max_epoch: 50
 log_interval: 100
 
@@ -89,4 +91,4 @@ optim_conf:
     lr: 0.001
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
-    warmup_steps: 100000
+    warmup_steps: 80000
