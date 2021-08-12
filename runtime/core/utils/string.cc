@@ -92,7 +92,7 @@ bool CheckEnglishWord(const std::string& word) {
 void SplitUTF8StringToWords(const std::string& str,
                             std::vector<std::string>* words) {
   std::vector<std::string> chars;
-  SplitUTF8StringToChars(trim(str), &chars);
+  SplitUTF8StringToChars(Trim(str), &chars);
 
   words->clear();
   std::ostringstream oss;
