@@ -33,7 +33,7 @@ bool MapToLabel(const std::string &text,
   labels->clear();
   // Split label to char sequence
   std::vector<std::string> chars;
-  SplitUTF8String(text, &chars);
+  SplitUTF8StringToChars(text, &chars);
   for (size_t i = 0; i < chars.size(); i++) {
     // ▁ is special symbol for white space
     std::string label = chars[i] != " " ? chars[i] : "▁";
