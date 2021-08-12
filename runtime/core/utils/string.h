@@ -50,11 +50,11 @@ void SplitUTF8StringToWords(const std::string& str,
 // Replace ▁ with space, then remove head, tail and consecutive space.
 std::string ProcessBlank(const std::string& str);
 
-std::string ltrim(const std::string& str);
+std::string Ltrim(const std::string& str);
 
-std::string rtrim(const std::string& str);
+std::string Rtrim(const std::string& str);
 
-std::string trim(const std::string& str);
+std::string Trim(const std::string& str);
 
 }  // namespace wenet
 
