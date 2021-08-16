@@ -15,7 +15,8 @@ You can use our pretrained model (click the following link to download):
 
 * [Chinese model trained on AIshell](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_device.tar.gz)
 * [Model trained on AISHELL-2](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_device.tar.gz)
-* [English model trained on LibriSpeech(TODO)]()
+* [Model trained on Multi-CN](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210815_unified_conformer_device.tar.gz)
+* [English model trained on LibriSpeech (TODO)]()
 
 Or you can train your own model using WeNet training pipeline on your data.
 

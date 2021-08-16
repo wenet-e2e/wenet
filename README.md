@@ -38,7 +38,7 @@ Please see `examples/$dataset/s0/README.md` for benchmark on different speech da
 * [AIShell-2](examples/aishell2/s0/README.md)
 * [LibriSpeech](examples/librispeech/s0/README.md)
 * [GigaSpeech](examples/gigaspeech/s0/README.md)
-* [Multi-Chinese](examples/multi_cn/s0/README.md) trained using all open source Chinese corpus.
+* [Multi-CN](examples/multi_cn/s0/README.md) trained using all open source Chinese corpus.
 
 ## Installation
 
