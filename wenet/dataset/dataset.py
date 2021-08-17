@@ -226,7 +226,7 @@ def _extract_feature(batch, speed_perturb, wav_distortion_conf,
                     waveform, sample_rate = torchaudio.backend.sox_io_backend.load(
                         filepath=wav_path,
                         num_frames=end_frame - start_frame,
-                        offset=start_frame)
+                        frame_offset=start_frame)
                 else:
                     waveform, sample_rate = torchaudio.load(wav_path)
             waveform = waveform * (1 << 15)
