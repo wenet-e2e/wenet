@@ -31,7 +31,8 @@ TorchAsrDecoder::TorchAsrDecoder(
     CHECK(model_->is_bidirectional_decoder());
   }
   if (nullptr == fst_) {
-    searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts));
+    searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts,
+                                            resource->context_graph));
   } else {
     searcher_.reset(new CtcWfstBeamSearch(*fst_, opts.ctc_wfst_search_opts));
   }

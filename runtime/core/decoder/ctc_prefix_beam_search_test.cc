@@ -13,7 +13,7 @@
 
 TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   using ::testing::ElementsAre;
-  // See https://robin1001.github.io/2020/12/11/ctc-search/ for the
+  // See https://robin1001.github.io/2020/12/11/ctc-search for the
   // graph demonstration of the data
   std::vector<float> data = {0.25, 0.40, 0.35, 0.40, 0.35,
                              0.25, 0.10, 0.50, 0.40};
@@ -33,13 +33,13 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   | top 2 | [1, 2]       | 0.1550       | 0.064         | [0, 2]    |
   | top 3 | [1]          | 0.1525       | 0.07          | [2]       |
   */
-  const std::vector<std::vector<int>>& result = prefix_beam_search.hypotheses();
+  const std::vector<std::vector<int>>& result = prefix_beam_search.Outputs();
   EXPECT_EQ(result.size(), 3);
   ASSERT_THAT(result[0], ElementsAre(2, 1));
   ASSERT_THAT(result[1], ElementsAre(1, 2));
   ASSERT_THAT(result[2], ElementsAre(1));
 
-  const std::vector<float>& likelihood = prefix_beam_search.likelihood();
+  const std::vector<float>& likelihood = prefix_beam_search.Likelihood();
   EXPECT_EQ(likelihood.size(), 3);
   EXPECT_FLOAT_EQ(std::exp(likelihood[0]), 0.2185);
   EXPECT_FLOAT_EQ(std::exp(likelihood[1]), 0.1550);
@@ -52,7 +52,7 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   EXPECT_FLOAT_EQ(std::exp(viterbi_likelihood[1]), 0.064);
   EXPECT_FLOAT_EQ(std::exp(viterbi_likelihood[2]), 0.07);
 
-  const std::vector<std::vector<int>>& times = prefix_beam_search.times();
+  const std::vector<std::vector<int>>& times = prefix_beam_search.Times();
   EXPECT_EQ(times.size(), 3);
   ASSERT_THAT(times[0], ElementsAre(0, 2));
   ASSERT_THAT(times[1], ElementsAre(0, 2));

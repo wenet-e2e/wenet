@@ -12,8 +12,10 @@
 
 namespace wenet {
 
-CtcPrefixBeamSearch::CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts)
-    : opts_(opts) {
+CtcPrefixBeamSearch::CtcPrefixBeamSearch(
+    const CtcPrefixBeamSearchOptions& opts,
+    const std::shared_ptr<ContextGraph>& context_graph)
+    : opts_(opts), context_graph_(context_graph) {
   Reset();
 }
 
@@ -36,7 +38,7 @@ void CtcPrefixBeamSearch::Reset() {
 static bool PrefixScoreCompare(
     const std::pair<std::vector<int>, PrefixScore>& a,
     const std::pair<std::vector<int>, PrefixScore>& b) {
-  return a.second.score() > b.second.score();
+  return a.second.total_score() > b.second.total_score();
 }
 
 // Please refer https://robin1001.github.io/2020/12/11/ctc-search
@@ -69,6 +71,15 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
           next_score.s = LogAdd(next_score.s, prefix_score.score() + prob);
           next_score.v_s = prefix_score.viterbi_score() + prob;
           next_score.times_s = prefix_score.times();
+
+          if (context_graph_) {
+            // Prefix not changed, copy the context score from prefix.
+            next_score.active_states = prefix_score.active_states;
+            next_score.partial_match_context_score =
+                prefix_score.partial_match_context_score;
+            next_score.full_match_context_score =
+                prefix_score.full_match_context_score;
+          }
         } else if (!prefix.empty() && id == prefix.back()) {
           // Case 1: *a + a => *a
           PrefixScore& next_score1 = next_hyps[prefix];
@@ -82,6 +93,16 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
               next_score1.times_ns.back() = abs_time_step_;
             }
           }
+
+          if (context_graph_) {
+            // Prefix not changed, copy the context score from prefix.
+            next_score1.active_states = prefix_score.active_states;
+            next_score1.partial_match_context_score =
+                prefix_score.partial_match_context_score;
+            next_score1.full_match_context_score =
+                prefix_score.full_match_context_score;
+          }
+
           // Case 2: *aε + a => *aa
           std::vector<int> new_prefix(prefix);
           new_prefix.emplace_back(id);
@@ -92,6 +113,20 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
             next_score2.cur_token_prob = prob;
             next_score2.times_ns = prefix_score.times_s;
             next_score2.times_ns.emplace_back(abs_time_step_);
+          }
+
+          if (context_graph_) {
+            // Prefix changed, calculate the context score.
+            float partial_match_context_score = 0;
+            float full_match_context_score = 0;
+            std::tie(partial_match_context_score, full_match_context_score) =
+                context_graph_->GetNextContextStates(
+                    prefix_score.active_states, id, next_score2.active_states);
+            next_score2.partial_match_context_score =
+                partial_match_context_score;
+            next_score2.full_match_context_score =
+                std::max(next_hyps[prefix].full_match_context_score,
+                         full_match_context_score);
           }
         } else {
           // Case 3: *a + b => *ab, *aε + b => *ab
@@ -104,6 +139,20 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
             next_score.cur_token_prob = prob;
             next_score.times_ns = prefix_score.times();
             next_score.times_ns.emplace_back(abs_time_step_);
+          }
+
+          if (context_graph_) {
+            // Calculate the context score.
+            float partial_match_context_score = 0;
+            float full_match_context_score = 0;
+            std::tie(partial_match_context_score, full_match_context_score) =
+                context_graph_->GetNextContextStates(
+                    prefix_score.active_states, id, next_score.active_states);
+            next_score.partial_match_context_score =
+                partial_match_context_score;
+            next_score.full_match_context_score =
+                std::max(next_hyps[prefix].full_match_context_score,
+                         full_match_context_score);
           }
         }
       }
@@ -128,7 +177,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     for (auto& item : arr) {
       cur_hyps_[item.first] = item.second;
       hypotheses_.emplace_back(std::move(item.first));
-      likelihood_.emplace_back(item.second.score());
+      likelihood_.emplace_back(item.second.total_score());
       viterbi_likelihood_.emplace_back(item.second.viterbi_score());
       times_.emplace_back(item.second.times());
     }
