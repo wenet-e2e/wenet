@@ -37,28 +37,29 @@ void ContextGraph::BuildContextGraph(
       continue;
     }
     if (++count > config_.max_contexts) break;
-    // Split context to chars, and build the context graph.
-    // TODO (zhendong.peng): Support bpe based context.
-    std::vector<std::string> chars;
-    SplitUTF8StringToChars(Trim(context), &chars);
+
+    std::vector<std::string> words;
+    // Split context to words by symbol table, and build the context graph.
+    bool no_oov = SplitUTF8StringToWords(Trim(context), symbol_table, words);
+    if (!no_oov) {
+      LOG(WARNING) << "Ignore unknown word found during compilation.";
+      continue;
+    }
+    float escape_score = 0;
     int prev_state = start_state;
     int next_state = start_state;
-    for (size_t i = 0; i < chars.size(); ++i) {
-      const std::string& ch = chars[i];
-      int word_id = symbol_table_->Find(ch);
-      if (word_id == -1) {
-        LOG(WARNING) << "Ignore unknown word found during compilation: " << ch;
-        break;
-      }
-      next_state = (i < chars.size() - 1) ? ofst->AddState() : final_state;
+    for (size_t i = 0; i < words.size(); ++i) {
+      int word_id = symbol_table_->Find(words[i]);
+      float score = config_.context_score * UTF8StringLength(words[i]);
+      next_state = (i < words.size() - 1) ? ofst->AddState() : final_state;
       // Each state has an escape arc to the start state.
       if (i > 0) {
-        float escape_score = -config_.context_score * i;
         ofst->AddArc(prev_state, fst::StdArc(0, 0, escape_score, start_state));
       }
-      ofst->AddArc(prev_state, fst::StdArc(word_id, word_id,
-                                           config_.context_score, next_state));
+      ofst->AddArc(prev_state,
+                   fst::StdArc(word_id, word_id, score, next_state));
       prev_state = next_state;
+      escape_score -= score;
     }
   }
   std::unique_ptr<fst::StdVectorFst> det_fst(new fst::StdVectorFst());
