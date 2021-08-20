@@ -31,8 +31,13 @@ namespace kaldi {
 // instantiate this class once for each thing you have to decode.
 template <typename FST, typename Token>
 LatticeFasterDecoderTpl<FST, Token>::LatticeFasterDecoderTpl(
-    const FST &fst, const LatticeFasterDecoderConfig &config)
-    : fst_(&fst), delete_fst_(false), config_(config), num_toks_(0) {
+    const FST &fst, const LatticeFasterDecoderConfig &config,
+    const std::shared_ptr<wenet::ContextGraph> &context_graph)
+    : fst_(&fst),
+      delete_fst_(false),
+      config_(config),
+      num_toks_(0),
+      context_graph_(context_graph) {
   config.Check();
   toks_.SetSize(
       1000);  // just so on the first frame we do something reasonable.
@@ -348,8 +353,8 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinks(
           *links_pruned = true;
         } else {  // keep the link and update the tok_extra_cost if needed.
           if (link_extra_cost < 0.0) {  // this is just a precaution.
-            if (link_extra_cost < -0.01)
-              KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
+            // if (link_extra_cost < -0.01)
+            //   KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
             link_extra_cost = 0.0;
           }
           if (link_extra_cost < tok_extra_cost)
@@ -439,8 +444,8 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinksFinal() {
           link = next_link;  // advance link but leave prev_link the same.
         } else {  // keep the link and update the tok_extra_cost if needed.
           if (link_extra_cost < 0.0) {  // this is just a precaution.
-            if (link_extra_cost < -0.01)
-              KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
+            // if (link_extra_cost < -0.01)
+            //   KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
             link_extra_cost = 0.0;
           }
           if (link_extra_cost < tok_extra_cost)
@@ -803,6 +808,30 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, NULL);
           // NULL: no change indicator needed
 
+          if (context_graph_) {
+            BaseFloat context_score = 0.0;
+            unordered_map<StateId, float> active_states{{0, 0}};
+            BaseFloat partial_match_context_score = 0.0;
+            BaseFloat full_match_context_score = 0.0;
+            if (arc.olabel == 0) {
+              active_states = tok->active_states;
+              partial_match_context_score = tok->partial_match_context_score;
+              full_match_context_score = tok->full_match_context_score;
+            } else {
+              std::tie(partial_match_context_score, full_match_context_score) =
+                  context_graph_->GetNextContextStates(
+                      tok->active_states, arc.olabel, active_states);
+            }
+            e_next->val->active_states = active_states;
+            e_next->val->partial_match_context_score =
+                partial_match_context_score;
+            e_next->val->full_match_context_score = full_match_context_score;
+            context_score =
+                std::max(partial_match_context_score, full_match_context_score);
+
+            graph_cost -= context_score;
+          }
+
           // Add ForwardLink from tok to next_tok (put on head of list
           // tok->links)
           tok->links = new ForwardLinkT(e_next->val, arc.ilabel, arc.olabel,
@@ -886,6 +915,30 @@ void LatticeFasterDecoderTpl<FST, Token>::ProcessNonemitting(BaseFloat cutoff) {
 
           Elem *e_new =
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, &changed);
+
+          if (context_graph_) {
+            BaseFloat context_score = 0;
+            unordered_map<StateId, float> active_states{{0, 0}};
+            BaseFloat partial_match_context_score = 0.0;
+            BaseFloat full_match_context_score = 0.0;
+            if (arc.olabel == 0) {
+              active_states = tok->active_states;
+              partial_match_context_score = tok->partial_match_context_score;
+              full_match_context_score = tok->full_match_context_score;
+            } else {
+              std::tie(partial_match_context_score, full_match_context_score) =
+                  context_graph_->GetNextContextStates(
+                      tok->active_states, arc.olabel, active_states);
+            }
+            e_new->val->active_states = active_states;
+            e_new->val->partial_match_context_score =
+                partial_match_context_score;
+            e_new->val->full_match_context_score = full_match_context_score;
+            context_score =
+                std::max(partial_match_context_score, full_match_context_score);
+
+            graph_cost -= context_score;
+          }
 
           tok->links = new ForwardLinkT(e_new->val, 0, arc.olabel, graph_cost,
                                         0, tok->links);

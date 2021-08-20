@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "base/kaldi-common.h"
+#include "decoder/context_graph.h"
 #include "fst/fstlib.h"
 #include "fstext/fstext-lib.h"
 #include "itf/decodable-itf.h"
@@ -137,6 +138,7 @@ struct ForwardLink {
 
 struct StdToken {
   using ForwardLinkT = ForwardLink<StdToken>;
+  using StateId = fst::StdArc::StateId;
   using Token = StdToken;
 
   // Standard token type for LatticeFasterDecoder.  Each active HCLG
@@ -154,6 +156,10 @@ struct StdToken {
   // succeed (e.g. if you were to take the currently active states one by one
   // and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
+
+  unordered_map<StateId, float> active_states{{0, 0}};
+  BaseFloat partial_match_context_score = 0.0;
+  BaseFloat full_match_context_score = 0.0;
 
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
   // use for lattice generation.
@@ -178,6 +184,7 @@ struct StdToken {
 
 struct BackpointerToken {
   using ForwardLinkT = ForwardLink<BackpointerToken>;
+  using StateId = fst::StdArc::StateId;
   using Token = BackpointerToken;
 
   // BackpointerToken is like Token but also
@@ -196,6 +203,10 @@ struct BackpointerToken {
   // eventually succeed (e.g. if you were to take the currently active states
   // one by one and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
+
+  unordered_map<StateId, BaseFloat> active_states{{0, 0}};
+  BaseFloat partial_match_context_score = 0.0;
+  BaseFloat full_match_context_score = 0.0;
 
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
   // use for lattice generation.
@@ -254,8 +265,9 @@ class LatticeFasterDecoderTpl {
   // Instantiate this class once for each thing you have to decode.
   // This version of the constructor does not take ownership of
   // 'fst'.
-  LatticeFasterDecoderTpl(const FST &fst,
-                          const LatticeFasterDecoderConfig &config);
+  LatticeFasterDecoderTpl(
+      const FST &fst, const LatticeFasterDecoderConfig &config,
+      const std::shared_ptr<wenet::ContextGraph> &context_graph);
 
   // This version of the constructor takes ownership of the fst, and will delete
   // it when this object is destroyed.
@@ -498,6 +510,8 @@ class LatticeFasterDecoderTpl {
   unordered_map<Token *, BaseFloat> final_costs_;
   BaseFloat final_relative_cost_;
   BaseFloat final_best_cost_;
+
+  std::shared_ptr<wenet::ContextGraph> context_graph_ = nullptr;
 
   // There are various cleanup tasks... the toks_ structure contains
   // singly linked lists of Token pointers, where Elem is the list type.

@@ -54,9 +54,10 @@ class LatticeFasterOnlineDecoderTpl
   // Instantiate this class once for each thing you have to decode.
   // This version of the constructor does not take ownership of
   // 'fst'.
-  LatticeFasterOnlineDecoderTpl(const FST &fst,
-                                const LatticeFasterDecoderConfig &config)
-      : LatticeFasterDecoderTpl<FST, Token>(fst, config) {}
+  LatticeFasterOnlineDecoderTpl(
+      const FST &fst, const LatticeFasterDecoderConfig &config,
+      const std::shared_ptr<wenet::ContextGraph> &context_graph)
+      : LatticeFasterDecoderTpl<FST, Token>(fst, config, context_graph) {}
 
   // This version of the initializer takes ownership of 'fst', and will delete
   // it when this object is destroyed.

@@ -42,9 +42,12 @@ int32 DecodableTensorScaled::NumIndices() const {
   return 0;
 }
 
-CtcWfstBeamSearch::CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
-                                     const CtcWfstBeamSearchOptions& opts)
-    : decodable_(opts.acoustic_scale), decoder_(fst, opts), opts_(opts) {
+CtcWfstBeamSearch::CtcWfstBeamSearch(
+    const fst::Fst<fst::StdArc>& fst, const CtcWfstBeamSearchOptions& opts,
+    const std::shared_ptr<ContextGraph>& context_graph)
+    : decodable_(opts.acoustic_scale),
+      decoder_(fst, opts, context_graph),
+      opts_(opts) {
   Reset();
 }
 
@@ -108,7 +111,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
     std::vector<int> alignment;
     kaldi::LatticeWeight weight;
     fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
-    ConvertToInputs(alignment, &inputs_[0]);
+    ConvertToInputs(alignment, inputs_[0]);
     VLOG(3) << weight.Value1() << " " << weight.Value2();
     likelihood_[0] = -weight.Value2();
   }
@@ -147,33 +150,26 @@ void CtcWfstBeamSearch::FinalizeSearch() {
       std::vector<int> alignment;
       fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
                                    &weight);
-      ConvertToInputs(alignment, &inputs_[i], &times_[i]);
+      ConvertToInputs(alignment, inputs_[i], &times_[i]);
       likelihood_[i] = -weight.Value2();
     }
   }
 }
 
 void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
-                                        std::vector<int>* input,
+                                        std::vector<int>& input,
                                         std::vector<int>* time) {
-  input->clear();
+  input.clear();
   if (time != nullptr) time->clear();
-  int cur = 0;
-  while (cur < alignment.size()) {
+  for (int cur = 0; cur < alignment.size(); ++cur) {
     // ignore blank
-    while (cur < alignment.size() && alignment[cur] - 1 == 0) {
-      ++cur;
-    }
+    if (alignment[cur] - 1 == 0) continue;
     // merge continuous same label
-    while (cur + 1 < alignment.size() && alignment[cur + 1] == alignment[cur]) {
-      ++cur;
-    }
-    if (cur < alignment.size()) {
-      input->push_back(alignment[cur] - 1);
-      if (time != nullptr) {
-        time->push_back(decoded_frames_mapping_[cur]);
-      }
-      ++cur;
+    if (cur > 0 && alignment[cur] == alignment[cur - 1]) continue;
+
+    input.push_back(alignment[cur] - 1);
+    if (time != nullptr) {
+      time->push_back(decoded_frames_mapping_[cur]);
     }
   }
 }
