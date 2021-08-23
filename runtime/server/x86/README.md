@@ -9,6 +9,9 @@
 [AISHELL-1](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_server.tar.gz)
 | [AISHELL-2](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz)
 | [Multi-CN](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210815_unified_conformer_server.tar.gz)
+| [LibriSpeech](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210610_u2pp_conformer_server.tar.gz)
+| [GigaSpeech](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210728_u2pp_conformer_server.tar.gz)
+
 
 * Step 2. Start docker websocket server. Here is a demo.
 
