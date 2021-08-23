@@ -5,6 +5,7 @@ This Android demo shows we can run on-device streaming ASR with WeNet. You can d
 ## Prebuilt APK
 
 * [Chinese ASR Demo APK, with model trained on AIShell data](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210202_app.apk)
+* [English ASR Demo APK, with model trained on GigaSpeech data](http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210823_app.apk)
 * [English ASR Demo APK, with model trained on LibriSpeech data (To be added)]()
 
 ## Build your APK from source code
