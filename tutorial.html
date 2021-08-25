@@ -203,26 +203,7 @@
 <p>If you meet any problems when going through this tutorial, please feel free to ask in github <a class="reference external" href="https://github.com/mobvoi/wenet/issues">issues</a>. Thanks for any kind of feedback.</p>
 <div class="section" id="setup-environment">
 <h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this headline">¶</a></h2>
-<ul class="simple">
-<li><p>Clone the repo</p></li>
-</ul>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/mobvoi/wenet.git
-</pre></div>
-</div>
-<ul class="simple">
-<li><p>Install Conda</p></li>
-</ul>
-<p>https://docs.conda.io/en/latest/miniconda.html</p>
-<ul class="simple">
-<li><p>Create Conda env</p></li>
-</ul>
-<p>Pytorch 1.6.0 is recommended. We met some error with NCCL when using 1.7.0 on 2080 Ti.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">create</span> <span class="o">-</span><span class="n">n</span> <span class="n">wenet</span> <span class="n">python</span><span class="o">=</span><span class="mf">3.8</span>
-<span class="n">conda</span> <span class="n">activate</span> <span class="n">wenet</span>
-<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">r</span> <span class="n">requirements</span><span class="o">.</span><span class="n">txt</span>
-<span class="n">conda</span> <span class="n">install</span> <span class="n">pytorch</span><span class="o">==</span><span class="mf">1.6</span><span class="o">.</span><span class="mi">0</span> <span class="n">cudatoolkit</span><span class="o">=</span><span class="mf">10.1</span> <span class="n">torchaudio</span><span class="o">=</span><span class="mf">0.6</span><span class="o">.</span><span class="mi">0</span> <span class="o">-</span><span class="n">c</span> <span class="n">pytorch</span>
-</pre></div>
-</div>
+<p>Please follow <a class="reference external" href="https://github.com/wenet-e2e/wenet#installation">Installation</a> to install WeNet.</p>
 </div>
 <div class="section" id="first-experiment">
 <h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this headline">¶</a></h2>
