@@ -30,11 +30,14 @@ GrpcClient::GrpcClient(const std::string& host, int port, int nbest,
       port_(port),
       nbest_(nbest),
       continuous_decoding_(continuous_decoding) {
-  Connect();
+  if (!Connect())
+  	{
+  	LOG(INFO) << "failed to Connect rpc sever .";;
+  	}
   t_.reset(new std::thread(&GrpcClient::ReadLoopFunc, this));
 }
 
-void GrpcClient::Connect() {
+bool GrpcClient::Connect() {
   channel_ = grpc::CreateChannel(host_ + ":" + std::to_string(port_),
                                  grpc::InsecureChannelCredentials());
   stub_ = ASR::NewStub(channel_);
@@ -45,13 +48,13 @@ void GrpcClient::Connect() {
   request_->mutable_decode_config()->set_nbest_config(nbest_);
   request_->mutable_decode_config()->set_continuous_decoding_config(
       continuous_decoding_);
-  stream_->Write(*request_);
+  return stream_->Write(*request_);
 }
 
-void GrpcClient::SendBinaryData(const void* data, size_t size) {
+bool GrpcClient::SendBinaryData(const void* data, size_t size) {
   const int16_t* pdata = reinterpret_cast<const int16_t*>(data);
   request_->set_audio_data(pdata, size);
-  stream_->Write(*request_);
+  return stream_->Write(*request_);
 }
 
 void GrpcClient::ReadLoopFunc() {

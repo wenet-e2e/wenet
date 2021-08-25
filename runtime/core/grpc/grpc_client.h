@@ -42,13 +42,13 @@ class GrpcClient {
   GrpcClient(const std::string& host, int port, int nbest,
              bool continuous_decoding);
 
-  void SendBinaryData(const void* data, size_t size);
+  bool SendBinaryData(const void* data, size_t size);
   void ReadLoopFunc();
   void Join();
   bool done() const { return done_; }
 
  private:
-  void Connect();
+  bool Connect();
   std::string host_;
   int port_;
   std::shared_ptr<Channel> channel_{nullptr};
