@@ -3,29 +3,8 @@
 If you meet any problems when going through this tutorial, please feel free to ask in github [issues](https://github.com/mobvoi/wenet/issues). Thanks for any kind of feedback.
 
 ### Setup environment
-- Clone the repo
 
-```sh
-git clone https://github.com/mobvoi/wenet.git
-```
-
-
-
-- Install Conda
-
-https://docs.conda.io/en/latest/miniconda.html
-
-
-- Create Conda env
-
-Pytorch 1.6.0 is recommended. We met some error with NCCL when using 1.7.0 on 2080 Ti.
-
-```
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
-```
+Please follow [Installation](https://github.com/wenet-e2e/wenet#installation) to install WeNet.
 
 ### First Experiment
 
