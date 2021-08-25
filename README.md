@@ -48,20 +48,13 @@ git clone https://github.com/wenet-e2e/wenet.git
 ```
 
 - Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
-- Create Conda env: (**PyTorch 1.6.0** is recommended. We met some error on NCCL when using 1.7.0 on 2080 Ti.)
+- Create Conda env:
 
 ``` sh
-# [option 1]
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
-
-# [option 2: working on machine with GPU 3090]
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch torchvision torchaudio=0.8.0 cudatoolkit=11.1 -c pytorch -c conda-forge
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 - Optionally, if you want to use x86 runtime or language model(LM),
