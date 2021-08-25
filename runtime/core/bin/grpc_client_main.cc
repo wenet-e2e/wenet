@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
   std::vector<float> pcm_data(wav_reader.data(),
                               wav_reader.data() + num_sample);
   // Send data every 0.5 second
-  const float interval = 0.5;
+  const float interval = 5;
   const int sample_interval = interval * sample_rate;
   for (int start = 0; start < num_sample; start += sample_interval) {
     if (client.done()) {
@@ -52,10 +52,13 @@ int main(int argc, char *argv[]) {
       data.push_back(static_cast<int16_t>(pcm_data[j]));
     }
     // Send PCM data
-    client.SendBinaryData(data.data(), data.size() * sizeof(int16_t));
-    VLOG(2) << "Send " << data.size() << " samples";
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(static_cast<int>(interval * 1000)));
+    auto ret = client.SendBinaryData(data.data(), data.size() * sizeof(int16_t));
+	if (ret )
+	    VLOG(2) << "Send " << data.size() << " samples";
+	else
+	    VLOG(2) << "data Send   failed";
+		
+    //std::this_thread::sleep_for(       std::chrono::milliseconds(static_cast<int>(interval * 1000)));
   }
   wenet::Timer timer;
 
