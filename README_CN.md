@@ -53,19 +53,13 @@ git clone https://github.com/wenet-e2e/wenet.git
 ```
 
 - 安装 Conda:  https://docs.conda.io/en/latest/miniconda.html
-- 创建 Conda 环境: (推荐**PyTorch 1.6.0**. 在2080 Ti上使用1.7.0会有NCCL的问题)
+- 创建 Conda 环境:
 
 ``` sh
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
-
-# GPU 3090
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch torchvision torchaudio=0.8.0 cudatoolkit=11.1 -c pytorch -c conda-forge
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 **训练模型**
