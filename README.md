@@ -7,7 +7,6 @@
 
 [**Google Groups**](https://groups.google.com/g/wenet-e2e)
 | [**Docs**](https://wenet-e2e.github.io/wenet/)
-| [**Tutorial**](https://wenet-e2e.github.io/wenet/tutorial.html)
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
 | [**Runtime (android)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet)
