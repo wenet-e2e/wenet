@@ -10,7 +10,7 @@
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
 | [**Runtime (android)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet)
-| [**Pretrained Modles**](docs/pretrained_models.md)
+| [**Pretrained Models**](docs/pretrained_models.md)
 
 **We** share neural **Net** together.
 
