@@ -10,6 +10,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
+#include "decoder/context_graph.h"
 #include "decoder/search_interface.h"
 #include "utils/utils.h"
 
@@ -33,12 +34,41 @@ struct PrefixScore {
   std::vector<int> times_s;           // times of viterbi blank path
   std::vector<int> times_ns;          // times of viterbi none blank path
 
-  PrefixScore() = default;
   float score() const { return LogAdd(s, ns); }
   float viterbi_score() const { return v_s > v_ns ? v_s : v_ns; }
   const std::vector<int>& times() const {
     return v_s > v_ns ? times_s : times_ns;
   }
+
+  bool has_context = false;
+  ContextState context_state;
+  float context_score = 0;
+  std::vector<std::pair<int, int>> boundaries;
+
+  void CopyContext(const PrefixScore& prefix_score) {
+    context_state = prefix_score.context_state;
+    context_score = prefix_score.context_score;
+    boundaries = prefix_score.boundaries;
+  }
+
+  void UpdateContext(const std::shared_ptr<ContextGraph>& context_graph,
+                     const PrefixScore& prefix_score, int word_id,
+                     int prefix_len) {
+    this->CopyContext(prefix_score);
+    context_state =
+        context_graph->GetNextState(prefix_score.context_state, word_id);
+    context_score += context_state.score;
+    if (context_state.is_start_boundary) {
+      boundaries.emplace_back(
+          std::make_pair(prefix_len - 1, context_graph->start_tag_id));
+    }
+    if (context_state.is_end_boundary) {
+      boundaries.emplace_back(
+          std::make_pair(prefix_len, context_graph->end_tag_id));
+    }
+  }
+
+  float total_score() const { return score() + context_score; }
 };
 
 struct PrefixHash {
@@ -54,28 +84,27 @@ struct PrefixHash {
 
 class CtcPrefixBeamSearch : public SearchInterface {
  public:
-  explicit CtcPrefixBeamSearch(const CtcPrefixBeamSearchOptions& opts);
+  explicit CtcPrefixBeamSearch(
+      const CtcPrefixBeamSearchOptions& opts,
+      const std::shared_ptr<ContextGraph>& context_graph = nullptr);
 
   void Search(const torch::Tensor& logp) override;
   void Reset() override;
   // CtcPrefixBeamSearch do nothing at FinalizeSearch
   void FinalizeSearch() override {}
   SearchType Type() const override { return SearchType::kPrefixBeamSearch; }
+  void UpdateOutputs(
+      const std::vector<int>& input,
+      const std::vector<std::pair<int, int>>& boundaries);
 
-  const std::vector<std::vector<int>>& hypotheses() const {
-    return hypotheses_;
-  }
-  const std::vector<float>& likelihood() const { return likelihood_; }
   const std::vector<float>& viterbi_likelihood() const {
     return viterbi_likelihood_;
   }
-  const std::vector<std::vector<int>>& times() const { return times_; }
-  // For CTC prefix beam search, both inputs and outputs are hypotheses_
   const std::vector<std::vector<int>>& Inputs() const override {
     return hypotheses_;
   }
   const std::vector<std::vector<int>>& Outputs() const override {
-    return hypotheses_;
+    return outputs_;
   }
   const std::vector<float>& Likelihood() const override { return likelihood_; }
   const std::vector<std::vector<int>>& Times() const override { return times_; }
@@ -90,6 +119,9 @@ class CtcPrefixBeamSearch : public SearchInterface {
   std::vector<std::vector<int>> times_;
 
   std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> cur_hyps_;
+  std::shared_ptr<ContextGraph> context_graph_ = nullptr;
+  // Outputs contain the hypotheses_ and tags like: <context> and </context>
+  std::vector<std::vector<int>> outputs_;
   const CtcPrefixBeamSearchOptions& opts_;
 
  public:
