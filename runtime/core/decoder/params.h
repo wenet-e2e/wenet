@@ -6,6 +6,8 @@
 #define DECODER_PARAMS_H_
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"

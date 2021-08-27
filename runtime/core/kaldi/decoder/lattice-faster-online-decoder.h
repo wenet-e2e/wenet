@@ -28,6 +28,8 @@
 
 #include "decoder/lattice-faster-decoder.h"
 
+#include <memory>
+
 namespace kaldi {
 
 /** LatticeFasterOnlineDecoderTpl is as LatticeFasterDecoderTpl but also

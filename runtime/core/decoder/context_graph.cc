@@ -3,6 +3,8 @@
 
 #include "decoder/context_graph.h"
 
+#include <utility>
+
 #include "fst/determinize.h"
 
 #include "utils/string.h"
@@ -40,7 +42,7 @@ void ContextGraph::BuildContextGraph(
 
     std::vector<std::string> words;
     // Split context to words by symbol table, and build the context graph.
-    bool no_oov = SplitUTF8StringToWords(Trim(context), symbol_table, words);
+    bool no_oov = SplitUTF8StringToWords(Trim(context), symbol_table, &words);
     if (!no_oov) {
       LOG(WARNING) << "Ignore unknown word found during compilation.";
       continue;

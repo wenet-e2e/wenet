@@ -4,7 +4,9 @@
 #ifndef DECODER_CTC_PREFIX_BEAM_SEARCH_H_
 #define DECODER_CTC_PREFIX_BEAM_SEARCH_H_
 
+#include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "torch/script.h"
@@ -93,9 +95,8 @@ class CtcPrefixBeamSearch : public SearchInterface {
   // CtcPrefixBeamSearch do nothing at FinalizeSearch
   void FinalizeSearch() override {}
   SearchType Type() const override { return SearchType::kPrefixBeamSearch; }
-  void UpdateOutputs(
-      const std::vector<int>& input,
-      const std::vector<std::pair<int, int>>& boundaries);
+  void UpdateOutputs(const std::vector<int>& input,
+                     const std::vector<std::pair<int, int>>& boundaries);
 
   const std::vector<float>& viterbi_likelihood() const {
     return viterbi_likelihood_;

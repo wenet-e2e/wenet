@@ -42,8 +42,8 @@ void SplitStringToVector(const std::string& full, const char* delim,
 }
 
 void SplitUTF8StringToChars(const std::string& str,
-                            std::vector<std::string>& chars) {
-  chars.clear();
+                            std::vector<std::string>* chars) {
+  chars->clear();
   int bytes = 1;
   for (size_t i = 0; i < str.length(); i += bytes) {
     assert((str[i] & 0xF8) <= 0xF0);
@@ -65,7 +65,7 @@ void SplitUTF8StringToChars(const std::string& str,
       // mathematical symbols, and emoji (pictographic symbols).
       bytes = 4;
     }
-    chars.push_back(str.substr(i, bytes));
+    chars->push_back(str.substr(i, bytes));
   }
 }
 
@@ -96,7 +96,7 @@ bool CheckEnglishChar(const std::string& ch) {
 
 bool CheckEnglishWord(const std::string& word) {
   std::vector<std::string> chars;
-  SplitUTF8StringToChars(word, chars);
+  SplitUTF8StringToChars(word, &chars);
   for (size_t k = 0; k < chars.size(); k++) {
     if (!CheckEnglishChar(chars[k])) {
       return false;
@@ -120,9 +120,9 @@ std::string JoinString(const std::string& c,
 bool SplitUTF8StringToWords(
     const std::string& str,
     const std::shared_ptr<fst::SymbolTable>& symbol_table,
-    std::vector<std::string>& words) {
+    std::vector<std::string>* words) {
   std::vector<std::string> chars;
-  SplitUTF8StringToChars(Trim(str), chars);
+  SplitUTF8StringToChars(Trim(str), &chars);
 
   bool no_oov = true;
   for (size_t start = 0; start < chars.size();) {
@@ -132,7 +132,7 @@ bool SplitUTF8StringToWords(
         word += chars[i];
       }
       if (symbol_table->Find(word) != -1) {
-        words.emplace_back(word);
+        words->emplace_back(word);
         start = end;
         continue;
       }
@@ -150,7 +150,7 @@ std::string ProcessBlank(const std::string& str) {
   std::string result;
   if (!str.empty()) {
     std::vector<std::string> chars;
-    SplitUTF8StringToChars(Trim(str), chars);
+    SplitUTF8StringToChars(Trim(str), &chars);
 
     for (std::string& ch : chars) {
       if (ch != kSpaceSymbol) {

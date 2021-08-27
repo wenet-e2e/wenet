@@ -38,7 +38,7 @@ void SplitStringToVector(const std::string& full, const char* delim,
 // UTF-8 REF: https://en.wikipedia.org/wiki/UTF-8#Encoding
 // Split the UTF-8 string into chars.
 void SplitUTF8StringToChars(const std::string& str,
-                            std::vector<std::string>& chars);
+                            std::vector<std::string>* chars);
 
 int UTF8StringLength(const std::string& str);
 
@@ -56,7 +56,7 @@ std::string JoinString(const std::string& c,
 bool SplitUTF8StringToWords(
     const std::string& str,
     const std::shared_ptr<fst::SymbolTable>& symbol_table,
-    std::vector<std::string>& words);
+    std::vector<std::string>* words);
 
 // Replace ▁ with space, then remove head, tail and consecutive space.
 std::string ProcessBlank(const std::string& str);

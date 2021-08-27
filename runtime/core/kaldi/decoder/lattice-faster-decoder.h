@@ -24,6 +24,7 @@
 #define KALDI_DECODER_LATTICE_FASTER_DECODER_H_
 
 #include <limits>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -125,8 +126,8 @@ struct ForwardLink {
   BaseFloat acoustic_cost;  // acoustic cost (pre-scaled) of traversing arc
   bool is_start_boundary;
   bool is_end_boundary;
-  ForwardLink *next;        // next in singly-linked list of forward arcs (arcs
-                            // in the state-level lattice) from a token.
+  ForwardLink *next;  // next in singly-linked list of forward arcs (arcs
+                      // in the state-level lattice) from a token.
   inline ForwardLink(Token *next_tok, Label ilabel, Label olabel,
                      BaseFloat graph_cost, BaseFloat acoustic_cost,
                      bool is_start_boundary, bool is_end_boundary,

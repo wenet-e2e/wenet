@@ -74,9 +74,9 @@ class CtcWfstBeamSearch : public SearchInterface {
  private:
   // Sub one and remove <blank>
   void ConvertToInputs(const std::vector<int>& alignment,
-                       std::vector<int>& input,
+                       std::vector<int>* input,
                        std::vector<int>* time = nullptr);
-  void RemoveContinuousTags(std::vector<int>& output);
+  void RemoveContinuousTags(std::vector<int>* output);
 
   int num_frames_ = 0;
   std::vector<int> decoded_frames_mapping_;

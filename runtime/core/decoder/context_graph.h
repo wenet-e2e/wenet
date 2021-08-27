@@ -4,6 +4,10 @@
 #ifndef DECODER_CONTEXT_GRAPH_H_
 #define DECODER_CONTEXT_GRAPH_H_
 
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "fst/compose.h"
 #include "fst/fst.h"
 #include "fst/vector-fst.h"
