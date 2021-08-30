@@ -72,7 +72,7 @@ def get_parser():
                         '-t',
                         type=str,
                         default="char",
-                        choices=["char", "phn", "cn_char_en_bpe"],
+                        choices=["char", "phn", "cn_char_en_bpe", "syllable"],
                         help="""Transcript type. char/phn. e.g., for TIMIT
                              FADG0_SI1279 -
                              If trans_type is char, read from
@@ -93,7 +93,6 @@ def main():
         with codecs.open(args.non_lang_syms, 'r', encoding="utf-8") as f:
             nls = [x.rstrip() for x in f.readlines()]
             rs = [re.compile(re.escape(x)) for x in nls]
-
     if args.bpe_model is not None:
         import sentencepiece as spm
         sp = spm.SentencePieceProcessor()
@@ -111,9 +110,12 @@ def main():
     n = args.nchar
     while line:
         x = line.split()
-        print(' '.join(x[:args.skip_ncols]), end=" ")
-        a = ' '.join(x[args.skip_ncols:])
-
+        if args.trans_type == "syllable":
+             print(' '.join(x[:args.skip_ncols]), end=" ")
+             a = ' '.join(x[args.skip_ncols:])
+        else:
+             print(' '.join(x[:args.skip_ncols]), end=" ")
+             a = ' '.join(x[args.skip_ncols:])
         # get all matched positions
         match_pos = []
         for r in rs:
@@ -138,7 +140,6 @@ def main():
                     chars.append(a[i])
                     i += 1
             a = chars
-
         if (args.trans_type == "phn"):
             a = a.split(" ")
         elif args.trans_type == "cn_char_en_bpe":
@@ -153,9 +154,17 @@ def main():
                     else:
                         for k in sp.encode_as_pieces(l):
                             a.append(k)
+        elif args.trans_type == "syllable":
+            a = a.strip().split()
+            b = []
+            for i, s in enumerate(a):
+                if str.isupper(s):
+                    b += [char for j, char in enumerate(s)]
+                else:
+                    b.append(s)
+            a = b
         else:
             a = [a[j:j + n] for j in range(0, len(a), n)]
-
         a_flat = []
         for z in a:
             a_flat.append("".join(z))
@@ -169,3 +178,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
