@@ -52,19 +52,19 @@ FetchContent_Declare(boost
 FetchContent_MakeAvailable(boost)
 include_directories(${boost_SOURCE_DIR})
 
-# third_party: libtorch 1.6.0, use FetchContent_Declare to download, and
+# third_party: libtorch 1.9.0, use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
-set(PYTORCH_VERSION "1.6.0")
+set(PYTORCH_VERSION "1.9.0")
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-${PYTORCH_VERSION}%2Bcpu.zip")
-    set(URL_HASH "SHA256=dacb2af654f1cffa43b0f3187ce945e1c93305b4c8bb60361c7a8cb543e1da82")
+    set(URL_HASH "SHA256=9bcd5b2703e18f2374413e55907ac20b2e5d8f5ae06a669f2e9905096114b4f1")
     set(CMAKE_BUILD_TYPE "Release")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-${PYTORCH_VERSION}%2Bcpu.zip")
-    set(URL_HASH "SHA256=c6c0d3a87039338f7812a1ae343b9e48198536f20d1415b0e5a9a15ba7b90b3f")
+    set(URL_HASH "SHA256=6b99edc046f37ad37a3b04dc86663895f10c362af09fdd10884f30360d0ba023")
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-macos-${PYTORCH_VERSION}.zip")
-    set(URL_HASH "SHA256=e1140bed7bd56c26638bae28aebbdf68e588a9fae92c6684645bcdd996e4183c")
+    set(URL_HASH "SHA256=5343b311201b1bd8e010ce613baedf4e5bf31dd098e1ac550b3c21f3192a4aad")
 else()
     message(FATAL_ERROR "Unsupported CMake System Name '${CMAKE_SYSTEM_NAME}' (expected 'Windows', 'Linux' or 'Darwin')")
 endif()
