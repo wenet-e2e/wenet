@@ -15,6 +15,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
+#include "decoder/context_graph.h"
 #include "decoder/ctc_endpoint.h"
 #include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/ctc_wfst_beam_search.h"
@@ -81,6 +82,7 @@ struct DecodeResource {
   std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
+  std::shared_ptr<ContextGraph> context_graph = nullptr;
 };
 
 // Torch ASR decoder
