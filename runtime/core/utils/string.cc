@@ -44,31 +44,47 @@ void SplitStringToVector(const std::string& full, const char* delim,
 void SplitUTF8StringToChars(const std::string& str,
                             std::vector<std::string>* chars) {
   chars->clear();
-  size_t i = 0;
-  while (i < str.length()) {
+  int bytes = 1;
+  for (size_t i = 0; i < str.length(); i += bytes) {
     assert((str[i] & 0xF8) <= 0xF0);
-    int bytes_ = 1;
     if ((str[i] & 0x80) == 0x00) {
       // The first 128 characters (US-ASCII) in UTF-8 format only need one byte.
-      bytes_ = 1;
+      bytes = 1;
     } else if ((str[i] & 0xE0) == 0xC0) {
       // The next 1,920 characters need two bytes to encode,
       // which covers the remainder of almost all Latin-script alphabets.
-      bytes_ = 2;
+      bytes = 2;
     } else if ((str[i] & 0xF0) == 0xE0) {
       // Three bytes are needed for characters in the rest of
       // the Basic Multilingual Plane, which contains virtually all characters
       // in common use, including most Chinese, Japanese and Korean characters.
-      bytes_ = 3;
+      bytes = 3;
     } else if ((str[i] & 0xF8) == 0xF0) {
       // Four bytes are needed for characters in the other planes of Unicode,
       // which include less common CJK characters, various historic scripts,
       // mathematical symbols, and emoji (pictographic symbols).
-      bytes_ = 4;
+      bytes = 4;
     }
-    chars->push_back(str.substr(i, bytes_));
-    i += bytes_;
+    chars->push_back(str.substr(i, bytes));
   }
+}
+
+int UTF8StringLength(const std::string& str) {
+  int len = 0;
+  int bytes = 1;
+  for (size_t i = 0; i < str.length(); i += bytes) {
+    if ((str[i] & 0x80) == 0x00) {
+      bytes = 1;
+    } else if ((str[i] & 0xE0) == 0xC0) {
+      bytes = 2;
+    } else if ((str[i] & 0xF0) == 0xE0) {
+      bytes = 3;
+    } else if ((str[i] & 0xF8) == 0xF0) {
+      bytes = 4;
+    }
+    ++len;
+  }
+  return len;
 }
 
 bool CheckEnglishChar(const std::string& ch) {
@@ -101,45 +117,44 @@ std::string JoinString(const std::string& c,
   return result;
 }
 
-void SplitUTF8StringToWords(const std::string& str,
-                            std::vector<std::string>* words) {
+bool SplitUTF8StringToWords(
+    const std::string& str,
+    const std::shared_ptr<fst::SymbolTable>& symbol_table,
+    std::vector<std::string>* words) {
   std::vector<std::string> chars;
   SplitUTF8StringToChars(Trim(str), &chars);
 
-  words->clear();
-  std::ostringstream oss;
-  // concat english chars into word
-  bool is_english_current = false;
-  for (const std::string& ch : chars) {
-    if (ch.empty() || ch[0] == ' ') continue;
-    if (CheckEnglishChar(ch)) {
-      is_english_current = true;
-      oss << ch;
-    } else {
-      // push back the complete english word to words
-      if (is_english_current) {
-        is_english_current = false;
-        words->push_back(oss.str());
-        oss.str("");
+  bool no_oov = true;
+  for (size_t start = 0; start < chars.size();) {
+    for (size_t end = chars.size(); end > start; --end) {
+      std::string word;
+      for (size_t i = start; i < end; i++) {
+        word += chars[i];
       }
-      words->push_back(ch);
+      if (symbol_table->Find(word) != -1) {
+        words->emplace_back(word);
+        start = end;
+        continue;
+      }
+      if (end == start + 1) {
+        ++start;
+        no_oov = false;
+        LOG(WARNING) << word << " is oov.";
+      }
     }
   }
-  // push back the last english word to words
-  if (is_english_current) {
-    words->push_back(oss.str());
-  }
+  return no_oov;
 }
 
 std::string ProcessBlank(const std::string& str) {
   std::string result;
   if (!str.empty()) {
-    std::vector<std::string> characters;
-    SplitUTF8StringToChars(Trim(str), &characters);
+    std::vector<std::string> chars;
+    SplitUTF8StringToChars(Trim(str), &chars);
 
-    for (std::string& character : characters) {
-      if (character != kSpaceSymbol) {
-        result.append(character);
+    for (std::string& ch : chars) {
+      if (ch != kSpaceSymbol) {
+        result.append(ch);
       } else {
         // Ignore consecutive space or located in head
         if (!result.empty() && result.back() != ' ') {
@@ -168,8 +183,6 @@ std::string Rtrim(const std::string& str) {
   return (end == std::string::npos) ? "" : str.substr(0, end + 1);
 }
 
-std::string Trim(const std::string& str) {
-  return Rtrim(Ltrim(str));
-}
+std::string Trim(const std::string& str) { return Rtrim(Ltrim(str)); }
 
 }  // namespace wenet
