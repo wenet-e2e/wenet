@@ -30,14 +30,11 @@ int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
-  auto model = wenet::InitTorchAsrModelFromFlags();
-  auto symbol_table = wenet::InitSymbolTableFromFlags();
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
-  auto fst = wenet::InitFstFromFlags();
+  auto decode_resource = wenet::InitDecodeResourceFromFlags();
 
-  wenet::GrpcServer service(feature_config, decode_config, symbol_table, model,
-                            fst);
+  wenet::GrpcServer service(feature_config, decode_config, decode_resource);
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;

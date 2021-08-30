@@ -45,9 +45,7 @@ class GrpcConnectionHandler {
                         std::shared_ptr<Response> response,
                         std::shared_ptr<FeaturePipelineConfig> feature_config,
                         std::shared_ptr<DecodeOptions> decode_config,
-                        std::shared_ptr<fst::SymbolTable> symbol_table,
-                        std::shared_ptr<TorchAsrModel> model,
-                        std::shared_ptr<fst::Fst<fst::StdArc>> fst);
+                        std::shared_ptr<DecodeResource> decode_resource);
   void operator()();
 
  private:
@@ -67,9 +65,7 @@ class GrpcConnectionHandler {
   std::shared_ptr<Response> response_;
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
   std::shared_ptr<DecodeOptions> decode_config_;
-  std::shared_ptr<fst::SymbolTable> symbol_table_;
-  std::shared_ptr<TorchAsrModel> model_;
-  std::shared_ptr<fst::Fst<fst::StdArc>> fst_;
+  std::shared_ptr<DecodeResource> decode_resource_;
 
   bool got_start_tag_ = false;
   bool got_end_tag_ = false;
@@ -84,23 +80,17 @@ class GrpcServer final : public ASR::Service {
  public:
   GrpcServer(std::shared_ptr<FeaturePipelineConfig> feature_config,
              std::shared_ptr<DecodeOptions> decode_config,
-             std::shared_ptr<fst::SymbolTable> symbol_table,
-             std::shared_ptr<TorchAsrModel> model,
-             std::shared_ptr<fst::Fst<fst::StdArc>> fst)
+             std::shared_ptr<DecodeResource> decode_resource)
       : feature_config_(std::move(feature_config)),
         decode_config_(std::move(decode_config)),
-        symbol_table_(std::move(symbol_table)),
-        model_(std::move(model)),
-        fst_(std::move(fst)) {}
+        decode_resource_(std::move(decode_resource)) {}
   Status Recognize(ServerContext *context,
                    ServerReaderWriter<Response, Request> *reader) override;
 
  private:
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
   std::shared_ptr<DecodeOptions> decode_config_;
-  std::shared_ptr<fst::SymbolTable> symbol_table_;
-  std::shared_ptr<TorchAsrModel> model_;
-  std::shared_ptr<fst::Fst<fst::StdArc>> fst_;
+  std::shared_ptr<DecodeResource> decode_resource_;
   DISALLOW_COPY_AND_ASSIGN(GrpcServer);
 };
 
