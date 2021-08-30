@@ -158,22 +158,15 @@ void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
                                         std::vector<int>* time) {
   input->clear();
   if (time != nullptr) time->clear();
-  int cur = 0;
-  while (cur < alignment.size()) {
+  for (int cur = 0; cur < alignment.size(); ++cur) {
     // ignore blank
-    while (cur < alignment.size() && alignment[cur] - 1 == 0) {
-      ++cur;
-    }
+    if (alignment[cur] - 1 == 0) continue;
     // merge continuous same label
-    while (cur + 1 < alignment.size() && alignment[cur + 1] == alignment[cur]) {
-      ++cur;
-    }
-    if (cur < alignment.size()) {
-      input->push_back(alignment[cur] - 1);
-      if (time != nullptr) {
-        time->push_back(decoded_frames_mapping_[cur]);
-      }
-      ++cur;
+    if (cur > 0 && alignment[cur] == alignment[cur - 1]) continue;
+
+    input->push_back(alignment[cur] - 1);
+    if (time != nullptr) {
+      time->push_back(decoded_frames_mapping_[cur]);
     }
   }
 }
