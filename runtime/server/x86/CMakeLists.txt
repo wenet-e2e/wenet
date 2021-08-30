@@ -114,7 +114,7 @@ else()
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
   FetchContent_Declare(openfst
-    URL      https://github.com.cnpmjs.org/kkm000/openfst/archive/refs/tags/win/1.6.5.1.tar.gz
+    URL      https://github.com/kkm000/openfst/archive/refs/tags/win/1.6.5.1.tar.gz
     URL_HASH SHA256=02c49b559c3976a536876063369efc0e41ab374be1035918036474343877046e
   )
   FetchContent_MakeAvailable(openfst)
@@ -137,6 +137,7 @@ add_subdirectory(kaldi)
 
 # decoder
 add_library(decoder STATIC
+  decoder/context_graph.cc
   decoder/ctc_prefix_beam_search.cc
   decoder/ctc_wfst_beam_search.cc
   decoder/ctc_endpoint.cc
@@ -155,7 +156,6 @@ add_library(websocket STATIC
   websocket/websocket_server.cc
 )
 target_link_libraries(websocket PUBLIC decoder frontend)
-
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
