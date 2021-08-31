@@ -11,7 +11,7 @@
 
 namespace wenet {
 
-ContextGraph::ContextGraph() {}
+ContextGraph::ContextGraph(ContextConfig config) : config_(config) {}
 
 void ContextGraph::BuildContextGraph(
     const std::vector<std::string>& query_contexts,
