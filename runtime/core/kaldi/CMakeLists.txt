@@ -25,6 +25,7 @@ lat/lattice-functions.cc
 target_link_libraries(kaldi-lat PUBLIC kaldi-util)
 
 add_library(kaldi-decoder
+../decoder/context_graph.cc
 decoder/lattice-faster-decoder.cc
 decoder/lattice-faster-online-decoder.cc
 )

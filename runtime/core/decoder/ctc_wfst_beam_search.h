@@ -10,6 +10,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
+#include "decoder/context_graph.h"
 #include "decoder/search_interface.h"
 #include "kaldi/decoder/lattice-faster-online-decoder.h"
 #include "utils/utils.h"
@@ -53,8 +54,9 @@ struct CtcWfstBeamSearchOptions : public kaldi::LatticeFasterDecoderConfig {
 
 class CtcWfstBeamSearch : public SearchInterface {
  public:
-  explicit CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
-                             const CtcWfstBeamSearchOptions& opts);
+  explicit CtcWfstBeamSearch(
+      const fst::Fst<fst::StdArc>& fst, const CtcWfstBeamSearchOptions& opts,
+      const std::shared_ptr<ContextGraph>& context_graph);
   void Search(const torch::Tensor& logp) override;
   void Reset() override;
   void FinalizeSearch() override;
@@ -74,6 +76,7 @@ class CtcWfstBeamSearch : public SearchInterface {
   void ConvertToInputs(const std::vector<int>& alignment,
                        std::vector<int>* input,
                        std::vector<int>* time = nullptr);
+  void RemoveContinuousTags(std::vector<int>* output);
 
   int num_frames_ = 0;
   std::vector<int> decoded_frames_mapping_;
@@ -86,6 +89,7 @@ class CtcWfstBeamSearch : public SearchInterface {
   std::vector<std::vector<int>> times_;
   DecodableTensorScaled decodable_;
   kaldi::LatticeFasterOnlineDecoder decoder_;
+  std::shared_ptr<ContextGraph> context_graph_;
   const CtcWfstBeamSearchOptions& opts_;
 };
 
