@@ -15,7 +15,7 @@
 import argparse
 import logging
 
-from pypinyin import pinyin, lazy_pinyin, Style
+from pypinyin import lazy_pinyin
 
 def parse_opts():
     parser = argparse.ArgumentParser(description='convert char to syllable')
