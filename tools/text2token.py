@@ -110,12 +110,8 @@ def main():
     n = args.nchar
     while line:
         x = line.split()
-        if args.trans_type == "syllable":
-             print(' '.join(x[:args.skip_ncols]), end=" ")
-             a = ' '.join(x[args.skip_ncols:])
-        else:
-             print(' '.join(x[:args.skip_ncols]), end=" ")
-             a = ' '.join(x[args.skip_ncols:])
+        print(' '.join(x[:args.skip_ncols]), end=" ")
+        a = ' '.join(x[args.skip_ncols:])
         # get all matched positions
         match_pos = []
         for r in rs:
