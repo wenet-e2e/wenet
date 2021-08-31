@@ -124,8 +124,9 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
     while (getline(infile, context)) {
       contexts.emplace_back(Trim(context));
     }
-    resource->context_graph = std::make_shared<ContextGraph>();
-    resource->context_graph->config_.context_score = FLAGS_context_score;
+    ContextConfig config;
+    config.context_score = FLAGS_context_score;
+    resource->context_graph = std::make_shared<ContextGraph>(config);
     resource->context_graph->BuildContextGraph(contexts, symbol_table);
   }
 

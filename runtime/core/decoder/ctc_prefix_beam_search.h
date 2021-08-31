@@ -43,7 +43,7 @@ struct PrefixScore {
   }
 
   bool has_context = false;
-  int context_state;
+  int context_state = 0;
   float context_score = 0;
   std::vector<int> start_boundaries;
   std::vector<int> end_boundaries;
@@ -68,7 +68,7 @@ struct PrefixScore {
         context_graph->GetNextState(prefix_score.context_state, word_id, &score,
                                     &is_start_boundary, &is_end_boundary);
     context_score += score;
-    if (is_start_boundary) start_boundaries.emplace_back(prefix_len - 1);
+    if (is_start_boundary) start_boundaries.emplace_back(prefix_len);
     if (is_end_boundary) end_boundaries.emplace_back(prefix_len);
   }
 

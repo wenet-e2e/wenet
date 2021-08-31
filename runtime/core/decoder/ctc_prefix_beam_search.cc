@@ -48,21 +48,18 @@ void CtcPrefixBeamSearch::UpdateOutputs(
   const std::vector<int>& end_boundaries = prefix.second.end_boundaries;
 
   std::vector<int> output;
-  int i = 0;
-  int j = 0;
-  for (int k = 0; k < input.size(); ++k) {
-    if (i < end_boundaries.size() && k == end_boundaries[i]) {
-      output.emplace_back(context_graph_->end_tag_id_);
-      ++i;
+  int s = 0;
+  int e = 0;
+  for (int i = 0; i < input.size(); ++i) {
+    if (s < start_boundaries.size() && i == start_boundaries[s]) {
+      output.emplace_back(context_graph_->start_tag_id());
+      ++s;
     }
-    if (j < start_boundaries.size() && k == start_boundaries[j]) {
-      output.emplace_back(context_graph_->start_tag_id_);
-      ++j;
+    output.emplace_back(input[i]);
+    if (e < end_boundaries.size() && i == end_boundaries[e]) {
+      output.emplace_back(context_graph_->end_tag_id());
+      ++e;
     }
-    output.emplace_back(input[k]);
-  }
-  if (i < end_boundaries.size()) {
-    output.emplace_back(context_graph_->end_tag_id_);
   }
   outputs_.emplace_back(output);
 }
@@ -135,7 +132,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
           if (context_graph_ && !next_score2.has_context) {
             // Prefix changed, calculate the context score.
             next_score2.UpdateContext(context_graph_, prefix_score, id,
-                                      new_prefix.size());
+                                      prefix.size());
             next_score2.has_context = true;
           }
         } else {
@@ -153,7 +150,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
           if (context_graph_ && !next_score.has_context) {
             // Calculate the context score.
             next_score.UpdateContext(context_graph_, prefix_score, id,
-                                     new_prefix.size());
+                                     prefix.size());
             next_score.has_context = true;
           }
         }
