@@ -7,6 +7,7 @@ from contextlib import nullcontext
 # from contextlib import suppress as nullcontext
 import torch
 from torch.nn.utils import clip_grad_norm_
+import time
 
 
 class Executor:
@@ -29,9 +30,10 @@ class Executor:
         if use_amp:
             assert scaler is not None
         num_seen_utts = 0
-        num_total_batch = len(data_loader)
+        start = time.time()
+        #num_total_batch = len(data_loader)
         for batch_idx, batch in enumerate(data_loader):
-            key, feats, target, feats_lengths, target_lengths = batch
+            feats, target, feats_lengths, target_lengths = batch
             feats = feats.to(device)
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
@@ -87,14 +89,17 @@ class Executor:
                 self.step += 1
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
-                log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
-                    batch_idx, num_total_batch,
-                    loss.item() * accum_grad)
+                log_str = 'TRAIN Batch {} loss {:.6f} '.format(
+                    batch_idx, loss.item() * accum_grad)
                 if loss_att is not None:
                     log_str += 'loss_att {:.6f} '.format(loss_att.item())
                 if loss_ctc is not None:
                     log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
                 log_str += 'lr {:.8f} rank {}'.format(lr, rank)
+                end = time.time()
+                speed = 1.0 * log_interval / (end - start)
+                log_str += 'speed {:.2f} batch/s'.format(speed)
+                start = end
                 logging.debug(log_str)
 
     def cv(self, model, data_loader, device, args):
@@ -105,10 +110,10 @@ class Executor:
         # in order to avoid division by 0
         num_seen_utts = 1
         total_loss = 0.0
-        num_total_batch = len(data_loader)
+        # num_total_batch = len(data_loader)
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
-                key, feats, target, feats_lengths, target_lengths = batch
+                feats, target, feats_lengths, target_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)
                 feats_lengths = feats_lengths.to(device)
@@ -122,8 +127,8 @@ class Executor:
                     num_seen_utts += num_utts
                     total_loss += loss.item() * num_utts
                 if batch_idx % log_interval == 0:
-                    log_str = 'CV Batch {}/{} loss {:.6f} '.format(
-                        batch_idx, num_total_batch, loss.item())
+                    log_str = 'CV Batch {} loss {:.6f} '.format(
+                        batch_idx, loss.item())
                     if loss_att is not None:
                         log_str += 'loss_att {:.6f} '.format(loss_att.item())
                     if loss_ctc is not None:
