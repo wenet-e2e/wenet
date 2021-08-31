@@ -49,4 +49,3 @@ if __name__ == '__main__':
             else:
                 syllable = lazy_pinyin(line)
             dst.writelines('{} {}\n'.format(key, ' '.join(syllable)))
-            
