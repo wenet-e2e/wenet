@@ -146,7 +146,7 @@ bool SplitUTF8StringToWords(
   return no_oov;
 }
 
-std::string ProcessBlank(const std::string& str, const bool& lowercase) {
+std::string ProcessBlank(const std::string& str, bool lowercase) {
   std::string result;
   if (!str.empty()) {
     std::vector<std::string> chars;
