@@ -6,6 +6,7 @@
 #define DECODER_PARAMS_H_
 
 #include <memory>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -142,7 +143,8 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   post_process_opts.language_type =
     FLAGS_language_type == 0 ? kMandarinEnglish : kIndoEuropean;
   post_process_opts.lowercase = FLAGS_lowercase;
-  resource->post_processor = std::make_shared<PostProcessor>(std::move(post_process_opts));
+  resource->post_processor =
+    std::make_shared<PostProcessor>(std::move(post_process_opts));
   return resource;
 }
 
