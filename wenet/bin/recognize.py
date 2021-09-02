@@ -107,6 +107,7 @@ if __name__ == '__main__':
     test_collate_conf['speed_perturb'] = False
     if raw_wav:
         test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
+        test_collate_conf['wav_distortion_conf']['wav_dither'] = 0.0
     test_collate_func = CollateFunc(**test_collate_conf, raw_wav=raw_wav)
     dataset_conf = configs.get('dataset_conf', {})
     dataset_conf['batch_size'] = args.batch_size
