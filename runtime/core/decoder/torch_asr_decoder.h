@@ -21,6 +21,7 @@
 #include "decoder/ctc_wfst_beam_search.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "post_processor/post_processor.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -83,6 +84,7 @@ struct DecodeResource {
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
   std::shared_ptr<ContextGraph> context_graph = nullptr;
+  std::shared_ptr<PostProcessor> post_processor = nullptr;
 };
 
 // Torch ASR decoder
@@ -116,7 +118,6 @@ class TorchAsrDecoder {
   const std::vector<DecodeResult>& result() const { return result_; }
 
  private:
-  void InitPostProcessing();
   // Return true if we reach the end of the feature pipeline
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
@@ -127,6 +128,7 @@ class TorchAsrDecoder {
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<PostProcessor> post_processor_;
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
   // output symbol table
@@ -137,9 +139,6 @@ class TorchAsrDecoder {
   // cache feature
   std::vector<std::vector<float>> cached_feature_;
   bool start_ = false;
-
-  // word piece start with space symbol["▁" (U+2581)] or not
-  bool wp_start_with_space_symbol_ = false;
 
   torch::jit::IValue subsampling_cache_;
   // transformer/conformer encoder layers output cache

@@ -6,12 +6,14 @@
 #define DECODER_PARAMS_H_
 
 #include <memory>
+#include <utility>
 #include <string>
 #include <vector>
 
 #include "decoder/torch_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "post_processor/post_processor.h"
 #include "utils/flags.h"
 #include "utils/string.h"
 
@@ -57,6 +59,13 @@ DEFINE_string(
 // Context flags
 DEFINE_string(context_path, "", "context path, is used to build context graph");
 DEFINE_double(context_score, 3.0, "is used to rescore the decoded result");
+
+// PostProcessOptions flags
+DEFINE_int32(language_type, 0,
+             "remove spaces according to language type"
+             "0x00 = kMandarinEnglish, "
+             "0x01 = kIndoEuropean");
+DEFINE_bool(lowercase, true, "lowercase final result if needed");
 
 namespace wenet {
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
@@ -130,6 +139,12 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
     resource->context_graph->BuildContextGraph(contexts, symbol_table);
   }
 
+  PostProcessOptions post_process_opts;
+  post_process_opts.language_type =
+    FLAGS_language_type == 0 ? kMandarinEnglish : kIndoEuropean;
+  post_process_opts.lowercase = FLAGS_lowercase;
+  resource->post_processor =
+    std::make_shared<PostProcessor>(std::move(post_process_opts));
   return resource;
 }
 

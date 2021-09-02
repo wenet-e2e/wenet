@@ -11,7 +11,6 @@
 #include <utility>
 
 #include "decoder/ctc_endpoint.h"
-#include "utils/string.h"
 #include "utils/timer.h"
 
 namespace wenet {
@@ -21,6 +20,7 @@ TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<DecodeResource> resource, const DecodeOptions& opts)
     : feature_pipeline_(std::move(feature_pipeline)),
       model_(resource->model),
+      post_processor_(resource->post_processor),
       symbol_table_(resource->symbol_table),
       fst_(resource->fst),
       unit_table_(resource->unit_table),
@@ -37,21 +37,6 @@ TorchAsrDecoder::TorchAsrDecoder(
     searcher_.reset(new CtcWfstBeamSearch(*fst_, opts.ctc_wfst_search_opts));
   }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
-  InitPostProcessing();
-}
-
-void TorchAsrDecoder::InitPostProcessing() {
-  fst::SymbolTableIterator iter(*symbol_table_);
-  std::string space_symbol = kSpaceSymbol;
-  while (!iter.Done()) {
-    if (iter.Symbol().size() > space_symbol.size() &&
-        std::equal(space_symbol.begin(), space_symbol.end(),
-                   iter.Symbol().begin())) {
-      wp_start_with_space_symbol_ = true;
-      break;
-    }
-    iter.Next();
-  }
 }
 
 void TorchAsrDecoder::Reset() {
@@ -215,22 +200,17 @@ void TorchAsrDecoder::UpdateResult(bool finish) {
     const std::vector<int>& hypothesis = hypotheses[i];
 
     DecodeResult path;
-    bool is_englishword_prev = false;
     path.score = likelihood[i];
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_->Find(hypothesis[j]);
-      if (wp_start_with_space_symbol_) {
-        path.sentence += word;
-        continue;
-      }
-      bool is_englishword_now = CheckEnglishWord(word);
-      if (is_englishword_prev && is_englishword_now) {
+      // A detailed explanation of this if-else branch can be found in
+      // https://github.com/wenet-e2e/wenet/issues/583#issuecomment-907994058
+      if (searcher_->Type() == kWfstBeamSearch) {
         path.sentence += (' ' + word);
       } else {
         path.sentence += (word);
       }
-      is_englishword_prev = is_englishword_now;
     }
 
     // TimeStamp is only supported in final result
@@ -254,7 +234,7 @@ void TorchAsrDecoder::UpdateResult(bool finish) {
         path.word_pieces.emplace_back(word_piece);
       }
     }
-    path.sentence = ProcessBlank(path.sentence);
+    path.sentence = post_processor_->Process(path.sentence, finish);
     result_.emplace_back(path);
   }
 

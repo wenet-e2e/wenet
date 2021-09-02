@@ -146,7 +146,7 @@ bool SplitUTF8StringToWords(
   return no_oov;
 }
 
-std::string ProcessBlank(const std::string& str) {
+std::string ProcessBlank(const std::string& str, bool lowercase) {
   std::string result;
   if (!str.empty()) {
     std::vector<std::string> chars;
@@ -167,7 +167,11 @@ std::string ProcessBlank(const std::string& str) {
       result.pop_back();
     }
     for (size_t i = 0; i < result.size(); ++i) {
-      result[i] = tolower(result[i]);
+      if (lowercase) {
+        result[i] = tolower(result[i]);
+      } else {
+        result[i] = toupper(result[i]);
+      }
     }
   }
   return result;

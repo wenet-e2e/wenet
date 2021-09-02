@@ -59,7 +59,7 @@ bool SplitUTF8StringToWords(
     std::vector<std::string>* words);
 
 // Replace ▁ with space, then remove head, tail and consecutive space.
-std::string ProcessBlank(const std::string& str);
+std::string ProcessBlank(const std::string& str, bool lowercase);
 
 std::string Ltrim(const std::string& str);
 
