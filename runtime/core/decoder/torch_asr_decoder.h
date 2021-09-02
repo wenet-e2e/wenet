@@ -21,6 +21,7 @@
 #include "decoder/ctc_wfst_beam_search.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "post_processor/post_processor.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -83,6 +84,7 @@ struct DecodeResource {
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
   std::shared_ptr<ContextGraph> context_graph = nullptr;
+  std::shared_ptr<PostProcessor> post_processor = nullptr;
 };
 
 // Torch ASR decoder
@@ -126,6 +128,7 @@ class TorchAsrDecoder {
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<PostProcessor> post_processor_;
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
   // output symbol table

@@ -20,6 +20,7 @@ TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<DecodeResource> resource, const DecodeOptions& opts)
     : feature_pipeline_(std::move(feature_pipeline)),
       model_(resource->model),
+      post_processor_(resource->post_processor),
       symbol_table_(resource->symbol_table),
       fst_(resource->fst),
       unit_table_(resource->unit_table),
@@ -233,6 +234,7 @@ void TorchAsrDecoder::UpdateResult(bool finish) {
         path.word_pieces.emplace_back(word_piece);
       }
     }
+    path.sentence = post_processor_->Process(path.sentence, finish);
     result_.emplace_back(path);
   }
 

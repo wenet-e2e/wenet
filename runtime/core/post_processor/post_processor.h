@@ -37,9 +37,10 @@ struct PostProcessResource {};
 // Post Processor
 class PostProcessor {
  public:
+  explicit PostProcessor(PostProcessOptions&& opts) : opts_(std::move(opts)) {}
   explicit PostProcessor(const PostProcessOptions& opts) : opts_(opts) {}
   // call other functions to do post processing
-  std::string Process(const std::string& str, const bool& finish);
+  std::string Process(const std::string& str, bool finish);
   // process spaces according to configurations
   std::string ProcessSpace(const std::string& str);
   // TODO(xcsong): add itn/punctuation
@@ -47,7 +48,7 @@ class PostProcessor {
   // void Punctuate(const std::string& str);
 
  private:
-  const PostProcessOptions& opts_;
+  const PostProcessOptions opts_;
 
  public:
   WENET_DISALLOW_COPY_AND_ASSIGN(PostProcessor);

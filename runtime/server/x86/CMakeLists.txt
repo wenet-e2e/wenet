@@ -144,7 +144,7 @@ add_library(decoder STATIC
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi-decoder utils)
+target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi-decoder utils post_processor)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
@@ -164,11 +164,11 @@ add_library(websocket STATIC
   websocket/websocket_client.cc
   websocket/websocket_server.cc
 )
-target_link_libraries(websocket PUBLIC decoder frontend post_processor)
+target_link_libraries(websocket PUBLIC decoder frontend)
 
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main PUBLIC frontend decoder post_processor)
+target_link_libraries(decoder_main PUBLIC frontend decoder)
 add_executable(websocket_client_main bin/websocket_client_main.cc)
 target_link_libraries(websocket_client_main PUBLIC websocket)
 add_executable(websocket_server_main bin/websocket_server_main.cc)

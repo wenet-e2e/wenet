@@ -44,7 +44,7 @@ std::string PostProcessor::ProcessSpace(const std::string& str) {
   return result;
 }
 
-std::string PostProcessor::Process(const std::string& str, const bool& finish) {
+std::string PostProcessor::Process(const std::string& str, bool finish) {
   std::string result;
   result = ProcessSpace(str);
   // TODO(xcsong): do itn/punctuation if finish == true
