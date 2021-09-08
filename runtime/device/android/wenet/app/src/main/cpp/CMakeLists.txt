@@ -51,11 +51,13 @@ add_subdirectory(kaldi)
 
 # decoder
 add_library(decoder STATIC
+  decoder/context_graph.cc
   decoder/ctc_endpoint.cc
   decoder/ctc_prefix_beam_search.cc
   decoder/ctc_wfst_beam_search.cc
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
+  post_processor/post_processor.cc
 )
 target_link_libraries(decoder PUBLIC kaldi-decoder utils ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY})
 
