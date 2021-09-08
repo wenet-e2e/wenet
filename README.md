@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/wenet-e2e/wenet)
 
-[**Google Groups**](https://groups.google.com/g/wenet-e2e)
+[**Discussions**](https://github.com/wenet-e2e/wenet/discussions)
 | [**Docs**](https://wenet-e2e.github.io/wenet/)
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
@@ -68,9 +68,9 @@ mkdir build && cd build && cmake .. && cmake --build .
 
 ## Discussion & Communication
 
-Please join our [Google Groups](https://groups.google.com/g/wenet-e2e) for further discussion.
+Please visit [Discussions](https://github.com/wenet-e2e/wenet/discussions) for further discussion.
 
-For Chinese users, in addition to Google Groups, You can aslo scan the QR code on the left to follow our offical account of WeNet.
+For Chinese users, you can aslo scan the QR code on the left to follow our offical account of WeNet.
 We created a WeChat group for better discussion and quicker response.
 Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 
