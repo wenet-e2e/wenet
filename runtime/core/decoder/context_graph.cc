@@ -50,13 +50,20 @@ void ContextGraph::BuildContextGraph(
 
     int prev_state = start_state;
     int next_state = start_state;
+    float escape_score = 0;
     for (size_t i = 0; i < words.size(); ++i) {
       int word_id = symbol_table_->Find(words[i]);
       float score = config_.context_score * UTF8StringLength(words[i]);
       next_state = (i < words.size() - 1) ? ofst->AddState() : start_state;
       ofst->AddArc(prev_state,
                    fst::StdArc(word_id, word_id, score, next_state));
+      // Add escape arc to clean the previous context score.
+      if (i > 0) {
+        // ilabel and olabel of the escape arc is 0 (<epsilon>).
+        ofst->AddArc(prev_state, fst::StdArc(0, 0, -escape_score, start_state));
+      }
       prev_state = next_state;
+      escape_score += score;
     }
   }
   std::unique_ptr<fst::StdVectorFst> det_fst(new fst::StdVectorFst());
@@ -70,7 +77,10 @@ int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
   for (fst::ArcIterator<fst::StdFst> aiter(*graph_, cur_state); !aiter.Done();
        aiter.Next()) {
     const fst::StdArc& arc = aiter.Value();
-    if (arc.ilabel == word_id) {
+    if (arc.ilabel == 0) {
+      // escape score, will be overwritten when ilabel equals to word id.
+      *score = arc.weight.Value();
+    } else if (arc.ilabel == word_id) {
       next_state = arc.nextstate;
       *score = arc.weight.Value();
       if (cur_state == 0) {
