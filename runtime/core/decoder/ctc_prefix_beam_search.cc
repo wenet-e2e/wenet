@@ -25,6 +25,7 @@ void CtcPrefixBeamSearch::Reset() {
   cur_hyps_.clear();
   viterbi_likelihood_.clear();
   times_.clear();
+  outputs_.clear();
   abs_time_step_ = 0;
   PrefixScore prefix_score;
   prefix_score.s = 0.0;
