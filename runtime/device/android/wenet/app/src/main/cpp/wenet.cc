@@ -20,6 +20,7 @@
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
+#include "post_processor/post_processor.h"
 #include "utils/log.h"
 #include "utils/string.h"
 
@@ -46,6 +47,10 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   LOG(INFO) << "dict path: " << dictPath;
   resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
           fst::SymbolTable::ReadText(dictPath));
+
+  PostProcessOptions post_process_opts;
+  resource->post_processor =
+    std::make_shared<PostProcessor>(std::move(post_process_opts));
 
   feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
   feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
