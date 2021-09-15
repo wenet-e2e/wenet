@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 import tarfile
 
+import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
@@ -156,4 +158,43 @@ def decode_text(data, symbol_table, bpe_model=None):
                 label.append(symbol_table['<unk>'])
         sample['tokens'] = tokens
         sample['label'] = label
+        yield sample
+
+
+def spec_augmentation(data,
+                      num_t_mask=2,
+                      num_f_mask=2,
+                      max_t=50,
+                      max_f=10,
+                      max_w=80):
+    """ Do spec augmentation
+
+    Args:
+        num_t_mask: number of time mask to apply
+        num_f_mask: number of freq mask to apply
+        max_t: max width of time mask
+        max_f: max width of freq mask
+        max_w: max width of time warp
+
+    """
+    for sample in data:
+        assert 'feat' in sample
+        x = sample['feat']
+        assert isinstance(x, torch.Tensor)
+        y = x.clone().detach()
+        max_frames = y.size(0)
+        max_freq = y.size(1)
+        # time mask
+        for i in range(num_t_mask):
+            start = random.randint(0, max_frames - 1)
+            length = random.randint(1, max_t)
+            end = min(max_frames, start + length)
+            y[start:end, :] = 0
+        # freq mask
+        for i in range(num_f_mask):
+            start = random.randint(0, max_freq - 1)
+            length = random.randint(1, max_f)
+            end = min(max_freq, start + length)
+            y[:, start:end] = 0
+        sample['feat'] = y
         yield sample

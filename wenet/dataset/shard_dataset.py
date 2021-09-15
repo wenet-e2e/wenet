@@ -62,6 +62,7 @@ def ShardDataset(urls, symbol_table):
     dataset = Processor(dataset, processor.filter)
     dataset = Processor(dataset, processor.resample)
     dataset = Processor(dataset, processor.compute_fbank)
+    dataset = Processor(dataset, processor.spec_augmentation)
     return dataset
 
 
