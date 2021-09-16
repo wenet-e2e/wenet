@@ -146,10 +146,11 @@ class BaseEncoder(torch.nn.Module):
             masks: torch.Tensor batch padding mask after subsample
                 (B, 1, T' ~= T/subsample_rate)
         """
-        masks = ~make_pad_mask(xs_lens).unsqueeze(1)  # (B, 1, T)
+        masks = ~make_pad_mask(xs_lens, xs.size(1)).unsqueeze(1)  # (B, 1, T)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
-        xs, pos_emb, masks = self.embed(xs, masks)
+        offset = torch.zeros(xs.size(0), dtype=torch.int32).to(xs.device)
+        xs, pos_emb, masks = self.embed(xs, masks, offset)
         mask_pad = masks  # (B, 1, T/subsample_rate)
         chunk_masks = add_optional_chunk_mask(xs, masks,
                                               self.use_dynamic_chunk,
@@ -208,6 +209,7 @@ class BaseEncoder(torch.nn.Module):
         tmp_masks = tmp_masks.unsqueeze(1)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
+        offset = torch.zeros(xs.size(0)).to(xs.device) + offset
         xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
         if subsampling_cache is not None:
             cache_size = subsampling_cache.size(1)

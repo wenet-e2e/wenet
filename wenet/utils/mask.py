@@ -35,8 +35,11 @@ def subsequent_mask(
          [1, 1, 0],
          [1, 1, 1]]
     """
-    ret = torch.ones(size, size, device=device, dtype=torch.bool)
-    return torch.tril(ret, out=ret)
+    arange = torch.arange(size, device=device)
+    mask = arange.expand(size, size)
+    arange = arange.unsqueeze(-1)
+    mask = mask <= arange
+    return mask
 
 
 def subsequent_chunk_mask(
@@ -145,7 +148,7 @@ def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
     return chunk_masks
 
 
-def make_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
+def make_pad_mask(lengths: torch.Tensor, max_len: int = None) -> torch.Tensor:
     """Make mask tensor containing indices of padded part.
 
     See description of make_non_pad_mask.
@@ -162,15 +165,10 @@ def make_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
                  [0, 0, 0, 1, 1],
                  [0, 0, 1, 1, 1]]
     """
-    batch_size = int(lengths.size(0))
-    max_len = int(lengths.max().item())
-    seq_range = torch.arange(0,
-                             max_len,
-                             dtype=torch.int64,
-                             device=lengths.device)
-    seq_range_expand = seq_range.unsqueeze(0).expand(batch_size, max_len)
-    seq_length_expand = lengths.unsqueeze(-1)
-    mask = seq_range_expand >= seq_length_expand
+    maxlen = max_len if max_len else lengths.max()
+    row_vector = torch.arange(0, maxlen, 1, device=lengths.device)
+    matrix = torch.unsqueeze(lengths, dim=-1)
+    mask = row_vector >= matrix
     return mask
 
 
