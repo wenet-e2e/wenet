@@ -25,6 +25,13 @@ AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
 def url_opener(data):
     """ Give url or local file, return file descriptor
+        Inplace operation.
+
+        Args:
+            data(Iterable[str]): url or local file list
+
+        Returns:
+            Iterable[{url, stream}]
     """
     for sample in data:
         assert 'url' in sample
@@ -36,7 +43,14 @@ def url_opener(data):
 
 
 def tar_file_and_group(data):
-    """Expand a stream of open tar files into a stream of tar file contents.
+    """ Expand a stream of open tar files into a stream of tar file contents.
+        And groups the file with same prefix
+
+        Args:
+            data: Iterable[{url, stream}]
+
+        Returns:
+            Iterable[{key, wav, txt, sample_rate}]
     """
     for sample in data:
         assert 'stream' in sample
@@ -74,8 +88,10 @@ def filter(data,
            token_max_length=200,
            token_min_length=1):
     """ Filter sample according to feature and label length
+        Inplace operation.
 
-        Attributes::
+        Args::
+            data: Iterable[{key, wav, label, sample_rate}]
             max_length: drop utterance which is greater than max_length(10ms)
             min_length: drop utterance which is less than min_length(10ms)
             token_max_length: drop utterance which is greater than
@@ -83,6 +99,9 @@ def filter(data,
                 english modeling
             token_min_length: drop utterance which is
                 less than token_max_length
+
+        Returns:
+            Iterable[{key, wav, label, sample_rate}]
     """
     for sample in data:
         assert 'sample_rate' in sample
@@ -102,7 +121,15 @@ def filter(data,
 
 
 def resample(data, resample_rate=16000):
-    """ Resample data
+    """ Resample data.
+        Inplace operation.
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+            resample_rate: target resample rate
+
+        Returns:
+            Iterable[{key, wav, label, sample_rate}]
     """
     for sample in data:
         assert 'sample_rate' in sample
@@ -122,6 +149,12 @@ def compute_fbank(data,
                   frame_shift=10,
                   dither=0.0):
     """ Extract fbank
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+
+        Returns:
+            Iterable[{key, feat, label}]
     """
     for sample in data:
         assert 'sample_rate' in sample
@@ -144,6 +177,13 @@ def compute_fbank(data,
 
 def decode_text(data, symbol_table, bpe_model=None):
     """ Decode text to chars or BPE
+        Inplace operation
+
+        Args:
+            data: Iterable[{key, wav, txt, sample_rate}]
+
+        Returns:
+            Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
     # TODO(Binbin Zhang): Support BPE
     for sample in data:
@@ -169,14 +209,18 @@ def spec_augmentation(data,
                       max_f=10,
                       max_w=80):
     """ Do spec augmentation
+        Inplace operation
 
-    Args:
-        num_t_mask: number of time mask to apply
-        num_f_mask: number of freq mask to apply
-        max_t: max width of time mask
-        max_f: max width of freq mask
-        max_w: max width of time warp
+        Args:
+            data: Iterable[{key, feat, label}]
+            num_t_mask: number of time mask to apply
+            num_f_mask: number of freq mask to apply
+            max_t: max width of time mask
+            max_f: max width of freq mask
+            max_w: max width of time warp
 
+        Returns
+            Iterable[{key, feat, label}]
     """
     for sample in data:
         assert 'feat' in sample
@@ -203,6 +247,13 @@ def spec_augmentation(data,
 
 def shuffle(data, shuffle_size=10000):
     """ Local shuffle the data
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            shuffle_size: buffer size for shuffle
+
+        Returns:
+            Iterable[{key, feat, label}]
     """
     buf = []
     for sample in data:
@@ -223,7 +274,15 @@ def sort(data, sort_size=500):
         Sort is used after shuffle and before batch, so we can group
         utts with similar lengths into a batch, and `sort_size` should
         be less than `shuffle_size`
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            sort_size: buffer size for sort
+
+        Returns:
+            Iterable[{key, feat, label}]
     """
+
     buf = []
     for sample in data:
         buf.append(sample)
@@ -240,6 +299,13 @@ def sort(data, sort_size=500):
 
 def static_batch(data, batch_size=16):
     """ Static batch the data by `batch_size`
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            batch_size: batch size
+
+        Returns:
+            Iterable[List[{key, feat, label}]]
     """
     buf = []
     for sample in data:
@@ -254,6 +320,13 @@ def static_batch(data, batch_size=16):
 def dynamic_batch(data, max_frames_in_batch=12000):
     """ Dynamic batch the data until the total frames in batch
         reach `max_frames_in_batch`
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            max_frames_in_batch: max_frames in one batch
+
+        Returns:
+            Iterable[List[{key, feat, label}]]
     """
     total_frames_in_batch = 0
     buf = []
@@ -272,11 +345,11 @@ def dynamic_batch(data, max_frames_in_batch=12000):
 def padding(data):
     """ Padding the data into training data
 
-        Attributes:
-            data: list of training examples
+        Args:
+            data: Iterable[List[{key, feat, label}]]
 
         Returns:
-            Tuple(keys, feats, labels, feats lengths, label lengths)
+            Iterable[Tuple(keys, feats, labels, feats lengths, label lengths)]
     """
     for sample in data:
         assert isinstance(sample, list)
