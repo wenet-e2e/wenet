@@ -12,10 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
+
+import torch
+import torch.distributed as dist
 from torch.utils.data import IterableDataset
 
-import processor
-import utils
+import wenet.dataset.processor as processor
+import wenet.dataset.utils as utils
 
 
 class Processor(IterableDataset):
@@ -42,19 +46,73 @@ class Processor(IterableDataset):
         return Processor(self, f, *self.args, **self.kw)
 
 
-class ShardList(IterableDataset):
-    def __init__(self, urls):
-        self.urls = urls
+class DistributedSampler:
+    def __init__(self, shuffle=False):
+        self.epoch = -1
+        self.update()
+        self.shuffle = shuffle
 
-    def set_epoch(self, epoch: int):
-        pass
+    def update(self):
+        assert dist.is_available()
+        if dist.is_initialized():
+            self.rank = dist.get_rank()
+            self.world_size = dist.get_world_size()
+        else:
+            self.rank = 0
+            self.world_size = 1
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is None:
+            self.worker_id = 0
+            self.num_workers = 1
+        else:
+            self.worker_id = worker_info.id
+            self.num_workers = worker_info.num_workers
+        return dict(rank=self.rank,
+                    world_size=self.world_size,
+                    worker_id=self.worker_id,
+                    num_workers=self.num_workers)
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+
+    def sample(self, data):
+        """ Sample data according to rank/world_size/num_workers
+
+            Args:
+                data(List): input data list
+
+            Returns:
+                List: data list after sample
+        """
+        data = data.copy()
+        if self.shuffle:
+            random.Random(self.epoch).shuffle(data)
+        data = data[self.rank::self.world_size]
+        data = data[self.worker_id::self.num_workers]
+        return data
+
+
+class ShardList(IterableDataset):
+    def __init__(self, urls, shuffle=False):
+        self.urls = urls
+        self.sampler = DistributedSampler(shuffle)
+
+    def set_epoch(self):
+        self.sampler.set_epoch(epoch)
 
     def __iter__(self):
-        for url in self.urls:
-            yield dict(url=url)
+        sampler_info = self.sampler.update()
+        urls = self.sampler.sample(self.urls)
+        for url in urls:
+            # yield dict(url=url)
+            data = dict(url=url)
+            data.update(sampler_info)
+            yield data
 
 
-def ShardDataset(urls, symbol_table):
+def Dataset(data_list_file, symbol_table_file):
+    urls = utils.read_urls_list(data_list_file)
+    symbol_table = utils.read_symbol_table(symbol_table_file)
     dataset = ShardList(urls)
     dataset = Processor(dataset, processor.url_opener)
     dataset = Processor(dataset, processor.tar_file_and_group)
@@ -68,17 +126,3 @@ def ShardDataset(urls, symbol_table):
     dataset = Processor(dataset, processor.static_batch, 2)
     dataset = Processor(dataset, processor.padding)
     return dataset
-
-
-if __name__ == '__main__':
-    shard_list = '/export/maryland/binbinzhang/code/wenet/examples/aishell/s0/shards/train.list'
-    symbol_table_file = '/export/maryland/binbinzhang/code/wenet/examples/aishell/s0/data/dict/lang_char.txt'
-    urls = utils.read_urls_list(shard_list)
-    symbol_table = utils.read_symbol_table(symbol_table_file)
-    dataset = ShardDataset(urls, symbol_table)
-    count = 0
-    for item in dataset:
-        print(item)
-        count += 1
-        if count > 1:
-            break
