@@ -18,6 +18,7 @@ import tarfile
 import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
+from torch.nn.utils.rnn import pad_sequence
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
@@ -198,3 +199,106 @@ def spec_augmentation(data,
             y[:, start:end] = 0
         sample['feat'] = y
         yield sample
+
+
+def shuffle(data, shuffle_size=10000):
+    """ Local shuffle the data
+    """
+    buf = []
+    for sample in data:
+        buf.append(sample)
+        if len(buf) >= shuffle_size:
+            random.shuffle(buf)
+            for x in buf:
+                yield x
+            buf = []
+    # The sample left over
+    random.shuffle(buf)
+    for x in buf:
+        yield x
+
+
+def sort(data, sort_size=500):
+    """ Sort the data by feature length.
+        Sort is used after shuffle and before batch, so we can group
+        utts with similar lengths into a batch, and `sort_size` should
+        be less than `shuffle_size`
+    """
+    buf = []
+    for sample in data:
+        buf.append(sample)
+        if len(buf) >= sort_size:
+            buf.sort(key=lambda x: x['feat'].size(0))
+            for x in buf:
+                yield x
+            buf = []
+    # The sample left over
+    buf.sort(key=lambda x: x['feat'].size(0))
+    for x in buf:
+        yield x
+
+
+def static_batch(data, batch_size=16):
+    """ Static batch the data by `batch_size`
+    """
+    buf = []
+    for sample in data:
+        buf.append(sample)
+        if len(buf) >= batch_size:
+            yield buf
+            buf = []
+    if len(buf) > 0:
+        yield buf
+
+
+def dynamic_batch(data, max_frames_in_batch=12000):
+    """ Dynamic batch the data until the total frames in batch
+        reach `max_frames_in_batch`
+    """
+    total_frames_in_batch = 0
+    buf = []
+    for sample in data:
+        buf.append(sample)
+        assert 'feat' in sample
+        assert isinstance(sample['feat'], torch.Tensor)
+        total_frames_in_batch += sample['feat'].size(0)
+        if total_frames_in_batch > max_frames_in_batch:
+            yield buf
+            buf = []
+    if len(buf) > 0:
+        yield buf
+
+
+def padding(data):
+    """ Padding the data into training data
+
+        Attributes:
+            data: list of training examples
+
+        Returns:
+            Tuple(keys, feats, labels, feats lengths, label lengths)
+    """
+    for sample in data:
+        assert isinstance(sample, list)
+        feats_length = torch.tensor([x['feat'].size(0) for x in sample],
+                                    dtype=torch.int32)
+        order = torch.argsort(feats_length, descending=True)
+        feats_lengths = torch.tensor(
+            [sample[i]['feat'].size(0) for i in order], dtype=torch.int32)
+        sorted_feats = [sample[i]['feat'] for i in order]
+        sorted_keys = [sample[i]['key'] for i in order]
+        sorted_labels = [
+            torch.tensor(sample[i]['label'], dtype=torch.int64) for i in order
+        ]
+        label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
+                                     dtype=torch.int32)
+
+        padded_feats = pad_sequence(sorted_feats,
+                                    batch_first=True,
+                                    padding_value=0)
+        padding_labels = pad_sequence(sorted_labels,
+                                      batch_first=True,
+                                      padding_value=-1)
+
+        yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
+               label_lengths)
