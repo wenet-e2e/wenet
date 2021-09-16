@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import random
 import tarfile
 
@@ -31,12 +32,12 @@ def url_opener(data):
             data(Iterable[str]): url or local file list
 
         Returns:
-            Iterable[{url, stream}]
+            Iterable[{src, stream}]
     """
     for sample in data:
-        assert 'url' in sample
+        assert 'src' in sample
         # TODO(Binbin Zhang): support HTTP
-        url = sample['url']
+        url = sample['src']
         stream = open(url, 'rb')
         sample.update(stream=stream)
         yield sample
@@ -47,7 +48,7 @@ def tar_file_and_group(data):
         And groups the file with same prefix
 
         Args:
-            data: Iterable[{url, stream}]
+            data: Iterable[{src, stream}]
 
         Returns:
             Iterable[{key, wav, txt, sample_rate}]
@@ -80,6 +81,30 @@ def tar_file_and_group(data):
             data['key'] = prev_prefix
             yield data
         stream.close()
+
+
+def parse_raw(data):
+    """ Parse key/wav/txt from json line
+
+        Args:
+            data: Iterable[str], str is a json line has key/wav/txt
+
+        Returns:
+            Iterable[{key, wav, txt, sample_rate}]
+    """
+    for sample in data:
+        assert 'src' in sample
+        json_line = sample['src']
+        obj = json.loads(json_line)
+        assert 'key' in obj
+        assert 'wav' in obj
+        assert 'txt' in obj
+        key = obj['key']
+        wav_file = obj['wav']
+        txt = obj['txt']
+        waveform, sample_rate = torchaudio.load(wav_file)
+        data = dict(key=key, txt=txt, wav=waveform, sample_rate=sample_rate)
+        yield data
 
 
 def filter(data,

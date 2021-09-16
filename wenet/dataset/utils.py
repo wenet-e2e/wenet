@@ -13,12 +13,12 @@
 # limitations under the License.
 
 
-def read_urls_list(list_file):
-    urls = []
+def read_lists(list_file):
+    lists = []
     with open(list_file, 'r', encoding='utf8') as fin:
         for line in fin:
-            urls.append(line.strip())
-    return urls
+            lists.append(line.strip())
+    return lists
 
 
 def read_symbol_table(symbol_table_file):

@@ -92,9 +92,9 @@ class DistributedSampler:
         return data
 
 
-class ShardList(IterableDataset):
-    def __init__(self, urls, shuffle=False):
-        self.urls = urls
+class DataList(IterableDataset):
+    def __init__(self, lists, shuffle=False):
+        self.lists = lists
         self.sampler = DistributedSampler(shuffle)
 
     def set_epoch(self):
@@ -102,20 +102,28 @@ class ShardList(IterableDataset):
 
     def __iter__(self):
         sampler_info = self.sampler.update()
-        urls = self.sampler.sample(self.urls)
-        for url in urls:
-            # yield dict(url=url)
-            data = dict(url=url)
+        lists = self.sampler.sample(self.lists)
+        for src in lists:
+            # yield dict(src=src)
+            data = dict(src=src)
             data.update(sampler_info)
             yield data
 
 
-def Dataset(data_list_file, symbol_table_file):
-    urls = utils.read_urls_list(data_list_file)
+def Dataset(data_type, data_list_file, symbol_table_file):
+    """ Construct dataset from arguments
+        Args:
+            data_type(str): raw/shard
+    """
+    assert data_type in ['raw', 'shard']
+    lists = utils.read_lists(data_list_file)
     symbol_table = utils.read_symbol_table(symbol_table_file)
-    dataset = ShardList(urls)
-    dataset = Processor(dataset, processor.url_opener)
-    dataset = Processor(dataset, processor.tar_file_and_group)
+    dataset = DataList(lists)
+    if dataset == 'shard':
+        dataset = Processor(dataset, processor.url_opener)
+        dataset = Processor(dataset, processor.tar_file_and_group)
+    else:
+        dataset = Processor(dataset, processor.parse_raw)
     dataset = Processor(dataset, processor.decode_text, symbol_table)
     dataset = Processor(dataset, processor.filter)
     dataset = Processor(dataset, processor.resample)
