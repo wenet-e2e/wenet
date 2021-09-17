@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import json
 import random
 import tarfile
@@ -38,9 +39,12 @@ def url_opener(data):
         assert 'src' in sample
         # TODO(Binbin Zhang): support HTTP
         url = sample['src']
-        stream = open(url, 'rb')
-        sample.update(stream=stream)
-        yield sample
+        try:
+            stream = open(url, 'rb')
+            sample.update(stream=stream)
+            yield sample
+        except Exception as ex:
+            logging.warning('Failed to open {}'.format(url))
 
 
 def tar_file_and_group(data):
@@ -58,6 +62,7 @@ def tar_file_and_group(data):
         stream = tarfile.open(fileobj=sample['stream'], mode="r|*")
         prev_prefix = None
         data = {}
+        valid = True
         for tarinfo in stream:
             name = tarinfo.name
             pos = name.rfind('.')
@@ -65,17 +70,23 @@ def tar_file_and_group(data):
             prefix, postfix = name[:pos], name[pos + 1:]
             if prev_prefix is not None and prefix != prev_prefix:
                 data['key'] = prev_prefix
-                yield data
+                if valid:
+                    yield data
                 data = {}
+                valid = True
             file_obj = stream.extractfile(tarinfo)
-            if postfix == 'txt':
-                data['txt'] = file_obj.read().decode('utf8').strip()
-            elif postfix in AUDIO_FORMAT_SETS:
-                waveform, sample_rate = torchaudio.load(file_obj)
-                data['wav'] = waveform
-                data['sample_rate'] = sample_rate
-            else:
-                data[postfix] = file_ojb.read()
+            try:
+                if postfix == 'txt':
+                    data['txt'] = file_obj.read().decode('utf8').strip()
+                elif postfix in AUDIO_FORMAT_SETS:
+                    waveform, sample_rate = torchaudio.load(file_obj)
+                    data['wav'] = waveform
+                    data['sample_rate'] = sample_rate
+                else:
+                    data[postfix] = file_ojb.read()
+            except Exception as ex:
+                valid = False
+                logging.warning('error to parse {}'.format(name))
             prev_prefix = prefix
         if prev_prefix is not None:
             data['key'] = prev_prefix
@@ -102,9 +113,15 @@ def parse_raw(data):
         key = obj['key']
         wav_file = obj['wav']
         txt = obj['txt']
-        waveform, sample_rate = torchaudio.load(wav_file)
-        data = dict(key=key, txt=txt, wav=waveform, sample_rate=sample_rate)
-        yield data
+        try:
+            waveform, sample_rate = torchaudio.load(wav_file)
+            data = dict(key=key,
+                        txt=txt,
+                        wav=waveform,
+                        sample_rate=sample_rate)
+            yield data
+        except Exception as ex:
+            logging.warning('Failed to read {}'.format(wav_file))
 
 
 def filter(data,

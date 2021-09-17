@@ -119,7 +119,7 @@ def Dataset(data_type, data_list_file, symbol_table_file):
     lists = utils.read_lists(data_list_file)
     symbol_table = utils.read_symbol_table(symbol_table_file)
     dataset = DataList(lists)
-    if dataset == 'shard':
+    if data_type == 'shard':
         dataset = Processor(dataset, processor.url_opener)
         dataset = Processor(dataset, processor.tar_file_and_group)
     else:
