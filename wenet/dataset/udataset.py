@@ -19,7 +19,7 @@ import torch.distributed as dist
 from torch.utils.data import IterableDataset
 
 import wenet.dataset.processor as processor
-import wenet.dataset.utils as utils
+from wenet.utils.file_utils import read_lists
 
 
 class Processor(IterableDataset):
@@ -97,7 +97,7 @@ class DataList(IterableDataset):
         self.lists = lists
         self.sampler = DistributedSampler(shuffle)
 
-    def set_epoch(self):
+    def set_epoch(self, epoch):
         self.sampler.set_epoch(epoch)
 
     def __iter__(self):
@@ -110,14 +110,13 @@ class DataList(IterableDataset):
             yield data
 
 
-def Dataset(data_type, data_list_file, symbol_table_file, conf):
+def Dataset(data_type, data_list_file, symbol_table, conf):
     """ Construct dataset from arguments
         Args:
             data_type(str): raw/shard
     """
     assert data_type in ['raw', 'shard']
-    lists = utils.read_lists(data_list_file)
-    symbol_table = utils.read_symbol_table(symbol_table_file)
+    lists = read_lists(data_list_file)
     dataset = DataList(lists)
     if data_type == 'shard':
         dataset = Processor(dataset, processor.url_opener)
