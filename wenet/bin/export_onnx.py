@@ -137,10 +137,16 @@ class Decoder(torch.nn.Module):
         score = torch.sum(score, 1)
         score = score + self.ctc_weight * ctc_score
 
-        # resize score to B X Beam
+        # resize score to B x Beam
         score = torch.reshape(score, (B, beam_size))
         best_index = torch.argmax(score, dim=1)  # B
-        return best_index
+        hyps_pad = hyps_pad.view(B, beam_size, -1)
+        hyps_lens = hyps_lens.view(B, beam_size)
+        index = torch.arange(B)
+        # remove sos
+        best_hyps = hyps_pad[index, best_index][:, 1:]
+        best_lens = hyps_lens[index, best_index] - 1
+        return best_hyps, best_lens
 
 
 if __name__ == '__main__':
@@ -257,7 +263,7 @@ if __name__ == '__main__':
                                    'hyps_pad_sos', 'hyps_pad_eos',
                                    'hyps_lens_sos', 'r_hyps_pad_sos',
                                    'r_hyps_pad_eos', 'ctc_score'],
-                      output_names=['best_hyps'],
+                      output_names=['best_hyps', 'best_lens'],
                       dynamic_axes={'encoder_out': [0, 1],
                                     'encoder_out_lens': [0],
                                     'hyps_pad_sos': [0, 1],
@@ -266,19 +272,21 @@ if __name__ == '__main__':
                                     'r_hyps_pad_sos': [0, 1],
                                     'r_hyps_pad_eos': [0, 1],
                                     'ctc_score': [0],
-                                    'best_hyps': [0]
+                                    'best_hyps': [0, 1],
+                                    'best_lens': [0]
                                     },
                       verbose=False
                       )
     with torch.no_grad():
-        o0 = decoder(encoder_out,
-                     encoder_out_lens,
-                     hyps_pad_sos,
-                     hyps_pad_eos,
-                     hyps_lens_sos,
-                     r_hyps_pad_sos,
-                     r_hyps_pad_eos,
-                     ctc_score)
+        o0, o1 = decoder(
+            encoder_out,
+            encoder_out_lens,
+            hyps_pad_sos,
+            hyps_pad_eos,
+            hyps_lens_sos,
+            r_hyps_pad_sos,
+            r_hyps_pad_eos,
+            ctc_score)
 
     ort_session = onnxruntime.InferenceSession(decoder_onnx_path)
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(encoder_out),
@@ -293,5 +301,5 @@ if __name__ == '__main__':
 
     # check encoder output
     test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-05)
-
+    test(to_numpy(o1), ort_outs[1], rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")

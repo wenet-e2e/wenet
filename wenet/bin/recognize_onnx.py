@@ -218,10 +218,10 @@ if __name__ == '__main__':
                     decoder_ort_session.get_inputs()[6].name: r_hyps_pad_eos,
                     decoder_ort_session.get_inputs()[7].name: ctc_score}
                 hyps = []
-                best_index = decoder_ort_session.run(
-                    None, decoder_ort_inputs)[0]
-                for idx, li in enumerate(score_hyps):
-                    hyps.append(li[best_index[idx]][1])
+                best_hyps, best_lens = decoder_ort_session.run(
+                    None, decoder_ort_inputs)
+                for hyp, blen in zip(best_hyps, best_lens):
+                    hyps.append(hyp.tolist()[0:blen])
                 hyps = map_batch(hyps, vocabulary, num_processes)
 
             for i, key in enumerate(keys):
