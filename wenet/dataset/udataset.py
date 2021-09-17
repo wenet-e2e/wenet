@@ -110,7 +110,7 @@ class DataList(IterableDataset):
             yield data
 
 
-def Dataset(data_type, data_list_file, symbol_table_file):
+def Dataset(data_type, data_list_file, symbol_table_file, conf):
     """ Construct dataset from arguments
         Args:
             data_type(str): raw/shard
@@ -124,13 +124,29 @@ def Dataset(data_type, data_list_file, symbol_table_file):
         dataset = Processor(dataset, processor.tar_file_and_group)
     else:
         dataset = Processor(dataset, processor.parse_raw)
+
     dataset = Processor(dataset, processor.decode_text, symbol_table)
-    dataset = Processor(dataset, processor.filter)
-    dataset = Processor(dataset, processor.resample)
-    dataset = Processor(dataset, processor.compute_fbank)
-    dataset = Processor(dataset, processor.spec_augmentation)
-    dataset = Processor(dataset, processor.shuffle, 1000)
-    dataset = Processor(dataset, processor.sort, 1000)
-    dataset = Processor(dataset, processor.static_batch, 2)
+    filter_conf = conf.get('filter_conf', {})
+    dataset = Processor(dataset, processor.filter, **filter_conf)
+
+    resample_conf = conf.get('resample_conf', {})
+    dataset = Processor(dataset, processor.resample, **resample_conf)
+
+    fbank_conf = conf.get('fbank_conf', {})
+    dataset = Processor(dataset, processor.compute_fbank, **fbank_conf)
+
+    spec_aug = conf.get('spec_aug', False)
+    if spec_aug:
+        spec_aug_conf = conf.get('spec_aug_conf', {})
+        dataset = Processor(dataset, processor.spec_aug, **spec_aug_conf)
+
+    shuffle_conf = conf.get('shuffle_conf', {})
+    dataset = Processor(dataset, processor.shuffle, **shuffle_conf)
+
+    sort_conf = conf.get('sort_conf', {})
+    dataset = Processor(dataset, processor.sort, **sort_conf)
+
+    batch_conf = conf.get('batch_conf', {})
+    dataset = Processor(dataset, processor.batch, **batch_conf)
     dataset = Processor(dataset, processor.padding)
     return dataset

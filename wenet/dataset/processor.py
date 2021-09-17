@@ -126,7 +126,7 @@ def parse_raw(data):
 
 def filter(data,
            max_length=10240,
-           min_length=0,
+           min_length=10,
            token_max_length=200,
            token_min_length=1):
     """ Filter sample according to feature and label length
@@ -244,12 +244,7 @@ def decode_text(data, symbol_table, bpe_model=None):
         yield sample
 
 
-def spec_augmentation(data,
-                      num_t_mask=2,
-                      num_f_mask=2,
-                      max_t=50,
-                      max_f=10,
-                      max_w=80):
+def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
     """ Do spec augmentation
         Inplace operation
 
@@ -382,6 +377,17 @@ def dynamic_batch(data, max_frames_in_batch=12000):
             buf = []
     if len(buf) > 0:
         yield buf
+
+
+def batch(data, batch_type='static', batch_size=16, max_frames_in_batch=12000):
+    """ Wrapper for static/dynamic batch
+    """
+    if batch_type == 'static':
+        return static_batch(data, batch_size)
+    elif batch_type == 'dynamic':
+        return dynamic_batch(data, max_frames_in_batch)
+    else:
+        logging.fatal('Unsupported batch type {}'.format(batch_type))
 
 
 def padding(data):
