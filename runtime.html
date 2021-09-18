@@ -1,72 +1,33 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
-  
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-  <title>Runtime for WeNet &mdash; Wenet  documentation</title>
-  
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-
-  
-  
-
-  
-  
-
-  
-
-  
+  <title>Runtime for WeNet &mdash; Wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-
-    
+    <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="JIT in WeNet" href="jit_in_wenet.html" />
     <link rel="prev" title="LM for WeNet" href="lm.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
-
-          
             <a href="index.html" class="icon icon-home"> Wenet
-          
-
-          
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -74,18 +35,7 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption"><span class="caption-text">Tutorial:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
@@ -107,71 +57,30 @@
 <li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">Wenet</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-        
       <li>Runtime for WeNet</li>
-    
-    
       <li class="wy-breadcrumbs-aside">
-        
-          
             <a href="_sources/runtime.md.txt" rel="nofollow"> View page source</a>
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
+             
   
 <style>
 /* CSS overrides for sphinx_rtd_theme */
@@ -197,7 +106,7 @@
 }
 </style>
 <div class="section" id="runtime-for-wenet">
-<h1>Runtime for WeNet<a class="headerlink" href="#runtime-for-wenet" title="Permalink to this headline">¶</a></h1>
+<h1>Runtime for WeNet<a class="headerlink" href="#runtime-for-wenet" title="Permalink to this headline"></a></h1>
 <p>WeNet runtime uses <a class="reference external" href="https://arxiv.org/pdf/2012.05481.pdf">Unified Two Pass (U2)</a> framework for inference. U2 has the following advantages:</p>
 <ul class="simple">
 <li><p><strong>Unified</strong>: U2 unified the streaming and non-streaming model in a simple way, and our runtime is also unified. Therefore you can easily balance the latency and accuracy by changing chunk_size (described in the following section).</p></li>
@@ -206,7 +115,7 @@
 <li><p><strong>Other benefits</strong>: In practice, we find U2 is more stable on long-form speech than standard transformer which usually fails or degrades a lot on long-form speech; and we can easily get the word-level time stamps by CTC spikes in U2. Both of these aspects are favored for industry adoption.</p></li>
 </ul>
 <div class="section" id="platforms-supported">
-<h2>Platforms Supported<a class="headerlink" href="#platforms-supported" title="Permalink to this headline">¶</a></h2>
+<h2>Platforms Supported<a class="headerlink" href="#platforms-supported" title="Permalink to this headline"></a></h2>
 <p>The WeNet runtime supports the following platforms.</p>
 <ul class="simple">
 <li><p>Server</p>
@@ -222,9 +131,9 @@
 </ul>
 </div>
 <div class="section" id="architecture-and-implementation">
-<h2>Architecture and Implementation<a class="headerlink" href="#architecture-and-implementation" title="Permalink to this headline">¶</a></h2>
+<h2>Architecture and Implementation<a class="headerlink" href="#architecture-and-implementation" title="Permalink to this headline"></a></h2>
 <div class="section" id="architecture">
-<h3>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline">¶</a></h3>
+<h3>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline"></a></h3>
 <p>The following picture shows how U2 works.</p>
 <p><img alt="U2" src="_images/u2.gif" /></p>
 <p>When input is not finished, the input frames $x_t$ are fed into the <em>Shared Encoder</em> module frame by frame to get the encoder output $e_t$, then $e_t$ is transformed by the <em>CTC Activation</em> module (typically, it’s just a linear transform with a log_softmax) to get the CTC prob $y_t$ at current frame, and $y_t$ is further used by the <em>CTC prefix beam search</em> module to generate n-best results at current time $t$, and the best result is used as partial result of the U2 system.</p>
@@ -232,7 +141,7 @@
 <p>We can group $C$ continuous frames $x_t, x_{t+1}, x_{t+C}$ as one chunk for the <em>Shared Encoder</em> module, and $C$ is called chunk_size in the U2 framework. The chunk_size will affect the attention computation in the <em>Shared Encoder</em> module. When chunk_size is infinite, it is a non-streaming case. The system gives the best accuracy with infinite latency. When chunk_size is limited (typically less than 1s), it is a streaming case. The system has limited latency and also gives promising accuracy. So the developer can balance the accuracy and latency and setting a proper chunk_size.</p>
 </div>
 <div class="section" id="interface-design">
-<h3>Interface Design<a class="headerlink" href="#interface-design" title="Permalink to this headline">¶</a></h3>
+<h3>Interface Design<a class="headerlink" href="#interface-design" title="Permalink to this headline"></a></h3>
 <p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code by &#64;torch.jit.export (see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/asr_model.py">asr_model.py</a>), which are required and used in C++ runtime in <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc">torch_asr_model.cc</a> and <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86/decoder/torch_asr_decoder.cc">torch_asr_decoder.cc</a>. Here we just list the interface and give a brief introduction.</p>
 <table border="1" class="docutils">
 <thead>
@@ -273,7 +182,7 @@
 </tbody>
 </table></div>
 <div class="section" id="cache-in-details">
-<h3>Cache in Details<a class="headerlink" href="#cache-in-details" title="Permalink to this headline">¶</a></h3>
+<h3>Cache in Details<a class="headerlink" href="#cache-in-details" title="Permalink to this headline"></a></h3>
 <p>For streaming scenario, the <em>Shared Encoder</em> module works in an incremental way. The current chunk computation requries the inputs and outputs of all the history chunks. We implement the incremental computation by using caches. Overall, three caches are used in our runtime.</p>
 <ul class="simple">
 <li><p>Encoder Conformer/Transformer layers output cache: cache the output of every encoder layer.</p></li>
@@ -286,7 +195,7 @@
 </div>
 </div>
 <div class="section" id="references">
-<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
 <ol class="simple">
 <li><p><a class="reference external" href="https://distill.pub/2017/ctc/">Sequence Modeling With CTC</a></p></li>
 <li><p><a class="reference external" href="https://arxiv.org/pdf/1408.2873.pdf">First-Pass Large Vocabulary Continuous Speech Recognition using Bi-Directional Recurrent DNNs</a></p></li>
@@ -297,50 +206,33 @@
 
 
            </div>
-           
           </div>
-          <footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="jit_in_wenet.html" class="btn btn-neutral float-right" title="JIT in WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="lm.html" class="btn btn-neutral float-left" title="LM for WeNet" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="jit_in_wenet.html" class="btn btn-neutral float-right" title="JIT in WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        &#169; Copyright 2020, wenet-team.
-
-    </p>
+    <p>&#169; Copyright 2020, wenet-team.</p>
   </div>
-    
-    
-    
-    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>

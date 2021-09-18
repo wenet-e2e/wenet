@@ -1,72 +1,33 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
   <meta charset="utf-8" />
-  
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  
-  <title>Tutorial on AIShell &mdash; Wenet  documentation</title>
-  
-
-  
-  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-
-  
-  
-
-  
-  
-
-  
-
-  
+  <title>Tutorial on AIShell &mdash; Wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
         <script src="_static/language_data.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    
-    <script type="text/javascript" src="_static/js/theme.js"></script>
-
-    
+    <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="Pretrained Models in WeNet" href="pretrained_models.html" />
     <link rel="prev" title="Tutorial on LibriSpeech" href="tutorial_librispeech.html" /> 
 </head>
 
-<body class="wy-body-for-nav">
-
-   
+<body class="wy-body-for-nav"> 
   <div class="wy-grid-for-nav">
-    
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-          
-
-          
             <a href="index.html" class="icon icon-home"> Wenet
-          
-
-          
           </a>
-
-          
-            
-            
-          
-
-          
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" />
@@ -74,18 +35,7 @@
     <input type="hidden" name="area" value="default" />
   </form>
 </div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption"><span class="caption-text">Tutorial:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
@@ -111,71 +61,30 @@
 <li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
 </ul>
 
-            
-          
         </div>
-        
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">Wenet</a>
-        
       </nav>
 
-
       <div class="wy-nav-content">
-        
         <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
+          <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-    
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-        
       <li>Tutorial on AIShell</li>
-    
-    
       <li class="wy-breadcrumbs-aside">
-        
-          
             <a href="_sources/tutorial_aishell.md.txt" rel="nofollow"> View page source</a>
-          
-        
       </li>
-    
   </ul>
-
-  
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
-            
+             
   
 <style>
 /* CSS overrides for sphinx_rtd_theme */
@@ -201,14 +110,14 @@
 }
 </style>
 <div class="section" id="tutorial-on-aishell">
-<h1>Tutorial on AIShell<a class="headerlink" href="#tutorial-on-aishell" title="Permalink to this headline">¶</a></h1>
+<h1>Tutorial on AIShell<a class="headerlink" href="#tutorial-on-aishell" title="Permalink to this headline"></a></h1>
 <p>If you meet any problems when going through this tutorial, please feel free to ask in github <a class="reference external" href="https://github.com/mobvoi/wenet/issues">issues</a>. Thanks for any kind of feedback.</p>
 <div class="section" id="setup-environment">
-<h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this headline">¶</a></h2>
+<h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this headline"></a></h2>
 <p>Please follow <a class="reference external" href="https://github.com/wenet-e2e/wenet#installation">Installation</a> to install WeNet.</p>
 </div>
 <div class="section" id="first-experiment">
-<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this headline">¶</a></h2>
+<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this headline"></a></h2>
 <p>We provide a recipe <code class="docutils literal notranslate"><span class="pre">example/aishell/s0/run.sh</span></code> on aishell-1 data.</p>
 <p>The recipe is simple and we suggest you run each stage one by one manually and check the result to understand the whole process.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">example</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s0</span>
@@ -227,11 +136,11 @@
 </pre></div>
 </div>
 <div class="section" id="stage-1-download-data">
-<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this headline">¶</a></h3>
+<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this headline"></a></h3>
 <p>This stage downloads the aishell-1 data to the local path <code class="docutils literal notranslate"><span class="pre">$data</span></code>. This may take several hours. If you have already downloaded the data, please change the <code class="docutils literal notranslate"><span class="pre">$data</span></code> variable in <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> and start from <code class="docutils literal notranslate"><span class="pre">--stage</span> <span class="pre">0</span></code>.</p>
 </div>
 <div class="section" id="stage-0-prepare-training-data">
-<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this headline">¶</a></h3>
+<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this headline"></a></h3>
 <p>In this stage, <code class="docutils literal notranslate"><span class="pre">local/aishell_data_prep.sh</span></code> organizes the original aishell-1 data into two files:</p>
 <ul class="simple">
 <li><p><strong>wav.scp</strong> each line records two tab-separated columns : <code class="docutils literal notranslate"><span class="pre">wav_id</span></code> and <code class="docutils literal notranslate"><span class="pre">wav_path</span></code></p></li>
@@ -256,12 +165,12 @@
 <p>If you want to train using your customized data, just organize the data into two files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>, and start from <code class="docutils literal notranslate"><span class="pre">stage</span> <span class="pre">1</span></code>.</p>
 </div>
 <div class="section" id="stage-1-extract-optinal-cmvn-features">
-<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this headline">¶</a></h3>
+<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this headline"></a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">example/aishell/s0</span></code> uses raw wav as input and and <a class="reference external" href="https://pytorch.org/audio/stable/index.html">TorchAudio</a> to extract the features just-in-time in dataloader. So in this step we just copy the training wav.scp and text file into the <code class="docutils literal notranslate"><span class="pre">raw_wav/train/</span></code> dir.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute_cmvn_stats.py</span></code> is used to extract global cmvn(cepstral mean and variance normalization) statistics. These statistics will be used to normalize the acoustic features. Setting <code class="docutils literal notranslate"><span class="pre">cmvn=false</span></code> will skip this step.</p>
 </div>
 <div class="section" id="stage-2-generate-label-token-dictionary">
-<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this headline">¶</a></h3>
+<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this headline"></a></h3>
 <p>The dict is a map between label tokens (we use characters for Aishell-1) and
 the integer indices.</p>
 <p>An example dict is as follows</p>
@@ -282,7 +191,7 @@ the integer indices.</p>
 </ul>
 </div>
 <div class="section" id="stage-3-prepare-wenet-data-format">
-<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this headline">¶</a></h3>
+<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this headline"></a></h3>
 <p>This stage generates a single WeNet format file including all the input/output information needed by neural network training/evaluation.</p>
 <p>See the generated training feature file in <code class="docutils literal notranslate"><span class="pre">fbank_pitch/train/format.data</span></code>.</p>
 <p>In the WeNet format file , each line records a data sample of seven tab-separated columns. For example, a line is as follows (tab replaced with newline here):</p>
@@ -298,7 +207,7 @@ the integer indices.</p>
 <p><code class="docutils literal notranslate"><span class="pre">feat_shape</span></code> is the duration(in seconds) of the wav.</p>
 </div>
 <div class="section" id="stage-4-neural-network-training">
-<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this headline">¶</a></h3>
+<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this headline"></a></h3>
 <p>The NN model is trained in this step.</p>
 <ul class="simple">
 <li><p>Multi-GPU mode</p></li>
@@ -324,7 +233,7 @@ You could use tensorboard to monitor the loss.</p>
 </div>
 </div>
 <div class="section" id="stage-5-recognize-wav-using-the-trained-model">
-<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this headline">¶</a></h3>
+<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this headline"></a></h3>
 <p>This stage shows how to recognize a set of wavs into texts. It also shows how to do the model averaging.</p>
 <ul class="simple">
 <li><p>Average model</p></li>
@@ -350,7 +259,7 @@ You could use tensorboard to monitor the loss.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute-wer.py</span></code> will calculate the word (or char) error rate of the result. If you run the recipe without any change, you may get WER ~= 5%.</p>
 </div>
 <div class="section" id="stage-6-export-the-trained-model">
-<h3>Stage 6: Export the trained model<a class="headerlink" href="#stage-6-export-the-trained-model" title="Permalink to this headline">¶</a></h3>
+<h3>Stage 6: Export the trained model<a class="headerlink" href="#stage-6-export-the-trained-model" title="Permalink to this headline"></a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">wenet/bin/export_jit.py</span></code> will export the trained model using Libtorch. The exported model files can be easily used for inference in other programming languages such as C++.</p>
 </div>
 </div>
@@ -358,50 +267,33 @@ You could use tensorboard to monitor the loss.</p>
 
 
            </div>
-           
           </div>
-          <footer>
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="pretrained_models.html" class="btn btn-neutral float-right" title="Pretrained Models in WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="tutorial_librispeech.html" class="btn btn-neutral float-left" title="Tutorial on LibriSpeech" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pretrained_models.html" class="btn btn-neutral float-right" title="Pretrained Models in WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>
-        &#169; Copyright 2020, wenet-team.
-
-    </p>
+    <p>&#169; Copyright 2020, wenet-team.</p>
   </div>
-    
-    
-    
-    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
-    
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
     <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
 
 </footer>
         </div>
       </div>
-
     </section>
-
   </div>
-  
-
-  <script type="text/javascript">
+  <script>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script>
-
-  
-  
-    
-   
+  </script> 
 
 </body>
 </html>
