@@ -146,7 +146,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --config $train_config \
             --data_type $data_type \
             --symbol_table $dict \
-            --train_data $feat_dir/$train_set/3.list \
+            --train_data $feat_dir/$train_set/data.list \
             --cv_data $feat_dir/dev/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
