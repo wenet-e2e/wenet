@@ -47,10 +47,11 @@ class Processor(IterableDataset):
 
 
 class DistributedSampler:
-    def __init__(self, shuffle=False):
+    def __init__(self, shuffle=True, cv=False):
         self.epoch = -1
         self.update()
         self.shuffle = shuffle
+        self.cv = cv
 
     def update(self):
         assert dist.is_available()
@@ -85,17 +86,22 @@ class DistributedSampler:
                 List: data list after sample
         """
         data = data.copy()
-        if self.shuffle:
-            random.Random(self.epoch).shuffle(data)
-        data = data[self.rank::self.world_size]
+        # TODO(Binbin Zhang): fix this
+        # We can not handle uneven data for CV on DDP, so we don't
+        # sample data by rank, that means every GPU gets the same
+        # and all the CV data
+        if not self.cv:
+            if self.shuffle:
+                random.Random(self.epoch).shuffle(data)
+            data = data[self.rank::self.world_size]
         data = data[self.worker_id::self.num_workers]
         return data
 
 
 class DataList(IterableDataset):
-    def __init__(self, lists, shuffle=False):
+    def __init__(self, lists, shuffle=True, cv=False):
         self.lists = lists
-        self.sampler = DistributedSampler(shuffle)
+        self.sampler = DistributedSampler(shuffle, cv)
 
     def set_epoch(self, epoch):
         self.sampler.set_epoch(epoch)
@@ -110,14 +116,14 @@ class DataList(IterableDataset):
             yield data
 
 
-def Dataset(data_type, data_list_file, symbol_table, conf):
+def Dataset(data_type, data_list_file, symbol_table, conf, cv=False):
     """ Construct dataset from arguments
         Args:
             data_type(str): raw/shard
     """
     assert data_type in ['raw', 'shard']
     lists = read_lists(data_list_file)
-    dataset = DataList(lists)
+    dataset = DataList(lists, cv=cv)
     if data_type == 'shard':
         dataset = Processor(dataset, processor.url_opener)
         dataset = Processor(dataset, processor.tar_file_and_group)

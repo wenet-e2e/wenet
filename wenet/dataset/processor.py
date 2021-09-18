@@ -92,6 +92,7 @@ def tar_file_and_group(data):
             data['key'] = prev_prefix
             yield data
         stream.close()
+        sample['stream'].close()
 
 
 def parse_raw(data):

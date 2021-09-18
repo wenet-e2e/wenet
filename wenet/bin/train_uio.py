@@ -115,7 +115,11 @@ if __name__ == '__main__':
 
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
                             train_conf)
-    cv_dataset = Dataset(args.data_type, args.cv_data, symbol_table, cv_conf)
+    cv_dataset = Dataset(args.data_type,
+                         args.cv_data,
+                         symbol_table,
+                         cv_conf,
+                         cv=True)
 
     train_data_loader = DataLoader(
         train_dataset,
@@ -201,25 +205,17 @@ if __name__ == '__main__':
     scaler = None
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
+
     for epoch in range(start_epoch, num_epochs):
         train_dataset.set_epoch(epoch)
+        configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler)
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
                                                 configs)
-        if args.world_size > 1:
-            # all_reduce expected a sequence parameter, so we use [num_seen_utts].
-            num_seen_utts = torch.Tensor([num_seen_utts]).to(device)
-            # the default operator in all_reduce function is sum.
-            dist.all_reduce(num_seen_utts)
-            total_loss = torch.Tensor([total_loss]).to(device)
-            dist.all_reduce(total_loss)
-            cv_loss = total_loss[0] / num_seen_utts[0]
-            cv_loss = cv_loss.item()
-        else:
-            cv_loss = total_loss / num_seen_utts
+        cv_loss = total_loss / num_seen_utts
 
         logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
@@ -238,4 +234,4 @@ if __name__ == '__main__':
     if final_epoch is not None and args.rank == 0:
         final_model_path = os.path.join(model_dir, 'final.pt')
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
-        writer.close()
+    writer.close()
