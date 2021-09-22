@@ -162,3 +162,44 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     wait
 fi
 
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+    # Test model, please specify the model you want to test by --checkpoint
+    if [ ${average_checkpoint} == true ]; then
+        decode_checkpoint=$dir/avg_${average_num}.pt
+        echo "do model average and final checkpoint is $decode_checkpoint"
+        python wenet/bin/average_model.py \
+            --dst_model $decode_checkpoint \
+            --src_path $dir  \
+            --num ${average_num} \
+            --val_best
+    fi
+    # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
+    # -1 for full chunk
+    decoding_chunk_size=
+    ctc_weight=0.5
+    reverse_weight=0.0
+    for mode in ${decode_modes}; do
+    {
+        test_dir=$dir/test_${mode}
+        mkdir -p $test_dir
+        python wenet/bin/recognize_uio.py --gpu 0 \
+            --mode $mode \
+            --config $dir/train.yaml \
+            --data_type $data_type \
+            --test_data $feat_dir/test/data.list \
+            --checkpoint $decode_checkpoint \
+            --beam_size 10 \
+            --batch_size 1 \
+            --penalty 0.0 \
+            --dict $dict \
+            --ctc_weight $ctc_weight \
+            --reverse_weight $reverse_weight \
+            --result_file $test_dir/text \
+            ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+         python tools/compute-wer.py --char=1 --v=1 \
+            $feat_dir/test/text $test_dir/text > $test_dir/wer
+    } &
+    done
+    wait
+
+fi
