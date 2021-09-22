@@ -47,11 +47,11 @@ class Processor(IterableDataset):
 
 
 class DistributedSampler:
-    def __init__(self, shuffle=True, cv=False):
+    def __init__(self, shuffle=True, partition=True):
         self.epoch = -1
         self.update()
         self.shuffle = shuffle
-        self.cv = cv
+        self.partition = partition
 
     def update(self):
         assert dist.is_available()
@@ -90,7 +90,7 @@ class DistributedSampler:
         # We can not handle uneven data for CV on DDP, so we don't
         # sample data by rank, that means every GPU gets the same
         # and all the CV data
-        if not self.cv:
+        if self.partition:
             if self.shuffle:
                 random.Random(self.epoch).shuffle(data)
             data = data[self.rank::self.world_size]
@@ -99,9 +99,9 @@ class DistributedSampler:
 
 
 class DataList(IterableDataset):
-    def __init__(self, lists, shuffle=True, cv=False):
+    def __init__(self, lists, shuffle=True, partition=True):
         self.lists = lists
-        self.sampler = DistributedSampler(shuffle, cv)
+        self.sampler = DistributedSampler(shuffle, partition)
 
     def set_epoch(self, epoch):
         self.sampler.set_epoch(epoch)
@@ -116,14 +116,21 @@ class DataList(IterableDataset):
             yield data
 
 
-def Dataset(data_type, data_list_file, symbol_table, conf, cv=False):
+def Dataset(data_type, data_list_file, symbol_table, conf, partition=True):
     """ Construct dataset from arguments
+
+        We have two shuffle stage in the Dataset. The first is global
+        shuffle at shards tar/raw file level. The second is global shuffle
+        at training samples level.
+
         Args:
             data_type(str): raw/shard
+            partition(bool): whether to do data partition in terms of rank
     """
     assert data_type in ['raw', 'shard']
     lists = read_lists(data_list_file)
-    dataset = DataList(lists, cv=cv)
+    shuffle = conf.get('shuffle', True)
+    dataset = DataList(lists, shuffle=shuffle, partition=partition)
     if data_type == 'shard':
         dataset = Processor(dataset, processor.url_opener)
         dataset = Processor(dataset, processor.tar_file_and_group)
@@ -140,16 +147,19 @@ def Dataset(data_type, data_list_file, symbol_table, conf, cv=False):
     fbank_conf = conf.get('fbank_conf', {})
     dataset = Processor(dataset, processor.compute_fbank, **fbank_conf)
 
-    spec_aug = conf.get('spec_aug', False)
+    spec_aug = conf.get('spec_aug', True)
     if spec_aug:
         spec_aug_conf = conf.get('spec_aug_conf', {})
         dataset = Processor(dataset, processor.spec_aug, **spec_aug_conf)
 
-    shuffle_conf = conf.get('shuffle_conf', {})
-    dataset = Processor(dataset, processor.shuffle, **shuffle_conf)
+    if shuffle:
+        shuffle_conf = conf.get('shuffle_conf', {})
+        dataset = Processor(dataset, processor.shuffle, **shuffle_conf)
 
-    sort_conf = conf.get('sort_conf', {})
-    dataset = Processor(dataset, processor.sort, **sort_conf)
+    sort = conf.get('sort', True)
+    if sort:
+        sort_conf = conf.get('sort_conf', {})
+        dataset = Processor(dataset, processor.sort, **sort_conf)
 
     batch_conf = conf.get('batch_conf', {})
     dataset = Processor(dataset, processor.batch, **batch_conf)

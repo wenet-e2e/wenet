@@ -119,7 +119,7 @@ if __name__ == '__main__':
                          args.cv_data,
                          symbol_table,
                          cv_conf,
-                         cv=True)
+                         partition=False)
 
     train_data_loader = DataLoader(
         train_dataset,
