@@ -62,6 +62,7 @@ class Encoder(torch.nn.Module):
         ctc_log_probs = self.ctc.log_softmax(encoder_out)
         beam_log_probs, beam_log_probs_idx = torch.topk(
             ctc_log_probs, self.beam_size, dim=2)
+        encoder_out_lens = encoder_out_lens.int()
         return encoder_out, encoder_out_lens, beam_log_probs, beam_log_probs_idx
 
 
@@ -92,16 +93,16 @@ class Decoder(torch.nn.Module):
         Args:
             encoder_out: B X T X F
             encoder_mask: B X 1 x T
-            hyps_pad: B*beam x T2,
+            hyps_pad: B x beam x T2,
                         hyps with sos and padded by ignore id
-            hyps_pad_out: B*beam x T2,
+            hyps_pad_out: B x beam x T2,
                         hyps with eos and padded by ignore_id
-            hyps_lens: B*beam, length for each hyp
-            r_hyps_pad: B*beam x T2,
+            hyps_lens: B x beam, length for each hyp
+            r_hyps_pad: B x beam x T2,
                     reversed hyps with sos and padded by ignore id
-            r_hyps_pad_out: B*beam x T2,
+            r_hyps_pad_out: B x beam x T2,
                     reversed hyps with eos and padded by ignore id
-            ctc_score: B*beam
+            ctc_score: B x beam
         """
         T = encoder_out.shape[1]
         F = encoder_out.shape[-1]
@@ -109,6 +110,12 @@ class Decoder(torch.nn.Module):
         encoder_out = encoder_out.repeat(1, self.beam_size, 1).view(-1, T, F)
         encoder_mask = ~make_pad_mask(encoder_lens, T).unsqueeze(1)
         encoder_mask = encoder_mask.repeat(1, self.beam_size, 1).view(-1, 1, T)
+        hyps_pad = hyps_pad.view(B * self.beam_size, -1)
+        hyps_pad_out = hyps_pad_out.view(B * self.beam_size, -1)
+        hyps_lens = hyps_lens.view(B * self.beam_size,)
+        r_hyps_pad = r_hyps_pad.view(B * self.beam_size, -1)
+        r_hyps_pad_out = r_hyps_pad_out.view(B * self.beam_size, -1)
+        ctc_score = ctc_score.view(B * self.beam_size,)
         decoder_out, r_decoder_out, _ = self.decoder(
             encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
             self.reverse_weight)
@@ -238,18 +245,16 @@ if __name__ == '__main__':
     decoder.eval()
     decoder_onnx_path = os.path.join(args.output_onnx_directory, 'decoder.onnx')
 
-    hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz * beam_size, seq_len))
-    hyps_lens_sos = torch.randint(low=3, high=seq_len, size=(bz * beam_size,))
-    hyps_pad_eos = torch.randint(low=3, high=1000, size=(bz * beam_size, seq_len))
-    r_hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz * beam_size, seq_len))
-    r_hyps_pad_eos = torch.randint(low=3, high=1000, size=(bz * beam_size, seq_len))
+    hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
+    hyps_lens_sos = torch.randint(low=3, high=seq_len, size=(bz, beam_size,), dtype=torch.int32)
+    hyps_pad_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
+    r_hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
+    r_hyps_pad_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
 
     output_size = configs["encoder_conf"]["output_size"]
     encoder_out = torch.randn(bz, seq_len, output_size, dtype=torch.float32)
-    encoder_out_lens = torch.randint(
-        low=3, high=seq_len, size=(
-            bz,), dtype=torch.int64)
-    ctc_score = torch.randn(bz * beam_size, dtype=torch.float32)
+    encoder_out_lens = torch.randint(low=3, high=seq_len, size=(bz,), dtype=torch.int32)
+    ctc_score = torch.randn(bz, beam_size, dtype=torch.float32)
     torch.onnx.export(decoder,
                       (encoder_out, encoder_out_lens,
                        hyps_pad_sos, hyps_pad_eos,
@@ -266,11 +271,11 @@ if __name__ == '__main__':
                       output_names=['best_hyps', 'best_lens'],
                       dynamic_axes={'encoder_out': [0, 1],
                                     'encoder_out_lens': [0],
-                                    'hyps_pad_sos': [0, 1],
-                                    'hyps_pad_eos': [0, 1],
+                                    'hyps_pad_sos': [0, 2],
+                                    'hyps_pad_eos': [0, 2],
                                     'hyps_lens_sos': [0],
-                                    'r_hyps_pad_sos': [0, 1],
-                                    'r_hyps_pad_eos': [0, 1],
+                                    'r_hyps_pad_sos': [0, 2],
+                                    'r_hyps_pad_eos': [0, 2],
                                     'ctc_score': [0],
                                     'best_hyps': [0, 1],
                                     'best_lens': [0]

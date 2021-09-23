@@ -191,22 +191,24 @@ if __name__ == '__main__':
                         if len(hyp[1]) + 1 > max_len:
                             max_len = len(hyp[1]) + 1
                 assert len(ctc_score) == beam_size * batch_size
-                ctc_score = np.array(ctc_score, dtype=np.float32)
+                ctc_score = np.array(ctc_score, dtype=np.float32).reshape(batch_size, beam_size)
                 hyps_pad_sos = np.ones(
-                    (batch_size * beam_size, max_len), dtype=np.int64) * IGNORE_ID
+                    (batch_size, beam_size, max_len), dtype=np.int64) * IGNORE_ID
                 hyps_pad_eos = np.ones(
-                    (batch_size * beam_size, max_len), dtype=np.int64) * IGNORE_ID
+                    (batch_size, beam_size, max_len), dtype=np.int64) * IGNORE_ID
                 r_hyps_pad_sos = np.ones(
-                    (batch_size * beam_size, max_len), dtype=np.int64) * IGNORE_ID
+                    (batch_size, beam_size, max_len), dtype=np.int64) * IGNORE_ID
                 r_hyps_pad_eos = np.ones(
-                    (batch_size * beam_size, max_len), dtype=np.int64) * IGNORE_ID
-                hyps_lens_sos = np.ones(batch_size * beam_size, dtype=np.int64)
-                for idx, cand in enumerate(all_hyps):
-                    hyps_pad_sos[idx][0:len(cand) + 1] = [sos] + cand
-                    hyps_pad_eos[idx][0:len(cand) + 1] = cand + [eos]
-                    r_hyps_pad_sos[idx][0:len(cand) + 1] = [sos] + cand[::-1]
-                    r_hyps_pad_eos[idx][0:len(cand) + 1] = cand[::-1] + [eos]
-                    hyps_lens_sos[idx] = len(cand) + 1
+                    (batch_size, beam_size, max_len), dtype=np.int64) * IGNORE_ID
+                hyps_lens_sos = np.ones((batch_size, beam_size), dtype=np.int32)
+                for i in range(batch_size):
+                    for j in range(beam_size):
+                        cand = all_hyps.pop(0)
+                        hyps_pad_sos[i][j][0:len(cand) + 1] = [sos] + cand
+                        hyps_pad_eos[i][j][0:len(cand) + 1] = cand + [eos]
+                        r_hyps_pad_sos[i][j][0:len(cand) + 1] = [sos] + cand[::-1]
+                        r_hyps_pad_eos[i][j][0:len(cand) + 1] = cand[::-1] + [eos]
+                        hyps_lens_sos[i][j] = len(cand) + 1
 
                 decoder_ort_inputs = {
                     decoder_ort_session.get_inputs()[0].name: encoder_out,

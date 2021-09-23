@@ -27,7 +27,7 @@ test_feat_dir=raw_wav/test
 
 dir=20210618_u2pp_conformer_exp
 beam_size=10
-decode_modes="ctc_prefix_beam_search attention_rescoring"
+decode_modes="attention_rescoring"
 dict=$dir/words.txt
 
 . tools/parse_options.sh || exit 1;
