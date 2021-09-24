@@ -144,6 +144,10 @@ def Dataset(data_type, data_list_file, symbol_table, conf, partition=True):
     resample_conf = conf.get('resample_conf', {})
     dataset = Processor(dataset, processor.resample, **resample_conf)
 
+    speed_perturb = conf.get('speed_perturb', False)
+    if speed_perturb:
+        dataset = Processor(dataset, processor.speed_perturb)
+
     fbank_conf = conf.get('fbank_conf', {})
     dataset = Processor(dataset, processor.compute_fbank, **fbank_conf)
 

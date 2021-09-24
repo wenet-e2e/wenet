@@ -111,6 +111,7 @@ if __name__ == '__main__':
 
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
+    cv_conf['speed_perturb'] = False
     cv_conf['spec_aug'] = False
 
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,

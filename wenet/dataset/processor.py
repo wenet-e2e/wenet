@@ -186,6 +186,32 @@ def resample(data, resample_rate=16000):
         yield sample
 
 
+def speed_perturb(data, speeds=[0.9, 1.0, 1.1]):
+    """ Apply speed perturb to the data.
+        Inplace operation.
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+            speeds(List[float]): optional speed
+
+        Returns:
+            Iterable[{key, wav, label, sample_rate}]
+    """
+    for sample in data:
+        assert 'sample_rate' in sample
+        assert 'wav' in sample
+        sample_rate = sample['sample_rate']
+        waveform = sample['wav']
+        speed = random.choice(speeds)
+        if speed != 1.0:
+            wav, _ = torchaudio.sox_effects.apply_effects_tensor(
+                waveform, sample_rate,
+                [['speed', str(speed)], ['rate', str(sample_rate)]])
+            sample['wav'] = wav
+
+        yield sample
+
+
 def compute_fbank(data,
                   num_mel_bins=23,
                   frame_length=25,
