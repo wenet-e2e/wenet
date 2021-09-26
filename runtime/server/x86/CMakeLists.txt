@@ -88,9 +88,9 @@ add_library(utils STATIC
 # Openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch.
 # To build openfst with gflags and glog, we comment out some vars of {flags, log}.h and flags.cc.
 if(NOT MSVC)
-  set(openfst_SOURCE_DIR ${fc_base}/openfst-src)
-  set(openfst_BINARY_DIR ${fc_base}/openfst-build)
-  set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix)
+  set(openfst_SOURCE_DIR ${fc_base}/openfst-src CACHE PATH "OpenFST source directory")
+  set(openfst_BINARY_DIR ${fc_base}/openfst-build CACHE PATH "OpenFST build directory")
+  set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix CACHE PATH "OpenFST prefix directory")
   ExternalProject_Add(openfst
     URL               https://github.com/mjansche/openfst/archive/1.6.5.zip
     URL_HASH          SHA256=b720357a464f42e181d7e33f60867b54044007f50baedc8f4458a3926f4a5a78
