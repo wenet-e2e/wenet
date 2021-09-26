@@ -5,15 +5,15 @@ project(wenet VERSION 0.1)
 option(GRPC "whether to build gRPC" OFF)
 
 include_directories(
-${CMAKE_SOURCE_DIR}
-${CMAKE_SOURCE_DIR}/kaldi  # for not changing c++ header names in kaldi source files
+${CMAKE_CURRENT_SOURCE_DIR}
+${CMAKE_CURRENT_SOURCE_DIR}/kaldi  # for not changing c++ header names in kaldi source files
 )
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 include(FetchContent)
 include(ExternalProject)
 set(FETCHCONTENT_QUIET off)
-get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_SOURCE_DIR}")
+get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
 
 if(NOT MSVC)
@@ -100,7 +100,7 @@ if(NOT MSVC)
                         "CPPFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR}"
                         "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR}"
                         "LIBS=-lgflags_nothreads -lglog -lpthread"
-    COMMAND           ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
+    COMMAND           ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
     BUILD_COMMAND     make -j 4
   )
   add_dependencies(openfst gflags glog)
@@ -118,7 +118,7 @@ else()
     URL_HASH SHA256=02c49b559c3976a536876063369efc0e41ab374be1035918036474343877046e
   )
   FetchContent_MakeAvailable(openfst)
-  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR})
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR})
   add_dependencies(fst gflags glog)
   target_link_libraries(fst PUBLIC gflags_nothreads_static glog)
   target_link_libraries(utils PUBLIC fst)
@@ -177,7 +177,7 @@ add_executable(label_checker_main bin/label_checker_main.cc)
 target_link_libraries(label_checker_main PUBLIC frontend decoder)
 
 if(GRPC)
-  include_directories(${CMAKE_SOURCE_DIR}/grpc)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
   # third_party: grpc
   # On how to build grpc, you may refer to https://github.com/grpc/grpc
   # We recommend manually recursive clone the repo to avoid internet connection problem
@@ -188,7 +188,7 @@ if(GRPC)
   FetchContent_MakeAvailable(gRPC)
 
   # compile wenet.proto
-  set(PROTO_DIR "${CMAKE_SOURCE_DIR}/grpc")
+  set(PROTO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/grpc")
   add_custom_command(
     OUTPUT ${PROTO_DIR}/wenet.pb.cc
            ${PROTO_DIR}/wenet.pb.h
