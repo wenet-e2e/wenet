@@ -188,7 +188,7 @@ std::vector<std::string> map_batch(
   std::vector<std::future<std::string>> res;
   for (size_t i = 0; i < batch_size; ++i) {
     res.emplace_back(pool.enqueue(map_sent, std::ref(batch_sents[i]),
-                                  vocabulary, greedy, blank_id));
+                                  std::ref(vocabulary), greedy, blank_id));
   }
   // get decoding results
   std::vector<std::string> batch_results;

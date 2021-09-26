@@ -134,7 +134,8 @@ if __name__ == '__main__':
                 encoder_ort_session.get_inputs()[0].name: feats.numpy(),
                 encoder_ort_session.get_inputs()[1].name: feats_lengths.numpy()}
             ort_outs = encoder_ort_session.run(None, ort_inputs)
-            encoder_out, encoder_out_lens, batch_log_probs, batch_log_probs_idx = ort_outs
+            encoder_out, encoder_out_lens, batch_log_probs, \
+                batch_log_probs_idx = ort_outs
             beam_size = batch_log_probs.shape[-1]
             hyps, score_hyps = [], []
             if args.mode == 'ctc_greedy_search':
@@ -148,7 +149,7 @@ if __name__ == '__main__':
                     num_processes,
                     greedy=True,
                     blank_id=0)
-            elif args.mode == 'ctc_prefix_beam_search' or args.mode == "attention_rescoring":
+            elif args.mode in ('ctc_prefix_beam_search', "attention_rescoring"):
                 batch_log_probs_seq_list = batch_log_probs.tolist()
                 batch_log_probs_idx_list = batch_log_probs_idx.tolist()
                 batch_len_list = encoder_out_lens.tolist()
@@ -191,7 +192,8 @@ if __name__ == '__main__':
                         if len(hyp[1]) + 1 > max_len:
                             max_len = len(hyp[1]) + 1
                 assert len(ctc_score) == beam_size * batch_size
-                ctc_score = np.array(ctc_score, dtype=np.float32).reshape(batch_size, beam_size)
+                ctc_score = np.array(ctc_score, dtype=np.float32)
+                ctc_score = ctc_score.reshape(batch_size, beam_size)
                 hyps_pad_sos = np.ones(
                     (batch_size, beam_size, max_len), dtype=np.int64) * IGNORE_ID
                 hyps_pad_eos = np.ones(

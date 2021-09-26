@@ -57,7 +57,8 @@ class Encoder(torch.nn.Module):
             encoder_out_lens: B
         """
         encoder_out, encoder_mask = self.encoder(speech,
-                                                 speech_lengths, -1, -1)
+                                                 speech_lengths,
+                                                 -1, -1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         ctc_log_probs = self.ctc.log_softmax(encoder_out)
         beam_log_probs, beam_log_probs_idx = torch.topk(
@@ -110,12 +111,13 @@ class Decoder(torch.nn.Module):
         encoder_out = encoder_out.repeat(1, self.beam_size, 1).view(-1, T, F)
         encoder_mask = ~make_pad_mask(encoder_lens, T).unsqueeze(1)
         encoder_mask = encoder_mask.repeat(1, self.beam_size, 1).view(-1, 1, T)
-        hyps_pad = hyps_pad.view(B * self.beam_size, -1)
-        hyps_pad_out = hyps_pad_out.view(B * self.beam_size, -1)
-        hyps_lens = hyps_lens.view(B * self.beam_size,)
-        r_hyps_pad = r_hyps_pad.view(B * self.beam_size, -1)
-        r_hyps_pad_out = r_hyps_pad_out.view(B * self.beam_size, -1)
-        ctc_score = ctc_score.view(B * self.beam_size,)
+        T2 = hyps_pad.shape[2]
+        hyps_pad = hyps_pad.view(-1, T2)
+        hyps_pad_out = hyps_pad_out.view(-1, T2)
+        hyps_lens = hyps_lens.view(-1,)
+        r_hyps_pad = r_hyps_pad.view(-1, T2)
+        r_hyps_pad_out = r_hyps_pad_out.view(-1, T2)
+        ctc_score = ctc_score.view(-1,)
         decoder_out, r_decoder_out, _ = self.decoder(
             encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
             self.reverse_weight)
@@ -210,7 +212,10 @@ if __name__ == '__main__':
                       )
 
     def to_numpy(tensor):
-        return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
+        if tensor.requires_grad:
+            return tensor.detach().cpu().numpy() 
+        else:
+            return tensor.cpu().numpy()
 
     with torch.no_grad():
         o0, o1, o2, o3 = encoder(speech, speech_lens)
@@ -246,7 +251,8 @@ if __name__ == '__main__':
     decoder_onnx_path = os.path.join(args.output_onnx_directory, 'decoder.onnx')
 
     hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
-    hyps_lens_sos = torch.randint(low=3, high=seq_len, size=(bz, beam_size,), dtype=torch.int32)
+    hyps_lens_sos = torch.randint(low=3, high=seq_len, size=(bz, beam_size,), 
+                                  dtype=torch.int32)
     hyps_pad_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
     r_hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
     r_hyps_pad_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))

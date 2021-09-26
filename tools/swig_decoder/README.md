@@ -6,6 +6,6 @@ To install the decoder:
 ```bash
 apt-get update
 apt-get install swig
-apt-get install python3-dev 
+apt-get install python3-dev
 bash setup.sh
 ```
