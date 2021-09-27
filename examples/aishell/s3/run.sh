@@ -29,7 +29,7 @@ nj=16
 feat_dir=raw_wav
 dict=data/dict/lang_char.txt
 
-data_type=shard # raw or shard
+data_type=raw # raw or shard
 num_utts_per_shard=1000
 
 train_set=train
