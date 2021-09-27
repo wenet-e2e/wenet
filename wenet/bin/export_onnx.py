@@ -88,10 +88,10 @@ class Decoder(torch.nn.Module):
         Args:
             encoder_out: B x T x F
             encoder_lens: B
-            hyps_pad: B x beam x T2,
+            hyps_pad_sos: B x beam x T2,
                         hyps with sos and padded by ignore id
             hyps_lens: B x beam, length for each hyp with sos
-            r_hyps_pad: B x beam x T2,
+            r_hyps_pad_sos: B x beam x T2,
                     reversed hyps with sos and padded by ignore id
         Returns:
             decoder_out: B x beam x T2 x V
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--beam_size', default=10, type=int, required=False,
                         help="beam size would be ctc output size")
-    parser.add_argument('--output_onnx_directory',
+    parser.add_argument('--output_onnx_dir',
                         default="onnx_model",
                         help='output onnx encoder and decoder directory')
     args = parser.parse_args()
@@ -148,7 +148,7 @@ if __name__ == '__main__':
     speech_lens = torch.randint(low=10, high=seq_len, size=(bz,), dtype=torch.int32)
     encoder = Encoder(model.encoder, model.ctc, beam_size)
     encoder.eval()
-    encoder_onnx_path = os.path.join(args.output_onnx_directory, 'encoder.onnx')
+    encoder_onnx_path = os.path.join(args.output_onnx_dir, 'encoder.onnx')
 
     torch.onnx.export(encoder,
                       (speech, speech_lens),
@@ -186,7 +186,7 @@ if __name__ == '__main__':
                   ort_session.get_inputs()[1].name: to_numpy(speech_lens)}
     ort_outs = ort_session.run(None, ort_inputs)
 
-    def test(a, b, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=True):
+    def test(a, b, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=False):
         try:
             torch.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
         except AssertionError as error:
@@ -208,7 +208,7 @@ if __name__ == '__main__':
         model.reverse_weight,
         beam_size)
     decoder.eval()
-    decoder_onnx_path = os.path.join(args.output_onnx_directory, 'decoder.onnx')
+    decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder.onnx')
 
     hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
     hyps_lens = torch.randint(low=3, high=seq_len, size=(bz, beam_size),
