@@ -34,7 +34,8 @@ TorchAsrDecoder::TorchAsrDecoder(
     searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts,
                                             resource->context_graph));
   } else {
-    searcher_.reset(new CtcWfstBeamSearch(*fst_, opts.ctc_wfst_search_opts));
+    searcher_.reset(new CtcWfstBeamSearch(*fst_, opts.ctc_wfst_search_opts,
+                                          resource->context_graph));
   }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
 }
