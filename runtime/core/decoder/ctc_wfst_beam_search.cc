@@ -42,9 +42,13 @@ int32 DecodableTensorScaled::NumIndices() const {
   return 0;
 }
 
-CtcWfstBeamSearch::CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
-                                     const CtcWfstBeamSearchOptions& opts)
-    : decodable_(opts.acoustic_scale), decoder_(fst, opts), opts_(opts) {
+CtcWfstBeamSearch::CtcWfstBeamSearch(
+    const fst::Fst<fst::StdArc>& fst, const CtcWfstBeamSearchOptions& opts,
+    const std::shared_ptr<ContextGraph>& context_graph)
+    : decodable_(opts.acoustic_scale),
+      decoder_(fst, opts, context_graph),
+      context_graph_(context_graph),
+      opts_(opts) {
   Reset();
 }
 
@@ -109,6 +113,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
     kaldi::LatticeWeight weight;
     fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
     ConvertToInputs(alignment, &inputs_[0]);
+    RemoveContinuousTags(&outputs_[0]);
     VLOG(3) << weight.Value1() << " " << weight.Value2();
     likelihood_[0] = -weight.Value2();
   }
@@ -148,6 +153,7 @@ void CtcWfstBeamSearch::FinalizeSearch() {
       fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
                                    &weight);
       ConvertToInputs(alignment, &inputs_[i], &times_[i]);
+      RemoveContinuousTags(&outputs_[i]);
       likelihood_[i] = -weight.Value2();
     }
   }
@@ -167,6 +173,21 @@ void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
     input->push_back(alignment[cur] - 1);
     if (time != nullptr) {
       time->push_back(decoded_frames_mapping_[cur]);
+    }
+  }
+}
+
+void CtcWfstBeamSearch::RemoveContinuousTags(std::vector<int>* output) {
+  if (context_graph_) {
+    for (auto it = output->begin(); it != output->end();) {
+      if (*it == context_graph_->start_tag_id() ||
+          *it == context_graph_->end_tag_id()) {
+        if (it + 1 != output->end() && *it == *(it + 1)) {
+          it = output->erase(it);
+          continue;
+        }
+      }
+      ++it;
     }
   }
 }

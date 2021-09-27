@@ -24,19 +24,18 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from wenet.dataset.udataset import Dataset
+from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
-from wenet.utils.file_utils import read_symbol_table
 
 if __name__ == '__main__':
+    print("""
+!!! This file is deprecated, and we are planning to remove it in
+the future, please move to the new IO !!!
+    """)
     parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--test_data', required=True, help='test data file')
-    parser.add_argument('--data_type',
-                        default='raw',
-                        choices=['raw', 'shard'],
-                        help='train and cv data type')
     parser.add_argument('--gpu',
                         type=int,
                         default=-1,
@@ -102,25 +101,30 @@ if __name__ == '__main__':
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
 
-    symbol_table = read_symbol_table(args.dict)
-    test_conf = copy.deepcopy(configs['dataset_conf'])
-
-    test_conf['filter_conf']['max_length'] = 102400
-    test_conf['filter_conf']['min_length'] = 0
-    test_conf['speed_perturb'] = False
-    test_conf['spec_aug'] = False
-    test_conf['shuffle'] = False
-    test_conf['sort'] = False
-    test_conf['fbank_conf']['dither'] = 0.0
-    test_conf['batch_conf']['batch_size'] = args.batch_size
-
-    test_dataset = Dataset(args.data_type,
-                           args.test_data,
-                           symbol_table,
-                           test_conf,
-                           partition=False)
-
-    test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
+    raw_wav = configs['raw_wav']
+    # Init dataset and data loader
+    # Init dataset and data loader
+    test_collate_conf = copy.deepcopy(configs['collate_conf'])
+    test_collate_conf['spec_aug'] = False
+    test_collate_conf['spec_sub'] = False
+    test_collate_conf['feature_dither'] = False
+    test_collate_conf['speed_perturb'] = False
+    if raw_wav:
+        test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
+        test_collate_conf['wav_distortion_conf']['wav_dither'] = 0.0
+    test_collate_func = CollateFunc(**test_collate_conf, raw_wav=raw_wav)
+    dataset_conf = configs.get('dataset_conf', {})
+    dataset_conf['batch_size'] = args.batch_size
+    dataset_conf['batch_type'] = 'static'
+    dataset_conf['sort'] = False
+    test_dataset = AudioDataset(args.test_data,
+                                **dataset_conf,
+                                raw_wav=raw_wav)
+    test_data_loader = DataLoader(test_dataset,
+                                  collate_fn=test_collate_func,
+                                  shuffle=False,
+                                  batch_size=1,
+                                  num_workers=0)
 
     # Init asr model from configs
     model = init_asr_model(configs)

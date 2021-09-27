@@ -95,10 +95,10 @@ if __name__ == '__main__':
 
     with open(args.train_config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-    feat_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
+    feat_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
     resample_rate = 0
-    if 'resample' in configs['collate_conf']['feature_extraction_conf']:
-        resample_rate = configs['collate_conf']['feature_extraction_conf']['resample']
+    if 'resample_conf' in configs['dataset_conf']:
+        resample_rate = configs['dataset_conf']['resample_conf']['resample_rate']
         print('using resample and new sample rate is {}'.format(resample_rate))
 
     collate_func = CollateFunc(feat_dim, resample_rate)

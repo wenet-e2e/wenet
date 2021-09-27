@@ -78,6 +78,10 @@ class AudioDataset(Dataset):
 
 
 if __name__ == '__main__':
+    print("""
+!!! This file is deprecated, and we are planning to remove it in
+the future, please move to the new IO !!!
+    """)
     parser = argparse.ArgumentParser(description='extract CMVN stats')
     parser.add_argument('--num_workers',
                         default=0,
@@ -95,10 +99,10 @@ if __name__ == '__main__':
 
     with open(args.train_config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-    feat_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
+    feat_dim = configs['collate_conf']['feature_extraction_conf']['mel_bins']
     resample_rate = 0
-    if 'resample_conf' in configs['dataset_conf']:
-        resample_rate = configs['dataset_conf']['resample_conf']['resample_rate']
+    if 'resample' in configs['collate_conf']['feature_extraction_conf']:
+        resample_rate = configs['collate_conf']['feature_extraction_conf']['resample']
         print('using resample and new sample rate is {}'.format(resample_rate))
 
     collate_func = CollateFunc(feat_dim, resample_rate)
