@@ -235,4 +235,4 @@ if __name__ == '__main__':
     if final_epoch is not None and args.rank == 0:
         final_model_path = os.path.join(model_dir, 'final.pt')
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
-    writer.close()
+        writer.close()
