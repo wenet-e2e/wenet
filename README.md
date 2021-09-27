@@ -34,11 +34,13 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 ## Performance Benchmark
 
 Please see `examples/$dataset/s0/README.md` for benchmark on different speech datasets.
-* [AIShell-1](examples/aishell/s0/README.md)
-* [AIShell-2](examples/aishell2/s0/README.md)
-* [LibriSpeech](examples/librispeech/s0/README.md)
-* [GigaSpeech](examples/gigaspeech/s0/README.md)
-* [Multi-CN](examples/multi_cn/s0/README.md) trained using all open source Chinese corpus.
+* Mandarin Chinese
+  * [AIShell-1](examples/aishell/s0/README.md)
+  * [AIShell-2](examples/aishell2/s0/README.md)
+  * [Multi-CN](examples/multi_cn/s0/README.md) (combining several open source Chinese corpora)
+* English
+  * [LibriSpeech](examples/librispeech/s0/README.md)
+  * [GigaSpeech](examples/gigaspeech/s0/README.md)
 
 ## Installation
 
