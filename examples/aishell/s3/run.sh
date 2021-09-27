@@ -5,14 +5,14 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1"
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
 # communication. More details can be found in
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
 stage=0 # start from 0 if you need to start from data preparation
-stop_stage=4
+stop_stage=5
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
 # NFS will be needed if you want run multi-machine training
@@ -80,7 +80,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         cp -r data/$x $feat_dir
     done
 
-    tools/compute_cmvn_stats_uio.py --num_workers 16 --train_config $train_config \
+    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
         --out_cmvn $feat_dir/$train_set/global_cmvn
 
@@ -142,7 +142,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         # Rank of each gpu/process used for knowing whether it is
         # the master of a worker.
         rank=`expr $node_rank \* $num_gpus + $i`
-        python wenet/bin/train_uio.py --gpu $gpu_id \
+        python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
             --data_type $data_type \
             --symbol_table $dict \
@@ -182,7 +182,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     {
         test_dir=$dir/test_${mode}
         mkdir -p $test_dir
-        python wenet/bin/recognize_uio.py --gpu 0 \
+        python wenet/bin/recognize.py --gpu 0 \
             --mode $mode \
             --config $dir/train.yaml \
             --data_type $data_type \
