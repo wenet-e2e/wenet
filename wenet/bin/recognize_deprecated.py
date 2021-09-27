@@ -152,7 +152,7 @@ the future, please move to the new IO !!!
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
             if args.mode == 'attention':
-                hyps = model.recognize(
+                hyps, _ = model.recognize(
                     feats,
                     feats_lengths,
                     beam_size=args.beam_size,
@@ -161,7 +161,7 @@ the future, please move to the new IO !!!
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp.tolist() for hyp in hyps]
             elif args.mode == 'ctc_greedy_search':
-                hyps = model.ctc_greedy_search(
+                hyps, _ = model.ctc_greedy_search(
                     feats,
                     feats_lengths,
                     decoding_chunk_size=args.decoding_chunk_size,
@@ -172,7 +172,7 @@ the future, please move to the new IO !!!
             # with other batch decoding mode
             elif args.mode == 'ctc_prefix_beam_search':
                 assert (feats.size(0) == 1)
-                hyp = model.ctc_prefix_beam_search(
+                hyp, _ = model.ctc_prefix_beam_search(
                     feats,
                     feats_lengths,
                     args.beam_size,
@@ -182,7 +182,7 @@ the future, please move to the new IO !!!
                 hyps = [hyp]
             elif args.mode == 'attention_rescoring':
                 assert (feats.size(0) == 1)
-                hyp = model.attention_rescoring(
+                hyp, _ = model.attention_rescoring(
                     feats,
                     feats_lengths,
                     args.beam_size,
