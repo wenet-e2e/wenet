@@ -29,6 +29,10 @@ from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 
 if __name__ == '__main__':
+    print("""
+!!! This file is deprecated, and we are planning to remove it in
+the future, please move to the new IO !!!
+    """)
     parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--test_data', required=True, help='test data file')

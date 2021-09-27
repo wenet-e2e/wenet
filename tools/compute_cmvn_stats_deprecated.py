@@ -78,6 +78,10 @@ class AudioDataset(Dataset):
 
 
 if __name__ == '__main__':
+    print("""
+!!! This file is deprecated, and we are planning to remove it in
+the future, please move to the new IO !!!
+    """)
     parser = argparse.ArgumentParser(description='extract CMVN stats')
     parser.add_argument('--num_workers',
                         default=0,

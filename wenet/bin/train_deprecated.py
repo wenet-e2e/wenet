@@ -33,6 +33,10 @@ from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
 
 if __name__ == '__main__':
+    print("""
+!!! This file is deprecated, and we are planning to remove it in
+the future, please move to the new IO !!!
+    """)
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--train_data', required=True, help='train data file')
