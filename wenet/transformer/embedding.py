@@ -62,10 +62,10 @@ class PositionalEncoding(torch.nn.Module):
         if offset is None:
             offset = torch.zeros(x.size(0), dtype=torch.int32).to(x.device)
         index = offset.unsqueeze(1) + \
-            torch.arange(0, x.size(1)).to(offset.device)  # B X T
+            torch.arange(0, x.size(1)).to(offset.device)  # B x T
         flag = index > 0
         index = index * flag
-        pos_emb = F.embedding(index, self.pe)  # B X T X d_model
+        pos_emb = F.embedding(index, self.pe)  # B x T x d_model
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
@@ -90,10 +90,10 @@ class PositionalEncoding(torch.nn.Module):
         """
         self.pe = self.pe.to(offset.device)
         index = offset.unsqueeze(1) \
-            + torch.arange(0, size).to(offset.device)  # B X T
+            + torch.arange(0, size).to(offset.device)  # B x T
         flag = index > 0
         index = index * flag
-        pos_emb = F.embedding(index, self.pe)  # B X T X d_model
+        pos_emb = F.embedding(index, self.pe)  # B x T x d_model
         return self.dropout(pos_emb)
 
 
@@ -126,10 +126,10 @@ class RelPositionalEncoding(PositionalEncoding):
 
         self.pe = self.pe.to(x.device)
         index = offset.unsqueeze(1) \
-            + torch.arange(0, x.size(1)).to(offset.device)  # B X T
+            + torch.arange(0, x.size(1)).to(offset.device)  # B x T
         flag = index > 0
         index = index * flag
-        pos_emb = F.embedding(index, self.pe)  # B X T X d_model
+        pos_emb = F.embedding(index, self.pe)  # B x T x d_model
         x = x * self.xscale
         return self.dropout(x), self.dropout(pos_emb)
 

@@ -92,8 +92,8 @@ class Decoder(torch.nn.Module):
                 ctc_score: torch.Tensor):
         """Encoder
         Args:
-            encoder_out: B X T X F
-            encoder_mask: B X 1 x T
+            encoder_out: B x T x F
+            encoder_mask: B x 1 x T
             hyps_pad: B x beam x T2,
                         hyps with sos and padded by ignore id
             hyps_pad_out: B x beam x T2,
