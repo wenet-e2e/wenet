@@ -82,7 +82,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         done
     done
 
-    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+    tools/compute_cmvn_stats_deprecated.py --num_workers 16 --train_config $train_config \
         --in_scp $wave_data/$train_set/wav.scp \
         --out_cmvn $wave_data/$train_set/global_cmvn
 
@@ -147,7 +147,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     for ((i = 0; i < $num_gpus; ++i)); do
     {
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-        python wenet/bin/train.py --gpu $gpu_id \
+        python wenet/bin/train_deprecated.py --gpu $gpu_id \
             --config $train_config \
             --train_data $wave_data/$train_set/format.data \
             --cv_data $wave_data/dev/format.data \
@@ -194,7 +194,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
                 test_dir=$dir/${test}_${mode}
                 mkdir -p $test_dir
                 gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-                python wenet/bin/recognize.py --gpu $gpu_id \
+                python wenet/bin/recognize_deprecated.py --gpu $gpu_id \
                     --mode $mode \
                     --config $dir/train.yaml \
                     --test_data $wave_data/$test/format.data \

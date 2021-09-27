@@ -26,7 +26,7 @@ import yaml
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
