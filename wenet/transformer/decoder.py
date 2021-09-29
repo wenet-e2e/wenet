@@ -111,8 +111,7 @@ class TransformerDecoder(torch.nn.Module):
         tgt = ys_in_pad
 
         # tgt_mask: (B, 1, L)
-        tgt_mask = (~make_pad_mask(ys_in_lens, tgt.size(1)).unsqueeze(1))
-        tgt_mask = tgt_mask.to(tgt.device)
+        tgt_mask = (~make_pad_mask(ys_in_lens).unsqueeze(1)).to(tgt.device)
         # m: (1, L, L)
         m = subsequent_mask(tgt_mask.size(-1),
                             device=tgt_mask.device).unsqueeze(0)

@@ -9,7 +9,6 @@ import math
 from typing import Tuple
 
 import torch
-import torch.nn.functional as F
 
 
 class PositionalEncoding(torch.nn.Module):
@@ -22,7 +21,6 @@ class PositionalEncoding(torch.nn.Module):
     PE(pos, 2i)   = sin(pos/(10000^(2i/dmodel)))
     PE(pos, 2i+1) = cos(pos/(10000^(2i/dmodel)))
     """
-
     def __init__(self,
                  d_model: int,
                  dropout_rate: float,
@@ -43,36 +41,28 @@ class PositionalEncoding(torch.nn.Module):
             -(math.log(10000.0) / self.d_model))
         self.pe[:, 0::2] = torch.sin(position * div_term)
         self.pe[:, 1::2] = torch.cos(position * div_term)
+        self.pe = self.pe.unsqueeze(0)
 
     def forward(self,
                 x: torch.Tensor,
-                offset: torch.Tensor = None) -> Tuple[torch.Tensor,
-                                                      torch.Tensor]:
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """Add positional encoding.
 
         Args:
             x (torch.Tensor): Input. Its shape is (batch, time, ...)
-            offset (torch.Tensor): position offset (batch)
+            offset (int): position offset
 
         Returns:
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
             torch.Tensor: for compatibility to RelPositionalEncoding
         """
+        assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
-        if offset is None:
-            offset = torch.zeros(x.size(0), dtype=torch.int32).to(x.device)
-        index = offset.unsqueeze(1) + \
-            torch.arange(0, x.size(1)).to(offset.device)  # B x T
-        flag = index > 0
-        index = index * flag
-        pos_emb = F.embedding(index, self.pe)  # B x T x d_model
+        pos_emb = self.pe[:, offset:offset + x.size(1)]
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
-    def position_encoding(
-            self,
-            offset: torch.Tensor,
-            size: int) -> torch.Tensor:
+    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
         """ For getting encoding in a streaming fashion
 
         Attention!!!!!
@@ -88,13 +78,8 @@ class PositionalEncoding(torch.nn.Module):
         Returns:
             torch.Tensor: Corresponding encoding
         """
-        self.pe = self.pe.to(offset.device)
-        index = offset.unsqueeze(1) \
-            + torch.arange(0, size).to(offset.device)  # B x T
-        flag = index > 0
-        index = index * flag
-        pos_emb = F.embedding(index, self.pe)  # B x T x d_model
-        return self.dropout(pos_emb)
+        assert offset + size < self.max_len
+        return self.dropout(self.pe[:, offset:offset + size])
 
 
 class RelPositionalEncoding(PositionalEncoding):
@@ -105,15 +90,13 @@ class RelPositionalEncoding(PositionalEncoding):
         dropout_rate (float): Dropout rate.
         max_len (int): Maximum input length.
     """
-
     def __init__(self, d_model: int, dropout_rate: float, max_len: int = 5000):
         """Initialize class."""
         super().__init__(d_model, dropout_rate, max_len, reverse=True)
 
     def forward(self,
                 x: torch.Tensor,
-                offset: torch.Tensor = None) -> Tuple[torch.Tensor,
-                                                      torch.Tensor]:
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
@@ -121,23 +104,16 @@ class RelPositionalEncoding(PositionalEncoding):
             torch.Tensor: Encoded tensor (batch, time, `*`).
             torch.Tensor: Positional embedding tensor (1, time, `*`).
         """
-        if offset is None:
-            offset = torch.zeros(x.size(0), dtype=torch.int32).to(x.device)
-
+        assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
-        index = offset.unsqueeze(1) \
-            + torch.arange(0, x.size(1)).to(offset.device)  # B x T
-        flag = index > 0
-        index = index * flag
-        pos_emb = F.embedding(index, self.pe)  # B x T x d_model
         x = x * self.xscale
+        pos_emb = self.pe[:, offset:offset + x.size(1)]
         return self.dropout(x), self.dropout(pos_emb)
 
 
 class NoPositionalEncoding(torch.nn.Module):
     """ No position encoding
     """
-
     def __init__(self, d_model: int, dropout_rate: float):
         super().__init__()
         self.d_model = d_model
@@ -145,15 +121,11 @@ class NoPositionalEncoding(torch.nn.Module):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: torch.Tensor = None) -> Tuple[torch.Tensor,
-                                                      torch.Tensor]:
+                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Just return zero vector for interface compatibility
         """
         pos_emb = torch.zeros(1, x.size(1), self.d_model).to(x.device)
         return self.dropout(x), pos_emb
 
-    def position_encoding(
-            self,
-            offset: torch.Tensor,
-            size: int) -> torch.Tensor:
+    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
         return torch.zeros(1, size, self.d_model)
