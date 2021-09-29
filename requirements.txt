@@ -6,4 +6,3 @@ tensorboard
 tensorboardX
 typeguard
 textgrid
-onnxruntime-gpu
