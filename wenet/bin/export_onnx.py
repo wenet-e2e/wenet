@@ -27,8 +27,10 @@ from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import BaseEncoder
 from wenet.utils.mask import make_pad_mask
-
-import onnxruntime
+try:
+    import onnxruntime
+except ImportError:
+    raise ImportError('Please install onnxruntime!')
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
@@ -142,7 +144,7 @@ if __name__ == '__main__':
     bz = 32
     seq_len = 100
     beam_size = args.beam_size
-    feature_size = configs["collate_conf"]["feature_extraction_conf"]["mel_bins"]
+    feature_size = configs["input_dim"]
 
     speech = torch.randn(bz, seq_len, feature_size, dtype=torch.float32)
     speech_lens = torch.randint(low=10, high=seq_len, size=(bz,), dtype=torch.int32)
