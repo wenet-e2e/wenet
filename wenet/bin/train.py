@@ -87,6 +87,10 @@ if __name__ == '__main__':
     parser.add_argument('--symbol_table',
                         required=True,
                         help='model unit symbol table for training')
+    parser.add_argument('--prefetch',
+                        default=100,
+                        type=int,
+                        help='prefetch number')
 
     args = parser.parse_args()
 
@@ -122,16 +126,16 @@ if __name__ == '__main__':
                          cv_conf,
                          partition=False)
 
-    train_data_loader = DataLoader(
-        train_dataset,
-        batch_size=None,
-        pin_memory=args.pin_memory,
-        num_workers=args.num_workers,
-    )
+    train_data_loader = DataLoader(train_dataset,
+                                   batch_size=None,
+                                   pin_memory=args.pin_memory,
+                                   num_workers=args.num_workers,
+                                   prefetch_factor=args.prefetch)
     cv_data_loader = DataLoader(cv_dataset,
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
-                                num_workers=args.num_workers)
+                                num_workers=args.num_workers,
+                                prefetch_factor=args.prefetch)
 
     input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
     vocab_size = len(symbol_table)
