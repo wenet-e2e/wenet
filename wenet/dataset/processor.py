@@ -404,6 +404,7 @@ def dynamic_batch(data, max_frames_in_batch=12000):
         if total_frames_in_batch > max_frames_in_batch:
             yield buf
             buf = []
+            total_frames_in_batch = 0
     if len(buf) > 0:
         yield buf
 
