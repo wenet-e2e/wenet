@@ -56,7 +56,7 @@ dataset_conf:
         max_f: 10
     shuffle: true
     shuffle_conf:
-        shuffle_size: 65536
+        shuffle_size: 1500
     sort: true
     sort_conf:
         sort_size: 500  # sort_size should be less than shuffle_size

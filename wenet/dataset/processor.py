@@ -129,7 +129,9 @@ def filter(data,
            max_length=10240,
            min_length=10,
            token_max_length=200,
-           token_min_length=1):
+           token_min_length=1,
+           min_output_input_ratio=0.0005,
+           max_output_input_ratio=1):
     """ Filter sample according to feature and label length
         Inplace operation.
 
@@ -142,6 +144,10 @@ def filter(data,
                 english modeling
             token_min_length: drop utterance which is
                 less than token_max_length
+            min_output_input_ratio: minimal ration of
+                token_length / feats_length(10ms)
+            max_output_input_ratio: maximum ration of
+                token_length / feats_length(10ms)
 
         Returns:
             Iterable[{key, wav, label, sample_rate}]
@@ -160,6 +166,11 @@ def filter(data,
             continue
         if len(sample['label']) > token_max_length:
             continue
+        if num_frames != 0:
+            if len(sample['label']) / num_frames < min_output_input_ratio:
+                continue
+            if len(sample['label']) / num_frames > max_output_input_ratio:
+                continue
         yield sample
 
 
@@ -404,6 +415,7 @@ def dynamic_batch(data, max_frames_in_batch=12000):
         if total_frames_in_batch > max_frames_in_batch:
             yield buf
             buf = []
+            total_frames_in_batch = 0
     if len(buf) > 0:
         yield buf
 
