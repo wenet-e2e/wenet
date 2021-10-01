@@ -280,7 +280,7 @@ class ASRModel(torch.nn.Module):
             batch_size, dtype=torch.long, device=device) * beam_size
         best_hyps = torch.index_select(hyps, dim=0, index=best_hyps_index)
         best_hyps = best_hyps[:, 1:]
-        return scores[0], best_scores
+        return best_hyps, best_scores
 
     def ctc_greedy_search(
         self,
