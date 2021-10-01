@@ -116,10 +116,12 @@ class Calculator :
         self.space[0][0]['error'] = 'non'
         for token in lab :
             if token not in self.data and len(token) > 0 :
-                self.data[token] = {'all' : 0, 'cor' : 0, 'sub' : 0, 'ins' : 0, 'del' : 0}
+                self.data[token] = {'all' : 0, 'cor' : 0, 'sub' : 0,
+                                    'ins' : 0, 'del' : 0}
         for token in rec :
             if token not in self.data and len(token) > 0 :
-                self.data[token] = {'all' : 0, 'cor' : 0, 'sub' : 0, 'ins' : 0, 'del' : 0}
+                self.data[token] = {'all' : 0, 'cor' : 0, 'sub' : 0,
+                                    'ins' : 0, 'del' : 0}
         # Computing edit distance
         for i, lab_token in enumerate(lab) :
             for j, rec_token in enumerate(rec) :
@@ -149,7 +151,8 @@ class Calculator :
                 self.space[i][j]['dist'] = min_dist
                 self.space[i][j]['error'] = min_error
         # Tracing back
-        result = {'lab': [], 'rec': [], 'all': 0, 'cor': 0, 'sub': 0, 'ins': 0, 'del': 0}
+        result = {'lab': [], 'rec': [], 'all': 0, 'cor': 0, 'sub': 0,
+                  'ins': 0, 'del': 0}
         i = len(lab) - 1
         j = len(rec) - 1
         while True :
@@ -192,7 +195,9 @@ class Calculator :
             elif self.space[i][j]['error'] == 'non' :  # starting point
                 break
             else :  # shouldn't reach here
-                print('this should not happen , i={i} , j={j} , error={error}'.format(i=i, j=j, error=self.space[i][j]['error']))
+                print('this should not happen , i={i} , j={j} , \
+                      error={error}'.
+                      format(i=i, j=j, error=self.space[i][j]['error']))
         return result
 
     def overall(self) :
@@ -262,8 +267,11 @@ def default_cluster(word) :
     return unicode_names[0]
 
 def usage() :
-    print("compute-wer.py : compute word error rate (WER) and align recognition results and references.")
-    print("         usage : python compute-wer.py [--cs={0,1}] [--cluster=foo] [--ig=ignore_file] [--char={0,1}] [--v={0,1}] [--padding-symbol={space,underline}] test.ref test.hyp > test.wer")
+    print("compute-wer.py : compute word error rate (WER) \
+          and align recognition results and references.")
+    print("         usage : python compute-wer.py [--cs={0,1}] \
+          [--cluster=foo] [--ig=ignore_file] [--char={0,1}] [--v={0,1}] \
+          [--padding-symbol={space,underline}] test.ref test.hyp > test.wer")
 
 if __name__ == '__main__':
     if len(sys.argv) == 1 :
@@ -382,7 +390,8 @@ if __name__ == '__main__':
             if len(array) == 0:
                 continue
             fid = array[0]
-            rec_set[fid] = normalize(array[1:], ignore_words, case_sensitive, split)
+            rec_set[fid] = normalize(array[1:], ignore_words,
+                                     case_sensitive, split)
 
     # compute error rate on the interaction of reference file and hyp file
     for line in open(ref_file, 'r', encoding='utf-8') :
@@ -412,12 +421,14 @@ if __name__ == '__main__':
         result = calculator.calculate(lab, rec)
         if verbose:
             if result['all'] != 0 :
-                wer = float(result['ins'] + result['sub'] + result['del']) * 100.0 / result['all']
+                wer = float(result['ins'] + result['sub'] +
+                            result['del']) * 100.0 / result['all']
             else :
                 wer = 0.0
             print('WER: %4.2f %%' % wer, end=' ')
             print('N=%d C=%d S=%d D=%d I=%d' %
-                  (result['all'], result['cor'], result['sub'], result['del'], result['ins']))
+                  (result['all'], result['cor'], result['sub'],
+                   result['del'], result['ins']))
             space = {}
             space['lab'] = []
             space['rec'] = []
@@ -459,30 +470,35 @@ if __name__ == '__main__':
                 rec1 = rec2
 
     if verbose:
-        print('===========================================================================')
+        print('===================================================\
+               ========================')
         print()
 
     result = calculator.overall()
     if result['all'] != 0 :
-        wer = float(result['ins'] + result['sub'] + result['del']) * 100.0 / result['all']
+        wer = float(result['ins'] + result['sub'] +
+                    result['del']) * 100.0 / result['all']
     else :
         wer = 0.0
     print('Overall -> %4.2f %%' % wer, end=' ')
     print('N=%d C=%d S=%d D=%d I=%d' %
-          (result['all'], result['cor'], result['sub'], result['del'], result['ins']))
+          (result['all'], result['cor'], result['sub'],
+           result['del'], result['ins']))
     if not verbose:
         print()
 
     if verbose:
         for cluster_id in default_clusters :
-            result = calculator.cluster([k for k in default_clusters[cluster_id]])
+            result = calculator.cluster(k for k in default_clusters[cluster_id])
             if result['all'] != 0 :
-                wer = float(result['ins'] + result['sub'] + result['del']) * 100.0 / result['all']
+                wer = float(result['ins'] + result['sub'] +
+                            result['del']) * 100.0 / result['all']
             else :
                 wer = 0.0
             print('%s -> %4.2f %%' % (cluster_id, wer), end=' ')
             print('N=%d C=%d S=%d D=%d I=%d' %
-                  (result['all'], result['cor'], result['sub'], result['del'], result['ins']))
+                  (result['all'], result['cor'], result['sub'],
+                   result['del'], result['ins']))
         if len(cluster_file) > 0 :  # compute separated WERs for word clusters
             cluster_id = ''
             cluster = []
@@ -493,20 +509,24 @@ if __name__ == '__main__':
                        token.lstrip('</').rstrip('>') == cluster_id :
                         result = calculator.cluster(cluster)
                         if result['all'] != 0 :
-                            wer = float(result['ins'] + result['sub'] + result['del']) * 100.0 / result['all']
+                            wer = float(result['ins'] + result['sub'] +
+                                        result['del']) * 100.0 / result['all']
                         else :
                             wer = 0.0
                         print('%s -> %4.2f %%' % (cluster_id, wer), end=' ')
                         print('N=%d C=%d S=%d D=%d I=%d' %
-                              (result['all'], result['cor'], result['sub'], result['del'], result['ins']))
+                              (result['all'], result['cor'], result['sub'],
+                               result['del'], result['ins']))
                         cluster_id = ''
                         cluster = []
                     # begin of cluster reached, like <Keyword>
-                    elif token[0] == '<' and token[len(token) - 1] == '>' and cluster_id == '' :
+                    elif (token[0] == '<' and token[len(token) - 1] == '>' and
+                          cluster_id == ''):
                         cluster_id = token.lstrip('<').rstrip('>')
                         cluster = []
                     # general terms, like WEATHER / CAR / ...
                     else :
                         cluster.append(token)
         print()
-        print('===========================================================================')
+        print('=======================================\
+               ====================================')
