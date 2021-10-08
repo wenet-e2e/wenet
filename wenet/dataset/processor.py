@@ -257,7 +257,7 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-def decode_text(data, symbol_table, bpe_model=None):
+def tokenize(data, symbol_table, bpe_model=None):
     """ Decode text to chars or BPE
         Inplace operation
 
