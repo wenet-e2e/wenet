@@ -16,6 +16,8 @@ import logging
 import json
 import random
 import tarfile
+from subprocess import PIPE, Popen
+from urllib.parse import urlparse
 
 import torch
 import torchaudio
@@ -40,7 +42,14 @@ def url_opener(data):
         # TODO(Binbin Zhang): support HTTP
         url = sample['src']
         try:
-            stream = open(url, 'rb')
+            pr = urlparse(url)
+            # local file
+            if pr.scheme == '' or pr.scheme == 'file':
+                stream = open(url, 'rb')
+            # network file, such as HTTP(HDFS/OSS/S3)/HTTPS/SCP
+            else:
+                cmd = f'curl -s -L {url}'
+                stream = Popen(cmd, shell=True, stdout=PIPE).stdout
             sample.update(stream=stream)
             yield sample
         except Exception as ex:
