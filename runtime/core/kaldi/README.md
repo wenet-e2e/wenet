@@ -8,11 +8,11 @@ The main changes are:
 
 ``` c++
 #define KALDI_WARN \
-  google::LogMessage(__FILE__, __LINE__, google::WARNING).stream()
+  google::LogMessage(__FILE__, __LINE__, google::GLOG_WARNING).stream()
 #define KALDI_ERR \
-  google::LogMessage(__FILE__, __LINE__, google::ERROR).stream()
+  google::LogMessage(__FILE__, __LINE__, google::GLOG_ERROR).stream()
 #define KALDI_INFO \
-  google::LogMessage(__FILE__, __LINE__, google::INFO).stream()
+  google::LogMessage(__FILE__, __LINE__, google::GLOG_INFO).stream()
 #define KALDI_VLOG(v) VLOG(v)
 
 #define KALDI_ASSERT(condition) CHECK(condition)

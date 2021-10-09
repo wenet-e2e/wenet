@@ -136,21 +136,21 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     for x in train dev; do
         cp ${feat_dir}_${en_modeling_unit}/${x}/text ${feat_dir}_${en_modeling_unit}/${x}/text.org
         paste -d " " <(cut -f 1 -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org) <(cut -f 2- -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org \
-            | tr 'a-z' 'A-Z' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " " ) \
+            | tr 'a-z' 'A-Z' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " ") \
             > ${feat_dir}_${en_modeling_unit}/${x}/text
-    sed -i 's/\xEF\xBB\xBF//' ${feat_dir}_${en_modeling_unit}/${x}/text
+        sed -i 's/\xEF\xBB\xBF//' ${feat_dir}_${en_modeling_unit}/${x}/text
 
     done
 
     for x in ${test_sets}; do
         cp ${feat_dir}_${en_modeling_unit}/test_${x}/text ${feat_dir}_${en_modeling_unit}/test_${x}/text.org
         paste -d " " <(cut -f 1 -d" " ${feat_dir}_${en_modeling_unit}/test_${x}/text.org) <(cut -f 2- -d" " ${feat_dir}_${en_modeling_unit}/test_${x}/text.org \
-        | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " " |  tr 'a-z' 'A-Z') \
+            | tr 'a-z' 'A-Z' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " ") \
             > ${feat_dir}_${en_modeling_unit}/test_${x}/text
         sed -i 's/\xEF\xBB\xBF//' ${feat_dir}_${en_modeling_unit}/test_${x}/text
     done
 
-    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+    tools/compute_cmvn_stats_deprecated.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
         --out_cmvn ${feat_dir}_${en_modeling_unit}/$train_set/global_cmvn
 
@@ -235,7 +235,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         # the master of a worker.
         rank=`expr $node_rank \* $num_gpus + $i`
 
-        python wenet/bin/train.py --gpu $gpu_id \
+        python wenet/bin/train_deprecated.py --gpu $gpu_id \
             --config $train_config \
             --train_data ${feat_dir}_${en_modeling_unit}/$train_set/format.data \
             --cv_data ${feat_dir}_${en_modeling_unit}/$dev_set/format.data \
@@ -281,7 +281,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             test_dir=$dir/test_${mode}${decoding_chunk_size:+_chunk$decoding_chunk_size}/${x}
             mkdir -p $test_dir
             gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-            python wenet/bin/recognize.py --gpu $gpu_id \
+            python wenet/bin/recognize_deprecated.py --gpu $gpu_id \
                 --mode $mode \
                 --config $dir/train.yaml \
                 --test_data ${feat_dir}_${en_modeling_unit}/test_${x}/format.data \
@@ -293,13 +293,15 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
                 --ctc_weight $ctc_weight \
                 --result_file $test_dir/text_${en_modeling_unit} \
                 ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
-            if $en_modeling_unit = "bpe"; then
-               tools/spm_decode --model=${bpemodel}.model --input_format=piece < $test_dir/text_${en_modeling_unit} | sed -e "s/▁/ /g" > $test_dir/text
-            else
-                cat $test_dir/text_${en_modeling_unit} | sed -e "s/▁/ /g" > $test_dir/text
-            fi
+            #if $en_modeling_unit = "bpe"; then
+            #   tools/spm_decode --model=${bpemodel}.model --input_format=piece < $test_dir/text_${en_modeling_unit} | sed -e "s/▁/ /g" > $test_dir/text
+            #else
+            cat $test_dir/text_${en_modeling_unit} | sed -e "s/▁/ /g" > $test_dir/text
+            #fi
+            cat ${feat_dir}_${en_modeling_unit}/test_${x}/text | sed -e "s/▁/ /g" > ${feat_dir}_${en_modeling_unit}/test_${x}/text.tmp
             python tools/compute-wer.py --char=1 --v=1 \
-                ${feat_dir}_${en_modeling_unit}/test_${x}/text $test_dir/text > $test_dir/wer
+                ${feat_dir}_${en_modeling_unit}/test_${x}/text.tmp $test_dir/text > $test_dir/wer
+            rm ${feat_dir}_${en_modeling_unit}/test_${x}/text.tmp
         }
         done
     } &

@@ -15,11 +15,13 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
+#include "decoder/context_graph.h"
 #include "decoder/ctc_endpoint.h"
 #include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/ctc_wfst_beam_search.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
+#include "post_processor/post_processor.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -74,14 +76,23 @@ enum DecodeState {
   kEndFeats = 0x02   // All feature is decoded
 };
 
+// DecodeResource is thread safe, which can be shared for multiple
+// decoding threads
+struct DecodeResource {
+  std::shared_ptr<TorchAsrModel> model = nullptr;
+  std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
+  std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
+  std::shared_ptr<ContextGraph> context_graph = nullptr;
+  std::shared_ptr<PostProcessor> post_processor = nullptr;
+};
+
 // Torch ASR decoder
 class TorchAsrDecoder {
  public:
   TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
-                  std::shared_ptr<TorchAsrModel> model,
-                  std::shared_ptr<fst::SymbolTable> symbol_table,
-                  const DecodeOptions& opts,
-                  std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr);
+                  std::shared_ptr<DecodeResource> resource,
+                  const DecodeOptions& opts);
 
   DecodeState Decode();
   void Rescoring();
@@ -113,18 +124,21 @@ class TorchAsrDecoder {
 
   float AttentionDecoderScore(const torch::Tensor& prob,
                               const std::vector<int>& hyp, int eos);
-  void UpdateResult();
+  void UpdateResult(bool finish = false);
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<PostProcessor> post_processor_;
+
+  std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
+  // output symbol table
   std::shared_ptr<fst::SymbolTable> symbol_table_;
+  // e2e unit symbol table
+  std::shared_ptr<fst::SymbolTable> unit_table_ = nullptr;
   const DecodeOptions& opts_;
   // cache feature
   std::vector<std::vector<float>> cached_feature_;
   bool start_ = false;
-
-  // word piece start with space symbol["▁" (U+2581)] or not
-  bool wp_start_with_space_symbol_ = false;
 
   torch::jit::IValue subsampling_cache_;
   // transformer/conformer encoder layers output cache

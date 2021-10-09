@@ -15,36 +15,20 @@
 #ifndef UTILS_UTILS_H_
 #define UTILS_UTILS_H_
 
-#include <algorithm>
-#include <cmath>
 #include <limits>
-#include <sstream>
-#include <string>
-#include <vector>
 
 namespace wenet {
 
 #define WENET_DISALLOW_COPY_AND_ASSIGN(Type) \
-  Type(const Type &) = delete;         \
+  Type(const Type &) = delete;               \
   Type &operator=(const Type &) = delete;
 
 const float kFloatMax = std::numeric_limits<float>::max();
+// kSpaceSymbol in UTF-8 is: ▁
 const char kSpaceSymbol[] = "\xe2\x96\x81";
 
 // Return the sum of two probabilities in log scale
-float LogAdd(const float& x, const float& y);
-
-void SplitString(const std::string& str, std::vector<std::string>* strs);
-
-void SplitStringToVector(const std::string &full, const char* delim,
-                         bool omit_empty_strings,
-                         std::vector<std::string>* out);
-
-bool SplitUTF8String(const std::string& str,
-                     std::vector<std::string>* characters);
-
-// Remove head,tail and consecutive space.
-std::string ProcessBlank(const std::string& str);
+float LogAdd(float x, float y);
 
 }  // namespace wenet
 

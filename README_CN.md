@@ -5,9 +5,9 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/mobvoi/wenet)
 
-[**文档**](https://mobvoi.github.io/wenet/)
-| [**训练模型教程**](https://mobvoi.github.io/wenet/tutorial.html)
-| [**WeNet 论文**](https://mobvoi.github.io/wenet/papers.html)
+[**文档**](https://wenet-e2e.github.io/wenet/)
+| [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial.html)
+| [**WeNet 论文**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**x86 识别服务**](https://github.com/mobvoi/wenet/tree/main/runtime/server/x86)
 | [**android 本地识别**](https://github.com/mobvoi/wenet/tree/main/runtime/device/android/wenet)
 
@@ -39,7 +39,7 @@ docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/w
 
 **实时识别**
 
-使用浏览器打开文件`wenet/runtime/server/x86/web/templates/index.html`，在 `WebSocket URL` 中填入 `ws://127.0.0.1:10086`, 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
+使用浏览器打开文件`wenet/runtime/server/x86/web/templates/index.html`，在 `WebSocket URL` 中填入 `ws://127.0.0.1:10086` (若在windows下通过wsl2运行docker,  则使用`ws://localhost:10086`) , 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
 
 ![Runtime web](/docs/images/runtime_web.png)
 
@@ -53,19 +53,13 @@ git clone https://github.com/wenet-e2e/wenet.git
 ```
 
 - 安装 Conda:  https://docs.conda.io/en/latest/miniconda.html
-- 创建 Conda 环境: (推荐**PyTorch 1.6.0**. 在2080 Ti上使用1.7.0会有NCCL的问题)
+- 创建 Conda 环境:
 
 ``` sh
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
-
-# GPU 3090
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch torchvision torchaudio=0.8.0 cudatoolkit=11.1 -c pytorch -c conda-forge
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 **训练模型**
@@ -76,7 +70,7 @@ cd examples/aishell/s0/
 bash run.sh --stage -1
 ```
 
-细节请阅读 [**训练模型教程**](https://mobvoi.github.io/wenet/tutorial.html)
+细节请阅读 [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial.html)
 
 
 ## WeNet 性能
@@ -85,7 +79,7 @@ WeNet 提供了一些开源数据集的脚本，具体的模型性能如下，�
 * [AIShell-1](examples/aishell/s0/README.md) 中文模型。
 * [AIShell-2](examples/aishell2/s0/README.md) 中文模型。
 * [LibriSpeech](examples/librispeech/s0/README.md) 英文模型。
-* [Multi-Chinese](examples/multi_cn/s0/README.md) 使用所有开源中文数据集训练的中文模型。
+* [Multi-CN](examples/multi_cn/s0/README.md) 使用所有开源中文数据集训练的中文模型。
 
 
 ## 技术支持

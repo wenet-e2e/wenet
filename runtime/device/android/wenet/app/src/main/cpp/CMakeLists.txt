@@ -10,8 +10,9 @@ include_directories(
 )
 set(CMAKE_VERBOSE_MAKEFILE on)
 set(build_DIR ${CMAKE_SOURCE_DIR}/../../../build)
+string(REPLACE "-Wl,--exclude-libs,libgcc_real.a" "" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 
-set(openfst_BINARY_DIR ${build_DIR}/wenet-openfst-android-1.0.0.aar/jni)
+set(openfst_BINARY_DIR ${build_DIR}/wenet-openfst-android-1.0.1.aar/jni)
 include_directories(${openfst_BINARY_DIR}/include)
 link_directories(${openfst_BINARY_DIR}/${ANDROID_ABI})
 link_libraries(log gflags_nothreads glog fst)
@@ -33,7 +34,10 @@ include_directories(
 )
 
 # utils
-add_library(utils STATIC utils/utils.cc)
+add_library(utils STATIC
+  utils/string.cc
+  utils/utils.cc
+)
 
 # frontend
 add_library(frontend STATIC
@@ -47,11 +51,13 @@ add_subdirectory(kaldi)
 
 # decoder
 add_library(decoder STATIC
+  decoder/context_graph.cc
   decoder/ctc_endpoint.cc
   decoder/ctc_prefix_beam_search.cc
   decoder/ctc_wfst_beam_search.cc
   decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
+  post_processor/post_processor.cc
 )
 target_link_libraries(decoder PUBLIC kaldi-decoder utils ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY})
 

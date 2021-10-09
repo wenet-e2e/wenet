@@ -25,7 +25,7 @@ import yaml
 from torch.utils.data import DataLoader
 from textgrid import TextGrid, IntervalTier
 
-from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.ctc_util import forced_align

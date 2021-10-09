@@ -7,7 +7,7 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-stage=1 # start from 0 if you need to start from data preparation
+stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
 
 # The num of nodes or machines used for multi-machine training
@@ -32,8 +32,9 @@ recog_set=test
 wave_data=data
 nj=16
 # Optional train_config
-# 1. conf/train_transformer_large.yaml: Standard transformer
-train_config=conf/train_conformer.yaml
+# 1. conf/train_transformer.yaml: Standard Conformer
+# 2. conf/train_transformer_bidecoder.yaml: Bidecoder Conformer
+train_config=conf/train_conformer_bidecoder.yaml
 checkpoint=
 cmvn=false
 do_delta=false
@@ -91,7 +92,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
     # optional
     # compute cmvn, perhaps you can sample some segmented examples fron wav.scp for cmvn computation
-    python tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+    python tools/compute_cmvn_stats_deprecated.py --num_workers 16 --train_config $train_config \
         --in_scp $wave_data/gigaspeech_$train_set/wav.scp \
         --out_cmvn $wave_data/gigaspeech_$train_set/global_cmvn
 
@@ -158,7 +159,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         # Rank of each gpu/process used for knowing whether it is
         # the master of a worker.
         rank=`expr $node_rank \* $num_gpus + $i`
-        python wenet/bin/train.py --gpu $gpu_id \
+        python wenet/bin/train_deprecated.py --gpu $gpu_id \
             --config $train_config \
             --train_data $wave_data/gigaspeech_$train_set/format.data \
             --cv_data $wave_data/gigaspeech_$train_dev/format.data \
@@ -168,9 +169,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.world_size $world_size \
             --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
-            --num_workers 32 \
-            $cmvn_opts \
-            --use_amp
+            --num_workers 16 \
+            $cmvn_opts
     } &
     done
     wait
@@ -205,7 +205,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
                 test_dir=$dir/${test}_${mode}
                 mkdir -p $test_dir
                 gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-                python wenet/bin/recognize.py --gpu $gpu_id \
+                python wenet/bin/recognize_deprecated.py --gpu $gpu_id \
                     --mode $mode \
                     --config $dir/train.yaml \
                     --test_data $wave_data/gigaspeech_$test/format.data \
