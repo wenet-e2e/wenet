@@ -70,23 +70,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
     cp -r data/dev ${feat_dir}_${en_modeling_unit}/test
 
-    # Unified data format for char and bpe modelding. Here we use ▁ for blank among english words
-    # Warning : it is "▁" symbol, not "_" symbol
-    for x in ${train_set} ${dev_set}; do
-        cp ${feat_dir}_${en_modeling_unit}/${x}/text ${feat_dir}_${en_modeling_unit}/${x}/text.org
-        paste -d " " <(cut -f 1 -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org) <(cut -f 2- -d" " ${feat_dir}_${en_modeling_unit}/${x}/text.org \
-            | tr 'a-z' 'A-Z' | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " " ) \
-            > ${feat_dir}_${en_modeling_unit}/${x}/text
-    sed -i 's/\xEF\xBB\xBF//' ${feat_dir}_${en_modeling_unit}/${x}/text
-
-    done
-
-    cp ${feat_dir}_${en_modeling_unit}/test/text ${feat_dir}_${en_modeling_unit}/test/text.org
-    paste -d " " <(cut -f 1 -d" " ${feat_dir}_${en_modeling_unit}/test/text.org) <(cut -f 2- -d" " ${feat_dir}_${en_modeling_unit}/test/text.org \
-    | sed 's/\([A-Z]\) \([A-Z]\)/\1▁\2/g' | tr -d " " |  tr 'a-z' 'A-Z') \
-        > ${feat_dir}_${en_modeling_unit}/test/text
-    sed -i 's/\xEF\xBB\xBF//' ${feat_dir}_${en_modeling_unit}/test/text
-
     tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
         --out_cmvn ${feat_dir}_${en_modeling_unit}/$train_set/global_cmvn
@@ -109,7 +92,12 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
 
-    tools/text2token.py -s 1 -n 1 -m ${bpecode} ${feat_dir}_${en_modeling_unit}/${train_set}/text ${trans_type_ops} | cut -f 2- -d" " | tr " " "\n" \
+    paste -d " " <(cut -f 1 -d" " ${feat_dir}_${en_modeling_unit}/${train_set}/text) <(cut -f 2- -d" " ${feat_dir}_${en_modeling_unit}/${train_set}/text \
+        | tr 'a-z' 'A-Z' | sed 's/\([A-Z]\)[ ]\+/\1▁/g'|sed 's/\([^A-Z]\)▁/\1 /g'|sed 's/▁\([^A-Z]\)/ \1/g' |sed 's/▁$//g'| tr -d " " ) \
+        > ${feat_dir}_${en_modeling_unit}/${train_set}/text4dict
+    sed -i 's/\xEF\xBB\xBF//' ${feat_dir}_${en_modeling_unit}/${train_set}/text4dict
+
+    tools/text2token.py -s 1 -n 1 -m ${bpecode} ${feat_dir}_${en_modeling_unit}/${train_set}/text4dict ${trans_type_ops} | cut -f 2- -d" " | tr " " "\n" \
             | sort | uniq | grep -a -v -e '^\s*$' \
             | grep -v '·' | grep -v '“' | grep -v "”" | grep -v "\[" | grep -v "\]" | grep -v "…" \
             | awk '{print $0 " " NR+1}' >> ${dict}
@@ -181,7 +169,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.dist_backend $dist_backend \
             --num_workers 1 \
             $cmvn_opts \
-            --pin_memory
+            --pin_memory \
+            --bpe_model ${bpecode}
     } &
     done
     wait
@@ -203,7 +192,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     decoding_chunk_size=-1
     ctc_weight=0.5
     idx=0
-    sed -i "s/▁/ /g" ${feat_dir}_${en_modeling_unit}/test/text
     for mode in ${decode_modes}; do
     {
       test_dir=$dir/test_${mode}${decoding_chunk_size:+_chunk$decoding_chunk_size}/test
@@ -212,7 +200,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       python wenet/bin/recognize.py --gpu $gpu_id \
           --mode $mode \
           --config $dir/train.yaml \
-          --test_data ${feat_dir}_${en_modeling_unit}/test/format.data \
+          --data_type $data_type \
+          --test_data ${feat_dir}_${en_modeling_unit}/test/data.list \
           --checkpoint $decode_checkpoint \
           --beam_size 10 \
           --batch_size 1 \

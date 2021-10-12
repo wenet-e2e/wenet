@@ -73,6 +73,8 @@ cat $train_dir/transcripts.txt |\
   sed -e 's/<foreign language=\"[a-zA-Z]\+\">/ /g' |\
   sed -e 's/<\/foreign>/ /g' |\
   sed -e 's/<noise>\(.\+\)<\/noise>/\1/g' |\
+  sed -e 's/<\/noise>//g' |\
+  sed -e 's/((\([^)]\{0,\}\)))/\1/g' |\
   sed -e 's/((\([^)]\{0,\}\)))/\1/g' |\
   awk '{if (NF > 1) print $0;}' |\
   local/hkust_normalize.pl |\
@@ -82,6 +84,8 @@ cat $dev_dir/transcripts.txt |\
   sed -e 's/<foreign language=\"[a-zA-Z]\+\">/ /g' |\
   sed -e 's/<\/foreign>/ /g' |\
   sed -e 's/<noise>\(.\+\)<\/noise>/\1/g' |\
+  sed -e 's/<\/noise>//g' |\
+  sed -e 's/((\([^)]\{0,\}\)))/\1/g' |\
   sed -e 's/((\([^)]\{0,\}\)))/\1/g' |\
   awk '{if (NF > 1) print $0;}' |\
   local/hkust_normalize.pl |\
