@@ -111,8 +111,8 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
-            tools/make_raw_list.py $feat_dir/$x/wav.scp $feat_dir/$x/text \
-                $feat_dir/$x/data.list
+       tools/make_raw_list.py $feat_dir/$x/wav.scp $feat_dir/$x/text \
+                              $feat_dir/$x/data.list
     done
 fi
 

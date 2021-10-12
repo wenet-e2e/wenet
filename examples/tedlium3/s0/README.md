@@ -7,6 +7,6 @@
 * Decoding info: ctc_weight 0.5, average_num 10
 
 
-| decoding mode             | Dev WER   | Test WER|
-|---------------------------|-------|---|
-| attention rescoring       |  9.54% |8.66%|
+| decoding mode       | Dev WER | Test WER |
+|---------------------|---------|----------|
+| attention rescoring | 9.54%   | 8.66%    |
