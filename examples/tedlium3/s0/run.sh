@@ -158,6 +158,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --config $train_config \
             --data_type $data_type \
             --symbol_table $dict \
+	    --bpe_model $bpemodel.model \
             --train_data $feat_dir/$train_set/data.list \
             --cv_data $feat_dir/dev/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
@@ -204,6 +205,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --batch_size 1 \
             --penalty 0.0 \
             --dict $dict \
+	    --bpe_model $bpemodel.model \
             --ctc_weight $ctc_weight \
             --reverse_weight $reverse_weight \
             --result_file $test_dir/text \
