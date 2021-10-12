@@ -31,17 +31,22 @@ from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
 
 
-@hydra.main(config_path=os.path.join(os.getcwd(), "conf"), config_name="decoding_default.yaml")
+@hydra.main(
+    config_path=os.path.join(os.getcwd(), "conf"),
+    config_name="decoding_default.yaml",
+)
 def main(args: DictConfig):
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s')
-    logging.info(f'config: {OmegaConf.to_yaml(args)}')
+    logging.info(f'Config: {OmegaConf.to_yaml(args)}')
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-    if args.decoding.mode in ['ctc_prefix_beam_search', 'attention_rescoring'
-                     ] and args.batch_size > 1:
+    if args.decoding.mode in [
+        'ctc_prefix_beam_search',
+        'attention_rescoring',
+    ] and args.batch_size > 1:
         logging.fatal(
             'decoding mode {} must be running with batch_size == 1'.format(
                 args.mode))

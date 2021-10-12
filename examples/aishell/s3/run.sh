@@ -180,7 +180,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         python wenet/bin/recognize.py \
                 hydra.run.dir=.,
                 hydra.output_subdir=null,
-                hydra/job_logging=disabled, 
+                hydra/job_logging=disabled,
                 hydra/hydra_logging=disabled,
                 ++config_name=${decoding_config},
                 gpu=0
