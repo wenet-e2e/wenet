@@ -119,14 +119,8 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
-        if [ $data_type == "shard" ]; then
-            tools/make_shard_list.py --num_utts_per_shard $num_utts_per_shard \
-                --num_threads 16 $feat_dir/$x/wav.scp $feat_dir/$x/text \
-                $(realpath $feat_dir/$x/shards) $feat_dir/$x/data.list
-        else
             tools/make_raw_list.py $feat_dir/$x/wav.scp $feat_dir/$x/text \
                 $feat_dir/$x/data.list
-        fi
     done
 fi
 
