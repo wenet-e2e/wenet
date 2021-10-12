@@ -17,9 +17,7 @@ dev set results trained only with training set (785 keywords, 1505 hour train se
 | liv      | 0.8886    | 0.6515   | 0.7518 | 0.6050 |
 | stv      | 0.9120    | 0.7471   | 0.8213 | 0.6256 |
 
-dev set results trained with training set and finetune set
-* 785 keywords
-* 1505 hour train set + 15 hour finetune set
+dev set results trained with training set and finetune set (785 keywords, 1505 hour train set + 15 hour finetune set)
 
 | scenario | Precision | Recall   | F1     | ATWV   |
 |----------|-----------|----------|--------|--------|
@@ -27,18 +25,16 @@ dev set results trained with training set and finetune set
 | liv      | 0.9177    | 0.8398   | 0.8770 | 0.7412 |
 | stv      | 0.9320    | 0.8207   | 0.8729 | 0.7120 |
 
-test set results trained only with training set
-* 348 keywords
-* 1505 hour train set
+test set results trained only with training set (384 keywords, 1505 hour train set)
+
 | scenario | Precision | Recall   | F1     | ATWV   |
 |----------|-----------|----------|--------|--------|
 | lgv      | 0.6262    | 0.5648   | 0.5939 | 0.5825 |
 | liv      | 0.8797    | 0.6282   | 0.7330 | 0.6061 |
 | stv      | 0.9102    | 0.7221   | 0.8053 | 0.6682 |
 
-test set results trained with training set and finetune set
-* 348 keywords
-* 1505 hour train set + 15 hour finetune set
+test set results trained with training set and finetune set (384 keywords, 1505 hour train set + 15 hour finetune set)
+
 | scenario | Precision | Recall   | F1     | ATWV   |
 |----------|-----------|----------|--------|--------|
 | lgv      | 0.6469    | 0.6276   | 0.6371 | 0.6116 |
