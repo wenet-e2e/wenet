@@ -288,18 +288,16 @@ def tokenize(data, symbol_table, bpe_model=None):
                     else:
                         for l in sp.encode_as_pieces(k):
                             tokens.append(l)
-            for ch in tokens:
-                if ch in symbol_table:
-                    label.append(symbol_table[ch])
-                elif '<unk>' in symbol_table:
-                    label.append(symbol_table['<unk>'])
         else:
             for ch in txt:
                 tokens.append(ch)
-                if ch in symbol_table:
-                    label.append(symbol_table[ch])
-                elif '<unk>' in symbol_table:
-                    label.append(symbol_table['<unk>'])
+
+        for ch in tokens:
+            if ch in symbol_table:
+                label.append(symbol_table[ch])
+            elif '<unk>' in symbol_table:
+                label.append(symbol_table['<unk>'])
+
         sample['tokens'] = tokens
         sample['label'] = label
         yield sample
