@@ -23,7 +23,7 @@ import torch
 import yaml
 import hydra
 from torch.utils.data import DataLoader
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
@@ -36,6 +36,8 @@ def main(args: DictConfig):
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s')
+    logging.info(f'config: {OmegaConf.to_yaml(args)}')
+
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
     if args.decoding.mode in ['ctc_prefix_beam_search', 'attention_rescoring'
@@ -68,6 +70,7 @@ def main(args: DictConfig):
                            args.test_data,
                            symbol_table,
                            test_conf,
+                           args.bpe_model,
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)

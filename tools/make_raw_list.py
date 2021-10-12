@@ -34,7 +34,7 @@ with open(text_file, 'r', encoding='utf8') as fin, \
     for line in fin:
         arr = line.strip().split(maxsplit=1)
         key = arr[0]
-        txt = arr[1]
+        txt = arr[1] if len(arr) > 1 else ''
         assert key in wav_table
         wav = wav_table[key]
         line = dict(key=key, wav=wav, txt=txt)
