@@ -86,6 +86,10 @@ if __name__ == '__main__':
                         default=0.0,
                         help='''right to left weight for attention rescoring
                                 decode mode''')
+    parser.add_argument('--bpe_model',
+                        default=None,
+                        type=str,
+                        help='bpe model for english part')
     args = parser.parse_args()
     print(args)
     logging.basicConfig(level=logging.DEBUG,
@@ -122,6 +126,7 @@ if __name__ == '__main__':
                            args.test_data,
                            symbol_table,
                            test_conf,
+                           args.bpe_model,
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
