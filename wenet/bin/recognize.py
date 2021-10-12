@@ -14,7 +14,6 @@
 
 from __future__ import print_function
 
-import argparse
 import copy
 import logging
 import os
@@ -22,23 +21,24 @@ import sys
 
 import torch
 import yaml
+import hydra
 from torch.utils.data import DataLoader
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
-from wenet.utils.set_configs import hydra_runner
 
 
-@hydra_runner(config_path=os.path.join(os.getcwd(), "conf"), config_name="decoding_default.yaml")
+@hydra.main(config_path=os.path.join(os.getcwd(), "conf"), config_name="decoding_default.yaml")
 def main(args: DictConfig):
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(levelname)s %(message)s')
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-    if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring'
+    if args.decoding.mode in ['ctc_prefix_beam_search', 'attention_rescoring'
                      ] and args.batch_size > 1:
         logging.fatal(
             'decoding mode {} must be running with batch_size == 1'.format(
@@ -97,16 +97,16 @@ def main(args: DictConfig):
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
-            if args.mode == 'attention':
+            if args.decoding.mode == 'attention':
                 hyps, _ = model.recognize(
                     feats,
                     feats_lengths,
-                    beam_size=args.beam_size,
+                    beam_size=args.decoding.beam_size,
                     decoding_chunk_size=args.decoding.chunk_size,
                     num_decoding_left_chunks=args.decoding.num_left_chunks,
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp.tolist() for hyp in hyps]
-            elif args.mode == 'ctc_greedy_search':
+            elif args.decoding.mode == 'ctc_greedy_search':
                 hyps, _ = model.ctc_greedy_search(
                     feats,
                     feats_lengths,
@@ -116,22 +116,22 @@ def main(args: DictConfig):
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
             # with other batch decoding mode
-            elif args.mode == 'ctc_prefix_beam_search':
+            elif args.decoding.mode == 'ctc_prefix_beam_search':
                 assert (feats.size(0) == 1)
                 hyp, _ = model.ctc_prefix_beam_search(
                     feats,
                     feats_lengths,
-                    args.beam_size,
+                    args.decoding.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp]
-            elif args.mode == 'attention_rescoring':
+            elif args.decoding.mode == 'attention_rescoring':
                 assert (feats.size(0) == 1)
                 hyp, _ = model.attention_rescoring(
                     feats,
                     feats_lengths,
-                    args.beam_size,
+                    args.decoding.beam_size,
                     decoding_chunk_size=args.decoding.chunk_size,
                     num_decoding_left_chunks=args.decoding.num_left_chunks,
                     ctc_weight=args.ctc_weight,

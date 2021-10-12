@@ -42,6 +42,7 @@ train_set=train
 # 6. conf/train_u2++_conformer.yaml: U2++ conformer
 # 7. conf/train_u2++_transformer.yaml: U2++ transformer
 train_config=conf/train_conformer.yaml
+decoding_config=conf/decoding_attention.yaml
 cmvn=true
 dir=exp/conformer
 checkpoint=
@@ -50,7 +51,6 @@ checkpoint=
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=30
-decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
 . tools/parse_options.sh || exit 1;
 
@@ -173,29 +173,26 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --num ${average_num} \
             --val_best
     fi
-    # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
-    # -1 for full chunk
-    decoding_chunk_size=
-    ctc_weight=0.5
-    reverse_weight=0.0
     for mode in ${decode_modes}; do
     {
         test_dir=$dir/test_${mode}
         mkdir -p $test_dir
-        python wenet/bin/recognize.py --gpu 0 \
-            --mode $mode \
-            --config $dir/train.yaml \
-            --data_type $data_type \
-            --test_data $feat_dir/test/data.list \
-            --checkpoint $decode_checkpoint \
-            --beam_size 10 \
-            --batch_size 1 \
-            --penalty 0.0 \
-            --dict $dict \
-            --ctc_weight $ctc_weight \
-            --reverse_weight $reverse_weight \
-            --result_file $test_dir/text \
-            ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+        python wenet/bin/recognize.py \
+                hydra.run.dir=.,
+                hydra.output_subdir=null,
+                hydra/job_logging=disabled, 
+                hydra/hydra_logging=disabled,
+                ++config_name=${decoding_config},
+                gpu=0
+                config=$dir/train.yaml,
+                test_data=$feat_dir/test/data.list,
+                checkpoint=$decode_checkpoint,
+                dict=$dict,
+                result_file=$test_dir/text
+                # there are temporal solution, will delete later
+                # see: https://stackoverflow.com/questions/65104134/disable-file-output-of-hydra
+                # if want to change variable like mode in decoding_x.yaml,
+                # just simple using '++decoding.mode=ctc_greedy', it will overrides the variable in .yaml
          python tools/compute-wer.py --char=1 --v=1 \
             $feat_dir/test/text $test_dir/text > $test_dir/wer
     } &
