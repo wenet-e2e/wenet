@@ -9,9 +9,8 @@ Conformer without speed perpurb and lm
 * num of averaged model: 5
 * ctc weight (used for attention rescoring): 0.5
 
-dev set results trained only with training set
-* 785 keywords
-* 1505 hour train set
+dev set results trained only with training set (785 keywords, 1505 hour train set)
+
 | scenario | Precision | Recall   | F1     | ATWV   |
 |----------|-----------|----------|--------|--------|
 | lgv      | 0.9281    | 0.6420   | 0.7590 | 0.5183 |
@@ -21,6 +20,7 @@ dev set results trained only with training set
 dev set results trained with training set and finetune set
 * 785 keywords
 * 1505 hour train set + 15 hour finetune set
+
 | scenario | Precision | Recall   | F1     | ATWV   |
 |----------|-----------|----------|--------|--------|
 | lgv      | 0.9478    | 0.7311   | 0.8255 | 0.6352 |
