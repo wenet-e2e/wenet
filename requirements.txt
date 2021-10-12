@@ -7,3 +7,4 @@ tensorboardX
 typeguard
 textgrid
 hydra-core
+omegaconf

@@ -23,71 +23,17 @@ import sys
 import torch
 import yaml
 from torch.utils.data import DataLoader
+from omegaconf import DictConfig, OmegaConf
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
+from wenet.utils.set_configs import hydra_runner
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='recognize with your model')
-    parser.add_argument('--config', required=True, help='config file')
-    parser.add_argument('--test_data', required=True, help='test data file')
-    parser.add_argument('--data_type',
-                        default='raw',
-                        choices=['raw', 'shard'],
-                        help='train and cv data type')
-    parser.add_argument('--gpu',
-                        type=int,
-                        default=-1,
-                        help='gpu id for this rank, -1 for cpu')
-    parser.add_argument('--checkpoint', required=True, help='checkpoint model')
-    parser.add_argument('--dict', required=True, help='dict file')
-    parser.add_argument('--beam_size',
-                        type=int,
-                        default=10,
-                        help='beam size for search')
-    parser.add_argument('--penalty',
-                        type=float,
-                        default=0.0,
-                        help='length penalty')
-    parser.add_argument('--result_file', required=True, help='asr result file')
-    parser.add_argument('--batch_size',
-                        type=int,
-                        default=16,
-                        help='asr result file')
-    parser.add_argument('--mode',
-                        choices=[
-                            'attention', 'ctc_greedy_search',
-                            'ctc_prefix_beam_search', 'attention_rescoring'
-                        ],
-                        default='attention',
-                        help='decoding mode')
-    parser.add_argument('--ctc_weight',
-                        type=float,
-                        default=0.0,
-                        help='ctc weight for attention rescoring decode mode')
-    parser.add_argument('--decoding_chunk_size',
-                        type=int,
-                        default=-1,
-                        help='''decoding chunk size,
-                                <0: for decoding, use full chunk.
-                                >0: for decoding, use fixed chunk size as set.
-                                0: used for training, it's prohibited here''')
-    parser.add_argument('--num_decoding_left_chunks',
-                        type=int,
-                        default=-1,
-                        help='number of left chunks for decoding')
-    parser.add_argument('--simulate_streaming',
-                        action='store_true',
-                        help='simulate streaming inference')
-    parser.add_argument('--reverse_weight',
-                        type=float,
-                        default=0.0,
-                        help='''right to left weight for attention rescoring
-                                decode mode''')
-    args = parser.parse_args()
-    print(args)
+
+@hydra_runner(config_path=os.path.join(os.getcwd(), "conf"), config_name="decoding_default.yaml")
+def main(args: DictConfig):
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -156,16 +102,16 @@ if __name__ == '__main__':
                     feats,
                     feats_lengths,
                     beam_size=args.beam_size,
-                    decoding_chunk_size=args.decoding_chunk_size,
-                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    decoding_chunk_size=args.decoding.chunk_size,
+                    num_decoding_left_chunks=args.decoding.num_left_chunks,
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp.tolist() for hyp in hyps]
             elif args.mode == 'ctc_greedy_search':
                 hyps, _ = model.ctc_greedy_search(
                     feats,
                     feats_lengths,
-                    decoding_chunk_size=args.decoding_chunk_size,
-                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    decoding_chunk_size=args.decoding.chunk_size,
+                    num_decoding_left_chunks=args.decoding.num_left_chunks,
                     simulate_streaming=args.simulate_streaming)
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
@@ -186,11 +132,11 @@ if __name__ == '__main__':
                     feats,
                     feats_lengths,
                     args.beam_size,
-                    decoding_chunk_size=args.decoding_chunk_size,
-                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    decoding_chunk_size=args.decoding.chunk_size,
+                    num_decoding_left_chunks=args.decoding.num_left_chunks,
                     ctc_weight=args.ctc_weight,
                     simulate_streaming=args.simulate_streaming,
-                    reverse_weight=args.reverse_weight)
+                    reverse_weight=args.decoding.reverse_weight)
                 hyps = [hyp]
             for i, key in enumerate(keys):
                 content = ''
@@ -200,3 +146,6 @@ if __name__ == '__main__':
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
+
+if __name__ == '__main__':
+    main()
