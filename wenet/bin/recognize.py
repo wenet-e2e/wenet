@@ -23,23 +23,25 @@ import torch
 import yaml
 import hydra
 from torch.utils.data import DataLoader
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
-
+from wenet.utils.set_config import DECODING_DICT
 
 @hydra.main(
     config_path=os.path.join(os.getcwd(), "conf"),
     config_name="decoding_default.yaml",
 )
-def main(args: DictConfig):
+def main(args) -> None:
     logging.basicConfig(
         level=logging.DEBUG,
         format='%(asctime)s (%(module)s:%(lineno)d) %(levelname)s: %(message)s')
     logging.info(f'Config: {OmegaConf.to_yaml(args)}')
+    args = OmegaConf.merge(
+        OmegaConf.structured(DECODING_DICT), args)
 
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
@@ -75,7 +77,7 @@ def main(args: DictConfig):
                            args.test_data,
                            symbol_table,
                            test_conf,
-                           args.bpe_model,
+                           args.get("bpe_model", None),
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)

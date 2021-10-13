@@ -182,7 +182,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
                 hydra.output_subdir=null,
                 hydra/job_logging=disabled,
                 hydra/hydra_logging=disabled,
-                ++config_name=${decoding_config},
+                --config_name=${decoding_config},
                 gpu=0
                 config=$dir/train.yaml,
                 test_data=$feat_dir/test/data.list,
