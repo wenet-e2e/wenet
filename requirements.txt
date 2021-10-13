@@ -8,3 +8,4 @@ typeguard
 textgrid
 hydra-core
 omegaconf
+undictify
