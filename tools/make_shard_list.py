@@ -50,8 +50,10 @@ def write_tar_file(data_list,
             suffix = wav.split('.')[-1]
             assert suffix in AUDIO_FORMAT_SETS
             if no_segments:
+                ts = time.time()
                 with open(wav, 'rb') as fin:
                     data = fin.read()
+                read_time += (time.time() - ts)
             else:
                 if wav != prev_wav:
                     ts = time.time()
