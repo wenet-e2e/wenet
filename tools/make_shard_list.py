@@ -18,7 +18,6 @@ import argparse
 import io
 import logging
 import os
-import sys
 import tarfile
 import time
 import multiprocessing
@@ -145,7 +144,7 @@ if __name__ == '__main__':
         for line in fin:
             arr = line.strip().split(maxsplit=1)
             key = arr[0]
-            txt = arr[1]
+            txt = arr[1] if len(arr) > 1 else ''
             if no_segments:
                 assert key in wav_table
                 wav = wav_table[key]
@@ -168,8 +167,6 @@ if __name__ == '__main__':
         tar_file = os.path.join(args.shards_dir,
                                 '{}_{:09d}.tar'.format(args.prefix, i))
         shards_list.append(tar_file)
-        sys.stdout.flush()
-        # write_tar_file(chunk, no_segments, tar_file, args.resample, i, num_chunks)
         pool.apply_async(
             write_tar_file,
             (chunk, no_segments, tar_file, args.resample, i, num_chunks))

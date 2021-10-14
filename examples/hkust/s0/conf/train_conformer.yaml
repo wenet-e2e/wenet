@@ -11,23 +11,18 @@ encoder_conf:
     attention_dropout_rate: 0.0
     input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
-    cnn_module_kernel: 8
+    cnn_module_kernel: 15
     use_cnn_module: True
     activation_type: 'swish'
     pos_enc_layer_type: 'rel_pos'
     selfattention_layer_type: 'rel_selfattn'
-    causal: true
-    use_dynamic_chunk: true
-    cnn_module_norm: 'layer_norm' # using nn.LayerNorm makes model converge faster
-    use_dynamic_left_chunk: false
 
 # decoder related
-decoder: bitransformer
+decoder: transformer
 decoder_conf:
     attention_heads: 4
     linear_units: 2048
-    num_blocks: 3
-    r_num_blocks: 3
+    num_blocks: 6
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     self_attention_dropout_rate: 0.0
@@ -38,15 +33,15 @@ model_conf:
     ctc_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
-    reverse_weight: 0.3
 
-# dataset related
+# feature extraction
 dataset_conf:
     filter_conf:
-        max_length: 40960
-        min_length: 0
-        token_max_length: 200
+        max_length: 2000
+        min_length: 50
+        token_max_length: 400
         token_min_length: 1
+        max_output_input_ratio: 1
     resample_conf:
         resample_rate: 16000
     speed_perturb: true
@@ -72,13 +67,13 @@ dataset_conf:
         batch_size: 16
 
 grad_clip: 5
-accum_grad: 1
+accum_grad: 4
 max_epoch: 240
 log_interval: 100
 
 optim: adam
 optim_conf:
-    lr: 0.001
+    lr: 0.002
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 25000

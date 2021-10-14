@@ -19,7 +19,6 @@
 #include <vector>
 
 #include "boost/json/src.hpp"
-
 #include "utils/log.h"
 
 namespace wenet {
@@ -123,34 +122,38 @@ std::string ConnectionHandler::SerializeResult(bool finish) {
 }
 
 void ConnectionHandler::DecodeThreadFunc() {
-  while (true) {
-    DecodeState state = decoder_->Decode();
-    if (state == DecodeState::kEndFeats) {
-      decoder_->Rescoring();
-      std::string result = SerializeResult(true);
-      OnFinalResult(result);
-      OnFinish();
-      stop_recognition_ = true;
-      break;
-    } else if (state == DecodeState::kEndpoint) {
-      decoder_->Rescoring();
-      std::string result = SerializeResult(true);
-      OnFinalResult(result);
-      // If it's not continuous decoidng, continue to do next recognition
-      // otherwise stop the recognition
-      if (continuous_decoding_) {
-        decoder_->ResetContinuousDecoding();
-      } else {
+  try {
+    while (true) {
+      DecodeState state = decoder_->Decode();
+      if (state == DecodeState::kEndFeats) {
+        decoder_->Rescoring();
+        std::string result = SerializeResult(true);
+        OnFinalResult(result);
         OnFinish();
         stop_recognition_ = true;
         break;
-      }
-    } else {
-      if (decoder_->DecodedSomething()) {
-        std::string result = SerializeResult(false);
-        OnPartialResult(result);
+      } else if (state == DecodeState::kEndpoint) {
+        decoder_->Rescoring();
+        std::string result = SerializeResult(true);
+        OnFinalResult(result);
+        // If it's not continuous decoidng, continue to do next recognition
+        // otherwise stop the recognition
+        if (continuous_decoding_) {
+          decoder_->ResetContinuousDecoding();
+        } else {
+          OnFinish();
+          stop_recognition_ = true;
+          break;
+        }
+      } else {
+        if (decoder_->DecodedSomething()) {
+          std::string result = SerializeResult(false);
+          OnPartialResult(result);
+        }
       }
     }
+  } catch (std::exception const& e) {
+    LOG(ERROR) << e.what();
   }
 }
 
@@ -234,6 +237,10 @@ void ConnectionHandler::operator()() {
   } catch (beast::system_error const& se) {
     // This indicates that the session was closed
     if (se.code() != websocket::error::closed) {
+      if (decode_thread_ != nullptr) {
+        decode_thread_->join();
+      }
+      OnSpeechEnd();
       LOG(ERROR) << se.code().message();
     }
   } catch (std::exception const& e) {
