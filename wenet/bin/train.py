@@ -91,6 +91,10 @@ if __name__ == '__main__':
                         default=100,
                         type=int,
                         help='prefetch number')
+    parser.add_argument('--bpe_model',
+                        default=None,
+                        type=str,
+                        help='bpe model for english part')
 
     args = parser.parse_args()
 
@@ -119,11 +123,12 @@ if __name__ == '__main__':
     cv_conf['spec_aug'] = False
 
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
-                            train_conf)
+                            train_conf, args.bpe_model, partition=True)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
                          cv_conf,
+                         args.bpe_model,
                          partition=False)
 
     train_data_loader = DataLoader(train_dataset,

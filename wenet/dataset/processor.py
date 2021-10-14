@@ -15,6 +15,7 @@
 import logging
 import json
 import random
+import re
 import tarfile
 from subprocess import PIPE, Popen
 from urllib.parse import urlparse
@@ -277,20 +278,59 @@ def tokenize(data, symbol_table, bpe_model=None):
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
     # TODO(Binbin Zhang): Support BPE
+    if bpe_model is not None:
+        import sentencepiece as spm
+        sp = spm.SentencePieceProcessor()
+        sp.load(bpe_model)
     for sample in data:
         assert 'txt' in sample
         txt = sample['txt']
         label = []
         tokens = []
-        for ch in txt:
-            tokens.append(ch)
+        if bpe_model is not None:
+            txt = bpe_preprocess(txt)
+            mix_chars = seg_char(txt)
+            for j in mix_chars:
+                for k in j.strip().split("▁"):
+                    if not k.encode('UTF-8').isalpha():
+                        tokens.append(k)
+                    else:
+                        for l in sp.encode_as_pieces(k):
+                            tokens.append(l)
+        else:
+            for ch in txt:
+                tokens.append(ch)
+
+        for ch in tokens:
             if ch in symbol_table:
                 label.append(symbol_table[ch])
             elif '<unk>' in symbol_table:
                 label.append(symbol_table['<unk>'])
+
         sample['tokens'] = tokens
         sample['label'] = label
         yield sample
+
+
+def bpe_preprocess(text):
+    """ Use ▁ for blank among english words
+        Warning: it is "▁" symbol, not "_" symbol
+    """
+    text = re.sub(r'[a-z]', r'[A-Z]', text)
+    text = re.sub(r'([A-Z])[ ]+', r'\1▁', text)
+    text = re.sub(r'([^A-Z])▁', r'\1 ', text)
+    text = re.sub(r'▁([^A-Z])', r' \1', text)
+    text = re.sub(r'▁$', r'', text)
+    text = text.replace(' ', '')
+    text = text.replace('\xEF\xBB\xBF', '')
+    return text
+
+
+def seg_char(text):
+    pattern = re.compile(r'([\u4e00-\u9fa5])')
+    chars = pattern.split(text)
+    chars = [w for w in chars if len(w.strip()) > 0]
+    return chars
 
 
 def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
