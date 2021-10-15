@@ -41,7 +41,12 @@
 <li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Pretrained Models in WeNet</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Pretrained Models in WeNet</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#model-types">Model Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-license">Model License</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#model-list">Model List</a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="lm.html">LM for WeNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
@@ -97,6 +102,8 @@
 </style>
 <div class="section" id="pretrained-models-in-wenet">
 <h1>Pretrained Models in WeNet<a class="headerlink" href="#pretrained-models-in-wenet" title="Permalink to this headline"></a></h1>
+<div class="section" id="model-types">
+<h2>Model Types<a class="headerlink" href="#model-types" title="Permalink to this headline"></a></h2>
 <p>We provide two types of pretrained model in WeNet to facilitate users with different requirements.</p>
 <ol class="simple">
 <li><p><strong>Checkpoint Model</strong>, with suffix <strong>.pt</strong>, the model trained and saved as checkpoint by WeNet python code, you can reproduce our published result with it, or you can use it as checkpoint to continue.</p></li>
@@ -107,6 +114,14 @@
 </ul>
 </li>
 </ol>
+</div>
+<div class="section" id="model-license">
+<h2>Model License<a class="headerlink" href="#model-license" title="Permalink to this headline"></a></h2>
+<p>The pretrained model in WeNet follows the license of it’s corresponding dataset.
+For example, the pretrained model on LibriSpeech follows <code class="docutils literal notranslate"><span class="pre">CC</span> <span class="pre">BY</span> <span class="pre">4.0</span></code>, since it is used as license of the LibriSpeech dataset, see http://openslr.org/12/.</p>
+</div>
+<div class="section" id="model-list">
+<h2>Model List<a class="headerlink" href="#model-list" title="Permalink to this headline"></a></h2>
 <p>Here is a list of the pretrained models on different datasets. The model structure, model size, and download link are given.</p>
 <table border="1" class="docutils">
 <thead>
@@ -156,6 +171,7 @@
 </tr>
 </tbody>
 </table></div>
+</div>
 
 
            </div>
