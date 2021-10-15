@@ -126,6 +126,7 @@ struct ForwardLink {
   BaseFloat acoustic_cost;  // acoustic cost (pre-scaled) of traversing arc
   bool is_start_boundary;
   bool is_end_boundary;
+  float context_score;
   ForwardLink *next;  // next in singly-linked list of forward arcs (arcs
                       // in the state-level lattice) from a token.
   inline ForwardLink(Token *next_tok, Label ilabel, Label olabel,
@@ -139,7 +140,8 @@ struct ForwardLink {
         acoustic_cost(acoustic_cost),
         is_start_boundary(is_start_boundary),
         is_end_boundary(is_end_boundary),
-        next(next) {}
+        next(next),
+        context_score(0) {}
 };
 
 struct StdToken {
@@ -182,7 +184,7 @@ struct StdToken {
   // fast way to obtain the best path).
   inline StdToken(BaseFloat tot_cost, BaseFloat extra_cost, ForwardLinkT *links,
                   Token *next, Token *backpointer)
-      : tot_cost(tot_cost), extra_cost(extra_cost), links(links), next(next) {}
+      : tot_cost(tot_cost), extra_cost(extra_cost), links(links), next(next), context_state(0) {}
 };
 
 struct BackpointerToken {
@@ -232,7 +234,8 @@ struct BackpointerToken {
         extra_cost(extra_cost),
         links(links),
         next(next),
-        backpointer(backpointer) {}
+        backpointer(backpointer),
+        context_state(0) {}
 };
 
 }  // namespace decoder
