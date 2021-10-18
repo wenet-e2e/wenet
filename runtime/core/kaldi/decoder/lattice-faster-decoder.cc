@@ -358,6 +358,8 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinks(
         // link_exta_cost is the difference in score between the best paths
         // through link source state and through link destination state
         KALDI_ASSERT(link_extra_cost == link_extra_cost);  // check for NaN
+	//the graph_cost contatins the context score
+	//if it's the score of the bachoff arc,it should be removed.
         if (link->context_score < 0) {
           link_extra_cost += link->context_score;
         }
