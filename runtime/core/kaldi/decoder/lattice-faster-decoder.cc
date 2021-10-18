@@ -358,6 +358,11 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinks(
         // link_exta_cost is the difference in score between the best paths
         // through link source state and through link destination state
         KALDI_ASSERT(link_extra_cost == link_extra_cost);  // check for NaN
+        // the graph_cost contatins the context score
+        // if it's the score of the backoff arc, it should be removed.
+        if (link->context_score < 0) {
+          link_extra_cost += link->context_score;
+        }
         if (link_extra_cost > config_.lattice_beam) {      // excise link
           ForwardLinkT *next_link = link->next;
           if (prev_link != NULL)
@@ -826,11 +831,11 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
 
           bool is_start_boundary = false;
           bool is_end_boundary = false;
+          float context_score = 0;
           if (context_graph_) {
             if (arc.olabel == 0) {
               e_next->val->context_state = tok->context_state;
             } else {
-              float context_score = 0;
               e_next->val->context_state = context_graph_->GetNextState(
                   tok->context_state, arc.olabel, &context_score,
                   &is_start_boundary, &is_end_boundary);
@@ -842,6 +847,7 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
           tok->links = new ForwardLinkT(e_next->val, arc.ilabel, arc.olabel,
                                         graph_cost, ac_cost, is_start_boundary,
                                         is_end_boundary, tok->links);
+          tok->links->context_score = context_score;
         }
       }  // for all arcs
     }
@@ -924,11 +930,11 @@ void LatticeFasterDecoderTpl<FST, Token>::ProcessNonemitting(BaseFloat cutoff) {
 
           bool is_start_boundary = false;
           bool is_end_boundary = false;
+          float context_score = 0;
           if (context_graph_) {
             if (arc.olabel == 0) {
               e_new->val->context_state = tok->context_state;
             } else {
-              float context_score = 0;
               e_new->val->context_state = context_graph_->GetNextState(
                   tok->context_state, arc.olabel, &context_score,
                   &is_start_boundary, &is_end_boundary);
@@ -939,6 +945,7 @@ void LatticeFasterDecoderTpl<FST, Token>::ProcessNonemitting(BaseFloat cutoff) {
           tok->links =
               new ForwardLinkT(e_new->val, 0, arc.olabel, graph_cost, 0,
                                is_start_boundary, is_end_boundary, tok->links);
+          tok->links->context_score = context_score;
 
           // "changed" tells us whether the new token has a different
           // cost from before, or is new [if so, add into queue].
