@@ -37,6 +37,11 @@ cmvn=true
 dir=exp/conformer
 checkpoint=
 
+# bpemode (unigram or bpe)
+nbpe=500
+bpemode=unigram
+
+
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
