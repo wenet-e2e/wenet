@@ -99,7 +99,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
         echo "$0: No such file segments" && exit 1;
     else
        for x in dev test ${train_set}; do
-       tools/make_raw_list.py --segments $feat_dir/$x/segments \
+         tools/make_raw_list.py --segments $feat_dir/$x/segments \
           $feat_dir/$x/wav.scp $feat_dir/$x/text $feat_dir/$x/data.list
        done
     fi
