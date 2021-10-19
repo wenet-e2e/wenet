@@ -125,7 +125,18 @@ def parse_raw(data):
         wav_file = obj['wav']
         txt = obj['txt']
         try:
-            waveform, sample_rate = torchaudio.load(wav_file)
+            if 'start' in obj:
+                assert 'end' in obj
+                sample_rate = torchaudio.backend.sox_io_backend.info(
+                    wav_file).sample_rate
+                start_frame = int(obj['start'] * sample_rate)
+                end_frame = int(obj['end'] * sample_rate)
+                waveform, _ = torchaudio.backend.sox_io_backend.load(
+                    filepath=wav_file,
+                    num_frames=end_frame - start_frame,
+                    frame_offset=start_frame)
+            else:
+                waveform, sample_rate = torchaudio.load(wav_file)
             data = dict(key=key,
                         txt=txt,
                         wav=waveform,
