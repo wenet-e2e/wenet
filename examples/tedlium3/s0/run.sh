@@ -60,21 +60,6 @@ fi
 
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    # remove the space between the text labels for Mandarin dataset
-    if [ ! -f data/$train_set/segments ]; then
-        echo "$0: No such file segments" && exit 1;
-    else
-        # generate segmented wav.scp
-        # the segmented wav.scp format is:
-        # AimeeMullins_2009P-0001782-0002881 db/TEDLIUM_release-3/legacy/test/sph/AimeeMullins_2009P.sph,0.0,10.197
-        # 0.0 is start time, 10.197 is end time (second)
-        for x in train dev test; do
-            mv data/$x/wav.scp data/$x/wav.scp.ori
-            python tools/segment.py --segments data/$x/segments \
-                --input data/$x/wav.scp.ori \
-                 --output data/$x/wav.scp
-        done
-    fi
     # For wav feature, just copy the data. Fbank extraction is done in training
     mkdir -p $feat_dir
     for x in ${train_set} dev test; do
@@ -110,10 +95,14 @@ fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "Prepare data, prepare requried format"
-    for x in dev test ${train_set}; do
-       tools/make_raw_list.py $feat_dir/$x/wav.scp $feat_dir/$x/text \
-                              $feat_dir/$x/data.list
-    done
+    if [ ! -f $feat_dir/$train_set/segments ]; then
+        echo "$0: No such file segments" && exit 1;
+    else
+       for x in dev test ${train_set}; do
+       tools/make_raw_list.py --segments $feat_dir/$x/segments \
+          $feat_dir/$x/wav.scp $feat_dir/$x/text $feat_dir/$x/data.list
+       done
+    fi
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
