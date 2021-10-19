@@ -153,7 +153,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.world_size $world_size \
             --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
-            --num_workers 1 \
+            --num_workers 8 \
             $cmvn_opts \
             --pin_memory
     } &
