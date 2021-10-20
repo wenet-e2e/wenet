@@ -20,18 +20,17 @@ import logging
 import os
 
 import torch
-import torch.distributed as dist
-import torch.optim as optim
 import yaml
-from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
-from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
-from wenet.utils.executor import Executor
+from wenet.utils.checkpoint import load_checkpoint
+
+from wenet.utils.common import get_subsample                                    
+from wenet.utils.common import remove_duplicates_and_blank
 from wenet.utils.file_utils import read_symbol_table
-from wenet.utils.scheduler import WarmupLR
+from wenet.utils.mask import make_pad_mask
 
 def map_words2char(word_list_file):                                             
     word_unit_dict = {}                                                         
