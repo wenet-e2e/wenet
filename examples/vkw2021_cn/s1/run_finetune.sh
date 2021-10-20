@@ -67,8 +67,11 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     for x in finetune_5h; do
         for z in lgv liv stv; do
             [ ! -f data/vkw/label/lab_${z}/${x}/wav_ori.scp ] && \
-                mv data/vkw/label/lab_${z}/${x}/wav.scp data/vkw/label/lab_${z}/${x}/wav_ori.scp && \
-                sed "s/ffmpeg\ -i\ /ffmpeg\ -i\ data\/vkw\/data\/dat_${z}\//g" data/vkw/label/lab_${z}/${x}/wav_ori.scp | cut -d" " -f 1,4 > data/vkw/label/lab_${z}/${x}/wav.scp
+                mv data/vkw/label/lab_${z}/${x}/wav.scp \
+                    data/vkw/label/lab_${z}/${x}/wav_ori.scp && \
+                sed "s/ffmpeg\ -i\ /ffmpeg\ -i\ data\/vkw\/data\/dat_${z}\//g" \
+                    data/vkw/label/lab_${z}/${x}/wav_ori.scp | cut -d" " -f 1,4\
+                     > data/vkw/label/lab_${z}/${x}/wav.scp
         done
         #exit 0
 
@@ -85,10 +88,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # download and transfer to wav.scp
     for x in ${finetune2_set}; do
         cp data/${x}/text data/${x}/text.org
-        paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " data/${x}/text.org | tr -d " ") \
-            > data/${x}/text
+        paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " \
+            data/${x}/text.org | tr -d " ") > data/${x}/text
         rm data/${x}/text.org
-         
+
     done
 
     #exit 0
@@ -127,8 +130,9 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "㕫 2" >> ${dict}
     echo "㖏 3" >> ${dict}
 
-    tools/text2token.py -s 1 -n 1 data/${train_set}/text | cut -f 2- -d" " | tr " " "\n" \
-        | sort | uniq | grep -a -v -e '^\s*$' | grep -P '[\p{Han}]' | awk '{print $0 " " NR+3}' >> ${dict}
+    tools/text2token.py -s 1 -n 1 data/${train_set}/text | cut -f 2- -d" " | \
+        tr " " "\n" | sort | uniq | grep -a -v -e '^\s*$' | grep -P '[\p{Han}]'\
+        | awk '{print $0 " " NR+3}' >> ${dict}
 
     num_token=$(cat $dict | wc -l)
     echo "郎 $(expr $num_token)" >> $dict
@@ -143,11 +147,14 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "Prepare data, prepare requried format"
     for x in ${finetune2_set}; do
         if [ $data_type == "shard" ]; then
-            tools/make_shard_list.py --resample 16000 --num_utts_per_shard $num_utts_per_shard \
-                --num_threads 8 --segments $feat_dir/$x/segments $feat_dir/$x/wav.scp.ori $feat_dir/$x/text \
+            tools/make_shard_list.py --resample 16000 \
+                --num_utts_per_shard $num_utts_per_shard \
+                --num_threads 8 --segments $feat_dir/$x/segments \
+                $feat_dir/$x/wav.scp.ori $feat_dir/$x/text \
                 $(realpath $feat_dir/$x/shards) $feat_dir/$x/data.list
         else
-            tools/make_raw_list.py --segments $feat_dir/$x/segments $feat_dir/$x/wav.scp.ori $feat_dir/$x/text \
+            tools/make_raw_list.py --segments $feat_dir/$x/segments \
+                $feat_dir/$x/wav.scp.ori $feat_dir/$x/text \
                 $feat_dir/$x/data.list
         fi
     done
@@ -184,10 +191,9 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         # the master of a worker.
         rank=$i ###`expr $node_rank \* $num_gpus + $i`
         echo "start training"
-        [ ! -f $checkpoint ] && \                                               
+        [ ! -f $checkpoint ] && \
             cp exp/train_vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char_new/avg_5.pt $checkpoint && \
             cp exp/train_vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char_new/0.yaml $dir/0.yaml
-
         python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
             --data_type $data_type \
@@ -255,13 +261,15 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             else
                 "invalid $y"
             fi
-            ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
+            ./data/vkw/data/vkw/scripts/bin/results_to_score.sh \
+                $new_dir/data/vkw/score/dev_${y}/ecf \
                 $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
                 $new_dir/data/vkw/score/dev_${y}/utter_map \
                 $dir/dev_${y}/kws_results \
                 $new_dir/data/vkw/keyword/kwlist.xml \
                 $new_dir/data/vkw/score/dev_${y}/rttm
-            ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
+            ./data/vkw/data/vkw/scripts/bin/F1.sh \
+                $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
     done
     done
 fi
