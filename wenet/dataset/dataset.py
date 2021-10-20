@@ -116,7 +116,8 @@ class DataList(IterableDataset):
             yield data
 
 
-def Dataset(data_type, data_list_file, symbol_table, conf, partition=True):
+def Dataset(data_type, data_list_file, symbol_table, conf,
+            bpe_model=None, partition=True):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -125,6 +126,7 @@ def Dataset(data_type, data_list_file, symbol_table, conf, partition=True):
 
         Args:
             data_type(str): raw/shard
+            bpe_model(str): model for english bpe part
             partition(bool): whether to do data partition in terms of rank
     """
     assert data_type in ['raw', 'shard']
@@ -137,7 +139,7 @@ def Dataset(data_type, data_list_file, symbol_table, conf, partition=True):
     else:
         dataset = Processor(dataset, processor.parse_raw)
 
-    dataset = Processor(dataset, processor.tokenize, symbol_table)
+    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model)
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 
