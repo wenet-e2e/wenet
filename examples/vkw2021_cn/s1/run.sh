@@ -1,10 +1,7 @@
 #!/bin/bash
 # Copyright 2021 Tencent Inc. (Author: Yougen Yuan).
 # Apach 2.0
-
 set -exo
-#conda activate wenet
-#nvidia-smi -c 3
 
 current_dir=$(pwd)
 cd $current_dir
@@ -258,36 +255,20 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             #[ ! -f $new_dir/data/vkw/score/dev_${y}/utter_map ] && \
             if [ $y == "lgv" ]; then
                 grep "TV1" $keyword_results > $dir/dev_${y}/kws_results
-                ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
-                    $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
-                    $new_dir/data/vkw/score/dev_${y}/utter_map \
-                    $dir/dev_${y}/kws_results \
-                    $new_dir/data/vkw/keyword/kwlist.xml \
-                    $new_dir/data/vkw/score/dev_${y}/rttm
-                ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
             elif [ $y == "liv" ]; then
-
                 grep "sph_live" $keyword_results > $dir/dev_${y}/kws_results
-                ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
-                    $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
-                    $new_dir/data/vkw/score/dev_${y}/utter_map \
-                    $dir/dev_${y}/kws_results \
-                    $new_dir/data/vkw/keyword/kwlist.xml \
-                    $new_dir/data/vkw/score/dev_${y}/rttm
-                ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
-
             elif [ $y == "stv" ]; then
                 grep "sph_video" $keyword_results > $dir/dev_${y}/kws_results
-                ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
-                    $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
-                    $new_dir/data/vkw/score/dev_${y}/utter_map \
-                    $dir/dev_${y}/kws_results \
-                    $new_dir/data/vkw/keyword/kwlist.xml \
-                    $new_dir/data/vkw/score/dev_${y}/rttm
-                ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
             else
                 "invalid $y"
             fi
+            ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
+                $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
+                $new_dir/data/vkw/score/dev_${y}/utter_map \
+                $dir/dev_${y}/kws_results \
+                $new_dir/data/vkw/keyword/kwlist.xml \
+                $new_dir/data/vkw/score/dev_${y}/rttm
+            ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
     done
     done
 fi

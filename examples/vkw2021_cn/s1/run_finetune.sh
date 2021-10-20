@@ -2,10 +2,6 @@
 # Copyright 2021 Tencent Inc. (Author: Yougen Yuan).
 # Apach 2.0
 
-set -exo
-#conda activate wenet
-#nvidia-smi -c 3
-
 current_dir=$(pwd)
 cd $current_dir
 local=$current_dir/local
@@ -23,7 +19,7 @@ export CUDA_VISIBLE_DEVICES="0"
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
-stage=5 # start from 0 if you need to start from data preparation
+stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
@@ -53,9 +49,9 @@ finetune2_set=combine_finetune_5h
 # 4. conf/train_unified_transformer.yaml: Unified dynamic chunk transformer
 # 5. conf/train_conformer_no_pos.yaml: Conformer without relative positional encoding
 name=vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char
-train_config=conf/train_${name}.yaml #conf/train_12conformer_hs2048_output512_att4_conv2d_char.yaml
+train_config=conf/combine_finetune_5h_${name}.yaml #conf/train_12conformer_hs2048_output512_att4_conv2d_char.yaml
 cmvn=true
-dir=exp/train_${name}_finetune_5h
+dir=exp/combine_finetune_5h_${name}
 checkpoint=$dir/0.pt
 
 # use average_checkpoint will get better result
@@ -252,36 +248,20 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             #[ ! -f $new_dir/data/vkw/score/dev_${y}/utter_map ] && \
             if [ $y == "lgv" ]; then
                 grep "TV1" $keyword_results > $dir/dev_${y}/kws_results
-                ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
-                    $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
-                    $new_dir/data/vkw/score/dev_${y}/utter_map \
-                    $dir/dev_${y}/kws_results \
-                    $new_dir/data/vkw/keyword/kwlist.xml \
-                    $new_dir/data/vkw/score/dev_${y}/rttm
-                ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
             elif [ $y == "liv" ]; then
-
                 grep "sph_live" $keyword_results > $dir/dev_${y}/kws_results
-                ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
-                    $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
-                    $new_dir/data/vkw/score/dev_${y}/utter_map \
-                    $dir/dev_${y}/kws_results \
-                    $new_dir/data/vkw/keyword/kwlist.xml \
-                    $new_dir/data/vkw/score/dev_${y}/rttm
-                ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
-
             elif [ $y == "stv" ]; then
                 grep "sph_video" $keyword_results > $dir/dev_${y}/kws_results
-                ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
-                    $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
-                    $new_dir/data/vkw/score/dev_${y}/utter_map \
-                    $dir/dev_${y}/kws_results \
-                    $new_dir/data/vkw/keyword/kwlist.xml \
-                    $new_dir/data/vkw/score/dev_${y}/rttm
-                ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
             else
                 "invalid $y"
             fi
+            ./data/vkw/data/vkw/scripts/bin/results_to_score.sh $new_dir/data/vkw/score/dev_${y}/ecf \
+                $new_dir/data/vkw/label/lab_${y}/dev_5h/segments \
+                $new_dir/data/vkw/score/dev_${y}/utter_map \
+                $dir/dev_${y}/kws_results \
+                $new_dir/data/vkw/keyword/kwlist.xml \
+                $new_dir/data/vkw/score/dev_${y}/rttm
+            ./data/vkw/data/vkw/scripts/bin/F1.sh $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
     done
     done
 fi
