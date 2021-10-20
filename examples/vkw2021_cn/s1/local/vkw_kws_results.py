@@ -247,15 +247,15 @@ if __name__ == '__main__':
                 for index_j in range(len(word_seq)):
                     for keyword in word_unit_list:
                         keyword_len = len(word_unit_dict[keyword])
-                        if index_j+keyword_len > len(word_seq):
+                        if index_j + keyword_len > len(word_seq):
                             continue
-                        if (word_seq[index_j:index_j+keyword_len] ==
-                               word_unit_dict[keyword]):
+                        if (word_seq[index_j:index_j + keyword_len] ==
+                            word_unit_dict[keyword]):
                             f_keyword_results.write("{} {} {} {} {}\n".format(
                                 word_id_dict[keyword],
                                 i,
                                 word_time[index_j][0],
-                                word_time[index_j+keyword_len-1][1],
+                                word_time[index_j + keyword_len - 1][1],
                                 0.0))
             f_keyword_results.flush()
     f_keyword_results.close()
