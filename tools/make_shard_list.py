@@ -42,14 +42,12 @@ def write_tar_file(data_list,
     with tarfile.open(tar_file, "w") as tar:
         prev_wav = None
         for item in data_list:
-            print(item)
             if no_segments:
                 key, txt, wav = item
             else:
                 key, txt, wav, start, end = item
 
             suffix = wav.split('.')[-1]
-            #print(suffix)
             assert suffix in AUDIO_FORMAT_SETS
             if no_segments:
                 ts = time.time()
@@ -65,13 +63,12 @@ def write_tar_file(data_list,
                 start = int(start * sample_rate)
                 end = int(end * sample_rate)
                 audio = waveforms[:1, start:end]
-                print(len(audio[0]), start, end, sample_rate)
+
                 # resample
                 if sample_rate != resample:
                     audio = torchaudio.transforms.Resample(
                         sample_rate, resample)(audio)
 
-                print(len(audio[0]), start, end, resample)
                 ts = time.time()
                 f = io.BytesIO()
                 sox.save(f, audio, resample, format="wav", bits_per_sample=16)
@@ -81,7 +78,6 @@ def write_tar_file(data_list,
                 data = f.read()
                 save_time += (time.time() - ts)
 
-            print(data)
             assert isinstance(txt, str)
             ts = time.time()
             txt_file = key + '.txt'
@@ -95,8 +91,6 @@ def write_tar_file(data_list,
             wav_data = io.BytesIO(data)
             wav_info = tarfile.TarInfo(wav_file)
             wav_info.size = len(data)
-            print(wav_info, wav_data)
-            #quit()
             tar.addfile(wav_info, wav_data)
             write_time += (time.time() - ts)
         logging.info('read {} save {} write {}'.format(read_time, save_time,
@@ -161,7 +155,6 @@ if __name__ == '__main__':
                 wav_key, start, end = segments_table[key]
                 wav = wav_table[wav_key]
                 data.append((key, txt, wav, start, end))
-                #print(key, txt, wav, start, end)
 
     num = args.num_utts_per_shard
     chunks = [data[i:i + num] for i in range(0, len(data), num)]
@@ -176,7 +169,6 @@ if __name__ == '__main__':
         tar_file = os.path.join(args.shards_dir,
                                 '{}_{:09d}.tar'.format(args.prefix, i))
         shards_list.append(tar_file)
-        #print(chunk, no_segments, tar_file, args.resample, i, num_chunks)
         pool.apply_async(
             write_tar_file,
             (chunk, no_segments, tar_file, args.resample, i, num_chunks))
