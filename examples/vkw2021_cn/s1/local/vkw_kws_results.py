@@ -170,6 +170,14 @@ if __name__ == '__main__':
                                 rank=args.rank)
 
     symbol_table = read_symbol_table(args.symbol_table)
+    # Load dict
+    char_dict = {}
+    with open(args.symbol_table, mode='r') as fin:
+        for line in fin:
+            arr = line.strip().split()
+            assert len(arr) == 2
+            char_dict[int(arr[1])] = arr[0]
+    eos = len(char_dict) - 1
 
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
@@ -219,25 +227,22 @@ if __name__ == '__main__':
             batch_size = encoder_out.size(0)
             ctc_probs = model.ctc.log_softmax(
                 encoder_out)  # (1, maxlen, vocab_size)
-
             encoder_out_lens = encoder_mask.squeeze(1).sum(1)
             topk_prob, topk_index = ctc_probs.topk(1, dim=2)  # (B, maxlen, 1)
             topk_index = topk_index.view(batch_size, maxlen)  # (B, maxlen)
             mask = make_pad_mask(encoder_out_lens)  # (B, maxlen)
             topk_index = topk_index.masked_fill_(mask, eos)  # (B, maxlen)
             alignment = [hyp.tolist() for hyp in topk_index]
-
             hyps = [remove_duplicates_and_blank(hyp) for hyp in alignment]
             for index, i in enumerate(key):
                 content = []
-                for w in hyps[index]:
-                    if w == eos:
-                        break
-                    content.append(char_dict[w])
-                print('{} {}\n'.format(i, " ".join(content)))
+                if len(hyps[index]) > 0:
+                    for w in hyps[index]:
+                        if w == eos:
+                            break
+                        content.append(char_dict[w])
                 f_ctc_results.write('{} {}\n'.format(i, " ".join(content)))
             f_ctc_results.flush()
-
             for index, i in enumerate(key):
                 timestamp = get_frames_timestamp(alignment[index])
                 subsample = get_subsample(configs)
