@@ -250,7 +250,7 @@ if __name__ == '__main__':
                         if index_j + keyword_len > len(word_seq):
                             continue
                         if (word_seq[index_j:index_j + keyword_len] ==
-                               word_unit_dict[keyword]):
+                                word_unit_dict[keyword]):
                             f_keyword_results.write("{} {} {} {} {}\n".format(
                                 word_id_dict[keyword],
                                 i,
