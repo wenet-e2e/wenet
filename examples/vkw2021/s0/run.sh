@@ -93,20 +93,13 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     mkdir -p $(dirname $dict)
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
-    echo "㕫 2" >> ${dict}
-    echo "㖏 3" >> ${dict}
-
+ 
     tools/text2token.py -s 1 -n 1 $data/${train_set}/text | cut -f 2- -d" " | \
         tr " " "\n" | sort | uniq | grep -a -v -e '^\s*$' | grep -P '[\p{Han}]'\
-        | awk '{print $0 " " NR+3}' >> ${dict}
+        | awk '{print $0 " " NR+1}' >> ${dict}
 
     num_token=$(cat $dict | wc -l)
-    echo "郎 $(expr $num_token)" >> $dict
-    echo "凉 $(expr $num_token + 1)" >> $dict
-    echo "氪 $(expr $num_token + 2)" >> $dict
-    echo "宓 $(expr $num_token + 3)" >> $dict
-    echo "OK $(expr $num_token + 4)" >> $dict
-    echo "<sos/eos> $(expr $num_token + 5)" >> $dict # <eos>
+    echo "<sos/eos> $num_token" >> $dict # <eos>
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
