@@ -81,3 +81,118 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     done
     #exit 0
 fi
+
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+    echo "stage 1: generate segmented wav.scp and compute cmvn"
+    ## For wav feature, just copy the data. Fbank extraction is done in training
+    mkdir -p $feat_dir
+    for x in ${dev_set} ${train_set}; do
+        mkdir -p $feat_dir/$x
+        for f in text segments wav.scp; do
+            cp -r data/$x/$f $feat_dir/$x/$f
+        done
+    done
+    for x in ${dev_set} ${train_set}; do
+        [ ! -f $feat_dir/$x/wav.scp.ori ] && \
+            mv $feat_dir/$x/wav.scp $feat_dir/$x/wav.scp.ori && \
+            python tools/segment.py --segments $feat_dir/$x/segments \
+                --input $feat_dir/$x/wav.scp.ori \
+                --output $feat_dir/$x/wav.scp
+    done
+
+    ### generate global_cmvn using training set
+    tools/compute_cmvn_stats.py --num_workers 12 --train_config $train_config \
+        --in_scp $feat_dir/${train_set}/wav.scp \
+        --out_cmvn $feat_dir/$train_set/global_cmvn
+    #exit 0
+fi
+
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+    # Make train dict
+    echo "Make a dictionary"
+    mkdir -p $(dirname $dict)
+    echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
+    echo "<unk> 1" >> ${dict} # <unk> must be 1
+    echo "㕫 2" >> ${dict}
+    echo "㖏 3" >> ${dict}
+
+    tools/text2token.py -s 1 -n 1 data/${train_set}/text | cut -f 2- -d" " | \
+        tr " " "\n" | sort | uniq | grep -a -v -e '^\s*$' | grep -P '[\p{Han}]'\
+        | awk '{print $0 " " NR+3}' >> ${dict}
+
+    num_token=$(cat $dict | wc -l)
+    echo "郎 $(expr $num_token)" >> $dict
+    echo "凉 $(expr $num_token + 1)" >> $dict
+    echo "氪 $(expr $num_token + 2)" >> $dict
+    echo "宓 $(expr $num_token + 3)" >> $dict
+    echo "OK $(expr $num_token + 4)" >> $dict
+    echo "<sos/eos> $(expr $num_token + 5)" >> $dict # <eos>
+fi
+
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+    echo "Prepare data, prepare requried format"
+    for x in ${dev_set} ${train_set}; do
+        if [ $data_type == "shard" ]; then
+            tools/make_shard_list.py --resample 16000 \
+                --num_utts_per_shard $num_utts_per_shard \
+                --num_threads 8 --segments $feat_dir/$x/segments \
+                $feat_dir/$x/wav.scp.ori $feat_dir/$x/text \
+                $(realpath $feat_dir/$x/shards) $feat_dir/$x/data.list
+        else
+            tools/make_raw_list.py --segments $feat_dir/$x/segments \
+            $feat_dir/$x/wav.scp.ori $feat_dir/$x/text $feat_dir/$x/data.list
+        fi
+    done
+fi
+
+if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
+    # Training
+    mkdir -p $dir
+    INIT_FILE=$dir/ddp_init
+    # You had better rm it manually before you start run.sh on first node.
+    # rm -f $INIT_FILE # delete old one before starting
+    init_method=file://$(readlink -f $INIT_FILE)
+    echo "$0: init method is $init_method"
+    # The number of gpus runing on each node/machine
+    num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
+    # Use "nccl" if it works, otherwise use "gloo"
+    dist_backend="gloo"
+    # The total number of processes/gpus, so that the master knows
+    # how many workers to wait for.
+    # More details about ddp can be found in
+    # https://pytorch.org/tutorials/intermediate/dist_tuto.html
+    world_size=`expr $num_gpus \* $num_nodes`
+    echo "total gpus is: $world_size"
+    cmvn_opts=
+    $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
+    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
+    # train.py will write $train_config to $dir/train.yaml with model input
+    # and output dimension, train.yaml will be used for inference or model
+    # export later
+    for ((i = 0; i < $num_gpus; ++i)); do
+    {
+        gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
+        # Rank of each gpu/process used for knowing whether it is
+        # the master of a worker.
+        rank=$i ###`expr $node_rank \* $num_gpus + $i`
+        echo "start training"
+        python wenet/bin/train.py --gpu $gpu_id \
+            --config $train_config \
+            --data_type $data_type \
+            --symbol_table $dict \
+            --train_data $feat_dir/$train_set/data.list \
+            --cv_data $feat_dir/${dev_set}/data.list \
+            ${checkpoint:+--checkpoint $checkpoint} \
+            --model_dir $dir \
+            --ddp.init_method $init_method \
+            --ddp.world_size $world_size \
+            --ddp.rank $rank \
+            --ddp.dist_backend $dist_backend \
+            --num_workers 4 \
+            $cmvn_opts \
+            --pin_memory
+    } &
+    done
+    wait
+    exit 0
+fi
