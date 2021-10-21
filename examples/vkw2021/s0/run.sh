@@ -3,10 +3,6 @@
 # Apach 2.0
 set -exo
 
-current_dir=$(pwd)
-cd $current_dir
-local=$current_dir/local
-
 . ./path.sh || exit 1;
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
@@ -33,7 +29,7 @@ data=$current_dir/data
 
 nj=10
 feat_dir=raw_wav
-dict=data/dict/lang_char2.txt
+dict=data/dict/lang_char.txt
 data_type=raw # raw or shard
 num_utts_per_shard=1000
 
@@ -70,21 +66,17 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
             [ ! -f data/vkw/label/lab_${z}/${x}/wav_ori.scp ] && \
                 mv data/vkw/label/lab_${z}/${x}/wav.scp \
                     data/vkw/label/lab_${z}/${x}/wav_ori.scp && \
-                sed "s/ffmpeg\ -i\ /ffmpeg\ -i\ data\/vkw\/data\/dat_${z}\//g" \
-                    data/vkw/label/lab_${z}/${x}/wav_ori.scp | \
-                    cut -d" " -f 1,4 > data/vkw/label/lab_${z}/${x}/wav.scp
+                cut -d" " -f -f 1,4 data/vkw/label/lab_${z}/${x}/wav_ori.scp |
+                    > data/vkw/label/lab_${z}/${x}/wav.scp 
         done
-        #exit 0
-
         y=`echo $x | cut -d "_" -f 1`
-        rm -rf data/combine_${y}
-        [ ! -f data/combine_${y}/wav.scp ] && \
-        tools/data/combine_data.sh data/combine_${y} \
-            data/vkw/label/lab_lgv/${x} \
-            data/vkw/label/lab_liv/${x} \
-            data/vkw/label/lab_stv/${x}
+        mkdir -p combine_${y}
+        for f in text wav.scp segments; do
+            for z in lgv liv stv; do
+                cat data/vkw/label/lab_${z}/${x}/$f
+            done > combine_${y}/$f
+        done
     done
-
     # remove the space between the text labels for Mandarin dataset
     # download and transfer to wav.scp
     for x in ${dev_set} ${train_set}; do
