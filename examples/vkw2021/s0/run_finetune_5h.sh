@@ -83,7 +83,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "Prepare data, prepare requried format"
     tools/make_raw_list.py --segments $data/$finetune2_set/segments \
         $data/$finetune2_set/wav.scp $data/$finetune2_set/text $data/$finetune2_set/data.list
-
+    #exit 0
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
@@ -196,3 +196,4 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
     done
 fi
+
