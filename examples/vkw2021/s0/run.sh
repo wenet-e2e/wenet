@@ -61,22 +61,22 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-    for x in dev_5h; do
-        for z in lgv liv stv; do
-            [ ! -f data/vkw/label/lab_${z}/${x}/wav_ori.scp ] && \
-                mv data/vkw/label/lab_${z}/${x}/wav.scp \
-                    data/vkw/label/lab_${z}/${x}/wav_ori.scp && \
-                cut -d" " -f -f 1,4 data/vkw/label/lab_${z}/${x}/wav_ori.scp |\
-                    > data/vkw/label/lab_${z}/${x}/wav.scp 
-        done
-        y=`echo $x | cut -d "_" -f 1`
-        mkdir -p combine_${y}
-        for f in text wav.scp segments; do
-            for z in lgv liv stv; do
-                cat data/vkw/label/lab_${z}/${x}/$f
-            done > combine_${y}/$f
-        done
+    x=dev_5h
+    for z in lgv liv stv; do
+        [ ! -f data/vkw/label/lab_${z}/${x}/wav_ori.scp ] && \
+            mv data/vkw/label/lab_${z}/${x}/wav.scp \
+                data/vkw/label/lab_${z}/${x}/wav_ori.scp && \
+            cut -d" " -f -f 1,4 data/vkw/label/lab_${z}/${x}/wav_ori.scp |\
+                > data/vkw/label/lab_${z}/${x}/wav.scp 
     done
+    y=`echo $x | cut -d "_" -f 1`
+    mkdir -p combine_${y}
+    for f in text wav.scp segments; do
+        for z in lgv liv stv; do
+            cat data/vkw/label/lab_${z}/${x}/$f
+        done > combine_${y}/$f
+    done
+    
     # remove the space between the text labels for Mandarin dataset
     # download and transfer to wav.scp
     for x in ${dev_set} ${train_set}; do
