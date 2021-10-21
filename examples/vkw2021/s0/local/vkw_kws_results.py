@@ -32,6 +32,7 @@ from wenet.utils.common import remove_duplicates_and_blank
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.mask import make_pad_mask
 
+
 def map_words2char(word_list_file):
     word_unit_dict = {}
     word_id_dict = {}
@@ -43,6 +44,7 @@ def map_words2char(word_list_file):
         word_unit_dict[keyword] = keyword_char
         word_id_dict[keyword] = ids
     return word_id_dict, word_unit_dict
+
 
 def get_frames_timestamp(alignment):
     # convert alignment to a praat format, which is a doing phonetics
@@ -70,6 +72,7 @@ def get_frames_timestamp(alignment):
         start = end
     return timestamp
 
+
 def get_labformat_frames(timestamp, subsample, char_dict):
     begin = 0
     duration = 0
@@ -91,6 +94,7 @@ def get_labformat_frames(timestamp, subsample, char_dict):
             word_time.append([begin, begin + duration])
         begin = begin + duration
     return word_seq, word_time
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training your network')
@@ -146,9 +150,7 @@ if __name__ == '__main__':
     parser.add_argument('--keyword_results',
                         required=True,
                         help='keyword results')
-    parser.add_argument('--ctc_results',
-                        required=True,
-                        help='ctc results')
+    parser.add_argument('--ctc_results', required=True, help='ctc results')
 
     args = parser.parse_args()
 
@@ -246,22 +248,19 @@ if __name__ == '__main__':
             for index, i in enumerate(key):
                 timestamp = get_frames_timestamp(alignment[index])
                 subsample = get_subsample(configs)
-                word_seq, word_time = get_labformat_frames(timestamp,
-                                                           subsample,
-                                                           char_dict)
+                word_seq, word_time = get_labformat_frames(
+                    timestamp, subsample, char_dict)
                 for index_j in range(len(word_seq)):
                     for keyword in word_unit_list:
                         keyword_len = len(word_unit_dict[keyword])
                         if index_j + keyword_len > len(word_seq):
                             continue
-                        if (word_seq[index_j:index_j + keyword_len] ==
-                                word_unit_dict[keyword]):
+                        if (word_seq[index_j:index_j +
+                                     keyword_len] == word_unit_dict[keyword]):
                             f_keyword_results.write("{} {} {} {} {}\n".format(
-                                word_id_dict[keyword],
-                                i,
+                                word_id_dict[keyword], i,
                                 word_time[index_j][0],
-                                word_time[index_j + keyword_len - 1][1],
-                                0.0))
+                                word_time[index_j + keyword_len - 1][1], 0.0))
             f_keyword_results.flush()
     f_keyword_results.close()
     f_ctc_results.close()
