@@ -86,6 +86,4 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         rm data/${x}/text.org
     done
     #exit 0
-
 fi
-
