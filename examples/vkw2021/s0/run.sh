@@ -19,7 +19,6 @@ node_rank=0
 data=data
 dict=data/dict/lang_char.txt
 data_type=raw # raw or shard
-num_utts_per_shard=1000
 
 train_set=train
 dev_set=combine_dev
