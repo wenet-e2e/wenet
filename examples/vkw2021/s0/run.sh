@@ -36,11 +36,6 @@ num_utts_per_shard=1000
 train_set=train
 dev_set=combine_dev
 # Optional train_config
-# 1. conf/train_transformer.yaml: Standard transformer
-# 2. conf/train_conformer.yaml: Standard conformer
-# 3. conf/train_unified_conformer.yaml: Unified dynamic chunk causal conformer
-# 4. conf/train_unified_transformer.yaml: Unified dynamic chunk transformer
-# 5. conf/train_conformer_no_pos.yaml: Conformer without relative positional encoding
 name=vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char
 train_config=conf/train_${name}.yaml #conf/train_12conformer_hs2048_output512_att4_conv2d_char.yaml
 cmvn=true
@@ -67,7 +62,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
             mv data/vkw/label/lab_${z}/${x}/wav.scp \
                 data/vkw/label/lab_${z}/${x}/wav_ori.scp && \
             cut -d " " -f 1,4 data/vkw/label/lab_${z}/${x}/wav_ori.scp \
-                > data/vkw/label/lab_${z}/${x}/wav.scp 
+                > data/vkw/label/lab_${z}/${x}/wav.scp
     done
     y=`echo $x | cut -d "_" -f 1`
     mkdir -p combine_${y}
@@ -76,7 +71,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
             cat data/vkw/label/lab_${z}/${x}/$f
         done > combine_${y}/$f
     done
-    
     # remove the space between the text labels for Mandarin dataset
     # download and transfer to wav.scp
     for x in ${dev_set} ${train_set}; do
