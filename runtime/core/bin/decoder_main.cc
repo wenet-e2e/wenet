@@ -16,6 +16,7 @@
 #include "utils/utils.h"
 
 DEFINE_bool(simulate_streaming, false, "simulate streaming input");
+DEFINE_bool(output_nbest, false, "output n-best of decode result");
 DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(result, "", "result output file");
@@ -106,7 +107,19 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << wav.first << " Final result: " << final_result << std::endl;
     LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time
               << "ms.";
-    buffer << wav.first << " " << final_result << std::endl;
+
+    if (!FLAGS_output_nbest) {
+      buffer << wav.first << " " << final_result << std::endl;
+    } else {
+      buffer << "wav " << wav.first << std::endl;
+      auto &results = decoder.result();
+      for (auto &r : results) {
+        if (r.sentence.empty())
+          continue;
+        buffer << "candidate " << r.score << " " << r.sentence << std::endl;
+      }
+    }
+
     total_waves_dur += wave_dur;
     total_decode_time += decode_time;
   }

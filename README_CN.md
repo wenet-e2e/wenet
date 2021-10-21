@@ -39,7 +39,7 @@ docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/w
 
 **实时识别**
 
-使用浏览器打开文件`wenet/runtime/server/x86/web/templates/index.html`，在 `WebSocket URL` 中填入 `ws://127.0.0.1:10086`, 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
+使用浏览器打开文件`wenet/runtime/server/x86/web/templates/index.html`，在 `WebSocket URL` 中填入 `ws://127.0.0.1:10086` (若在windows下通过wsl2运行docker,  则使用`ws://localhost:10086`) , 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
 
 ![Runtime web](/docs/images/runtime_web.png)
 

@@ -5,7 +5,7 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6"
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
 # communication. More details can be found in
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
@@ -93,21 +93,11 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    nj=32
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
-        tools/format_data.sh --nj ${nj} \
-            --feat-type wav --feat $feat_dir/$x/wav.scp \
-            $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
-
-        tools/remove_longshortdata.py \
-            --min_input_len 0.5 \
-            --max_input_len 20 \
-            --max_output_len 400 \
-            --max_output_input_ratio 10.0 \
-            --data_file $feat_dir/$x/format.data.tmp \
-            --output_data_file $feat_dir/$x/format.data
+        tools/make_raw_list.py $feat_dir/$x/wav.scp $feat_dir/$x/text \
+                $feat_dir/$x/data.list
     done
 fi
 
@@ -122,7 +112,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # The number of gpus runing on each node/machine
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
-    dist_backend="nccl"
+    dist_backend="gloo"
     # The total number of processes/gpus, so that the master knows
     # how many workers to wait for.
     # More details about ddp can be found in
@@ -143,8 +133,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     rank=`expr $node_rank \* $num_gpus + $i`
     python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
-            --train_data $feat_dir/$train_set/format.data \
-            --cv_data $feat_dir/dev/format.data \
+            --data_type raw \
+            --symbol_table $dict \
+            --train_data $feat_dir/$train_set/data.list \
+            --cv_data $feat_dir/dev/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
@@ -180,7 +172,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         python wenet/bin/recognize.py --gpu 0 \
             --mode $mode \
             --config $dir/train.yaml \
-            --test_data $feat_dir/test/format.data \
+            --data_type raw \
+            --test_data $feat_dir/test/data.list \
             --checkpoint $decode_checkpoint \
             --beam_size 10 \
             --batch_size 1 \
