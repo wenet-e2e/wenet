@@ -161,3 +161,57 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     wait
     exit 0
 fi
+
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+    if [ ${average_checkpoint} == true ]; then
+        decode_checkpoint=$dir/avg_${average_num}.pt
+        echo "do model average and final checkpoint is $decode_checkpoint"
+        [ ! -f $decode_checkpoint ] && \
+        python3 wenet/bin/average_model.py \
+            --dst_model $decode_checkpoint \
+            --src_path $dir  \
+            --num ${average_num} \
+            --val_best
+    fi
+    # Test model, please specify the model you want to use by --checkpoint
+    sets=${dev_set}
+    keywords_list=$data/vkw/keyword/kwlist
+    ali_format=$feat_dir/${sets}/data.list
+    checkpoint=$dir/avg_${average_num}.pt
+    keyword_results=$dir/keyword_results_${sets}
+    ctc_results=$dir/ctc_results_${sets}
+    python3 $local/vkw_kws_results.py --gpu 0 \
+        --config $dir/train.yaml \
+        --data_type $data_type \
+        --symbol_table $dict \
+        --num_workers 4 \
+        --prefetch 32 \
+        --input_data $feat_dir/${dev_set}/data.list \
+        --checkpoint $checkpoint \
+        --keyword_unit_dict $keywords_list \
+        --keyword_results $keyword_results \
+        --ctc_results $ctc_results
+
+    for y in "stv" "lgv" "liv"; do
+        mkdir -p $dir/dev_${y}
+        #[ ! -f data/vkw/score/dev_${y}/utter_map ] && \
+        if [ $y == "lgv" ]; then
+            grep "TV1" $keyword_results > $dir/dev_${y}/kws_results
+        elif [ $y == "liv" ]; then
+            grep "sph_live" $keyword_results > $dir/dev_${y}/kws_results
+        elif [ $y == "stv" ]; then
+            grep "sph_video" $keyword_results > $dir/dev_${y}/kws_results
+        else
+            "invalid $y"
+        fi
+        ./data/vkw/data/vkw/scripts/bin/results_to_score.sh \
+            data/vkw/score/dev_${y}/ecf \
+            data/vkw/label/lab_${y}/dev_5h/segments \
+            data/vkw/score/dev_${y}/utter_map \
+            $dir/dev_${y}/kws_results \
+            data/vkw/keyword/kwlist.xml \
+            data/vkw/score/dev_${y}/rttm
+        ./data/vkw/data/vkw/scripts/bin/F1.sh \
+            $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
+    done
+fi
