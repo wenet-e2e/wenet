@@ -66,7 +66,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         [ ! -f data/vkw/label/lab_${z}/${x}/wav_ori.scp ] && \
             mv data/vkw/label/lab_${z}/${x}/wav.scp \
                 data/vkw/label/lab_${z}/${x}/wav_ori.scp && \
-            cut -d" " -f -f 1,4 data/vkw/label/lab_${z}/${x}/wav_ori.scp |\
+            cut -d " " -f 1,4 data/vkw/label/lab_${z}/${x}/wav_ori.scp \
                 > data/vkw/label/lab_${z}/${x}/wav.scp 
     done
     y=`echo $x | cut -d "_" -f 1`
