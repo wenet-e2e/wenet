@@ -22,11 +22,12 @@ data_type=raw # raw or shard
 
 train_set=train
 dev_set=combine_dev
+finetune2_set=combine_finetune_5h
 # Optional train_config
 name=vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char
-train_config=conf/train_${name}.yaml #conf/train_12conformer_hs2048_output512_att4_conv2d_char.yaml
+train_config=conf/${finetune2_set}_${name}.yaml #conf/train_12conformer_hs2048_output512_att4_conv2d_char.yaml
 cmvn=true
-dir=exp/train_${name}_new
+dir=exp/${finetune2_set}_${name}_new
 checkpoint= #$dir/0.pt
 
 # use average_checkpoint will get better result
@@ -43,7 +44,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-    x=dev_5h
+    x=finetune_5h
     for z in lgv liv stv; do
         [ ! -f data/vkw/label/lab_${z}/${x}/wav_ori.scp ] && \
             mv data/vkw/label/lab_${z}/${x}/wav.scp \
@@ -60,53 +61,28 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     done
     # remove the space between the text labels for Mandarin dataset
     # download and transfer to wav.scp
-    for x in ${dev_set} ${train_set}; do
-        cp data/${x}/text data/${x}/text.org
-        paste -d " " <(cut -f 1 -d" " data/${x}/text.org) <(cut -f 2- -d" " \
-            data/${x}/text.org | tr -d " ") > data/${x}/text
-        rm data/${x}/text.org
-    done
+    cp data/${finetune2_set}/text data/${finetune2_set}/text.org
+    paste -d " " <(cut -f 1 -d" " data/${finetune2_set}/text.org) <(cut -f 2- -d" " \
+        data/${finetune2_set}/text.org | tr -d " ") > data/${finetune2_set}/text
+    rm data/${finetune2_set}/text.org
     #exit 0
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "stage 1: generate segmented wav.scp and compute cmvn"
     ## For wav feature, just copy the data. Fbank extraction is done in training
-    for x in ${dev_set} ${train_set}; do
-        [ ! -f $data/$x/segmentd_wav.scp ] && \
-            python tools/segment.py --segments $data/$x/segments \
-                --input $data/$x/wav.scp \
-                --output $data/$x/segmented_wav.scp
-    done
-
-    ### generate global_cmvn using training set
-    tools/compute_cmvn_stats.py --num_workers 12 --train_config $train_config \
-        --in_scp $data/${train_set}/segmented_wav.scp \
-        --out_cmvn $data/$train_set/global_cmvn
+    [ ! -f $data/$finetune2_set/segmentd_wav.scp ] && \
+        python tools/segment.py --segments $data/$finetune2_set/segments \
+            --input $data/$finetune2_set/wav.scp \
+            --output $data/$finetune2_set/segmented_wav.scp
     #exit 0
-fi
-
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    # Make train dict
-    echo "Make a dictionary"
-    mkdir -p $(dirname $dict)
-    echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
-    echo "<unk> 1" >> ${dict} # <unk> must be 1
-
-    tools/text2token.py -s 1 -n 1 $data/${train_set}/text | cut -f 2- -d" " | \
-        tr " " "\n" | sort | uniq | grep -a -v -e '^\s*$' | grep -P '[\p{Han}]'\
-        | awk '{print $0 " " NR+1}' >> ${dict}
-
-    num_token=$(cat $dict | wc -l)
-    echo "<sos/eos> $num_token" >> $dict # <eos>
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "Prepare data, prepare requried format"
-    for x in ${dev_set} ${train_set}; do
-        tools/make_raw_list.py --segments $data/$x/segments \
-            $data/$x/wav.scp $data/$x/text $data/$x/data.list
-    done
+    tools/make_raw_list.py --segments $data/$finetune2_set/segments \
+        $data/$finetune2_set/wav.scp $data/$finetune2_set/text $data/$finetune2_set/data.list
+    #exit 0
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
@@ -140,11 +116,16 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         # the master of a worker.
         rank=$i ###`expr $node_rank \* $num_gpus + $i`
         echo "start training"
+        [ ! -f exp/train_vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char_new/avg_5.pt ] && \
+            echo "Please use a pretrained model for finetuning" && exit 0
+        [ ! -f $checkpoint ] && \
+            cp exp/train_vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char_new/avg_5.pt $checkpoint && \
+            cp exp/train_vkw_bidirect_12conformer_hs2048_output256_att4_conv2d_char_new/0.yaml $dir/0.yaml
         python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
             --data_type $data_type \
             --symbol_table $dict \
-            --train_data $data/$train_set/data.list \
+            --train_data $data/${finetune2_set}/data.list \
             --cv_data $data/${dev_set}/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
@@ -215,7 +196,3 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     done
 fi
 
-if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-    echo "adding 5h finetune data for each scenario to obtain better results"
-    $local/run_finetune_5h.sh
-fi
