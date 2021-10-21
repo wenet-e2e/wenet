@@ -22,7 +22,7 @@ fi
 data=$1
 
 if [ ! -s $data/utt2dur ]; then
-  local/get_utt2dur.sh $data 1>&2 || exit 1;
+  tools/wav_to_duration.sh $data 1>&2 || exit 1;
 fi
 
 # <utt-id> <utt-id> 0 <utt-dur>
