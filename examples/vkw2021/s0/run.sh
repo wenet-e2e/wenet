@@ -1,34 +1,22 @@
 #!/bin/bash
 # Copyright 2021 Tencent Inc. (Author: Yougen Yuan).
 # Apach 2.0
-set -exo
 
 . ./path.sh || exit 1;
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-#export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-
-# The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
-# communication. More details can be found in
-# https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
-# export NCCL_SOCKET_IFNAME=ens4f1
-export NCCL_DEBUG=INFO
-stage=-1 # start from 0 if you need to start from data preparation
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+stage=-1
 stop_stage=0
-# The num of nodes or machines used for multi-machine training
-# Default 1 for single machine/node
-# NFS will be needed if you want run multi-machine training
+
+# The num of nodes
 num_nodes=1
-# The rank of each node or machine, range from 0 to num_nodes -1
-# The first node/machine sets node_rank 0, the second one sets node_rank 1
-# the third one set node_rank 2, and so on. Default 0
+# The rank of current node
 node_rank=0
+
 # data
 data=data
-
-nj=10
-feat_dir=raw_wav
 dict=data/dict/lang_char.txt
 data_type=raw # raw or shard
 num_utts_per_shard=1000
@@ -85,25 +73,17 @@ fi
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "stage 1: generate segmented wav.scp and compute cmvn"
     ## For wav feature, just copy the data. Fbank extraction is done in training
-    mkdir -p $feat_dir
     for x in ${dev_set} ${train_set}; do
-        mkdir -p $feat_dir/$x
-        for f in text segments wav.scp; do
-            cp -r data/$x/$f $feat_dir/$x/$f
-        done
-    done
-    for x in ${dev_set} ${train_set}; do
-        [ ! -f $feat_dir/$x/wav.scp.ori ] && \
-            mv $feat_dir/$x/wav.scp $feat_dir/$x/wav.scp.ori && \
-            python tools/segment.py --segments $feat_dir/$x/segments \
-                --input $feat_dir/$x/wav.scp.ori \
-                --output $feat_dir/$x/wav.scp
+        [ ! -f $data/$x/segmentd_wav.scp ] && \
+            python tools/segment.py --segments $data/$x/segments \
+                --input $data/$x/wav.scp \
+                --output $data/$x/segmented_wav.scp
     done
 
     ### generate global_cmvn using training set
     tools/compute_cmvn_stats.py --num_workers 12 --train_config $train_config \
-        --in_scp $feat_dir/${train_set}/wav.scp \
-        --out_cmvn $feat_dir/$train_set/global_cmvn
+        --in_scp $data/${train_set}/segmented_wav.scp \
+        --out_cmvn $data/$train_set/global_cmvn
     #exit 0
 fi
 
@@ -116,7 +96,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     echo "㕫 2" >> ${dict}
     echo "㖏 3" >> ${dict}
 
-    tools/text2token.py -s 1 -n 1 data/${train_set}/text | cut -f 2- -d" " | \
+    tools/text2token.py -s 1 -n 1 $data/${train_set}/text | cut -f 2- -d" " | \
         tr " " "\n" | sort | uniq | grep -a -v -e '^\s*$' | grep -P '[\p{Han}]'\
         | awk '{print $0 " " NR+3}' >> ${dict}
 
@@ -132,16 +112,8 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "Prepare data, prepare requried format"
     for x in ${dev_set} ${train_set}; do
-        if [ $data_type == "shard" ]; then
-            tools/make_shard_list.py --resample 16000 \
-                --num_utts_per_shard $num_utts_per_shard \
-                --num_threads 8 --segments $feat_dir/$x/segments \
-                $feat_dir/$x/wav.scp.ori $feat_dir/$x/text \
-                $(realpath $feat_dir/$x/shards) $feat_dir/$x/data.list
-        else
-            tools/make_raw_list.py --segments $feat_dir/$x/segments \
-            $feat_dir/$x/wav.scp.ori $feat_dir/$x/text $feat_dir/$x/data.list
-        fi
+        tools/make_raw_list.py --segments $data/$x/segments \
+            $data/$x/wav.scp $data/$x/text $data/$x/data.list
     done
 fi
 
@@ -164,7 +136,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     world_size=`expr $num_gpus \* $num_nodes`
     echo "total gpus is: $world_size"
     cmvn_opts=
-    $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
+    $cmvn && cp ${data}/${train_set}/global_cmvn $dir
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
@@ -180,8 +152,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --config $train_config \
             --data_type $data_type \
             --symbol_table $dict \
-            --train_data $feat_dir/$train_set/data.list \
-            --cv_data $feat_dir/${dev_set}/data.list \
+            --train_data $data/$train_set/data.list \
+            --cv_data $data/${dev_set}/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
