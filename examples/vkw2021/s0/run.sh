@@ -25,7 +25,7 @@ num_nodes=1
 # the third one set node_rank 2, and so on. Default 0
 node_rank=0
 # data
-data=$current_dir/data
+data=data
 
 nj=10
 feat_dir=raw_wav
