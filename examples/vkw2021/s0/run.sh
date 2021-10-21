@@ -215,3 +215,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             $dir/dev_${y}/kws_outputs/f4de_scores_unnormalized/alignment.csv
     done
 fi
+
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+    echo "adding 5h finetune data for each scenario to obtain better results"
+    $local/run_finetune_5h.sh
+fi
