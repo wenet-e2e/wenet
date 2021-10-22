@@ -95,6 +95,7 @@ if __name__ == '__main__':
                     action='append',
                     default=[],
                     help="override yaml config")
+
     args = parser.parse_args()
     print(args)
     logging.basicConfig(level=logging.DEBUG,
