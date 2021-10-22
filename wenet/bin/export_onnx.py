@@ -30,7 +30,7 @@ from wenet.utils.mask import make_pad_mask
 try:
     import onnxruntime
 except ImportError:
-    raise ImportError('Please install onnxruntime!')
+    raise ImportError('Please install onnxruntime-gpu!')
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
@@ -100,11 +100,12 @@ class Decoder(torch.nn.Module):
             r_decoder_out: B x beam x T2 x V
         """
         B, T, F = encoder_out.shape
-        encoder_out = encoder_out.repeat(1, self.beam_size, 1).view(-1, T, F)
+        bz = self.beam_size
+        B2 = B * bz
+        encoder_out = encoder_out.repeat(1, bz, 1).view(B2, T, F)
         encoder_mask = ~make_pad_mask(encoder_lens, T).unsqueeze(1)
-        encoder_mask = encoder_mask.repeat(1, self.beam_size, 1).view(-1, 1, T)
+        encoder_mask = encoder_mask.repeat(1, bz, 1).view(B2, 1, T)
         T2 = hyps_pad_sos.shape[2]
-        B2 = B * self.beam_size
         hyps_pad = hyps_pad_sos.view(B2, T2)
         hyps_lens = hyps_lens.view(B2,)
         r_hyps_pad = r_hyps_pad_sos.view(B2, T2)
@@ -113,9 +114,9 @@ class Decoder(torch.nn.Module):
             self.reverse_weight)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         V = decoder_out.shape[-1]
-        decoder_out = decoder_out.view(B, self.beam_size, T2, V)
+        decoder_out = decoder_out.view(B, bz, T2, V)
         r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
-        r_decoder_out = r_decoder_out.view(B, self.beam_size, T2, V)
+        r_decoder_out = r_decoder_out.view(B, bz, T2, V)
         return decoder_out, r_decoder_out
 
 
@@ -150,6 +151,8 @@ if __name__ == '__main__':
     speech_lens = torch.randint(low=10, high=seq_len, size=(bz,), dtype=torch.int32)
     encoder = Encoder(model.encoder, model.ctc, beam_size)
     encoder.eval()
+    if not os.path.exists(args.output_onnx_dir):
+        os.mkdir(args.output_onnx_dir)
     encoder_onnx_path = os.path.join(args.output_onnx_dir, 'encoder.onnx')
 
     torch.onnx.export(encoder,
@@ -163,13 +166,13 @@ if __name__ == '__main__':
                                     'ctc_log_probs',
                                     'beam_log_probs', 'beam_log_probs_idx'],
                       dynamic_axes={
-                          'speech': [0, 1],
-                          'speech_lengths': [0],
-                          'encoder_out': [0, 1],
-                          'encoder_out_lens': [0],
-                          'ctc_log_probs': [0, 1],
-                          'beam_log_probs': [0, 1],
-                          'beam_log_probs_idx': [0, 1],
+                          'speech': {0: 'B', 1: 'T'},
+                          'speech_lengths': {0: 'B'},
+                          'encoder_out': {0: 'B', 1: 'T_OUT'},
+                          'encoder_out_lens': {0: 'B'},
+                          'ctc_log_probs': {0: 'B', 1: 'T_OUT'},
+                          'beam_log_probs': {0: 'B', 1: 'T_OUT'},
+                          'beam_log_probs_idx': {0: 'B', 1: 'T_OUT'},
                       },
                       verbose=False
                       )
@@ -183,7 +186,9 @@ if __name__ == '__main__':
     with torch.no_grad():
         o0, o1, o2, o3, o4 = encoder(speech, speech_lens)
 
-    ort_session = onnxruntime.InferenceSession(encoder_onnx_path)
+    providers = ["CUDAExecutionProvider"]
+    ort_session = onnxruntime.InferenceSession(encoder_onnx_path,
+                                               providers=providers)
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(speech),
                   ort_session.get_inputs()[1].name: to_numpy(speech_lens)}
     ort_outs = ort_session.run(None, ort_inputs)
@@ -232,13 +237,13 @@ if __name__ == '__main__':
                                    'hyps_pad_sos', 'hyps_lens',
                                    'r_hyps_pad_sos'],
                       output_names=['decoder_out', 'r_decoder_out'],
-                      dynamic_axes={'encoder_out': [0, 1],
-                                    'encoder_out_lens': [0],
-                                    'hyps_pad_sos': [0, 2],
-                                    'hyps_lens': [0],
-                                    'r_hyps_pad_sos': [0, 2],
-                                    'decoder_out': [0, 2],
-                                    'r_decoder_out': [0, 2]
+                      dynamic_axes={'encoder_out': {0: 'B', 1: 'T'},
+                                    'encoder_out_lens': {0: 'B'},
+                                    'hyps_pad_sos': {0: 'B', 2: 'T2'},
+                                    'hyps_lens': {0: 'B'},
+                                    'r_hyps_pad_sos': {0: 'B', 2: 'T2'},
+                                    'decoder_out': {0: 'B', 2: 'T2'},
+                                    'r_decoder_out': {0: 'B', 2: 'T2'}
                                     },
                       verbose=False
                       )
@@ -250,7 +255,8 @@ if __name__ == '__main__':
             hyps_lens,
             r_hyps_pad_sos)
 
-    ort_session = onnxruntime.InferenceSession(decoder_onnx_path)
+    ort_session = onnxruntime.InferenceSession(decoder_onnx_path,
+                                               providers=providers)
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(encoder_out),
                   ort_session.get_inputs()[1].name: to_numpy(encoder_out_lens),
                   ort_session.get_inputs()[2].name: to_numpy(hyps_pad_sos),
