@@ -32,6 +32,7 @@ from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.scheduler import WarmupLR
+from wenet.utils.config import override_config
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training your network')
@@ -106,6 +107,8 @@ if __name__ == '__main__':
     torch.manual_seed(777)
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
+    if len(args.override_config) > 0:
+        configs = override_config(configs, args.override_config)
 
     distributed = args.world_size > 1
     if distributed:
