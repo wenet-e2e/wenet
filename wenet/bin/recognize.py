@@ -28,6 +28,7 @@ from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
+from wenet.utils.config import override_config
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='recognize with your model')
@@ -90,6 +91,11 @@ if __name__ == '__main__':
                         default=None,
                         type=str,
                         help='bpe model for english part')
+    parser.add_argument('--override_config',
+                        action='append',
+                        default=[],
+                        help="override yaml config")
+
     args = parser.parse_args()
     print(args)
     logging.basicConfig(level=logging.DEBUG,
@@ -105,6 +111,8 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
+    if len(args.override_config) > 0:
+        configs = override_config(configs, args.override_config)
 
     symbol_table = read_symbol_table(args.dict)
     test_conf = copy.deepcopy(configs['dataset_conf'])
