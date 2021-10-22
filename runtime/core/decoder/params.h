@@ -46,7 +46,7 @@ DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
 DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
 DEFINE_double(blank_skip_thresh, 1.0,
               "blank skip thresh for ctc wfst search, 1.0 means no skip");
-DEFINE_int32(nbest, 10, "nbest for ctc wfst search");
+DEFINE_int32(nbest, 10, "nbest for ctc wfst or prefix search");
 
 // SymbolTable flags
 DEFINE_string(dict_path, "",
@@ -89,6 +89,8 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->ctc_wfst_search_opts.blank_skip_thresh =
       FLAGS_blank_skip_thresh;
   decode_config->ctc_wfst_search_opts.nbest = FLAGS_nbest;
+  decode_config->ctc_prefix_search_opts.first_beam_size = FLAGS_nbest;
+  decode_config->ctc_prefix_search_opts.second_beam_size = FLAGS_nbest;
   return decode_config;
 }
 

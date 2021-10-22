@@ -126,6 +126,7 @@ struct ForwardLink {
   BaseFloat acoustic_cost;  // acoustic cost (pre-scaled) of traversing arc
   bool is_start_boundary;
   bool is_end_boundary;
+  float context_score;
   ForwardLink *next;  // next in singly-linked list of forward arcs (arcs
                       // in the state-level lattice) from a token.
   inline ForwardLink(Token *next_tok, Label ilabel, Label olabel,
@@ -139,6 +140,7 @@ struct ForwardLink {
         acoustic_cost(acoustic_cost),
         is_start_boundary(is_start_boundary),
         is_end_boundary(is_end_boundary),
+        context_score(0),
         next(next) {}
 };
 
@@ -162,7 +164,7 @@ struct StdToken {
   // and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
 
-  int context_state;
+  int context_state = 0;
 
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
   // use for lattice generation.
@@ -182,7 +184,11 @@ struct StdToken {
   // fast way to obtain the best path).
   inline StdToken(BaseFloat tot_cost, BaseFloat extra_cost, ForwardLinkT *links,
                   Token *next, Token *backpointer)
-      : tot_cost(tot_cost), extra_cost(extra_cost), links(links), next(next) {}
+      : tot_cost(tot_cost),
+        extra_cost(extra_cost),
+        links(links),
+        context_state(0),
+        next(next) {}
 };
 
 struct BackpointerToken {
@@ -206,7 +212,7 @@ struct BackpointerToken {
   // one by one and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
 
-  int context_state;
+  int context_state = 0;
 
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
   // use for lattice generation.
@@ -232,7 +238,8 @@ struct BackpointerToken {
         extra_cost(extra_cost),
         links(links),
         next(next),
-        backpointer(backpointer) {}
+        backpointer(backpointer),
+        context_state(0) {}
 };
 
 }  // namespace decoder
