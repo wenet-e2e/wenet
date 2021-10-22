@@ -6,7 +6,7 @@ def override_config(configs, override_list):
         arr = item.split()
         if len(arr) != 2:
             print(f"the overrive {item} format not correct, skip it")
-            continue 
+            continue
         keys = arr[0].split('.')
         s_configs = new_configs
         for i, key in enumerate(keys):
