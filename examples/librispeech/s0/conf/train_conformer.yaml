@@ -37,10 +37,12 @@ model_conf:
 # dataset related
 dataset_conf:
     filter_conf:
-        max_length: 40960
-        min_length: 0
-        token_max_length: 200
+        max_length: 2000
+        min_length: 50
+        token_max_length: 400
         token_min_length: 1
+        min_output_input_ratio: 0.05
+        max_output_input_ratio: 10.0
     resample_conf:
         resample_rate: 16000
     speed_perturb: true
@@ -48,7 +50,7 @@ dataset_conf:
         num_mel_bins: 80
         frame_shift: 10
         frame_length: 25
-        dither: 0.1
+        dither: 0.0
     spec_aug: true
     spec_aug_conf:
         num_t_mask: 2
@@ -63,7 +65,7 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 8
+        batch_size: 12
 
 grad_clip: 5
 accum_grad: 1
