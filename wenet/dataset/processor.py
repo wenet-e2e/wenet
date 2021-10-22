@@ -310,6 +310,8 @@ def tokenize(data, symbol_table, bpe_model=None):
                             tokens.append(l)
         else:
             for ch in txt:
+                if ch == ' ':
+                    ch = "▁"
                 tokens.append(ch)
 
         for ch in tokens:
