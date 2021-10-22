@@ -6,4 +6,3 @@ tensorboard
 tensorboardX
 typeguard
 textgrid
-hydra-core
