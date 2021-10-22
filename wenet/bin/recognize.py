@@ -30,7 +30,7 @@ from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.config import override_config
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--test_data', required=True, help='test data file')
@@ -98,6 +98,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
+    return args
+
+
+def main():
+    args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -213,3 +218,7 @@ if __name__ == '__main__':
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
+
+
+if __name__ == '__main__':
+    main()

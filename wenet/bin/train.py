@@ -34,7 +34,7 @@ from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.scheduler import WarmupLR
 from wenet.utils.config import override_config
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--data_type',
@@ -102,7 +102,11 @@ if __name__ == '__main__':
                         help="override yaml config")
 
     args = parser.parse_args()
+    return args
 
+
+def main():
+    args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -252,3 +256,7 @@ if __name__ == '__main__':
         final_model_path = os.path.join(model_dir, 'final.pt')
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
+
+
+if __name__ == '__main__':
+    main()
