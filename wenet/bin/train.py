@@ -96,6 +96,10 @@ if __name__ == '__main__':
                         default=None,
                         type=str,
                         help='bpe model for english part')
+    parser.add_argument('--override_config',
+                        action='append',
+                        default=[],
+                        help="override yaml config")
 
     args = parser.parse_args()
 
