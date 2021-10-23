@@ -16,6 +16,7 @@ from __future__ import print_function
 
 import argparse
 import os
+import sys
 
 import torch
 import yaml
@@ -27,10 +28,12 @@ from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import BaseEncoder
 from wenet.utils.mask import make_pad_mask
+
 try:
     import onnxruntime
 except ImportError:
-    raise ImportError('Please install onnxruntime-gpu!')
+    print('Please install onnxruntime-gpu!')
+    sys.exit(1)
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
@@ -231,7 +234,7 @@ if __name__ == '__main__':
                        hyps_pad_sos, hyps_lens, r_hyps_pad_sos),
                       decoder_onnx_path,
                       export_params=True,
-                      opset_version=14,
+                      opset_version=13,
                       do_constant_folding=True,
                       input_names=['encoder_out', 'encoder_out_lens',
                                    'hyps_pad_sos', 'hyps_lens',
