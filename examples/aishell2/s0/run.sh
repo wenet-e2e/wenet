@@ -25,12 +25,11 @@ node_rank=0
 # modify this to your AISHELL-2 data path
 # Note: the evaluation data (dev & test) is available at AISHELL.
 # Please download it from http://aishell-eval.oss-cn-beijing.aliyuncs.com/TEST%26DEV%20DATA.zip
-trn_set=/ssd/nfs06/open_source_data/AISHELL-2/iOS/data
-dev_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/dev
-tst_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/test
+trn_set=/mnt/nfs/ptm1/open-data/AISHELL-2/iOS/data
+dev_set=/mnt/nfs/ptm1/open-data/AISHELL-DEV-TEST-SET/iOS/dev
+tst_set=/mnt/nfs/ptm1/open-data/AISHELL-DEV-TEST-SET/iOS/test
 
 nj=16
-feat_dir=raw_wav
 dict=data/dict/lang_char.txt
 
 train_set=train
@@ -68,15 +67,10 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
             > data/${x}/text
         rm data/${x}/text.org
     done
-    # For wav feature, just copy the data. Fbank extraction is done in training
-    mkdir -p $feat_dir
-    for x in ${train_set} dev test; do
-        cp -r data/$x $feat_dir
-    done
 
     tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
-        --out_cmvn $feat_dir/$train_set/global_cmvn
+        --out_cmvn data/$train_set/global_cmvn
 
 fi
 
@@ -96,8 +90,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
-        tools/make_raw_list.py $feat_dir/$x/wav.scp $feat_dir/$x/text \
-                $feat_dir/$x/data.list
+        tools/make_raw_list.py data/$x/wav.scp data/$x/text data/$x/data.list
     done
 fi
 
@@ -120,7 +113,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     world_size=`expr $num_gpus \* $num_nodes`
     echo "total gpus is: $world_size"
     cmvn_opts=
-    $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
+    $cmvn && cp data/${train_set}/global_cmvn $dir
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
@@ -135,8 +128,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --config $train_config \
             --data_type raw \
             --symbol_table $dict \
-            --train_data $feat_dir/$train_set/data.list \
-            --cv_data $feat_dir/dev/data.list \
+            --train_data data/$train_set/data.list \
+            --cv_data data/dev/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
@@ -173,7 +166,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --mode $mode \
             --config $dir/train.yaml \
             --data_type raw \
-            --test_data $feat_dir/test/data.list \
+            --test_data data/test/data.list \
             --checkpoint $decode_checkpoint \
             --beam_size 10 \
             --batch_size 1 \
@@ -183,7 +176,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --result_file $test_dir/text \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
          python tools/compute-wer.py --char=1 --v=1 \
-            $feat_dir/test/text $test_dir/text > $test_dir/wer
+            data/test/text $test_dir/text > $test_dir/wer
     } &
     done
     wait
@@ -236,4 +229,3 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # See $dir/lm_with_runtime for wer
   tail $dir/lm_with_runtime/wer
 fi
-
