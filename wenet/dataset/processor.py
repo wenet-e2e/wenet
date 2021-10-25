@@ -71,7 +71,7 @@ def tar_file_and_group(data):
         assert 'stream' in sample
         stream = tarfile.open(fileobj=sample['stream'], mode="r|*")
         prev_prefix = None
-        data = {}
+        example = {}
         valid = True
         for tarinfo in stream:
             name = tarinfo.name
@@ -79,28 +79,28 @@ def tar_file_and_group(data):
             assert pos > 0
             prefix, postfix = name[:pos], name[pos + 1:]
             if prev_prefix is not None and prefix != prev_prefix:
-                data['key'] = prev_prefix
+                example['key'] = prev_prefix
                 if valid:
-                    yield data
-                data = {}
+                    yield example
+                example = {}
                 valid = True
             file_obj = stream.extractfile(tarinfo)
             try:
                 if postfix == 'txt':
-                    data['txt'] = file_obj.read().decode('utf8').strip()
+                    example['txt'] = file_obj.read().decode('utf8').strip()
                 elif postfix in AUDIO_FORMAT_SETS:
                     waveform, sample_rate = torchaudio.load(file_obj)
-                    data['wav'] = waveform
-                    data['sample_rate'] = sample_rate
+                    example['wav'] = waveform
+                    example['sample_rate'] = sample_rate
                 else:
-                    data[postfix] = file_ojb.read()
+                    example[postfix] = file_ojb.read()
             except Exception as ex:
                 valid = False
                 logging.warning('error to parse {}'.format(name))
             prev_prefix = prefix
         if prev_prefix is not None:
-            data['key'] = prev_prefix
-            yield data
+            example['key'] = prev_prefix
+            yield example
         stream.close()
         sample['stream'].close()
 
@@ -137,11 +137,11 @@ def parse_raw(data):
                     frame_offset=start_frame)
             else:
                 waveform, sample_rate = torchaudio.load(wav_file)
-            data = dict(key=key,
-                        txt=txt,
-                        wav=waveform,
-                        sample_rate=sample_rate)
-            yield data
+            example = dict(key=key,
+                           txt=txt,
+                           wav=waveform,
+                           sample_rate=sample_rate)
+            yield example
         except Exception as ex:
             logging.warning('Failed to read {}'.format(wav_file))
 
