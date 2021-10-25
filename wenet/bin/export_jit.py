@@ -23,7 +23,8 @@ import yaml
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 
-if __name__ == '__main__':
+
+def get_args():
     parser = argparse.ArgumentParser(description='export your script model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
@@ -32,6 +33,11 @@ if __name__ == '__main__':
                         default=None,
                         help='output quantized model file')
     args = parser.parse_args()
+    return args
+
+
+def main():
+    args = get_args()
     # No need gpu for model export
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
@@ -57,3 +63,7 @@ if __name__ == '__main__':
         script_quant_model.save(args.output_quant_file)
         print('Export quantized model successfully, '
               'see {}'.format(args.output_quant_file))
+
+
+if __name__ == '__main__':
+    main()
