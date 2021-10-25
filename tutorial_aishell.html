@@ -192,19 +192,22 @@ the integer indices.</p>
 </div>
 <div class="section" id="stage-3-prepare-wenet-data-format">
 <h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this headline"></a></h3>
-<p>This stage generates a single WeNet format file including all the input/output information needed by neural network training/evaluation.</p>
-<p>See the generated training feature file in <code class="docutils literal notranslate"><span class="pre">fbank_pitch/train/format.data</span></code>.</p>
-<p>In the WeNet format file , each line records a data sample of seven tab-separated columns. For example, a line is as follows (tab replaced with newline here):</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">utt</span><span class="p">:</span><span class="n">BAC009S0764W0121</span>
-<span class="n">feat</span><span class="p">:</span><span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">data</span><span class="o">/</span><span class="n">asr</span><span class="o">-</span><span class="n">data</span><span class="o">/</span><span class="n">OpenSLR</span><span class="o">/</span><span class="mi">33</span><span class="o">/</span><span class="n">data_aishell</span><span class="o">/</span><span class="n">wav</span><span class="o">/</span><span class="n">test</span><span class="o">/</span><span class="n">S0764</span><span class="o">/</span><span class="n">BAC009S0764W0121</span><span class="o">.</span><span class="n">wav</span>
-<span class="n">feat_shape</span><span class="p">:</span><span class="mf">4.2039375</span>
-<span class="n">text</span><span class="p">:</span><span class="n">甚至出现交易几乎停滞的情况</span>
-<span class="n">token</span><span class="p">:</span><span class="n">甚</span> <span class="n">至</span> <span class="n">出</span> <span class="n">现</span> <span class="n">交</span> <span class="n">易</span> <span class="n">几</span> <span class="n">乎</span> <span class="n">停</span> <span class="n">滞</span> <span class="n">的</span> <span class="n">情</span> <span class="n">况</span>
-<span class="n">tokenid</span><span class="p">:</span><span class="mi">2474</span> <span class="mi">3116</span> <span class="mi">331</span> <span class="mi">2408</span> <span class="mi">82</span> <span class="mi">1684</span> <span class="mi">321</span> <span class="mi">47</span> <span class="mi">235</span> <span class="mi">2199</span> <span class="mi">2553</span> <span class="mi">1319</span> <span class="mi">307</span>
-<span class="n">token_shape</span><span class="p">:</span><span class="mi">13</span><span class="p">,</span><span class="mi">4233</span>
+<p>This stage generates the WeNet required format file <code class="docutils literal notranslate"><span class="pre">data.list</span></code>. Each line in <code class="docutils literal notranslate"><span class="pre">data.list</span></code> is in json format which contains the following fields.</p>
+<ol class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">key</span></code>: key of the utterance</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">wav</span></code>: audio file path of the utterance</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">txt</span></code>: normalized transcription of the utterance, the transcription will be tokenized to the model units on-the-fly at the training stage.</p></li>
+</ol>
+<p>Here is an example of the <code class="docutils literal notranslate"><span class="pre">data.list</span></code>, and please see the generated training feature file in <code class="docutils literal notranslate"><span class="pre">data/train/data.list</span></code>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;BAC009S0002W0122&quot;</span><span class="p">,</span> <span class="s2">&quot;wav&quot;</span><span class="p">:</span> <span class="s2">&quot;/export/data/asr-data/OpenSLR/33//data_aishell/wav/train/S0002/BAC009S0002W0122.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;txt&quot;</span><span class="p">:</span> <span class="s2">&quot;而对楼市成交抑制作用最大的限购&quot;</span><span class="p">}</span>
+<span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;BAC009S0002W0123&quot;</span><span class="p">,</span> <span class="s2">&quot;wav&quot;</span><span class="p">:</span> <span class="s2">&quot;/export/data/asr-data/OpenSLR/33//data_aishell/wav/train/S0002/BAC009S0002W0123.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;txt&quot;</span><span class="p">:</span> <span class="s2">&quot;也成为地方政府的眼中钉&quot;</span><span class="p">}</span>
+<span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;BAC009S0002W0124&quot;</span><span class="p">,</span> <span class="s2">&quot;wav&quot;</span><span class="p">:</span> <span class="s2">&quot;/export/data/asr-data/OpenSLR/33//data_aishell/wav/train/S0002/BAC009S0002W0124.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;txt&quot;</span><span class="p">:</span> <span class="s2">&quot;自六月底呼和浩特市率先宣布取消限购后&quot;</span><span class="p">}</span>
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">feat_shape</span></code> is the duration(in seconds) of the wav.</p>
+<p>We aslo design another format for <code class="docutils literal notranslate"><span class="pre">data.list</span></code> named <code class="docutils literal notranslate"><span class="pre">shard</span></code> which is for big data training.
+Please see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/examples/gigaspeech/s0">gigaspeech</a>(10k hours) or
+<a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0">wenetspeech</a>(10k hours)
+for how to use <code class="docutils literal notranslate"><span class="pre">shard</span></code> style <code class="docutils literal notranslate"><span class="pre">data.list</span></code> if you want to apply WeNet on big data set(more than 5k).</p>
 </div>
 <div class="section" id="stage-4-neural-network-training">
 <h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this headline"></a></h3>
