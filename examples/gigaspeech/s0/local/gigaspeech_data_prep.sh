@@ -7,7 +7,7 @@ set -e
 set -o pipefail
 
 stage=1
-prefix=gigaspeech
+prefix=
 garbage_utterance_tags="<SIL> <MUSIC> <NOISE> <OTHER>"
 punctuation_tags="<COMMA> <EXCLAMATIONPOINT> <PERIOD> <QUESTIONMARK>"
 train_subset=XL
