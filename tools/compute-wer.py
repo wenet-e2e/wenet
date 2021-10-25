@@ -484,7 +484,7 @@ if __name__ == '__main__':
           else :
             wer = 0.0
           print('%s -> %4.2f %%' % (cluster_id, wer), end = ' ')
-          print('N=%d C=%d S=%d D=d I=%d' %
+          print('N=%d C=%d S=%d D=%d I=%d' %
                 (result['all'], result['cor'], result['sub'], result['del'], result['ins']))
           cluster_id = ''
           cluster = []
