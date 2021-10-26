@@ -320,7 +320,7 @@ class ASRModel(torch.nn.Module):
             encoder_out)  # (B, maxlen, vocab_size)
         topk_prob, topk_index = ctc_probs.topk(1, dim=2)  # (B, maxlen, 1)
         topk_index = topk_index.view(batch_size, maxlen)  # (B, maxlen)
-        mask = make_pad_mask(encoder_out_lens)  # (B, maxlen)
+        mask = make_pad_mask(encoder_out_lens, maxlen)  # (B, maxlen)
         topk_index = topk_index.masked_fill_(mask, self.eos)  # (B, maxlen)
         hyps = [hyp.tolist() for hyp in topk_index]
         scores = topk_prob.max(1)
