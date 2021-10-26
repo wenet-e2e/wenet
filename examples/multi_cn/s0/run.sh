@@ -46,7 +46,7 @@ has_tal=false       # TAL data need download from Baidu SkyDrive
                     # TAL/TAL_ASR and TAL/TAL_ASR_mix in $dbase
 data_type=raw # raw or shard
 num_utts_per_shard=1000
-
+shards_dir=
 # Optional train_config
 # 1. conf/train_transformer.yaml: Standard transformer
 # 2. conf/train_conformer.yaml: Standard conformer
