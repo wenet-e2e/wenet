@@ -174,7 +174,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
 
   [ ! -f scripts/bin/results_to_score.sh ] && \
     ln -sf data/vkw/scripts scripts && chmod -R 755 scripts
-  ### attention: install the F4DE tool before testing 
+  ### attention: install the F4DE tool before testing
   for y in "stv" "lgv" "liv"; do
     mkdir -p $dir/dev_${y}
     #[ ! -f data/vkw/score/dev_${y}/utter_map ] && \
