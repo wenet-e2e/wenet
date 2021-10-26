@@ -65,7 +65,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     <(cut -f 2- -d" " data/${finetune2_set}/text.org | tr -d " ") \
     > data/${finetune2_set}/text
   rm data/${finetune2_set}/text.org
-  #exit 0
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -75,14 +74,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     python tools/segment.py --segments $data/$finetune2_set/segments \
       --input $data/$finetune2_set/wav.scp \
       --output $data/$finetune2_set/segmented_wav.scp
-  #exit 0
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo "Prepare data, prepare requried format"
   tools/make_raw_list.py --segments $data/$finetune2_set/segments \
     $data/$finetune2_set/wav.scp $data/$finetune2_set/text $data/$finetune2_set/data.list
-  #exit 0
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
@@ -139,7 +136,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   } &
   done
   wait
-  exit 0
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then

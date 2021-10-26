@@ -65,7 +65,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       data/${x}/text.org | tr -d " ") > data/${x}/text
     rm data/${x}/text.org
   done
-  #exit 0
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -82,7 +81,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   tools/compute_cmvn_stats.py --num_workers 12 --train_config $train_config \
     --in_scp $data/${train_set}/segmented_wav.scp \
     --out_cmvn $data/$train_set/global_cmvn
-  #exit 0
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
@@ -157,7 +155,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   } &
   done
   wait
-  exit 0
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
