@@ -40,7 +40,7 @@ dev_set=dev
 test_sets="aishell aidatatang magicdata thchs aishell2 tal_asr"
 has_aishell2=false  # AISHELL2 train set is not publically downloadable
                     # with this option true, the script assumes you have it in $dbase
-data_type=shard # raw or shard
+data_type=raw # raw or shard
 num_utts_per_shard=1000
 
 # Optional train_config
