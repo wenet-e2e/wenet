@@ -467,17 +467,20 @@ def dynamic_batch(data, max_frames_in_batch=12000):
         Returns:
             Iterable[List[{key, feat, label}]]
     """
-    total_frames_in_batch = 0
     buf = []
+    longest_frames = 0
     for sample in data:
-        buf.append(sample)
         assert 'feat' in sample
         assert isinstance(sample['feat'], torch.Tensor)
-        total_frames_in_batch += sample['feat'].size(0)
-        if total_frames_in_batch > max_frames_in_batch:
+        new_sample_frames = sample['feat'].size(0)
+        longest_frames = max(longest_frames, new_sample_frames)
+        frames_after_padding = longest_frames * (len(buf) + 1)
+        if frames_after_padding > max_frames_in_batch:
             yield buf
-            buf = []
-            total_frames_in_batch = 0
+            buf = [sample]
+            longest_frames = new_sample_frames
+        else:
+            buf.append(sample)
     if len(buf) > 0:
         yield buf
 
