@@ -162,7 +162,7 @@ if __name__ == '__main__':
                       (speech, speech_lens),
                       encoder_onnx_path,
                       export_params=True,
-                      opset_version=14,
+                      opset_version=13,
                       do_constant_folding=True,
                       input_names=['speech', 'speech_lengths'],
                       output_names=['encoder_out', 'encoder_out_lens',
