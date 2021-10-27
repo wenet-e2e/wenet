@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Xiaoyu Chen)
+# Copyright (c) 2021 Mobvoi Inc. (authors: Binbin Zhang)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,15 +26,21 @@ import yaml
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
+from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.scheduler import WarmupLR
+from wenet.utils.config import override_config
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--config', required=True, help='config file')
+    parser.add_argument('--data_type',
+                        default='raw',
+                        choices=['raw', 'shard'],
+                        help='train and cv data type')
     parser.add_argument('--train_data', required=True, help='train data file')
     parser.add_argument('--cv_data', required=True, help='cv data file')
     parser.add_argument('--gpu',
@@ -79,82 +85,82 @@ if __name__ == '__main__':
                         default=False,
                         help='Use automatic mixed precision training')
     parser.add_argument('--cmvn', default=None, help='global cmvn file')
+    parser.add_argument('--symbol_table',
+                        required=True,
+                        help='model unit symbol table for training')
+    parser.add_argument('--prefetch',
+                        default=100,
+                        type=int,
+                        help='prefetch number')
+    parser.add_argument('--bpe_model',
+                        default=None,
+                        type=str,
+                        help='bpe model for english part')
+    parser.add_argument('--override_config',
+                        action='append',
+                        default=[],
+                        help="override yaml config")
 
     args = parser.parse_args()
+    return args
 
+
+def main():
+    args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+
     # Set random seed
     torch.manual_seed(777)
-    print(args)
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
+    if len(args.override_config) > 0:
+        configs = override_config(configs, args.override_config)
 
     distributed = args.world_size > 1
-
-    raw_wav = configs['raw_wav']
-
-    train_collate_func = CollateFunc(**configs['collate_conf'],
-                                     raw_wav=raw_wav)
-
-    cv_collate_conf = copy.deepcopy(configs['collate_conf'])
-    # no augmenation on cv set
-    cv_collate_conf['spec_aug'] = False
-    cv_collate_conf['spec_sub'] = False
-    if raw_wav:
-        cv_collate_conf['feature_dither'] = 0.0
-        cv_collate_conf['speed_perturb'] = False
-        cv_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    cv_collate_func = CollateFunc(**cv_collate_conf, raw_wav=raw_wav)
-
-    dataset_conf = configs.get('dataset_conf', {})
-    train_dataset = AudioDataset(args.train_data,
-                                 **dataset_conf,
-                                 raw_wav=raw_wav)
-    cv_dataset = AudioDataset(args.cv_data, **dataset_conf, raw_wav=raw_wav)
-
     if distributed:
         logging.info('training on multiple gpus, this gpu {}'.format(args.gpu))
         dist.init_process_group(args.dist_backend,
                                 init_method=args.init_method,
                                 world_size=args.world_size,
                                 rank=args.rank)
-        train_sampler = torch.utils.data.distributed.DistributedSampler(
-            train_dataset, shuffle=True)
-        cv_sampler = torch.utils.data.distributed.DistributedSampler(
-            cv_dataset, shuffle=False)
-    else:
-        train_sampler = None
-        cv_sampler = None
+
+    symbol_table = read_symbol_table(args.symbol_table)
+
+    train_conf = configs['dataset_conf']
+    cv_conf = copy.deepcopy(train_conf)
+    cv_conf['speed_perturb'] = False
+    cv_conf['spec_aug'] = False
+
+    train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
+                            train_conf, args.bpe_model, partition=True)
+    cv_dataset = Dataset(args.data_type,
+                         args.cv_data,
+                         symbol_table,
+                         cv_conf,
+                         args.bpe_model,
+                         partition=False)
 
     train_data_loader = DataLoader(train_dataset,
-                                   collate_fn=train_collate_func,
-                                   sampler=train_sampler,
-                                   shuffle=(train_sampler is None),
+                                   batch_size=None,
                                    pin_memory=args.pin_memory,
-                                   batch_size=1,
-                                   num_workers=args.num_workers)
+                                   num_workers=args.num_workers,
+                                   prefetch_factor=args.prefetch)
     cv_data_loader = DataLoader(cv_dataset,
-                                collate_fn=cv_collate_func,
-                                sampler=cv_sampler,
-                                shuffle=False,
-                                batch_size=1,
+                                batch_size=None,
                                 pin_memory=args.pin_memory,
-                                num_workers=args.num_workers)
+                                num_workers=args.num_workers,
+                                prefetch_factor=args.prefetch)
 
-    if raw_wav:
-        input_dim = configs['collate_conf']['feature_extraction_conf'][
-            'mel_bins']
-    else:
-        input_dim = train_dataset.input_dim
-    vocab_size = train_dataset.output_dim
+    input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
+    vocab_size = len(symbol_table)
 
     # Save configs to model_dir/train.yaml for inference and export
     configs['input_dim'] = input_dim
     configs['output_dim'] = vocab_size
     configs['cmvn_file'] = args.cmvn
-    configs['is_json_cmvn'] = raw_wav
+    configs['is_json_cmvn'] = True
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')
         with open(saved_config_path, 'w') as fout:
@@ -220,26 +226,17 @@ if __name__ == '__main__':
     scaler = None
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
+
     for epoch in range(start_epoch, num_epochs):
-        if distributed:
-            train_sampler.set_epoch(epoch)
+        train_dataset.set_epoch(epoch)
+        configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler)
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
                                                 configs)
-        if args.world_size > 1:
-            # all_reduce expected a sequence parameter, so we use [num_seen_utts].
-            num_seen_utts = torch.Tensor([num_seen_utts]).to(device)
-            # the default operator in all_reduce function is sum.
-            dist.all_reduce(num_seen_utts)
-            total_loss = torch.Tensor([total_loss]).to(device)
-            dist.all_reduce(total_loss)
-            cv_loss = total_loss[0] / num_seen_utts[0]
-            cv_loss = cv_loss.item()
-        else:
-            cv_loss = total_loss / num_seen_utts
+        cv_loss = total_loss / num_seen_utts
 
         logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
@@ -251,9 +248,15 @@ if __name__ == '__main__':
                     'cv_loss': cv_loss,
                     'step': executor.step
                 })
-            writer.add_scalars('epoch', {'cv_loss': cv_loss, 'lr': lr}, epoch)
+            writer.add_scalar('epoch/cv_loss', cv_loss, epoch)
+            writer.add_scalar('epoch/lr', lr, epoch)
         final_epoch = epoch
 
     if final_epoch is not None and args.rank == 0:
         final_model_path = os.path.join(model_dir, 'final.pt')
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
+        writer.close()
+
+
+if __name__ == '__main__':
+    main()

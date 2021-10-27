@@ -7,12 +7,12 @@ set -e
 set -o pipefail
 
 stage=1
-prefix=gigaspeech
+prefix=
 garbage_utterance_tags="<SIL> <MUSIC> <NOISE> <OTHER>"
 punctuation_tags="<COMMA> <EXCLAMATIONPOINT> <PERIOD> <QUESTIONMARK>"
 train_subset=XL
 
-. ./utils/parse_options.sh || exit 1;
+. ./tools/parse_options.sh || exit 1;
 
 filter_by_id () {
   idlist=$1
@@ -100,7 +100,7 @@ if [ $stage -le 1 ]; then
   # Files to be created:
   # wav.scp text segments utt2dur
   python3 local/extract_meta.py \
-     $gigaspeech_dir/GigaSpeech.json $corpus_dir | exit 1;
+     $gigaspeech_dir/GigaSpeech.json $corpus_dir || exit 1;
 fi
 
 if [ $stage -le 2 ]; then

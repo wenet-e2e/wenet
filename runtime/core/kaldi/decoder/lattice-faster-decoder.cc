@@ -31,8 +31,13 @@ namespace kaldi {
 // instantiate this class once for each thing you have to decode.
 template <typename FST, typename Token>
 LatticeFasterDecoderTpl<FST, Token>::LatticeFasterDecoderTpl(
-    const FST &fst, const LatticeFasterDecoderConfig &config)
-    : fst_(&fst), delete_fst_(false), config_(config), num_toks_(0) {
+    const FST &fst, const LatticeFasterDecoderConfig &config,
+    const std::shared_ptr<wenet::ContextGraph> &context_graph)
+    : fst_(&fst),
+      delete_fst_(false),
+      config_(config),
+      num_toks_(0),
+      context_graph_(context_graph) {
   config.Check();
   toks_.SetSize(
       1000);  // just so on the first frame we do something reasonable.
@@ -166,6 +171,20 @@ bool LatticeFasterDecoderTpl<FST, Token>::GetRawLattice(
           KALDI_ASSERT(f >= 0 && f < cost_offsets_.size());
           cost_offset = cost_offsets_[f];
         }
+
+        if (l->is_start_boundary) {
+          StateId tmp = ofst->AddState();
+          Arc arc(0, context_graph_->start_tag_id(), Weight(0, 0), tmp);
+          ofst->AddArc(cur_state, arc);
+          cur_state = tmp;
+        }
+        if (l->is_end_boundary) {
+          StateId tmp = ofst->AddState();
+          Arc arc(0, context_graph_->end_tag_id(), Weight(0, 0), nextstate);
+          ofst->AddArc(tmp, arc);
+          nextstate = tmp;
+        }
+
         Arc arc(l->ilabel, l->olabel,
                 Weight(l->graph_cost, l->acoustic_cost - cost_offset),
                 nextstate);
@@ -183,6 +202,8 @@ bool LatticeFasterDecoderTpl<FST, Token>::GetRawLattice(
       }
     }
   }
+
+  fst::TopSort(ofst);
   return (ofst->NumStates() > 0);
 }
 
@@ -337,6 +358,11 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinks(
         // link_exta_cost is the difference in score between the best paths
         // through link source state and through link destination state
         KALDI_ASSERT(link_extra_cost == link_extra_cost);  // check for NaN
+        // the graph_cost contatins the context score
+        // if it's the score of the backoff arc, it should be removed.
+        if (link->context_score < 0) {
+          link_extra_cost += link->context_score;
+        }
         if (link_extra_cost > config_.lattice_beam) {      // excise link
           ForwardLinkT *next_link = link->next;
           if (prev_link != NULL)
@@ -348,8 +374,8 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinks(
           *links_pruned = true;
         } else {  // keep the link and update the tok_extra_cost if needed.
           if (link_extra_cost < 0.0) {  // this is just a precaution.
-            if (link_extra_cost < -0.01)
-              KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
+            // if (link_extra_cost < -0.01)
+            //   KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
             link_extra_cost = 0.0;
           }
           if (link_extra_cost < tok_extra_cost)
@@ -439,8 +465,8 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinksFinal() {
           link = next_link;  // advance link but leave prev_link the same.
         } else {  // keep the link and update the tok_extra_cost if needed.
           if (link_extra_cost < 0.0) {  // this is just a precaution.
-            if (link_extra_cost < -0.01)
-              KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
+            // if (link_extra_cost < -0.01)
+            //   KALDI_WARN << "Negative extra_cost: " << link_extra_cost;
             link_extra_cost = 0.0;
           }
           if (link_extra_cost < tok_extra_cost)
@@ -803,10 +829,25 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, NULL);
           // NULL: no change indicator needed
 
+          bool is_start_boundary = false;
+          bool is_end_boundary = false;
+          float context_score = 0;
+          if (context_graph_) {
+            if (arc.olabel == 0) {
+              e_next->val->context_state = tok->context_state;
+            } else {
+              e_next->val->context_state = context_graph_->GetNextState(
+                  tok->context_state, arc.olabel, &context_score,
+                  &is_start_boundary, &is_end_boundary);
+              graph_cost -= context_score;
+            }
+          }
           // Add ForwardLink from tok to next_tok (put on head of list
           // tok->links)
           tok->links = new ForwardLinkT(e_next->val, arc.ilabel, arc.olabel,
-                                        graph_cost, ac_cost, tok->links);
+                                        graph_cost, ac_cost, is_start_boundary,
+                                        is_end_boundary, tok->links);
+          tok->links->context_score = context_score;
         }
       }  // for all arcs
     }
@@ -887,8 +928,24 @@ void LatticeFasterDecoderTpl<FST, Token>::ProcessNonemitting(BaseFloat cutoff) {
           Elem *e_new =
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, &changed);
 
-          tok->links = new ForwardLinkT(e_new->val, 0, arc.olabel, graph_cost,
-                                        0, tok->links);
+          bool is_start_boundary = false;
+          bool is_end_boundary = false;
+          float context_score = 0;
+          if (context_graph_) {
+            if (arc.olabel == 0) {
+              e_new->val->context_state = tok->context_state;
+            } else {
+              e_new->val->context_state = context_graph_->GetNextState(
+                  tok->context_state, arc.olabel, &context_score,
+                  &is_start_boundary, &is_end_boundary);
+              graph_cost -= context_score;
+            }
+          }
+
+          tok->links =
+              new ForwardLinkT(e_new->val, 0, arc.olabel, graph_cost, 0,
+                               is_start_boundary, is_end_boundary, tok->links);
+          tok->links->context_score = context_score;
 
           // "changed" tells us whether the new token has a different
           // cost from before, or is new [if so, add into queue].

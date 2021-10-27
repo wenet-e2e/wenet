@@ -3,6 +3,8 @@
 
 #include "decoder/ctc_wfst_beam_search.h"
 
+#include <utility>
+
 namespace wenet {
 
 void DecodableTensorScaled::Reset() {
@@ -40,9 +42,13 @@ int32 DecodableTensorScaled::NumIndices() const {
   return 0;
 }
 
-CtcWfstBeamSearch::CtcWfstBeamSearch(const fst::Fst<fst::StdArc>& fst,
-                                     const CtcWfstBeamSearchOptions& opts)
-    : decodable_(opts.acoustic_scale), decoder_(fst, opts), opts_(opts) {
+CtcWfstBeamSearch::CtcWfstBeamSearch(
+    const fst::Fst<fst::StdArc>& fst, const CtcWfstBeamSearchOptions& opts,
+    const std::shared_ptr<ContextGraph>& context_graph)
+    : decodable_(opts.acoustic_scale),
+      decoder_(fst, opts, context_graph),
+      context_graph_(context_graph),
+      opts_(opts) {
   Reset();
 }
 
@@ -81,6 +87,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
       if (cur_best != 0 && is_last_frame_blank_ && cur_best == last_best_) {
         decodable_.AcceptLoglikes(last_frame_prob_);
         decoder_.AdvanceDecoding(&decodable_, 1);
+        decoded_frames_mapping_.push_back(num_frames_ - 1);
         VLOG(2) << "Adding blank frame at symbol " << cur_best;
       }
       last_best_ = cur_best;
@@ -106,6 +113,7 @@ void CtcWfstBeamSearch::Search(const torch::Tensor& logp) {
     kaldi::LatticeWeight weight;
     fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
     ConvertToInputs(alignment, &inputs_[0]);
+    RemoveContinuousTags(&outputs_[0]);
     VLOG(3) << weight.Value1() << " " << weight.Value2();
     likelihood_[0] = -weight.Value2();
   }
@@ -117,37 +125,69 @@ void CtcWfstBeamSearch::FinalizeSearch() {
   inputs_.clear();
   outputs_.clear();
   likelihood_.clear();
+  times_.clear();
   if (decoded_frames_mapping_.size() > 0) {
-    // Get N-best path by lattice(CompactLattice)
-    kaldi::CompactLattice clat;
-    decoder_.GetLattice(&clat, true);
-    kaldi::Lattice lat, nbest_lat;
-    fst::ConvertLattice(clat, &lat);
-    // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
-    fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
     std::vector<kaldi::Lattice> nbest_lats;
-    fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
+    if (opts_.nbest == 1) {
+      kaldi::Lattice lat;
+      decoder_.GetBestPath(&lat, true);
+      nbest_lats.push_back(std::move(lat));
+    } else {
+      // Get N-best path by lattice(CompactLattice)
+      kaldi::CompactLattice clat;
+      decoder_.GetLattice(&clat, true);
+      kaldi::Lattice lat, nbest_lat;
+      fst::ConvertLattice(clat, &lat);
+      // TODO(Binbin Zhang): it's n-best word lists here, not character n-best
+      fst::ShortestPath(lat, &nbest_lat, opts_.nbest);
+      fst::ConvertNbestToVector(nbest_lat, &nbest_lats);
+    }
     int nbest = nbest_lats.size();
     inputs_.resize(nbest);
     outputs_.resize(nbest);
     likelihood_.resize(nbest);
+    times_.resize(nbest);
     for (int i = 0; i < nbest; i++) {
       kaldi::LatticeWeight weight;
       std::vector<int> alignment;
       fst::GetLinearSymbolSequence(nbest_lats[i], &alignment, &outputs_[i],
                                    &weight);
-      ConvertToInputs(alignment, &inputs_[i]);
+      ConvertToInputs(alignment, &inputs_[i], &times_[i]);
+      RemoveContinuousTags(&outputs_[i]);
       likelihood_[i] = -weight.Value2();
     }
   }
 }
 
 void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
-                                        std::vector<int>* input) {
+                                        std::vector<int>* input,
+                                        std::vector<int>* time) {
   input->clear();
-  for (size_t i = 0; i < alignment.size(); i++) {
-    if (alignment[i] - 1 > 0) {
-      input->push_back(alignment[i] - 1);
+  if (time != nullptr) time->clear();
+  for (int cur = 0; cur < alignment.size(); ++cur) {
+    // ignore blank
+    if (alignment[cur] - 1 == 0) continue;
+    // merge continuous same label
+    if (cur > 0 && alignment[cur] == alignment[cur - 1]) continue;
+
+    input->push_back(alignment[cur] - 1);
+    if (time != nullptr) {
+      time->push_back(decoded_frames_mapping_[cur]);
+    }
+  }
+}
+
+void CtcWfstBeamSearch::RemoveContinuousTags(std::vector<int>* output) {
+  if (context_graph_) {
+    for (auto it = output->begin(); it != output->end();) {
+      if (*it == context_graph_->start_tag_id() ||
+          *it == context_graph_->end_tag_id()) {
+        if (it + 1 != output->end() && *it == *(it + 1)) {
+          it = output->erase(it);
+          continue;
+        }
+      }
+      ++it;
     }
   }
 }

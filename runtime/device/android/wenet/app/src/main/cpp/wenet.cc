@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include <jni.h>
-#include <string>
 
 #include "torch/script.h"
 #include "torch/torch.h"
@@ -21,31 +20,37 @@
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
+#include "post_processor/post_processor.h"
 #include "utils/log.h"
+#include "utils/string.h"
 
 namespace wenet {
 
 std::shared_ptr<DecodeOptions> decode_config;
 std::shared_ptr<FeaturePipelineConfig> feature_config;
 std::shared_ptr<FeaturePipeline> feature_pipeline;
-std::shared_ptr<fst::SymbolTable> symbol_table;
-std::shared_ptr<TorchAsrModel> model;
 std::shared_ptr<TorchAsrDecoder> decoder;
+std::shared_ptr<DecodeResource> resource;
 DecodeState state = kEndBatch;
 std::string total_result;  // NOLINT
 
 void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
-  model = std::make_shared<TorchAsrModel>();
+  resource = std::make_shared<DecodeResource>();
+  resource->model = std::make_shared<TorchAsrModel>();
   const char *pModelPath = (env)->GetStringUTFChars(jModelPath, nullptr);
   std::string modelPath = std::string(pModelPath);
   LOG(INFO) << "model path: " << modelPath;
-  model->Read(modelPath);
+  resource->model->Read(modelPath);
 
   const char *pDictPath = (env)->GetStringUTFChars(jDictPath, nullptr);
   std::string dictPath = std::string(pDictPath);
   LOG(INFO) << "dict path: " << dictPath;
-  symbol_table = std::shared_ptr<fst::SymbolTable>(
+  resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
           fst::SymbolTable::ReadText(dictPath));
+
+  PostProcessOptions post_process_opts;
+  resource->post_processor =
+    std::make_shared<PostProcessor>(std::move(post_process_opts));
 
   feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
   feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
@@ -53,8 +58,8 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   decode_config = std::make_shared<DecodeOptions>();
   decode_config->chunk_size = 16;
 
-  decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline, model,
-                                              symbol_table, *decode_config);
+  decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline, resource,
+                                              *decode_config);
 }
 
 void reset(JNIEnv *env, jobject) {

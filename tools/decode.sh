@@ -9,12 +9,14 @@ set -e
 nj=1
 chunk_size=-1
 ctc_weight=0.0
+reverse_weight=0.0
 rescoring_weight=1.0
 # For CTC WFST based decoding
 fst_path=
 acoustic_scale=1.0
 beam=15.0
 lattice_beam=12.0
+min_active=200
 max_active=7000
 blank_skip_thresh=1.0
 
@@ -51,6 +53,7 @@ if [ ! -z $fst_path ]; then
   wfst_decode_opts="$wfst_decode_opts --beam $beam"
   wfst_decode_opts="$wfst_decode_opts --lattice_beam $lattice_beam"
   wfst_decode_opts="$wfst_decode_opts --max_active $max_active"
+  wfst_decode_opts="$wfst_decode_opts --min_active $min_active"
   wfst_decode_opts="$wfst_decode_opts --acoustic_scale $acoustic_scale"
   wfst_decode_opts="$wfst_decode_opts --blank_skip_thresh $blank_skip_thresh"
   echo $wfst_decode_opts > $dir/config
@@ -60,6 +63,7 @@ for n in $(seq ${nj}); do
   decoder_main \
      --rescoring_weight $rescoring_weight \
      --ctc_weight $ctc_weight \
+     --reverse_weight $reverse_weight \
      --chunk_size $chunk_size \
      --wav_scp ${dir}/split${nj}/wav.${n}.scp \
      --model_path $model_file \

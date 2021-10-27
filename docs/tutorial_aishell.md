@@ -1,31 +1,10 @@
-## Tutorial
+## Tutorial on AIShell
 
 If you meet any problems when going through this tutorial, please feel free to ask in github [issues](https://github.com/mobvoi/wenet/issues). Thanks for any kind of feedback.
 
 ### Setup environment
-- Clone the repo
 
-```sh
-git clone https://github.com/mobvoi/wenet.git
-```
-
-
-
-- Install Conda
-
-https://docs.conda.io/en/latest/miniconda.html
-
-
-- Create Conda env
-
-Pytorch 1.6.0 is recommended. We met some error with NCCL when using 1.7.0 on 2080 Ti.
-
-```
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
-```
+Please follow [Installation](https://github.com/wenet-e2e/wenet#installation) to install WeNet.
 
 ### First Experiment
 
@@ -111,23 +90,24 @@ An example dict is as follows
 
 #### Stage 3: Prepare WeNet data format
 
-This stage generates a single WeNet format file including all the input/output information needed by neural network training/evaluation.
+This stage generates the WeNet required format file `data.list`. Each line in `data.list` is in json format which contains the following fields.
 
-See the generated training feature file in `fbank_pitch/train/format.data`.
+1. `key`: key of the utterance
+2. `wav`: audio file path of the utterance
+3. `txt`: normalized transcription of the utterance, the transcription will be tokenized to the model units on-the-fly at the training stage.
 
-In the WeNet format file , each line records a data sample of seven tab-separated columns. For example, a line is as follows (tab replaced with newline here):
+Here is an example of the `data.list`, and please see the generated training feature file in `data/train/data.list`.
 
 ```
-utt:BAC009S0764W0121
-feat:/export/data/asr-data/OpenSLR/33/data_aishell/wav/test/S0764/BAC009S0764W0121.wav
-feat_shape:4.2039375
-text:甚至出现交易几乎停滞的情况
-token:甚 至 出 现 交 易 几 乎 停 滞 的 情 况
-tokenid:2474 3116 331 2408 82 1684 321 47 235 2199 2553 1319 307
-token_shape:13,4233
+{"key": "BAC009S0002W0122", "wav": "/export/data/asr-data/OpenSLR/33//data_aishell/wav/train/S0002/BAC009S0002W0122.wav", "txt": "而对楼市成交抑制作用最大的限购"}
+{"key": "BAC009S0002W0123", "wav": "/export/data/asr-data/OpenSLR/33//data_aishell/wav/train/S0002/BAC009S0002W0123.wav", "txt": "也成为地方政府的眼中钉"}
+{"key": "BAC009S0002W0124", "wav": "/export/data/asr-data/OpenSLR/33//data_aishell/wav/train/S0002/BAC009S0002W0124.wav", "txt": "自六月底呼和浩特市率先宣布取消限购后"}
 ```
 
-`feat_shape` is the duration(in seconds) of the wav.
+We aslo design another format for `data.list` named `shard` which is for big data training.
+Please see [gigaspeech](https://github.com/wenet-e2e/wenet/tree/main/examples/gigaspeech/s0)(10k hours) or
+[wenetspeech](https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0)(10k hours)
+for how to use `shard` style `data.list` if you want to apply WeNet on big data set(more than 5k).
 
 #### Stage 4: Neural Network training
 

@@ -245,7 +245,7 @@ class ASRModel(torch.nn.Module):
             top_k_logp, top_k_index = logp.topk(beam_size)  # (B*N, N)
             top_k_logp = mask_finished_scores(top_k_logp, end_flag)
             top_k_index = mask_finished_preds(top_k_index, end_flag, self.eos)
-            # 2.3 Seconde beam prune: select topk score with history
+            # 2.3 Second beam prune: select topk score with history
             scores = scores + top_k_logp  # (B*N, N), broadcast add
             scores = scores.view(batch_size, beam_size * beam_size)  # (B, N*N)
             scores, offset_k_index = scores.topk(k=beam_size)  # (B, N)
@@ -275,12 +275,12 @@ class ASRModel(torch.nn.Module):
         # 3. Select best of best
         scores = scores.view(batch_size, beam_size)
         # TODO: length normalization
-        best_index = torch.argmax(scores, dim=-1).long()
+        best_scores, best_index = scores.max(dim=-1)
         best_hyps_index = best_index + torch.arange(
             batch_size, dtype=torch.long, device=device) * beam_size
         best_hyps = torch.index_select(hyps, dim=0, index=best_hyps_index)
         best_hyps = best_hyps[:, 1:]
-        return best_hyps
+        return best_hyps, best_scores
 
     def ctc_greedy_search(
         self,
@@ -320,11 +320,12 @@ class ASRModel(torch.nn.Module):
             encoder_out)  # (B, maxlen, vocab_size)
         topk_prob, topk_index = ctc_probs.topk(1, dim=2)  # (B, maxlen, 1)
         topk_index = topk_index.view(batch_size, maxlen)  # (B, maxlen)
-        mask = make_pad_mask(encoder_out_lens)  # (B, maxlen)
+        mask = make_pad_mask(encoder_out_lens, maxlen)  # (B, maxlen)
         topk_index = topk_index.masked_fill_(mask, self.eos)  # (B, maxlen)
         hyps = [hyp.tolist() for hyp in topk_index]
+        scores = topk_prob.max(1)
         hyps = [remove_duplicates_and_blank(hyp) for hyp in hyps]
-        return hyps
+        return hyps, scores
 
     def _ctc_prefix_beam_search(
         self,
@@ -441,7 +442,7 @@ class ASRModel(torch.nn.Module):
                                                beam_size, decoding_chunk_size,
                                                num_decoding_left_chunks,
                                                simulate_streaming)
-        return hyps[0][0]
+        return hyps[0]
 
     def attention_rescoring(
         self,
@@ -539,7 +540,7 @@ class ASRModel(torch.nn.Module):
             if score > best_score:
                 best_score = score
                 best_index = i
-        return hyps[best_index][0]
+        return hyps[best_index][0], best_score
 
     @torch.jit.export
     def subsampling_rate(self) -> int:

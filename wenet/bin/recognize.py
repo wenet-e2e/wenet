@@ -24,14 +24,20 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import AudioDataset, CollateFunc
+from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.file_utils import read_symbol_table
+from wenet.utils.config import override_config
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--test_data', required=True, help='test data file')
+    parser.add_argument('--data_type',
+                        default='raw',
+                        choices=['raw', 'shard'],
+                        help='train and cv data type')
     parser.add_argument('--gpu',
                         type=int,
                         default=-1,
@@ -81,8 +87,22 @@ if __name__ == '__main__':
                         default=0.0,
                         help='''right to left weight for attention rescoring
                                 decode mode''')
+    parser.add_argument('--bpe_model',
+                        default=None,
+                        type=str,
+                        help='bpe model for english part')
+    parser.add_argument('--override_config',
+                        action='append',
+                        default=[],
+                        help="override yaml config")
+
     args = parser.parse_args()
     print(args)
+    return args
+
+
+def main():
+    args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -96,30 +116,33 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
+    if len(args.override_config) > 0:
+        configs = override_config(configs, args.override_config)
 
-    raw_wav = configs['raw_wav']
-    # Init dataset and data loader
-    # Init dataset and data loader
-    test_collate_conf = copy.deepcopy(configs['collate_conf'])
-    test_collate_conf['spec_aug'] = False
-    test_collate_conf['spec_sub'] = False
-    test_collate_conf['feature_dither'] = False
-    test_collate_conf['speed_perturb'] = False
-    if raw_wav:
-        test_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    test_collate_func = CollateFunc(**test_collate_conf, raw_wav=raw_wav)
-    dataset_conf = configs.get('dataset_conf', {})
-    dataset_conf['batch_size'] = args.batch_size
-    dataset_conf['batch_type'] = 'static'
-    dataset_conf['sort'] = False
-    test_dataset = AudioDataset(args.test_data,
-                                **dataset_conf,
-                                raw_wav=raw_wav)
-    test_data_loader = DataLoader(test_dataset,
-                                  collate_fn=test_collate_func,
-                                  shuffle=False,
-                                  batch_size=1,
-                                  num_workers=0)
+    symbol_table = read_symbol_table(args.dict)
+    test_conf = copy.deepcopy(configs['dataset_conf'])
+
+    test_conf['filter_conf']['max_length'] = 102400
+    test_conf['filter_conf']['min_length'] = 0
+    test_conf['filter_conf']['token_max_length'] = 102400
+    test_conf['filter_conf']['token_min_length'] = 0
+    test_conf['filter_conf']['max_output_input_ratio'] = 102400
+    test_conf['filter_conf']['min_output_input_ratio'] = 0
+    test_conf['speed_perturb'] = False
+    test_conf['spec_aug'] = False
+    test_conf['shuffle'] = False
+    test_conf['sort'] = False
+    test_conf['fbank_conf']['dither'] = 0.0
+    test_conf['batch_conf']['batch_size'] = args.batch_size
+
+    test_dataset = Dataset(args.data_type,
+                           args.test_data,
+                           symbol_table,
+                           test_conf,
+                           args.bpe_model,
+                           partition=False)
+
+    test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
     model = init_asr_model(configs)
@@ -147,7 +170,7 @@ if __name__ == '__main__':
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
             if args.mode == 'attention':
-                hyps = model.recognize(
+                hyps, _ = model.recognize(
                     feats,
                     feats_lengths,
                     beam_size=args.beam_size,
@@ -156,7 +179,7 @@ if __name__ == '__main__':
                     simulate_streaming=args.simulate_streaming)
                 hyps = [hyp.tolist() for hyp in hyps]
             elif args.mode == 'ctc_greedy_search':
-                hyps = model.ctc_greedy_search(
+                hyps, _ = model.ctc_greedy_search(
                     feats,
                     feats_lengths,
                     decoding_chunk_size=args.decoding_chunk_size,
@@ -167,7 +190,7 @@ if __name__ == '__main__':
             # with other batch decoding mode
             elif args.mode == 'ctc_prefix_beam_search':
                 assert (feats.size(0) == 1)
-                hyp = model.ctc_prefix_beam_search(
+                hyp, _ = model.ctc_prefix_beam_search(
                     feats,
                     feats_lengths,
                     args.beam_size,
@@ -177,7 +200,7 @@ if __name__ == '__main__':
                 hyps = [hyp]
             elif args.mode == 'attention_rescoring':
                 assert (feats.size(0) == 1)
-                hyp = model.attention_rescoring(
+                hyp, _ = model.attention_rescoring(
                     feats,
                     feats_lengths,
                     args.beam_size,
@@ -195,3 +218,7 @@ if __name__ == '__main__':
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
+
+
+if __name__ == '__main__':
+    main()

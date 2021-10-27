@@ -24,10 +24,12 @@
 #define KALDI_DECODER_LATTICE_FASTER_DECODER_H_
 
 #include <limits>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
 #include "base/kaldi-common.h"
+#include "decoder/context_graph.h"
 #include "fst/fstlib.h"
 #include "fstext/fstext-lib.h"
 #include "itf/decodable-itf.h"
@@ -122,16 +124,23 @@ struct ForwardLink {
   Label olabel;          // olabel on arc
   BaseFloat graph_cost;  // graph cost of traversing arc (contains LM, etc.)
   BaseFloat acoustic_cost;  // acoustic cost (pre-scaled) of traversing arc
-  ForwardLink *next;        // next in singly-linked list of forward arcs (arcs
-                            // in the state-level lattice) from a token.
+  bool is_start_boundary;
+  bool is_end_boundary;
+  float context_score;
+  ForwardLink *next;  // next in singly-linked list of forward arcs (arcs
+                      // in the state-level lattice) from a token.
   inline ForwardLink(Token *next_tok, Label ilabel, Label olabel,
                      BaseFloat graph_cost, BaseFloat acoustic_cost,
+                     bool is_start_boundary, bool is_end_boundary,
                      ForwardLink *next)
       : next_tok(next_tok),
         ilabel(ilabel),
         olabel(olabel),
         graph_cost(graph_cost),
         acoustic_cost(acoustic_cost),
+        is_start_boundary(is_start_boundary),
+        is_end_boundary(is_end_boundary),
+        context_score(0),
         next(next) {}
 };
 
@@ -155,6 +164,8 @@ struct StdToken {
   // and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
 
+  int context_state = 0;
+
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
   // use for lattice generation.
   ForwardLinkT *links;
@@ -173,7 +184,11 @@ struct StdToken {
   // fast way to obtain the best path).
   inline StdToken(BaseFloat tot_cost, BaseFloat extra_cost, ForwardLinkT *links,
                   Token *next, Token *backpointer)
-      : tot_cost(tot_cost), extra_cost(extra_cost), links(links), next(next) {}
+      : tot_cost(tot_cost),
+        extra_cost(extra_cost),
+        links(links),
+        context_state(0),
+        next(next) {}
 };
 
 struct BackpointerToken {
@@ -196,6 +211,8 @@ struct BackpointerToken {
   // eventually succeed (e.g. if you were to take the currently active states
   // one by one and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
+
+  int context_state = 0;
 
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
   // use for lattice generation.
@@ -221,7 +238,8 @@ struct BackpointerToken {
         extra_cost(extra_cost),
         links(links),
         next(next),
-        backpointer(backpointer) {}
+        backpointer(backpointer),
+        context_state(0) {}
 };
 
 }  // namespace decoder
@@ -254,8 +272,9 @@ class LatticeFasterDecoderTpl {
   // Instantiate this class once for each thing you have to decode.
   // This version of the constructor does not take ownership of
   // 'fst'.
-  LatticeFasterDecoderTpl(const FST &fst,
-                          const LatticeFasterDecoderConfig &config);
+  LatticeFasterDecoderTpl(
+      const FST &fst, const LatticeFasterDecoderConfig &config,
+      const std::shared_ptr<wenet::ContextGraph> &context_graph);
 
   // This version of the constructor takes ownership of the fst, and will delete
   // it when this object is destroyed.
@@ -498,6 +517,8 @@ class LatticeFasterDecoderTpl {
   unordered_map<Token *, BaseFloat> final_costs_;
   BaseFloat final_relative_cost_;
   BaseFloat final_best_cost_;
+
+  std::shared_ptr<wenet::ContextGraph> context_graph_ = nullptr;
 
   // There are various cleanup tasks... the toks_ structure contains
   // singly linked lists of Token pointers, where Elem is the list type.

@@ -142,7 +142,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     for ((i = 0; i < $num_gpus; ++i)); do
     {
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-        python wenet/bin/train.py --gpu $gpu_id \
+        python wenet/bin/train_deprecated.py --gpu $gpu_id \
             --config $train_config \
             --train_data data/$train_set/format.data \
             --cv_data data/dev/format.data \
@@ -182,7 +182,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     {
         test_dir=$dir/${test}_${mode}
         mkdir -p $test_dir
-        python wenet/bin/recognize.py --gpu 0 \
+        python wenet/bin/recognize_deprecated.py --gpu 0 \
             --mode $mode \
             --config $dir/train.yaml \
             --test_data data/$test/format.data \

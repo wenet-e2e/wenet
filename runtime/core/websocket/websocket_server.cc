@@ -19,7 +19,6 @@
 #include <vector>
 
 #include "boost/json/src.hpp"
-
 #include "utils/log.h"
 
 namespace wenet {
@@ -34,15 +33,11 @@ namespace json = boost::json;
 ConnectionHandler::ConnectionHandler(
     tcp::socket&& socket, std::shared_ptr<FeaturePipelineConfig> feature_config,
     std::shared_ptr<DecodeOptions> decode_config,
-    std::shared_ptr<fst::SymbolTable> symbol_table,
-    std::shared_ptr<TorchAsrModel> model,
-    std::shared_ptr<fst::Fst<fst::StdArc>> fst)
+    std::shared_ptr<DecodeResource> decode_resource)
     : ws_(std::move(socket)),
       feature_config_(std::move(feature_config)),
       decode_config_(std::move(decode_config)),
-      symbol_table_(std::move(symbol_table)),
-      model_(std::move(model)),
-      fst_(std::move(fst)) {}
+      decode_resource_(std::move(decode_resource)) {}
 
 void ConnectionHandler::OnSpeechStart() {
   LOG(INFO) << "Recieved speech start signal, start reading speech";
@@ -52,7 +47,7 @@ void ConnectionHandler::OnSpeechStart() {
   ws_.write(asio::buffer(json::serialize(rv)));
   feature_pipeline_ = std::make_shared<FeaturePipeline>(*feature_config_);
   decoder_ = std::make_shared<TorchAsrDecoder>(
-      feature_pipeline_, model_, symbol_table_, *decode_config_, fst_);
+      feature_pipeline_, decode_resource_, *decode_config_);
   // Start decoder thread
   decode_thread_ =
       std::make_shared<std::thread>(&ConnectionHandler::DecodeThreadFunc, this);
@@ -127,34 +122,38 @@ std::string ConnectionHandler::SerializeResult(bool finish) {
 }
 
 void ConnectionHandler::DecodeThreadFunc() {
-  while (true) {
-    DecodeState state = decoder_->Decode();
-    if (state == DecodeState::kEndFeats) {
-      decoder_->Rescoring();
-      std::string result = SerializeResult(true);
-      OnFinalResult(result);
-      OnFinish();
-      stop_recognition_ = true;
-      break;
-    } else if (state == DecodeState::kEndpoint) {
-      decoder_->Rescoring();
-      std::string result = SerializeResult(true);
-      OnFinalResult(result);
-      // If it's not continuous decoidng, continue to do next recognition
-      // otherwise stop the recognition
-      if (continuous_decoding_) {
-        decoder_->ResetContinuousDecoding();
-      } else {
+  try {
+    while (true) {
+      DecodeState state = decoder_->Decode();
+      if (state == DecodeState::kEndFeats) {
+        decoder_->Rescoring();
+        std::string result = SerializeResult(true);
+        OnFinalResult(result);
         OnFinish();
         stop_recognition_ = true;
         break;
-      }
-    } else {
-      if (decoder_->DecodedSomething()) {
-        std::string result = SerializeResult(false);
-        OnPartialResult(result);
+      } else if (state == DecodeState::kEndpoint) {
+        decoder_->Rescoring();
+        std::string result = SerializeResult(true);
+        OnFinalResult(result);
+        // If it's not continuous decoidng, continue to do next recognition
+        // otherwise stop the recognition
+        if (continuous_decoding_) {
+          decoder_->ResetContinuousDecoding();
+        } else {
+          OnFinish();
+          stop_recognition_ = true;
+          break;
+        }
+      } else {
+        if (decoder_->DecodedSomething()) {
+          std::string result = SerializeResult(false);
+          OnPartialResult(result);
+        }
       }
     }
+  } catch (std::exception const& e) {
+    LOG(ERROR) << e.what();
   }
 }
 
@@ -238,6 +237,10 @@ void ConnectionHandler::operator()() {
   } catch (beast::system_error const& se) {
     // This indicates that the session was closed
     if (se.code() != websocket::error::closed) {
+      if (decode_thread_ != nullptr) {
+        decode_thread_->join();
+      }
+      OnSpeechEnd();
       LOG(ERROR) << se.code().message();
     }
   } catch (std::exception const& e) {
@@ -256,7 +259,7 @@ void WebSocketServer::Start() {
       acceptor.accept(socket);
       // Launch the session, transferring ownership of the socket
       ConnectionHandler handler(std::move(socket), feature_config_,
-                                decode_config_, symbol_table_, model_, fst_);
+                                decode_config_, decode_resource_);
       std::thread t(std::move(handler));
       t.detach();
     }

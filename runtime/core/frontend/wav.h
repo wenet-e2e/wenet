@@ -46,10 +46,14 @@ struct WavHeader {
 
 class WavReader {
  public:
-  explicit WavReader(const std::string& filename) {
+  WavReader() : data_(nullptr) {}
+  explicit WavReader(const std::string& filename) { Open(filename); }
+
+  bool Open(const std::string& filename) {
     FILE* fp = fopen(filename.c_str(), "rb");
     if (NULL == fp) {
-      LOG(FATAL) << "Error in read " << filename;
+      LOG(WARNING) << "Error in read " << filename;
+      return false;
     }
 
     WavHeader header;
@@ -58,7 +62,7 @@ class WavReader {
       fprintf(stderr,
               "WaveData: expect PCM format data "
               "to have fmt chunk of at least size 16.\n");
-      exit(1);
+      return false;
     } else if (header.fmt_size > 16) {
       int offset = 44 - 8 + header.fmt_size - 16;
       fseek(fp, offset, SEEK_SET);
@@ -109,6 +113,7 @@ class WavReader {
       }
     }
     fclose(fp);
+    return true;
   }
 
   int num_channel() const { return num_channel_; }

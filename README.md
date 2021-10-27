@@ -1,13 +1,16 @@
 # WeNet
 
+[**中文版**](https://github.com/wenet-e2e/wenet/blob/main/README_CN.md)
+
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/wenet-e2e/wenet)
 
-[**Docs**](https://wenet-e2e.github.io/wenet/)
-| [**Tutorial**](https://wenet-e2e.github.io/wenet/tutorial.html)
+[**Discussions**](https://github.com/wenet-e2e/wenet/discussions)
+| [**Docs**](https://wenet-e2e.github.io/wenet/)
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
 | [**Runtime (android)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet)
+| [**Pretrained Models**](docs/pretrained_models.md)
 
 **We** share neural **Net** together.
 
@@ -16,26 +19,19 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 ## Highlights
 
-* **Production first and production ready**: The python code of WeNet meets the requirements of TorchScript,
-  so the model trained by WeNet can be directly exported by Torch JIT and use LibTorch for inference.
-  There is no gap between the research model and production model.
-  Neither model conversion nor additional code is required for model inference.
-* **Unified solution for streaming and non-streaming ASR**: WeNet implements [Unified Two Pass (U2)](https://arxiv.org/pdf/2012.05481.pdf)
-  framework to achieve accurate, fast and unified E2E model, which is favorable for industry adoption.
-* **Portable runtime**: Several demos will be provided to show how to host WeNet trained models
-  on different platforms, including server [x86](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86) and on-device [android](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet).
-* **Light weight**: WeNet is designed specifically for E2E speech recognition,
-  with clean and simple code. It is all based on PyTorch and its corresponding ecosystem. It has no dependency on Kaldi,
-  which simplifies installation and usage.
+* **Production first and production ready**: The core design principle of WeNet. WeNet provides full stack solutions for speech recognition.
+  * *Unified solution for streaming and non-streaming ASR*: [U2 framework](https://arxiv.org/pdf/2012.05481.pdf)--develop, train, and deploy only once.
+  * *Runtime solution*: built-in server [x86](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86) and on-device [android](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet) runtime solution.
+  * *Model exporting solution*: built-in solution to export model to LibTorch/ONNX for inference.
+  * *LM solution*: built-in production-level [LM solution](docs/lm.md).
+  * *Other production solutions*: built-in contextual biasing, time stamp, endpoint, and n-best solutions.
 
-## Pretrained Models & Performance Benchmark
+* **Accurate**: WeNet achieves SOTA results on a lot of public speech datasets.
+* **Light weight**: WeNet is easy to install, easy to use, well designed, and well documented.
 
- We release various pretrained models. Please see `examples/$dataset/s0/README.md` for model download links and WeNet benchmark on different speech datasets.
-* [AIShell-1](examples/aishell/s0/README.md)
-* [AIShell-2](examples/aishell2/s0/README.md)
-* [LibriSpeech](examples/librispeech/s0/README.md)
-* [GigaSpeech](examples/gigaspeech/s0/README.md)
-* [Multi-Chinese](examples/multi_cn/s0/README.md) trained using all open source Chinese corpus.
+## Performance Benchmark
+
+Please see `examples/$dataset/s0/README.md` for benchmark on different speech datasets.
 
 ## Installation
 
@@ -45,20 +41,13 @@ git clone https://github.com/wenet-e2e/wenet.git
 ```
 
 - Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
-- Create Conda env: (**PyTorch 1.6.0** is recommended. We met some error on NCCL when using 1.7.0 on 2080 Ti.)
+- Create Conda env:
 
 ``` sh
-# [option 1]
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch==1.6.0 cudatoolkit=10.1 torchaudio=0.6.0 -c pytorch
-
-# [option 2: working on machine with GPU 3090]
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch torchvision torchaudio=0.8.0 cudatoolkit=11.1 -c pytorch -c conda-forge
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 - Optionally, if you want to use x86 runtime or language model(LM),
@@ -72,16 +61,18 @@ mkdir build && cd build && cmake .. && cmake --build .
 
 ## Discussion & Communication
 
-Please scan the QR code on the left to follow the offical account of WeNet.
+Please visit [Discussions](https://github.com/wenet-e2e/wenet/discussions) for further discussion.
 
-In addition to discussing in [Github Issues](https://github.com/wenet-e2e/wenet/issues),
-we created a WeChat group for better discussion and quicker response.
+For Chinese users, you can aslo scan the QR code on the left to follow our offical account of WeNet.
+We created a WeChat group for better discussion and quicker response.
 Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 
 If you can not access the QR image, please access it on [gitee](https://gitee.com/robin1001/qr/tree/master).
 
 | <img src="https://github.com/robin1001/qr/blob/master/wenet.jpeg" width="250px"> | <img src="https://github.com/robin1001/qr/blob/master/binbin.jpeg" width="250px"> |
 | ---- | ---- |
+
+Or you can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
 
 ## Contributors
 
@@ -98,12 +89,13 @@ If you can not access the QR image, please access it on [gitee](https://gitee.co
 ## Citations
 
 ``` bibtex
-@article{yao2021wenet,
+@inproceedings{yao2021wenet,
   title={WeNet: Production oriented Streaming and Non-streaming End-to-End Speech Recognition Toolkit},
   author={Yao, Zhuoyuan and Wu, Di and Wang, Xiong and Zhang, Binbin and Yu, Fan and Yang, Chao and Peng, Zhendong and Chen, Xiaoyu and Xie, Lei and Lei, Xin},
-  journal={arXiv e-prints},
-  pages={arXiv--2102},
-  year={2021}
+  booktitle={Proc. Interspeech},
+  year={2021},
+  address={Brno, Czech Republic }
+  organization={IEEE}
 }
 
 @article{zhang2020unified,

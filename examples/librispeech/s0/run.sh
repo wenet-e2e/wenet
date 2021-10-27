@@ -12,10 +12,9 @@ stop_stage=5
 # data
 data_url=www.openslr.org/resources/12
 # use your own data path
-datadir=/nfsa/diwu/open-dir
+datadir=/export/data/en-asr-data/OpenSLR
 # wav data dir
 wave_data=data
-nj=16
 # Optional train_config
 # 1. conf/train_transformer_large.yaml: Standard transformer
 train_config=conf/train_conformer.yaml
@@ -113,17 +112,8 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev ${recog_set} $train_set ; do
-        tools/format_data.sh --nj ${nj} \
-            --feat-type flac --feat $wave_data/$x/wav.scp --bpecode ${bpemodel}.model \
-            $wave_data/$x ${dict} > $wave_data/$x/format.data.tmp
-
-        tools/remove_longshortdata.py \
-            --min_input_len 0.5 \
-            --max_input_len 20 \
-            --max_output_len 400 \
-            --max_output_input_ratio 10.0 \
-            --data_file $wave_data/$x/format.data.tmp \
-            --output_data_file $wave_data/$x/format.data
+        tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
+                $wave_data/$x/data.list
     done
 
 fi
@@ -138,7 +128,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "$0: init method is $init_method"
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
-    dist_backend="nccl"
+    dist_backend="gloo"
     cmvn_opts=
     $cmvn && cmvn_opts="--cmvn $wave_data/${train_set}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
@@ -149,8 +139,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
         python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
-            --train_data $wave_data/$train_set/format.data \
-            --cv_data $wave_data/dev/format.data \
+            --data_type raw \
+            --symbol_table $dict \
+            --train_data $wave_data/$train_set/data.list \
+            --cv_data $wave_data/dev/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
@@ -197,7 +189,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
                 python wenet/bin/recognize.py --gpu $gpu_id \
                     --mode $mode \
                     --config $dir/train.yaml \
-                    --test_data $wave_data/$test/format.data \
+                    --data_type raw \
+                    --test_data $wave_data/$test/data.list \
                     --checkpoint $decode_checkpoint \
                     --beam_size 10 \
                     --batch_size 1 \

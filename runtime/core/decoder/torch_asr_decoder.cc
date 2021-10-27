@@ -17,36 +17,27 @@ namespace wenet {
 
 TorchAsrDecoder::TorchAsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
-    std::shared_ptr<TorchAsrModel> model,
-    std::shared_ptr<fst::SymbolTable> symbol_table, const DecodeOptions& opts,
-    std::shared_ptr<fst::Fst<fst::StdArc>> fst)
+    std::shared_ptr<DecodeResource> resource, const DecodeOptions& opts)
     : feature_pipeline_(std::move(feature_pipeline)),
-      model_(std::move(model)),
-      symbol_table_(symbol_table),
+      model_(resource->model),
+      post_processor_(resource->post_processor),
+      symbol_table_(resource->symbol_table),
+      fst_(resource->fst),
+      unit_table_(resource->unit_table),
       opts_(opts),
       ctc_endpointer_(new CtcEndpoint(opts.ctc_endpoint_config)) {
   if (opts_.reverse_weight > 0) {
     // Check if model has a right to left decoder
     CHECK(model_->is_bidirectional_decoder());
   }
-  if (nullptr == fst) {
-    searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts));
+  if (nullptr == fst_) {
+    searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts,
+                                            resource->context_graph));
   } else {
-    searcher_.reset(new CtcWfstBeamSearch(*fst, opts.ctc_wfst_search_opts));
+    searcher_.reset(new CtcWfstBeamSearch(*fst_, opts.ctc_wfst_search_opts,
+                                          resource->context_graph));
   }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
-
-  fst::SymbolTableIterator iter(*symbol_table_);
-  std::string space_symbol = kSpaceSymbol;
-  while (!iter.Done()) {
-    if (iter.Symbol().size() > space_symbol.size() &&
-        std::equal(space_symbol.begin(), space_symbol.end(),
-                   iter.Symbol().begin())) {
-      wp_start_with_space_symbol_ = true;
-      break;
-    }
-    iter.Next();
-  }
 }
 
 void TorchAsrDecoder::Reset() {
@@ -198,96 +189,53 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   return state;
 }
 
-// NOTE(Xingchen Song): we add this function to make it possible to
-// support multilingual recipe in the future, in which characters of
-// different languages are all encoded in UTF-8 format.
-// UTF-8 REF: https://en.wikipedia.org/wiki/UTF-8#Encoding
-void SplitEachChar(const std::string& word, std::vector<std::string>* chars) {
-  chars->clear();
-  size_t i = 0;
-  while (i < word.length()) {
-    assert((word[i] & 0xF8) <= 0xF0);
-    int bytes_ = 1;
-    if ((word[i] & 0x80) == 0x00) {
-      // The first 128 characters (US-ASCII) in UTF-8 format only need one byte.
-      bytes_ = 1;
-    } else if ((word[i] & 0xE0) == 0xC0) {
-      // The next 1,920 characters need two bytes to encode,
-      // which covers the remainder of almost all Latin-script alphabets.
-      bytes_ = 2;
-    } else if ((word[i] & 0xF0) == 0xE0) {
-      // Three bytes are needed for characters in the rest of
-      // the Basic Multilingual Plane, which contains virtually all characters
-      // in common use, including most Chinese, Japanese and Korean characters.
-      bytes_ = 3;
-    } else if ((word[i] & 0xF8) == 0xF0) {
-      // Four bytes are needed for characters in the other planes of Unicode,
-      // which include less common CJK characters, various historic scripts,
-      // mathematical symbols, and emoji (pictographic symbols).
-      bytes_ = 4;
-    }
-    chars->push_back(word.substr(i, bytes_));
-    i += bytes_;
-  }
-  return;
-}
-
-static bool CheckEnglishWord(const std::string& word) {
-  std::vector<std::string> chars;
-  SplitEachChar(word, &chars);
-  for (size_t k = 0; k < chars.size(); k++) {
-    // all english characters should be encoded in one byte
-    if (chars[k].size() > 1) return false;
-    // english words may contain apostrophe, i.e., "He's"
-    if (chars[k][0] == '\'') continue;
-    if (!isalpha(chars[k][0])) return false;
-  }
-  return true;
-}
-
-void TorchAsrDecoder::UpdateResult() {
+void TorchAsrDecoder::UpdateResult(bool finish) {
   const auto& hypotheses = searcher_->Outputs();
+  const auto& inputs = searcher_->Inputs();
   const auto& likelihood = searcher_->Likelihood();
   const auto& times = searcher_->Times();
   result_.clear();
 
   CHECK_EQ(hypotheses.size(), likelihood.size());
-  // CHECK_EQ(hypotheses.size(), times.size());
   for (size_t i = 0; i < hypotheses.size(); i++) {
     const std::vector<int>& hypothesis = hypotheses[i];
 
     DecodeResult path;
-    bool is_englishword_prev = false;
     path.score = likelihood[i];
     int offset = global_frame_offset_ * feature_frame_shift_in_ms();
     for (size_t j = 0; j < hypothesis.size(); j++) {
       std::string word = symbol_table_->Find(hypothesis[j]);
-      if (wp_start_with_space_symbol_) {
-        path.sentence += word;
-        continue;
-      }
-      bool is_englishword_now = CheckEnglishWord(word);
-      if (is_englishword_prev && is_englishword_now) {
+      // A detailed explanation of this if-else branch can be found in
+      // https://github.com/wenet-e2e/wenet/issues/583#issuecomment-907994058
+      if (searcher_->Type() == kWfstBeamSearch) {
         path.sentence += (' ' + word);
       } else {
         path.sentence += (word);
       }
-      is_englishword_prev = is_englishword_now;
     }
-    // TimeStamp is only supported in CtcPrefixBeamSearch now
-    if (searcher_->Type() == SearchType::kPrefixBeamSearch) {
+
+    // TimeStamp is only supported in final result
+    // TimeStamp of the output of CtcWfstBeamSearch may be inaccurate due to
+    // various FST operations when building the decoding graph. So here we use
+    // time stamp of the input(e2e model unit), which is more accurate, and it
+    // requires the symbol table of the e2e model used in training.
+    if (unit_table_ != nullptr && finish) {
+      const std::vector<int>& input = inputs[i];
       const std::vector<int>& time_stamp = times[i];
-      CHECK_EQ(hypothesis.size(), time_stamp.size());
-      for (size_t j = 0; j < hypothesis.size(); j++) {
-        std::string word = symbol_table_->Find(hypothesis[j]);
-        int start = j > 0 ? time_stamp[j - 1] * frame_shift_in_ms() : 0;
-        int end = time_stamp[j] * frame_shift_in_ms();
+      CHECK_EQ(input.size(), time_stamp.size());
+      for (size_t j = 0; j < input.size(); j++) {
+        std::string word = unit_table_->Find(input[j]);
+        int start = j > 0 ? ((time_stamp[j - 1] + time_stamp[j]) / 2 *
+                             frame_shift_in_ms())
+                          : 0;
+        int end = j < input.size() - 1 ? ((time_stamp[j] + time_stamp[j + 1]) /
+                                          2 * frame_shift_in_ms())
+                                       : offset_ * frame_shift_in_ms();
         WordPiece word_piece(word, offset + start, offset + end);
         path.word_pieces.emplace_back(word_piece);
-        start = word_piece.end;
       }
     }
-    path.sentence = ProcessBlank(path.sentence);
+    path.sentence = post_processor_->Process(path.sentence, finish);
     result_.emplace_back(path);
   }
 
@@ -310,8 +258,13 @@ float TorchAsrDecoder::AttentionDecoderScore(const torch::Tensor& prob,
 
 void TorchAsrDecoder::AttentionRescoring() {
   searcher_->FinalizeSearch();
-  UpdateResult();
+  UpdateResult(true);
+  // No need to do rescoring
   if (0.0 == opts_.rescoring_weight) {
+    return;
+  }
+  // No encoder output
+  if (encoder_outs_.size() == 0) {
     return;
   }
 

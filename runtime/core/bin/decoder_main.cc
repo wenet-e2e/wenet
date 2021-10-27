@@ -11,25 +11,23 @@
 #include "frontend/wav.h"
 #include "utils/flags.h"
 #include "utils/log.h"
+#include "utils/string.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
 
 DEFINE_bool(simulate_streaming, false, "simulate streaming input");
+DEFINE_bool(output_nbest, false, "output n-best of decode result");
 DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(result, "", "result output file");
 
 int main(int argc, char *argv[]) {
-  google::ParseCommandLineFlags(&argc, &argv, false);
+  gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
-  auto model = wenet::InitTorchAsrModelFromFlags();
-  auto symbol_table = wenet::InitSymbolTableFromFlags();
   auto decode_config = wenet::InitDecodeOptionsFromFlags();
   auto feature_config = wenet::InitFeaturePipelineConfigFromFlags();
-  auto fst = wenet::InitFstFromFlags();
-  auto feature_pipeline =
-      std::make_shared<wenet::FeaturePipeline>(*feature_config);
+  auto decode_resource = wenet::InitDecodeResourceFromFlags();
 
   if (FLAGS_wav_path.empty() && FLAGS_wav_scp.empty()) {
     LOG(FATAL) << "Please provide the wave path or the wav scp.";
@@ -60,17 +58,19 @@ int main(int argc, char *argv[]) {
     wenet::WavReader wav_reader(wav.second);
     CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
 
-    feature_pipeline->Reset();
+    auto feature_pipeline =
+        std::make_shared<wenet::FeaturePipeline>(*feature_config);
     feature_pipeline->AcceptWaveform(std::vector<float>(
         wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
     feature_pipeline->set_input_finished();
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
-    wenet::TorchAsrDecoder decoder(feature_pipeline, model, symbol_table,
-                                   *decode_config, fst);
+    wenet::TorchAsrDecoder decoder(feature_pipeline, decode_resource,
+                                   *decode_config);
 
-    int wave_dur = static_cast<int>(static_cast<float>(
-                wav_reader.num_sample()) / wav_reader.sample_rate() * 1000);
+    int wave_dur =
+        static_cast<int>(static_cast<float>(wav_reader.num_sample()) /
+                         wav_reader.sample_rate() * 1000);
     int decode_time = 0;
     while (true) {
       wenet::Timer timer;
@@ -107,7 +107,19 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << wav.first << " Final result: " << final_result << std::endl;
     LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time
               << "ms.";
-    buffer << wav.first << " " << final_result << std::endl;
+
+    if (!FLAGS_output_nbest) {
+      buffer << wav.first << " " << final_result << std::endl;
+    } else {
+      buffer << "wav " << wav.first << std::endl;
+      auto &results = decoder.result();
+      for (auto &r : results) {
+        if (r.sentence.empty())
+          continue;
+        buffer << "candidate " << r.score << " " << r.sentence << std::endl;
+      }
+    }
+
     total_waves_dur += wave_dur;
     total_decode_time += decode_time;
   }

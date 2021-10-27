@@ -75,11 +75,11 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
-    implementation 'org.pytorch:pytorch_android:1.6.0'
-    extractForNativeBuild 'org.pytorch:pytorch_android:1.6.0'
+    implementation 'org.pytorch:pytorch_android:1.9.0'
+    extractForNativeBuild 'org.pytorch:pytorch_android:1.9.0'
 
-    implementation 'com.github.pengzhendong:wenet-openfst-android:1.0.0'
-    extractForNativeBuild 'com.github.pengzhendong:wenet-openfst-android:1.0.0'
+    implementation 'com.github.pengzhendong:wenet-openfst-android:1.0.1'
+    extractForNativeBuild 'com.github.pengzhendong:wenet-openfst-android:1.0.1'
 }
 
 task extractAARForNativeBuild {
