@@ -19,10 +19,10 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 ## Highlights
 
-* **Production first and production ready**: The core design priciple of WeNet. WeNet provides full stack solutions for speech recognition.
+* **Production first and production ready**: The core design principle of WeNet. WeNet provides full stack solutions for speech recognition.
   * *Unified solution for streaming and non-streaming ASR*: [U2 framework](https://arxiv.org/pdf/2012.05481.pdf)--develop, train, and deploy only once.
   * *Runtime solution*: built-in server [x86](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86) and on-device [android](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet) runtime solution.
-  * *Model exporting solution*: built-in solution to export model to LibTorch/ONNX for inferrence.
+  * *Model exporting solution*: built-in solution to export model to LibTorch/ONNX for inference.
   * *LM solution*: built-in production-level [LM solution](docs/lm.md).
   * *Other production solutions*: built-in contextual biasing, time stamp, endpoint, and n-best solutions.
 
