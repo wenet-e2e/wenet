@@ -46,7 +46,7 @@ has_tal=false       # TAL data need download from Baidu SkyDrive
                     # TAL/TAL_ASR and TAL/TAL_ASR_mix in $dbase
 data_type=raw # raw or shard
 num_utts_per_shard=1000
-shards_dir=
+shards_dir= # specify if you prefer to store to somewhere else
 # Optional train_config
 # 1. conf/train_transformer.yaml: Standard transformer
 # 2. conf/train_conformer.yaml: Standard conformer
@@ -93,7 +93,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
   local/magicdata_download_and_untar.sh $dbase/magicdata $magicdata_url \
     test_set || exit 1;
   # tal data need download from Baidu SkyDrive
-  # AISHELL-2 database is free for academic research, not in the commerce, 
+  # AISHELL-2 database is free for academic research, not in the commerce,
   # if without permission.
   # You need to request the data from AISHELL company.
 fi
@@ -225,7 +225,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   done
   for x in ${dev_set} ${train_set} ${feat_test_sets}; do
     if [ $data_type == "shard" ]; then
-      sdir=$shards_dir/shards_${en_modeling_unit}
+      sdir=${shards_dir:+$shards_dir/}shards_${en_modeling_unit}
       mkdir -p $sdir
       tools/make_shard_list.py --num_utts_per_shard $num_utts_per_shard \
         --num_threads 16 data_${en_modeling_unit}/$x/wav.scp \
