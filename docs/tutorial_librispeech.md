@@ -173,38 +173,31 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev ${recog_set} $train_set ; do
-        tools/format_data.sh --nj ${nj} \
-            --feat-type flac --feat $wave_data/$x/wav.scp --bpecode ${bpemodel}.model \
-            $wave_data/$x ${dict} > $wave_data/$x/format.data.tmp
-
-        tools/remove_longshortdata.py \
-            --min_input_len 0.5 \
-            --max_input_len 20 \
-            --max_output_len 400 \
-            --max_output_input_ratio 10.0 \
-            --data_file $wave_data/$x/format.data.tmp \
-            --output_data_file $wave_data/$x/format.data
+        tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
+                $wave_data/$x/data.list
     done
 
 fi
 ```
 
-This stage generates a single WeNet format file including all the input/output information needed by neural network training/evaluation.
+This stage generates the WeNet required format file `data.list`. Each line in `data.list` is in json format which contains the following fields.
 
-See the generated training feature file in `fbank_pitch/train/format.data`.
+1. `key`: key of the utterance
+2. `wav`: audio file path of the utterance
+3. `txt`: normalized transcription of the utterance, the transcription will be tokenized to the model units on-the-fly at the training stage.
 
-In the WeNet format file , each line records a data sample of seven tab-separated columns. For example, a line is as follows (tab replaced with newline here):
+Here is an example of the `data.list`, and please see the generated training feature file in `data/train/data.list`.
 
 ```
-utt:1867-154075-0014
-feat:/export/data/en-asr-data/OpenSLR//LibriSpeech/train-clean-100/1867/154075/1867-154075-0014.flac
-feat_shape:2.21
-text:YOU SHOW HIM THAT IT IS POSSIBLE
-token:▁YOU ▁SHOW ▁HIM ▁THAT ▁IT ▁IS ▁POSSIBL E
-tokenid:4995 3987 2099 4452 2389 2375 3365 1351
-token_shape:8,5002
+{"key": "1455-134435-0000", "wav": "/mnt/nfs/ptm1/open-data/LibriSpeech/train-clean-100/1455/134435/1455-134435-0000.flac", "txt": "THE GIRL WHO CAME INTO THE WORLD ON THAT NIGHT WHEN JESSE RAN THROUGH THE FIELDS CRYING TO GOD THAT HE BE GIVEN A SON HAD GROWN TO WOMANHOOD ON THE FARM"}
+{"key": "1455-134435-0001", "wav": "/mnt/nfs/ptm1/open-data/LibriSpeech/train-clean-100/1455/134435/1455-134435-0001.flac", "txt": "AND WHEN NOT ANGRY SHE WAS OFTEN MOROSE AND SILENT IN WINESBURG IT WAS SAID THAT SHE DRANK HER HUSBAND THE BANKER"}
+{"key": "1455-134435-0002", "wav": "/mnt/nfs/ptm1/open-data/LibriSpeech/train-clean-100/1455/134435/1455-134435-0002.flac", "txt": "BUT LOUISE COULD NOT BE MADE HAPPY SHE FLEW INTO HALF INSANE FITS OF TEMPER DURING WHICH SHE WAS SOMETIMES SILENT SOMETIMES NOISY AND QUARRELSOME SHE SWORE AND CRIED OUT IN HER ANGER SHE GOT A KNIFE FROM THE KITCHEN AND THREATENED HER HUSBAND'S LIFE"}
 ```
-`feat_shape` is the duration(in seconds) of the wav, `text` is splited into BPE sequence `token`.
+
+We aslo design another format for `data.list` named `shard` which is for big data training.
+Please see [gigaspeech](https://github.com/wenet-e2e/wenet/tree/main/examples/gigaspeech/s0)(10k hours) or
+[wenetspeech](https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0)(10k hours)
+for how to use `shard` style `data.list` if you want to apply WeNet on big data set(more than 5k).
 
 #### Stage 4: Neural Network training
 
@@ -229,8 +222,10 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
         python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
-            --train_data $wave_data/$train_set/format.data \
-            --cv_data $wave_data/dev/format.data \
+            --data_type raw \
+            --symbol_table $dict \
+            --train_data $wave_data/$train_set/data.list \
+            --cv_data $wave_data/dev/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
@@ -307,7 +302,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
                 python wenet/bin/recognize.py --gpu $gpu_id \
                     --mode $mode \
                     --config $dir/train.yaml \
-                    --test_data $wave_data/$test/format.data \
+                    --data_type raw \
+                    --test_data $wave_data/$test/data.list \
                     --checkpoint $decode_checkpoint \
                     --beam_size 10 \
                     --batch_size 1 \
