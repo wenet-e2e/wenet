@@ -21,7 +21,7 @@ encoder_conf:
 decoder: transformer
 decoder_conf:
     attention_heads: 8
-    linear_units: 1024
+    linear_units: 2048
     num_blocks: 6
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
@@ -30,11 +30,12 @@ decoder_conf:
 
 # hybrid CTC/attention
 model_conf:
-    ctc_weight: 0.3
+    ctc_weight: 0.2
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
 
 dataset_conf:
+    char: true
     filter_conf:
         max_length: 40960
         min_length: 0
@@ -64,14 +65,14 @@ dataset_conf:
         batch_type: 'static' # static or dynamic
         batch_size: 8
 
-grad_clip: 5
+grad_clip: 10
 accum_grad: 4
-max_epoch: 60
-log_interval: 100
+max_epoch: 80
+log_interval: 200
 
 optim: adam
 optim_conf:
-    lr: 0.001
+    lr: 0.0002
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 20000
