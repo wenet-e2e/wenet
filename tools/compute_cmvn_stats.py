@@ -21,7 +21,17 @@ class CollateFunc(object):
     def __init__(self, feat_dim, resample_rate):
         self.feat_dim = feat_dim
         self.resample_rate = resample_rate
+        self.cached_wav_path = None
+        self.cached_audio = None
         pass
+
+    def get_audio(self, wav_path):
+        if wav_path == self.cached_wav_path:
+            return self.cached_audio
+        audio = torchaudio.load(wav_path)
+        self.cached_wav_path = wav_path
+        self.cached_audio = audio
+        return audio
 
     def __call__(self, batch):
         mean_stat = torch.zeros(self.feat_dim)
@@ -35,15 +45,12 @@ class CollateFunc(object):
             resample_rate = sample_rate
             # len(value) == 3 means segmented wav.scp,
             # len(value) == 1 means original wav.scp
+            waveform, sample_rate = self.get_audio(wav_path)
             if len(value) == 3:
                 start_frame = int(float(value[1]) * sample_rate)
                 end_frame = int(float(value[2]) * sample_rate)
-                waveform, sample_rate = torchaudio.backend.sox_io_backend.load(
-                    filepath=wav_path,
-                    num_frames=end_frame - start_frame,
-                    frame_offset=start_frame)
-            else:
-                waveform, sample_rate = torchaudio.load(item[1])
+                # https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html#tips-on-slicing
+                waveform = waveform[:, start_frame: end_frame]
 
             waveform = waveform * (1 << 15)
             if self.resample_rate != 0 and self.resample_rate != sample_rate:
@@ -103,10 +110,10 @@ if __name__ == '__main__':
 
     collate_func = CollateFunc(feat_dim, resample_rate)
     dataset = AudioDataset(args.in_scp)
-    batch_size = 20
+    batch_size = 500
     data_loader = DataLoader(dataset,
                              batch_size=batch_size,
-                             shuffle=True,
+                             shuffle=False,
                              sampler=None,
                              num_workers=args.num_workers,
                              collate_fn=collate_func)
