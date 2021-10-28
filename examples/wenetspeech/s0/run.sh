@@ -77,17 +77,14 @@ fi
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo "Compute cmvn"
   # Here we use all the training data, you can sample some some data to save time
+  # BUG!!! We should use the segmented data for CMVN
   if $cmvn; then
-    python tools/segment.py \
-      --segments data/$train_set/segments \
-      --input data/$train_set/wav.scp \
-      --output data/$train_set/wav.segment.scp
-    python3 tools/compute_cmvn_stats.py \
-    --num_workers 16 \
-    --train_config $train_config \
-    --in_scp data/$train_set/wav.segment.scp \
-    --out_cmvn data/$train_set/global_cmvn \
-    || exit 1;
+      python3 tools/compute_cmvn_stats.py \
+      --num_workers 16 \
+      --train_config $train_config \
+      --in_scp data/$train_set/wav.scp \
+      --out_cmvn data/$train_set/global_cmvn \
+      || exit 1;
   fi
 fi
 
