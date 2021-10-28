@@ -49,7 +49,6 @@ class CollateFunc(object):
             if len(value) == 3:
                 start_frame = int(float(value[1]) * sample_rate)
                 end_frame = int(float(value[2]) * sample_rate)
-                # https://pytorch.org/tutorials/beginner/audio_preprocessing_tutorial.html#tips-on-slicing
                 waveform = waveform[:, start_frame: end_frame]
 
             waveform = waveform * (1 << 15)
