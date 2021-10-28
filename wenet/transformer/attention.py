@@ -11,6 +11,8 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
+from wenet.transformer.quant import QuantLinear, FakeQuantize
+
 
 class MultiHeadedAttention(nn.Module):
     """Multi-Head Attention layer.
@@ -19,20 +21,32 @@ class MultiHeadedAttention(nn.Module):
         n_head (int): The number of heads.
         n_feat (int): The number of features.
         dropout_rate (float): Dropout rate.
+        quantize (bool): Whether to use quantization aware training.
 
     """
-    def __init__(self, n_head: int, n_feat: int, dropout_rate: float):
+    def __init__(self, n_head: int, n_feat: int, dropout_rate: float, quantize: bool = False):
         """Construct an MultiHeadedAttention object."""
         super().__init__()
         assert n_feat % n_head == 0
         # We assume d_v always equals d_k
         self.d_k = n_feat // n_head
         self.h = n_head
-        self.linear_q = nn.Linear(n_feat, n_feat)
-        self.linear_k = nn.Linear(n_feat, n_feat)
-        self.linear_v = nn.Linear(n_feat, n_feat)
-        self.linear_out = nn.Linear(n_feat, n_feat)
+        self.quantize = quantize
+        self.linear_fn = QuantLinear if quantize else nn.Linear
+        self.linear_q = self.linear_fn(n_feat, n_feat)
+        self.linear_k = self.linear_fn(n_feat, n_feat)
+        self.linear_v = self.linear_fn(n_feat, n_feat)
+        self.linear_out = self.linear_fn(n_feat, n_feat)
         self.dropout = nn.Dropout(p=dropout_rate)
+        self.p_quantizer = torch.nn.Identity()
+        self.v_quantizer = torch.nn.Identity()
+        self.q_quantizer = torch.nn.Identity()
+        self.k_quantizer = torch.nn.Identity()
+        if self.quantize:
+            self.p_quantizer = FakeQuantize()
+            self.v_quantizer = FakeQuantize()
+            self.q_quantizer = FakeQuantize()
+            self.k_quantizer = FakeQuantize()
 
     def forward_qkv(
         self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor
@@ -90,6 +104,9 @@ class MultiHeadedAttention(nn.Module):
             attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
 
         p_attn = self.dropout(attn)
+        if self.quantize:
+            p_attn = self.p_quantizer(p_attn)
+            value = self.v_quantizer(value)
         x = torch.matmul(p_attn, value)  # (batch, head, time1, d_k)
         x = (x.transpose(1, 2).contiguous().view(n_batch, -1,
                                                  self.h * self.d_k)
@@ -126,6 +143,10 @@ class MultiHeadedAttention(nn.Module):
 
         """
         q, k, v = self.forward_qkv(query, key, value)
+
+        if self.quantize:
+            q = self.q_quantizer(q)
+            k = self.k_quantizer(k)
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
         return self.forward_attention(v, scores, mask)
 
@@ -137,12 +158,18 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         n_head (int): The number of heads.
         n_feat (int): The number of features.
         dropout_rate (float): Dropout rate.
+        quantize (bool): Whether to use quantization aware training.
     """
-    def __init__(self, n_head, n_feat, dropout_rate):
+    def __init__(self, n_head, n_feat, dropout_rate, quantize: bool = False):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate)
+        self.q_with_bias_u_quantizer = torch.nn.Identity()
+        self.q_with_bias_v_quantizer = torch.nn.Identity()
+        if self.quantize:
+            self.q_with_bias_u_quantizer = FakeQuantize()
+            self.q_with_bias_v_quantizer = FakeQuantize()
         # linear transformation for positional encoding
-        self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
+        self.linear_pos = self.linear_fn(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
         self.pos_bias_u = nn.Parameter(torch.Tensor(self.h, self.d_k))
@@ -207,10 +234,16 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         # first compute matrix a and matrix c
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
         # (batch, head, time1, time2)
+        if self.quantize:
+            q_with_bias_u = self.q_with_bias_u_quantizer(q_with_bias_u)
+            k = self.k_quantizer(k)
         matrix_ac = torch.matmul(q_with_bias_u, k.transpose(-2, -1))
 
         # compute matrix b and matrix d
         # (batch, head, time1, time2)
+        if self.quantize:
+            q_with_bias_v = self.q_with_bias_v_quantizer(q_with_bias_v)
+            p = self.p_quantizer(p)
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
         # Remove rel_shift since it is useless in speech recognition,
         # and it requires special attention for streaming.

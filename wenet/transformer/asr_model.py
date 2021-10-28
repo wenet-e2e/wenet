@@ -689,26 +689,31 @@ def init_asr_model(configs):
     input_dim = configs['input_dim']
     vocab_size = configs['output_dim']
 
+    use_qat = configs.get('use_qat', False)
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')
 
     if encoder_type == 'conformer':
         encoder = ConformerEncoder(input_dim,
                                    global_cmvn=global_cmvn,
+                                   quantize=use_qat,
                                    **configs['encoder_conf'])
     else:
         encoder = TransformerEncoder(input_dim,
                                      global_cmvn=global_cmvn,
+                                     quantize=use_qat,
                                      **configs['encoder_conf'])
     if decoder_type == 'transformer':
         decoder = TransformerDecoder(vocab_size, encoder.output_size(),
+                                     quantize=use_qat,
                                      **configs['decoder_conf'])
     else:
         assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
         assert configs['decoder_conf']['r_num_blocks'] > 0
         decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
+                                       quantize=use_qat,
                                        **configs['decoder_conf'])
-    ctc = CTC(vocab_size, encoder.output_size())
+    ctc = CTC(vocab_size, encoder.output_size(), quantize=use_qat)
     model = ASRModel(
         vocab_size=vocab_size,
         encoder=encoder,

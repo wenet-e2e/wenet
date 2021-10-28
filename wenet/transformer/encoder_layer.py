@@ -10,6 +10,8 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
+from wenet.transformer.quant import QuantLinear
+
 
 class TransformerEncoderLayer(nn.Module):
     """Encoder layer module.
@@ -29,6 +31,7 @@ class TransformerEncoderLayer(nn.Module):
             output.
             True: x -> x + linear(concat(x, att(x)))
             False: x -> x + att(x)
+        quantize (bool): Whether to use quantization aware training.
 
     """
     def __init__(
@@ -39,6 +42,7 @@ class TransformerEncoderLayer(nn.Module):
         dropout_rate: float,
         normalize_before: bool = True,
         concat_after: bool = False,
+        quantize: bool = False,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -52,7 +56,8 @@ class TransformerEncoderLayer(nn.Module):
         self.concat_after = concat_after
         # concat_linear may be not used in forward fuction,
         # but will be saved in the *.pt
-        self.concat_linear = nn.Linear(size + size, size)
+        linear_fn = QuantLinear if quantize else nn.Linear
+        self.concat_linear = linear_fn(size + size, size)
 
     def forward(
         self,
@@ -140,6 +145,7 @@ class ConformerEncoderLayer(nn.Module):
             output.
             True: x -> x + linear(concat(x, att(x)))
             False: x -> x + att(x)
+        quantize (bool): Whether to use quantization aware training.
     """
     def __init__(
         self,
@@ -151,6 +157,7 @@ class ConformerEncoderLayer(nn.Module):
         dropout_rate: float = 0.1,
         normalize_before: bool = True,
         concat_after: bool = False,
+        quantize: bool = False,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -174,7 +181,8 @@ class ConformerEncoderLayer(nn.Module):
         self.size = size
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        self.concat_linear = nn.Linear(size + size, size)
+        linear_fn = QuantLinear if quantize else nn.Linear
+        self.concat_linear = linear_fn(size + size, size)
 
     def forward(
         self,

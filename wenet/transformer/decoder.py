@@ -13,6 +13,7 @@ from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
 
+from wenet.transformer.quant import QuantLinear
 
 class TransformerDecoder(torch.nn.Module):
     """Base class of Transfomer decoder module.
@@ -33,6 +34,7 @@ class TransformerDecoder(torch.nn.Module):
         concat_after: whether to concat attention layer's input and output
             True: x -> x + linear(concat(x, att(x)))
             False: x -> x + att(x)
+        quantize (bool): whether to use quantization aware training.
     """
     def __init__(
         self,
@@ -49,6 +51,7 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
+        quantize: bool = False,
     ):
         assert check_argument_types()
         super().__init__()
@@ -65,20 +68,25 @@ class TransformerDecoder(torch.nn.Module):
         self.normalize_before = normalize_before
         self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-12)
         self.use_output_layer = use_output_layer
-        self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
+        linear_fn = QuantLinear if quantize else torch.nn.Linear
+        self.output_layer = linear_fn(attention_dim, vocab_size)
         self.num_blocks = num_blocks
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
                 MultiHeadedAttention(attention_heads, attention_dim,
-                                     self_attention_dropout_rate),
+                                     self_attention_dropout_rate, 
+                                     quantize=quantize),
                 MultiHeadedAttention(attention_heads, attention_dim,
-                                     src_attention_dropout_rate),
+                                     src_attention_dropout_rate,
+                                     quantize=quantize),
                 PositionwiseFeedForward(attention_dim, linear_units,
-                                        dropout_rate),
+                                        dropout_rate,
+                                        quantize=quantize),
                 dropout_rate,
                 normalize_before,
                 concat_after,
+                quantize=quantize,
             ) for _ in range(self.num_blocks)
         ])
 
@@ -193,6 +201,7 @@ class BiTransformerDecoder(torch.nn.Module):
         concat_after: whether to concat attention layer's input and output
             True: x -> x + linear(concat(x, att(x)))
             False: x -> x + att(x)
+        quantize (bool): whether to use quantization aware training.
     """
     def __init__(
         self,
@@ -210,6 +219,7 @@ class BiTransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
+        quantize: bool = False,
     ):
 
         assert check_argument_types()
@@ -218,13 +228,15 @@ class BiTransformerDecoder(torch.nn.Module):
             vocab_size, encoder_output_size, attention_heads, linear_units,
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before, concat_after)
+            input_layer, use_output_layer, normalize_before, concat_after,
+            quantize=quantize)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before, concat_after)
+            input_layer, use_output_layer, normalize_before, concat_after,
+            quantize=quantize)
 
     def forward(
         self,

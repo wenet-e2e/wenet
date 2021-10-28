@@ -46,6 +46,7 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        quantize: bool = False,
     ):
         """
         Args:
@@ -78,6 +79,7 @@ class BaseEncoder(torch.nn.Module):
             global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
+            quantize (bool): whether to use quantization aware training.
         """
         assert check_argument_types()
         super().__init__()
@@ -109,6 +111,7 @@ class BaseEncoder(torch.nn.Module):
             output_size,
             dropout_rate,
             pos_enc_class(output_size, positional_dropout_rate),
+            quantize=quantize
         )
 
         self.normalize_before = normalize_before
@@ -335,6 +338,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        quantize: bool = False,
     ):
         """ Construct TransformerEncoder
 
@@ -346,15 +350,16 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk, quantize=quantize)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
                 MultiHeadedAttention(attention_heads, output_size,
-                                     attention_dropout_rate),
+                                     attention_dropout_rate, quantize=quantize),
                 PositionwiseFeedForward(output_size, linear_units,
-                                        dropout_rate), dropout_rate,
-                normalize_before, concat_after) for _ in range(num_blocks)
+                                        dropout_rate, quantize=quantize), dropout_rate,
+                normalize_before, concat_after, 
+                quantize=quantize) for _ in range(num_blocks)
         ])
 
 
@@ -386,6 +391,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        quantize: bool = False,
     ):
         """Construct ConformerEncoder
 
@@ -402,6 +408,7 @@ class ConformerEncoder(BaseEncoder):
             use_cnn_module (bool): Whether to use convolution module.
             cnn_module_kernel (int): Kernel size of convolution module.
             causal (bool): whether to use causal convolution or not.
+            quantize (bool): whether to use quantization aware training.
         """
         assert check_argument_types()
         super().__init__(input_size, output_size, attention_heads,
@@ -409,7 +416,7 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk, quantize=quantize)
         activation = get_activation(activation_type)
 
         # self-attention module definition
@@ -421,6 +428,7 @@ class ConformerEncoder(BaseEncoder):
             attention_heads,
             output_size,
             attention_dropout_rate,
+            quantize
         )
         # feed-forward module definition
         positionwise_layer = PositionwiseFeedForward
@@ -429,11 +437,12 @@ class ConformerEncoder(BaseEncoder):
             linear_units,
             dropout_rate,
             activation,
+            quantize,
         )
         # convolution module definition
         convolution_layer = ConvolutionModule
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  cnn_module_norm, causal)
+                                  cnn_module_norm, causal, True, quantize)
 
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(
@@ -447,5 +456,6 @@ class ConformerEncoder(BaseEncoder):
                 dropout_rate,
                 normalize_before,
                 concat_after,
+                quantize=quantize,
             ) for _ in range(num_blocks)
         ])

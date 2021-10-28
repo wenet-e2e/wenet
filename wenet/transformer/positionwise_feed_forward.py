@@ -7,6 +7,7 @@
 
 import torch
 
+from wenet.transformer.quant import QuantLinear
 
 class PositionwiseFeedForward(torch.nn.Module):
     """Positionwise feed forward layer.
@@ -19,18 +20,21 @@ class PositionwiseFeedForward(torch.nn.Module):
         hidden_units (int): The number of hidden units.
         dropout_rate (float): Dropout rate.
         activation (torch.nn.Module): Activation function
+        quantize (bool): Whether to use quantization aware training.
     """
     def __init__(self,
                  idim: int,
                  hidden_units: int,
                  dropout_rate: float,
-                 activation: torch.nn.Module = torch.nn.ReLU()):
+                 activation: torch.nn.Module = torch.nn.ReLU(),
+                 quantize: bool = False):
         """Construct a PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
-        self.w_1 = torch.nn.Linear(idim, hidden_units)
+        linear_fn = QuantLinear if quantize else torch.nn.Linear
+        self.w_1 = linear_fn(idim, hidden_units)
         self.activation = activation
         self.dropout = torch.nn.Dropout(dropout_rate)
-        self.w_2 = torch.nn.Linear(hidden_units, idim)
+        self.w_2 = linear_fn(hidden_units, idim)
 
     def forward(self, xs: torch.Tensor) -> torch.Tensor:
         """Forward function.

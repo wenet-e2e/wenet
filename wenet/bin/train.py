@@ -100,6 +100,10 @@ def get_args():
                         action='append',
                         default=[],
                         help="override yaml config")
+    parser.add_argument('--use_qat',
+                        action='store_true',
+                        default=False,
+                        help='Use quantization aware training')
 
     args = parser.parse_args()
     return args
@@ -161,6 +165,7 @@ def main():
     configs['output_dim'] = vocab_size
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
+    configs['use_qat'] = args.use_qat
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')
         with open(saved_config_path, 'w') as fout:

@@ -9,6 +9,8 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
+from wenet.transformer.quant import QuantLinear
+
 
 class DecoderLayer(nn.Module):
     """Single decoder layer module.
@@ -29,6 +31,7 @@ class DecoderLayer(nn.Module):
             and output.
             True: x -> x + linear(concat(x, att(x)))
             False: x -> x + att(x)
+        quantize (bool): whether to use quantization aware training.
     """
     def __init__(
         self,
@@ -39,6 +42,7 @@ class DecoderLayer(nn.Module):
         dropout_rate: float,
         normalize_before: bool = True,
         concat_after: bool = False,
+        quantize: bool = False,
     ):
         """Construct an DecoderLayer object."""
         super().__init__()
@@ -52,8 +56,9 @@ class DecoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        self.concat_linear1 = nn.Linear(size + size, size)
-        self.concat_linear2 = nn.Linear(size + size, size)
+        linear_fn = QuantLinear if quantize else nn.Linear
+        self.concat_linear1 = linear_fn(size + size, size)
+        self.concat_linear2 = linear_fn(size + size, size)
 
     def forward(
         self,

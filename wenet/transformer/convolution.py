@@ -11,6 +11,8 @@ import torch
 from torch import nn
 from typeguard import check_argument_types
 
+from wenet.transformer.quant import QuantConv1d
+
 
 class ConvolutionModule(nn.Module):
     """ConvolutionModule in Conformer model."""
@@ -20,17 +22,20 @@ class ConvolutionModule(nn.Module):
                  activation: nn.Module = nn.ReLU(),
                  norm: str = "batch_norm",
                  causal: bool = False,
-                 bias: bool = True):
+                 bias: bool = True,
+                 quantize: bool = False):
         """Construct an ConvolutionModule object.
         Args:
             channels (int): The number of channels of conv layers.
             kernel_size (int): Kernel size of conv layers.
             causal (int): Whether use causal convolution or not
+            quantize (bool): Whether to use quantization aware training.
         """
         assert check_argument_types()
         super().__init__()
 
-        self.pointwise_conv1 = nn.Conv1d(
+        conv1d_fn = QuantConv1d if quantize else nn.Conv1d
+        self.pointwise_conv1 = conv1d_fn(
             channels,
             2 * channels,
             kernel_size=1,
@@ -50,7 +55,7 @@ class ConvolutionModule(nn.Module):
             assert (kernel_size - 1) % 2 == 0
             padding = (kernel_size - 1) // 2
             self.lorder = 0
-        self.depthwise_conv = nn.Conv1d(
+        self.depthwise_conv = conv1d_fn(
             channels,
             channels,
             kernel_size,
@@ -68,7 +73,7 @@ class ConvolutionModule(nn.Module):
             self.use_layer_norm = True
             self.norm = nn.LayerNorm(channels)
 
-        self.pointwise_conv2 = nn.Conv1d(
+        self.pointwise_conv2 = conv1d_fn(
             channels,
             channels,
             kernel_size=1,

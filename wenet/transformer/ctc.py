@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 from typeguard import check_argument_types
 
+from wenet.transformer.quant import QuantLinear
+
 
 class CTC(torch.nn.Module):
     """CTC module"""
@@ -11,6 +13,7 @@ class CTC(torch.nn.Module):
         encoder_output_size: int,
         dropout_rate: float = 0.0,
         reduce: bool = True,
+        quantize: bool = False,
     ):
         """ Construct CTC module
         Args:
@@ -18,12 +21,14 @@ class CTC(torch.nn.Module):
             encoder_output_size: number of encoder projection units
             dropout_rate: dropout rate (0.0 ~ 1.0)
             reduce: reduce the CTC loss into a scalar
+            quantize (bool): whether to use quantization aware training.
         """
         assert check_argument_types()
         super().__init__()
         eprojs = encoder_output_size
         self.dropout_rate = dropout_rate
-        self.ctc_lo = torch.nn.Linear(eprojs, odim)
+        linear_fn = QuantLinear if quantize else torch.nn.Linear
+        self.ctc_lo = linear_fn(eprojs, odim)
 
         reduction_type = "sum" if reduce else "none"
         self.ctc_loss = torch.nn.CTCLoss(reduction=reduction_type)

@@ -9,6 +9,8 @@ from typing import Tuple
 
 import torch
 
+from wenet.transformer.quant import QuantLinear, QuantConv2d
+
 
 class BaseSubsampling(torch.nn.Module):
     def __init__(self):
@@ -27,14 +29,16 @@ class LinearNoSubsampling(BaseSubsampling):
         idim (int): Input dimension.
         odim (int): Output dimension.
         dropout_rate (float): Dropout rate.
+        quantize (bool): whether to use quantization aware training.
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module):
+                 pos_enc_class: torch.nn.Module, quantize: bool = False):
         """Construct an linear object."""
         super().__init__()
+        linear_fn = QuantLinear if quantize else torch.nn.Linear
         self.out = torch.nn.Sequential(
-            torch.nn.Linear(idim, odim),
+            linear_fn(idim, odim),
             torch.nn.LayerNorm(odim, eps=1e-12),
             torch.nn.Dropout(dropout_rate),
         )
@@ -73,20 +77,23 @@ class Conv2dSubsampling4(BaseSubsampling):
         idim (int): Input dimension.
         odim (int): Output dimension.
         dropout_rate (float): Dropout rate.
+        quantize (bool): whether to use quantization aware training.
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module):
+                 pos_enc_class: torch.nn.Module, quantize: bool = False):
         """Construct an Conv2dSubsampling4 object."""
         super().__init__()
+        linear_fn = QuantLinear if quantize else torch.nn.Linear
+        conv2d_fn = QuantConv2d if quantize else torch.nn.Conv2d
         self.conv = torch.nn.Sequential(
-            torch.nn.Conv2d(1, odim, 3, 2),
+            conv2d_fn(1, odim, 3, 2),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(odim, odim, 3, 2),
+            conv2d_fn(odim, odim, 3, 2),
             torch.nn.ReLU(),
         )
         self.out = torch.nn.Sequential(
-            torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2), odim))
+            linear_fn(odim * (((idim - 1) // 2 - 1) // 2), odim))
         self.pos_enc = pos_enc_class
         # The right context for every conv layer is computed by:
         # (kernel_size - 1) * frame_rate_of_this_layer
@@ -129,18 +136,21 @@ class Conv2dSubsampling6(BaseSubsampling):
         odim (int): Output dimension.
         dropout_rate (float): Dropout rate.
         pos_enc (torch.nn.Module): Custom position encoding layer.
+        quantize (bool): whether to use quantization aware training.
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module):
+                 pos_enc_class: torch.nn.Module, quantize: bool = False):
         """Construct an Conv2dSubsampling6 object."""
         super().__init__()
+        linear_fn = QuantLinear if quantize else torch.nn.Linear
+        conv2d_fn = QuantConv2d if quantize else torch.nn.Conv2d
         self.conv = torch.nn.Sequential(
-            torch.nn.Conv2d(1, odim, 3, 2),
+            conv2d_fn(1, odim, 3, 2),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(odim, odim, 5, 3),
+            conv2d_fn(odim, odim, 5, 3),
             torch.nn.ReLU(),
         )
-        self.linear = torch.nn.Linear(odim * (((idim - 1) // 2 - 2) // 3),
+        self.linear = linear_fn(odim * (((idim - 1) // 2 - 2) // 3),
                                       odim)
         self.pos_enc = pos_enc_class
         # 10 = (3 - 1) * 1 + (5 - 1) * 2
@@ -180,21 +190,24 @@ class Conv2dSubsampling8(BaseSubsampling):
         idim (int): Input dimension.
         odim (int): Output dimension.
         dropout_rate (float): Dropout rate.
+        quantize (bool): whether to use quantization aware training.
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module):
+                 pos_enc_class: torch.nn.Module, quantize: bool = False):
         """Construct an Conv2dSubsampling8 object."""
         super().__init__()
+        linear_fn = QuantLinear if quantize else torch.nn.Linear
+        conv2d_fn = QuantConv2d if quantize else torch.nn.Conv2d
         self.conv = torch.nn.Sequential(
-            torch.nn.Conv2d(1, odim, 3, 2),
+            conv2d_fn(1, odim, 3, 2),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(odim, odim, 3, 2),
+            conv2d_fn(odim, odim, 3, 2),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(odim, odim, 3, 2),
+            conv2d_fn(odim, odim, 3, 2),
             torch.nn.ReLU(),
         )
-        self.linear = torch.nn.Linear(
+        self.linear = linear_fn(
             odim * ((((idim - 1) // 2 - 1) // 2 - 1) // 2), odim)
         self.pos_enc = pos_enc_class
         self.subsampling_rate = 8
