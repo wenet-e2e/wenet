@@ -65,8 +65,8 @@ checkpoint=
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=30
-decode_modes="ctc_greedy_search ctc_prefix_beam_search attention"\
-             "attention_rescoring"
+decode_modes="ctc_greedy_search ctc_prefix_beam_search"
+decode_modes="$decode_modes attention attention_rescoring"
 
 . tools/parse_options.sh || exit 1;
 
@@ -108,9 +108,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   local/magicdata_data_prep.sh $dbase/magicdata/ data/magicdata || exit 1;
   local/primewords_data_prep.sh $dbase/primewords data/primewords || exit 1;
   local/stcmds_data_prep.sh $dbase/stcmds data/stcmds || exit 1;
-  local/tal_data_prep.sh $dbase/TAL/TAL_ASR data/tal_asr || exit 1;
-  local/tal_mix_data_prep.sh $dbase/TAL/TAL_ASR_mix data/tal_mix || exit 1;
-
+  if $has_tal; then
+    local/tal_data_prep.sh $dbase/TAL/TAL_ASR data/tal_asr || exit 1;
+    local/tal_mix_data_prep.sh $dbase/TAL/TAL_ASR_mix data/tal_mix || exit 1;
+  fi
   if $has_aishell2; then
     local/aishell2_data_prep.sh $dbase/aishell2/IOS data/aishell2/train \
       || exit 1;
@@ -130,9 +131,10 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     train_sets=$train_sets,tal_asr,tal_mix
     dev_sets=$dev_sets,tal_asr
   fi
-  tools/combine_data.sh data/train data/{$train_sets}/train || exit 1;
-  tools/combine_data.sh data/dev data/{$dev_sets}/dev || exit 1;
-
+  unrolled_train_sets=$(eval echo data/{$train_sets}/train)
+  unrolled_dev_sets=$(eval echo data/{$dev_sets}/dev)
+  tools/combine_data.sh data/train $unrolled_train_sets || exit 1;
+  tools/combine_data.sh data/dev $unrolled_dev_sets || exit 1;
 fi
 
 
