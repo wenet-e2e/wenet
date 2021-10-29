@@ -70,7 +70,7 @@ cd examples/aishell/s0/
 bash run.sh --stage -1
 ```
 
-细节请阅读 [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial.html)
+细节请阅读 [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial_aishell.html)
 
 
 ## WeNet 性能
