@@ -30,6 +30,7 @@ test_sets="test_net test_meeting"
 train_config=conf/train_conformer.yaml
 checkpoint=
 cmvn=true
+cmvn_sampling_divisor=20 # 20 means 5% of the training data to estimate cmvn
 dir=exp/conformer
 
 decode_checkpoint=
@@ -77,15 +78,16 @@ fi
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo "Compute cmvn"
   # Here we use all the training data, you can sample some some data to save time
+  # BUG!!! We should use the segmented data for CMVN
   if $cmvn; then
-    python tools/segment.py \
-      --segments data/$train_set/segments \
-      --input data/$train_set/wav.scp \
-      --output data/$train_set/wav.segment.scp
+    full_size=`cat data/${train_set}/wav.scp | wc -l`
+    sampling_size=$((full_size / cmvn_sampling_divisor))
+    shuf -n $sampling_size data/$train_set/wav.scp \
+      > data/$train_set/wav.scp.sampled
     python3 tools/compute_cmvn_stats.py \
     --num_workers 16 \
     --train_config $train_config \
-    --in_scp data/$train_set/wav.segment.scp \
+    --in_scp data/$train_set/wav.scp.sampled \
     --out_cmvn data/$train_set/global_cmvn \
     || exit 1;
   fi
