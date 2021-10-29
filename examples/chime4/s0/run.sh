@@ -16,7 +16,7 @@ data_dir=data/chime4
 dict=$data_dir/dict_char.txt
 train_config=conf/train_conformer.yaml
 exp_dir=exp/1a
-decode_modes="ctc_prefix_beam_search attention"
+decode_modes="ctc_prefix_beam_search attention_rescoring"
 average_checkpoint=true
 average_num=10
 
