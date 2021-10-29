@@ -30,7 +30,7 @@ test_sets="test_net test_meeting"
 train_config=conf/train_conformer.yaml
 checkpoint=
 cmvn=true
-cmvn_sampling_divisor=10 # 10 means 10% of the training data to train cmvn
+cmvn_sampling_divisor=20 # 20 means 5% of the training data to estimate cmvn
 dir=exp/conformer
 
 decode_checkpoint=
