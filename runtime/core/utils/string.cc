@@ -166,12 +166,15 @@ std::string ProcessBlank(const std::string& str, bool lowercase) {
     if (!result.empty() && result.back() == ' ') {
       result.pop_back();
     }
-    for (size_t i = 0; i < result.size(); ++i) {
-      if (lowercase) {
-        result[i] = tolower(result[i]);
-      } else {
-        result[i] = toupper(result[i]);
-      }
+    // NOTE: replace std::tolower() with boost::locale::to_lower()
+    //       see issue 745: https://github.com/wenet-e2e/wenet/issues/745
+    boost::locale::generator gen;
+    std::locale loc = gen("");
+    std::locale::global(loc);
+    if (lowercase) {
+      result = boost::locale::to_lower(result);
+    } else {
+      result = boost::locale::to_upper(result);
     }
   }
   return result;

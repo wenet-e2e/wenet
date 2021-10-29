@@ -88,6 +88,16 @@ add_library(utils STATIC
 # Openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch.
 # To build openfst with gflags and glog, we comment out some vars of {flags, log}.h and flags.cc.
 if(NOT MSVC)
+  set(boost_PREFIX_DIR ${fc_base}/boost-subbuild/boost-populate-prefix CACHE PATH "boost prefix directory")
+  execute_process(
+    COMMAND           bootstrap.sh --prefix=${boost_PREFIX_DIR} --with-libraries=locale
+    WORKING_DIRECTORY ${boost_SOURCE_DIR}
+  )
+  execute_process(
+    COMMAND           b2 --prefix=${boost_PREFIX_DIR} install
+    WORKING_DIRECTORY ${boost_SOURCE_DIR}
+  )
+  link_directories(${boost_PREFIX_DIR}/lib)
   set(openfst_SOURCE_DIR ${fc_base}/openfst-src CACHE PATH "OpenFST source directory")
   set(openfst_BINARY_DIR ${fc_base}/openfst-build CACHE PATH "OpenFST build directory")
   set(openfst_PREFIX_DIR ${fc_base}/openfst-subbuild/openfst-populate-prefix CACHE PATH "OpenFST prefix directory")
@@ -106,7 +116,7 @@ if(NOT MSVC)
   add_dependencies(openfst gflags glog)
   add_dependencies(utils openfst)
   link_directories(${openfst_PREFIX_DIR}/lib)
-  target_link_libraries(utils PUBLIC fst dl)
+  target_link_libraries(utils PUBLIC fst dl boost_locale)
 else()
   execute_process(COMMAND bootstrap.bat WORKING_DIRECTORY ${boost_SOURCE_DIR})
   execute_process(COMMAND b2.exe WORKING_DIRECTORY ${boost_SOURCE_DIR})
@@ -121,7 +131,7 @@ else()
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR})
   add_dependencies(fst gflags glog)
   target_link_libraries(fst PUBLIC gflags_nothreads_static glog)
-  target_link_libraries(utils PUBLIC fst)
+  target_link_libraries(utils PUBLIC fst boost_locale)
 endif()
 include_directories(${openfst_SOURCE_DIR}/src/include)
 

@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include "boost/locale.hpp"
 #include "fst/symbol-table.h"
 
 namespace wenet {
