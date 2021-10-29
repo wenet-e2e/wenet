@@ -89,12 +89,9 @@ add_library(utils STATIC
 # To build openfst with gflags and glog, we comment out some vars of {flags, log}.h and flags.cc.
 if(NOT MSVC)
   set(boost_PREFIX_DIR ${fc_base}/boost-subbuild/boost-populate-prefix CACHE PATH "boost prefix directory")
-  execute_process(
-    COMMAND           bootstrap.sh --prefix=${boost_PREFIX_DIR} --with-libraries=locale
-    WORKING_DIRECTORY ${boost_SOURCE_DIR}
-  )
-  execute_process(
-    COMMAND           b2 --prefix=${boost_PREFIX_DIR} install
+  add_custom_target(boostlocale
+    COMMAND           ./bootstrap.sh --prefix=${boost_PREFIX_DIR} --with-libraries=locale
+    COMMAND           ./b2 --prefix=${boost_PREFIX_DIR} install
     WORKING_DIRECTORY ${boost_SOURCE_DIR}
   )
   link_directories(${boost_PREFIX_DIR}/lib)
@@ -114,12 +111,15 @@ if(NOT MSVC)
     BUILD_COMMAND     make -j 4
   )
   add_dependencies(openfst gflags glog)
-  add_dependencies(utils openfst)
+  add_dependencies(utils openfst boostlocale)
   link_directories(${openfst_PREFIX_DIR}/lib)
   target_link_libraries(utils PUBLIC fst dl boost_locale)
 else()
-  execute_process(COMMAND bootstrap.bat WORKING_DIRECTORY ${boost_SOURCE_DIR})
-  execute_process(COMMAND b2.exe WORKING_DIRECTORY ${boost_SOURCE_DIR})
+  add_custom_target(boostlocale
+    COMMAND           bootstrap.bat
+    COMMAND           b2.exe
+    WORKING_DIRECTORY ${boost_SOURCE_DIR}
+  )
   link_directories(${boost_SOURCE_DIR}/stage/lib)
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
@@ -129,6 +129,7 @@ else()
   )
   FetchContent_MakeAvailable(openfst)
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR})
+  add_dependencies(utils boostlocale)
   add_dependencies(fst gflags glog)
   target_link_libraries(fst PUBLIC gflags_nothreads_static glog)
   target_link_libraries(utils PUBLIC fst boost_locale)
