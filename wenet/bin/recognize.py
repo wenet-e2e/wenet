@@ -133,6 +133,7 @@ def main():
     test_conf['shuffle'] = False
     test_conf['sort'] = False
     test_conf['fbank_conf']['dither'] = 0.0
+    test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
     test_dataset = Dataset(args.data_type,
