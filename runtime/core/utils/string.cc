@@ -166,13 +166,15 @@ std::string ProcessBlank(const std::string& str, bool lowercase) {
     if (!result.empty() && result.back() == ' ') {
       result.pop_back();
     }
-    for (size_t i = 0; i < result.size(); ++i) {
-      if (lowercase) {
-        result[i] = tolower(result[i]);
-      } else {
-        result[i] = toupper(result[i]);
-      }
+    // NOTE: convert string to wstring
+    //       see issue 745: https://github.com/wenet-e2e/wenet/issues/745
+    std::locale loc("");
+    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+    std::wstring wsresult = converter.from_bytes(result);
+    for (auto &c : wsresult) {
+      c = lowercase ? tolower(c, loc) : toupper(c, loc);
     }
+    result = converter.to_bytes(wsresult);
   }
   return result;
 }

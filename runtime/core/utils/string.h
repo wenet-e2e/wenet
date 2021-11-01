@@ -18,6 +18,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <locale>
+#include <codecvt>
 
 #include "fst/symbol-table.h"
 
