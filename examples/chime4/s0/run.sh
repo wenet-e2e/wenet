@@ -92,7 +92,7 @@ if [ $end -ge 5 ] && [ $beg -le 5 ]; then
       --val_best
   fi
   nj=4
-  ctc_weight=0.2
+  ctc_weight=0.5
   for x in dt05_{simu,real} et05_{simu,real}; do
     subdir=${x}_${suffix}
     tools/make_raw_list.py $data_dir/$subdir/wav.scp $data_dir/$subdir/text \
