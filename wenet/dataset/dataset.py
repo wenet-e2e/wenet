@@ -85,7 +85,7 @@ class DistributedSampler:
             Returns:
                 List: data list after sample
         """
-        data = data.copy()
+        data = list(range(len(data)))
         # TODO(Binbin Zhang): fix this
         # We can not handle uneven data for CV on DDP, so we don't
         # sample data by rank, that means every GPU gets the same
@@ -108,10 +108,10 @@ class DataList(IterableDataset):
 
     def __iter__(self):
         sampler_info = self.sampler.update()
-        lists = self.sampler.sample(self.lists)
-        for src in lists:
+        indexes = self.sampler.sample(self.lists)
+        for index in indexes:
             # yield dict(src=src)
-            data = dict(src=src)
+            data = dict(src=self.lists[index])
             data.update(sampler_info)
             yield data
 
