@@ -42,7 +42,7 @@ set -u
 set -o pipefail
 
 train_set=train_960
-train_dev=dev
+dev_set=dev
 recog_set="test_clean test_other dev_clean dev_other"
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
@@ -77,7 +77,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   # merge total dev data
   for set in dev_clean dev_other; do
     for f in `ls $wave_data/$set`; do
-      cat $wave_data/$set/$f >> $wave_data/dev/$f
+      cat $wave_data/$set/$f >> $wave_data/$dev_set/$f
     done
   done
 
@@ -111,7 +111,7 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   # Prepare wenet requried data
   echo "Prepare data, prepare requried format"
-  for x in dev ${recog_set} $train_set ; do
+  for x in $dev_set ${recog_set} $train_set ; do
     tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
         $wave_data/$x/data.list
   done
@@ -142,7 +142,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --data_type raw \
       --symbol_table $dict \
       --train_data $wave_data/$train_set/data.list \
-      --cv_data $wave_data/dev/data.list \
+      --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.init_method $init_method \
