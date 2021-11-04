@@ -104,7 +104,8 @@ def tar_file_and_group(data):
             example['key'] = prev_prefix
             yield example
         stream.close()
-        sample['process'].communicate()
+        if 'process' in sample:
+            sample['process'].communicate()
         sample['stream'].close()
 
 
