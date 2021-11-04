@@ -284,7 +284,7 @@ def main():
             for i, key in enumerate(keys):
                 content = hyps[i]
                 logging.info('{} {}'.format(key, content))
-                fout.write('{} {}\n'.format(key, content))         
+                fout.write('{} {}\n'.format(key, content))
 
 if __name__ == '__main__':
     main()
