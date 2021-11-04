@@ -12,7 +12,7 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
 stage=0 # start from 0 if you need to start from data preparation
-stop_stage=5
+stop_stage=6
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
 # NFS will be needed if you want run multi-machine training
@@ -28,9 +28,6 @@ data_url=www.openslr.org/resources/33
 nj=16
 feat_dir=raw_wav
 dict=data/dict/lang_char.txt
-
-data_type=raw # raw or shard
-num_utts_per_shard=1000
 
 train_set=train
 # Optional train_config
@@ -80,7 +77,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
         cp -r data/$x $feat_dir
     done
 
-    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+    tools/compute_cmvn_stats_deprecated.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
         --out_cmvn $feat_dir/$train_set/global_cmvn
 
@@ -99,16 +96,21 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+    nj=32
+    # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
-        if [ $data_type == "shard" ]; then
-            tools/make_shard_list.py --num_utts_per_shard $num_utts_per_shard \
-                --num_threads 16 $feat_dir/$x/wav.scp $feat_dir/$x/text \
-                $(realpath $feat_dir/$x/shards) $feat_dir/$x/data.list
-        else
-            tools/make_raw_list.py $feat_dir/$x/wav.scp $feat_dir/$x/text \
-                $feat_dir/$x/data.list
-        fi
+        tools/format_data.sh --nj ${nj} \
+            --feat-type wav --feat $feat_dir/$x/wav.scp \
+            $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
+
+        tools/remove_longshortdata.py \
+            --min_input_len 0.5 \
+            --max_input_len 20 \
+            --max_output_len 400 \
+            --max_output_input_ratio 10.0 \
+            --data_file $feat_dir/$x/format.data.tmp \
+            --output_data_file $feat_dir/$x/format.data
     done
 fi
 
@@ -123,7 +125,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # The number of gpus runing on each node/machine
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
-    dist_backend="gloo"
+    dist_backend="nccl"
     # The total number of processes/gpus, so that the master knows
     # how many workers to wait for.
     # More details about ddp can be found in
@@ -142,19 +144,17 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         # Rank of each gpu/process used for knowing whether it is
         # the master of a worker.
         rank=`expr $node_rank \* $num_gpus + $i`
-        python wenet/bin/train.py --gpu $gpu_id \
+        python wenet/bin/train_deprecated.py --gpu $gpu_id \
             --config $train_config \
-            --data_type $data_type \
-            --symbol_table $dict \
-            --train_data $feat_dir/$train_set/data.list \
-            --cv_data $feat_dir/dev/data.list \
+            --train_data $feat_dir/$train_set/format.data \
+            --cv_data $feat_dir/dev/format.data \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
             --ddp.world_size $world_size \
             --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
-            --num_workers 1 \
+            --num_workers 2 \
             $cmvn_opts \
             --pin_memory
     } &
@@ -182,11 +182,10 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     {
         test_dir=$dir/test_${mode}
         mkdir -p $test_dir
-        python wenet/bin/recognize.py --gpu 0 \
+        python wenet/bin/recognize_deprecated.py --gpu 0 \
             --mode $mode \
             --config $dir/train.yaml \
-            --data_type $data_type \
-            --test_data $feat_dir/test/data.list \
+            --test_data $feat_dir/test/format.data \
             --checkpoint $decode_checkpoint \
             --beam_size 10 \
             --batch_size 1 \
@@ -203,3 +202,61 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     wait
 
 fi
+
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+    # Export the best model you want
+    python wenet/bin/export_jit.py \
+        --config $dir/train.yaml \
+        --checkpoint $dir/avg_${average_num}.pt \
+        --output_file $dir/final.zip \
+        --output_quant_file $dir/final_quant.zip
+fi
+
+# Optionally, you can add LM and test it with runtime.
+if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+    # 7.1 Prepare dict
+    unit_file=$dict
+    mkdir -p data/local/dict
+    cp $unit_file data/local/dict/units.txt
+    tools/fst/prepare_dict.py $unit_file ${data}/resource_aishell/lexicon.txt \
+        data/local/dict/lexicon.txt
+    # 7.2 Train lm
+    lm=data/local/lm
+    mkdir -p $lm
+    tools/filter_scp.pl data/train/text \
+         $data/data_aishell/transcript/aishell_transcript_v0.8.txt > $lm/text
+    local/aishell_train_lms.sh
+    # 7.3 Build decoding TLG
+    tools/fst/compile_lexicon_token_fst.sh \
+        data/local/dict data/local/tmp data/local/lang
+    tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+    # 7.4 Decoding with runtime
+    # reverse_weight only works for u2++ model and only left to right decoder is used when it is set to 0.0.
+    reverse_weight=0.0
+    chunk_size=-1
+    ./tools/decode.sh --nj 16 \
+        --beam 15.0 --lattice_beam 7.5 --max_active 7000 \
+        --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
+        --reverse_weight $reverse_weight --chunk_size $chunk_size \
+        --fst_path data/lang_test/TLG.fst \
+        data/test/wav.scp data/test/text $dir/final.zip \
+        data/lang_test/words.txt $dir/lm_with_runtime
+    # See $dir/lm_with_runtime for wer
+fi
+
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+    # Test model, please specify the model you want to use by --checkpoint
+    # alignment input
+    ali_format=$feat_dir/test/format.data
+    # alignment output
+    ali_result=$dir/ali
+    python wenet/bin/alignment.py --gpu -1 \
+        --config $dir/train.yaml \
+        --input_file $ali_format \
+        --checkpoint $checkpoint \
+        --batch_size 1 \
+        --dict $dict \
+        --result_file $ali_result \
+        --gen_praat
+fi
+

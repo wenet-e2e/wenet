@@ -32,8 +32,9 @@ from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.scheduler import WarmupLR
+from wenet.utils.config import override_config
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--data_type',
@@ -91,9 +92,21 @@ if __name__ == '__main__':
                         default=100,
                         type=int,
                         help='prefetch number')
+    parser.add_argument('--bpe_model',
+                        default=None,
+                        type=str,
+                        help='bpe model for english part')
+    parser.add_argument('--override_config',
+                        action='append',
+                        default=[],
+                        help="override yaml config")
 
     args = parser.parse_args()
+    return args
 
+
+def main():
+    args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -102,6 +115,8 @@ if __name__ == '__main__':
     torch.manual_seed(777)
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
+    if len(args.override_config) > 0:
+        configs = override_config(configs, args.override_config)
 
     distributed = args.world_size > 1
     if distributed:
@@ -119,11 +134,12 @@ if __name__ == '__main__':
     cv_conf['spec_aug'] = False
 
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
-                            train_conf)
+                            train_conf, args.bpe_model, partition=True)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
                          cv_conf,
+                         args.bpe_model,
                          partition=False)
 
     train_data_loader = DataLoader(train_dataset,
@@ -240,3 +256,7 @@ if __name__ == '__main__':
         final_model_path = os.path.join(model_dir, 'final.pt')
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
+
+
+if __name__ == '__main__':
+    main()

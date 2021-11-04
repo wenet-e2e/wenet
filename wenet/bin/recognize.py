@@ -28,8 +28,9 @@ from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
+from wenet.utils.config import override_config
 
-if __name__ == '__main__':
+def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--test_data', required=True, help='test data file')
@@ -86,8 +87,22 @@ if __name__ == '__main__':
                         default=0.0,
                         help='''right to left weight for attention rescoring
                                 decode mode''')
+    parser.add_argument('--bpe_model',
+                        default=None,
+                        type=str,
+                        help='bpe model for english part')
+    parser.add_argument('--override_config',
+                        action='append',
+                        default=[],
+                        help="override yaml config")
+
     args = parser.parse_args()
     print(args)
+    return args
+
+
+def main():
+    args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
@@ -101,6 +116,8 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
+    if len(args.override_config) > 0:
+        configs = override_config(configs, args.override_config)
 
     symbol_table = read_symbol_table(args.dict)
     test_conf = copy.deepcopy(configs['dataset_conf'])
@@ -116,12 +133,14 @@ if __name__ == '__main__':
     test_conf['shuffle'] = False
     test_conf['sort'] = False
     test_conf['fbank_conf']['dither'] = 0.0
+    test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            symbol_table,
                            test_conf,
+                           args.bpe_model,
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
@@ -200,3 +219,7 @@ if __name__ == '__main__':
                     content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
+
+
+if __name__ == '__main__':
+    main()

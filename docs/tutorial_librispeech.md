@@ -37,10 +37,10 @@ bash run.sh --stage -1 --stop-stage 7
 data_url=www.openslr.org/resources/12
 datadir=/export/data/en-asr-data/OpenSLR/
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    echo "stage -1: Data Download"
-    for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500; do
-        local/download_and_untar.sh ${datadir} ${data_url} ${part}
-    done
+  echo "stage -1: Data Download"
+  for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500; do
+    local/download_and_untar.sh ${datadir} ${data_url} ${part}
+  done
 fi
 ```
 
@@ -51,10 +51,10 @@ This stage downloads the librispeech data to the local path `$data`. This may ta
 ``` sh
 wave_data=data
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-    for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500; do
-        # use underscore-separated names in data directories.
-        local/data_prep_torchaudio.sh ${datadir}/LibriSpeech/${part} $wave_data/${part//-/_}
-    done
+  for part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500; do
+    # use underscore-separated names in data directories.
+    local/data_prep_torchaudio.sh ${datadir}/LibriSpeech/${part} $wave_data/${part//-/_}
+  done
 fi
 ```
 
@@ -83,27 +83,27 @@ If you want to train using your customized data, just organize the data into two
 
 ``` sh
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    ### Task dependent. You have to design training and dev sets by yourself.
-    ### But you can utilize Kaldi recipes in most cases
-    echo "stage 1: Feature Generation"
-    mkdir -p $wave_data/train_960
-    # merge total training data
-    for set in train_clean_100 train_clean_360 train_other_500; do
-        for f in `ls $wave_data/$set`; do
-            cat $wave_data/$set/$f >> $wave_data/train_960/$f
-        done
+  ### Task dependent. You have to design training and dev sets by yourself.
+  ### But you can utilize Kaldi recipes in most cases
+  echo "stage 1: Feature Generation"
+  mkdir -p $wave_data/train_960
+  # merge total training data
+  for set in train_clean_100 train_clean_360 train_other_500; do
+    for f in `ls $wave_data/$set`; do
+      cat $wave_data/$set/$f >> $wave_data/train_960/$f
     done
-    mkdir -p $wave_data/dev
-    # merge total dev data
-    for set in dev_clean dev_other; do
-        for f in `ls $wave_data/$set`; do
-            cat $wave_data/$set/$f >> $wave_data/dev/$f
-        done
+  done
+  mkdir -p $wave_data/dev
+  # merge total dev data
+  for set in dev_clean dev_other; do
+    for f in `ls $wave_data/$set`; do
+      cat $wave_data/$set/$f >> $wave_data/dev/$f
     done
+  done
 
-    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
-        --in_scp $wave_data/$train_set/wav.scp \
-        --out_cmvn $wave_data/$train_set/global_cmvn
+  tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
+    --in_scp $wave_data/$train_set/wav.scp \
+    --out_cmvn $wave_data/$train_set/global_cmvn
 
 fi
 ```
@@ -120,20 +120,20 @@ dict=$wave_data/lang_char/${train_set}_${bpemode}${nbpe}_units.txt
 bpemodel=$wave_data/lang_char/${train_set}_${bpemode}${nbpe}
 echo "dictionary: ${dict}"
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-    ### Task dependent. You have to check non-linguistic symbols used in the corpus.
-    echo "stage 2: Dictionary and Json Data Preparation"
-    mkdir -p data/lang_char/
+  ### Task dependent. You have to check non-linguistic symbols used in the corpus.
+  echo "stage 2: Dictionary and Json Data Preparation"
+  mkdir -p data/lang_char/
 
-    echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
-    echo "<unk> 1" >> ${dict} # <unk> must be 1
+  echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
+  echo "<unk> 1" >> ${dict} # <unk> must be 1
 
-    # we borrowed these code and scripts which are related bpe from ESPnet.
-    cut -f 2- -d" " $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
-    tools/spm_train --input=$wave_data/lang_char/input.txt --vocab_size=${nbpe} --model_type=${bpemode} --model_prefix=${bpemodel} --input_sentence_size=100000000
-    tools/spm_encode --model=${bpemodel}.model --output_format=piece < $wave_data/lang_char/input.txt | tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
-    num_token=$(cat $dict | wc -l)
-    echo "<sos/eos> $num_token" >> $dict # <eos>
-    wc -l ${dict}
+  # we borrowed these code and scripts which are related bpe from ESPnet.
+  cut -f 2- -d" " $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
+  tools/spm_train --input=$wave_data/lang_char/input.txt --vocab_size=${nbpe} --model_type=${bpemode} --model_prefix=${bpemodel} --input_sentence_size=100000000
+  tools/spm_encode --model=${bpemodel}.model --output_format=piece < $wave_data/lang_char/input.txt | tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
+  num_token=$(cat $dict | wc -l)
+  echo "<sos/eos> $num_token" >> $dict # <eos>
+  wc -l ${dict}
 fi
 ```
 
@@ -170,79 +170,74 @@ ZZ 5000
 
 ``` sh
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    # Prepare wenet requried data
-    echo "Prepare data, prepare requried format"
-    for x in dev ${recog_set} $train_set ; do
-        tools/format_data.sh --nj ${nj} \
-            --feat-type flac --feat $wave_data/$x/wav.scp --bpecode ${bpemodel}.model \
-            $wave_data/$x ${dict} > $wave_data/$x/format.data.tmp
-
-        tools/remove_longshortdata.py \
-            --min_input_len 0.5 \
-            --max_input_len 20 \
-            --max_output_len 400 \
-            --max_output_input_ratio 10.0 \
-            --data_file $wave_data/$x/format.data.tmp \
-            --output_data_file $wave_data/$x/format.data
-    done
+  # Prepare wenet requried data
+  echo "Prepare data, prepare requried format"
+  for x in dev ${recog_set} $train_set ; do
+    tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
+        $wave_data/$x/data.list
+  done
 
 fi
 ```
 
-This stage generates a single WeNet format file including all the input/output information needed by neural network training/evaluation.
+This stage generates the WeNet required format file `data.list`. Each line in `data.list` is in json format which contains the following fields.
 
-See the generated training feature file in `fbank_pitch/train/format.data`.
+1. `key`: key of the utterance
+2. `wav`: audio file path of the utterance
+3. `txt`: normalized transcription of the utterance, the transcription will be tokenized to the model units on-the-fly at the training stage.
 
-In the WeNet format file , each line records a data sample of seven tab-separated columns. For example, a line is as follows (tab replaced with newline here):
+Here is an example of the `data.list`, and please see the generated training feature file in `data/train/data.list`.
 
 ```
-utt:1867-154075-0014
-feat:/export/data/en-asr-data/OpenSLR//LibriSpeech/train-clean-100/1867/154075/1867-154075-0014.flac
-feat_shape:2.21
-text:YOU SHOW HIM THAT IT IS POSSIBLE
-token:▁YOU ▁SHOW ▁HIM ▁THAT ▁IT ▁IS ▁POSSIBL E
-tokenid:4995 3987 2099 4452 2389 2375 3365 1351
-token_shape:8,5002
+{"key": "1455-134435-0000", "wav": "/mnt/nfs/ptm1/open-data/LibriSpeech/train-clean-100/1455/134435/1455-134435-0000.flac", "txt": "THE GIRL WHO CAME INTO THE WORLD ON THAT NIGHT WHEN JESSE RAN THROUGH THE FIELDS CRYING TO GOD THAT HE BE GIVEN A SON HAD GROWN TO WOMANHOOD ON THE FARM"}
+{"key": "1455-134435-0001", "wav": "/mnt/nfs/ptm1/open-data/LibriSpeech/train-clean-100/1455/134435/1455-134435-0001.flac", "txt": "AND WHEN NOT ANGRY SHE WAS OFTEN MOROSE AND SILENT IN WINESBURG IT WAS SAID THAT SHE DRANK HER HUSBAND THE BANKER"}
+{"key": "1455-134435-0002", "wav": "/mnt/nfs/ptm1/open-data/LibriSpeech/train-clean-100/1455/134435/1455-134435-0002.flac", "txt": "BUT LOUISE COULD NOT BE MADE HAPPY SHE FLEW INTO HALF INSANE FITS OF TEMPER DURING WHICH SHE WAS SOMETIMES SILENT SOMETIMES NOISY AND QUARRELSOME SHE SWORE AND CRIED OUT IN HER ANGER SHE GOT A KNIFE FROM THE KITCHEN AND THREATENED HER HUSBAND'S LIFE"}
 ```
-`feat_shape` is the duration(in seconds) of the wav, `text` is splited into BPE sequence `token`.
+
+We aslo design another format for `data.list` named `shard` which is for big data training.
+Please see [gigaspeech](https://github.com/wenet-e2e/wenet/tree/main/examples/gigaspeech/s0)(10k hours) or
+[wenetspeech](https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0)(10k hours)
+for how to use `shard` style `data.list` if you want to apply WeNet on big data set(more than 5k).
 
 #### Stage 4: Neural Network training
 
 ``` sh
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-    # Training
-    mkdir -p $dir
-    INIT_FILE=$dir/ddp_init
-    rm -f $INIT_FILE # delete old one before starting
-    init_method=file://$(readlink -f $INIT_FILE)
-    echo "$0: init method is $init_method"
-    num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-    # Use "nccl" if it works, otherwise use "gloo"
-    dist_backend="nccl"
-    cmvn_opts=
-    $cmvn && cmvn_opts="--cmvn $wave_data/${train_set}/global_cmvn"
-    # train.py will write $train_config to $dir/train.yaml with model input
-    # and output dimension, train.yaml will be used for inference or model
-    # export later
-    for ((i = 0; i < $num_gpus; ++i)); do
-    {
-        gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-        python wenet/bin/train.py --gpu $gpu_id \
-            --config $train_config \
-            --train_data $wave_data/$train_set/format.data \
-            --cv_data $wave_data/dev/format.data \
-            ${checkpoint:+--checkpoint $checkpoint} \
-            --model_dir $dir \
-            --ddp.init_method $init_method \
-            --ddp.world_size $num_gpus \
-            --ddp.rank $i \
-            --ddp.dist_backend $dist_backend \
-            --num_workers 1 \
-            $cmvn_opts \
-            --pin_memory
-    } &
-    done
-    wait
+  # Training
+  mkdir -p $dir
+  INIT_FILE=$dir/ddp_init
+  rm -f $INIT_FILE # delete old one before starting
+  init_method=file://$(readlink -f $INIT_FILE)
+  echo "$0: init method is $init_method"
+  num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
+  # Use "nccl" if it works, otherwise use "gloo"
+  dist_backend="nccl"
+  cmvn_opts=
+  $cmvn && cmvn_opts="--cmvn $wave_data/${train_set}/global_cmvn"
+  # train.py will write $train_config to $dir/train.yaml with model input
+  # and output dimension, train.yaml will be used for inference or model
+  # export later
+  for ((i = 0; i < $num_gpus; ++i)); do
+  {
+    gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
+    python wenet/bin/train.py --gpu $gpu_id \
+      --config $train_config \
+      --data_type raw \
+      --symbol_table $dict \
+      --train_data $wave_data/$train_set/data.list \
+      --cv_data $wave_data/dev/data.list \
+      ${checkpoint:+--checkpoint $checkpoint} \
+      --model_dir $dir \
+      --ddp.init_method $init_method \
+      --ddp.world_size $num_gpus \
+      --ddp.rank $i \
+      --ddp.dist_backend $dist_backend \
+      --num_workers 1 \
+      $cmvn_opts \
+      --pin_memory
+  } &
+  done
+  wait
 fi
 ```
 
@@ -276,60 +271,61 @@ tensorboard --logdir tensorboard/$your_exp_name/ --port 12598 --bind_all
 
 ``` sh
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-    # Test model, please specify the model you want to test by --checkpoint
-    cmvn_opts=
-    $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
-    # TODO, Add model average here
-    mkdir -p $dir/test
-    if [ ${average_checkpoint} == true ]; then
-        decode_checkpoint=$dir/avg_${average_num}.pt
-        echo "do model average and final checkpoint is $decode_checkpoint"
-        python wenet/bin/average_model.py \
-            --dst_model $decode_checkpoint \
-            --src_path $dir  \
-            --num ${average_num} \
-            --val_best
-    fi
-    # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
-    # -1 for full chunk
-    decoding_chunk_size=
-    ctc_weight=0.5
-    # Polling GPU id begin with index 0
-    num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-    idx=0
-    for test in $recog_set; do
-        for mode in ${decode_modes}; do
-        {
-            {
-                test_dir=$dir/${test}_${mode}
-                mkdir -p $test_dir
-                gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-                python wenet/bin/recognize.py --gpu $gpu_id \
-                    --mode $mode \
-                    --config $dir/train.yaml \
-                    --test_data $wave_data/$test/format.data \
-                    --checkpoint $decode_checkpoint \
-                    --beam_size 10 \
-                    --batch_size 1 \
-                    --penalty 0.0 \
-                    --dict $dict \
-                    --result_file $test_dir/text_bpe \
-                    --ctc_weight $ctc_weight \
-                    ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+# Test model, please specify the model you want to test by --checkpoint
+  cmvn_opts=
+  $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
+  # TODO, Add model average here
+  mkdir -p $dir/test
+  if [ ${average_checkpoint} == true ]; then
+    decode_checkpoint=$dir/avg_${average_num}.pt
+    echo "do model average and final checkpoint is $decode_checkpoint"
+    python wenet/bin/average_model.py \
+      --dst_model $decode_checkpoint \
+      --src_path $dir  \
+      --num ${average_num} \
+      --val_best
+  fi
+  # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
+  # -1 for full chunk
+  decoding_chunk_size=
+  ctc_weight=0.5
+  # Polling GPU id begin with index 0
+  num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
+  idx=0
+  for test in $recog_set; do
+    for mode in ${decode_modes}; do
+    {
+      {
+        test_dir=$dir/${test}_${mode}
+        mkdir -p $test_dir
+        gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
+        python wenet/bin/recognize.py --gpu $gpu_id \
+          --mode $mode \
+          --config $dir/train.yaml \
+          --data_type raw \
+          --test_data $wave_data/$test/data.list \
+          --checkpoint $decode_checkpoint \
+          --beam_size 10 \
+          --batch_size 1 \
+          --penalty 0.0 \
+          --dict $dict \
+          --result_file $test_dir/text_bpe \
+          --ctc_weight $ctc_weight \
+          ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
 
-                tools/spm_decode --model=${bpemodel}.model --input_format=piece < $test_dir/text_bpe | sed -e "s/▁/ /g" > $test_dir/text
-                python tools/compute-wer.py --char=1 --v=1 \
-                    $wave_data/$test/text $test_dir/text > $test_dir/wer
-            } &
+        tools/spm_decode --model=${bpemodel}.model --input_format=piece < $test_dir/text_bpe | sed -e "s/▁/ /g" > $test_dir/text
+        python tools/compute-wer.py --char=1 --v=1 \
+          $wave_data/$test/text $test_dir/text > $test_dir/wer
+      } &
 
-            ((idx+=1))
-            if [ $idx -eq $num_gpus ]; then
-              idx=0
-            fi
-        }
-        done
+      ((idx+=1))
+      if [ $idx -eq $num_gpus ]; then
+        idx=0
+      fi
+    }
     done
-    wait
+  done
+  wait
 
 fi
 
@@ -367,11 +363,11 @@ In general, attention_rescoring is the best method. Please see [U2 paper](https:
 
 ``` sh
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-    # Export the best model you want
-    python wenet/bin/export_jit.py \
-        --config $dir/train.yaml \
-        --checkpoint $dir/avg_${average_num}.pt \
-        --output_file $dir/final.zip
+  # Export the best model you want
+  python wenet/bin/export_jit.py \
+    --config $dir/train.yaml \
+    --checkpoint $dir/avg_${average_num}.pt \
+    --output_file $dir/final.zip
 fi
 ```
 
@@ -386,50 +382,50 @@ It is required if you want to integrate language model(LM), as shown in Stage 7.
 
 ``` sh
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
-    lm=data/local/lm
-    lexicon=data/local/dict/lexicon.txt
-    mkdir -p $lm
-    mkdir -p data/local/dict
+  lm=data/local/lm
+  lexicon=data/local/dict/lexicon.txt
+  mkdir -p $lm
+  mkdir -p data/local/dict
 
-    # 7.1 Download & format LM
-    which_lm=3-gram.pruned.1e-7.arpa.gz
-    if [ ! -e ${lm}/${which_lm} ]; then
-        wget http://www.openslr.org/resources/11/${which_lm} -P ${lm}
-    fi
-    echo "unzip lm($which_lm)..."
-    gunzip -k ${lm}/${which_lm} -c > ${lm}/lm.arpa
-    echo "Lm saved as ${lm}/lm.arpa"
+  # 7.1 Download & format LM
+  which_lm=3-gram.pruned.1e-7.arpa.gz
+  if [ ! -e ${lm}/${which_lm} ]; then
+    wget http://www.openslr.org/resources/11/${which_lm} -P ${lm}
+  fi
+  echo "unzip lm($which_lm)..."
+  gunzip -k ${lm}/${which_lm} -c > ${lm}/lm.arpa
+  echo "Lm saved as ${lm}/lm.arpa"
 
-    # 7.2 Prepare dict
-    unit_file=$dict
-    bpemodel=$bpemodel
-    # use $dir/words.txt (unit_file) and $dir/train_960_unigram5000 (bpemodel)
-    # if you download pretrained librispeech conformer model
-    cp $unit_file data/local/dict/units.txt
-    if [ ! -e ${lm}/librispeech-lexicon.txt ]; then
-        wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P ${lm}
-    fi
-    echo "build lexicon..."
-    tools/fst/prepare_dict.py $unit_file ${lm}/librispeech-lexicon.txt \
-        $lexicon $bpemodel.model
-    echo "lexicon saved as '$lexicon'"
+  # 7.2 Prepare dict
+  unit_file=$dict
+  bpemodel=$bpemodel
+  # use $dir/words.txt (unit_file) and $dir/train_960_unigram5000 (bpemodel)
+  # if you download pretrained librispeech conformer model
+  cp $unit_file data/local/dict/units.txt
+  if [ ! -e ${lm}/librispeech-lexicon.txt ]; then
+    wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P ${lm}
+  fi
+  echo "build lexicon..."
+  tools/fst/prepare_dict.py $unit_file ${lm}/librispeech-lexicon.txt \
+    $lexicon $bpemodel.model
+  echo "lexicon saved as '$lexicon'"
 
-    # 7.3 Build decoding TLG
-    tools/fst/compile_lexicon_token_fst.sh \
-       data/local/dict data/local/tmp data/local/lang
-    tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+  # 7.3 Build decoding TLG
+  tools/fst/compile_lexicon_token_fst.sh \
+     data/local/dict data/local/tmp data/local/lang
+  tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
 
-    # 7.4 Decoding with runtime
-    fst_dir=data/lang_test
-    for test in ${recog_set}; do
-        ./tools/decode.sh --nj 6 \
-            --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
-            --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
-            --fst_path $fst_dir/TLG.fst \
-            data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
-            $dir/lm_with_runtime_${test}
-        tail $dir/lm_with_runtime_${test}/wer
-    done
+  # 7.4 Decoding with runtime
+  fst_dir=data/lang_test
+  for test in ${recog_set}; do
+    ./tools/decode.sh --nj 6 \
+      --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
+      --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
+      --fst_path $fst_dir/TLG.fst \
+      data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
+      $dir/lm_with_runtime_${test}
+    tail $dir/lm_with_runtime_${test}/wer
+  done
 fi
 ```
 

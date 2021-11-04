@@ -5,7 +5,7 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6"
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 # The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
 # communication. More details can be found in
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
@@ -25,12 +25,11 @@ node_rank=0
 # modify this to your AISHELL-2 data path
 # Note: the evaluation data (dev & test) is available at AISHELL.
 # Please download it from http://aishell-eval.oss-cn-beijing.aliyuncs.com/TEST%26DEV%20DATA.zip
-trn_set=/ssd/nfs06/open_source_data/AISHELL-2/iOS/data
-dev_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/dev
-tst_set=/ssd/nfs06/open_source_data/AISHELL-DEV-TEST-SET/iOS/test
+trn_set=/mnt/nfs/ptm1/open-data/AISHELL-2/iOS/data
+dev_set=/mnt/nfs/ptm1/open-data/AISHELL-DEV-TEST-SET/iOS/dev
+tst_set=/mnt/nfs/ptm1/open-data/AISHELL-DEV-TEST-SET/iOS/test
 
 nj=16
-feat_dir=raw_wav
 dict=data/dict/lang_char.txt
 
 train_set=train
@@ -68,15 +67,10 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
             > data/${x}/text
         rm data/${x}/text.org
     done
-    # For wav feature, just copy the data. Fbank extraction is done in training
-    mkdir -p $feat_dir
-    for x in ${train_set} dev test; do
-        cp -r data/$x $feat_dir
-    done
 
-    tools/compute_cmvn_stats_deprecated.py --num_workers 16 --train_config $train_config \
+    tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
-        --out_cmvn $feat_dir/$train_set/global_cmvn
+        --out_cmvn data/$train_set/global_cmvn
 
 fi
 
@@ -93,21 +87,10 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    nj=32
     # Prepare wenet requried data
     echo "Prepare data, prepare requried format"
     for x in dev test ${train_set}; do
-        tools/format_data.sh --nj ${nj} \
-            --feat-type wav --feat $feat_dir/$x/wav.scp \
-            $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
-
-        tools/remove_longshortdata.py \
-            --min_input_len 0.5 \
-            --max_input_len 20 \
-            --max_output_len 400 \
-            --max_output_input_ratio 10.0 \
-            --data_file $feat_dir/$x/format.data.tmp \
-            --output_data_file $feat_dir/$x/format.data
+        tools/make_raw_list.py data/$x/wav.scp data/$x/text data/$x/data.list
     done
 fi
 
@@ -122,7 +105,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # The number of gpus runing on each node/machine
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
-    dist_backend="nccl"
+    dist_backend="gloo"
     # The total number of processes/gpus, so that the master knows
     # how many workers to wait for.
     # More details about ddp can be found in
@@ -130,7 +113,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     world_size=`expr $num_gpus \* $num_nodes`
     echo "total gpus is: $world_size"
     cmvn_opts=
-    $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
+    $cmvn && cp data/${train_set}/global_cmvn $dir
     $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
@@ -141,10 +124,12 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # Rank of each gpu/process used for knowing whether it is
     # the master of a worker.
     rank=`expr $node_rank \* $num_gpus + $i`
-    python wenet/bin/train_deprecated.py --gpu $gpu_id \
+    python wenet/bin/train.py --gpu $gpu_id \
             --config $train_config \
-            --train_data $feat_dir/$train_set/format.data \
-            --cv_data $feat_dir/dev/format.data \
+            --data_type raw \
+            --symbol_table $dict \
+            --train_data data/$train_set/data.list \
+            --cv_data data/dev/data.list \
             ${checkpoint:+--checkpoint $checkpoint} \
             --model_dir $dir \
             --ddp.init_method $init_method \
@@ -177,10 +162,11 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     {
         test_dir=$dir/test_${mode}
         mkdir -p $test_dir
-        python wenet/bin/recognize_deprecated.py --gpu 0 \
+        python wenet/bin/recognize.py --gpu 0 \
             --mode $mode \
             --config $dir/train.yaml \
-            --test_data $feat_dir/test/format.data \
+            --data_type raw \
+            --test_data data/test/data.list \
             --checkpoint $decode_checkpoint \
             --beam_size 10 \
             --batch_size 1 \
@@ -190,7 +176,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --result_file $test_dir/text \
             ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
          python tools/compute-wer.py --char=1 --v=1 \
-            $feat_dir/test/text $test_dir/text > $test_dir/wer
+            data/test/text $test_dir/text > $test_dir/wer
     } &
     done
     wait
@@ -243,4 +229,3 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # See $dir/lm_with_runtime for wer
   tail $dir/lm_with_runtime/wer
 fi
-

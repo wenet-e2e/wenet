@@ -15,7 +15,10 @@
 import logging
 import json
 import random
+import re
 import tarfile
+from subprocess import PIPE, Popen
+from urllib.parse import urlparse
 
 import torch
 import torchaudio
@@ -40,7 +43,14 @@ def url_opener(data):
         # TODO(Binbin Zhang): support HTTP
         url = sample['src']
         try:
-            stream = open(url, 'rb')
+            pr = urlparse(url)
+            # local file
+            if pr.scheme == '' or pr.scheme == 'file':
+                stream = open(url, 'rb')
+            # network file, such as HTTP(HDFS/OSS/S3)/HTTPS/SCP
+            else:
+                cmd = f'curl -s -L {url}'
+                stream = Popen(cmd, shell=True, stdout=PIPE).stdout
             sample.update(stream=stream)
             yield sample
         except Exception as ex:
@@ -61,7 +71,7 @@ def tar_file_and_group(data):
         assert 'stream' in sample
         stream = tarfile.open(fileobj=sample['stream'], mode="r|*")
         prev_prefix = None
-        data = {}
+        example = {}
         valid = True
         for tarinfo in stream:
             name = tarinfo.name
@@ -69,28 +79,28 @@ def tar_file_and_group(data):
             assert pos > 0
             prefix, postfix = name[:pos], name[pos + 1:]
             if prev_prefix is not None and prefix != prev_prefix:
-                data['key'] = prev_prefix
+                example['key'] = prev_prefix
                 if valid:
-                    yield data
-                data = {}
+                    yield example
+                example = {}
                 valid = True
             file_obj = stream.extractfile(tarinfo)
             try:
                 if postfix == 'txt':
-                    data['txt'] = file_obj.read().decode('utf8').strip()
+                    example['txt'] = file_obj.read().decode('utf8').strip()
                 elif postfix in AUDIO_FORMAT_SETS:
                     waveform, sample_rate = torchaudio.load(file_obj)
-                    data['wav'] = waveform
-                    data['sample_rate'] = sample_rate
+                    example['wav'] = waveform
+                    example['sample_rate'] = sample_rate
                 else:
-                    data[postfix] = file_ojb.read()
+                    example[postfix] = file_obj.read()
             except Exception as ex:
                 valid = False
                 logging.warning('error to parse {}'.format(name))
             prev_prefix = prefix
         if prev_prefix is not None:
-            data['key'] = prev_prefix
-            yield data
+            example['key'] = prev_prefix
+            yield example
         stream.close()
         sample['stream'].close()
 
@@ -115,12 +125,23 @@ def parse_raw(data):
         wav_file = obj['wav']
         txt = obj['txt']
         try:
-            waveform, sample_rate = torchaudio.load(wav_file)
-            data = dict(key=key,
-                        txt=txt,
-                        wav=waveform,
-                        sample_rate=sample_rate)
-            yield data
+            if 'start' in obj:
+                assert 'end' in obj
+                sample_rate = torchaudio.backend.sox_io_backend.info(
+                    wav_file).sample_rate
+                start_frame = int(obj['start'] * sample_rate)
+                end_frame = int(obj['end'] * sample_rate)
+                waveform, _ = torchaudio.backend.sox_io_backend.load(
+                    filepath=wav_file,
+                    num_frames=end_frame - start_frame,
+                    frame_offset=start_frame)
+            else:
+                waveform, sample_rate = torchaudio.load(wav_file)
+            example = dict(key=key,
+                           txt=txt,
+                           wav=waveform,
+                           sample_rate=sample_rate)
+            yield example
         except Exception as ex:
             logging.warning('Failed to read {}'.format(wav_file))
 
@@ -268,20 +289,61 @@ def tokenize(data, symbol_table, bpe_model=None):
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
     # TODO(Binbin Zhang): Support BPE
+    if bpe_model is not None:
+        import sentencepiece as spm
+        sp = spm.SentencePieceProcessor()
+        sp.load(bpe_model)
     for sample in data:
         assert 'txt' in sample
         txt = sample['txt']
         label = []
         tokens = []
-        for ch in txt:
-            tokens.append(ch)
+        if bpe_model is not None:
+            txt = bpe_preprocess(txt)
+            mix_chars = seg_char(txt)
+            for j in mix_chars:
+                for k in j.strip().split("▁"):
+                    if not k.encode('UTF-8').isalpha():
+                        tokens.append(k)
+                    else:
+                        for l in sp.encode_as_pieces(k):
+                            tokens.append(l)
+        else:
+            for ch in txt:
+                if ch == ' ':
+                    ch = "▁"
+                tokens.append(ch)
+
+        for ch in tokens:
             if ch in symbol_table:
                 label.append(symbol_table[ch])
             elif '<unk>' in symbol_table:
                 label.append(symbol_table['<unk>'])
+
         sample['tokens'] = tokens
         sample['label'] = label
         yield sample
+
+
+def bpe_preprocess(text):
+    """ Use ▁ for blank among english words
+        Warning: it is "▁" symbol, not "_" symbol
+    """
+    text = re.sub(r'[a-z]', r'[A-Z]', text)
+    text = re.sub(r'([A-Z])[ ]+', r'\1▁', text)
+    text = re.sub(r'([^A-Z])▁', r'\1 ', text)
+    text = re.sub(r'▁([^A-Z])', r' \1', text)
+    text = re.sub(r'▁$', r'', text)
+    text = text.replace(' ', '')
+    text = text.replace('\xEF\xBB\xBF', '')
+    return text
+
+
+def seg_char(text):
+    pattern = re.compile(r'([\u4e00-\u9fa5])')
+    chars = pattern.split(text)
+    chars = [w for w in chars if len(w.strip()) > 0]
+    return chars
 
 
 def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
@@ -405,17 +467,20 @@ def dynamic_batch(data, max_frames_in_batch=12000):
         Returns:
             Iterable[List[{key, feat, label}]]
     """
-    total_frames_in_batch = 0
     buf = []
+    longest_frames = 0
     for sample in data:
-        buf.append(sample)
         assert 'feat' in sample
         assert isinstance(sample['feat'], torch.Tensor)
-        total_frames_in_batch += sample['feat'].size(0)
-        if total_frames_in_batch > max_frames_in_batch:
+        new_sample_frames = sample['feat'].size(0)
+        longest_frames = max(longest_frames, new_sample_frames)
+        frames_after_padding = longest_frames * (len(buf) + 1)
+        if frames_after_padding > max_frames_in_batch:
             yield buf
-            buf = []
-            total_frames_in_batch = 0
+            buf = [sample]
+            longest_frames = new_sample_frames
+        else:
+            buf.append(sample)
     if len(buf) > 0:
         yield buf
 

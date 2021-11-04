@@ -37,47 +37,35 @@ model_conf:
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
 
-# use raw_wav or kaldi feature
-raw_wav: true
-
-# feature extraction
-collate_conf:
-    # waveform level config
-    wav_distortion_conf:
-        wav_dither: 1.0
-        wav_distortion_rate: 0.0
-        distortion_methods: []
+dataset_conf:
+    filter_conf:
+        max_length: 2000
+        min_length: 100
+        token_max_length: 160
+        token_min_length: 1
+    resample_conf:
+        resample_rate: 16000
     speed_perturb: false
-    feature_extraction_conf:
-        feature_type: 'fbank'
-        mel_bins: 80
+    fbank_conf:
+        num_mel_bins: 80
         frame_shift: 10
         frame_length: 25
-        using_pitch: false
-    # spec level config
-    # spec_swap: false
-    feature_dither: 0.0 # add dither [-feature_dither,feature_dither] on fbank feature
+        dither: 1.0
     spec_aug: true
     spec_aug_conf:
-        warp_for_time: True
         num_t_mask: 3
         num_f_mask: 2
         max_t: 50
         max_f: 10
-        max_w: 80
-    spec_sub: true
-    spec_sub_conf:
-        num_t_sub: 3
-        max_t: 20
-
-# dataset related
-dataset_conf:
-    max_length: 2000
-    min_length: 10
-    batch_type: 'static' # static or dynamic
-    # the size of batch_size should be set according to your gpu memory size, here we used v100 gpu whose memory size is 32GB
-    batch_size: 20
+    shuffle: true
+    shuffle_conf:
+        shuffle_size: 1500
     sort: true
+    sort_conf:
+        sort_size: 500  # sort_size should be less than shuffle_size
+    batch_conf:
+        batch_type: 'static' # static or dynamic
+        batch_size: 20
 
 grad_clip: 5
 accum_grad: 4

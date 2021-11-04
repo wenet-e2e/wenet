@@ -6,7 +6,7 @@
 * Training info: lr 0.002, batch size 18, 4 gpu, acc_grad 4, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210204_conformer_exp.tar.gz
+* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20211025_conformer_exp.tar.gz
 
 | decoding mode             | CER   |
 |---------------------------|-------|
@@ -22,7 +22,6 @@
 * Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 360 epochs
 * Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30
 * Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_u2pp_conformer_exp.tar.gz
 
 | decoding mode/chunk size  | full  | 16    |
 |---------------------------|-------|-------|
@@ -37,7 +36,6 @@
 * Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 180 epochs, dither 0.0
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210203_unified_conformer_exp.tar.gz
 
 | decoding mode/chunk size  | full  | 16    | 8     | 4     |
 |---------------------------|-------|-------|-------|-------|
@@ -53,7 +51,6 @@
 * Training info: lr 0.001, batch size 26, 8 gpu, acc_grad 1, 360 epochs, dither 0.1
 * Decoding info: ctc_weight 0.2, reverse_weight 0.5, average_num 30
 * Git hash: 65270043fc8c2476d1ab95e7c39f730017a670e0
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210607_u2pp_transformer_exp.tar.gz
 
 | decoding mode/chunk size  | full  | 16    |
 |---------------------------|-------|-------|
@@ -68,7 +65,6 @@
 * Training info: lr 0.002, batch size 26, 4 gpu, acc_grad 4, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210204_transformer_exp.tar.gz
 
 | decoding mode             | CER   |
 |---------------------------|-------|
@@ -84,7 +80,6 @@
 * Training info: lr 0.002, batch size 16, 4 gpu, acc_grad 1, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210204_unified_transformer_exp.tar.gz
 
 | decoding mode/chunk size  | full  | 16    | 8     | 4     |
 |---------------------------|-------|-------|-------|-------|
