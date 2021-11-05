@@ -52,9 +52,9 @@ FetchContent_Declare(boost
 FetchContent_MakeAvailable(boost)
 include_directories(${boost_SOURCE_DIR})
 
-# third_party: libtorch 1.9.0, use FetchContent_Declare to download, and
+# third_party: libtorch use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
-set(PYTORCH_VERSION "1.9.0")
+set(PYTORCH_VERSION "1.10.0")
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-${PYTORCH_VERSION}%2Bcpu.zip")
     set(URL_HASH "SHA256=9bcd5b2703e18f2374413e55907ac20b2e5d8f5ae06a669f2e9905096114b4f1")
