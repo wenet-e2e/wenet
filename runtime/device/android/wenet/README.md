@@ -45,7 +45,7 @@ Step 3, push your binary and the dynamic library to `/data/local/tmp` as follows
 ``` sh
 adb push app/.cxx/cmake/release/arm64-v8a/decoder_main /data/local/tmp
 adb push app/.cxx/cmake/release/arm64-v8a/gflags-build/lib/libgflags.so /data/local/tmp
-adb push app/build/pytorch_android-1.9.0.aar/jni/arm64-v8a/* /data/local/tmp
+adb push app/build/pytorch_android-1.10.0.aar/jni/arm64-v8a/* /data/local/tmp
 ```
 
 Step 4, change to the directory `/data/local/tmp` of your phone, and export the library path by:
