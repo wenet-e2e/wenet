@@ -166,7 +166,7 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     if (state != DecodeState::kEndFeats) {
       UpdateResult(false);
     }
-    
+
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
       LOG(INFO) << "Endpoint is detected at " << num_frames_;
       state = DecodeState::kEndpoint;
