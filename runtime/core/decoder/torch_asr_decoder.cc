@@ -163,8 +163,10 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     int search_time = timer.Elapsed();
     VLOG(3) << "forward takes " << forward_time << " ms, search takes "
             << search_time << " ms";
-    UpdateResult();
-
+    if (state != DecodeState::kEndFeats) {
+      UpdateResult(false);
+    }
+    
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
       LOG(INFO) << "Endpoint is detected at " << num_frames_;
       state = DecodeState::kEndpoint;
