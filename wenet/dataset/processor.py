@@ -51,9 +51,9 @@ def url_opener(data):
             else:
                 cmd = f'curl -s -L {url}'
                 process = Popen(cmd, shell=True, stdout=PIPE)
+                sample.update(process=process)
                 stream = process.stdout
             sample.update(stream=stream)
-            sample.update(process=process)
             yield sample
         except Exception as ex:
             logging.warning('Failed to open {}'.format(url))
