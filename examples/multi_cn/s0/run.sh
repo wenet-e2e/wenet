@@ -302,11 +302,6 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
           --num ${average_num} \
           --val_best
   fi
-  if $has_aishell2; then
-      test_sets="aishell aidatatang magicdata thchs aishell2 tal_asr"
-  else
-      test_sets="aishell aidatatang magicdata thchs tal_asr"
-  fi
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
   decoding_chunk_size=16
