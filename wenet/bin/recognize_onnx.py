@@ -237,8 +237,9 @@ def main():
                 for i in range(batch_size):
                     for j in range(beam_size):
                         cand = all_hyps[k]
-                        hyps_pad_sos_eos[i][j][0:len(cand) + 2] = [sos] + cand + [eos]
-                        r_hyps_pad_sos_eos[i][j][0:len(cand) + 2] = [sos] + cand[::-1] + [eos]
+                        l = len(cand) + 2
+                        hyps_pad_sos_eos[i][j][0:l] = [sos] + cand + [eos]
+                        r_hyps_pad_sos_eos[i][j][0:l] = [sos] + cand[::-1] + [eos]
                         hyps_lens_sos[i][j] = len(cand) + 1
                         k += 1
                 decoder_ort_inputs = {
@@ -248,7 +249,8 @@ def main():
                     decoder_ort_session.get_inputs()[3].name: hyps_lens_sos,
                     decoder_ort_session.get_inputs()[-1].name: ctc_score}
                 if reverse_weight > 0:
-                    decoder_ort_inputs[decoder_ort_session.get_inputs()[4].name] = r_hyps_pad_sos_eos
+                    r_hyps_pad_sos_eos_name = decoder_ort_session.get_inputs()[4].name 
+                    decoder_ort_inputs[r_hyps_pad_sos_eos_name] = r_hyps_pad_sos_eos
                 _, _, best_index = decoder_ort_session.run(
                     None, decoder_ort_inputs)
                 best_sents = []
