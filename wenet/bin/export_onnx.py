@@ -134,7 +134,7 @@ class Decoder(torch.nn.Module):
         score = decoder_out.gather(2, index).squeeze(2)  # B2 X T2
         # mask padded part
         score = score * mask
-        decoder_out = decoder_out.view(B, bz, T2, V) 
+        decoder_out = decoder_out.view(B, bz, T2, V)
         if self.reverse_weight > 0:
             r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
             r_decoder_out = r_decoder_out.view(B2, T2, V)
@@ -158,7 +158,7 @@ if __name__ == '__main__':
                         help='global_cmvn file, default path is in config file')
     parser.add_argument('--reverse_weight', default=-1.0, type=float,
                         required=False,
-                        help='reverse weight for bitransformer,' + 
+                        help='reverse weight for bitransformer,' +
                         'default value is in config file')
     parser.add_argument('--ctc_weight', default=-1.0, type=float,
                         required=False,

@@ -249,7 +249,7 @@ def main():
                     decoder_ort_session.get_inputs()[3].name: hyps_lens_sos,
                     decoder_ort_session.get_inputs()[-1].name: ctc_score}
                 if reverse_weight > 0:
-                    r_hyps_pad_sos_eos_name = decoder_ort_session.get_inputs()[4].name 
+                    r_hyps_pad_sos_eos_name = decoder_ort_session.get_inputs()[4].name
                     decoder_ort_inputs[r_hyps_pad_sos_eos_name] = r_hyps_pad_sos_eos
                 _, _, best_index = decoder_ort_session.run(
                     None, decoder_ort_inputs)
