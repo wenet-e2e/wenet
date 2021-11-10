@@ -139,7 +139,7 @@ def Dataset(data_type, data_list_file, symbol_table, conf,
     else:
         dataset = Processor(dataset, processor.parse_raw)
 
-    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model)
+    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model, conf.get('char', False))
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 

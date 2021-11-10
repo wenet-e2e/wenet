@@ -258,7 +258,7 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-def tokenize(data, symbol_table, bpe_model=None):
+def tokenize(data, symbol_table, bpe_model=None, char=False):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -289,6 +289,8 @@ def tokenize(data, symbol_table, bpe_model=None):
                         for l in sp.encode_as_pieces(k):
                             tokens.append(l)
         else:
+            if char:
+                txt = txt.split(" ")
             for ch in txt:
                 tokens.append(ch)
 
