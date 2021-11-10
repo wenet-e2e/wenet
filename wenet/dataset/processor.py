@@ -50,7 +50,9 @@ def url_opener(data):
             # network file, such as HTTP(HDFS/OSS/S3)/HTTPS/SCP
             else:
                 cmd = f'curl -s -L {url}'
-                stream = Popen(cmd, shell=True, stdout=PIPE).stdout
+                process = Popen(cmd, shell=True, stdout=PIPE)
+                sample.update(process=process)
+                stream = process.stdout
             sample.update(stream=stream)
             yield sample
         except Exception as ex:
@@ -102,6 +104,8 @@ def tar_file_and_group(data):
             example['key'] = prev_prefix
             yield example
         stream.close()
+        if 'process' in sample:
+            sample['process'].communicate()
         sample['stream'].close()
 
 

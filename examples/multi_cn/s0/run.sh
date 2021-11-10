@@ -37,7 +37,6 @@ nj=16
 train_set=train
 dev_set=dev
 
-test_sets="aishell aidatatang magicdata thchs aishell2 tal_asr"
 has_aishell2=false  # AISHELL2 train set is not publically downloadable
                     # With this option true, the script assumes you have it in
                     # $dbase
@@ -69,6 +68,14 @@ decode_modes="ctc_greedy_search ctc_prefix_beam_search"
 decode_modes="$decode_modes attention attention_rescoring"
 
 . tools/parse_options.sh || exit 1;
+
+test_sets="aishell aidatatang magicdata thchs"
+if $has_aishell2; then
+  test_sets="$test_sets aishell2"
+fi
+if $has_tal; then
+  test_sets="$test_sets tal_asr"
+fi
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
   echo "stage -1: Data Download"
@@ -144,14 +151,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   for x in ${train_set} ${dev_set}; do
       cp -r data/$x data_${en_modeling_unit}
   done
-
-  test_sets="aishell aidatatang magicdata thchs"
-  if $has_aishell2; then
-      test_sets="$test_sets aishell2"
-  fi
-  if $has_tal; then
-      test_sets="$test_sets tal_asr"
-  fi
 
   for x in ${test_sets}; do
       cp -r data/$x/test data_${en_modeling_unit}/test_${x}
@@ -301,11 +300,6 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
           --src_path $dir  \
           --num ${average_num} \
           --val_best
-  fi
-  if $has_aishell2; then
-      test_sets="aishell aidatatang magicdata thchs aishell2 tal_asr"
-  else
-      test_sets="aishell aidatatang magicdata thchs tal_asr"
   fi
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
