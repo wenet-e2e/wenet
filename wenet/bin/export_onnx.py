@@ -76,28 +76,32 @@ class Encoder(torch.nn.Module):
 class Decoder(torch.nn.Module):
     def __init__(self,
                  decoder: TransformerDecoder,
+                 ctc_weight: float = 0.5,
                  reverse_weight: float = 0.0,
                  beam_size: int = 10):
         super().__init__()
         self.decoder = decoder
+        self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
         self.beam_size = beam_size
 
     def forward(self,
                 encoder_out: torch.Tensor,
                 encoder_lens: torch.Tensor,
-                hyps_pad_sos: torch.Tensor,
+                hyps_pad_sos_eos: torch.Tensor,
                 hyps_lens: torch.Tensor,
-                r_hyps_pad_sos: torch.Tensor):
+                r_hyps_pad_sos_eos: torch.Tensor,
+                ctc_score: torch.Tensor):
         """Encoder
         Args:
             encoder_out: B x T x F
             encoder_lens: B
-            hyps_pad_sos: B x beam x T2,
-                        hyps with sos and padded by ignore id
+            hyps_pad_sos_eos: B x beam x (T2+1),
+                        hyps with sos & eos and padded by ignore id
             hyps_lens: B x beam, length for each hyp with sos
-            r_hyps_pad_sos: B x beam x T2,
-                    reversed hyps with sos and padded by ignore id
+            r_hyps_pad_sos_eos: B x beam x (T2+1),
+                    reversed hyps with sos & eos and padded by ignore id
+            ctc_score: B x beam, ctc score for each hyp
         Returns:
             decoder_out: B x beam x T2 x V
             r_decoder_out: B x beam x T2 x V
@@ -108,25 +112,57 @@ class Decoder(torch.nn.Module):
         encoder_out = encoder_out.repeat(1, bz, 1).view(B2, T, F)
         encoder_mask = ~make_pad_mask(encoder_lens, T).unsqueeze(1)
         encoder_mask = encoder_mask.repeat(1, bz, 1).view(B2, 1, T)
-        T2 = hyps_pad_sos.shape[2]
-        hyps_pad = hyps_pad_sos.view(B2, T2)
+        T2 = hyps_pad_sos_eos.shape[2] - 1
+        hyps_pad = hyps_pad_sos_eos.view(B2, T2 + 1)
         hyps_lens = hyps_lens.view(B2,)
-        r_hyps_pad = r_hyps_pad_sos.view(B2, T2)
+        hyps_pad_sos = hyps_pad[:, :-1].contiguous()
+        hyps_pad_eos = hyps_pad[:, 1:].contiguous()
+
+        r_hyps_pad = r_hyps_pad_sos_eos.view(B2, T2 + 1)
+        r_hyps_pad_sos = r_hyps_pad[:, :-1].contiguous()
+        r_hyps_pad_eos = r_hyps_pad[:, 1:].contiguous()
+
         decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
+            encoder_out, encoder_mask, hyps_pad_sos, hyps_lens, r_hyps_pad_sos,
             self.reverse_weight)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         V = decoder_out.shape[-1]
-        decoder_out = decoder_out.view(B, bz, T2, V)
-        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
-        r_decoder_out = r_decoder_out.view(B, bz, T2, V)
-        return decoder_out, r_decoder_out
+        decoder_out = decoder_out.view(B2, T2, V)
+        mask = ~make_pad_mask(hyps_lens, T2)  # B2 x T2
+        # mask index, remove ignore id
+        index = torch.unsqueeze(hyps_pad_eos * mask, 2)
+        score = decoder_out.gather(2, index).squeeze(2)  # B2 X T2
+        # mask padded part
+        score = score * mask
+        decoder_out = decoder_out.view(B, bz, T2, V) 
+        if self.reverse_weight > 0:
+            r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
+            r_decoder_out = r_decoder_out.view(B2, T2, V)
+            index = torch.unsqueeze(r_hyps_pad_eos * mask, 2)
+            r_score = r_decoder_out.gather(2, index).squeeze(2)
+            r_score = r_score * mask
+            score = score * (1 - self.reverse_weight) + self.reverse_weight * r_score
+            r_decoder_out = r_decoder_out.view(B, bz, T2, V)
+        score = torch.sum(score, axis=1)  # B2
+        score = torch.reshape(score, (B, bz)) + self.ctc_weight * ctc_score
+        best_index = torch.argmax(score, dim=1)
+        # add decoder_out and r_decoder_out
+        return decoder_out, r_decoder_out, best_index
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='export your script model')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
+    parser.add_argument('--cmvn_file', required=False, default='', type=str,
+                        help='global_cmvn file, default path is in config file')
+    parser.add_argument('--reverse_weight', default=-1.0, type=float,
+                        required=False,
+                        help='reverse weight for bitransformer,' + 
+                        'default value is in config file')
+    parser.add_argument('--ctc_weight', default=-1.0, type=float,
+                        required=False,
+                        help='ctc weight, default value is in config file')
     parser.add_argument('--beam_size', default=10, type=int, required=False,
                         help="beam size would be ctc output size")
     parser.add_argument('--output_onnx_dir',
@@ -139,12 +175,18 @@ if __name__ == '__main__':
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-
+    if args.cmvn_file and os.path.exists(args.cmvn_file):
+        configs['cmvn_file'] = args.cmvn_file
+    if args.reverse_weight != -1.0 and 'reverse_weight' in configs['model_conf']:
+        configs['model_conf']['reverse_weight'] = args.reverse_weight
+        print("Update reverse weight to", args.reverse_weight)
+    if args.ctc_weight != -1:
+        print("Update ctc weight to ", args.ctc_weight)
+        configs['model_conf']['ctc_weight'] = args.ctc_weight
     configs["encoder_conf"]["use_dynamic_chunk"] = False
     model = init_asr_model(configs)
     load_checkpoint(model, args.checkpoint)
     model.eval()
-
     bz = 32
     seq_len = 100
     beam_size = args.beam_size
@@ -196,7 +238,7 @@ if __name__ == '__main__':
                   ort_session.get_inputs()[1].name: to_numpy(speech_lens)}
     ort_outs = ort_session.run(None, ort_inputs)
 
-    def test(a, b, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=False):
+    def test(a, b, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=True):
         try:
             torch.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
         except AssertionError as error:
@@ -206,7 +248,7 @@ if __name__ == '__main__':
                 raise
 
     # check encoder output
-    test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-05)
+    test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-5)
     test(to_numpy(o1), ort_outs[1], rtol=1e-03, atol=1e-05)
     test(to_numpy(o2), ort_outs[2], rtol=1e-03, atol=1e-05)
     test(to_numpy(o3), ort_outs[3], rtol=1e-03, atol=1e-05)
@@ -215,60 +257,71 @@ if __name__ == '__main__':
 
     decoder = Decoder(
         model.decoder,
+        model.ctc_weight,
         model.reverse_weight,
         beam_size)
     decoder.eval()
     decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder.onnx')
 
-    hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
+    hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
     hyps_lens = torch.randint(low=3, high=seq_len, size=(bz, beam_size),
                               dtype=torch.int32)
-    r_hyps_pad_sos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
+    r_hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
 
     output_size = configs["encoder_conf"]["output_size"]
     encoder_out = torch.randn(bz, seq_len, output_size, dtype=torch.float32)
     encoder_out_lens = torch.randint(low=3, high=seq_len, size=(bz,), dtype=torch.int32)
-
+    ctc_score = torch.randn(bz, beam_size, dtype=torch.float32)
     torch.onnx.export(decoder,
                       (encoder_out, encoder_out_lens,
-                       hyps_pad_sos, hyps_lens, r_hyps_pad_sos),
+                       hyps_pad_sos_eos, hyps_lens,
+                       r_hyps_pad_sos_eos, ctc_score),
                       decoder_onnx_path,
                       export_params=True,
                       opset_version=13,
                       do_constant_folding=True,
                       input_names=['encoder_out', 'encoder_out_lens',
-                                   'hyps_pad_sos', 'hyps_lens',
-                                   'r_hyps_pad_sos'],
-                      output_names=['decoder_out', 'r_decoder_out'],
+                                   'hyps_pad_sos_eos', 'hyps_lens',
+                                   'r_hyps_pad_sos_eos', 'ctc_score'],
+                      output_names=['decoder_out', 'r_decoder_out', 'best_index'],
                       dynamic_axes={'encoder_out': {0: 'B', 1: 'T'},
                                     'encoder_out_lens': {0: 'B'},
-                                    'hyps_pad_sos': {0: 'B', 2: 'T2'},
+                                    'hyps_pad_sos_eos': {0: 'B', 2: 'T2'},
                                     'hyps_lens': {0: 'B'},
-                                    'r_hyps_pad_sos': {0: 'B', 2: 'T2'},
+                                    'r_hyps_pad_sos_eos': {0: 'B', 2: 'T2'},
+                                    'ctc_score': {0: 'B'},
                                     'decoder_out': {0: 'B', 2: 'T2'},
-                                    'r_decoder_out': {0: 'B', 2: 'T2'}
+                                    'r_decoder_out': {0: 'B', 2: 'T2'},
+                                    'best_index': {0: 'B'},
                                     },
                       verbose=False
                       )
     with torch.no_grad():
-        o0, o1 = decoder(
+        o0, o1, o2 = decoder(
             encoder_out,
             encoder_out_lens,
-            hyps_pad_sos,
+            hyps_pad_sos_eos,
             hyps_lens,
-            r_hyps_pad_sos)
+            r_hyps_pad_sos_eos,
+            ctc_score)
 
     ort_session = onnxruntime.InferenceSession(decoder_onnx_path,
                                                providers=providers)
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(encoder_out),
                   ort_session.get_inputs()[1].name: to_numpy(encoder_out_lens),
-                  ort_session.get_inputs()[2].name: to_numpy(hyps_pad_sos),
+                  ort_session.get_inputs()[2].name: to_numpy(hyps_pad_sos_eos),
                   ort_session.get_inputs()[3].name: to_numpy(hyps_lens),
-                  ort_session.get_inputs()[4].name: to_numpy(r_hyps_pad_sos)
+                  ort_session.get_inputs()[-1].name: to_numpy(ctc_score)
                   }
+    # if model.reverse weight == 0,
+    # the r_hyps_pad will be removed
+    # from the onnx decoder since it doen't play any role
+    if model.reverse_weight > 0:
+        ort_inputs[ort_session.get_inputs()[4].name] = to_numpy(r_hyps_pad_sos_eos)
     ort_outs = ort_session.run(None, ort_inputs)
 
     # check encoder output
     test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-05)
     test(to_numpy(o1), ort_outs[1], rtol=1e-03, atol=1e-05)
+    test(to_numpy(o2), ort_outs[2], rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")
