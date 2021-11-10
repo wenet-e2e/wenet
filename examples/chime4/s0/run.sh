@@ -104,15 +104,15 @@ if [ $end -ge 5 ] && [ $beg -le 5 ]; then
       dec_dir=$exp_dir/${subdir}_${mode} && mkdir -p $dec_dir
       python wenet/bin/recognize.py \
         --gpu 0 \
-  	--mode $mode \
+	--mode $mode \
         --config $exp_dir/train.yaml \
-  	--test_data $data_dir/$subdir/data.list \
-  	--checkpoint $exp_dir/avg_${average_num}.pt \
-  	--beam_size 8 \
+        --test_data $data_dir/$subdir/data.list \
+        --checkpoint $exp_dir/avg_${average_num}.pt \
+        --beam_size 8 \
         --batch_size 1 \
         --dict $dict \
-  	--ctc_weight $ctc_weight \
-   	--result_file $dec_dir/text &
+        --ctc_weight $ctc_weight \
+        --result_file $dec_dir/text &
      done
      wait
   done

@@ -63,7 +63,7 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 12
+        batch_size: 8
 
 grad_clip: 10
 accum_grad: 4
@@ -72,7 +72,7 @@ log_interval: 200
 
 optim: adam
 optim_conf:
-    lr: 0.001
+    lr: 0.0005
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 20000
