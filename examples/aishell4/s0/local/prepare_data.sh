@@ -39,7 +39,7 @@ for room_name in "train_L" "train_M" "train_S" "test"; do
 done
 
 mkdir -p ${aishell4_source_dir}/full_train
-for r in train_L train_M train_S ; do 
+for r in train_L train_M train_S ; do
   cat ${aishell4_source_dir}/$r/TextGrid_list.txt >> ${aishell4_source_dir}/full_train/textgrid.flist
   cat ${aishell4_source_dir}/$r/wav_list.txt >> ${aishell4_source_dir}/full_train/wav.flist
 done

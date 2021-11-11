@@ -140,7 +140,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
       $cmvn_opts
-  } 
+  }
   done
   wait
 fi
@@ -153,7 +153,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     python wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
-      --num ${average_num}  
+      --num ${average_num}
   fi
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
@@ -182,7 +182,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         data/${test_set}/text $test_dir/text > $test_dir/wer
     } &
     done
-  } 
+  }
   done
   wait
 
