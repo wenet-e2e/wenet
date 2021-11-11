@@ -89,7 +89,7 @@ class Decoder(torch.nn.Module):
                 encoder_out: torch.Tensor,
                 encoder_lens: torch.Tensor,
                 hyps_pad_sos_eos: torch.Tensor,
-                hyps_lens: torch.Tensor,
+                hyps_lens_sos: torch.Tensor,
                 r_hyps_pad_sos_eos: torch.Tensor,
                 ctc_score: torch.Tensor):
         """Encoder
@@ -98,13 +98,14 @@ class Decoder(torch.nn.Module):
             encoder_lens: B
             hyps_pad_sos_eos: B x beam x (T2+1),
                         hyps with sos & eos and padded by ignore id
-            hyps_lens: B x beam, length for each hyp with sos
+            hyps_lens_sos: B x beam, length for each hyp with sos
             r_hyps_pad_sos_eos: B x beam x (T2+1),
                     reversed hyps with sos & eos and padded by ignore id
             ctc_score: B x beam, ctc score for each hyp
         Returns:
             decoder_out: B x beam x T2 x V
             r_decoder_out: B x beam x T2 x V
+            best_index: B
         """
         B, T, F = encoder_out.shape
         bz = self.beam_size
@@ -114,7 +115,7 @@ class Decoder(torch.nn.Module):
         encoder_mask = encoder_mask.repeat(1, bz, 1).view(B2, 1, T)
         T2 = hyps_pad_sos_eos.shape[2] - 1
         hyps_pad = hyps_pad_sos_eos.view(B2, T2 + 1)
-        hyps_lens = hyps_lens.view(B2,)
+        hyps_lens = hyps_lens_sos.view(B2,)
         hyps_pad_sos = hyps_pad[:, :-1].contiguous()
         hyps_pad_eos = hyps_pad[:, 1:].contiguous()
 
@@ -146,8 +147,7 @@ class Decoder(torch.nn.Module):
         score = torch.sum(score, axis=1)  # B2
         score = torch.reshape(score, (B, bz)) + self.ctc_weight * ctc_score
         best_index = torch.argmax(score, dim=1)
-        # add decoder_out and r_decoder_out
-        return decoder_out, r_decoder_out, best_index
+        return best_index
 
 
 if __name__ == '__main__':
@@ -264,8 +264,8 @@ if __name__ == '__main__':
     decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder.onnx')
 
     hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
-    hyps_lens = torch.randint(low=3, high=seq_len, size=(bz, beam_size),
-                              dtype=torch.int32)
+    hyps_lens_sos = torch.randint(low=3, high=seq_len, size=(bz, beam_size),
+                                  dtype=torch.int32)
     r_hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
 
     output_size = configs["encoder_conf"]["output_size"]
@@ -274,34 +274,32 @@ if __name__ == '__main__':
     ctc_score = torch.randn(bz, beam_size, dtype=torch.float32)
     torch.onnx.export(decoder,
                       (encoder_out, encoder_out_lens,
-                       hyps_pad_sos_eos, hyps_lens,
+                       hyps_pad_sos_eos, hyps_lens_sos,
                        r_hyps_pad_sos_eos, ctc_score),
                       decoder_onnx_path,
                       export_params=True,
                       opset_version=13,
                       do_constant_folding=True,
                       input_names=['encoder_out', 'encoder_out_lens',
-                                   'hyps_pad_sos_eos', 'hyps_lens',
+                                   'hyps_pad_sos_eos', 'hyps_lens_sos',
                                    'r_hyps_pad_sos_eos', 'ctc_score'],
-                      output_names=['decoder_out', 'r_decoder_out', 'best_index'],
+                      output_names=['best_index'],
                       dynamic_axes={'encoder_out': {0: 'B', 1: 'T'},
                                     'encoder_out_lens': {0: 'B'},
                                     'hyps_pad_sos_eos': {0: 'B', 2: 'T2'},
-                                    'hyps_lens': {0: 'B'},
+                                    'hyps_lens_sos': {0: 'B'},
                                     'r_hyps_pad_sos_eos': {0: 'B', 2: 'T2'},
                                     'ctc_score': {0: 'B'},
-                                    'decoder_out': {0: 'B', 2: 'T2'},
-                                    'r_decoder_out': {0: 'B', 2: 'T2'},
                                     'best_index': {0: 'B'},
                                     },
                       verbose=False
                       )
     with torch.no_grad():
-        o0, o1, o2 = decoder(
+        o0 = decoder(
             encoder_out,
             encoder_out_lens,
             hyps_pad_sos_eos,
-            hyps_lens,
+            hyps_lens_sos,
             r_hyps_pad_sos_eos,
             ctc_score)
 
@@ -310,7 +308,7 @@ if __name__ == '__main__':
     ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(encoder_out),
                   ort_session.get_inputs()[1].name: to_numpy(encoder_out_lens),
                   ort_session.get_inputs()[2].name: to_numpy(hyps_pad_sos_eos),
-                  ort_session.get_inputs()[3].name: to_numpy(hyps_lens),
+                  ort_session.get_inputs()[3].name: to_numpy(hyps_lens_sos),
                   ort_session.get_inputs()[-1].name: to_numpy(ctc_score)
                   }
     # if model.reverse weight == 0,
@@ -322,6 +320,4 @@ if __name__ == '__main__':
 
     # check encoder output
     test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-05)
-    test(to_numpy(o1), ort_outs[1], rtol=1e-03, atol=1e-05)
-    test(to_numpy(o2), ort_outs[2], rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")

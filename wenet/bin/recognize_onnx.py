@@ -251,8 +251,7 @@ def main():
                 if reverse_weight > 0:
                     r_hyps_pad_sos_eos_name = decoder_ort_session.get_inputs()[4].name
                     decoder_ort_inputs[r_hyps_pad_sos_eos_name] = r_hyps_pad_sos_eos
-                _, _, best_index = decoder_ort_session.run(
-                    None, decoder_ort_inputs)
+                best_index = decoder_ort_session.run(None, decoder_ort_inputs)[0]
                 best_sents = []
                 k = 0
                 for idx in best_index:
