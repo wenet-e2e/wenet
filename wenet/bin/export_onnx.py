@@ -321,3 +321,11 @@ if __name__ == '__main__':
     # check encoder output
     test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")
+
+    # dump configurations
+    onnx_config = {"beam_size": args.beam_size,
+                   "reverse_weight": args.reverse_weight,
+                   "ctc_weight": args.ctc_weight}
+    config_dir = os.path.join(args.output_onnx_dir, "config.yaml")
+    with open(config_dir, "w") as out:
+        yaml.dump(onnx_config, out)
