@@ -21,4 +21,4 @@ def generate(wav_file, out):
 if __name__ == "__main__":
     inp = sys.argv[1]
     out = sys.argv[2]
-    generate(inp, out)              
+    generate(inp, out)             

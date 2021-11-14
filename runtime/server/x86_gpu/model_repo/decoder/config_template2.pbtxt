@@ -27,7 +27,7 @@ input [
     name: "encoder_out_lens"
     data_type: TYPE_INT32
     dims: [1]
-    reshape: { shape: [ ] } 
+    reshape: { shape: [ ] }
   },
   {
     name: "hyps_pad_sos_eos"
