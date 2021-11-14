@@ -98,7 +98,9 @@ def get_args():
                         action='append',
                         default=[],
                         help="override yaml config")
-
+    parser.add_argument('--fp16',
+                        action='store_true',
+                        help='whether to export fp16 model, default false')
     args = parser.parse_args()
     print(args)
     return args
@@ -166,9 +168,12 @@ def main():
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for _, batch in enumerate(test_data_loader):
             keys, feats, _, feats_lengths, _ = batch
+            feats, feats_lengths = feats.numpy(), feats_lengths.numpy()
+            if args.fp16:
+                feats = feats.astype(np.float16)
             ort_inputs = {
-                encoder_ort_session.get_inputs()[0].name: feats.numpy(),
-                encoder_ort_session.get_inputs()[1].name: feats_lengths.numpy()}
+                encoder_ort_session.get_inputs()[0].name: feats,
+                encoder_ort_session.get_inputs()[1].name: feats_lengths}
             ort_outs = encoder_ort_session.run(None, ort_inputs)
             encoder_out, encoder_out_lens, ctc_log_probs, \
                 beam_log_probs, beam_log_probs_idx = ort_outs
@@ -227,7 +232,10 @@ def main():
                         if len(hyp[1]) > max_len:
                             max_len = len(hyp[1])
                     ctc_score.append(cur_ctc_score)
-                ctc_score = np.array(ctc_score, dtype=np.float32)
+                if args.fp16:
+                    ctc_score = np.array(ctc_score, dtype=np.float16)
+                else:
+                    ctc_score = np.array(ctc_score, dtype=np.float32)
                 hyps_pad_sos_eos = np.ones(
                     (batch_size, beam_size, max_len + 2), dtype=np.int64) * IGNORE_ID
                 r_hyps_pad_sos_eos = np.ones(

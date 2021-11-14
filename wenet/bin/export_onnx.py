@@ -168,6 +168,9 @@ if __name__ == '__main__':
     parser.add_argument('--output_onnx_dir',
                         default="onnx_model",
                         help='output onnx encoder and decoder directory')
+    parser.add_argument('--fp16',
+                        action='store_true',
+                        help='whether to export fp16 model, default false')
     args = parser.parse_args()
 
     torch.manual_seed(0)
@@ -322,10 +325,27 @@ if __name__ == '__main__':
     test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")
 
+    if args.fp16:
+        try:
+            import onnxmltools
+            from onnxmltools.utils.float16_converter import convert_float_to_float16
+        except ImportError:
+            print('Please install onnxmltools!')
+            sys.exit(1)
+        encoder_onnx_model = onnxmltools.utils.load_model(encoder_onnx_path)
+        encoder_onnx_model = convert_float_to_float16(encoder_onnx_model)
+        encoder_onnx_path = os.path.join(args.output_onnx_dir, 'encoder_fp16.onnx')
+        onnxmltools.utils.save_model(encoder_onnx_model, encoder_onnx_path)
+        decoder_onnx_model = onnxmltools.utils.load_model(decoder_onnx_path)
+        decoder_onnx_model = convert_float_to_float16(decoder_onnx_model)
+        decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder_fp16.onnx')
+        onnxmltools.utils.save_model(decoder_onnx_model, decoder_onnx_path)
     # dump configurations
     onnx_config = {"beam_size": args.beam_size,
                    "reverse_weight": args.reverse_weight,
-                   "ctc_weight": args.ctc_weight}
+                   "ctc_weight": args.ctc_weight,
+                   "fp16": args.fp16}
+
     config_dir = os.path.join(args.output_onnx_dir, "config.yaml")
     with open(config_dir, "w") as out:
         yaml.dump(onnx_config, out)
