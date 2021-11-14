@@ -25,7 +25,7 @@ input [
   {
     name: "WAV_LENS"
     data_type: TYPE_INT32
-    dims: [1] 
+    dims: [1]
   }
 ]
 

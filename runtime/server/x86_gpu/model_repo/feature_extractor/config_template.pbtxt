@@ -45,7 +45,7 @@ input [
   {
     name: "wav_lens"
     data_type: TYPE_INT32
-    dims: [1] 
+    dims: [1]
   }
 ]
 
@@ -53,7 +53,7 @@ output [
   {
     name: "speech"
     data_type: TYPE_#DTYPE
-    dims: [-1, #num_mel_bins]  # 80 
+    dims: [-1, #num_mel_bins]  # 80
   },
   {
     name: "speech_lengths"

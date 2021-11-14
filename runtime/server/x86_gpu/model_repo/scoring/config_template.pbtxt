@@ -51,12 +51,12 @@ input [
   {
     name: "batch_log_probs"
     data_type: TYPE_#DTYPE
-    dims: [-1, #beam_size] #[-1, beam_size] 
+    dims: [-1, #beam_size] #[-1, beam_size]
   },
   {
     name: "batch_log_probs_idx"
     data_type: TYPE_INT64
-    dims: [-1, #beam_size] 
+    dims: [-1, #beam_size]
   }
 ]
 

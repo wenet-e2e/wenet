@@ -4,7 +4,7 @@ The below example shows how to deploy WeNet offline ASR models on GPUs.
 
 ## Instructions
 * Step 1. Convert your model/pretrained model to onnx models. For example:
-```bash 
+```bash
 conda activate wenet
 pip install onnxruntime-gpu onnxmltools
 cd wenet/examples/wenetspeech && . ./path.sh
