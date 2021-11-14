@@ -47,7 +47,7 @@ class TritonPythonModel:
 
         # Get OUTPUT0 configuration
         output0_config = pb_utils.get_output_config_by_name(
-            model_config, "speech")        
+            model_config, "speech")
         # Convert Triton types to numpy types
         output0_dtype = pb_utils.triton_string_to_numpy(
             output0_config['data_type'])
@@ -58,7 +58,7 @@ class TritonPythonModel:
 
         # Get OUTPUT1 configuration
         output1_config = pb_utils.get_output_config_by_name(
-            model_config, "speech_lengths")        
+            model_config, "speech_lengths")
         # Convert Triton types to numpy types
         self.output1_dtype = pb_utils.triton_string_to_numpy(
             output1_config['data_type'])
@@ -81,7 +81,7 @@ class TritonPythonModel:
         opts.device = torch.device(self.device)
         self.opts = opts
         self.feature_extractor = Fbank(self.opts)
-        self.feature_size = opts.mel_opts.num_bins 
+        self.feature_size = opts.mel_opts.num_bins
 
     def execute(self, requests):
         """`execute` must be implemented in every Python model. `execute`
@@ -126,7 +126,7 @@ class TritonPythonModel:
             expect_feat_len = _kaldifeat.num_frames(l, self.opts.frame_opts)
             speech = torch.zeros((b, expect_feat_len, self.feature_size),
                                  dtype=self.output0_dtype, device=self.device)
-            speech_lengths = torch.zeros((b, 1), dtype=torch.int32, device=self.device) 
+            speech_lengths = torch.zeros((b, 1), dtype=torch.int32, device=self.device)
             for i in range(b):
                 f = features.pop(0)
                 f_l = f.shape[0]

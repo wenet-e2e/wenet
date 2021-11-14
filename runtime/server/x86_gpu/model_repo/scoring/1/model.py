@@ -32,7 +32,7 @@ class TritonPythonModel:
 
         # Get OUTPUT0 configuration
         output0_config = pb_utils.get_output_config_by_name(
-            model_config, "OUTPUT0")        
+            model_config, "OUTPUT0")
         # Convert Triton types to numpy types
         self.out0_dtype = pb_utils.triton_string_to_numpy(
             output0_config['data_type'])
@@ -179,10 +179,10 @@ class TritonPythonModel:
                 total += 1
 
         score_hyps = ctc_beam_search_decoder_batch(batch_log_probs,
-                                                   batch_log_probs_idx, 
-                                                   batch_root, 
-                                                   batch_start, 
-                                                   self.beam_size, 
+                                                   batch_log_probs_idx,
+                                                   batch_root,
+                                                   batch_start,
+                                                   self.beam_size,
                                                    min(total, self.num_processes),
                                                    blank_id=self.blank_id,
                                                    space_id=-2,
@@ -268,7 +268,7 @@ class TritonPythonModel:
                 hyps.append(best_cand)
                 idx += 1
 
-            hyps = map_batch(hyps, self.vocabulary, 
+            hyps = map_batch(hyps, self.vocabulary,
                              min(multiprocessing.cpu_count(), len(in_ctc_score)))
             st = 0
             for b in batch_count:
