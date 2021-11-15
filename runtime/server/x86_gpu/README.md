@@ -12,6 +12,7 @@ model_dir=<absolute path to>/20211025_conformer_exp
 onnx_model_dir=<absolute path>
 mkdir $onnx_model_dir
 python3 wenet/bin/export_onnx.py --config=$model_dir/train.yaml --checkpoint=$model_dir/final.pt --cmvn_file=$model_dir/global_cmvn --ctc_weight=0.5 --output_onnx_dir=$onnx_model_dir --fp16
+cp $model_dir/words.txt $model_dir/train.yaml $onnx_model_dir/
 ```
 Congratulations! You've successully exported the onnx models and now you are able to deploy them.
 
@@ -35,7 +36,9 @@ python3 client.py --audio_file=/ws/test_data/mid.wav --url=localhost:8001
 # test a list of wav files & cer
 python3 client.py --wavscp=/ws/dataset/test/wav.scp --data_dir=/ws/dataset/test/ --trans=/ws/dataset/test/text
 ```
-![test](test.gif)
+
+<img src="test.gif" alt="test" width="500"/>
+
 
 ## Perf Test
 We use the below command to do our testing and we run the below command several times to warm up:

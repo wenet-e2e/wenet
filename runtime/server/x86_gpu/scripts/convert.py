@@ -48,7 +48,6 @@ if __name__ == "__main__":
         "#DTYPE": "FP32"
     }
 
-
     # fill values
     model_params["#beam_size"] = onnx_configs["beam_size"]
     if onnx_configs["fp16"]:
@@ -66,7 +65,7 @@ if __name__ == "__main__":
     model_params["#vocabulary_path"] = args.vocab
     # read vocabulary
     num_vocab = len(open(args.vocab, "r", encoding="utf-8").readlines())
-    model_params["#vocab_size"] = num_vocab
+    model_params["#vocab_size"] = configs["output_dim"]
 
     for model in os.listdir(args.model_repo):
         template = "config_template.pbtxt"
@@ -83,7 +82,6 @@ if __name__ == "__main__":
                     continue
                 for key, value in model_params.items():
                     if key == "#encoder_out_feat_size" and \
-                       configs["encoder_conf"].get("causal", False) and \
                        model == "encoder":
                         value = "-1"
                     line = line.replace(key, str(value))

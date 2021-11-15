@@ -192,7 +192,7 @@ class TritonPythonModel:
         all_ctc_score = []
         max_seq_len = 0
         for seq_cand in score_hyps:
-            # if candidates lenss than beam size
+            # if candidates less than beam size
             if len(seq_cand) != self.beam_size:
                 seq_cand = list(seq_cand)
                 seq_cand += (self.beam_size - len(seq_cand)) * [(-float("INF"), (0,))]

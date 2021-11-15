@@ -16,7 +16,6 @@
 #
 
 onnx_model_dir=/ws/onnx_model
-model_dir=/ws/model
 model_repo=/ws/model_repo
 
 mkdir $model_repo/encoder/1
@@ -24,7 +23,7 @@ mkdir $model_repo/decoder/1
 mkdir $model_repo/attention_rescoring/1
 
 # Convert config.pbtxt in model_repo and move models
-python3 scripts/convert.py --config=$model_dir/train.yaml --vocab=$model_dir/words.txt \
+python3 scripts/convert.py --config=$onnx_model_dir/train.yaml --vocab=$onnx_model_dir/words.txt \
         --model_repo=$model_repo --onnx_model_dir=$onnx_model_dir
 
 # Start server
