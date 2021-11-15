@@ -63,8 +63,6 @@ if __name__ == "__main__":
     if configs["decoder"].startswith("bi"):
         model_params["#bidecoder"] = 1
     model_params["#vocabulary_path"] = args.vocab
-    # read vocabulary
-    num_vocab = len(open(args.vocab, "r", encoding="utf-8").readlines())
     model_params["#vocab_size"] = configs["output_dim"]
 
     for model in os.listdir(args.model_repo):
