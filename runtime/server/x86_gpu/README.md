@@ -40,6 +40,7 @@ python3 client.py --wavscp=/ws/dataset/test/wav.scp --data_dir=/ws/dataset/test/
 <img src="test.gif" alt="test" width="500"/>
 
 |Model | Dataset | Precision | CER |
+|------------|-----------|-----------|----------|
 |Aishell2-U2++ Conformer|Aishell2-DEV|FP16| 5.39%|
 |Aishell2-U2++ Conformer|Aishell2-DEV|FP32| 5.38%|
 |Wenetspeech Conformer| Wenetspeech-DEV|FP16| 8.61%|
