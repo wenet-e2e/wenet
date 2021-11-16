@@ -86,10 +86,6 @@ ensemble_scheduling {
         key: "beam_log_probs_idx"
         value: "beam_log_probs_idx"
     }
-    output_map {
-        key: "beam_log_probs_idx"
-        value: "beam_log_probs_idx"
-    }
   },
   {
       model_name: "scoring"
