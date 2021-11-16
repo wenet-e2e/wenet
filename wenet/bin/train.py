@@ -84,6 +84,10 @@ def get_args():
                         action='store_true',
                         default=False,
                         help='Use automatic mixed precision training')
+    parser.add_argument('--fp16_grad_sync',
+                        action='store_true',
+                        default=False,
+                        help='Use fp16 gradient sync for ddp')
     parser.add_argument('--cmvn', default=None, help='global cmvn file')
     parser.add_argument('--symbol_table',
                         required=True,
@@ -204,6 +208,13 @@ def main():
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=True)
         device = torch.device("cuda")
+        if args.fp16_grad_sync:
+            from torch.distributed.algorithms.ddp_comm_hooks import (
+                default as comm_hooks,
+            )
+            model.register_comm_hook(
+                state=None, hook=comm_hooks.fp16_compress_hook
+            )
     else:
         use_cuda = args.gpu >= 0 and torch.cuda.is_available()
         device = torch.device('cuda' if use_cuda else 'cpu')
