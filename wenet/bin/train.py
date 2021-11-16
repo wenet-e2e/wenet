@@ -213,7 +213,7 @@ def main():
                 default as comm_hooks,
             )
             model.register_comm_hook(
-                state=None,hook=comm_hooks.fp16_compress_hook
+                state=None, hook=comm_hooks.fp16_compress_hook
             )
     else:
         use_cuda = args.gpu >= 0 and torch.cuda.is_available()
