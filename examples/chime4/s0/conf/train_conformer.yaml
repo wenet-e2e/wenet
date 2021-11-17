@@ -35,7 +35,7 @@ model_conf:
     length_normalized_loss: false
 
 dataset_conf:
-    char: true
+    split_with_space: true
     filter_conf:
         max_length: 40960
         min_length: 0
