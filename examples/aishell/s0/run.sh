@@ -5,13 +5,13 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES="2"
 # The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
 # communication. More details can be found in
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
-stage=0 # start from 0 if you need to start from data preparation
+stage=5 # start from 0 if you need to start from data preparation
 stop_stage=5
 
 # The num of machines(nodes) for multi-machine training, 1 is for one machine.
@@ -23,7 +23,7 @@ num_nodes=1
 # on the second machine, and so on.
 node_rank=0
 # data
-data=/export/data/asr-data/OpenSLR/33/
+data=/home/lsq/corpus/aishell
 data_url=www.openslr.org/resources/33
 
 nj=16
@@ -46,12 +46,12 @@ train_set=train
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
-checkpoint=
+checkpoint=/home/lsq/wenet/examples/aishell/s0/exp/conformer/14.pt
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
-average_num=30
+average_num=20
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
 . tools/parse_options.sh || exit 1;

@@ -8,11 +8,11 @@
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 stage=0 # start from 0 if you need to start from data preparation
-stop_stage=5
+stop_stage=0
 # data
 data_url=www.openslr.org/resources/12
 # use your own data path
-datadir=/export/data/en-asr-data/OpenSLR
+datadir=/home/lsq/corpus
 # wav data dir
 wave_data=data
 # Optional train_config
