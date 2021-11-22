@@ -68,7 +68,7 @@ class TransformerDecoder(torch.nn.Module):
         self.use_output_layer = use_output_layer
         self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
         self.num_blocks = num_blocks
-        self.layer_reuse = layer_duplicate
+        self.layer_reuse = layer_reuse
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,

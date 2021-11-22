@@ -117,7 +117,7 @@ class BaseEncoder(torch.nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
-        self.layer_reuse = layer_duplicate
+        self.layer_reuse = layer_reuse
 
     def output_size(self) -> int:
         return self._output_size
