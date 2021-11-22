@@ -26,7 +26,8 @@ import torchaudio.compliance.kaldi as kaldi
 from torch.nn.utils.rnn import pad_sequence
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
-
+# non_linguistic_symbols in text of wsj corpus
+non_linguistic_symbols = set(['<NOISE>','<*MR.*>','<*IN*>'])
 
 def url_opener(data):
     """ Give url or local file, return file descriptor
@@ -315,10 +316,22 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         else:
             if split_with_space:
                 txt = txt.split(" ")
-            for ch in txt:
-                if ch == ' ':
-                    ch = "▁"
-                tokens.append(ch)
+            # add non_linguistic_symbols in text of wsj corpus
+            while len(txt) != 0:
+                for w in non_linguistic_symbols:
+                    if txt.startswith(w):
+                        txt = txt[len(w) :]
+                        break
+                else:
+                    t = txt[0]
+                    if t == " ":
+                        t = "▁"
+                    tokens.append(t)
+                    txt = txt[1:]
+            # for ch in txt:
+            #     if ch == ' ':
+            #         ch = "▁"
+            #     tokens.append(ch)
 
         for ch in tokens:
             if ch in symbol_table:
