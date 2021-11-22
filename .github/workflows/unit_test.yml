@@ -42,11 +42,11 @@ jobs:
       - name: Install Wenet Dependencies
         run: |
           set -eux
-          pip install pytorch==${{ matrix.pytorch-version }} torchvision torchaudio==${{ matrix.torchaudio-version }}
+          pip install torch==${{ matrix.pytorch-version }} torchvision torchaudio==${{ matrix.torchaudio-version }}
+          pip install -r requirements.txt
       - name: Run Pytest
         run: |
           set -eux
-          pip install pytest
           pytest --version
           PYTHONPATH="${PYTHONPATH:-}:$(pwd)" pytest -q
           if [ $? != 0 ]; then exit 1; fi
