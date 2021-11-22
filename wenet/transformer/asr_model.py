@@ -25,6 +25,7 @@ from wenet.transformer.decoder import (TransformerDecoder,
                                        BiTransformerDecoder)
 from wenet.transformer.encoder import ConformerEncoder
 from wenet.transformer.encoder import TransformerEncoder
+from wenet.transformer.encoder import RoPEConformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
@@ -694,6 +695,10 @@ def init_asr_model(configs):
 
     if encoder_type == 'conformer':
         encoder = ConformerEncoder(input_dim,
+                                   global_cmvn=global_cmvn,
+                                   **configs['encoder_conf'])
+    elif encoder_type == 'roconformer':
+        encoder = RoPEConformerEncoder(input_dim,
                                    global_cmvn=global_cmvn,
                                    **configs['encoder_conf'])
     else:

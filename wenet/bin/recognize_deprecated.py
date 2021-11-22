@@ -137,7 +137,6 @@ the future, please move to the new IO !!!
             assert len(arr) == 2
             char_dict[int(arr[1])] = arr[0]
     eos = len(char_dict) - 1
-
     load_checkpoint(model, args.checkpoint)
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
