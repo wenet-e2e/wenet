@@ -46,7 +46,7 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
-        layer_duplicate: int = 1,
+        layer_reuse: int = 1,
     ):
         """
         Args:
@@ -117,7 +117,7 @@ class BaseEncoder(torch.nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
-        self.layer_duplicate = layer_duplicate
+        self.layer_reuse = layer_duplicate
 
     def output_size(self) -> int:
         return self._output_size
@@ -161,7 +161,7 @@ class BaseEncoder(torch.nn.Module):
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
 
-        for _ in range(self.layer_duplicate):
+        for _ in range(self.layer_reuse):
             for layer in self.encoders:
                 xs, chunk_masks, _ = layer(
                     xs, chunk_masks, pos_emb, mask_pad
@@ -342,7 +342,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
-        layer_duplicate: int = 1,
+        layer_reuse: int = 1,
     ):
         """ Construct TransformerEncoder
 
@@ -354,7 +354,7 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk, layer_duplicate)
+                         global_cmvn, use_dynamic_left_chunk, layer_reuse)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
@@ -394,7 +394,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
-        layer_duplicate: int = 1,
+        layer_reuse: int = 1,
     ):
         """Construct ConformerEncoder
 
@@ -418,7 +418,7 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk, layer_duplicate)
+                         global_cmvn, use_dynamic_left_chunk, layer_reuse)
         activation = get_activation(activation_type)
 
         # self-attention module definition

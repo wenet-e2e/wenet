@@ -1,6 +1,6 @@
 # network architecture
 # encoder related
-encoder: transformer
+encoder: conformer
 encoder_conf:
     output_size: 256    # dimension of attention
     attention_heads: 4
@@ -9,9 +9,14 @@ encoder_conf:
     dropout_rate: 0.1
     positional_dropout_rate: 0.1
     attention_dropout_rate: 0.0
-    input_layer: conv2d # encoder architecture type
+    input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
-    layer_duplicate: 12
+    cnn_module_kernel: 15
+    use_cnn_module: True
+    activation_type: 'swish'
+    pos_enc_layer_type: 'rel_pos'
+    selfattention_layer_type: 'rel_selfattn'
+    layer_reuse: 12
 
 # decoder related
 decoder: transformer
@@ -23,7 +28,7 @@ decoder_conf:
     positional_dropout_rate: 0.1
     self_attention_dropout_rate: 0.0
     src_attention_dropout_rate: 0.0
-    layer_duplicate: 6
+    layer_reuse: 6
 
 # hybrid CTC/attention
 model_conf:
@@ -59,11 +64,12 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'dynamic' # static or dynamic
+        batch_size: 32
         max_frames_in_batch: 30000 #50000
 
 grad_clip: 5
-accum_grad: 1
-max_epoch: 300
+accum_grad: 4
+max_epoch: 240
 log_interval: 100
 
 optim: adam

@@ -49,7 +49,7 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
-        layer_duplicate: int = 1,
+        layer_reuse: int = 1,
     ):
         assert check_argument_types()
         super().__init__()
@@ -68,7 +68,7 @@ class TransformerDecoder(torch.nn.Module):
         self.use_output_layer = use_output_layer
         self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
         self.num_blocks = num_blocks
-        self.layer_duplicate = layer_duplicate
+        self.layer_reuse = layer_duplicate
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
@@ -121,7 +121,7 @@ class TransformerDecoder(torch.nn.Module):
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
         x, _ = self.embed(tgt)
-        for i in range(self.layer_duplicate):
+        for i in range(self.layer_reuse):
             for layer in self.decoders:
                 x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
                                                          memory_mask)
@@ -156,7 +156,7 @@ class TransformerDecoder(torch.nn.Module):
         """
         x, _ = self.embed(tgt)
         new_cache = []
-        for j in range(self.layer_duplicate):
+        for j in range(self.layer_reuse):
             for i, decoder in enumerate(self.decoders):
                 if cache is None:
                     c = None
