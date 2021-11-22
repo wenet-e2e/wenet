@@ -49,7 +49,7 @@ def get_parser():
                         type=int,
                         help='skip first n columns')
     parser.add_argument('--space',
-                        default='<space>',
+                        default='▁',
                         type=str,
                         help='space symbol')
     parser.add_argument('--bpe-model',
