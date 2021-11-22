@@ -11,8 +11,8 @@ export CUDA_VISIBLE_DEVICES="0"
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
-stage=2     # start from 0 if you need to start from data preparation
-stop_stage=2
+stage=6     # start from 0 if you need to start from data preparation
+stop_stage=6
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
 # NFS will be needed if you want run multi-machine training
@@ -22,7 +22,7 @@ num_nodes=1
 # the third one set node_rank 2, and so on. Default 0
 node_rank=0
 # data
-WSJ0=/home/lsq/corpus/WSJ/wsj0-new
+WSJ0=/home/lsq/corpus/WSJ/wsj0
 WSJ1=/home/lsq/corpus/WSJ/wsj1
 
 
@@ -46,7 +46,7 @@ other_text=data/local/other_text/text
 # 7. conf/train_u2++_transformer.yaml: U2++ transformer
 train_config=conf/train_conformer.yaml
 cmvn=true
-dir=exp/conformer_new
+dir=/home/lsq/exp_dir/exp_wenet/wsj/conformer_1120
 checkpoint=
 
 # use average_checkpoint will get better result
@@ -204,3 +204,16 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   done
   wait
 fi
+
+if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+  # compute wer
+  for mode in ${decode_modes}; do
+    for test_set in $test_sets; do
+     test_dir=$dir/test_${mode}
+     sed 's:▁: :g' $test_dir/text > $test_dir/text.norm
+     python tools/compute-wer.py --char=1 --v=1 \
+       data/$test_set/text $test_dir/text.norm > $test_dir/wer
+    done
+  done
+fi
+
