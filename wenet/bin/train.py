@@ -131,7 +131,7 @@ def main():
                                 rank=args.rank)
 
     symbol_table = read_symbol_table(args.symbol_table)
-
+    
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
     cv_conf['speed_perturb'] = False

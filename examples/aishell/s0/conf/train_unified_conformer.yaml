@@ -69,7 +69,7 @@ dataset_conf:
         batch_size: 16
 
 grad_clip: 5
-accum_grad: 1
+accum_grad: 4
 max_epoch: 180
 log_interval: 100
 
