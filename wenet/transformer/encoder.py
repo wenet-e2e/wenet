@@ -5,8 +5,6 @@
 # Author: di.wu@mobvoi.com (DI WU)
 """Encoder definition."""
 from typing import Tuple, List, Optional
-import random
-import logging
 
 import torch
 from typeguard import check_argument_types
