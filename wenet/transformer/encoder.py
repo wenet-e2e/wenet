@@ -166,7 +166,7 @@ class BaseEncoder(torch.nn.Module):
                 xs, chunk_masks, _ = layer(
                     xs, chunk_masks, pos_emb, mask_pad
                 )
- 
+
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
