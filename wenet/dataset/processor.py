@@ -298,7 +298,7 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         sp.load(bpe_model)
     for sample in data:
         assert 'txt' in sample
-        txt = sample['txt']
+        txt = sample['txt'].strip()
         label = []
         tokens = []
         if bpe_model is not None:
@@ -308,7 +308,7 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
             # Example:
             #   txt   = "你好 ITS'S OKAY 的"
             #   chars = ["你", "好", " ITS'S OKAY ", "的"]
-            chars = pattern.split(txt.strip().upper())
+            chars = pattern.split(txt.upper())
             mix_chars = [w for w in chars if len(w.strip()) > 0]
             for j in mix_chars:
                 # j is a single CJK charater(i.e., "你"), do nothing.
@@ -318,7 +318,7 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
                 # encode j using bpe_model.
                 else:
                     for k in j.strip().split():
-                        for l in sentproc.encode_as_pieces(k):
+                        for l in sp.encode_as_pieces(k):
                             tokens.append(l)
         else:
             if split_with_space:
