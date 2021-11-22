@@ -216,11 +216,7 @@ def main():
                 for w in hyps[i]:
                     if w == eos:
                         break
-                    hyp_char = char_dict[w]
-                    # for wsj corpus
-                    if hyp_char == "▁":
-                        hyp_char = " "
-                    content += hyp_char
+                    content += char_dict[w]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
 

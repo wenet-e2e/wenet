@@ -6,9 +6,9 @@ def postprocess_scp(args):
     src_path, splits = args.src, args.splits
     for split in splits:
         scp_file_old = os.path.join(src_path, split, "wav.scp")
-        os.rename(scp_file_old, os.path.join(src_path, split, "wav_old.scp"))
+        os.rename(scp_file_old, os.path.join(src_path, split, "raw_wav.scp"))
         scp_file = os.path.join(src_path, split, "wav.scp")
-        with open(scp_file_old.replace("wav.scp", "wav_old.scp"), "r") as f:
+        with open(scp_file_old.replace("wav.scp", "raw_wav.scp"), "r") as f:
             for line in f.readlines():
                 line_list = line.strip().split(" ")
                 wav_id, file_path = line_list[0], line_list[-1], " ".join(line_list[1:])
@@ -22,7 +22,7 @@ def sph2pipe(args):
     # Convert the original file in sphere format to wav format
     src_path, splits = args.src, args.splits
     for split in splits:
-        scp_file_old = os.path.join(src_path, split, "wav_old.scp")
+        scp_file_old = os.path.join(src_path, split, "raw_wav.scp")
         with open(scp_file_old, "r") as f:
             for line in f.readlines():
                 line_list = line.strip().split(" ")
