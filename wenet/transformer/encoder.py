@@ -162,11 +162,11 @@ class BaseEncoder(torch.nn.Module):
                                               num_decoding_left_chunks)
 
         for _ in range(self.layer_duplicate):
-            for layer in self.encoders: 
+            for layer in self.encoders:
                 xs, chunk_masks, _ = layer(
                     xs, chunk_masks, pos_emb, mask_pad
                 )
-    
+ 
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
@@ -354,7 +354,7 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk,  layer_duplicate)
+                         global_cmvn, use_dynamic_left_chunk, layer_duplicate)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,

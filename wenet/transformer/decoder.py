@@ -124,7 +124,7 @@ class TransformerDecoder(torch.nn.Module):
         for i in range(self.layer_duplicate):
             for layer in self.decoders:
                 x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
-                    memory_mask)
+                                                         memory_mask)
         if self.normalize_before:
             x = self.after_norm(x)
         if self.use_output_layer:
