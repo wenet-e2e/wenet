@@ -292,26 +292,34 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         Returns:
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
-    # TODO(Binbin Zhang): Support BPE
     if bpe_model is not None:
         import sentencepiece as spm
         sp = spm.SentencePieceProcessor()
         sp.load(bpe_model)
     for sample in data:
         assert 'txt' in sample
-        txt = sample['txt']
+        txt = sample['txt'].strip()
         label = []
         tokens = []
         if bpe_model is not None:
-            txt = bpe_preprocess(txt)
-            mix_chars = seg_char(txt)
-            for j in mix_chars:
-                for k in j.strip().split("▁"):
-                    if not k.encode('UTF-8').isalpha():
-                        tokens.append(k)
-                    else:
-                        for l in sp.encode_as_pieces(k):
-                            tokens.append(l)
+            # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
+            # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
+            pattern = re.compile(r'([\u4e00-\u9fff])')
+            # Example:
+            #   txt   = "你好 ITS'S OKAY 的"
+            #   chars = ["你", "好", " ITS'S OKAY ", "的"]
+            chars = pattern.split(txt.upper())
+            mix_chars = [w for w in chars if len(w.strip()) > 0]
+            for ch_or_w in mix_chars:
+                # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
+                if pattern.fullmatch(ch_or_w) is not None:
+                    tokens.append(ch_or_w)
+                # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
+                # encode ch_or_w using bpe_model.
+                else:
+                    for w in ch_or_w.strip().split():
+                        for p in sp.encode_as_pieces(w):
+                            tokens.append(p)
         else:
             if split_with_space:
                 txt = txt.split(" ")
@@ -329,25 +337,6 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         sample['tokens'] = tokens
         sample['label'] = label
         yield sample
-
-
-def bpe_preprocess(text):
-    """ Use ▁ for blank among english words
-        Warning: it is "▁" symbol, not "_" symbol
-    """
-    text = text.upper()
-    text = re.sub(r'([A-Z])[ ]([A-Z])', r'\1▁\2', text)
-    text = re.sub(r'([A-Z])[ ]([A-Z])', r'\1▁\2', text)
-    text = text.replace(' ', '')
-    text = text.replace('\xEF\xBB\xBF', '')
-    return text
-
-
-def seg_char(text):
-    pattern = re.compile(r'([\u4e00-\u9fa5])')
-    chars = pattern.split(text)
-    chars = [w for w in chars if len(w.strip()) > 0]
-    return chars
 
 
 def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
