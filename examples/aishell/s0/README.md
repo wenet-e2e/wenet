@@ -16,6 +16,20 @@
 | attention rescoring       | 4.61  |
 | LM + attention rescoring  | 4.36  |
 
+## Layer reuse Conformer Result
+
+* Feature info: using fbank feature, dither, with cmvn, online speed perturb.
+* Training info: lr 0.002, batch frame 30000, 8 gpu, acc_grad 4, 240 epochs, dither 0.1
+* Decoding info: ctc_weight 0.5, average_num 30
+* Git hash: 316bf88184b24a981ed81c47dbc5c22fdb341bf2
+ 
+| decoding mode             | CER   |
+|---------------------------|-------|
+| attention decoder         | 6.70  |
+| ctc greedy search         | 7.57  |
+| ctc prefix beam search    | 7.57  |
+| attention rescoring       | 6.50  |
+
 ## U2++ Conformer Result
 
 * Feature info: using fbank feature, dither=1.0, cmvn, oneline speed perturb
@@ -73,6 +87,20 @@
 | ctc prefix beam search    | 5.91  |
 | attention rescoring       | 5.30  |
 | LM + attention rescoring  | 5.04  |
+
+## Layer reuse Transformer Result
+
+* Feature info: using fbank feature, dither, with cmvn, online speed perturb.
+* Training info: lr 0.002, batch frame 30000, 8 gpu, acc_grad 1, 300 epochs, dither 0.1
+* Decoding info: ctc_weight 0.5, average_num 30
+* Git hash: 316bf88184b24a981ed81c47dbc5c22fdb341bf2
+ 
+| decoding mode             | CER   |
+|---------------------------|-------|
+| attention decoder         | 6.63  |
+| ctc greedy search         | 8.38  |
+| ctc prefix beam search    | 8.38  |
+| attention rescoring       | 6.85  |
 
 ## Unified Transformer Result
 
