@@ -310,16 +310,16 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
             #   chars = ["你", "好", " ITS'S OKAY ", "的"]
             chars = pattern.split(txt.upper())
             mix_chars = [w for w in chars if len(w.strip()) > 0]
-            for j in mix_chars:
-                # j is a single CJK charater(i.e., "你"), do nothing.
-                if pattern.fullmatch(j) is not None:
-                    tokens.append(j)
-                # j contains non-CJK charaters(i.e., " IT'S OKAY "),
-                # encode j using bpe_model.
+            for ch_or_w in mix_chars:
+                # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
+                if pattern.fullmatch(ch_or_w) is not None:
+                    tokens.append(ch_or_w)
+                # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
+                # encode ch_or_w using bpe_model.
                 else:
-                    for k in j.strip().split():
-                        for l in sp.encode_as_pieces(k):
-                            tokens.append(l)
+                    for w in ch_or_w.strip().split():
+                        for p in sp.encode_as_pieces(w):
+                            tokens.append(p)
         else:
             if split_with_space:
                 txt = txt.split(" ")
