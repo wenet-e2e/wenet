@@ -22,7 +22,7 @@
 * Training info: lr 0.002, batch frame 30000, 8 gpu, acc_grad 4, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 316bf88184b24a981ed81c47dbc5c22fdb341bf2
- 
+
 | decoding mode             | CER   |
 |---------------------------|-------|
 | attention decoder         | 6.70  |
@@ -94,7 +94,7 @@
 * Training info: lr 0.002, batch frame 30000, 8 gpu, acc_grad 1, 300 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 316bf88184b24a981ed81c47dbc5c22fdb341bf2
- 
+
 | decoding mode             | CER   |
 |---------------------------|-------|
 | attention decoder         | 6.63  |
