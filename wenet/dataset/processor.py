@@ -86,19 +86,19 @@ def tar_file_and_group(data):
                     yield example
                 example = {}
                 valid = True
-            file_obj = stream.extractfile(tarinfo)
-            try:
-                if postfix == 'txt':
-                    example['txt'] = file_obj.read().decode('utf8').strip()
-                elif postfix in AUDIO_FORMAT_SETS:
-                    waveform, sample_rate = torchaudio.load(file_obj)
-                    example['wav'] = waveform
-                    example['sample_rate'] = sample_rate
-                else:
-                    example[postfix] = file_obj.read()
-            except Exception as ex:
-                valid = False
-                logging.warning('error to parse {}'.format(name))
+            with stream.extractfile(tarinfo) as file_obj:
+                try:
+                    if postfix == 'txt':
+                        example['txt'] = file_obj.read().decode('utf8').strip()
+                    elif postfix in AUDIO_FORMAT_SETS:
+                        waveform, sample_rate = torchaudio.load(file_obj)
+                        example['wav'] = waveform
+                        example['sample_rate'] = sample_rate
+                    else:
+                        example[postfix] = file_obj.read()
+                except Exception as ex:
+                    valid = False
+                    logging.warning('error to parse {}'.format(name))
             prev_prefix = prefix
         if prev_prefix is not None:
             example['key'] = prev_prefix
