@@ -99,10 +99,20 @@ def test_tokenize(symbol_table_path):
             l = l.strip().split()
             symbol_table[l[0]] = int(l[1])
     outs = processor.tokenize(
-        txts, symbol_table, bpe_model, False
+        txts, symbol_table, bpe_model, split_with_space=False
     )
     for (hyp, ref) in zip(outs, refs):
         assert(len(hyp["tokens"]) == len(ref["tokens"]))
         assert(all([h == r for h, r in zip(hyp["tokens"], ref["tokens"])]))
         assert(len(hyp["label"]) == len(ref["label"]))
         assert(all([h == r for h, r in zip(hyp["label"], ref["label"])]))
+
+
+def test_non_lang_symbol_tokenize():
+    data = [{"key": 1, "wav": 1, "txt": "我是{NOISE}", "sample_rate": 16000}]
+    symbol_table = {"我": 1, "是": 2, "{NOISE}": 3}
+
+    sample = next(processor.tokenize(data, symbol_table,
+                                     non_lang_syms=["{NOISE}"]))
+
+    assert sample["tokens"] == ["我", "是", "{NOISE}"]

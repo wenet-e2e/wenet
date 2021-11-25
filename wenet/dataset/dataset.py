@@ -120,7 +120,7 @@ def Dataset(data_type,
             data_list_file,
             symbol_table,
             conf,
-            bpe_model=None,
+            bpe_model=None, non_lang_syms=None,
             partition=True):
     """ Construct dataset from arguments
 
@@ -144,7 +144,7 @@ def Dataset(data_type,
         dataset = Processor(dataset, processor.parse_raw)
 
     dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model,
-                        conf.get('split_with_space', False))
+                        non_lang_syms, conf.get('split_with_space', False))
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 

@@ -25,6 +25,8 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 from torch.nn.utils.rnn import pad_sequence
 
+from tools.text2token import exist_or_not
+
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
 
@@ -282,7 +284,52 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
+def __tokenize_non_lang_syms(txt, non_lang_sym_patterns):
+    """split txt by non_lang_sym_patterns
+
+    Args:
+        txt: original transcript.
+        non_lang_sym_patterns: non lang sym regex pattern.
+
+    Returns:
+        [token, token, ..., token]
+
+    """
+    match_pos = []
+
+    for r in non_lang_sym_patterns:
+        i = 0
+
+        while i >= 0:
+            m = r.search(txt, i)
+
+            if m:
+                match_pos.append([m.start(), m.end()])
+                i = m.end()
+            else:
+                break
+
+    if len(match_pos) > 0:
+        chars = []
+        i = 0
+
+        while i < len(txt):
+            start_pos, end_pos = exist_or_not(i, match_pos)
+
+            if start_pos is not None:
+                chars.append(txt[start_pos: end_pos])
+                i = end_pos
+            else:
+                chars.append(txt[i])
+                i += 1
+
+        return chars
+    else:
+        return txt
+
+
+def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
+             split_with_space=False):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -292,13 +339,20 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         Returns:
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
+    if non_lang_syms is not None:
+        rs = [re.compile(re.escape(x)) for x in non_lang_syms]
+    else:
+        rs = []
+
     if bpe_model is not None:
         import sentencepiece as spm
         sp = spm.SentencePieceProcessor()
         sp.load(bpe_model)
+
     for sample in data:
         assert 'txt' in sample
         txt = sample['txt'].strip()
+        txt = __tokenize_non_lang_syms(txt, rs)
         label = []
         tokens = []
         if bpe_model is not None:
