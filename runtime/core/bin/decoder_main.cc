@@ -86,8 +86,8 @@ int main(int argc, char *argv[]) {
       }
 
       if (state == wenet::DecodeState::kEndpoint) {
-	decoder.Rescoring();
-	final_result.append(decoder.result()[0].sentence);
+        decoder.Rescoring();
+        final_result.append(decoder.result()[0].sentence);
         decoder.ResetContinuousDecoding();
       }
 
