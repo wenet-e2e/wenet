@@ -107,12 +107,20 @@ def test_tokenize(symbol_table_path):
         assert(len(hyp["label"]) == len(ref["label"]))
         assert(all([h == r for h, r in zip(hyp["label"], ref["label"])]))
 
-
-def test_non_lang_symbol_tokenize():
+@pytest.mark.parametrize("use_pbe_model", [True, False])
+def test_non_lang_symbol_tokenize(use_pbe_model):
     data = [{"key": 1, "wav": 1, "txt": "我是{NOISE}", "sample_rate": 16000}]
     symbol_table = {"我": 1, "是": 2, "{NOISE}": 3}
 
-    sample = next(processor.tokenize(data, symbol_table,
-                                     non_lang_syms=["{NOISE}"]))
+    if use_pbe_model:
+        bpe_model = "test/resources/librispeech.train_960_unigram5000.bpemodel"
 
-    assert sample["tokens"] == ["我", "是", "{NOISE}"]
+        sample = next(processor.tokenize(data, symbol_table, bpe_model,
+                                         non_lang_syms=["{NOISE}"]))
+
+        assert sample["tokens"] == ["我", "是", "{NOISE}"]
+    else:
+        sample = next(processor.tokenize(data, symbol_table,
+                                         non_lang_syms=["{NOISE}"]))
+
+        assert sample["tokens"] == ["我", "是", "{NOISE}"]

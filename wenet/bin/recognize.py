@@ -143,7 +143,8 @@ def main():
                            args.test_data,
                            symbol_table,
                            test_conf,
-                           args.bpe_model, non_lang_syms,
+                           args.bpe_model,
+                           non_lang_syms,
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)

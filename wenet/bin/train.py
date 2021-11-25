@@ -146,7 +146,8 @@ def main():
                          args.cv_data,
                          symbol_table,
                          cv_conf,
-                         args.bpe_model, non_lang_syms,
+                         args.bpe_model,
+                         non_lang_syms,
                          partition=False)
 
     train_data_loader = DataLoader(train_dataset,

@@ -120,7 +120,8 @@ def Dataset(data_type,
             data_list_file,
             symbol_table,
             conf,
-            bpe_model=None, non_lang_syms=None,
+            bpe_model=None,
+            non_lang_syms=None,
             partition=True):
     """ Construct dataset from arguments
 
