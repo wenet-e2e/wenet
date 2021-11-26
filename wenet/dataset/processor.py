@@ -318,7 +318,7 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
     if non_lang_syms is not None:
-        non_lang_syms_pattern = re.compile(r"({[A-Z]+})")
+        non_lang_syms_pattern = re.compile(r"(\[[^\[]]+]|<[^<>]+>|{[^{}]+})")
     else:
         non_lang_syms = {}
         non_lang_syms_pattern = None
