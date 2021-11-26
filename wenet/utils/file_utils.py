@@ -21,6 +21,27 @@ def read_lists(list_file):
     return lists
 
 
+def read_non_lang_symbols(non_lang_sym_path):
+    """read non-linguistic symbol from file.
+
+    The file format is like below:
+
+    {NOISE}\n
+    {BRK}\n
+    ...
+
+
+    Args:
+        non_lang_sym_path: non-linguistic symbol file path, None means no any
+        syms.
+
+    """
+    if non_lang_sym_path is None:
+        return None
+    else:
+        return read_lists(non_lang_sym_path)
+
+
 def read_symbol_table(symbol_table_file):
     symbol_table = {}
     with open(symbol_table_file, 'r', encoding='utf8') as fin:

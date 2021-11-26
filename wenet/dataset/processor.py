@@ -282,7 +282,32 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
+def __tokenize_by_bpe_model(sp, txt):
+    tokens = []
+    # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
+    # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
+    pattern = re.compile(r'([\u4e00-\u9fff])')
+    # Example:
+    #   txt   = "你好 ITS'S OKAY 的"
+    #   chars = ["你", "好", " ITS'S OKAY ", "的"]
+    chars = pattern.split(txt.upper())
+    mix_chars = [w for w in chars if len(w.strip()) > 0]
+    for ch_or_w in mix_chars:
+        # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
+        if pattern.fullmatch(ch_or_w) is not None:
+            tokens.append(ch_or_w)
+        # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
+        # encode ch_or_w using bpe_model.
+        else:
+            for w in ch_or_w.strip().split():
+                for p in sp.encode_as_pieces(w):
+                    tokens.append(p)
+
+    return tokens
+
+
+def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
+             split_with_space=False):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -292,41 +317,43 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         Returns:
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
+    if non_lang_syms is not None:
+        non_lang_syms_pattern = re.compile(r"(\[[^\[]]+]|<[^<>]+>|{[^{}]+})")
+    else:
+        non_lang_syms = {}
+        non_lang_syms_pattern = None
+
     if bpe_model is not None:
         import sentencepiece as spm
         sp = spm.SentencePieceProcessor()
         sp.load(bpe_model)
+    else:
+        sp = None
+
     for sample in data:
         assert 'txt' in sample
         txt = sample['txt'].strip()
+        if non_lang_syms_pattern is not None:
+            parts = non_lang_syms_pattern.split(txt.upper())
+            parts = [w for w in parts if len(w.strip()) > 0]
+        else:
+            parts = [txt]
+
         label = []
         tokens = []
-        if bpe_model is not None:
-            # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
-            # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
-            pattern = re.compile(r'([\u4e00-\u9fff])')
-            # Example:
-            #   txt   = "你好 ITS'S OKAY 的"
-            #   chars = ["你", "好", " ITS'S OKAY ", "的"]
-            chars = pattern.split(txt.upper())
-            mix_chars = [w for w in chars if len(w.strip()) > 0]
-            for ch_or_w in mix_chars:
-                # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
-                if pattern.fullmatch(ch_or_w) is not None:
-                    tokens.append(ch_or_w)
-                # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
-                # encode ch_or_w using bpe_model.
+        for part in parts:
+            if part in non_lang_syms:
+                tokens.append(part)
+            else:
+                if bpe_model is not None:
+                    tokens.extend(__tokenize_by_bpe_model(sp, part))
                 else:
-                    for w in ch_or_w.strip().split():
-                        for p in sp.encode_as_pieces(w):
-                            tokens.append(p)
-        else:
-            if split_with_space:
-                txt = txt.split(" ")
-            for ch in txt:
-                if ch == ' ':
-                    ch = "▁"
-                tokens.append(ch)
+                    if split_with_space:
+                        part = part.split(" ")
+                    for ch in part:
+                        if ch == ' ':
+                            ch = "▁"
+                        tokens.append(ch)
 
         for ch in tokens:
             if ch in symbol_table:
