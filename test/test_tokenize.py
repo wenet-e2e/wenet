@@ -109,7 +109,7 @@ def test_tokenize(symbol_table_path):
 
 @pytest.mark.parametrize("use_pbe_model", [True, False])
 def test_non_lang_symbol_tokenize(use_pbe_model):
-    data = [{"key": 1, "wav": 1, "txt": "我是{NOISE}", "sample_rate": 16000}]
+    data = [{"txt": "我是{NOISE}"}]
     symbol_table = {"我": 1, "是": 2, "{NOISE}": 3}
 
     if use_pbe_model:

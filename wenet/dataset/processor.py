@@ -284,48 +284,6 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-def __tokenize_non_lang_syms(txt, non_lang_sym_patterns):
-    """split txt by non_lang_sym_patterns
-
-    Args:
-        txt: original transcript.
-        non_lang_sym_patterns: non lang sym regex pattern.
-
-    Returns:
-        [[piece, is_non_lang_sym], [piece, True], ..., [piece, False]]
-
-    """
-    match_pos = []
-    for r in non_lang_sym_patterns:
-        i = 0
-        while i >= 0:
-            m = r.search(txt, i)
-            if m:
-                match_pos.append([m.start(), m.end()])
-                i = m.end()
-            else:
-                break
-
-    if len(match_pos) > 0:
-        pieces = []
-        i = 0
-        while i < len(txt):
-            start_pos, end_pos = exist_or_not(i, match_pos)
-            if start_pos is not None:
-                pieces.append([txt[start_pos: end_pos], True])
-                i = end_pos
-            else:
-                if len(pieces) == 0 or (len(pieces) > 0 and pieces[-1][1]):
-                    pieces.append([txt[i], False])
-                else:
-                    pieces[-1][0] += txt[i]
-                i += 1
-
-        return pieces
-    else:
-        return [[txt, False]]
-
-
 def __tokenize_by_bpe_model(sp, txt):
     tokens = []
     # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
@@ -362,9 +320,10 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
     if non_lang_syms is not None:
-        rs = [re.compile(re.escape(x)) for x in non_lang_syms]
+        non_lang_syms_pattern = re.compile(r"({[A-Z]+})")
     else:
-        rs = []
+        non_lang_syms = {}
+        non_lang_syms_pattern = None
 
     if bpe_model is not None:
         import sentencepiece as spm
@@ -376,27 +335,24 @@ def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
     for sample in data:
         assert 'txt' in sample
         txt = sample['txt'].strip()
-        if len(rs) > 0:
-            pieces = __tokenize_non_lang_syms(txt, rs)
+        if non_lang_syms_pattern is not None:
+            parts = non_lang_syms_pattern.split(txt.upper())
+            parts = [w for w in parts if len(w.strip()) > 0]
         else:
-            pieces = [[txt, False]]
+            parts = [txt]
 
         label = []
         tokens = []
-        if bpe_model is not None:
-            for piece, is_non_lang_sym in pieces:
-                if is_non_lang_sym:
-                    tokens.append(piece)
-                else:
-                    tokens.extend(__tokenize_by_bpe_model(sp, piece))
-        else:
-            for piece, is_non_lang_sym in pieces:
-                if is_non_lang_sym:
-                    tokens.append(piece)
+        for part in parts:
+            if part in non_lang_syms:
+                tokens.append(part)
+            else:
+                if bpe_model is not None:
+                    tokens.extend(__tokenize_by_bpe_model(sp, part))
                 else:
                     if split_with_space:
-                        piece = piece.split(" ")
-                    for ch in piece:
+                        part = part.split(" ")
+                    for ch in part:
                         if ch == ' ':
                             ch = "▁"
                         tokens.append(ch)
