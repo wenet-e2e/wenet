@@ -63,7 +63,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     local/wsj_data_prep.sh ${WSJ0}/??-{?,??}.? ${WSJ1}/??-{?,??}.?
     local/wsj_format_data.sh
 
-    python postprocess.py --src /home/lsq/wenet/examples/wsj/s0/data
+    python local/postprocess.py --src /home/lsq/wenet/examples/wsj/s0/data
 
     echo "Prepare text from lng_modl dir: ${WSJ1}/13-32.1/wsj1/doc/lng_modl/lm_train/np_data/{87,88,89}/*.z -> ${other_text}"
     mkdir -p "$(dirname ${other_text})"
