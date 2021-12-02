@@ -11,8 +11,8 @@ export CUDA_VISIBLE_DEVICES="0"
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
 # export NCCL_SOCKET_IFNAME=ens4f1
 export NCCL_DEBUG=INFO
-stage=5     # start from 0 if you need to start from data preparation
-stop_stage=5
+stage=1     # start from 0 if you need to start from data preparation
+stop_stage=4
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
 # NFS will be needed if you want run multi-machine training
@@ -46,8 +46,10 @@ other_text=data/local/other_text/text
 # 7. conf/train_u2++_transformer.yaml: U2++ transformer
 train_config=conf/train_conformer.yaml
 cmvn=true
-dir=/home/lsq/exp_dir/exp_wenet/wsj/conformer_1120
+dir=/home/lsq/exp_dir/exp_wenet/wsj/conformer_1202
+dump_wav_dir=/home/lsq/corpus/wsj_wav
 checkpoint=
+
 
 # use average_checkpoint will get better result
 average_checkpoint=true
@@ -63,7 +65,11 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     local/wsj_data_prep.sh ${WSJ0}/??-{?,??}.? ${WSJ1}/??-{?,??}.?
     local/wsj_format_data.sh
 
-    python local/postprocess.py --src /home/lsq/wenet/examples/wsj/s0/data
+    for x in ${valid_set} ${train_set}; do
+    {
+      ./local/wsj_gen_wav.sh data/$x $dump_wav_dir/$x
+    }
+    done
 
     echo "Prepare text from lng_modl dir: ${WSJ1}/13-32.1/wsj1/doc/lng_modl/lm_train/np_data/{87,88,89}/*.z -> ${other_text}"
     mkdir -p "$(dirname ${other_text})"
@@ -74,7 +80,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    
+
     # compute cmvn
     tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
         --in_scp data/${train_set}/wav.scp \
