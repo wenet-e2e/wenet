@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Context Biasing &mdash; Wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Runtime for WeNet" href="runtime.html" />
+    <link rel="prev" title="LM for WeNet" href="lm.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Tutorial:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained Models in WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lm.html">LM for WeNet</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Context Biasing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#context-graph">Context Graph</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ctc-prefix-beam-search">CTC Prefix Beam Search</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ctc-wfst-beam-search">CTC WFST Beam Search</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#pruning">Pruning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Context Biasing</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/context.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="context-biasing">
+<h1>Context Biasing<a class="headerlink" href="#context-biasing" title="Permalink to this headline"></a></h1>
+<p>In the practical application of ASR, the recognition effect of commonly used words is better, but for some unique words, the recognition accuracy may be low. Contextual biasing is the problem of injecting prior knowledge into an ASR system during inference, for example a user’s favorite songs, contacts, apps or location. Conventional ASR systems perform contextual biasing by building an n-gram finite state transducer (FST) from a list of biasing phrases, which is composed on-the-fly with the decoder graph during decoding. This helps to bias the recognition result towards the n-grams contained in the contextual FST, and thus improves accuracy in certain scenarios.</p>
+<p>In WeNet, we compute the biasing scores $P_C(\mathbf y)$, which are interpolated with the base model $P(\mathbf y|\mathbf x)$ using shallow-fusion during beam search, including CTC prefix beam search and CTC WFST beam search.</p>
+<p>$$
+\mathbf y^*=\mathrm{arg,max,log}P(\mathbf y|\mathbf x)+\lambda,\mathrm{log},P_C(\mathbf y)
+$$</p>
+<p>where, $\lambda$ is a tunable hyperparameter controlling how much the contextual LM influences the overall model score during beam search.</p>
+<div class="section" id="context-graph">
+<h2>Context Graph<a class="headerlink" href="#context-graph" title="Permalink to this headline"></a></h2>
+<p>If we want to improve the score of the word “cat”, and the biasing score $\lambda,\mathrm{log},P_C(\mathbf y)$ of each character is 0.25. The context graph can be constructed as follow:</p>
+<p><img alt="context graph" src="_images/context_graph.png" /></p>
+<p>In the decoding process, when the corresponding prefix is matched, the corresponding score reward will be obtained. In order to avoid artificially boosting prefixes which match early on but do not match the entire phrase, we add a special failure arc which removes the boosted score.</p>
+<p>WeNet records only one state for each prefix, to easily determine the boundary of the matched hot word. That is, only one hot word can be matched at the same time, and only after the hot word matching succeeds or fails can other hot words start matching.</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">ContextGraph</span><span class="o">::</span><span class="n">GetNextState</span><span class="p">(</span><span class="kt">int</span> <span class="n">cur_state</span><span class="p">,</span> <span class="kt">int</span> <span class="n">word_id</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">score</span><span class="p">,</span>
+                               <span class="kt">bool</span><span class="o">*</span> <span class="n">is_start_boundary</span><span class="p">,</span> <span class="kt">bool</span><span class="o">*</span> <span class="n">is_end_boundary</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">next_state</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+  <span class="c1">// Traverse the arcs of current state.</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">fst</span><span class="o">::</span><span class="n">ArcIterator</span><span class="o">&lt;</span><span class="n">fst</span><span class="o">::</span><span class="n">StdFst</span><span class="o">&gt;</span> <span class="n">aiter</span><span class="p">(</span><span class="o">*</span><span class="n">graph_</span><span class="p">,</span> <span class="n">cur_state</span><span class="p">);</span> <span class="o">!</span><span class="n">aiter</span><span class="p">.</span><span class="n">Done</span><span class="p">();</span>
+       <span class="n">aiter</span><span class="p">.</span><span class="n">Next</span><span class="p">())</span> <span class="p">{</span>
+    <span class="k">const</span> <span class="n">fst</span><span class="o">::</span><span class="n">StdArc</span><span class="o">&amp;</span> <span class="n">arc</span> <span class="o">=</span> <span class="n">aiter</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+      <span class="c1">// Record the score of the backoff arc. It might will be covered.</span>
+      <span class="o">*</span><span class="n">score</span> <span class="o">=</span> <span class="n">arc</span><span class="p">.</span><span class="n">weight</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span> <span class="o">==</span> <span class="n">word_id</span><span class="p">)</span> <span class="p">{</span>
+      <span class="c1">// If they match, record the next state and the score.</span>
+      <span class="n">next_state</span> <span class="o">=</span> <span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">;</span>
+      <span class="o">*</span><span class="n">score</span> <span class="o">=</span> <span class="n">arc</span><span class="p">.</span><span class="n">weight</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
+      <span class="c1">// Check whether is the boundary of the hot word.</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">cur_state</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="o">*</span><span class="n">is_start_boundary</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+      <span class="p">}</span>
+      <span class="k">if</span> <span class="p">(</span><span class="n">graph_</span><span class="o">-&gt;</span><span class="n">Final</span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">)</span> <span class="o">==</span> <span class="n">fst</span><span class="o">::</span><span class="n">StdArc</span><span class="o">::</span><span class="n">Weight</span><span class="o">::</span><span class="n">One</span><span class="p">())</span> <span class="p">{</span>
+        <span class="o">*</span><span class="n">is_end_boundary</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+      <span class="p">}</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">next_state</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="ctc-prefix-beam-search">
+<h2>CTC Prefix Beam Search<a class="headerlink" href="#ctc-prefix-beam-search" title="Permalink to this headline"></a></h2>
+<p>In the process of CTC prefix beam search, each prefix needs to record the hot word matching information. After appending the current output character, if the prefix changes, call the above function <code class="docutils literal notranslate"><span class="pre">GetNextState</span></code> to update the state and score of the hot word. If it is the start or end of a hot word, it is also necessary to record the position, which are used to insert the start tag and end tag in the result, such as: “The &lt;context&gt;cat&lt;/context&gt; is in the bag”.</p>
+</div>
+<div class="section" id="ctc-wfst-beam-search">
+<h2>CTC WFST Beam Search<a class="headerlink" href="#ctc-wfst-beam-search" title="Permalink to this headline"></a></h2>
+<p>WeNet adopts the Lattice Faster Online Decoder from Kaldi for WFST beam search. We have to modify the <code class="docutils literal notranslate"><span class="pre">lattice-faster-decoder.cc</span></code> to support context biasing.</p>
+<p>WFST beam search decodes in the TLG graph according to the CTC outputs. If we bias the input label of the TLG, we need to compose the context graph with the Token graph. Finally, we decide to bias TLG’s output towards the contextual fst. We need to modify the <code class="docutils literal notranslate"><span class="pre">ProcessEmitting</span></code> and <code class="docutils literal notranslate"><span class="pre">ProcessNonemitting</span></code> functions as follow:</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">Elem</span> <span class="o">*</span><span class="n">e_next</span> <span class="o">=</span>
+    <span class="n">FindOrAddToken</span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">,</span> <span class="n">frame</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">tot_cost</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="c1">// NULL: no change indicator needed</span>
+
+<span class="c1">// ========== Context code BEGIN ===========</span>
+<span class="kt">bool</span> <span class="n">is_start_boundary</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+<span class="kt">bool</span> <span class="n">is_end_boundary</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+<span class="kt">float</span> <span class="n">context_score</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">context_graph_</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">olabel</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="o">-&gt;</span><span class="n">context_state</span> <span class="o">=</span> <span class="n">tok</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="p">;</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="o">-&gt;</span><span class="n">context_state</span> <span class="o">=</span> <span class="n">context_graph_</span><span class="o">-&gt;</span><span class="n">GetNextState</span><span class="p">(</span>
+      <span class="n">tok</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="p">,</span> <span class="n">arc</span><span class="p">.</span><span class="n">olabel</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">context_score</span><span class="p">,</span>
+      <span class="o">&amp;</span><span class="n">is_start_boundary</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">is_end_boundary</span><span class="p">);</span>
+    <span class="n">graph_cost</span> <span class="o">-=</span> <span class="n">context_score</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="c1">// ========== Context code END ==========</span>
+
+<span class="c1">// Add ForwardLink from tok to next_tok (put on head of list</span>
+<span class="c1">// tok-&gt;links)</span>
+<span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ForwardLinkT</span><span class="p">(</span><span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">,</span> <span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span><span class="p">,</span> <span class="n">arc</span><span class="p">.</span><span class="n">olabel</span><span class="p">,</span>
+                              <span class="n">graph_cost</span><span class="p">,</span> <span class="n">ac_cost</span><span class="p">,</span> <span class="n">is_start_boundary</span><span class="p">,</span>
+                              <span class="n">is_end_boundary</span><span class="p">,</span> <span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span><span class="p">);</span>
+<span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span><span class="o">-&gt;</span><span class="n">context_score</span> <span class="o">=</span> <span class="n">context_score</span><span class="p">;</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="pruning">
+<h2>Pruning<a class="headerlink" href="#pruning" title="Permalink to this headline"></a></h2>
+<p>The backoff arc will return the accumulated scores to a single ForwardLink. It leads to the cost of that ForwardLink is too large. We have to remove the cost returned by backoff arc before pruning.</p>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span> <span class="n">LatticeFasterDecoderTpl</span><span class="o">&lt;</span><span class="n">FST</span><span class="p">,</span> <span class="n">Token</span><span class="o">&gt;::</span><span class="n">PruneForwardLinks</span><span class="p">(</span>
+    <span class="n">int32</span> <span class="n">frame_plus_one</span><span class="p">,</span> <span class="kt">bool</span> <span class="o">*</span><span class="n">extra_costs_changed</span><span class="p">,</span> <span class="kt">bool</span> <span class="o">*</span><span class="n">links_pruned</span><span class="p">,</span>
+    <span class="n">BaseFloat</span> <span class="n">delta</span><span class="p">)</span> <span class="p">{</span>
+  <span class="p">...</span>
+  <span class="n">BaseFloat</span> <span class="n">link_extra_cost</span> <span class="o">=</span>
+            <span class="n">next_tok</span><span class="o">-&gt;</span><span class="n">extra_cost</span> <span class="o">+</span>
+            <span class="p">((</span><span class="n">tok</span><span class="o">-&gt;</span><span class="n">tot_cost</span> <span class="o">+</span> <span class="n">link</span><span class="o">-&gt;</span><span class="n">acoustic_cost</span> <span class="o">+</span> <span class="n">link</span><span class="o">-&gt;</span><span class="n">graph_cost</span><span class="p">)</span> <span class="o">-</span>
+             <span class="n">next_tok</span><span class="o">-&gt;</span><span class="n">tot_cost</span><span class="p">);</span>  <span class="c1">// difference in brackets is &gt;= 0</span>
+  <span class="c1">// ========== Context code BEGIN ===========</span>
+  <span class="c1">// graph_cost contains the score of hot word</span>
+  <span class="c1">// link-&gt;context_score &lt; 0 means the hot word of the link is returned from backoff arc</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">link</span><span class="o">-&gt;</span><span class="n">context_score</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">link_extra_cost</span> <span class="o">+=</span> <span class="n">link</span><span class="o">-&gt;</span><span class="n">context_score</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="c1">// ========== Context code END ==========</span>
+  <span class="c1">// link_exta_cost is the difference in score between the best paths</span>
+  <span class="c1">// through link source state and through link destination state</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
+<ol class="simple">
+<li><p>Specify the <code class="docutils literal notranslate"><span class="pre">--context_path</span></code> to a text file.</p>
+<ul class="simple">
+<li><p>Each line of the file contains a context.</p></li>
+<li><p>Each context can be split into words with the symbol_table of the ASR model (It means there is no oov in the context).</p></li>
+</ul>
+</li>
+<li><p>Specify the <code class="docutils literal notranslate"><span class="pre">--context_score</span></code>, the reward of each word in the context.</p></li>
+</ol>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> /home/wenet/runtime/server/x86
+<span class="nb">export</span> <span class="nv">GLOG_logtostderr</span><span class="o">=</span><span class="m">1</span>
+<span class="nb">export</span> <span class="nv">GLOG_v</span><span class="o">=</span><span class="m">2</span>
+<span class="nv">wav_path</span><span class="o">=</span>docker_resource/test.wav
+<span class="nv">context_path</span><span class="o">=</span>docker_resource/context.txt
+<span class="nv">model_dir</span><span class="o">=</span>docker_resource/model
+./build/decoder_main <span class="se">\</span>
+    --chunk_size -1 <span class="se">\</span>
+    --wav_path <span class="nv">$wav_path</span> <span class="se">\</span>
+    --model_path <span class="nv">$model_dir</span>/final.zip <span class="se">\</span>
+    --context_path <span class="nv">$context_path</span> <span class="se">\</span>
+    --context_score <span class="m">3</span> <span class="se">\</span>
+    --dict_path <span class="nv">$model_dir</span>/words.txt <span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">|</span> tee log.txt
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="lm.html" class="btn btn-neutral float-left" title="LM for WeNet" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="runtime.html" class="btn btn-neutral float-right" title="Runtime for WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
