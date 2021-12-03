@@ -116,8 +116,13 @@ class DataList(IterableDataset):
             yield data
 
 
-def Dataset(data_type, data_list_file, symbol_table, conf,
-            bpe_model=None, partition=True):
+def Dataset(data_type,
+            data_list_file,
+            symbol_table,
+            conf,
+            bpe_model=None,
+            non_lang_syms=None,
+            partition=True):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -139,7 +144,8 @@ def Dataset(data_type, data_list_file, symbol_table, conf,
     else:
         dataset = Processor(dataset, processor.parse_raw)
 
-    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model)
+    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model,
+                        non_lang_syms, conf.get('split_with_space', False))
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 
