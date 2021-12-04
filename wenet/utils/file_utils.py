@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 
 def read_lists(list_file):
     lists = []
@@ -39,7 +41,19 @@ def read_non_lang_symbols(non_lang_sym_path):
     if non_lang_sym_path is None:
         return None
     else:
-        return read_lists(non_lang_sym_path)
+        syms = read_lists(non_lang_sym_path)
+        non_lang_syms_pattern = re.compile(r"(\[[^\[\]]+\]|<[^<>]+>|{[^{}]+})")
+        for sym in syms:
+            if non_lang_syms_pattern.fullmatch(sym) is None:
+                class BadSymbolFormat(Exception):
+                    pass
+                raise BadSymbolFormat(
+                    "Non-linguistic symbols should be "
+                    "formatted in {xxx}/<xxx>/[xxx], consider"
+                    " modify '%s' to meet the requirment. "
+                    "More details can be found in discussions here : "
+                    "https://github.com/wenet-e2e/wenet/pull/819" % (sym))
+        return syms
 
 
 def read_symbol_table(symbol_table_file):
