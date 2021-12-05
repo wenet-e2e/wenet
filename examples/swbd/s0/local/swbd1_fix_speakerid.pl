@@ -12,8 +12,8 @@ sub trim {
 }
 
 if ($#ARGV != 1) {
-	print "Usage: swbd1_fix_speakerid.pl <swbd-conv-tab-file> <data-dir>\n";
-	print "E.g.:  swbd1_fix_speakerid.pl /datasets/SWBD1Transcripts/tables/conv.tab data/train\n";
+  print "Usage: swbd1_fix_speakerid.pl <swbd-conv-tab-file> <data-dir>\n";
+  print "E.g.:  swbd1_fix_speakerid.pl /datasets/SWBD1Transcripts/tables/conv.tab data/train\n";
 }
 
 $tab_file = $ARGV[0];
