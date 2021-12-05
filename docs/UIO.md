@@ -25,8 +25,10 @@ sequence, which solves the problem of slow random reading performance. Different
 to ensure the global randomness of data.
 
 The new IO method takes into account both small data sets and large data sets， and provides two data reading methods.
-We call it UIO. The overall design of UIO is shown in the figure below：
+We call it UIO. The overall design of UIO is shown in the figure below:
+
 ![UIO System Design](./images/UIO_system.png)
+
 Some necessary explanations about the above figure:
 - Small IO(raw) supports small datasets, which we call raw mode. This mode only supports local file reading.
 The required documents must be sorted into Kaldi style file: wav.scp and text.(It's the same as before)
@@ -48,7 +50,9 @@ def read_dataset(filename, batch_size):
     return dataset
 ```
 Refer to TFRecord IO, the UIO dataflow in WeNet is designed as the figure below:
+
 ![UIO dataflow](./images/UIO_dataflow.png)
+
 It includes the following modules:
 - tokenize module: convert the label into specify modeling unit(egs: char or BPE).
 
@@ -88,9 +92,13 @@ prefetch to avoid this problem.
 ## Validation experiments
 At present, we have verified the accuracy of UIO on aishell (200 hours) and wenetspeech (10000 hours) data respectively.
 ### Aishell(raw vs shard)
+
 ![UIO Aishell](./images/UIO_aishell_cer.png)
+
 ### WenetSpeech(shard)
+
 ![UIO WenetSpeech](./images/UIO_wenetspeech_cer.png)
+
 WeNet and ESPnet use similar model structure and parameter configuration, and they achieve similar recognition rate,
 which shows the correctness of UIO in WeNet. And during the training, we observed that the overall utilization rate of
 GPU of UIO is more than 80% - 90%, indicating that the overall IO reading efficiency is very high.
