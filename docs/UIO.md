@@ -144,6 +144,7 @@ https://examplebucket.oss-cn-hangzhou.aliyuncs.com/exampledir/2.tar.gz
 
 ## Q&A
 Q1: How to operate distributed partition of training data?
+
 A: According to rank and num_workers can segment the data. for example:
 ```python
 class DistributedSampler:
@@ -167,4 +168,5 @@ class DistributedSampler:
 ```
 
 Q2: How to deal with unbalanced data?
+
 A: Use model.join() to handle the imbalance of data allocated on each rank. Please refer [this](https://pytorch.org/tutorials/advanced/generic_join.html#how-does-join-work).
