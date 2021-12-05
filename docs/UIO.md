@@ -88,9 +88,9 @@ prefetch to avoid this problem.
 ## Validation experiments
 At present, we have verified the accuracy of UIO on aishell (200 hours) and wenetspeech (10000 hours) data respectively.
 ### Aishell(raw vs shard)
-![UIO dataflow](./images/UIO_dataflow.png)
+![UIO Aishell](./images/UIO_aishell_cer.png)
 ### WenetSpeech(shard)
-![UIO dataflow](./images/UIO_dataflow.png)
+![UIO WenetSpeech](./images/UIO_wenetspeech_cer.png)
 WeNet and ESPnet use similar model structure and parameter configuration, and they achieve similar recognition rate,
 which shows the correctness of UIO in WeNet. And during the training, we observed that the overall utilization rate of
 GPU of UIO is more than 80% - 90%, indicating that the overall IO reading efficiency is very high.
