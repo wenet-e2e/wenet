@@ -30,5 +30,6 @@ if __name__ == '__main__':
     with open(wav_scp, 'w') as f, open(segment_file, 'r') as sgement:
         for l in sgement:
             item = l.strip().split()
-            item[1] = wav_dic[item[1]]
-            f.write("{} {},{},{}\n".format(item[0], item[1], item[2], item[3]))
+            if item[1] in wav_dic:
+                item[1] = wav_dic[item[1]]
+                f.write("{} {},{},{}\n".format(item[0], item[1], item[2], item[3]))
