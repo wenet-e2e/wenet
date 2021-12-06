@@ -93,7 +93,11 @@ prefetch to avoid this problem.
 At present, we have verified the accuracy of UIO on aishell (200 hours) and wenetspeech (10000 hours) data respectively.
 ### Aishell(raw vs shard)
 
-![UIO Aishell](./images/UIO_aishell_cer.png)
+|IO|CER|
+|:-:|:-:|
+|Old|4.61|
+|UIO(Raw)|4.63|
+|UIO(Shards)|4.67|
 
 ### WenetSpeech(shard)
 
