@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UIO for WeNet &mdash; Wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="JIT in WeNet" href="jit_in_wenet.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Tutorial:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained Models in WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lm.html">LM for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="context.html">Context Biasing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">UIO for WeNet</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#necessity-of-upgrading-io-mothod">Necessity of upgrading IO mothod</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#system-design-of-uio">System design of UIO</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overall-design">Overall design</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#chain-io">Chain IO</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#validation-experiments">Validation experiments</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aishell-raw-vs-shard">Aishell(<code class="docutils literal notranslate"><span class="pre">raw</span></code> vs <code class="docutils literal notranslate"><span class="pre">shard</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#wenetspeech-shard">WenetSpeech(<code class="docutils literal notranslate"><span class="pre">shard</span></code>)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-of-uio">Usage of UIO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#q-a">Q&amp;A</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>UIO for WeNet</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/UIO.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="uio-for-wenet">
+<h1>UIO for WeNet<a class="headerlink" href="#uio-for-wenet" title="Permalink to this headline"></a></h1>
+<p>In order to support the model training of industrial tens of millions of hours of speech dataset, the data processing
+method UIO (Unified IO) has been updated in WeNet. The document will introduce UIO from the following sections:
+Necessity of upgrading IO mothod, System design of UIO, Validation experiments, Usage of UIO, Q&amp;A.</p>
+<div class="section" id="necessity-of-upgrading-io-mothod">
+<h2>Necessity of upgrading IO mothod<a class="headerlink" href="#necessity-of-upgrading-io-mothod" title="Permalink to this headline"></a></h2>
+<p>The old IO method in WeNet is based on Pytorch’s native Dataset. During training, it need to load all training audio
+paths and correspondingly labels into the memory at one time, then randomly read data. In the case of industrial-grade
+ultra-large-scale data (egs: more than 50,000 hours or 50 million or more audio), this method will cause the training
+to fail to run for two reasons:</p>
+<ul class="simple">
+<li><p>Out of memory(OOM): The physical memory of the general machine is difficult to load the training data at one time.</p></li>
+<li><p>Slow down reading performance:  In the case that the large-scale data memory cannot be used as a file cache, the training
+data reading speed is greatly reduced.</p></li>
+</ul>
+</div>
+<div class="section" id="system-design-of-uio">
+<h2>System design of UIO<a class="headerlink" href="#system-design-of-uio" title="Permalink to this headline"></a></h2>
+<div class="section" id="overall-design">
+<h3>Overall design<a class="headerlink" href="#overall-design" title="Permalink to this headline"></a></h3>
+<p>Inspired by the following industrial methods(egs: <a class="reference external" href="https://github.com/webdataset/webdataset">webdataset</a>, <a class="reference external" href="https://www.tensorflow.org/tutorials/load_data/tfrecord">TFRecord</a>),
+WeNet redesigned the IO method. Its core idea is to make the audio and labels of multiple small data(such as 1000 pieces),
+into compressed packets (tar) and read them based on the IterableDataset of Pytorch. The advantages of this method is：</p>
+<ul class="simple">
+<li><p>Only the index information of the compressed package needs to be maintained in memory, which greatly saves memory and
+solves the problem of OOM.</p></li>
+<li><p>The on-the-fly decompression is performed in the memory, and the data in the same compressed package is read in
+sequence, which solves the problem of slow random reading performance. Different compressed packets can be read randomly
+to ensure the global randomness of data.</p></li>
+</ul>
+<p>The new IO method takes into account both small datasets and large datasets， and provides two data reading methods.
+We call it UIO. The overall design of UIO is shown in the figure below:</p>
+<p><img alt="UIO System Design" src="_images/UIO_system.png" /></p>
+<p>Some necessary explanations about the above figure:</p>
+<ul class="simple">
+<li><p>Small IO(raw) supports small datasets, which we call <code class="docutils literal notranslate"><span class="pre">raw</span></code> mode. This mode only supports local file reading.
+The required documents must be sorted into Kaldi style file: wav.scp and text.(It’s the same as before)</p></li>
+<li><p>Big IO(shared) supports large datasets, which we call <code class="docutils literal notranslate"><span class="pre">shard</span></code> mode. This mode can support both local file
+reading and network cloud storage file reading. The required files must be sorted into compressed packages. Audio (wav)
+and label (txt) are stored in a single compressed package in sequence.</p></li>
+</ul>
+</div>
+<div class="section" id="chain-io">
+<h3>Chain IO<a class="headerlink" href="#chain-io" title="Permalink to this headline"></a></h3>
+<p>Inspired by TFRecord chain IO, UIO also adopts chain implementation. In practical use, chain IO is more flexible,
+easier to expand and easier to debug. TFRecord IO example as follows,</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_dataset</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">TFRecordDataset</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">_parse_image_function</span><span class="p">,</span> <span class="n">num_parallel_calls</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">AUTOTUNE</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="mi">500</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">drop_remainder</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">repeat</span><span class="p">()</span>
+    <span class="n">dataset</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">prefetch</span><span class="p">(</span><span class="n">buffer_size</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">experimental</span><span class="o">.</span><span class="n">AUTOTUNE</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dataset</span>
+</pre></div>
+</div>
+<p>Refer to TFRecord IO, the UIO dataflow in WeNet is designed as the figure below:</p>
+<p><img alt="UIO dataflow" src="_images/UIO_dataflow.png" /></p>
+<p>It includes the following modules:</p>
+<ul class="simple">
+<li><p>tokenize module: convert the label into specify modeling unit(egs: char or BPE).</p></li>
+<li><p>filter module: filter out unqualified training data.</p></li>
+<li><p>resample module: optional resampling of training data.</p></li>
+<li><p>compute_fbank module: fbank feature extraction.</p></li>
+<li><p>spec_augmentation module: feature enhancement.</p></li>
+<li><p>shuffle module: disrupt local data.</p></li>
+<li><p>sort module: sort local data.</p></li>
+<li><p>batch module: organize multiple pieces of data into batch.</p></li>
+<li><p>padding module: padding data in the same batch.</p></li>
+</ul>
+<p>what’s more, There are several parameters to note. first, <code class="docutils literal notranslate"><span class="pre">shuffle</span> <span class="pre">buffer</span></code> and <code class="docutils literal notranslate"><span class="pre">sort</span> <span class="pre">buffer</span></code> in <code class="docutils literal notranslate"><span class="pre">buffer</span> <span class="pre">size</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Shuffle</span> <span class="pre">buffer</span></code>: shuffle data. It is recommended that the size of this buffer be larger than
+the number of data contained in a single shard. Each time it is equivalent to shuffling data between two shards,
+which increases the randomness of the data.(egs: if each shard contains 1000, you can set shuffle buffer as 1500)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Sort</span> <span class="pre">buffer</span></code>: sort the data according to the number of frames. This operation is very important and can greatly
+improve the training speed.</p></li>
+</ul>
+<p>then, <code class="docutils literal notranslate"><span class="pre">Prefetch</span></code>:
+<code class="docutils literal notranslate"><span class="pre">Prefetch</span></code> is used in the Pytorch <code class="docutils literal notranslate"><span class="pre">Dataloader</span></code> to pre-read data. The granularity of prefetch is the batch of final training.
+The default parameter is 2, that is, the data of two batches will be pre-read by default. In the design of the UIO,
+due to the existence of the pre buffer, the pre-read data may already be in the buffer, so there is no real pre read.
+Only when the data in the buffer is insufficient during the next training can the buffer be filled on the fly.
+At this time, the training is blocked on the read data. In a word, when the prefetch is very small, the training will
+block reading data in part of the time, because the previous data is still in cache. Therefore, you can set a large
+prefetch to avoid this problem.</p>
+</div>
+</div>
+<div class="section" id="validation-experiments">
+<h2>Validation experiments<a class="headerlink" href="#validation-experiments" title="Permalink to this headline"></a></h2>
+<p>At present, we have verified the accuracy of UIO on aishell (200 hours) and wenetspeech (10000 hours) data respectively.</p>
+<div class="section" id="aishell-raw-vs-shard">
+<h3>Aishell(<code class="docutils literal notranslate"><span class="pre">raw</span></code> vs <code class="docutils literal notranslate"><span class="pre">shard</span></code>)<a class="headerlink" href="#aishell-raw-vs-shard" title="Permalink to this headline"></a></h3>
+<table border="1" class="docutils">
+<thead>
+<tr>
+<th align="left">IO</th>
+<th align="left">CER</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Old</td>
+<td align="left">4.61</td>
+</tr>
+<tr>
+<td align="left">UIO(<code>Raw</code>)</td>
+<td align="left">4.63</td>
+</tr>
+<tr>
+<td align="left">UIO(<code>Shard</code>)</td>
+<td align="left">4.67</td>
+</tr>
+</tbody>
+</table></div>
+<div class="section" id="wenetspeech-shard">
+<h3>WenetSpeech(<code class="docutils literal notranslate"><span class="pre">shard</span></code>)<a class="headerlink" href="#wenetspeech-shard" title="Permalink to this headline"></a></h3>
+<p><img alt="UIO WenetSpeech" src="_images/UIO_wenetspeech_cer.png" /></p>
+<p>WeNet and ESPnet use similar model structure and parameter configuration, and they achieve similar recognition rate,
+which shows the correctness of UIO in WeNet. And during the training, we observed that the overall utilization rate of
+GPU of UIO is more than 80% - 90%, indicating that the overall IO reading efficiency is very high.</p>
+</div>
+</div>
+<div class="section" id="usage-of-uio">
+<h2>Usage of UIO<a class="headerlink" href="#usage-of-uio" title="Permalink to this headline"></a></h2>
+<p>For detailed usage of UIO, please refer to the aishell dataset example:
+https://github.com/wenet-e2e/wenet/blob/main/examples/aishell/s0/run.sh
+At present, all datasets in WeNet have used UIO as the default data preparation.</p>
+<p>There are three parameters related to UIO in the training script train.py：</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">train_data</span></code>(<code class="docutils literal notranslate"><span class="pre">cv_data</span></code>/<code class="docutils literal notranslate"><span class="pre">test_data</span></code>): data.list</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">data_type</span></code>: raw/shard</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">symbol_table</span></code>: specify modeling unit</p></li>
+</ul>
+<p>For example:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python wenet/bin/train.py --gpu <span class="nv">$gpu_id</span> <span class="se">\</span>
+  --config <span class="nv">$train_config</span> <span class="se">\</span>
+  --data_type <span class="nv">$data_type</span> <span class="se">\</span>
+  --symbol_table <span class="nv">$dict</span> <span class="se">\</span>
+  --train_data <span class="nv">$feat_dir</span>/<span class="nv">$train_set</span>/data.list <span class="se">\</span>
+  --cv_data <span class="nv">$feat_dir</span>/dev/data.list <span class="se">\</span>
+  ...
+</pre></div>
+</div>
+<p>If data_type is <code class="docutils literal notranslate"><span class="pre">raw</span></code>, the format of data.list is as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;BAC009S0002W0122&quot;</span><span class="p">,</span> <span class="s2">&quot;wav&quot;</span><span class="p">:</span> <span class="s2">&quot;/export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0122.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;txt&quot;</span><span class="p">:</span> <span class="s2">&quot;而对楼市成交抑制作用最大的限购&quot;</span><span class="p">}</span>
+<span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;BAC009S0002W0123&quot;</span><span class="p">,</span> <span class="s2">&quot;wav&quot;</span><span class="p">:</span> <span class="s2">&quot;/export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0123.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;txt&quot;</span><span class="p">:</span> <span class="s2">&quot;也成为地方政府的眼中钉&quot;</span><span class="p">}</span>
+<span class="p">{</span><span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="s2">&quot;BAC009S0002W0124&quot;</span><span class="p">,</span> <span class="s2">&quot;wav&quot;</span><span class="p">:</span> <span class="s2">&quot;/export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0124.wav&quot;</span><span class="p">,</span> <span class="s2">&quot;txt&quot;</span><span class="p">:</span> <span class="s2">&quot;自六月底呼和浩特市率先宣布取消限购后&quot;</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Each line is a json serialized string, which contains three fields: <code class="docutils literal notranslate"><span class="pre">key</span></code>, <code class="docutils literal notranslate"><span class="pre">wav</span></code> and <code class="docutils literal notranslate"><span class="pre">txt</span></code>.</p>
+<p>If data_type is <code class="docutils literal notranslate"><span class="pre">shard</span></code>, the format of data.list is as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># [option 1: local]</span>
+<span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">maryland</span><span class="o">/</span><span class="n">binbinzhang</span><span class="o">/</span><span class="n">code</span><span class="o">/</span><span class="n">wenet</span><span class="o">/</span><span class="n">examples</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s3</span><span class="o">/</span><span class="n">raw_wav</span><span class="o">/</span><span class="n">train</span><span class="o">/</span><span class="n">shards</span><span class="o">/</span><span class="n">shards_000000000</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+<span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">maryland</span><span class="o">/</span><span class="n">binbinzhang</span><span class="o">/</span><span class="n">code</span><span class="o">/</span><span class="n">wenet</span><span class="o">/</span><span class="n">examples</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s3</span><span class="o">/</span><span class="n">raw_wav</span><span class="o">/</span><span class="n">train</span><span class="o">/</span><span class="n">shards</span><span class="o">/</span><span class="n">shards_000000001</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+<span class="o">/</span><span class="n">export</span><span class="o">/</span><span class="n">maryland</span><span class="o">/</span><span class="n">binbinzhang</span><span class="o">/</span><span class="n">code</span><span class="o">/</span><span class="n">wenet</span><span class="o">/</span><span class="n">examples</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s3</span><span class="o">/</span><span class="n">raw_wav</span><span class="o">/</span><span class="n">train</span><span class="o">/</span><span class="n">shards</span><span class="o">/</span><span class="n">shards_000000002</span><span class="o">.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+
+<span class="c1"># [option 2: network(egs: OSS)]</span>
+<span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">examplebucket</span><span class="o">.</span><span class="n">oss</span><span class="o">-</span><span class="n">cn</span><span class="o">-</span><span class="n">hangzhou</span><span class="o">.</span><span class="n">aliyuncs</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">exampledir</span><span class="o">/</span><span class="mf">1.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+<span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">examplebucket</span><span class="o">.</span><span class="n">oss</span><span class="o">-</span><span class="n">cn</span><span class="o">-</span><span class="n">hangzhou</span><span class="o">.</span><span class="n">aliyuncs</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">exampledir</span><span class="o">/</span><span class="mf">2.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="q-a">
+<h2>Q&amp;A<a class="headerlink" href="#q-a" title="Permalink to this headline"></a></h2>
+<p>Q1: How to operate distributed partition of training data?</p>
+<p>A: According to rank and num_workers can segment the data. for example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DistributedSampler</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">partition</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span> <span class="o">=</span> <span class="n">shuffle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">partition</span> <span class="o">=</span> <span class="n">partition</span>
+
+    <span class="k">def</span> <span class="nf">set_epoch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epoch</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch</span> <span class="o">=</span> <span class="n">epoch</span>
+
+    <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">shuffle</span><span class="p">:</span>
+                <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch</span><span class="p">)</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rank</span><span class="p">::</span><span class="bp">self</span><span class="o">.</span><span class="n">world_size</span><span class="p">]</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">worker_id</span><span class="p">::</span><span class="bp">self</span><span class="o">.</span><span class="n">num_workers</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">data</span>
+</pre></div>
+</div>
+<p>Q2: How to deal with unbalanced data?</p>
+<p>A: Use model.join() to handle the imbalance of data allocated on each rank. Please refer <a class="reference external" href="https://pytorch.org/tutorials/advanced/generic_join.html#how-does-join-work">this</a>.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="jit_in_wenet.html" class="btn btn-neutral float-left" title="JIT in WeNet" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
