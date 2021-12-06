@@ -24,15 +24,15 @@ solves the problem of OOM.
 sequence, which solves the problem of slow random reading performance. Different compressed packets can be read randomly
 to ensure the global randomness of data.
 
-The new IO method takes into account both small data sets and large data sets， and provides two data reading methods.
+The new IO method takes into account both small datasets and large datasets， and provides two data reading methods.
 We call it UIO. The overall design of UIO is shown in the figure below:
 
 ![UIO System Design](./images/UIO_system.png)
 
 Some necessary explanations about the above figure:
-- Small IO(raw) supports small datasets, which we call raw mode. This mode only supports local file reading.
+- Small IO(raw) supports small datasets, which we call ``raw`` mode. This mode only supports local file reading.
 The required documents must be sorted into Kaldi style file: wav.scp and text.(It's the same as before)
-- Big IO supports(shared) supports large datasets, which we call shard mode. This mode can support both local file
+- Big IO(shared) supports large datasets, which we call ``shard`` mode. This mode can support both local file
 reading and network cloud storage file reading. The required files must be sorted into compressed packages. Audio (wav)
 and label (txt) are stored in a single compressed package in sequence.
 
@@ -72,15 +72,15 @@ It includes the following modules:
 
 - padding module: padding data in the same batch.
 
-what's more, There are several parameters to note. first, **shuffle buffer** and **sort buffer** in buffer size:
-* Shuffle buffer: shuffle data. It is recommended that the size of this buffer be larger than
+what's more, There are several parameters to note. first, ``shuffle buffer`` and ``sort buffer`` in ``buffer size``:
+* ``Shuffle buffer``: shuffle data. It is recommended that the size of this buffer be larger than
 the number of data contained in a single shard. Each time it is equivalent to shuffling data between two shards,
 which increases the randomness of the data.(egs: if each shard contains 1000, you can set shuffle buffer as 1500)
-* Sort buffer: sort the data according to the number of frames. This operation is very important and can greatly
+* ``Sort buffer``: sort the data according to the number of frames. This operation is very important and can greatly
 improve the training speed.
 
-then, **Prefetch**:
-Prefetch is used in the Pytorch Dataloader to pre-read data. The granularity of prefetch is the batch of final training.
+then, ``Prefetch``:
+``Prefetch`` is used in the Pytorch ``Dataloader`` to pre-read data. The granularity of prefetch is the batch of final training.
 The default parameter is 2, that is, the data of two batches will be pre-read by default. In the design of the UIO,
 due to the existence of the pre buffer, the pre-read data may already be in the buffer, so there is no real pre read.
 Only when the data in the buffer is insufficient during the next training can the buffer be filled on the fly.
@@ -91,15 +91,15 @@ prefetch to avoid this problem.
 
 ## Validation experiments
 At present, we have verified the accuracy of UIO on aishell (200 hours) and wenetspeech (10000 hours) data respectively.
-### Aishell(raw vs shard)
+### Aishell(``raw`` vs ``shard``)
 
 |IO|CER|
-|:-:|:-:|
+|:---|:---|
 |Old|4.61|
-|UIO(Raw)|4.63|
-|UIO(Shards)|4.67|
+|UIO(``Raw``)|4.63|
+|UIO(``Shard``)|4.67|
 
-### WenetSpeech(shard)
+### WenetSpeech(``shard``)
 
 ![UIO WenetSpeech](./images/UIO_wenetspeech_cer.png)
 
@@ -113,9 +113,10 @@ https://github.com/wenet-e2e/wenet/blob/main/examples/aishell/s0/run.sh
 At present, all datasets in WeNet have used UIO as the default data preparation.
 
 There are three parameters related to UIO in the training script train.py：
-- train_data(cv_data/test_data): data.list
-- data_type: raw/shard
-- symbol_table: specify modeling unit
+- ``train_data``(``cv_data``/``test_data``): data.list
+- ``data_type``: raw/shard
+- ``symbol_table``: specify modeling unit
+
 For example:
 ```shell
 python wenet/bin/train.py --gpu $gpu_id \
@@ -126,15 +127,15 @@ python wenet/bin/train.py --gpu $gpu_id \
   --cv_data $feat_dir/dev/data.list \
   ...
 ```
-If data_type is raw, the format of data.list is as follows:
+If data_type is ``raw``, the format of data.list is as follows:
 ```
 {"key": "BAC009S0002W0122", "wav": "/export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0122.wav", "txt": "而对楼市成交抑制作用最大的限购"}
 {"key": "BAC009S0002W0123", "wav": "/export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0123.wav", "txt": "也成为地方政府的眼中钉"}
 {"key": "BAC009S0002W0124", "wav": "/export/data/asr-data/OpenSLR/33/data_aishell/wav/train/S0002/BAC009S0002W0124.wav", "txt": "自六月底呼和浩特市率先宣布取消限购后"}
 ```
-Each line is a json serialized string, which contains three fields: key, wav and txt.
+Each line is a json serialized string, which contains three fields: ``key``, ``wav`` and ``txt``.
 
-If data_type is shard, the format of data.list is as follows:
+If data_type is ``shard``, the format of data.list is as follows:
 ```
 # [option 1: local]
 /export/maryland/binbinzhang/code/wenet/examples/aishell/s3/raw_wav/train/shards/shards_000000000.tar.gz
