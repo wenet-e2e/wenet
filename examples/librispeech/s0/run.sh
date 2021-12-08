@@ -141,6 +141,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --config $train_config \
       --data_type raw \
       --symbol_table $dict \
+      --bpe_model ${bpemodel}.model \
       --train_data $wave_data/$train_set/data.list \
       --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
