@@ -191,12 +191,13 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
           --mode $mode \
           --config $dir/train.yaml \
           --data_type raw \
+          --dict $dict \
+          --bpe_model ${bpemodel}.model \
           --test_data $wave_data/$test/data.list \
           --checkpoint $decode_checkpoint \
           --beam_size 10 \
           --batch_size 1 \
           --penalty 0.0 \
-          --dict $dict \
           --result_file $test_dir/text_bpe \
           --ctc_weight $ctc_weight \
           ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
