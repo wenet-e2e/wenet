@@ -172,11 +172,12 @@ bool LatticeFasterDecoderTpl<FST, Token>::GetRawLattice(
           cost_offset = cost_offsets_[f];
         }
 
+        StateId state = cur_state;
         if (l->is_start_boundary) {
           StateId tmp = ofst->AddState();
           Arc arc(0, context_graph_->start_tag_id(), Weight(0, 0), tmp);
-          ofst->AddArc(cur_state, arc);
-          cur_state = tmp;
+          ofst->AddArc(state, arc);
+          state = tmp;
         }
         if (l->is_end_boundary) {
           StateId tmp = ofst->AddState();
@@ -188,7 +189,7 @@ bool LatticeFasterDecoderTpl<FST, Token>::GetRawLattice(
         Arc arc(l->ilabel, l->olabel,
                 Weight(l->graph_cost, l->acoustic_cost - cost_offset),
                 nextstate);
-        ofst->AddArc(cur_state, arc);
+        ofst->AddArc(state, arc);
       }
       if (f == num_frames) {
         if (use_final_probs && !final_costs.empty()) {

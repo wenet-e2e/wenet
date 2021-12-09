@@ -26,7 +26,7 @@ class Executor:
         is_distributed = args.get('is_distributed', True)
         use_amp = args.get('use_amp', False)
         logging.info('using accumulate grad, new batch size is {} times'
-                     'larger than before'.format(accum_grad))
+                     ' larger than before'.format(accum_grad))
         if use_amp:
             assert scaler is not None
         # A context manager to be used in conjunction with an instance of

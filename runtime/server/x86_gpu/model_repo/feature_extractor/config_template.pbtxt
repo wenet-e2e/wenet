@@ -1,0 +1,73 @@
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "feature_extractor"
+backend: "python"
+max_batch_size: 64
+
+parameters [
+  {
+    key: "num_mel_bins",
+    value: { string_value: "#num_mel_bins"}
+  },
+  {
+    key: "frame_shift_in_ms"
+    value: { string_value: "#frame_shift"}
+  },
+  {
+    key: "frame_length_in_ms"
+    value: { string_value: "#frame_length"}
+  },
+  {
+    key: "sample_rate"
+    value: { string_value: "#sample_rate"}
+  }
+
+]
+
+input [
+  {
+    name: "wav"
+    data_type: TYPE_FP32
+    dims: [-1]
+  },
+  {
+    name: "wav_lens"
+    data_type: TYPE_INT32
+    dims: [1]
+  }
+]
+
+output [
+  {
+    name: "speech"
+    data_type: TYPE_#DTYPE
+    dims: [-1, #num_mel_bins]  # 80
+  },
+  {
+    name: "speech_lengths"
+    data_type: TYPE_INT32
+    dims: [1]
+  }
+]
+
+dynamic_batching {
+    preferred_batch_size: [ 16, 32 ]
+  }
+instance_group [
+    {
+      count: 2
+      kind: KIND_GPU
+    }
+]

@@ -85,7 +85,7 @@ class DistributedSampler:
             Returns:
                 List: data list after sample
         """
-        data = data.copy()
+        data = list(range(len(data)))
         # TODO(Binbin Zhang): fix this
         # We can not handle uneven data for CV on DDP, so we don't
         # sample data by rank, that means every GPU gets the same
@@ -108,16 +108,21 @@ class DataList(IterableDataset):
 
     def __iter__(self):
         sampler_info = self.sampler.update()
-        lists = self.sampler.sample(self.lists)
-        for src in lists:
+        indexes = self.sampler.sample(self.lists)
+        for index in indexes:
             # yield dict(src=src)
-            data = dict(src=src)
+            data = dict(src=self.lists[index])
             data.update(sampler_info)
             yield data
 
 
-def Dataset(data_type, data_list_file, symbol_table, conf,
-            bpe_model=None, partition=True):
+def Dataset(data_type,
+            data_list_file,
+            symbol_table,
+            conf,
+            bpe_model=None,
+            non_lang_syms=None,
+            partition=True):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -139,7 +144,8 @@ def Dataset(data_type, data_list_file, symbol_table, conf,
     else:
         dataset = Processor(dataset, processor.parse_raw)
 
-    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model)
+    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model,
+                        non_lang_syms, conf.get('split_with_space', False))
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 

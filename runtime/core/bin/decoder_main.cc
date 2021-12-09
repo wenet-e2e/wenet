@@ -72,6 +72,7 @@ int main(int argc, char *argv[]) {
         static_cast<int>(static_cast<float>(wav_reader.num_sample()) /
                          wav_reader.sample_rate() * 1000);
     int decode_time = 0;
+    std::string final_result;
     while (true) {
       wenet::Timer timer;
       wenet::DecodeState state = decoder.Decode();
@@ -82,6 +83,12 @@ int main(int argc, char *argv[]) {
       decode_time += chunk_decode_time;
       if (decoder.DecodedSomething()) {
         LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
+      }
+
+      if (state == wenet::DecodeState::kEndpoint) {
+        decoder.Rescoring();
+        final_result.append(decoder.result()[0].sentence);
+        decoder.ResetContinuousDecoding();
       }
 
       if (state == wenet::DecodeState::kEndFeats) {
@@ -100,9 +107,8 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    std::string final_result;
     if (decoder.DecodedSomething()) {
-      final_result = decoder.result()[0].sentence;
+      final_result.append(decoder.result()[0].sentence);
     }
     LOG(INFO) << wav.first << " Final result: " << final_result << std::endl;
     LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time

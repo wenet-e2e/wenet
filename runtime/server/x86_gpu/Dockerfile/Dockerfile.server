@@ -1,0 +1,11 @@
+FROM nvcr.io/nvidia/tritonserver:21.10-py3
+LABEL maintainer="NVIDIA"
+LABEL repository="tritonserver"
+
+RUN apt-get update && apt-get -y install swig && apt-get -y install python3-dev && apt-get install -y cmake
+RUN pip3 install torch==1.9.1+cu111 torchvision==0.10.1+cu111 torchaudio==0.9.1 -f https://download.pytorch.org/whl/torch_stable.html
+RUN pip3 install -v kaldifeat
+RUN pip3 install pyyaml
+WORKDIR /workspace
+RUN git clone https://github.com/Slyne/ctc_decoder.git && cd ctc_decoder/swig && bash setup.sh
+COPY ./scripts scripts
