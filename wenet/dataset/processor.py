@@ -299,7 +299,7 @@ def __tokenize_by_bpe_model(sp, txt):
         # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
         # encode ch_or_w using bpe_model.
         else:
-            for p in sp.encode_as_pieces(w):
+            for p in sp.encode_as_pieces(ch_or_w):
                 tokens.append(p)
 
     return tokens
