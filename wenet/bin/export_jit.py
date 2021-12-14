@@ -49,15 +49,19 @@ def main():
     load_checkpoint(model, args.checkpoint)
     # Export jit torch script model
 
-    script_model = torch.jit.script(model)
-    script_model.save(args.output_file)
-    print('Export model successfully, see {}'.format(args.output_file))
+    if not configs.get('use_qat', False):
+        script_model = torch.jit.script(model)
+        script_model.save(args.output_file)
+        print('Export model successfully, see {}'.format(args.output_file))
 
     # Export quantized jit torch script model
     if args.output_quant_file:
-        quantized_model = torch.quantization.quantize_dynamic(
-            model, {torch.nn.Linear}, dtype=torch.qint8
-        )
+        if configs.get('use_qat', False):
+            quantized_model = torch.quantization.convert(model, inplace=True)
+        else:
+            quantized_model = torch.quantization.quantize_dynamic(
+                model, {torch.nn.Linear}, dtype=torch.qint8
+            )
         print(quantized_model)
         script_quant_model = torch.jit.script(quantized_model)
         script_quant_model.save(args.output_quant_file)

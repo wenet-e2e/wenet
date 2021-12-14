@@ -36,6 +36,7 @@ from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
 
 class ASRModel(torch.nn.Module):
     """CTC-attention hybrid Encoder-Decoder model"""
+
     def __init__(
         self,
         vocab_size: int,
@@ -721,4 +722,10 @@ def init_asr_model(configs):
         ctc=ctc,
         **configs['model_conf'],
     )
+
+    if use_qat:
+        model.qconfig = torch.quantization.get_default_qconfig("fbgemm")
+        model.decoder.embed.qconfig = torch.quantization.float_qparams_weight_only_qconfig
+        torch.quantization.prepare_qat(model, inplace=True)
+
     return model

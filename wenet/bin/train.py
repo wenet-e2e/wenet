@@ -181,13 +181,14 @@ def main():
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements
-    if args.rank == 0:
+    if not args.use_qat and args.rank == 0:
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
-        infos = load_checkpoint(model, args.checkpoint)
+        infos = load_checkpoint(model, args.checkpoint, 
+                strict=False if args.use_qat else True)
     else:
         infos = {}
     start_epoch = infos.get('epoch', -1) + 1
