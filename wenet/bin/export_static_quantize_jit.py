@@ -136,9 +136,6 @@ def main():
                 print('Progress utts {}'.format(batch_idx))
                 sys.stdout.flush()
 
-            if batch_idx != 0 and batch_idx % 1000 == 0:
-                break
-
     # Convert the observed model to a quantized model. This does several things:
     # quantizes the weights, computes and stores the scale and bias value to be
     # used with each activation tensor, and replaces key operators with
