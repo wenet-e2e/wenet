@@ -102,8 +102,8 @@ TEST(PostProcessorTest, ProcessSpacekIndoEuropeanTest) {
   };
 
   std::vector<std::string> result_uppercase = {
-    "ZHENDONG IST SO SCHöN",
-    "ZHENDONG IST SO SCHöN"
+    "ZHENDONG IST SO SCHÖN",
+    "ZHENDONG IST SO SCHÖN"
   };
 
   for (size_t i = 0; i < input.size(); ++i) {

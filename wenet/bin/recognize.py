@@ -27,7 +27,7 @@ from torch.utils.data import DataLoader
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
-from wenet.utils.file_utils import read_symbol_table
+from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 
 def get_args():
@@ -44,6 +44,8 @@ def get_args():
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--dict', required=True, help='dict file')
+    parser.add_argument("--non_lang_syms",
+                        help="non-linguistic symbol file. One symbol per line.")
     parser.add_argument('--beam_size',
                         type=int,
                         default=10,
@@ -133,13 +135,16 @@ def main():
     test_conf['shuffle'] = False
     test_conf['sort'] = False
     test_conf['fbank_conf']['dither'] = 0.0
+    test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
+    non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            symbol_table,
                            test_conf,
                            args.bpe_model,
+                           non_lang_syms,
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)

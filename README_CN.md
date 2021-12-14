@@ -59,7 +59,7 @@ git clone https://github.com/wenet-e2e/wenet.git
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
+conda install pytorch=1.10.0 torchvision torchaudio=0.10.0 cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 **训练模型**
@@ -70,16 +70,7 @@ cd examples/aishell/s0/
 bash run.sh --stage -1
 ```
 
-细节请阅读 [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial.html)
-
-
-## WeNet 性能
-
-WeNet 提供了一些开源数据集的脚本，具体的模型性能如下，注意**其中提供的预训练模型为 pytorch 训练时使用的模型，并非 runtime 模型**。runtime 模型需要进行导出操作。
-* [AIShell-1](examples/aishell/s0/README.md) 中文模型。
-* [AIShell-2](examples/aishell2/s0/README.md) 中文模型。
-* [LibriSpeech](examples/librispeech/s0/README.md) 英文模型。
-* [Multi-CN](examples/multi_cn/s0/README.md) 使用所有开源中文数据集训练的中文模型。
+细节请阅读 [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial_aishell.html)
 
 
 ## 技术支持
