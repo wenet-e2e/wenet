@@ -7,29 +7,35 @@
 
 import torch
 from torch import nn
+import torch.nn.functional as F
+from torch.nn.modules.utils import _single, _pair
 
 
-class QuantLinear(nn.Module):
+class QuantLinear(nn.Linear):
     """Quantized version of nn.Linear
 
     Apply quantized linear to the incoming data, y = dequant(quant(x)quant(A)^T + b).
     """
 
     def __init__(self, in_features, out_features, bias=True, **kwargs):
-        super().__init__()
-        self.linear = nn.Linear(in_features, out_features, bias=bias, **kwargs)
+        super().__init__(in_features, out_features, bias)
         self.quant = torch.quantization.QuantStub()
         self.dequant = torch.quantization.DeQuantStub()
 
     def forward(self, x):
         x = self.quant(x)
-        x = self.linear(x)
+        x = F.linear(x, self.weight, bias=self.bias)
         x = self.dequant(x)
         return x
 
 
-class QuantConv2d(nn.Module):
-    """Quantized 2D conv"""
+class QuantConv2d(nn.Conv2d):
+    """Quantized 2D conv
+
+    Raises:
+        ValueError: If unsupported arguments are passed in.
+
+    """
 
     def __init__(self,
                  in_channels,
@@ -42,32 +48,42 @@ class QuantConv2d(nn.Module):
                  bias=True,
                  padding_mode='zeros',
                  **kwargs):
-        super().__init__()
 
-        self.conv2d = nn.Conv2d(
-            in_channels,
-            out_channels,
-            kernel_size,
-            stride=stride,
-            padding=padding,
-            dilation=dilation,
-            groups=groups,
-            bias=bias,
-            padding_mode=padding_mode,
-            **kwargs)
+        kernel_size = _pair(kernel_size)
+        stride = _pair(stride)
+        padding = _pair(padding)
+        dilation = _pair(dilation)
 
+        super().__init__(in_channels, out_channels, kernel_size, stride, padding, dilation,
+                         groups, bias, padding_mode)
         self.quant = torch.quantization.QuantStub()
         self.dequant = torch.quantization.DeQuantStub()
 
     def forward(self, x):
         x = self.quant(x)
-        x = self.conv2d(x)
+
+        if self.padding_mode == 'circular':
+            expanded_padding = ((self.padding[1] + 1) // 2, self.padding[1] // 2,
+                                (self.padding[0] + 1) // 2, self.padding[0] // 2)
+            x = F.conv2d(F.pad(x, expanded_padding, mode='circular'),
+                         self.weight, self.bias, self.stride,
+                         _pair(0), self.dilation, self.groups)
+        else:
+            x = F.conv2d(x, self.weight, self.bias, self.stride, self.padding, self.dilation,
+                         self.groups)
+
         x = self.dequant(x)
+
         return x
 
 
-class QuantConv1d(nn.Module):
-    """Quantized 1D Conv"""
+class QuantConv1d(nn.Conv1d):
+    """Quantized 1D Conv
+
+    Raises:
+        ValueError: If unsupported arguments are passed in.
+
+    """
 
     def __init__(self,
                  in_channels,
@@ -80,25 +96,28 @@ class QuantConv1d(nn.Module):
                  bias=True,
                  padding_mode='zeros',
                  **kwargs):
-        super().__init__()
 
-        self.conv1d = nn.Conv1d(
-            in_channels,
-            out_channels,
-            kernel_size,
-            stride=stride,
-            padding=padding,
-            dilation=dilation,
-            groups=groups,
-            bias=bias,
-            padding_mode=padding_mode,
-            **kwargs)
+        kernel_size = _single(kernel_size)
+        stride = _single(stride)
+        padding = _single(padding)
+        dilation = _single(dilation)
+
+        super(QuantConv1d, self).__init__(in_channels, out_channels, kernel_size, stride, padding, dilation,
+                                          groups, bias, padding_mode)
 
         self.quant = torch.quantization.QuantStub()
         self.dequant = torch.quantization.DeQuantStub()
 
     def forward(self, x):
         x = self.quant(x)
-        x = self.conv1d(x)
+        if self.padding_mode == 'circular':
+            expanded_padding = (
+                (self.padding[0] + 1) // 2, self.padding[0] // 2)
+            x = F.conv1d(F.pad(x, expanded_padding, mode='circular'),
+                         self.weight, self.bias, self.stride,
+                         _single(0), self.dilation, self.groups)
+        else:
+            x = F.conv1d(x, self.weight, self.bias, self.stride,
+                         self.padding, self.dilation, self.groups)
         x = self.dequant(x)
         return x
