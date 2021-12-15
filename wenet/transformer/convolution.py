@@ -11,7 +11,7 @@ import torch
 from torch import nn
 from typeguard import check_argument_types
 
-from wenet.transformer.quant import QuantConv1d
+from wenet.transformer.quant import QuantPointwiseConv, QuantConv1d
 
 
 class ConvolutionModule(nn.Module):
@@ -34,15 +34,21 @@ class ConvolutionModule(nn.Module):
         assert check_argument_types()
         super().__init__()
 
-        conv1d_fn = QuantConv1d if quantize else nn.Conv1d
-        self.pointwise_conv1 = conv1d_fn(
-            channels,
-            2 * channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=bias,
-        )
+        if quantize:
+            self.pointwise_conv1 = QuantPointwiseConv(
+                channels,
+                2 * channels,
+                bias=bias
+            )
+        else:
+            self.pointwise_conv1 = conv1d_fn(
+                channels,
+                2 * channels,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=bias,
+            )
         # self.lorder is used to distinguish if it's a causal convolution,
         # if self.lorder > 0: it's a causal convolution, the input will be
         #    padded with self.lorder frames on the left in forward.
@@ -55,7 +61,8 @@ class ConvolutionModule(nn.Module):
             assert (kernel_size - 1) % 2 == 0
             padding = (kernel_size - 1) // 2
             self.lorder = 0
-        self.depthwise_conv = conv1d_fn(
+        depthwise_conv_fn = QuantConv1d if quantize else nn.Conv1d
+        self.depthwise_conv = depthwise_conv_fn(
             channels,
             channels,
             kernel_size,
@@ -73,14 +80,21 @@ class ConvolutionModule(nn.Module):
             self.use_layer_norm = True
             self.norm = nn.LayerNorm(channels)
 
-        self.pointwise_conv2 = conv1d_fn(
-            channels,
-            channels,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            bias=bias,
-        )
+        if quantize:
+            self.pointwise_conv2 = QuantPointwiseConv(
+                channels,
+                channels,
+                bias=bias
+            )
+        else:
+            self.pointwise_conv2 = conv1d_fn(
+                channels,
+                channels,
+                kernel_size=1,
+                stride=1,
+                padding=0,
+                bias=bias,
+            )
         self.activation = activation
 
     def forward(

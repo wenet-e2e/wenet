@@ -102,3 +102,26 @@ class QuantConv1d(nn.Module):
         x = self.qconv1d(x)
         x = self.dequant(x)
         return x
+
+
+class QuantPointwiseConv(nn.Module):
+    """Quantized Point-wise Conv"""
+
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 bias=True,
+                 **kwargs):
+        super().__init__()
+
+        self.qlinear = nn.Linear(in_channels, out_channels, bias=bias)
+        self.quant = torch.quantization.QuantStub()
+        self.dequant = torch.quantization.DeQuantStub()
+
+    def forward(self, x):
+        x = self.quant(x)
+        x = x.transpose(1, 2)
+        x = self.qlinear(x)
+        x = x.transpose(1, 2)
+        x = self.dequant(x)
+        return x

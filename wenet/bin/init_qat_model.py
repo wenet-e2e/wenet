@@ -63,9 +63,19 @@ def restore_qat_model(model: torch.nn.Module, path: str) -> dict:
         prefix = prefix_scope(k)
         if prefix in qlayer_dict:
             qtype = qlayer_dict[prefix]
+            if k.find('conv_module.pointwise_conv') > 0:
+                # Change pointwise conv1d to linear
+                v = torch.squeeze(v, dim=-1)
             quant_state_dict[insert_scope(k, qtype)] = v
         else:
             quant_state_dict[k] = v
+    
+    # for k,v in model.state_dict().items():
+    #      if k not in quant_state_dict:
+    #          if k.find('fake_quant') > 0 or k.find('max_val') > 0 or k.find('min_val')>0 or k.find('post_process') > 0:
+    #              pass
+    #          else:
+    #              print(k)
 
     model.load_state_dict(quant_state_dict, strict=False)
 
@@ -98,6 +108,7 @@ def main():
 
     # Init asr model from configs
     model_fp32 = init_asr_model(configs)
+    print(model_fp32)
     restore_qat_model(model_fp32, args.checkpoint)
     save_checkpoint(model_fp32, args.output, infos=None)
 
