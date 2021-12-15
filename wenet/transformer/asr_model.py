@@ -724,7 +724,10 @@ def init_asr_model(configs):
     )
 
     if use_qat:
-        model.qconfig = torch.quantization.get_default_qconfig("fbgemm")
+        model.qconfig = torch.quantization.get_default_qat_qconfig('fbgemm')
+        for k, v in model.named_modules():
+            if isinstance(v, torch.nn.modules.normalization.LayerNorm):
+                v.qconfig = None
         model.decoder.embed.qconfig = torch.quantization.float_qparams_weight_only_qconfig
         model = torch.quantization.prepare_qat(model)
 

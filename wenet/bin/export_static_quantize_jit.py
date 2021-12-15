@@ -26,7 +26,7 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
-from wenet.utils.checkpoint import load_quant_checkpoint
+from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 
@@ -115,7 +115,7 @@ def main():
 
     # Init asr model from configs
     model_fp32 = init_asr_model(configs)
-    load_quant_checkpoint(model_fp32, args.checkpoint)
+    load_checkpoint(model_fp32, args.checkpoint)
     # model must be set to eval mode for static quantization logic to work
     model_fp32.eval()
 
