@@ -41,7 +41,7 @@ class ConvolutionModule(nn.Module):
                 bias=bias
             )
         else:
-            self.pointwise_conv1 = conv1d_fn(
+            self.pointwise_conv1 = nn.Conv1d(
                 channels,
                 2 * channels,
                 kernel_size=1,
@@ -87,7 +87,7 @@ class ConvolutionModule(nn.Module):
                 bias=bias
             )
         else:
-            self.pointwise_conv2 = conv1d_fn(
+            self.pointwise_conv2 = nn.Conv1d(
                 channels,
                 channels,
                 kernel_size=1,
