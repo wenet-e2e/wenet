@@ -9,7 +9,7 @@ from typing import Tuple
 
 import torch
 
-from wenet.transformer.quant import QuantLinear, QuantConv2d
+from wenet.transformer.quant import QuantLinear
 
 
 class BaseSubsampling(torch.nn.Module):
@@ -84,16 +84,21 @@ class Conv2dSubsampling4(BaseSubsampling):
                  pos_enc_class: torch.nn.Module, quantize: bool = False):
         """Construct an Conv2dSubsampling4 object."""
         super().__init__()
-        linear_fn = QuantLinear if quantize else torch.nn.Linear
-        conv2d_fn = QuantConv2d if quantize else torch.nn.Conv2d
+        self.quantize = quantize
+        self.quant = torch.nn.Identity()
+        self.dequant = torch.nn.Identity()
+        if quantize:
+            self.quant = torch.quantization.QuantStub()
+            self.dequant = torch.quantization.DeQuantStub()
+
         self.conv = torch.nn.Sequential(
-            conv2d_fn(1, odim, 3, 2),
+            torch.nn.Conv2d(1, odim, 3, 2),
             torch.nn.ReLU(),
-            conv2d_fn(odim, odim, 3, 2),
+            torch.nn.Conv2d(odim, odim, 3, 2),
             torch.nn.ReLU(),
         )
         self.out = torch.nn.Sequential(
-            linear_fn(odim * (((idim - 1) // 2 - 1) // 2), odim))
+            torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2), odim))
         self.pos_enc = pos_enc_class
         # The right context for every conv layer is computed by:
         # (kernel_size - 1) * frame_rate_of_this_layer
@@ -122,9 +127,13 @@ class Conv2dSubsampling4(BaseSubsampling):
 
         """
         x = x.unsqueeze(1)  # (b, c=1, t, f)
+        if self.quantize:
+            x = self.quant(x)
         x = self.conv(x)
         b, c, t, f = x.size()
         x = self.out(x.transpose(1, 2).contiguous().view(b, t, c * f))
+        if self.quantize:
+            x = self.dequant(x)
         x, pos_emb = self.pos_enc(x, offset)
         return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-2:2]
 
@@ -142,15 +151,19 @@ class Conv2dSubsampling6(BaseSubsampling):
                  pos_enc_class: torch.nn.Module, quantize: bool = False):
         """Construct an Conv2dSubsampling6 object."""
         super().__init__()
-        linear_fn = QuantLinear if quantize else torch.nn.Linear
-        conv2d_fn = QuantConv2d if quantize else torch.nn.Conv2d
+        self.quantize = quantize
+        self.quant = torch.nn.Identity()
+        self.dequant = torch.nn.Identity()
+        if quantize:
+            self.quant = torch.quantization.QuantStub()
+            self.dequant = torch.quantization.DeQuantStub()
         self.conv = torch.nn.Sequential(
-            conv2d_fn(1, odim, 3, 2),
+            torch.nn.Conv2d(1, odim, 3, 2),
             torch.nn.ReLU(),
-            conv2d_fn(odim, odim, 5, 3),
+            torch.nn.Conv2d(odim, odim, 5, 3),
             torch.nn.ReLU(),
         )
-        self.linear = linear_fn(odim * (((idim - 1) // 2 - 2) // 3),
+        self.linear = torch.nn.Linear(odim * (((idim - 1) // 2 - 2) // 3),
                                       odim)
         self.pos_enc = pos_enc_class
         # 10 = (3 - 1) * 1 + (5 - 1) * 2
@@ -176,9 +189,13 @@ class Conv2dSubsampling6(BaseSubsampling):
             torch.Tensor: positional encoding
         """
         x = x.unsqueeze(1)  # (b, c, t, f)
+        if self.quantize:
+            x = self.quant(x)
         x = self.conv(x)
         b, c, t, f = x.size()
         x = self.linear(x.transpose(1, 2).contiguous().view(b, t, c * f))
+        if self.quantize:
+            x = self.dequant(x)
         x, pos_emb = self.pos_enc(x, offset)
         return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-4:3]
 
@@ -197,17 +214,21 @@ class Conv2dSubsampling8(BaseSubsampling):
                  pos_enc_class: torch.nn.Module, quantize: bool = False):
         """Construct an Conv2dSubsampling8 object."""
         super().__init__()
-        linear_fn = QuantLinear if quantize else torch.nn.Linear
-        conv2d_fn = QuantConv2d if quantize else torch.nn.Conv2d
+        self.quantize = quantize
+        self.quant = torch.nn.Identity()
+        self.dequant = torch.nn.Identity()
+        if quantize:
+            self.quant = torch.quantization.QuantStub()
+            self.dequant = torch.quantization.DeQuantStub()
         self.conv = torch.nn.Sequential(
-            conv2d_fn(1, odim, 3, 2),
+            torch.nn.Conv2d(1, odim, 3, 2),
             torch.nn.ReLU(),
-            conv2d_fn(odim, odim, 3, 2),
+            torch.nn.Conv2d(odim, odim, 3, 2),
             torch.nn.ReLU(),
-            conv2d_fn(odim, odim, 3, 2),
+            torch.nn.Conv2d(odim, odim, 3, 2),
             torch.nn.ReLU(),
         )
-        self.linear = linear_fn(
+        self.linear = torch.nn.Linear(
             odim * ((((idim - 1) // 2 - 1) // 2 - 1) // 2), odim)
         self.pos_enc = pos_enc_class
         self.subsampling_rate = 8
@@ -234,8 +255,12 @@ class Conv2dSubsampling8(BaseSubsampling):
             torch.Tensor: positional encoding
         """
         x = x.unsqueeze(1)  # (b, c, t, f)
+        if self.quantize:
+            x = self.quant(x)
         x = self.conv(x)
         b, c, t, f = x.size()
         x = self.linear(x.transpose(1, 2).contiguous().view(b, t, c * f))
+        if self.quantize:
+            x = self.dequant(x)
         x, pos_emb = self.pos_enc(x, offset)
         return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-2:2][:, :, :-2:2]

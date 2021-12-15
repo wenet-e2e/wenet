@@ -55,8 +55,6 @@ def restore_qat_model(model: torch.nn.Module, path: str) -> dict:
             qlayer_dict[prefix] = 'qlinear'
         elif isinstance(v, torch.nn.Conv1d):
             qlayer_dict[prefix] = 'qconv1d'
-        elif isinstance(v, torch.nn.Conv2d):
-            qlayer_dict[prefix] = 'qconv2d'
 
     quant_state_dict = {}
     for k,v in state_dict.items():
