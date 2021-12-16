@@ -240,6 +240,11 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   # Polling GPU id begin with index 0
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   idx=0
+  #decode_modes1="ctc_greedy_search attention" # TODO better for batch_size=16 or 32
+  #decode_modes2="attention_rescoring ctc_prefix_beam_search" # TODO must for batch_size=1
+  #
+  #for test in $recog_set; do
+  #for test in test1; do
   for test in $recog_set; do
     for mode in ${decode_modes}; do
     {
@@ -254,7 +259,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
           --test_data $wave_data/$test/data.list \
           --checkpoint $decode_checkpoint \
           --beam_size 10 \
-          --batch_size 16 \
+          --batch_size 1 \
           --penalty 0.0 \
           --dict $dict \
           --result_file $test_dir/text_bpe \
