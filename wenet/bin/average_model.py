@@ -60,7 +60,7 @@ def main():
             for epoch in sorted_val_scores[:args.num, 0]
         ]
     else:
-        path_list = glob.glob('{}/[!avg][!final]*.pt'.format(args.src_path))
+        path_list = glob.glob('{}/[0-9]*.pt'.format(args.src_path))
         path_list = sorted(path_list, key=os.path.getmtime)
         path_list = path_list[-args.num:]
     print(path_list)
