@@ -26,8 +26,11 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 #stage=6 # make "data.list" files
 #stop_stage=6 # 
 
-stage=7 # train
-stop_stage=7 # 
+#stage=7 # train -> 50 epochs
+#stop_stage=7 # 
+
+stage=8 # train -> 50 epochs
+stop_stage=8 # 
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -50,7 +53,7 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 #average_num=10
-average_num=2
+average_num=10
 decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
 
 . tools/parse_options.sh || exit 1;
@@ -213,11 +216,9 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   wait
 fi
 
-exit 0
-
 ### 测试模型 ###
 
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   # Test model, please specify the model you want to test by --checkpoint
   cmvn_opts=
   $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
@@ -253,7 +254,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
           --test_data $wave_data/$test/data.list \
           --checkpoint $decode_checkpoint \
           --beam_size 10 \
-          --batch_size 1 \
+          --batch_size 16 \
           --penalty 0.0 \
           --dict $dict \
           --result_file $test_dir/text_bpe \
@@ -278,10 +279,9 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     done
   done
   wait
-
 fi
 
-
+exit 0
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
   # Export the best model you want
@@ -292,7 +292,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
 fi
 
 # Optionally, you can add LM and test it with runtime.
-if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
+if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
   lm=data/local/lm
   lexicon=data/local/dict/lexicon.txt
   mkdir -p $lm
