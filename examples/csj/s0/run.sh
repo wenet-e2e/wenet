@@ -60,7 +60,7 @@ recog_set="test1 test2 test3"
 
 ### data preparing - split xml by sentences ###
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-  ### I did not check espnet nor kaldi for the pre-processing, 
+  ### I did not check espnet nor kaldi for the pre-processing,
   ### I developed my own ways. so, use at your own risks.
   echo "stage 1: Data preparation -> xml preprocessing "
   echo "  -> extract [start.time, end.time, text] from raw xml files"
@@ -148,7 +148,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     --model_type=${bpemode} \
     --model_prefix=${bpemodel} \
     --input_sentence_size=100000000
-  
+
   tools/spm_encode \
     --model=${bpemodel}.model \
     --output_format=piece < $wave_data/lang_char/input.txt | \
@@ -230,7 +230,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   fi
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
-  decoding_chunk_size=-1 
+  decoding_chunk_size=-1
   ctc_weight=0.5
   # Polling GPU id begin with index 0
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
