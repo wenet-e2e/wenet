@@ -92,7 +92,8 @@ def gen_wav_scp(xmllist, wavlist, outpath):
     outwavscpfn = os.path.join(outpath, 'wav.scp')
     with open(outwavscpfn, 'w') as bw:
         for wav in wavlist:
-            # wav is alike "/workspace/asr/wenet/examples/csj/s0/data/wav/S04F1228.wav_00458.875_00459.209.wav"
+            # wav is alike "/workspace/asr/wenet/examples/csj/s0/data
+            # /wav/S04F1228.wav_00458.875_00459.209.wav"
             aid = wav.split('/')[-1]
             cols = aid.split('_')
 
@@ -110,7 +111,8 @@ def gen_wav_scp(xmllist, wavlist, outpath):
             bw.write(aoutline)
 
 
-def prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath, out1path, out2path, out3path):
+def prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, 
+        outtrainpath, out1path, out2path, out3path):
     # xmlpath = alike "/workspace/asr/wenet/examples/csj/s0/data/xml"
     # wavpath = alike "/workspace/asr/wenet/examples/csj/s0/data/xml"
 
@@ -123,7 +125,8 @@ def prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath, 
     # out2path = "/workspace/asr/wenet/examples/csj/s0/data/test2"
     # out3path = "/workspace/asr/wenet/examples/csj/s0/data/test3"
 
-    trainlist, t1list, t2list, t3list = split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn)
+    trainlist, t1list, t2list, t3list = split_train_tests_xml(xmlpath, 
+            test1fn, test2fn, test3fn)
     wavlist = all_wavs(wavpath)
 
     gen_text(trainlist, outtrainpath)
@@ -138,7 +141,9 @@ def prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath, 
 
 if __name__ == '__main__':
     if len(sys.argv) < 10:
-        print("Usage: {} <xmlpath> <wavpath> <test1fn> <test2fn> <test3fn> <outtrainpath> <out1path> <out2path> <out3path>".format(sys.argv[0]))
+        print("Usage: {}".format(sys.argv[0]) + "<xmlpath> " + 
+            "<wavpath> <test1fn> <test2fn> <test3fn> " + 
+            "<outtrainpath> <out1path> <out2path> <out3path>")
         exit(1)
 
     xmlpath = sys.argv[1]

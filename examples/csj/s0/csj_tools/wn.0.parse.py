@@ -65,7 +65,9 @@ def parsexml(afile, outpath):
 
             lemmasent = ' '.join(lemmalist)
             dictlemmasent = ' '.join(dictlemmalist)
-            outrow = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(starttime, endtime, txtsent, plaintxtsent, prontxtsent, lemmasent, dictlemmasent)
+            outrow = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
+                    starttime, endtime, txtsent, plaintxtsent, 
+                    prontxtsent, lemmasent, dictlemmasent)
             bw.write(outrow)
 
 def procfolder_orig(apath, outpath):
@@ -99,7 +101,8 @@ def procfolder(apath, outpath):
                 pool.apply_async(parsexml, (afile, outpath))
         pool.close()
         pool.join()
-    print('parallel {} threads done for {} files in total.'.format(nthreads, len(fnlist)))
+    print('parallel {} threads done for {} files in total.'.format(
+        nthreads, len(fnlist)))
 
 if __name__ == '__main__':
     # afile='XML/BaseXML/core/A01F0055.xml'

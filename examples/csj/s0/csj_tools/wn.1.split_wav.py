@@ -37,7 +37,8 @@ def ch2to1(f1, outf1):
     # print('2ch to 1ch, {} -> {}'.format(f1, outf1))
     acmd = 'mv {} {}'.format(outf1, f1)
     res = os.system(acmd)
-    # rename the .1ch file back to the .wav file and overwrite the old .wav file which is 2ch
+    # rename the .1ch file back to the .wav file and 
+    # overwrite the old .wav file which is 2ch
     # print(res, acmd)
 
 def proc1file(fullxmlfn, fullwavfn, outwavpath):
@@ -54,7 +55,8 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
 
             basename = fullwavfn.split('/')[-1]
 
-            partwavfn = os.path.join(outwavpath, '{}_{}_{}.wav'.format(basename, stime, etime))
+            partwavfn = os.path.join(outwavpath, 
+                    '{}_{}_{}.wav'.format(basename, stime, etime))
 
             dur = float(etime) - float(stime)
             acmd = 'sox {} {} trim {} {}'.format(fullwavfn, partwavfn, stime, dur)
@@ -69,7 +71,8 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
 def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
     # atag = 'core' and 'noncore'
     axmlpath = xmlsimppath
-    # '/raid/xianchaow/asr/csj/XML/BaseXML/core' if apath=='core' else '/raid/xianchaow/asr/csj/XML/BaseXML/noncore'
+    # '/raid/xianchaow/asr/csj/XML/BaseXML/core' if apath=='core' 
+    # else '/raid/xianchaow/asr/csj/XML/BaseXML/noncore'
     awavpath = os.path.join(csjpath, atag)
 
     xmldict = xmlfn(axmlpath)
@@ -85,7 +88,8 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
             if i + j < len(wavidlist):
                 wavid = wavidlist[i + j]
                 if len(idset) > 0 and wavid not in idset:
-                    # when idset is not empty, then only process the ids that are included in idset:
+                    # when idset is not empty, then only process the ids 
+                    # that are included in idset:
                     continue
 
                 fullwavfn = wavdict[wavid]
@@ -100,7 +104,8 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
-        print("Usage: {} <in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]".format(sys.argv[0]))
+        print("Usage: {} <in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]".format(
+            sys.argv[0]))
         exit(1)
 
     csjpath = sys.argv[1]
