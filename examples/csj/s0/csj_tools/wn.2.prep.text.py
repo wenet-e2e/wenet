@@ -16,10 +16,10 @@ def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
     test2list = readtst(test2fn)
     test3list = readtst(test3fn)
 
-    #test123set = set(test1list + test2list + test3list)
+    # test123set = set(test1list + test2list + test3list)
 
-    outtrainlist = list() # full path ".xml.simp" files
-    outt1list = list() # test 1, full path ".xml.simp" files
+    outtrainlist = list()  # full path ".xml.simp" files
+    outt1list = list()  # test 1, full path ".xml.simp" files
     outt2list = list()
     outt3list = list()
 
@@ -27,7 +27,6 @@ def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
     for afile in os.listdir(xmlpath):
         if not afile.endswith('.xml.simp'):
             continue
-        
         afile2 = xmlpath + '/' + afile
         aid = afile.split('.')[0]
         if aid in test1list:
@@ -66,7 +65,7 @@ def gen_text(xmllist, outpath):
                     # stime \t etime \t text1 \t text2 \t text3 \t text4 \t text5
                     cols = aline.split('\t')
                     # TODO different between "< 7" and "< 4"? strange
-                    if len(cols) < 4: 
+                    if len(cols) < 4:
                         continue
 
                     stime = cols[0]
@@ -74,7 +73,6 @@ def gen_text(xmllist, outpath):
                     atxt = cols[3].replace(' ', '')
 
                     afullid = '{}_{}_{}'.format(aid2, stime, etime)
-                    
                     aoutline = '{}\t{}\n'.format(afullid, atxt)
                     bw.write(aoutline)
 
@@ -99,7 +97,7 @@ def gen_wav_scp(xmllist, wavlist, outpath):
             cols = aid.split('_')
 
             aid2 = cols[0].split('.')[0]
-            if not aid2 in xmlset:
+            if aid2 not in xmlset:
                 continue
 
             stime = cols[1]
@@ -108,7 +106,6 @@ def gen_wav_scp(xmllist, wavlist, outpath):
             afullid = '{}_{}_{}'.format(aid2, stime, etime)
 
             wavabspath = os.path.abspath(wav)
-            
             aoutline = '{}\t{}\n'.format(afullid, wavabspath)
             bw.write(aoutline)
 
@@ -127,7 +124,6 @@ def prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath, 
     # out3path = "/workspace/asr/wenet/examples/csj/s0/data/test3"
 
     trainlist, t1list, t2list, t3list = split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn)
-    
     wavlist = all_wavs(wavpath)
 
     gen_text(trainlist, outtrainpath)
@@ -140,7 +136,6 @@ def prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath, 
     gen_wav_scp(t2list, wavlist, out2path)
     gen_wav_scp(t3list, wavlist, out3path)
 
-    
 if __name__ == '__main__':
     if len(sys.argv) < 10:
         print("Usage: {} <xmlpath> <wavpath> <test1fn> <test2fn> <test3fn> <outtrainpath> <out1path> <out2path> <out3path>".format(sys.argv[0]))
@@ -158,4 +153,3 @@ if __name__ == '__main__':
     out3path = sys.argv[9]
 
     prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath, out1path, out2path, out3path)
-

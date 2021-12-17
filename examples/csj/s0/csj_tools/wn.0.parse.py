@@ -1,14 +1,14 @@
 
 # parse xml files and output simplified version
 
-from xml.dom.minidom import parse
+# from xml.dom.minidom import parse
 import xml.dom.minidom
 import os
 import sys
 import multiprocessing
 
 
-#afile='XML/BaseXML/core/A01F0055.xml'
+# afile='XML/BaseXML/core/A01F0055.xml'
 def parsexml(afile, outpath):
     outfile = os.path.join(outpath, afile.split('/')[-1] + '.simp')
 
@@ -25,16 +25,16 @@ def parsexml(afile, outpath):
             if ipu.hasAttribute('IPUEndTime'):
                 endtime = ipu.getAttribute('IPUEndTime')
 
-            #print('{}\t{}'.format(starttime, endtime))
-            ### original format ###
+            # print('{}\t{}'.format(starttime, endtime))
+            #  ## original format ###
             wlist = list()
             plainwlist = list()
             pronlist = list()
 
-            ### pronunciation ###
-            lemmalist = list() # lemma list
-            dictlemmalist = list() # dict lemma list
-            for suw in ipu.getElementsByTagName('SUW'): # short unit word
+            #  ## pronunciation ###
+            lemmalist = list()  # lemma list
+            dictlemmalist = list()  # dict lemma list
+            for suw in ipu.getElementsByTagName('SUW'):  # short unit word
                 txt = ''
                 plaintxt = ''
                 # PhoneticTranscription
@@ -46,7 +46,6 @@ def parsexml(afile, outpath):
                     plaintxt = suw.getAttribute('PlainOrthographicTranscription')
                 if suw.hasAttribute('PhoneticTranscription'):
                     prontxt = suw.getAttribute('PhoneticTranscription')
-                
                 wlist.append(txt)
                 plainwlist.append(plaintxt)
                 pronlist.append(prontxt)
@@ -60,14 +59,12 @@ def parsexml(afile, outpath):
                     dictlemma = suw.getAttribute('SUWDictionaryForm')
                 lemmalist.append(lemma)
                 dictlemmalist.append(dictlemma)
-            
             txtsent = ' '.join(wlist)
             plaintxtsent = ' '.join(plainwlist)
             prontxtsent = ' '.join(pronlist)
 
             lemmasent = ' '.join(lemmalist)
             dictlemmasent = ' '.join(dictlemmalist)
-            
             outrow = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(starttime, endtime, txtsent, plaintxtsent, prontxtsent, lemmasent, dictlemmasent)
             bw.write(outrow)
 
@@ -76,48 +73,45 @@ def procfolder_orig(apath, outpath):
     for afile in os.listdir(apath):
         if not afile.endswith('.xml'):
             continue
-        
         afile = os.path.join(apath, afile)
         parsexml(afile, outpath)
         count += 1
         print('done: {} [{}]'.format(afile, count))
 
 def procfolder(apath, outpath):
-    #count = 0
+    # count = 0
     fnlist = list()
     for afile in os.listdir(apath):
         if not afile.endswith('.xml'):
             continue
         fnlist.append(afile)
-    
     # now parallel processing:
     nthreads = 16
     for i in range(0, len(fnlist), nthreads):
         # fnlist[i, i+16]
         pool = multiprocessing.Pool(processes=nthreads)
         for j in range(nthreads):
-            if i+j < len(fnlist):
-                afile = os.path.join(apath, fnlist[i+j])
-                #parsexml(afile, outpath)
-                #count += 1
-                #print('done: {} [{}]'.format(afile, count))
+            if i + j < len(fnlist):
+                afile = os.path.join(apath, fnlist[i + j])
+                # parsexml(afile, outpath)
+                # count += 1
+                # print('done: {} [{}]'.format(afile, count))
                 pool.apply_async(parsexml, (afile, outpath))
         pool.close()
         pool.join()
     print('parallel {} threads done for {} files in total.'.format(nthreads, len(fnlist)))
 
 if __name__ == '__main__':
-    #afile='XML/BaseXML/core/A01F0055.xml'
+    # afile='XML/BaseXML/core/A01F0055.xml'
     if len(sys.argv) < 3:
         print("Usage: {} <in.csj.path> <out.csj.path>".format(sys.argv[0]))
         exit(1)
-    
-    #csjpath='/workspace/asr/csj/'
+    # csjpath='/workspace/asr/csj/'
     csjpath = sys.argv[1]
     outcsjpath = sys.argv[2]
 
-    apath=os.path.join(csjpath, 'XML/BaseXML/core')
-    apath2=os.path.join(csjpath, 'XML/BaseXML/noncore')
+    apath = os.path.join(csjpath, 'XML/BaseXML/core')
+    apath2 = os.path.join(csjpath, 'XML/BaseXML/noncore')
 
     outapath = os.path.join(outcsjpath, 'xml')
     # create the "outapath" dir:
@@ -129,6 +123,5 @@ if __name__ == '__main__':
     procfolder(apath2, outapath)
 
     # for debug only, NOTE
-    #afile='XML/BaseXML/noncore/A01M0716.xml'
-    #parsexml(afile)
-
+    # afile='XML/BaseXML/noncore/A01M0716.xml'
+    # parsexml(afile)

@@ -47,14 +47,14 @@ if __name__ == '__main__':
             key = arr[0]
             txt = arr[1] if len(arr) > 1 else ''
             if args.segments is None:
-                #assert key in wav_table
+                # assert key in wav_table
                 if key in wav_table:
                     wav = wav_table[key]
                     line = dict(key=key, wav=wav, txt=txt)
                 else:
                     line = None
             else:
-                #assert key in segments_table
+                # assert key in segments_table
                 if key in segments_table:
                     wav_key, start, end = segments_table[key]
                     wav = wav_table[wav_key]
@@ -64,4 +64,3 @@ if __name__ == '__main__':
             if line:
                 json_line = json.dumps(line, ensure_ascii=False)
                 fout.write(json_line + '\n')
-
