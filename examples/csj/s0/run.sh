@@ -38,7 +38,6 @@ dir=exp/sp_spec_aug # model's dir (output dir)
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
-#average_num=10
 average_num=10
 decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
 
@@ -102,9 +101,9 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   mkdir -p $outt3
 
   python ./csj_tools/wn.2.prep.text.py \
-	  ${xml_simp_path} ${wav_split_path} \
-	  $t1fn $t2fn $t3fn \
-	  $outtrain $outt1 $outt2 $outt3
+    ${xml_simp_path} ${wav_split_path} \
+    $t1fn $t2fn $t3fn \
+    $outtrain $outt1 $outt2 $outt3
 fi
 
 minsec=0.1
@@ -144,18 +143,16 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # we borrowed these code and scripts which are related bpe from ESPnet.
   cut -f 2- -d" " $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
   tools/spm_train \
-	  --input=$wave_data/lang_char/input.txt \
-	  --vocab_size=${nbpe} \
-	  --model_type=${bpemode} \
-	  --model_prefix=${bpemodel} \
-	  --input_sentence_size=100000000
+    --input=$wave_data/lang_char/input.txt \
+    --vocab_size=${nbpe} \
+    --model_type=${bpemode} \
+    --model_prefix=${bpemodel} \
+    --input_sentence_size=100000000
   
   tools/spm_encode \
-	  --model=${bpemodel}.model \
-	  --output_format=piece \
-	  < $wave_data/lang_char/input.txt | \
-	  tr ' ' '\n' | sort | uniq | \
-	  awk '{print $0 " " NR+1}' >> ${dict}
+    --model=${bpemodel}.model \
+    --output_format=piece < $wave_data/lang_char/input.txt | \
+    tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
   num_token=$(cat $dict | wc -l)
   echo "<sos/eos> $num_token" >> $dict # <eos>
   wc -l ${dict}
@@ -221,7 +218,6 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   # Test model, please specify the model you want to test by --checkpoint
   cmvn_opts=
   $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
-  # TODO, Add model average here
   mkdir -p $dir/test
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
@@ -239,11 +235,6 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   # Polling GPU id begin with index 0
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   idx=0
-  #decode_modes1="ctc_greedy_search attention" # TODO better for batch_size=16 or 32
-  #decode_modes2="attention_rescoring ctc_prefix_beam_search" # TODO must for batch_size=1
-  #
-  #for test in $recog_set; do
-  #for test in test1; do
   for test in $recog_set; do
     for mode in ${decode_modes}; do
     {
@@ -283,63 +274,5 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
     done
   done
   wait
-fi
-
-exit 0
-
-if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
-  # Export the best model you want
-  python wenet/bin/export_jit.py \
-    --config $dir/train.yaml \
-    --checkpoint $dir/avg_${average_num}.pt \
-    --output_file $dir/final.zip
-fi
-
-# Optionally, you can add LM and test it with runtime.
-if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
-  lm=data/local/lm
-  lexicon=data/local/dict/lexicon.txt
-  mkdir -p $lm
-  mkdir -p data/local/dict
-
-  # 7.1 Download & format LM
-  which_lm=3-gram.pruned.1e-7.arpa.gz
-  if [ ! -e ${lm}/${which_lm} ]; then
-    wget http://www.openslr.org/resources/11/${which_lm} -P ${lm}
-  fi
-  echo "unzip lm($which_lm)..."
-  gunzip -k ${lm}/${which_lm} -c > ${lm}/lm.arpa
-  echo "Lm saved as ${lm}/lm.arpa"
-
-  # 7.2 Prepare dict
-  unit_file=$dict
-  bpemodel=$bpemodel
-  # use $dir/words.txt (unit_file) and $dir/train_960_unigram5000 (bpemodel)
-  # if you download pretrained librispeech conformer model
-  cp $unit_file data/local/dict/units.txt
-  if [ ! -e ${lm}/librispeech-lexicon.txt ]; then
-    wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P ${lm}
-  fi
-  echo "build lexicon..."
-  tools/fst/prepare_dict.py $unit_file ${lm}/librispeech-lexicon.txt \
-    $lexicon $bpemodel.model
-  echo "lexicon saved as '$lexicon'"
-
-  # 7.3 Build decoding TLG
-  tools/fst/compile_lexicon_token_fst.sh \
-     data/local/dict data/local/tmp data/local/lang
-  tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
-
-  # 7.4 Decoding with runtime
-  fst_dir=data/lang_test
-  for test in ${recog_set}; do
-    ./tools/decode.sh --nj 6 \
-      --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
-      --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
-      --fst_path $fst_dir/TLG.fst \
-      data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
-      $dir/lm_with_runtime_${test}
-    tail $dir/lm_with_runtime_${test}/wer
-  done
 fi
 

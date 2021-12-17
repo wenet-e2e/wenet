@@ -16,8 +16,6 @@ def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
     test2list = readtst(test2fn)
     test3list = readtst(test3fn)
 
-    # test123set = set(test1list + test2list + test3list)
-
     outtrainlist = list()  # full path ".xml.simp" files
     outt1list = list()  # test 1, full path ".xml.simp" files
     outt2list = list()
@@ -64,6 +62,7 @@ def gen_text(xmllist, outpath):
                     # stime \t etime \t text1 \t text2 \t text3 \t text4 \t text5
                     cols = aline.split('\t')
                     # TODO different between "< 7" and "< 4"? strange
+                    # -> use "< 4", DO NOT use "< 7" !
                     if len(cols) < 4:
                         continue
 

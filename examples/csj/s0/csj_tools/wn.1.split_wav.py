@@ -70,8 +70,6 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
 def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
     # atag = 'core' and 'noncore'
     axmlpath = xmlsimppath
-    # '/raid/xianchaow/asr/csj/XML/BaseXML/core' if apath=='core'
-    # else '/raid/xianchaow/asr/csj/XML/BaseXML/noncore'
     awavpath = os.path.join(csjpath, atag)
 
     xmldict = xmlfn(axmlpath)
@@ -94,7 +92,6 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
                 fullwavfn = wavdict[wavid]
                 if wavid in xmldict:
                     fullxmlfn = xmldict[wavid]
-                    # proc1file(fullxmlfn, fullwavfn)
                     pool.apply_async(proc1file, (fullxmlfn, fullwavfn, outwavpath))
         pool.close()
         pool.join()

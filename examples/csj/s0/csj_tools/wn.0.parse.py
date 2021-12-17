@@ -1,7 +1,6 @@
 
 # parse xml files and output simplified version
 
-# from xml.dom.minidom import parse
 import xml.dom.minidom
 import os
 import sys
@@ -93,9 +92,6 @@ def procfolder(apath, outpath):
         for j in range(nthreads):
             if i + j < len(fnlist):
                 afile = os.path.join(apath, fnlist[i + j])
-                # parsexml(afile, outpath)
-                # count += 1
-                # print('done: {} [{}]'.format(afile, count))
                 pool.apply_async(parsexml, (afile, outpath))
         pool.close()
         pool.join()
@@ -103,11 +99,10 @@ def procfolder(apath, outpath):
         nthreads, len(fnlist)))
 
 if __name__ == '__main__':
-    # afile='XML/BaseXML/core/A01F0055.xml'
     if len(sys.argv) < 3:
         print("Usage: {} <in.csj.path> <out.csj.path>".format(sys.argv[0]))
         exit(1)
-    # csjpath='/workspace/asr/csj/'
+    # e.g., csjpath='/workspace/asr/csj/'
     csjpath = sys.argv[1]
     outcsjpath = sys.argv[2]
 
