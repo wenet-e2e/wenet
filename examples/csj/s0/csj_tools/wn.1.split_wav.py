@@ -8,7 +8,6 @@ import librosa
 import soundfile as sf
 
 # use .simp as the source for .wav file splitting
-
 def wavfn(apath):
     wavdict = dict()  # key=id, value=full.path of .wav
     for awavfn in os.listdir(apath):

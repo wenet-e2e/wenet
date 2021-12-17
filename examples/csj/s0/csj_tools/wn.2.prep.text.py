@@ -23,7 +23,6 @@ def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
     outt2list = list()
     outt3list = list()
 
-
     for afile in os.listdir(xmlpath):
         if not afile.endswith('.xml.simp'):
             continue
@@ -114,17 +113,6 @@ def gen_wav_scp(xmllist, wavlist, outpath):
 def prep_text_wavscp(
         xmlpath, wavpath, test1fn, test2fn, test3fn,
         outtrainpath, out1path, out2path, out3path):
-    # xmlpath = alike "/workspace/asr/wenet/examples/csj/s0/data/xml"
-    # wavpath = alike "/workspace/asr/wenet/examples/csj/s0/data/xml"
-
-    # test1fn = "/workspace/asr/wenet/examples/csj/s0/test.set.1.list"
-    # test2fn = "/workspace/asr/wenet/examples/csj/s0/test.set.2.list"
-    # test3fn = "/workspace/asr/wenet/examples/csj/s0/test.set.3.list"
-
-    # outtrainpath = "/workspace/asr/wenet/examples/csj/s0/data/train"
-    # out1path = "/workspace/asr/wenet/examples/csj/s0/data/test1"
-    # out2path = "/workspace/asr/wenet/examples/csj/s0/data/test2"
-    # out3path = "/workspace/asr/wenet/examples/csj/s0/data/test3"
 
     trainlist, t1list, t2list, t3list = split_train_tests_xml(
         xmlpath,

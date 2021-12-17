@@ -8,28 +8,15 @@
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 
-#stage=1 # xml split by sentences
-#stop_stage=1 #
+# 1. xml split by sentences
+# 2. wav split by xml.simp's guidance
+# 3. generate "text" and "wav.scp" files as required by wenet
+# 4. compute cmvn, better wav.len >= 0.1s, otherwise bug happens...
+# 5. sentence piece's bpe vocabulary
+# 6. make "data.list" files
+# 7. train -> 50 epochs
 
-#stage=2 # wav split by xml.simp's guidance
-#stop_stage=2 #
-
-#stage=3 # generate "text" and "wav.scp" files as required by wenet
-#stop_stage=3 #
-
-#stage=4 # compute cmvn, better wav.len >= 0.1s, otherwise bug happens...
-#stop_stage=4 #
-
-#stage=5 # sentence piece's bpe vocabulary
-#stop_stage=5 #
-
-#stage=6 # make "data.list" files
-#stop_stage=6 #
-
-#stage=7 # train -> 50 epochs
-#stop_stage=7 #
-
-stage=8 # train -> 50 epochs
+stage=1 # train -> 50 epochs
 stop_stage=8 #
 
 # data
@@ -40,7 +27,6 @@ datadir=/workspace/asr/csj
 # output wav data dir
 wave_data=data # wave file path
 # Optional train_config
-# 1. conf/train_transformer_large.yaml: Standard transformer
 train_config=conf/train_conformer.yaml
 checkpoint=
 cmvn=true # cmvn is for mean, variance, frame_number statistics
@@ -59,24 +45,26 @@ decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search atten
 . tools/parse_options.sh || exit 1;
 
 # bpemode (unigram or bpe)
-nbpe=4096 # TODO
-bpemode=bpe #unigram # TODO
+nbpe=4096 # TODO -> you can change this value to 5000, 100000 and so on
+bpemode=bpe #unigram # TODO -> you can use unigram and other methods
 
-set -e # 如果任何语句的执行结果不是true，则bash退出
-set -u # 脚本遇到错误时停止，并指出错误的行数信息
-set -o pipefail # 整体脚本的返回值，会变成最后一个返回非零的管道命令的返回值。
+set -e # if any line's exex result is not true, bash stops
+set -u # show the error line when stops (failed)
+set -o pipefail # return value of the whole bash = final line executed's result
 
 train_set=train
 dev_set=dev
 recog_set="test1 test2 test3"
 
-### CSJ数据集合不是免费的
-# 购买地址：https://ccd.ninjal.ac.jp/csj/en/
+### CSJ data is not free!
+# buying URL: https://ccd.ninjal.ac.jp/csj/en/
 
-### 数据准备- split xml by sentences ###
+### data preparing - split xml by sentences ###
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-  ### I did not check espnet nor kaldi for the pre-processing, I developed my own ways. so, use at your own risks.
-  echo "stage 1: Data preparation -> xml preprocessing -> extract [start.time, end.time, text] from raw xml files"
+  ### I did not check espnet nor kaldi for the pre-processing, 
+  ### I developed my own ways. so, use at your own risks.
+  echo "stage 1: Data preparation -> xml preprocessing "
+  echo "  -> extract [start.time, end.time, text] from raw xml files"
   python ./csj_tools/wn.0.parse.py $datadir ${wave_data}
 fi
 
@@ -86,20 +74,17 @@ xml_simp_path=${wave_data}/xml
 wav_split_path=${wave_data}/wav
 mkdir -p ${wav_split_path}
 
-### 数据准备- split wav by xml.simp's guidance ###
+### data preparing - split wav by xml.simp's guidance ###
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-  ### I did not check espnet nor kaldi for the pre-processing, I developed my own ways. so, use at your own risks.
-  echo "stage 2: Data preparation -> wav preprocessing -> split wav file by xml.simp's [start.time, end.time, text] format"
+  echo "stage 2: Data preparation -> wav preprocessing "
+  echo "  -> split wav file by xml.simp's [start.time, end.time, text] format"
   # in addition, 2ch to 1ch!
 
-  #id2chfn="2ch.id.list"
-  #python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path} $id2chfn
   python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path}
 fi
 
-### 数据准备- generate "text" and "wav.scp" files ###
+### data preparing - generate "text" and "wav.scp" files ###
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  ### I did not check espnet nor kaldi for the pre-processing, I developed my own ways. so, use at your own risks.
   echo "stage 3: prepare text and wav.scp for train/test1/test2/test3 from wav and xml folders"
 
   t1fn='test.set.1.list'
@@ -116,15 +101,18 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   mkdir -p $outt2
   mkdir -p $outt3
 
-  python ./csj_tools/wn.2.prep.text.py ${xml_simp_path} ${wav_split_path} $t1fn $t2fn $t3fn $outtrain $outt1 $outt2 $outt3
+  python ./csj_tools/wn.2.prep.text.py \
+	  ${xml_simp_path} ${wav_split_path} \
+	  $t1fn $t2fn $t3fn \
+	  $outtrain $outt1 $outt2 $outt3
 fi
 
 minsec=0.1
 
-### 统计一些信息，mean, variance, frame_num ###
+### compute static info: mean, variance, frame_num ###
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo "stage 4: Feature Generation"
-  # TODO failed...
+  # TODO if failed, then please make sure your wav files are all >= 0.1s ...
 
   mkdir -p $wave_data/dev
   # merge total dev data
@@ -141,7 +129,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     --out_cmvn $wave_data/$train_set/global_cmvn
 fi
 
-### 用sentence piece来构造subword的词典 ###
+### use sentence piece to construct subword vocabulary ###
 dict=$wave_data/lang_char/${train_set}_${bpemode}${nbpe}_units.txt
 bpemodel=$wave_data/lang_char/${train_set}_${bpemode}${nbpe}
 echo "dictionary: ${dict}"
@@ -155,8 +143,19 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
 
   # we borrowed these code and scripts which are related bpe from ESPnet.
   cut -f 2- -d" " $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
-  tools/spm_train --input=$wave_data/lang_char/input.txt --vocab_size=${nbpe} --model_type=${bpemode} --model_prefix=${bpemodel} --input_sentence_size=100000000
-  tools/spm_encode --model=${bpemodel}.model --output_format=piece < $wave_data/lang_char/input.txt | tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
+  tools/spm_train \
+	  --input=$wave_data/lang_char/input.txt \
+	  --vocab_size=${nbpe} \
+	  --model_type=${bpemode} \
+	  --model_prefix=${bpemodel} \
+	  --input_sentence_size=100000000
+  
+  tools/spm_encode \
+	  --model=${bpemodel}.model \
+	  --output_format=piece \
+	  < $wave_data/lang_char/input.txt | \
+	  tr ' ' '\n' | sort | uniq | \
+	  awk '{print $0 " " NR+1}' >> ${dict}
   num_token=$(cat $dict | wc -l)
   echo "<sos/eos> $num_token" >> $dict # <eos>
   wc -l ${dict}
@@ -176,7 +175,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
   done
 fi
 
-### 开启训练的大门了 ###
+### Training! ###
 
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # Training
@@ -216,7 +215,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   wait
 fi
 
-### 测试模型 ###
+### test model ###
 
 if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   # Test model, please specify the model you want to test by --checkpoint
@@ -235,7 +234,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   fi
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
-  decoding_chunk_size=-1 # TODO for what?
+  decoding_chunk_size=-1 
   ctc_weight=0.5
   # Polling GPU id begin with index 0
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
@@ -288,7 +287,7 @@ fi
 
 exit 0
 
-if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
+if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
   # Export the best model you want
   python wenet/bin/export_jit.py \
     --config $dir/train.yaml \
@@ -297,7 +296,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
 fi
 
 # Optionally, you can add LM and test it with runtime.
-if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
+if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
   lm=data/local/lm
   lexicon=data/local/dict/lexicon.txt
   mkdir -p $lm

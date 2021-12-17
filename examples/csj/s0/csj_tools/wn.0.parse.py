@@ -7,8 +7,6 @@ import os
 import sys
 import multiprocessing
 
-
-# afile='XML/BaseXML/core/A01F0055.xml'
 def parsexml(afile, outpath):
     outfile = os.path.join(outpath, afile.split('/')[-1] + '.simp')
 
@@ -124,7 +122,3 @@ if __name__ == '__main__':
     # range over the following two folders:
     procfolder(apath, outapath)
     procfolder(apath2, outapath)
-
-    # for debug only, NOTE
-    # afile='XML/BaseXML/noncore/A01M0716.xml'
-    # parsexml(afile)
