@@ -55,8 +55,8 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
 
             basename = fullwavfn.split('/')[-1]
 
-            partwavfn = os.path.join(outwavpath, 
-                    '{}_{}_{}.wav'.format(basename, stime, etime))
+            name2 = '{}_{}_{}.wav'.format(basename, stime, etime)
+            partwavfn = os.path.join(outwavpath, name2)
 
             dur = float(etime) - float(stime)
             acmd = 'sox {} {} trim {} {}'.format(fullwavfn, partwavfn, stime, dur)
@@ -100,12 +100,15 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
         pool.close()
         pool.join()
 
-    print('parallel {} threads done for {} files in total.'.format(nthreads, len(wavidlist)))
+    print('parallel {} threads done for {} files.'.format(
+        nthreads, 
+        len(wavidlist)))
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
-        print("Usage: {} <in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]".format(
-            sys.argv[0]))
+        print(
+            "Usage: {}".format(sys.argv[0]) + 
+            "<in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]")
         exit(1)
 
     csjpath = sys.argv[1]
