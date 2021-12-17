@@ -86,9 +86,9 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   echo "stage 3: prepare text and wav.scp for train/test1/test2/test3 from wav and xml folders"
 
-  t1fn='test.set.1.list'
-  t2fn='test.set.2.list'
-  t3fn='test.set.3.list'
+  t1fn='list_files/test.set.1.list'
+  t2fn='list_files/test.set.2.list'
+  t3fn='list_files/test.set.3.list'
 
   outtrain=${wave_data}/train
   outt1=${wave_data}/test1
