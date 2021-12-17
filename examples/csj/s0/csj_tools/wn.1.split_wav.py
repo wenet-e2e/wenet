@@ -37,7 +37,7 @@ def ch2to1(f1, outf1):
     # print('2ch to 1ch, {} -> {}'.format(f1, outf1))
     acmd = 'mv {} {}'.format(outf1, f1)
     res = os.system(acmd)
-    # rename the .1ch file back to the .wav file and 
+    # rename the .1ch file back to the .wav file and
     # overwrite the old .wav file which is 2ch
     # print(res, acmd)
 
@@ -71,7 +71,7 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
 def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
     # atag = 'core' and 'noncore'
     axmlpath = xmlsimppath
-    # '/raid/xianchaow/asr/csj/XML/BaseXML/core' if apath=='core' 
+    # '/raid/xianchaow/asr/csj/XML/BaseXML/core' if apath=='core'
     # else '/raid/xianchaow/asr/csj/XML/BaseXML/noncore'
     awavpath = os.path.join(csjpath, atag)
 
@@ -88,7 +88,7 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
             if i + j < len(wavidlist):
                 wavid = wavidlist[i + j]
                 if len(idset) > 0 and wavid not in idset:
-                    # when idset is not empty, then only process the ids 
+                    # when idset is not empty, then only process the ids
                     # that are included in idset:
                     continue
 
@@ -101,13 +101,13 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
         pool.join()
 
     print('parallel {} threads done for {} files.'.format(
-        nthreads, 
+        nthreads,
         len(wavidlist)))
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print(
-            "Usage: {}".format(sys.argv[0]) + 
+            "Usage: {}".format(sys.argv[0]) +
             "<in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]")
         exit(1)
 

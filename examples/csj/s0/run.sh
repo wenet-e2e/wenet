@@ -8,29 +8,29 @@
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 
-#stage=1 # xml split by sentences  
-#stop_stage=1 # 
+#stage=1 # xml split by sentences
+#stop_stage=1 #
 
-#stage=2 # wav split by xml.simp's guidance  
-#stop_stage=2 # 
+#stage=2 # wav split by xml.simp's guidance
+#stop_stage=2 #
 
-#stage=3 # generate "text" and "wav.scp" files as required by wenet  
-#stop_stage=3 # 
+#stage=3 # generate "text" and "wav.scp" files as required by wenet
+#stop_stage=3 #
 
-#stage=4 # compute cmvn, better wav.len >= 0.1s, otherwise bug happens... 
-#stop_stage=4 # 
+#stage=4 # compute cmvn, better wav.len >= 0.1s, otherwise bug happens...
+#stop_stage=4 #
 
 #stage=5 # sentence piece's bpe vocabulary
-#stop_stage=5 # 
+#stop_stage=5 #
 
 #stage=6 # make "data.list" files
-#stop_stage=6 # 
+#stop_stage=6 #
 
 #stage=7 # train -> 50 epochs
-#stop_stage=7 # 
+#stop_stage=7 #
 
 stage=8 # train -> 50 epochs
-stop_stage=8 # 
+stop_stage=8 #
 
 # data
 #data_url=www.openslr.org/resources/12
@@ -77,9 +77,9 @@ recog_set="test1 test2 test3"
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   ### I did not check espnet nor kaldi for the pre-processing, I developed my own ways. so, use at your own risks.
   echo "stage 1: Data preparation -> xml preprocessing -> extract [start.time, end.time, text] from raw xml files"
-  python ./csj_tools/wn.0.parse.py $datadir ${wave_data} 
+  python ./csj_tools/wn.0.parse.py $datadir ${wave_data}
 fi
-  
+
 in_wav_path=$datadir/WAV
 xml_simp_path=${wave_data}/xml
 #wav_split_path=${wave_data}/wav.2
@@ -93,15 +93,15 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   # in addition, 2ch to 1ch!
 
   #id2chfn="2ch.id.list"
-  #python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path} $id2chfn 
-  python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path} 
+  #python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path} $id2chfn
+  python ./csj_tools/wn.1.split_wav.py ${in_wav_path} ${xml_simp_path} ${wav_split_path}
 fi
 
 ### 数据准备- generate "text" and "wav.scp" files ###
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   ### I did not check espnet nor kaldi for the pre-processing, I developed my own ways. so, use at your own risks.
   echo "stage 3: prepare text and wav.scp for train/test1/test2/test3 from wav and xml folders"
-  
+
   t1fn='test.set.1.list'
   t2fn='test.set.2.list'
   t3fn='test.set.3.list'
@@ -116,7 +116,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   mkdir -p $outt2
   mkdir -p $outt3
 
-  python ./csj_tools/wn.2.prep.text.py ${xml_simp_path} ${wav_split_path} $t1fn $t2fn $t3fn $outtrain $outt1 $outt2 $outt3 
+  python ./csj_tools/wn.2.prep.text.py ${xml_simp_path} ${wav_split_path} $t1fn $t2fn $t3fn $outtrain $outt1 $outt2 $outt3
 fi
 
 minsec=0.1

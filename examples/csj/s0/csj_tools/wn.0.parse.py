@@ -66,7 +66,7 @@ def parsexml(afile, outpath):
             lemmasent = ' '.join(lemmalist)
             dictlemmasent = ' '.join(dictlemmalist)
             outrow = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
-                starttime, endtime, txtsent, plaintxtsent, 
+                starttime, endtime, txtsent, plaintxtsent,
                 prontxtsent, lemmasent, dictlemmasent)
             bw.write(outrow)
 
