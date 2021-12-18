@@ -186,18 +186,15 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   }
 }
 
-void CtcPrefixBeamSearch::FinalizeSearch()
-{ 
-  //TODO(luchuanze)
+void CtcPrefixBeamSearch::FinalizeSearch(){ 
   UpdateFinalContext();
 }
 
 void CtcPrefixBeamSearch::UpdateFinalContext() {
   if (context_graph_ == nullptr) return;
-
   CHECK_EQ(hypotheses_.size(), cur_hyps_.size());
   CHECK_EQ(hypotheses_.size(), likelihood_.size());
-  // TODO(luchuanze)
+  
   // The context that has not yet the end boudary does not set to start state
   // with negative score, so using a word id -1 to udpate the hyps itself at the
   // end of the search.
@@ -206,12 +203,12 @@ void CtcPrefixBeamSearch::UpdateFinalContext() {
     prefix_score.UpdateContext(context_graph_, prefix_score, -1, prefix.size());
   }
 
-  //Resort hyps
+  // Resort hyps
   std::vector<std::pair<std::vector<int>, PrefixScore>> arr(cur_hyps_.begin(),
                                                               cur_hyps_.end());
   std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
-  //Update cur_hyps_ and get new result
+  // Update cur_hyps_ and get new result
   cur_hyps_.clear();
   outputs_.clear();
   hypotheses_.clear();
