@@ -194,7 +194,6 @@ void CtcPrefixBeamSearch::UpdateFinalContext() {
   if (context_graph_ == nullptr) return;
   CHECK_EQ(hypotheses_.size(), cur_hyps_.size());
   CHECK_EQ(hypotheses_.size(), likelihood_.size());
-  
   // The context that has not yet the end boudary does not set to start state
   // with negative score, so using a word id -1 to udpate the hyps itself at the
   // end of the search.
