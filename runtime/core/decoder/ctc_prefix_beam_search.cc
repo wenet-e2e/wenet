@@ -186,7 +186,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   }
 }
 
-void CtcPrefixBeamSearch::FinalizeSearch() { 
+void CtcPrefixBeamSearch::FinalizeSearch() {
   UpdateFinalContext();
 }
 
