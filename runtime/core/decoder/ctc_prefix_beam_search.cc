@@ -65,6 +65,24 @@ void CtcPrefixBeamSearch::UpdateOutputs(
   outputs_.emplace_back(output);
 }
 
+void CtcPrefixBeamSearch::UpdateHypotheses(
+    const std::vector<std::pair<std::vector<int>, PrefixScore>>& hpys) {
+  cur_hyps_.clear();
+  outputs_.clear();
+  hypotheses_.clear();
+  likelihood_.clear();
+  viterbi_likelihood_.clear();
+  times_.clear();
+  for (auto& item : hpys) {
+    cur_hyps_[item.first] = item.second;
+    UpdateOutputs(item);
+    hypotheses_.emplace_back(std::move(item.first));
+    likelihood_.emplace_back(item.second.total_score());
+    viterbi_likelihood_.emplace_back(item.second.viterbi_score());
+    times_.emplace_back(item.second.times());
+  }
+}
+
 // Please refer https://robin1001.github.io/2020/12/11/ctc-search
 // for how CTC prefix beam search works, and there is a simple graph demo in
 // it.
@@ -169,20 +187,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
     // 4. Update cur_hyps_ and get new result
-    cur_hyps_.clear();
-    outputs_.clear();
-    hypotheses_.clear();
-    likelihood_.clear();
-    viterbi_likelihood_.clear();
-    times_.clear();
-    for (auto& item : arr) {
-      cur_hyps_[item.first] = item.second;
-      UpdateOutputs(item);
-      hypotheses_.emplace_back(std::move(item.first));
-      likelihood_.emplace_back(item.second.total_score());
-      viterbi_likelihood_.emplace_back(item.second.viterbi_score());
-      times_.emplace_back(item.second.times());
-    }
+    UpdateHypotheses(arr);
   }
 }
 
@@ -194,34 +199,21 @@ void CtcPrefixBeamSearch::UpdateFinalContext() {
   if (context_graph_ == nullptr) return;
   CHECK_EQ(hypotheses_.size(), cur_hyps_.size());
   CHECK_EQ(hypotheses_.size(), likelihood_.size());
-  // The context that has not yet the end boudary does not set to start state
-  // with negative score, so using a word id -1 to udpate the hyps itself at the
-  // end of the search.
+  // We should backoff the context score/state when the context is
+  // not fully matched at the last time.
   for (const auto& prefix : hypotheses_) {
     PrefixScore& prefix_score = cur_hyps_[prefix];
-    prefix_score.UpdateContext(context_graph_, prefix_score, -1, prefix.size());
+    if (prefix_score.context_state != 0) {
+      prefix_score.UpdateContext(context_graph_, prefix_score, 0,
+                                 prefix.size());
+    }
   }
-
-  // Resort hyps
   std::vector<std::pair<std::vector<int>, PrefixScore>> arr(cur_hyps_.begin(),
                                                               cur_hyps_.end());
   std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
   // Update cur_hyps_ and get new result
-  cur_hyps_.clear();
-  outputs_.clear();
-  hypotheses_.clear();
-  likelihood_.clear();
-  viterbi_likelihood_.clear();
-  times_.clear();
-  for (auto& item : arr) {
-    cur_hyps_[item.first] = item.second;
-    UpdateOutputs(item);
-    hypotheses_.emplace_back(std::move(item.first));
-    likelihood_.emplace_back(item.second.total_score());
-    viterbi_likelihood_.emplace_back(item.second.viterbi_score());
-    times_.emplace_back(item.second.times());
-  }
+  UpdateHypotheses(arr);
 }
 
 }  // namespace wenet
