@@ -237,4 +237,33 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # Please see $dir/lm_with_runtime for wer
 fi
 
+# Optionally, static quantize.
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+    # 8.1 Prepare QAT checkpoint
+    python wenet/bin/init_qat_model.py \
+      --config $dir/train.yaml \
+      --checkpoint $dir/avg_${average_num}.pt \
+      --output $dir/init_qat.pt \
 
+    # 8.2 Static quantization calibration
+    cat data/train/data.list | python tools/shuffle_list.py --seed 777 | \
+       head -n 10000 > $dir/calibration.list
+    python wenet/bin/export_static_quantize_jit.py --config \
+        --test_data $dir/calibration.list \
+        --checkpoint $dir/init_qat.pt \
+        --num_workers 1 \
+        --script_model $dir/final_static_quant.zip \
+        --data_type $data_type \
+        --dict $dict
+
+    # 8.3 Decoding with static quantization model runtime
+    chunk_size=-1
+    ./tools/decode.sh --nj 16 \
+      --beam 15.0 --lattice_beam 7.5 --max_active 7000 \
+      --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
+      --chunk_size $chunk_size \
+      --fst_path data/lang_test/TLG.fst \
+      data/test/wav.scp data/test/text $dir/final_static_quant.zip \
+      data/lang_test/words.txt $dir/lm_with_runtime_static_quant
+
+fi
