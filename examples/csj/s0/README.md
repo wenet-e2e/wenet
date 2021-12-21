@@ -17,11 +17,6 @@ note that "+" means we removed two <0.1s wav files in test1 before decoding.
 
 
 
-## Conformer U2++ Result
-
-
-
-
 ## Conformer Result
 
 * Feature info: using fbank feature, cmvn, dither, online speed perturb
@@ -43,6 +38,8 @@ note that "+" means we removed two <0.1s wav files in test1 before decoding.
 
 ## Conformer U2++ Result
 
+* TODO
+
 
 ## Conformer U2 Result
-
+* TODO
