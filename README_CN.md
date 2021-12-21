@@ -34,7 +34,7 @@ WeNet 是一款面向工业落地应用的语音识别工具包，提供了从�
 wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz
 tar -xf 20210602_unified_transformer_server.tar.gz
 model_dir=$PWD/20210602_unified_transformer_server
-docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/wenet:mini bash /home/run.sh
+docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/wenet-mini:latest bash /home/run.sh
 ```
 
 **实时识别**
@@ -59,7 +59,7 @@ git clone https://github.com/wenet-e2e/wenet.git
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
+conda install pytorch=1.10.0 torchvision torchaudio=0.10.0 cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 **训练模型**

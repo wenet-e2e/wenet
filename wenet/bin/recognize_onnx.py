@@ -90,15 +90,6 @@ def get_args():
                             'attention_rescoring'],
                         default='attention_rescoring',
                         help='decoding mode')
-    parser.add_argument('--ctc_weight',
-                        type=float,
-                        default=0.0,
-                        help='ctc weight for attention rescoring decode mode')
-    parser.add_argument('--reverse_weight',
-                        type=float,
-                        default=0.0,
-                        help='''right to left weight for attention rescoring
-                                decode mode''')
     parser.add_argument('--bpe_model',
                         default=None,
                         type=str,
@@ -107,7 +98,9 @@ def get_args():
                         action='append',
                         default=[],
                         help="override yaml config")
-
+    parser.add_argument('--fp16',
+                        action='store_true',
+                        help='whether to export fp16 model, default false')
     args = parser.parse_args()
     print(args)
     return args
@@ -124,9 +117,9 @@ def main():
     if len(args.override_config) > 0:
         configs = override_config(configs, args.override_config)
 
+    reverse_weight = configs["model_conf"].get("reverse_weight", 0.0)
     symbol_table = read_symbol_table(args.dict)
     test_conf = copy.deepcopy(configs['dataset_conf'])
-
     test_conf['filter_conf']['max_length'] = 102400
     test_conf['filter_conf']['min_length'] = 0
     test_conf['filter_conf']['token_max_length'] = 102400
@@ -175,9 +168,12 @@ def main():
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for _, batch in enumerate(test_data_loader):
             keys, feats, _, feats_lengths, _ = batch
+            feats, feats_lengths = feats.numpy(), feats_lengths.numpy()
+            if args.fp16:
+                feats = feats.astype(np.float16)
             ort_inputs = {
-                encoder_ort_session.get_inputs()[0].name: feats.numpy(),
-                encoder_ort_session.get_inputs()[1].name: feats_lengths.numpy()}
+                encoder_ort_session.get_inputs()[0].name: feats,
+                encoder_ort_session.get_inputs()[1].name: feats_lengths}
             ort_outs = encoder_ort_session.run(None, ort_inputs)
             encoder_out, encoder_out_lens, ctc_log_probs, \
                 beam_log_probs, beam_log_probs_idx = ort_outs
@@ -229,56 +225,47 @@ def main():
                     cur_len = len(hyps)
                     if len(hyps) < beam_size:
                         hyps += (beam_size - cur_len) * [(-float("INF"), (0,))]
+                    cur_ctc_score = []
                     for hyp in hyps:
-                        ctc_score.append(hyp[0])
+                        cur_ctc_score.append(hyp[0])
                         all_hyps.append(list(hyp[1]))
-                        if len(hyp[1]) + 1 > max_len:
-                            max_len = len(hyp[1]) + 1
-                assert len(ctc_score) == beam_size * batch_size
-                hyps_pad_sos = np.ones(
-                    (batch_size, beam_size, max_len), dtype=np.int64) * IGNORE_ID
-                r_hyps_pad_sos = np.ones(
-                    (batch_size, beam_size, max_len), dtype=np.int64) * IGNORE_ID
+                        if len(hyp[1]) > max_len:
+                            max_len = len(hyp[1])
+                    ctc_score.append(cur_ctc_score)
+                if args.fp16:
+                    ctc_score = np.array(ctc_score, dtype=np.float16)
+                else:
+                    ctc_score = np.array(ctc_score, dtype=np.float32)
+                hyps_pad_sos_eos = np.ones(
+                    (batch_size, beam_size, max_len + 2), dtype=np.int64) * IGNORE_ID
+                r_hyps_pad_sos_eos = np.ones(
+                    (batch_size, beam_size, max_len + 2), dtype=np.int64) * IGNORE_ID
                 hyps_lens_sos = np.ones((batch_size, beam_size), dtype=np.int32)
                 k = 0
                 for i in range(batch_size):
                     for j in range(beam_size):
                         cand = all_hyps[k]
-                        hyps_pad_sos[i][j][0:len(cand) + 1] = [sos] + cand
-                        r_hyps_pad_sos[i][j][0:len(cand) + 1] = [sos] + cand[::-1]
+                        l = len(cand) + 2
+                        hyps_pad_sos_eos[i][j][0:l] = [sos] + cand + [eos]
+                        r_hyps_pad_sos_eos[i][j][0:l] = [sos] + cand[::-1] + [eos]
                         hyps_lens_sos[i][j] = len(cand) + 1
                         k += 1
                 decoder_ort_inputs = {
                     decoder_ort_session.get_inputs()[0].name: encoder_out,
                     decoder_ort_session.get_inputs()[1].name: encoder_out_lens,
-                    decoder_ort_session.get_inputs()[2].name: hyps_pad_sos,
+                    decoder_ort_session.get_inputs()[2].name: hyps_pad_sos_eos,
                     decoder_ort_session.get_inputs()[3].name: hyps_lens_sos,
-                    decoder_ort_session.get_inputs()[4].name: r_hyps_pad_sos}
-                decoder_out, r_decoder_out = decoder_ort_session.run(
-                    None, decoder_ort_inputs)
+                    decoder_ort_session.get_inputs()[-1].name: ctc_score}
+                if reverse_weight > 0:
+                    r_hyps_pad_sos_eos_name = decoder_ort_session.get_inputs()[4].name
+                    decoder_ort_inputs[r_hyps_pad_sos_eos_name] = r_hyps_pad_sos_eos
+                best_index = decoder_ort_session.run(None, decoder_ort_inputs)[0]
                 best_sents = []
                 k = 0
-                for d_o, r_d_o in zip(decoder_out, r_decoder_out):
-                    # d_0 & r_d_o: beam x T x V
-                    cur_best_sent = []
-                    cur_best_score = -float("inf")
-                    for sent_d_o, sent_r_d_o in zip(d_o, r_d_o):
-                        cand = all_hyps[k] + [eos]
-                        r_cand = all_hyps[k][::-1] + [eos]
-                        score, r_score = 0, 0
-                        for i in range(len(cand)):
-                            index, r_index = cand[i], r_cand[i]
-                            score += sent_d_o[i][index]
-                            r_score += sent_r_d_o[i][r_index]
-                        if args.reverse_weight > 0:
-                            score = score * (1 - args.reverse_weight) + \
-                                args.reverse_weight * r_score
-                        score = score + args.ctc_weight * ctc_score[k]
-                        if score > cur_best_score:
-                            cur_best_sent = all_hyps[k]
-                            cur_best_score = score
-                        k += 1
+                for idx in best_index:
+                    cur_best_sent = all_hyps[k: k + beam_size][idx]
                     best_sents.append(cur_best_sent)
+                    k += beam_size
                 hyps = map_batch(best_sents, vocabulary, num_processes)
 
             for i, key in enumerate(keys):
