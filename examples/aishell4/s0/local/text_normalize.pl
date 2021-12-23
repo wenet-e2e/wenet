@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 use warnings; #sed replacement for -w perl parameter
-# Copyright Chao Weng 
+# Copyright Chao Weng
 
 # normalizations for hkust trascript
 # see the docs/trans-guidelines.pdf for details
@@ -8,7 +8,7 @@ use warnings; #sed replacement for -w perl parameter
 while (<STDIN>) {
   @A = split(" ", $_);
   print "$A[0] ";
-  for ($n = 1; $n < @A; $n++) { 
+  for ($n = 1; $n < @A; $n++) {
     $tmp = $A[$n];
     if ($tmp =~ /<sil>/) {$tmp =~ s:<sil>::g;}
     if ($tmp =~ /<%>/) {$tmp =~ s:<%>::g;}
@@ -20,7 +20,7 @@ while (<STDIN>) {
     if ($tmp =~ /`/) {$tmp =~ s:`::g;}
     if ($tmp =~ /&/) {$tmp =~ s:&::g;}
     if ($tmp =~ /,/) {$tmp =~ s:,::g;}
-    if ($tmp =~ /[a-zA-Z]/) {$tmp=uc($tmp);} 
+    if ($tmp =~ /[a-zA-Z]/) {$tmp=uc($tmp);}
     if ($tmp =~ /Ａ/) {$tmp =~ s:Ａ:A:g;}
     if ($tmp =~ /ａ/) {$tmp =~ s:ａ:A:g;}
     if ($tmp =~ /ｂ/) {$tmp =~ s:ｂ:B:g;}
@@ -45,7 +45,7 @@ while (<STDIN>) {
     if ($tmp =~ /\./) {$tmp =~ s:\.::g;}
     if ($tmp =~ /</) {$tmp =~ s:<::g;}
     if ($tmp =~ /＆/) {$tmp =~ s:＆::g;}
-    print "$tmp "; 
+    print "$tmp ";
   }
-  print "\n"; 
+  print "\n";
 }
