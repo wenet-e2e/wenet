@@ -7,7 +7,7 @@ from contextlib import nullcontext
 # from contextlib import suppress as nullcontext
 import torch
 from torch.nn.utils import clip_grad_norm_
-
+from torch.distributed import ReduceOp
 
 class Executor:
     def __init__(self):
@@ -38,7 +38,14 @@ class Executor:
             model_context = nullcontext
         num_seen_utts = 0
         with model_context():
+            iterator_stop = torch.tensor(0).to("cuda")
             for batch_idx, batch in enumerate(data_loader):
+                # try to solve the programm stuck, when train and cv both are dynamic batch size
+                if is_distributed:
+                    torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)
+                    if iterator_stop > 0:
+                        break
+                # end
                 key, feats, target, feats_lengths, target_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)
@@ -106,6 +113,11 @@ class Executor:
                     log_str += 'lr {:.8f} rank {}'.format(lr, rank)
                     logging.debug(log_str)
 
+            else:
+                if is_distributed:
+                    iterator_stop.fill_(1)
+                    torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)
+
     def cv(self, model, data_loader, device, args):
         ''' Cross validation on
         '''
@@ -113,11 +125,19 @@ class Executor:
         rank = args.get('rank', 0)
         epoch = args.get('epoch', 0)
         log_interval = args.get('log_interval', 10)
+        is_distributed = args.get('is_distributed', True)
         # in order to avoid division by 0
         num_seen_utts = 1
         total_loss = 0.0
         with torch.no_grad():
+            iterator_stop = torch.tensor(0).to("cuda")
             for batch_idx, batch in enumerate(data_loader):
+                # try to solve the programm stuck, when train and cv both are dynamic batch size
+                if is_distributed:
+                    torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)
+                    if iterator_stop > 0:
+                        break
+                # end
                 key, feats, target, feats_lengths, target_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)
@@ -142,4 +162,10 @@ class Executor:
                                                             num_seen_utts)
                     log_str += ' rank {}'.format(rank)
                     logging.debug(log_str)
+
+            else:
+                if is_distributed:
+                    iterator_stop.fill_(1)
+                    torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)
+
         return total_loss, num_seen_utts
