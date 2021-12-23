@@ -40,7 +40,8 @@ class Executor:
         with model_context():
             iterator_stop = torch.tensor(0).to("cuda")
             for batch_idx, batch in enumerate(data_loader):
-                # try to solve the programm stuck, when train and cv both are dynamic batch size
+                # try to solve the programm stuck,
+                # when train and cv are both batch size
                 if is_distributed:
                     torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)
                     if iterator_stop > 0:
@@ -132,7 +133,8 @@ class Executor:
         with torch.no_grad():
             iterator_stop = torch.tensor(0).to("cuda")
             for batch_idx, batch in enumerate(data_loader):
-                # try to solve the programm stuck, when train and cv both are dynamic batch size
+                # try to solve the programm stuck,
+                # when train and cv are both batch size
                 if is_distributed:
                     torch.distributed.all_reduce(iterator_stop, ReduceOp.SUM)
                     if iterator_stop > 0:
