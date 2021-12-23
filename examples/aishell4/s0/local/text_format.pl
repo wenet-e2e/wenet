@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 use warnings; #sed replacement for -w perl parameter
-# Copyright Chao Weng 
+# Copyright Chao Weng
 
 # normalizations for hkust trascript
 # see the docs/trans-guidelines.pdf for details
