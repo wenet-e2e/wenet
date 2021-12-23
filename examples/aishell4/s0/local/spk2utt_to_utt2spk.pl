@@ -15,7 +15,7 @@
 # limitations under the License.
 
 
-while(<>){ 
+while(<>){
     @A = split(" ", $_);
     @A > 1 || die "Invalid line in spk2utt file: $_";
     $s = shift @A;
