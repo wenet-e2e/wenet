@@ -28,7 +28,7 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
-from wenet.utils.checkpoint import load_checkpoint, save_checkpoint,load_trained_modules
+from wenet.utils.checkpoint import load_checkpoint, save_checkpoint, load_trained_modules
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
 
@@ -87,10 +87,12 @@ the future, please move to the new IO !!!
                         default=None,
                         type=str,
                         help="Pre-trained model to initialize encoder")
-    parser.add_argument("--enc_init_mods",
+    parser.add_argument(
+                        "--enc_init_mods",
                         default="encoder.",
                         type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
-                        help="List of encoder modules to initialize, separated by a comma")
+                        help="List of encoder modules \
+                        to initialize ,separated by a comma")
 
     args = parser.parse_args()
 
@@ -190,8 +192,8 @@ the future, please move to the new IO !!!
     if args.checkpoint is not None:
         infos = load_checkpoint(model, args.checkpoint)
     elif args.enc_init is not None:
-            logging.debug('load pretrained encoders: {}'.format(args.enc_init))
-            infos= load_trained_modules(model, args)
+        logging.debug('load pretrained encoders: {}'.format(args.enc_init))
+        infos = load_trained_modules(model, args)
     else:
         infos = {}
     start_epoch = infos.get('epoch', -1) + 1

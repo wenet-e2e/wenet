@@ -121,7 +121,7 @@ class BaseEncoder(torch.nn.Module):
         if use_feature_norm:
             self.feature_norm = torch.nn.LayerNorm(output_size, eps=1e-12)
         else:
-            self.feature_norm =None
+            self.feature_norm = None
 
     def output_size(self) -> int:
         return self._output_size
@@ -357,7 +357,7 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk,use_feature_norm)
+                         global_cmvn, use_dynamic_left_chunk, use_feature_norm)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
@@ -397,7 +397,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
-        cnn_module_before: bool =False,
+        cnn_module_before: bool = False,
         use_feature_norm: bool = False,
     ):
         """Construct ConformerEncoder
@@ -422,7 +422,7 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk,use_feature_norm)
+                         global_cmvn, use_dynamic_left_chunk, use_feature_norm)
         activation = get_activation(activation_type)
 
         # self-attention module definition

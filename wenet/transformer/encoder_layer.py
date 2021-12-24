@@ -151,7 +151,7 @@ class ConformerEncoderLayer(nn.Module):
         feed_forward: Optional[nn.Module] = None,
         feed_forward_macaron: Optional[nn.Module] = None,
         conv_module: Optional[nn.Module] = None,
-        cnn_module_before: bool =False,
+        cnn_module_before: bool = False,
         dropout_rate: float = 0.1,
         normalize_before: bool = True,
         concat_after: bool = False,
@@ -174,7 +174,7 @@ class ConformerEncoderLayer(nn.Module):
                                           eps=1e-12)  # for the CNN module
             self.norm_final = nn.LayerNorm(
                 size, eps=1e-12)  # for the final output of the block
-        self.cnn_module_before=cnn_module_before
+        self.cnn_module_before = cnn_module_before
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
