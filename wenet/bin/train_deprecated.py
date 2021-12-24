@@ -28,7 +28,7 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
-from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint, 
+from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
