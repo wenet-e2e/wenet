@@ -132,7 +132,7 @@ class ConformerEncoderLayer(nn.Module):
             `PositionwiseFeedForward` instance can be used as the argument.
         conv_module (torch.nn.Module): Convolution module instance.
             `ConvlutionModule` instance can be used as the argument.
-        cnn_module_before (bool ) : 
+        cnn_module_before (bool ) :
             True: use cnn_module before each attention-block.
             False: use cnn_module before each attention-block.
         dropout_rate (float): Dropout rate.

@@ -28,7 +28,8 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
-from wenet.utils.checkpoint import load_checkpoint, save_checkpoint, load_trained_modules
+from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint, 
+                                    load_trained_modules)
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
 
@@ -87,8 +88,7 @@ the future, please move to the new IO !!!
                         default=None,
                         type=str,
                         help="Pre-trained model to initialize encoder")
-    parser.add_argument(
-                        "--enc_init_mods",
+    parser.add_argument("--enc_init_mods",
                         default="encoder.",
                         type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
                         help="List of encoder modules \

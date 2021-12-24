@@ -70,13 +70,10 @@ def filter_modules(model_state_dict, modules):
 
     return new_mods
 
-
 def load_trained_modules(model: torch.nn.Module, args: None):
-    #Load model encoder or/and decoder modules with pre-trained model(s).
-
+    # Load model encoder or/and decoder modules with pre-trained model(s).
     enc_model_path = args.enc_init
     enc_modules = args.enc_init_mods
-
     main_state_dict = model.state_dict()
 
     logging.warning("model(s) found for pre-initialization")
@@ -93,13 +90,10 @@ def load_trained_modules(model: torch.nn.Module, args: None):
                 for key, value in model_state_dict.items():
                     if any(key.startswith(m) for m in modules):
                         partial_state_dict[key] = value
-
                 main_state_dict.update(partial_state_dict)
-
             else:
                 logging.warning("model was not found : %s", model_path)
 
     model.load_state_dict(main_state_dict)
-
     configs = {}
     return configs
