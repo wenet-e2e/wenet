@@ -52,18 +52,18 @@ sed -e 's/\.wav//' $train_dir/wav.flist | awk -F '/' '{print $NF}' > $train_dir/
 paste -d' ' $train_dir/utt.list $train_dir/wav.flist | sort -u > $train_dir/wav.scp
 python local/aishell4_process_textgrid.py --path $train_dir
 cat $train_dir/text_all | local/text_normalize.pl | local/text_format.pl | sort -u > $train_dir/text
-utils/filter_scp.pl -f 1 $train_dir/text $train_dir/utt2spk_all | sort -u > $train_dir/utt2spk
-utils/utt2spk_to_spk2utt.pl $train_dir/utt2spk > $train_dir/spk2utt
-utils/filter_scp.pl -f 1 $train_dir/text $train_dir/segments_all | sort -u > $train_dir/segments
+local/filter_scp.pl -f 1 $train_dir/text $train_dir/utt2spk_all | sort -u > $train_dir/utt2spk
+local/utt2spk_to_spk2utt.pl $train_dir/utt2spk > $train_dir/spk2utt
+local/filter_scp.pl -f 1 $train_dir/text $train_dir/segments_all | sort -u > $train_dir/segments
 
 # process test set
 sed -e 's/\.wav//' $test_dir/wav.flist | awk -F '/' '{print $NF}' > $test_dir/utt.list
 paste -d' ' $test_dir/utt.list $test_dir/wav.flist |sort -u > $test_dir/wav.scp
 python local/aishell4_process_textgrid.py --path $test_dir
 cat $test_dir/text_all | local/text_normalize.pl | local/text_format.pl | sort -u > $test_dir/text
-utils/filter_scp.pl -f 1 $test_dir/text $test_dir/utt2spk_all | sort -u > $test_dir/utt2spk
-utils/utt2spk_to_spk2utt.pl $test_dir/utt2spk > $test_dir/spk2utt
-utils/filter_scp.pl -f 1 $test_dir/text $test_dir/segments_all | sort -u > $test_dir/segments
+local/filter_scp.pl -f 1 $test_dir/text $test_dir/utt2spk_all | sort -u > $test_dir/utt2spk
+local/utt2spk_to_spk2utt.pl $test_dir/utt2spk > $test_dir/spk2utt
+local/filter_scp.pl -f 1 $test_dir/text $test_dir/segments_all | sort -u > $test_dir/segments
 
 local/copy_data_dir.sh --utt-prefix Aishell4- --spk-prefix Aishell4- \
   $train_dir data/aishell4_train
