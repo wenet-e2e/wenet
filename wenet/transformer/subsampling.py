@@ -35,7 +35,7 @@ class LinearNoSubsampling(BaseSubsampling):
         super().__init__()
         self.out = torch.nn.Sequential(
             torch.nn.Linear(idim, odim),
-            torch.nn.LayerNorm(odim, eps=1e-12),
+            torch.nn.LayerNorm(odim, eps=1e-5),
             torch.nn.Dropout(dropout_rate),
         )
         self.pos_enc = pos_enc_class
