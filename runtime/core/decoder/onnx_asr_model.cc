@@ -14,7 +14,6 @@ void OnnxAsrModel::Read(const std::string &model_dir) {
   std::string onnx_conf_path = model_dir + "/onnx.conf";
 
   try {
-    
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(1);
     session_options.SetInterOpNumThreads(1);
