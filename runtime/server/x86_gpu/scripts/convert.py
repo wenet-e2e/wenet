@@ -80,8 +80,9 @@ if __name__ == "__main__":
                     continue
                 for key, value in model_params.items():
                     # This issue will only occur in pytorch-1.11
-                    # 1.10 is ok
-                    #if key == "#encoder_out_feat_size" and \
+                    # Currently wenet has pytorch-1.10
+                    # Please report to us if you find a mismatch issue in triton!
+                    # if key == "#encoder_out_feat_size" and \
                     #   model == "encoder":
                     #    value = "-1"
                     line = line.replace(key, str(value))
