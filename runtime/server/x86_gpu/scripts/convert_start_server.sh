@@ -27,4 +27,4 @@ python3 scripts/convert.py --config=$onnx_model_dir/train.yaml --vocab=$onnx_mod
         --model_repo=$model_repo --onnx_model_dir=$onnx_model_dir
 
 # Start server
-tritonserver --model-repository=/ws/model_repo
+tritonserver --model-repository=/ws/model_repo --strict-model-config=false

@@ -17,6 +17,8 @@ import argparse
 import yaml
 import os
 import subprocess
+from pathlib import Path
+import shutil
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='generate config.pbtxt for model_repo')
@@ -28,6 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('--lm_path', default=None, type=str, required=False,
                         help="the additional language model path")
     args = parser.parse_args()
+    shutil.copy(Path(args.vocab), Path(args.model_repo) / "scoring/1/words.txt")
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
 
@@ -43,7 +46,7 @@ if __name__ == "__main__":
         "#encoder_out_feat_size": 256,
         "#lm_path": "",
         "#bidecoder": 0,
-        "#vocabulary_path": "",
+        "#vocabulary_path": str(Path(args.model_repo) / "scoring/1/words.txt"),
         "#vocab_size": 0,
         "#DTYPE": "FP32"
     }
@@ -62,7 +65,6 @@ if __name__ == "__main__":
     model_params["#lm_path"] = args.lm_path
     if configs["decoder"].startswith("bi"):
         model_params["#bidecoder"] = 1
-    model_params["#vocabulary_path"] = args.vocab
     model_params["#vocab_size"] = configs["output_dim"]
 
     for model in os.listdir(args.model_repo):
