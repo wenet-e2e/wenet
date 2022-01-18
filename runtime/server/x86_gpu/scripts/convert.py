@@ -79,12 +79,11 @@ if __name__ == "__main__":
                 if line.startswith("#"):
                     continue
                 for key, value in model_params.items():
-                    # currently, the exported encoder output size is -1
-                    # means this output dim is dynamic
-                    # we are checking this issue
-                    if key == "#encoder_out_feat_size" and \
-                       model == "encoder":
-                        value = "-1"
+                    # This issue will only occur in pytorch-1.11
+                    # 1.10 is ok
+                    #if key == "#encoder_out_feat_size" and \
+                    #   model == "encoder":
+                    #    value = "-1"
                     line = line.replace(key, str(value))
                 out.write(line)
         out.close()
