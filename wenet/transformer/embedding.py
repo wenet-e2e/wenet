@@ -102,9 +102,11 @@ class RelPositionalEncoding(PositionalEncoding):
         dropout_rate (float): Dropout rate.
         max_len (int): Maximum input length.
     """
-    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 5000, onnx_mode: bool = False):
+    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 5000,
+                 onnx_mode: bool = False):
         """Initialize class."""
-        super().__init__(d_model, dropout_rate, max_len, reverse=True, onnx_mode=onnx_mode)
+        super().__init__(d_model, dropout_rate, max_len, reverse=True,
+                         onnx_mode=onnx_mode)
 
     def forward(self,
                 x: torch.Tensor,

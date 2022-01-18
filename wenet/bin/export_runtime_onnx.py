@@ -96,9 +96,14 @@ def check_encoder_onnx_and_pytorch(encoder_model, torch_encoder_model,
     chunk_onnx_outputs = []
     for i in range(5):
         dummy_input = inputs[i]
-        out, subsampling_cache, elayers_output_cache, conformer_cnn_cache = encoder_model(
-            dummy_input, offset, required_cache_size, subsampling_cache,
-            elayers_output_cache, conformer_cnn_cache)
+        (out, 
+         subsampling_cache, 
+         elayers_output_cache, 
+         conformer_cnn_cache) = encoder_model(dummy_input, offset, 
+                                              required_cache_size, 
+                                              subsampling_cache, 
+                                              elayers_output_cache, 
+                                              conformer_cnn_cache)
         chunk_onnx_outputs.append(out)
         offset += out.size(1)
 
@@ -111,9 +116,14 @@ def check_encoder_onnx_and_pytorch(encoder_model, torch_encoder_model,
 
     for i in range(5):
         dummy_input = inputs[i]
-        out2, subsampling_cache, elayers_output_cache, conformer_cnn_cache = torch_encoder_model(
-            dummy_input, offset, required_cache_size, subsampling_cache,
-            elayers_output_cache, conformer_cnn_cache)
+        (out2,
+         subsampling_cache, 
+         elayers_output_cache, 
+         conformer_cnn_cache) = torch_encoder_model(dummy_input, offset, 
+                                                    required_cache_size, 
+                                                    subsampling_cache,
+                                                    elayers_output_cache, 
+                                                    conformer_cnn_cache)
         torch_outputs.append(out2)
         offset += out2.size(1)
 
@@ -168,9 +178,8 @@ def check_encoder_onnx_and_pytorch(encoder_model, torch_encoder_model,
                                    rtol=1e-03,
                                    atol=1e-05)
 
-    print(
-        "Exported encoder model has been tested with ONNXRuntime, and the result looks good!"
-    )
+    print("Exported encoder model has been tested with ONNXRuntime, \
+and the result looks good!")
 
 
 def output_ctc_onnx(ctc_model, ctc_model_path):
@@ -237,9 +246,8 @@ def check_ctc_onnx_and_pytorch(ctc_model, torch_ctc_model, ctc_model_path):
                                    rtol=1e-03,
                                    atol=1e-05)
 
-    print(
-        "Exported ctc model has been tested with ONNXRuntime, and the result looks good!"
-    )
+    print("Exported ctc model has been tested with ONNXRuntime, \
+and the result looks good!")
 
 
 def output_rescore_onnx(rescore_model, rescore_model_path):
@@ -332,9 +340,8 @@ def check_rescore_onnx_and_pytorch(model, torch_model, decoder_model_path):
                                    rtol=1e-03,
                                    atol=1e-05)
 
-    print(
-        "Exported rescore model has been tested with ONNXRuntime, and the result looks good!"
-    )
+    print("Exported rescore model has been tested with ONNXRuntime, \
+and the result looks good!")
 
 
 if __name__ == '__main__':

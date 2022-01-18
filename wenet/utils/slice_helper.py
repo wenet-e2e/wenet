@@ -1,6 +1,7 @@
 # Copyright 2021 Huya Inc. All Rights Reserved.
 # Author: lizexuan@huya.com (Zexuan Li)
-# Reference from https://github.com/fanlu/wenet/blob/40062b065405280b5ae679c8e6d91a2333294d0a/wenet/transformer/slice_helper.py
+# Reference from https://github.com/fanlu/wenet/blob/\
+# 40062b065405280b5ae679c8e6d91a2333294d0a/wenet/transformer/slice_helper.py
 
 import torch
 

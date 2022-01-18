@@ -354,7 +354,8 @@ class BaseEncoder(torch.nn.Module):
 
         r_conformer_cnn_cache = torch.zeros(0, 1, self._output_size,
                                             conformer_cnn_cache.size(3))
-        r_elayers_output_cache = torch.zeros(0, 1, xs.size(1) - next_cache_start + 1, self._output_size)
+        r_elayers_output_cache = torch.zeros(0, 1, xs.size(1) - next_cache_start + 1,
+                                             self._output_size)
         for i, layer in enumerate(self.encoders):
             if elayers_output_cache is None:
                 attn_cache = None

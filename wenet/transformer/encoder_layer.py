@@ -281,7 +281,8 @@ class ConformerEncoderLayer(nn.Module):
         if onnx_mode:
             x = torch.nn.functional.pad(x, (0, 0, 1, 0), mode='constant', value=0)
             mask = torch.nn.functional.pad(mask, (1, 0), mode='constant', value=0)
-            new_cnn_cache = torch.nn.functional.pad(new_cnn_cache, (1, 0), mode='constant', value=0)
+            new_cnn_cache = torch.nn.functional.pad(new_cnn_cache, (1, 0),
+                                                    mode='constant', value=0)
 
 
         return x, mask, new_cnn_cache
