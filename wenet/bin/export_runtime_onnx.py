@@ -96,13 +96,13 @@ def check_encoder_onnx_and_pytorch(encoder_model, torch_encoder_model,
     chunk_onnx_outputs = []
     for i in range(5):
         dummy_input = inputs[i]
-        (out, 
-         subsampling_cache, 
-         elayers_output_cache, 
-         conformer_cnn_cache) = encoder_model(dummy_input, offset, 
-                                              required_cache_size, 
-                                              subsampling_cache, 
-                                              elayers_output_cache, 
+        (out,
+         subsampling_cache,
+         elayers_output_cache,
+         conformer_cnn_cache) = encoder_model(dummy_input, offset,
+                                              required_cache_size,
+                                              subsampling_cache,
+                                              elayers_output_cache,
                                               conformer_cnn_cache)
         chunk_onnx_outputs.append(out)
         offset += out.size(1)
@@ -117,12 +117,12 @@ def check_encoder_onnx_and_pytorch(encoder_model, torch_encoder_model,
     for i in range(5):
         dummy_input = inputs[i]
         (out2,
-         subsampling_cache, 
-         elayers_output_cache, 
-         conformer_cnn_cache) = torch_encoder_model(dummy_input, offset, 
-                                                    required_cache_size, 
+         subsampling_cache,
+         elayers_output_cache,
+         conformer_cnn_cache) = torch_encoder_model(dummy_input, offset,
+                                                    required_cache_size,
                                                     subsampling_cache,
-                                                    elayers_output_cache, 
+                                                    elayers_output_cache,
                                                     conformer_cnn_cache)
         torch_outputs.append(out2)
         offset += out2.size(1)
