@@ -677,7 +677,7 @@ class ASRModel(torch.nn.Module):
         return decoder_out, r_decoder_out
 
 
-def init_asr_model(configs):
+def init_asr_model(configs, onnx_mode=False):
     if configs['cmvn_file'] is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
@@ -695,14 +695,14 @@ def init_asr_model(configs):
     if encoder_type == 'conformer':
         encoder = ConformerEncoder(input_dim,
                                    global_cmvn=global_cmvn,
-                                   **configs['encoder_conf'])
+                                   **configs['encoder_conf'], onnx_mode=onnx_mode)
     else:
         encoder = TransformerEncoder(input_dim,
                                      global_cmvn=global_cmvn,
                                      **configs['encoder_conf'])
     if decoder_type == 'transformer':
         decoder = TransformerDecoder(vocab_size, encoder.output_size(),
-                                     **configs['decoder_conf'])
+                                     **configs['decoder_conf'], onnx_mode=onnx_mode)
     else:
         assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
         assert configs['decoder_conf']['r_num_blocks'] > 0

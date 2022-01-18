@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "decoder/torch_asr_decoder.h"
+#include "decoder/onnx_asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
@@ -66,6 +67,7 @@ DEFINE_int32(language_type, 0,
              "0x00 = kMandarinEnglish, "
              "0x01 = kIndoEuropean");
 DEFINE_bool(lowercase, true, "lowercase final result if needed");
+DEFINE_string(onnx_dir, "", "directory where the onnx model is saved");
 
 namespace wenet {
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
@@ -97,10 +99,17 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
 
-  LOG(INFO) << "Reading model " << FLAGS_model_path;
-  auto model = std::make_shared<TorchAsrModel>();
-  model->Read(FLAGS_model_path, FLAGS_num_threads);
-  resource->model = model;
+  if (!FLAGS_onnx_dir.empty()){
+    LOG(INFO) << "Reading onnx model ";
+    auto model = std::make_shared<OnnxAsrModel>();
+    model->Read(FLAGS_onnx_dir);
+    resource->onnx_model = model;
+  }else{
+    LOG(INFO) << "Reading model " << FLAGS_model_path;
+    auto model = std::make_shared<TorchAsrModel>();
+    model->Read(FLAGS_model_path, FLAGS_num_threads);
+    resource->model = model;
+  }
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   if (!FLAGS_fst_path.empty()) {

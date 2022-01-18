@@ -25,6 +25,7 @@ from wenet.transformer.subsampling import LinearNoSubsampling
 from wenet.utils.common import get_activation
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
+from wenet.utils.slice_helper import slice_helper3, get_next_start
 
 
 class BaseEncoder(torch.nn.Module):
@@ -46,6 +47,7 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        onnx_mode: bool = False,
     ):
         """
         Args:
@@ -108,7 +110,7 @@ class BaseEncoder(torch.nn.Module):
             input_size,
             output_size,
             dropout_rate,
-            pos_enc_class(output_size, positional_dropout_rate),
+            pos_enc_class(output_size, positional_dropout_rate, onnx_mode=onnx_mode),
         )
 
         self.normalize_before = normalize_before
@@ -314,6 +316,85 @@ class BaseEncoder(torch.nn.Module):
         masks = masks.unsqueeze(1)
         return ys, masks
 
+    # Reference from https://github.com/Mashiro009/wenet-onnx.git
+    def forward_chunk_onnx(
+        self,
+        xs: torch.Tensor,
+        offset,
+        required_cache_size,
+        subsampling_cache: Optional[torch.Tensor] = None,
+        elayers_output_cache: Optional[torch.Tensor] = None,
+        conformer_cnn_cache: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        offset = offset.squeeze(0)
+        required_cache_size = required_cache_size.squeeze(0)
+        assert xs.size(0) == 1
+        # tmp_masks is just for interface compatibility
+        tmp_masks = torch.ones(1,
+                               xs.size(1),
+                               device=xs.device,
+                               dtype=torch.bool)
+        tmp_masks = tmp_masks.unsqueeze(1)
+        if self.global_cmvn is not None:
+            xs = self.global_cmvn(xs)
+        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset - 1)
+        if subsampling_cache is not None:
+            cache_size = subsampling_cache.size(1)
+            xs = torch.cat((subsampling_cache, xs), dim=1)
+
+        pos_emb = self.embed.position_encoding_onnx(offset - cache_size, xs)
+        next_cache_start = get_next_start(xs, required_cache_size)
+        r_subsampling_cache = torch.cat((torch.zeros(
+            1, 1, self._output_size), slice_helper3(xs, next_cache_start)), 1)
+
+        # Real mask for transformer/conformer layers
+        masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
+        masks = masks.unsqueeze(1)
+
+        r_conformer_cnn_cache = torch.zeros(0, 1, self._output_size,
+                                            conformer_cnn_cache.size(3))
+        r_elayers_output_cache = torch.zeros(0, 1, xs.size(1) - next_cache_start + 1, self._output_size)
+        for i, layer in enumerate(self.encoders):
+            if elayers_output_cache is None:
+                attn_cache = None
+            else:
+                attn_cache = elayers_output_cache[i]
+            if conformer_cnn_cache is None:
+                cnn_cache = None
+            else:
+                cnn_cache = conformer_cnn_cache[i]
+            xs, _, new_cnn_cache = layer(
+                xs,
+                masks,
+                pos_emb,
+                output_cache=attn_cache,
+                cnn_cache=cnn_cache,
+                onnx_mode=True,
+            )
+            tmp_elayers_output_for_cache = slice_helper3(xs, next_cache_start)
+            tmp_elayers_output_for_cache = torch.nn.functional.pad(
+                tmp_elayers_output_for_cache, (0, 0, 1, 0),
+                mode='constant',
+                value=0)
+            r_elayers_output_cache = torch.cat(
+                (r_elayers_output_cache,
+                 tmp_elayers_output_for_cache.unsqueeze(0)), 0)
+            r_conformer_cnn_cache = torch.cat(
+                (r_conformer_cnn_cache, new_cnn_cache.unsqueeze(0)), 0)
+
+        if self.normalize_before:
+            xs = self.after_norm(xs[:, 1:, :])
+            xs = torch.nn.functional.pad(xs, (0, 0, 1, 0),
+                                         mode='constant',
+                                         value=0)
+
+        subsampling_cache_size = subsampling_cache.size(1)
+        subsampling_cache_size = torch.tensor(subsampling_cache_size,
+                                              dtype=torch.int64)
+        return (slice_helper3(xs, subsampling_cache_size), r_subsampling_cache,
+                r_elayers_output_cache, r_conformer_cnn_cache)
+
 
 class TransformerEncoder(BaseEncoder):
     """Transformer encoder module."""
@@ -386,6 +467,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        onnx_mode: bool = False,
     ):
         """Construct ConformerEncoder
 
@@ -409,7 +491,7 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk, onnx_mode)
         activation = get_activation(activation_type)
 
         # self-attention module definition

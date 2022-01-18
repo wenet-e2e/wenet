@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 import torch
 from torch import nn
-
+from wenet.utils.slice_helper import slice_helper
 
 class TransformerEncoderLayer(nn.Module):
     """Encoder layer module.
@@ -184,6 +184,7 @@ class ConformerEncoderLayer(nn.Module):
         mask_pad: Optional[torch.Tensor] = None,
         output_cache: Optional[torch.Tensor] = None,
         cnn_cache: Optional[torch.Tensor] = None,
+        onnx_mode: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
@@ -201,6 +202,12 @@ class ConformerEncoderLayer(nn.Module):
             torch.Tensor: Output tensor (#batch, time, size).
             torch.Tensor: Mask tensor (#batch, time).
         """
+        if onnx_mode:
+            x = x[:, 1:, :]
+            mask = mask[:, :, 1:]
+            output_cache = output_cache[:, 1:, :]
+            cnn_cache = cnn_cache[:, :, 1:]
+
 
         # whether to use macaron style
         if self.feed_forward_macaron is not None:
@@ -224,9 +231,15 @@ class ConformerEncoderLayer(nn.Module):
             assert output_cache.size(2) == self.size
             assert output_cache.size(1) < x.size(1)
             chunk = x.size(1) - output_cache.size(1)
-            x_q = x[:, -chunk:, :]
-            residual = residual[:, -chunk:, :]
-            mask = mask[:, -chunk:, :]
+            if onnx_mode:
+                chunk = torch.tensor(chunk, dtype=torch.int64)
+                x_q = slice_helper(x, chunk)
+                residual = slice_helper(residual, chunk)
+                mask = slice_helper(mask, chunk)
+            else:
+                x_q = x[:, -chunk:, :]
+                residual = residual[:, -chunk:, :]
+                mask = mask[:, -chunk:, :]
 
         x_att = self.self_attn(x_q, x, x, mask, pos_emb)
         if self.concat_after:
@@ -264,5 +277,11 @@ class ConformerEncoderLayer(nn.Module):
 
         if output_cache is not None:
             x = torch.cat([output_cache, x], dim=1)
+
+        if onnx_mode:
+            x = torch.nn.functional.pad(x, (0, 0, 1, 0), mode='constant', value=0)
+            mask = torch.nn.functional.pad(mask, (1, 0), mode='constant', value=0)
+            new_cnn_cache = torch.nn.functional.pad(new_cnn_cache, (1, 0), mode='constant', value=0)
+
 
         return x, mask, new_cnn_cache

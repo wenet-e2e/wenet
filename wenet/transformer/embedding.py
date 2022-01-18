@@ -9,6 +9,7 @@ import math
 from typing import Tuple
 
 import torch
+from wenet.utils.slice_helper import slice_helper2
 
 
 class PositionalEncoding(torch.nn.Module):
@@ -25,13 +26,15 @@ class PositionalEncoding(torch.nn.Module):
                  d_model: int,
                  dropout_rate: float,
                  max_len: int = 5000,
-                 reverse: bool = False):
+                 reverse: bool = False,
+                 onnx_mode: bool = False):
         """Construct an PositionalEncoding object."""
         super().__init__()
         self.d_model = d_model
         self.xscale = math.sqrt(self.d_model)
         self.dropout = torch.nn.Dropout(p=dropout_rate)
         self.max_len = max_len
+        self.onnx_mode = onnx_mode
 
         self.pe = torch.zeros(self.max_len, self.d_model)
         position = torch.arange(0, self.max_len,
@@ -56,9 +59,14 @@ class PositionalEncoding(torch.nn.Module):
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
             torch.Tensor: for compatibility to RelPositionalEncoding
         """
+        if self.onnx_mode:
+            offset = torch.tensor(0, dtype=torch.int)
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
-        pos_emb = self.pe[:, offset:offset + x.size(1)]
+        if self.onnx_mode:
+            pos_emb = slice_helper2(self.pe, offset, offset + x.size(1))
+        else:
+            pos_emb = self.pe[:, offset:offset + x.size(1)]
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
@@ -81,6 +89,10 @@ class PositionalEncoding(torch.nn.Module):
         assert offset + size < self.max_len
         return self.dropout(self.pe[:, offset:offset + size])
 
+    def position_encoding_onnx(self, offset: int, x: torch.Tensor) -> torch.Tensor:
+        return self.dropout(slice_helper2(self.pe, offset, offset + x.size(1) - 1))
+
+
 
 class RelPositionalEncoding(PositionalEncoding):
     """Relative positional encoding module.
@@ -90,9 +102,9 @@ class RelPositionalEncoding(PositionalEncoding):
         dropout_rate (float): Dropout rate.
         max_len (int): Maximum input length.
     """
-    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 5000):
+    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 5000, onnx_mode: bool = False):
         """Initialize class."""
-        super().__init__(d_model, dropout_rate, max_len, reverse=True)
+        super().__init__(d_model, dropout_rate, max_len, reverse=True, onnx_mode=onnx_mode)
 
     def forward(self,
                 x: torch.Tensor,
@@ -107,7 +119,10 @@ class RelPositionalEncoding(PositionalEncoding):
         assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         x = x * self.xscale
-        pos_emb = self.pe[:, offset:offset + x.size(1)]
+        if self.onnx_mode:
+            pos_emb = slice_helper2(self.pe, offset, offset + x.size(1))
+        else:
+            pos_emb = self.pe[:, offset:offset + x.size(1)]
         return self.dropout(x), self.dropout(pos_emb)
 
 

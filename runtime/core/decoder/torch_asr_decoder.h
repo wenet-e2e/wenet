@@ -20,6 +20,7 @@
 #include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/ctc_wfst_beam_search.h"
 #include "decoder/torch_asr_model.h"
+#include "decoder/onnx_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/utils.h"
@@ -80,6 +81,7 @@ enum DecodeState {
 // decoding threads
 struct DecodeResource {
   std::shared_ptr<TorchAsrModel> model = nullptr;
+  std::shared_ptr<OnnxAsrModel> onnx_model = nullptr;
   std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::SymbolTable> unit_table = nullptr;

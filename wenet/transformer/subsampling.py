@@ -19,6 +19,9 @@ class BaseSubsampling(torch.nn.Module):
     def position_encoding(self, offset: int, size: int) -> torch.Tensor:
         return self.pos_enc.position_encoding(offset, size)
 
+    def position_encoding_onnx(self, offset: int, x) -> torch.Tensor:
+        return self.pos_enc.position_encoding_onnx(offset, x)
+
 
 class LinearNoSubsampling(BaseSubsampling):
     """Linear transform the input without subsampling

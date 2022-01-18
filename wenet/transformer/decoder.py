@@ -49,6 +49,7 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
+        onnx_mode: bool = False,
     ):
         assert check_argument_types()
         super().__init__()
@@ -57,7 +58,7 @@ class TransformerDecoder(torch.nn.Module):
         if input_layer == "embed":
             self.embed = torch.nn.Sequential(
                 torch.nn.Embedding(vocab_size, attention_dim),
-                PositionalEncoding(attention_dim, positional_dropout_rate),
+                PositionalEncoding(attention_dim, positional_dropout_rate, onnx_mode=onnx_mode),
             )
         else:
             raise ValueError(f"only 'embed' is supported: {input_layer}")
