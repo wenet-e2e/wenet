@@ -6,7 +6,7 @@
 import torch
 
 @torch.jit.script
-def slice_helper(x, offset):
+def slice_helper(x: torch.Tensor, offset):
     return x[:, -offset: , :]
 
 @torch.jit.script
@@ -14,11 +14,11 @@ def slice_helper2(x: torch.Tensor, start, end):
     return x[:, start:end]
 
 @torch.jit.script
-def slice_helper3(x, start):
+def slice_helper3(x: torch.Tensor, start):
     return x[:, start:]
 
 @torch.jit.script
-def get_next_start(xs, required_cache_size):
+def get_next_start(xs: torch.Tensor, required_cache_size):
     next_cache_start = 0
     if required_cache_size < 0:
         next_cache_start = 1
