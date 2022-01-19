@@ -4,14 +4,14 @@
 // Copyright 2021 Huya Inc. All Rights Reserved.
 // Author: lizexuan@huya.com (Zexuan Li)
 
-#include "decoder/onnx_asr_decoder.h"
-
 #include <ctype.h>
-
+#include <memory>
 #include <algorithm>
 #include <limits>
 #include <utility>
-
+#include <string>
+#include <vector>
+#include "decoder/onnx_asr_decoder.h"
 #include "decoder/ctc_endpoint.h"
 #include "utils/timer.h"
 

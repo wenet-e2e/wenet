@@ -4,6 +4,8 @@
 #include "decoder/onnx_asr_model.h"
 
 #include <utility>
+#include <memory>
+#include <string>
 
 namespace wenet {
 
@@ -18,15 +20,18 @@ void OnnxAsrModel::Read(const std::string &model_dir) {
     session_options.SetIntraOpNumThreads(1);
     session_options.SetInterOpNumThreads(1);
 
-    Ort::Session encoder_session{env_, encoder_onnx_path.data(), session_options};
-    encoder_session_ = std::make_shared<Ort::Session>(std::move(encoder_session));
+    Ort::Session encoder_session{env_, encoder_onnx_path.data(),
+                                 session_options};
+    encoder_session_ = std::make_shared<Ort::Session>(
+                            std::move(encoder_session));
 
-    Ort::Session rescore_session{env_, rescore_onnx_path.data(), session_options};
-    rescore_session_ = std::make_shared<Ort::Session>(std::move(rescore_session));
+    Ort::Session rescore_session{env_, rescore_onnx_path.data(),
+                                 session_options};
+    rescore_session_ = std::make_shared<Ort::Session>(
+                            std::move(rescore_session));
 
     Ort::Session ctc_session{env_, ctc_onnx_path.data(), session_options};
     ctc_session_ = std::make_shared<Ort::Session>(std::move(ctc_session));
-
   } catch (std::exception const &e) {
     printf("%s", e.what());
     exit(0);
@@ -68,7 +73,6 @@ void OnnxAsrModel::Read(const std::string &model_dir) {
   is_bidirectional_decoder_ = std::stoi(data);
 
   infile.close();
-
 }
 
 }  // namespace wenet

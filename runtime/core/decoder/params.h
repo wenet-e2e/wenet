@@ -99,12 +99,12 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
 
-  if (!FLAGS_onnx_dir.empty()){
+  if (!FLAGS_onnx_dir.empty()) {
     LOG(INFO) << "Reading onnx model ";
     auto model = std::make_shared<OnnxAsrModel>();
     model->Read(FLAGS_onnx_dir);
     resource->onnx_model = model;
-  }else{
+  } else {
     LOG(INFO) << "Reading model " << FLAGS_model_path;
     auto model = std::make_shared<TorchAsrModel>();
     model->Read(FLAGS_model_path, FLAGS_num_threads);

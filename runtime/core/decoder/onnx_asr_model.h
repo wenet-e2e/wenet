@@ -5,8 +5,10 @@
 #define DECODER_ONNX_ASR_MODEL_H_
 
 #include <fstream>
-#include "onnxruntime_cxx_api.h"
 #include <algorithm>
+#include <string>
+#include <memory>
+#include "./onnxruntime_cxx_api.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -23,9 +25,15 @@ class OnnxAsrModel {
   int num_blocks() const { return num_blocks_; }
   int cnn_module_kernel() const { return cnn_module_kernel_; }
   bool is_bidirectional_decoder() const { return is_bidirectional_decoder_; }
-  std::shared_ptr<Ort::Session> encoder_session() const { return encoder_session_; }
-  std::shared_ptr<Ort::Session> rescore_session() const { return rescore_session_; }
-  std::shared_ptr<Ort::Session> ctc_session() const { return ctc_session_; }
+  std::shared_ptr<Ort::Session> encoder_session() const {
+    return encoder_session_;
+  }
+  std::shared_ptr<Ort::Session> rescore_session() const {
+    return rescore_session_;
+  }
+  std::shared_ptr<Ort::Session> ctc_session() const {
+    return ctc_session_;
+  }
 
  private:
   Ort::Env env_;

@@ -7,6 +7,8 @@
 #ifndef DECODER_ONNX_ASR_DECODER_H_
 #define DECODER_ONNX_ASR_DECODER_H_
 
+#include <memory>
+#include <vector>
 #include "decoder/torch_asr_decoder.h"
 
 namespace wenet {
@@ -100,4 +102,4 @@ class OnnxAsrDecoder {
 
 }  // namespace wenet
 
-#endif  // DECODER_TORCH_ASR_DECODER_H_
+#endif  // DECODER_ONNX_ASR_DECODER_H_
