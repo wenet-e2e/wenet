@@ -23,8 +23,8 @@ url=$2
 part=$3
 
 if [ ! -d "$data" ]; then
-  echo "$0: no such directory $data"
-  exit 1;
+  echo "$0: no such directory $data, make it"
+  mkdir -p $data
 fi
 
 part_ok=false
