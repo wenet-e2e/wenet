@@ -51,14 +51,12 @@ def filter_modules(model_state_dict, modules):
 
     new_mods = []
     incorrect_mods = []
-
-    mods_model = list(model_state_dict.keys())
+    mods_model = model_state_dict.keys()
     for mod in modules:
         if any(key.startswith(mod) for key in mods_model):
             new_mods += [mod]
         else:
             incorrect_mods += [mod]
-
     if incorrect_mods:
         logging.warning(
             "module(s) %s don't match or (partially match) "
@@ -75,24 +73,19 @@ def load_trained_modules(model: torch.nn.Module, args: None):
     enc_model_path = args.enc_init
     enc_modules = args.enc_init_mods
     main_state_dict = model.state_dict()
-
     logging.warning("model(s) found for pre-initialization")
-    for model_path, modules in [(enc_model_path, enc_modules)]:
-        if model_path is not None:
-            if os.path.isfile(model_path):
-                logging.info('Checkpoint: loading from checkpoint %s for CPU' %
-                             model_path)
-                model_state_dict = torch.load(model_path, map_location='cpu')
-
-                modules = filter_modules(model_state_dict, modules)
-
-                partial_state_dict = OrderedDict()
-                for key, value in model_state_dict.items():
-                    if any(key.startswith(m) for m in modules):
-                        partial_state_dict[key] = value
-                main_state_dict.update(partial_state_dict)
-            else:
-                logging.warning("model was not found : %s", model_path)
+    if os.path.isfile(enc_model_path):
+        logging.info('Checkpoint: loading from checkpoint %s for CPU' %
+                    enc_model_path)
+        model_state_dict = torch.load(enc_model_path, map_location='cpu')
+        modules = filter_modules(model_state_dict, enc_modules)
+        partial_state_dict = OrderedDict()
+        for key, value in model_state_dict.items():
+            if any(key.startswith(m) for m in modules):
+                partial_state_dict[key] = value
+        main_state_dict.update(partial_state_dict)
+    else:
+        logging.warning("model was not found : %s", model_path)
 
     model.load_state_dict(main_state_dict)
     configs = {}
