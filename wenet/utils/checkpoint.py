@@ -48,7 +48,6 @@ def save_checkpoint(model: torch.nn.Module, path: str, infos=None):
 
 
 def filter_modules(model_state_dict, modules):
-
     new_mods = []
     incorrect_mods = []
     mods_model = model_state_dict.keys()
@@ -68,6 +67,7 @@ def filter_modules(model_state_dict, modules):
 
     return new_mods
 
+
 def load_trained_modules(model: torch.nn.Module, args: None):
     # Load encoder modules with pre-trained model(s).
     enc_model_path = args.enc_init
@@ -76,7 +76,7 @@ def load_trained_modules(model: torch.nn.Module, args: None):
     logging.warning("model(s) found for pre-initialization")
     if os.path.isfile(enc_model_path):
         logging.info('Checkpoint: loading from checkpoint %s for CPU' %
-                    enc_model_path)
+                     enc_model_path)
         model_state_dict = torch.load(enc_model_path, map_location='cpu')
         modules = filter_modules(model_state_dict, enc_modules)
         partial_state_dict = OrderedDict()
