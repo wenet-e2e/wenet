@@ -1,0 +1,45 @@
+NIST_1A
+   1024
+database_id -s8 TIDIGITS
+database_version -s3 1.0
+utterance_id -s9 dd_1233_a
+channel_count -i 1
+sample_count -i 37120
+sample_rate -i 20000
+sample_min -i -2677
+sample_max -i 2234
+sample_n_bytes -i 1
+sample_byte_format -s1 1
+sample_sig_bits -i 8
+speaker_id -s2 dd
+prompt_code -s4 1233
+utterance_production -s1 a
+recording_date -s11  9-SEP-1982
+sample_coding -s4 alaw
+sample_checksum -i 64712
+end_head
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
