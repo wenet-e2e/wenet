@@ -79,8 +79,8 @@ class BaseEncoder(torch.nn.Module):
             global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
-            use_feature_norm (bool): whether to use layer_norm after 
-				cnn subsampling
+            use_feature_norm (bool): whether to use layer_norm after
+                cnn subsampling
         """
         assert check_argument_types()
         super().__init__()
