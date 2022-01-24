@@ -46,6 +46,7 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        use_feature_norm: bool = False,
     ):
         """
         Args:
@@ -78,6 +79,8 @@ class BaseEncoder(torch.nn.Module):
             global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
+            use_feature_norm (bool): whether to use layer_norm after 
+				cnn subsampling
         """
         assert check_argument_types()
         super().__init__()
@@ -116,6 +119,11 @@ class BaseEncoder(torch.nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
+
+        if use_feature_norm:
+            self.feature_norm = torch.nn.LayerNorm(output_size, eps=1e-5)
+        else:
+            self.feature_norm = None
 
     def output_size(self) -> int:
         return self._output_size
@@ -158,6 +166,8 @@ class BaseEncoder(torch.nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
+        if self.feature_norm is not None:
+            xs = self.feature_norm(xs)
         for layer in self.encoders:
             xs, chunk_masks, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:
@@ -210,6 +220,8 @@ class BaseEncoder(torch.nn.Module):
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
         xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
+        if self.feature_norm is not None:
+            xs = self.feature_norm(xs)
         if subsampling_cache is not None:
             cache_size = subsampling_cache.size(1)
             xs = torch.cat((subsampling_cache, xs), dim=1)
@@ -335,6 +347,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        use_feature_norm: bool = False,
     ):
         """ Construct TransformerEncoder
 
@@ -346,7 +359,7 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk, use_feature_norm)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
@@ -386,6 +399,8 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        cnn_module_before: bool = False,
+        use_feature_norm: bool = False,
     ):
         """Construct ConformerEncoder
 
@@ -409,14 +424,15 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk, use_feature_norm)
         activation = get_activation(activation_type)
 
         # self-attention module definition
-        if pos_enc_layer_type == "no_pos":
-            encoder_selfattn_layer = MultiHeadedAttention
-        else:
+        if selfattention_layer_type == "rel_selfattn":
             encoder_selfattn_layer = RelPositionMultiHeadedAttention
+        else:
+            encoder_selfattn_layer = MultiHeadedAttention
+
         encoder_selfattn_layer_args = (
             attention_heads,
             output_size,
@@ -444,6 +460,7 @@ class ConformerEncoder(BaseEncoder):
                     *positionwise_layer_args) if macaron_style else None,
                 convolution_layer(
                     *convolution_layer_args) if use_cnn_module else None,
+                cnn_module_before,
                 dropout_rate,
                 normalize_before,
                 concat_after,
