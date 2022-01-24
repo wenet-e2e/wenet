@@ -31,9 +31,20 @@ else
     trans_type=phn
 fi
 
-. ./path.sh # Needed for KALDI_ROOT
-# export PATH=$PATH:$KALDI_ROOT/tools/irstlm/bin
-sph2pipe=$local/sph2pipe_v2.5/sph2pipe
+. ./path.sh 
+
+sph2pipe_version="v2.5"
+if [ ! -d tools/sph2pipe_${sph2pipe_version} ]; then
+  echo "Download sph2pipe_${sph2pipe_version} ......"
+  wget -T 10 -t 3 -P tools https://www.openslr.org/resources/3/sph2pipe_${sph2pipe_version}.tar.gz || \
+  wget -T 10 -c -P tools https://sourceforge.net/projects/kaldi/files/sph2pipe_${sph2pipe_version}.tar.gz; \
+  tar --no-same-owner -xzf tools/sph2pipe_${sph2pipe_version}.tar.gz -C tools
+  cd tools/sph2pipe_${sph2pipe_version}/ && \
+        gcc -o sph2pipe  *.c -lm
+  cd -
+fi
+sph2pipe=`which sph2pipe` || sph2pipe=`pwd`/tools/sph2pipe_${sph2pipe_version}/sph2pipe
+
 if ! command -v "${sph2pipe}" &> /dev/null; then
     echo "Could not find (or execute) the sph2pipe program at $sph2pipe";
     exit 1;
