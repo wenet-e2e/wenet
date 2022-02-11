@@ -107,7 +107,8 @@ int main(int argc, char *argv[]) {
               decoder.num_frames_in_current_chunk() * frame_shift_in_ms -
               chunk_decode_time;
           if (wait_time > 0) {
-            LOG(INFO) << "Simulate streaming, waiting for " << wait_time << "ms";
+            LOG(INFO) << "Simulate streaming, waiting for " <<
+                         wait_time << "ms";
             std::this_thread::sleep_for(
                 std::chrono::milliseconds(static_cast<int>(wait_time)));
           }
