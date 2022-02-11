@@ -602,6 +602,20 @@ class ASRModel(torch.nn.Module):
                                           conformer_cnn_cache)
 
     @torch.jit.export
+    def forward_encoder_chunk_v2(
+        self,
+        xs: torch.Tensor,
+        infer_control: torch.Tensor,
+        cnn_cache: torch.Tensor,
+        key_cache: torch.Tensor,
+        value_cache: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor,
+               torch.Tensor, torch.Tensor]:
+        """TODO: add doc."""
+        return self.encoder.forward_chunk_v2(
+            xs, infer_control, cnn_cache, key_cache, value_cache)
+
+    @torch.jit.export
     def ctc_activation(self, xs: torch.Tensor) -> torch.Tensor:
         """ Export interface for c++ call, apply linear transform and log
             softmax before ctc

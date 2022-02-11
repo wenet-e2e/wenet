@@ -97,11 +97,14 @@ class ConvolutionModule(nn.Module):
         x = x.transpose(1, 2)  # (#batch, channels, time)
 
         # mask batch padding
-        if mask_pad is not None:
+        # NOTE(xcsong): mask_pad with shape(0, 0, 0) means fake mask,
+        #   we can just ignore this elementwise operation to decrease
+        #   Memory Access Cost (MAC)
+        if mask_pad is not None and mask_pad.size(2) > 0:
             x.masked_fill_(~mask_pad, 0.0)
 
         if self.lorder > 0:
-            if cache is None:
+            if cache is None or cache.size(2) == 0:
                 x = nn.functional.pad(x, (self.lorder, 0), 'constant', 0.0)
             else:
                 assert cache.size(0) == x.size(0)
@@ -128,7 +131,7 @@ class ConvolutionModule(nn.Module):
             x = x.transpose(1, 2)
         x = self.pointwise_conv2(x)
         # mask batch padding
-        if mask_pad is not None:
+        if mask_pad is not None and mask_pad.size(2) > 0:
             x.masked_fill_(~mask_pad, 0.0)
 
         return x.transpose(1, 2), new_cache

@@ -250,6 +250,58 @@ class BaseEncoder(torch.nn.Module):
         return (xs[:, cache_size:, :], r_subsampling_cache,
                 r_elayers_output_cache, r_conformer_cnn_cache)
 
+    def forward_chunk_v2(
+        self,
+        xs: torch.Tensor,
+        infer_control: torch.Tensor,
+        cnn_cache: torch.Tensor,
+        key_cache: torch.Tensor,
+        value_cache: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor,
+               torch.Tensor, torch.Tensor]:
+        """TODO(xcsong): add doc."""
+        elayers, b, attn_head, _cache_size, attn_dk = key_cache.size()
+        offset, next_cache_start, cache_size, chunk_size = \
+            infer_control[0], infer_control[1], infer_control[2], infer_control[3]
+        # Stage-1: CMVN
+        if self.global_cmvn is not None:
+            xs = self.global_cmvn(xs)
+        # Stage-2: Subsampling
+        xs = xs.unsqueeze(1)  # (b, c1=1, frames, mel_bins)
+        xs = self.embed.conv(xs)
+        b, channel, _chunk_size, f = xs.size()  # chunk_size=frames/sub_rate
+        assert cache_size == _cache_size
+        assert chunk_size == -1 or chunk_size == _chunk_size
+        xs = self.embed.out(
+            xs.transpose(1, 2).contiguous().view(b, _chunk_size, channel * f))
+        # Stage-3: PositionalEncoding
+        xs, _ = self.embed.pos_enc(xs, offset)
+        conformer_only_pos_emb = self.embed.position_encoding(
+            offset - cache_size, cache_size + _chunk_size)
+        # Stage-4: Encoder layers
+        mask_pad = torch.ones((0, 0, 0), device=xs.device, dtype=torch.bool)
+        attn_masks = torch.ones((0, 0, 0), device=xs.device, dtype=torch.bool)
+        r_cnn_cache = []
+        r_key_cache = []
+        r_value_cache = []
+        for i, layer in enumerate(self.encoders):
+            xs, _, _cnn_cache, _k_cache, _v_cache = layer.forward_v2(
+                xs, attn_masks, conformer_only_pos_emb, mask_pad,
+                cnn_cache[i], key_cache[i], value_cache[i]
+            )
+            r_cnn_cache.append(_cnn_cache.unsqueeze(0))
+            r_key_cache.append(
+                (_k_cache[:, :, next_cache_start:, :]).unsqueeze(0))
+            r_value_cache.append(
+                (_v_cache[:, :, next_cache_start:, :]).unsqueeze(0))
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+        r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
+        r_key_cache = torch.cat(r_key_cache, dim=0)
+        r_value_cache = torch.cat(r_value_cache, dim=0)
+
+        return (xs, r_cnn_cache, r_key_cache, r_value_cache)
+
     def forward_chunk_by_chunk(
         self,
         xs: torch.Tensor,

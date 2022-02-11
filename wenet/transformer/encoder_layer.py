@@ -228,7 +228,7 @@ class ConformerEncoderLayer(nn.Module):
             residual = residual[:, -chunk:, :]
             mask = mask[:, -chunk:, :]
 
-        x_att = self.self_attn(x_q, x, x, mask, pos_emb)
+        x_att = self.self_attn(x_q, x, x, mask, pos_emb)[0]
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
             x = residual + self.concat_linear(x_concat)
@@ -266,3 +266,67 @@ class ConformerEncoderLayer(nn.Module):
             x = torch.cat([output_cache, x], dim=1)
 
         return x, mask, new_cnn_cache
+
+    def forward_v2(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor,
+        pos_emb: torch.Tensor,
+        mask_pad: Optional[torch.Tensor] = None,
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0)),
+        key_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        value_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor,
+               torch.Tensor, torch.Tensor]:
+        """TODO(xcsong): add doc."""
+        # whether to use macaron style
+        if self.feed_forward_macaron is not None:
+            residual = x
+            if self.normalize_before:
+                x = self.norm_ff_macaron(x)
+            x = residual + self.ff_scale * self.dropout(
+                self.feed_forward_macaron(x))
+            if not self.normalize_before:
+                x = self.norm_ff_macaron(x)
+
+        # multi-headed self-attention module
+        residual = x
+        if self.normalize_before:
+            x = self.norm_mha(x)
+
+        x_att, new_key_cache, new_value_cache = self.self_attn(
+            x, x, x, mask, pos_emb, key_cache, value_cache)
+        if self.concat_after:
+            x_concat = torch.cat((x, x_att), dim=-1)
+            x = residual + self.concat_linear(x_concat)
+        else:
+            x = residual + self.dropout(x_att)
+        if not self.normalize_before:
+            x = self.norm_mha(x)
+
+        # convolution module
+        # Fake new cnn cache here, and then change it in conv_module
+        new_cnn_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
+        if self.conv_module is not None:
+            residual = x
+            if self.normalize_before:
+                x = self.norm_conv(x)
+            x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
+            x = residual + self.dropout(x)
+
+            if not self.normalize_before:
+                x = self.norm_conv(x)
+
+        # feed forward module
+        residual = x
+        if self.normalize_before:
+            x = self.norm_ff(x)
+
+        x = residual + self.ff_scale * self.dropout(self.feed_forward(x))
+        if not self.normalize_before:
+            x = self.norm_ff(x)
+
+        if self.conv_module is not None:
+            x = self.norm_final(x)
+
+        return x, mask, new_cnn_cache, new_key_cache, new_value_cache

@@ -81,7 +81,10 @@ class MultiHeadedAttention(nn.Module):
 
         """
         n_batch = value.size(0)
-        if mask is not None:
+        # NOTE(xcsong): mask with shape(0, 0, 0, 0) means fake mask,
+        #   we can just ignore this elementwise operation to decrease
+        #   Memory Access Cost (MAC)
+        if mask is not None and mask.size(2) > 0:
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
             scores = scores.masked_fill(mask, -float('inf'))
             attn = torch.softmax(scores, dim=-1).masked_fill(
@@ -100,7 +103,10 @@ class MultiHeadedAttention(nn.Module):
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor,
                 mask: Optional[torch.Tensor],
-                pos_emb: torch.Tensor = torch.empty(0),) -> torch.Tensor:
+                pos_emb: torch.Tensor = torch.empty(0),
+                key_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+                value_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute scaled dot product attention.
 
         Args:
@@ -119,15 +125,25 @@ class MultiHeadedAttention(nn.Module):
                 of the encoder, such as Mocha, the passed in mask could be
                 in (#batch, L, T) shape. But there is no such case in current
                 Wenet.
+            TODO(xcsong): add doc for cache tensor.
 
 
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
+            TODO(xcsong): add doc for cache tensor.
 
         """
         q, k, v = self.forward_qkv(query, key, value)
+
+        if key_cache.size(0) > 0 and value_cache.size(0) > 0:
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        new_key_cache = k
+        new_value_cache = v
+
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
-        return self.forward_attention(v, scores, mask)
+        return self.forward_attention(v, scores, mask), \
+            new_key_cache, new_value_cache
 
 
 class RelPositionMultiHeadedAttention(MultiHeadedAttention):
@@ -178,8 +194,12 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor, mask: Optional[torch.Tensor],
-                pos_emb: torch.Tensor):
+                pos_emb: torch.Tensor,
+                key_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+                value_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
+
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
             key (torch.Tensor): Key tensor (#batch, time2, size).
@@ -188,10 +208,21 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 (#batch, time1, time2).
             pos_emb (torch.Tensor): Positional embedding tensor
                 (#batch, time2, size).
+            TODO(xcsong): add doc for cache tensor.
+
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
+            TODO(xcsong): add doc for cache tensor.
+
         """
         q, k, v = self.forward_qkv(query, key, value)
+
+        if key_cache.size(2) > 0 and value_cache.size(2) > 0:
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        new_key_cache = k
+        new_value_cache = v
+
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
 
         n_batch_pos = pos_emb.size(0)
@@ -219,4 +250,5 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k)  # (batch, head, time1, time2)
 
-        return self.forward_attention(v, scores, mask)
+        return self.forward_attention(v, scores, mask), \
+            new_key_cache, new_value_cache
