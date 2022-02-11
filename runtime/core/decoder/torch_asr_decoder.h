@@ -49,6 +49,7 @@ struct DecodeOptions {
   CtcEndpointConfig ctc_endpoint_config;
   CtcPrefixBeamSearchOptions ctc_prefix_search_opts;
   CtcWfstBeamSearchOptions ctc_wfst_search_opts;
+  int api_version = 1;
 };
 
 struct WordPiece {
@@ -140,6 +141,19 @@ class TorchAsrDecoder {
   std::vector<std::vector<float>> cached_feature_;
   bool start_ = false;
 
+  // NOTE(xcsong): In order to simplify the comparison of different APIs,
+  //  all the data required by the two APIs are retained.
+
+  // API_v2
+  // cnn_cache_: (elayers, batch, cnn_kernel - 1, hidden_dim)
+  torch::Tensor cnn_cache_ = torch::zeros({12, 0, 0, 0});
+  // key_cache_: (elayers, batch, n_head, cahched_time, hidden_dim)
+  torch::Tensor key_cache_ = torch::zeros({12, 0, 0, 0, 0});
+  // cnn_cache_: (elayers, batch, n_head, cached_time, hidden_dim)
+  torch::Tensor value_cache_ = torch::zeros({12, 0, 0, 0, 0});
+  // infer_control_: offset, next_cache_start, cache_size, chunk_size
+  std::vector<int> infer_control_ = {0, 0, 0, 0};
+  // API_v1
   torch::jit::IValue subsampling_cache_;
   // transformer/conformer encoder layers output cache
   torch::jit::IValue elayers_output_cache_;

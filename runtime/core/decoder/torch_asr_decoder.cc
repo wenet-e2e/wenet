@@ -38,15 +38,21 @@ TorchAsrDecoder::TorchAsrDecoder(
                                           resource->context_graph));
   }
   ctc_endpointer_->frame_shift_in_ms(frame_shift_in_ms());
+  infer_control_[3] = opts_.chunk_size;
 }
 
 void TorchAsrDecoder::Reset() {
   start_ = false;
   result_.clear();
   offset_ = 0;
+  std::fill(infer_control_.begin(), infer_control_.end(), 0);
+  infer_control_[3] = opts_.chunk_size;
   num_frames_ = 0;
   global_frame_offset_ = 0;
   num_frames_in_current_chunk_ = 0;
+  cnn_cache_ = std::move(torch::zeros({12, 0, 0, 0}));
+  key_cache_ = std::move(torch::zeros({12, 0, 0, 0, 0}));
+  value_cache_ = std::move(torch::zeros({12, 0, 0, 0, 0}));
   subsampling_cache_ = std::move(torch::jit::IValue());
   elayers_output_cache_ = std::move(torch::jit::IValue());
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
@@ -62,7 +68,12 @@ void TorchAsrDecoder::ResetContinuousDecoding() {
   start_ = false;
   result_.clear();
   offset_ = 0;
+  std::fill(infer_control_.begin(), infer_control_.end(), 0);
+  infer_control_[3] = opts_.chunk_size;
   num_frames_in_current_chunk_ = 0;
+  cnn_cache_ = std::move(torch::zeros({12, 0, 0, 0}));
+  key_cache_ = std::move(torch::zeros({12, 0, 0, 0, 0}));
+  value_cache_ = std::move(torch::zeros({12, 0, 0, 0, 0}));
   subsampling_cache_ = std::move(torch::jit::IValue());
   elayers_output_cache_ = std::move(torch::jit::IValue());
   conformer_cnn_cache_ = std::move(torch::jit::IValue());
@@ -104,6 +115,14 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
   // If not okay, that means we reach the end of the input
   if (!feature_pipeline_->Read(num_requried_frames, &chunk_feats)) {
     state = DecodeState::kEndFeats;
+    if (num_requried_frames < std::numeric_limits<int>::max() &&
+        num_requried_frames > chunk_feats.size()) {
+      // NOTE(xcsong): Padding last chunk to meet requirements of chunk_size
+      int pad_len = num_requried_frames - chunk_feats.size();
+      std::vector<std::vector<float>> pad_data(
+        pad_len, std::vector<float>(feature_dim, 0.0));
+      chunk_feats.insert(chunk_feats.end(), pad_data.begin(), pad_data.end());
+    }
   }
 
   num_frames_in_current_chunk_ = chunk_feats.size();
@@ -134,23 +153,59 @@ DecodeState TorchAsrDecoder::AdvanceDecoding() {
     // 2. Encoder chunk forward
     int requried_cache_size = opts_.chunk_size * opts_.num_left_chunks;
     torch::NoGradGuard no_grad;
-    std::vector<torch::jit::IValue> inputs = {feats,
-                                              offset_,
-                                              requried_cache_size,
-                                              subsampling_cache_,
-                                              elayers_output_cache_,
-                                              conformer_cnn_cache_};
-    // Refer interfaces in wenet/transformer/asr_model.py
-    auto outputs = model_->torch_model()
-                       ->get_method("forward_encoder_chunk")(inputs)
-                       .toTuple()
-                       ->elements();
-    CHECK_EQ(outputs.size(), 4);
-    torch::Tensor chunk_out = outputs[0].toTensor();
-    subsampling_cache_ = outputs[1];
-    elayers_output_cache_ = outputs[2];
-    conformer_cnn_cache_ = outputs[3];
-    offset_ += chunk_out.size(1);
+    torch::Tensor chunk_out;
+    if (opts_.api_version == 1) {
+      std::vector<torch::jit::IValue> inputs = {feats,
+                                                offset_,
+                                                requried_cache_size,
+                                                subsampling_cache_,
+                                                elayers_output_cache_,
+                                                conformer_cnn_cache_};
+      // Refer interfaces in wenet/transformer/asr_model.py
+      auto outputs = model_->torch_model()
+                         ->get_method("forward_encoder_chunk")(inputs)
+                         .toTuple()
+                         ->elements();
+      CHECK_EQ(outputs.size(), 4);
+      chunk_out = outputs[0].toTensor();
+      subsampling_cache_ = outputs[1];
+      elayers_output_cache_ = outputs[2];
+      conformer_cnn_cache_ = outputs[3];
+      offset_ += chunk_out.size(1);
+    } else {
+      infer_control_[2] = key_cache_.size(3);  // real_cache_size
+      torch::Tensor infer_control = torch::from_blob(
+        infer_control_.data(), {infer_control_.size()}, torch::kInt).clone();
+      std::vector<torch::jit::IValue> inputs = {feats,
+                                                infer_control,
+                                                cnn_cache_,
+                                                key_cache_,
+                                                value_cache_};
+      // Refer interfaces in wenet/transformer/asr_model.py
+      auto outputs = model_->torch_model()
+                         ->get_method("forward_encoder_chunk_v2")(inputs)
+                         .toTuple()
+                         ->elements();
+      CHECK_EQ(outputs.size(), 4);
+      chunk_out = outputs[0].toTensor();
+      cnn_cache_ = outputs[1].toTensor();
+      key_cache_ = outputs[2].toTensor();
+      value_cache_ = outputs[3].toTensor();
+      offset_ += chunk_out.size(1);
+      infer_control_[0] += chunk_out.size(1);  // offset
+      if (requried_cache_size < 0) {
+        infer_control_[1] = 0;
+      } else if (requried_cache_size == 0) {
+        infer_control_[1] = chunk_out.size(1);  // next_cache_start
+      } else {
+        if (key_cache_.size(3) < requried_cache_size) {
+          infer_control_[1] = 0;
+        } else {
+          infer_control_[1] = chunk_out.size(1);  // next_cache_start
+        }
+      }
+      infer_control_[3] = chunk_out.size(1);  // chunk_size
+    }
 
     // The first dimension of returned value is for batchsize, which is 1
     torch::Tensor ctc_log_probs = model_->torch_model()
