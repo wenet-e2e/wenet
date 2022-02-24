@@ -106,9 +106,9 @@ if ($#ARGV == 1) {
     $outDir = $ARGV[1];
     print STDERR ("$0: $inDir $outDir\n");
     if($vocabFile) {
-	print STDERR ("\tLimiting transcriptions to words in $vocabFile\n");
-	print STDERR ("\tMapping OOV tokens to \"$OOV_symbol\"\n");
-	print STDERR ("\tif they remain OOV even after removing [$fragMarkers] from either end\n") if ($fragMarkers);
+    print STDERR ("\tLimiting transcriptions to words in $vocabFile\n");
+    print STDERR ("\tMapping OOV tokens to \"$OOV_symbol\"\n");
+    print STDERR ("\tif they remain OOV even after removing [$fragMarkers] from either end\n") if ($fragMarkers);
     }        
     print STDERR ("$0 ADVICE: Use full path for the Input Directory\n") unless ($inDir=~m:^/:);
 } else {
@@ -219,63 +219,63 @@ if (-d $TranscriptionDir) {
                     }
                     $prevTimeMark = $thisTimeMark;
                 } else {
-		    @tokens = split(/\s+/, $line);
-		    $text = "";
-		    while ($w = shift(@tokens)) {
-			# First, some Babel-specific transcription filtering
-			if (($w eq "<sta>")||($w eq "<male-to-female>")||($w eq "<female-to-male>")||($w eq "~")) {
-			    next;
-			} elsif (($w eq "<lipsmack>")||($w eq "<breath>")||($w eq "<cough>")||($w eq "<laugh>")) {
-			    $text .= " $vocalNoise";
-			    $numWords++;
-			} elsif (($w eq "<click>")||($w eq "<ring>")||($w eq "<dtmf>")||($w eq "<int>")){
-			    $text .= " $nVoclNoise";
-			    $numWords++;
-			} elsif (($w eq "(())")||($w eq "<foreign>")||($w eq "<overlap>")||($w eq "<prompt>")) {
-			    $text .= " $OOV_symbol";
-			    $oovCount{$w}++;
-			    $numOOV++;
-			    $numWords++;
-			} elsif ($w eq "<no-speech>") {
-			    $text .= " $silence";
-			    $numSilence++;
-			} else {
-			    # This is a just regular spoken word
-			    if ($vocabFile && (! $inVocab{$w}) && $fragMarkers) {
-				# $w is a potential OOV token
-				# Remove fragMarkers to see if $w becomes in-vocabulary
-				while ($w =~ m:^(\S+[$fragMarkers]|[$fragMarkers]\S+)$:) {
-				    if ($w =~ m:^(\S+)[$fragMarkers]$:) {
-					$w = $1;
-					last if ($inVocab{$w});
-				    } elsif ($w =~m:^[$fragMarkers](\S+)$:) {
-					$w = $1;
-					last if ($inVocab{$w});
-				    } else {
-					die "Logically, the program should never reach here!";
-				    }
-				}
-			    }
-			    # If still an OOV, replace $w by $OOV_symbol
-			    if ($vocabFile && (! $inVocab{$w})) {
-				# $w is definitely an OOV token
-				if (exists $oovCount{$w}) {
-				    $oovCount{$w}++;
-				} else {
-				    $oovCount{$w} = 1;
-				}
-				$w = $OOV_symbol;
-				$numOOV++;
-			    }
-			    $text .= " $w";
-			    $numWords++;
-			}
-		    }
-		    $text =~ s:^\s+::; # Remove leading white space, if any
+            @tokens = split(/\s+/, $line);
+            $text = "";
+            while ($w = shift(@tokens)) {
+            # First, some Babel-specific transcription filtering
+            if (($w eq "<sta>")||($w eq "<male-to-female>")||($w eq "<female-to-male>")||($w eq "~")) {
+                next;
+            } elsif (($w eq "<lipsmack>")||($w eq "<breath>")||($w eq "<cough>")||($w eq "<laugh>")) {
+                $text .= " $vocalNoise";
+                $numWords++;
+            } elsif (($w eq "<click>")||($w eq "<ring>")||($w eq "<dtmf>")||($w eq "<int>")){
+                $text .= " $nVoclNoise";
+                $numWords++;
+            } elsif (($w eq "(())")||($w eq "<foreign>")||($w eq "<overlap>")||($w eq "<prompt>")) {
+                $text .= " $OOV_symbol";
+                $oovCount{$w}++;
+                $numOOV++;
+                $numWords++;
+            } elsif ($w eq "<no-speech>") {
+                $text .= " $silence";
+                $numSilence++;
+            } else {
+                # This is a just regular spoken word
+                if ($vocabFile && (! $inVocab{$w}) && $fragMarkers) {
+                # $w is a potential OOV token
+                # Remove fragMarkers to see if $w becomes in-vocabulary
+                while ($w =~ m:^(\S+[$fragMarkers]|[$fragMarkers]\S+)$:) {
+                    if ($w =~ m:^(\S+)[$fragMarkers]$:) {
+                    $w = $1;
+                    last if ($inVocab{$w});
+                    } elsif ($w =~m:^[$fragMarkers](\S+)$:) {
+                    $w = $1;
+                    last if ($inVocab{$w});
+                    } else {
+                    die "Logically, the program should never reach here!";
+                    }
+                }
+                }
+                # If still an OOV, replace $w by $OOV_symbol
+                if ($vocabFile && (! $inVocab{$w})) {
+                # $w is definitely an OOV token
+                if (exists $oovCount{$w}) {
+                    $oovCount{$w}++;
+                } else {
+                    $oovCount{$w} = 1;
+                }
+                $w = $OOV_symbol;
+                $numOOV++;
+                }
+                $text .= " $w";
+                $numWords++;
+            }
+            }
+            $text =~ s:^\s+::; # Remove leading white space, if any
                     # Transcriptions must contain real words to be useful in training
                     $text =~ s:^(($OOV_symbol|$vocalNoise|$nVoclNoise|$silence)[ ]{0,1})+$::;
-		}
-	    }
+        }
+        }
             close(TRANSCRIPTION);
             if ($numUtterancesThisFile>0) {
                 $lastTimeMarkInFile{$fileID} = $prevTimeMark;
@@ -421,9 +421,9 @@ foreach $utteranceID (sort keys %transcription) {
     if (exists $waveformName{$fileID}) {
         # There are matching transcriptions and audio
         $numUtterances++;
-      	$totalSpeech += ($endTime{$utteranceID} - $startTime{$utteranceID});
+        $totalSpeech += ($endTime{$utteranceID} - $startTime{$utteranceID});
         $totalSpeechSq += (($endTime{$utteranceID} - $startTime{$utteranceID})
-			   *($endTime{$utteranceID} - $startTime{$utteranceID}));
+               *($endTime{$utteranceID} - $startTime{$utteranceID}));
         print TEXT ("$utteranceID $transcription{$utteranceID}\n");
         print UTT2SPK ("$utteranceID $speakerID{$utteranceID}\n");
         print SEGMENTS ("$utteranceID $fileID $startTime{$utteranceID} $endTime{$utteranceID}\n");
@@ -466,9 +466,9 @@ print STDERR ("\tTotal # words = $numWords (including $numOOV OOVs) + $numSilenc
 printf STDERR ("\tAmount of speech = %.2f hours (including some due to $silence)\n", $totalSpeech/3600.0);
 if ($numUtterances>0) {
     printf STDERR ("\tAverage utterance length = %.2f sec +/- %.2f sec, and %.2f words\n",
-		   $totalSpeech /= $numUtterances,
-		   sqrt(($totalSpeechSq/$numUtterances)-($totalSpeech*$totalSpeech)),
-		   $numWords/$numUtterances);
+           $totalSpeech /= $numUtterances,
+           sqrt(($totalSpeechSq/$numUtterances)-($totalSpeech*$totalSpeech)),
+           $numWords/$numUtterances);
 }
 
 exit(0);
