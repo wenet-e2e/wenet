@@ -46,7 +46,7 @@ for l in ${all_langs}; do
 
   cp ${cwd}/cmd.sh .
   cp ${cwd}/path.sh .
-  sed -i 's/\.\.\/\.\.\/\.\./\.\.\/\.\.\/\.\.\/\.\.\/\.\./g' path.sh 
+  sed -i 's/\.\.\/\.\.\/\.\./\.\.\/\.\.\/\.\.\/\.\.\/\.\./g' path.sh
   cd ${cwd}
 done
 
