@@ -1,4 +1,4 @@
-#!/bin/bash 
+#!/bin/bash
 
 # Copyright 2012  Johns Hopkins University (Author: Yenda Trmal)
 # Apache 2.0.
@@ -29,18 +29,18 @@ input_data_list=$2
 output_data_dir=$3
 
 if [[ ! -d "$input_data_dir" ]] ; then
-  echo "FATAL: input data directory does not exist"; 
+  echo "FATAL: input data directory does not exist";
   exit 1;
 fi
-if [[ ! -f "$input_data_list" ]] ; then 
-  echo "FATAL: input data list file does not exist!"; 
+if [[ ! -f "$input_data_list" ]] ; then
+  echo "FATAL: input data list file does not exist!";
   exit 1;
 fi
 
 mkdir -p $output_data_dir/transcription
 mkdir -p $output_data_dir/audio
 
-abs_src_dir=`utils/make_absolute.sh $input_data_dir` 
+abs_src_dir=`utils/make_absolute.sh $input_data_dir`
 abs_tgt_dir=`utils/make_absolute.sh $output_data_dir`
 
 echo "Making subset..."
@@ -48,7 +48,7 @@ for file_basename in `cat $input_data_list`; do
     echo $file_basename
     if [[ -e $abs_src_dir/audio/$file_basename.sph ]] ; then
         ln -sf $abs_src_dir/audio/$file_basename.sph $abs_tgt_dir/audio || exit 1
-    else 
+    else
       if [[ -e $abs_src_dir/audio/$file_basename.wav ]] ; then
         ln -sf $abs_src_dir/audio/$file_basename.wav $abs_tgt_dir/audio || exit 1
       else
