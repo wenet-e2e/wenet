@@ -282,15 +282,14 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-
 def compute_mfcc(data,
-                  num_mel_bins=23,
-                  frame_length=25,
-                  frame_shift=10,
-                  dither=0.0,
-                  num_ceps=40,
-                  high_freq=0.0,
-                  low_freq=20.0):
+                 num_mel_bins=23,
+                 frame_length=25,
+                 frame_shift=10,
+                 dither=0.0,
+                 num_ceps=40,
+                 high_freq=0.0,
+                 low_freq=20.0):
     """ Extract mfcc
 
         Args:
@@ -309,14 +308,14 @@ def compute_mfcc(data,
         waveform = waveform * (1 << 15)
         # Only keep key, feat, label
         mat = kaldi.mfcc(waveform,
-                          num_mel_bins=num_mel_bins,
-                          frame_length=frame_length,
-                          frame_shift=frame_shift,
-                          dither=dither,
-                          num_ceps=num_ceps,
-                          high_freq=high_freq,
-                          low_freq=low_freq,
-                          sample_frequency=sample_rate)
+                         num_mel_bins=num_mel_bins,
+                         frame_length=frame_length,
+                         frame_shift=frame_shift,
+                         dither=dither,
+                         num_ceps=num_ceps,
+                         high_freq=high_freq,
+                         low_freq=low_freq,
+                         sample_frequency=sample_rate)
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
@@ -343,7 +342,10 @@ def __tokenize_by_bpe_model(sp, txt):
     return tokens
 
 
-def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
+def tokenize(data,
+             symbol_table,
+             bpe_model=None,
+             non_lang_syms=None,
              split_with_space=False):
     """ Decode text to chars or BPE
         Inplace operation
