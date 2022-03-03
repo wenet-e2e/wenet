@@ -156,8 +156,14 @@ def Dataset(data_type,
     if speed_perturb:
         dataset = Processor(dataset, processor.speed_perturb)
 
-    fbank_conf = conf.get('fbank_conf', {})
-    dataset = Processor(dataset, processor.compute_fbank, **fbank_conf)
+    feats_type = conf.get('feats_type', 'fbank')
+    assert feats_type in ['fbank', 'mfcc']
+    if feats_type == 'fbank':
+        fbank_conf = conf.get('fbank_conf', {})
+        dataset = Processor(dataset, processor.compute_fbank, **fbank_conf)
+    elif feats_type == 'mfcc':
+        mfcc_conf = conf.get('mfcc_conf', {})
+        dataset = Processor(dataset, processor.compute_mfcc, **mfcc_conf)
 
     spec_aug = conf.get('spec_aug', True)
     if spec_aug:
