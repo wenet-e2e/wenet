@@ -46,9 +46,9 @@ class DecoderLayer(nn.Module):
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
-        self.norm1 = nn.LayerNorm(size, eps=1e-12)
-        self.norm2 = nn.LayerNorm(size, eps=1e-12)
-        self.norm3 = nn.LayerNorm(size, eps=1e-12)
+        self.norm1 = nn.LayerNorm(size, eps=1e-5)
+        self.norm2 = nn.LayerNorm(size, eps=1e-5)
+        self.norm3 = nn.LayerNorm(size, eps=1e-5)
         self.dropout = nn.Dropout(dropout_rate)
         self.normalize_before = normalize_before
         self.concat_after = concat_after

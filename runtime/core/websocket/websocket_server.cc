@@ -40,7 +40,7 @@ ConnectionHandler::ConnectionHandler(
       decode_resource_(std::move(decode_resource)) {}
 
 void ConnectionHandler::OnSpeechStart() {
-  LOG(INFO) << "Recieved speech start signal, start reading speech";
+  LOG(INFO) << "Received speech start signal, start reading speech";
   got_start_tag_ = true;
   json::value rv = {{"status", "ok"}, {"type", "server_ready"}};
   ws_.text(true);
@@ -54,9 +54,10 @@ void ConnectionHandler::OnSpeechStart() {
 }
 
 void ConnectionHandler::OnSpeechEnd() {
-  LOG(INFO) << "Recieved speech end signal";
-  CHECK(feature_pipeline_ != nullptr);
-  feature_pipeline_->set_input_finished();
+  LOG(INFO) << "Received speech end signal";
+  if (feature_pipeline_ != nullptr) {
+    feature_pipeline_->set_input_finished();
+  }
   got_end_tag_ = true;
 }
 
@@ -92,7 +93,7 @@ void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
     pcm_data[i] = static_cast<float>(*pdata);
     pdata++;
   }
-  VLOG(2) << "Recieved " << num_samples << " samples";
+  VLOG(2) << "Received " << num_samples << " samples";
   CHECK(feature_pipeline_ != nullptr);
   CHECK(decoder_ != nullptr);
   feature_pipeline_->AcceptWaveform(pcm_data);
@@ -235,13 +236,13 @@ void ConnectionHandler::operator()() {
       decode_thread_->join();
     }
   } catch (beast::system_error const& se) {
+    LOG(INFO) << se.code().message();
     // This indicates that the session was closed
-    if (se.code() != websocket::error::closed) {
-      if (decode_thread_ != nullptr) {
-        decode_thread_->join();
-      }
+    if (se.code() == websocket::error::closed) {
       OnSpeechEnd();
-      LOG(ERROR) << se.code().message();
+    }
+    if (decode_thread_ != nullptr) {
+      decode_thread_->join();
     }
   } catch (std::exception const& e) {
     LOG(ERROR) << e.what();

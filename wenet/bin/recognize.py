@@ -134,7 +134,10 @@ def main():
     test_conf['spec_aug'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
-    test_conf['fbank_conf']['dither'] = 0.0
+    if 'fbank_conf' in test_conf:
+        test_conf['fbank_conf']['dither'] = 0.0
+    elif 'mfcc_conf' in test_conf:
+        test_conf['mfcc_conf']['dither'] = 0.0
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)

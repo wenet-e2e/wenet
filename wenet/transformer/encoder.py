@@ -112,7 +112,7 @@ class BaseEncoder(torch.nn.Module):
         )
 
         self.normalize_before = normalize_before
-        self.after_norm = torch.nn.LayerNorm(output_size, eps=1e-12)
+        self.after_norm = torch.nn.LayerNorm(output_size, eps=1e-5)
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk

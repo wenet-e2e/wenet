@@ -250,7 +250,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
     ali_format=$feat_dir/test/format.data
     # alignment output
     ali_result=$dir/ali
-    python wenet/bin/alignment.py --gpu -1 \
+    python wenet/bin/alignment_deprecated.py --gpu -1 \
         --config $dir/train.yaml \
         --input_file $ali_format \
         --checkpoint $checkpoint \

@@ -1,4 +1,5 @@
 # Copyright (c) 2021 Mobvoi Inc. (authors: Di Wu)
+#               2022 Tinnove Inc (authors: Wei Ren)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,9 +26,10 @@ import yaml
 from torch.utils.data import DataLoader
 from textgrid import TextGrid, IntervalTier
 
-from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
+from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.ctc_util import forced_align
 from wenet.utils.common import get_subsample
 
@@ -104,12 +106,18 @@ if __name__ == '__main__':
         description='use ctc to generate alignment')
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--input_file', required=True, help='format data file')
+    parser.add_argument('--data_type',
+                        default='raw',
+                        choices=['raw', 'shard'],
+                        help='train and cv data type')
     parser.add_argument('--gpu',
                         type=int,
                         default=-1,
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--dict', required=True, help='dict file')
+    parser.add_argument('--non_lang_syms',
+                        help="non-linguistic symbol file. One symbol per line.")
     parser.add_argument('--result_file',
                         required=True,
                         help='alignment result file')
@@ -117,6 +125,10 @@ if __name__ == '__main__':
     parser.add_argument('--gen_praat',
                         action='store_true',
                         help='convert alignment to a praat format')
+    parser.add_argument('--bpe_model',
+                        default=None,
+                        type=str,
+                        help='bpe model for english part')
 
     args = parser.parse_args()
     print(args)
@@ -140,28 +152,35 @@ if __name__ == '__main__':
             char_dict[int(arr[1])] = arr[0]
     eos = len(char_dict) - 1
 
-    raw_wav = configs['raw_wav']
+    symbol_table = read_symbol_table(args.dict)
+
     # Init dataset and data loader
-    ali_collate_conf = copy.deepcopy(configs['collate_conf'])
-    ali_collate_conf['spec_aug'] = False
-    ali_collate_conf['spec_sub'] = False
-    ali_collate_conf['feature_dither'] = False
-    ali_collate_conf['speed_perturb'] = False
-    if raw_wav:
-        ali_collate_conf['wav_distortion_conf']['wav_distortion_rate'] = 0
-    ali_collate_func = CollateFunc(**ali_collate_conf, raw_wav=raw_wav)
-    dataset_conf = configs.get('dataset_conf', {})
-    dataset_conf['batch_size'] = args.batch_size
-    dataset_conf['batch_type'] = 'static'
-    dataset_conf['sort'] = False
-    ali_dataset = AudioDataset(args.input_file,
-                               **dataset_conf,
-                               raw_wav=raw_wav)
-    ali_data_loader = DataLoader(ali_dataset,
-                                 collate_fn=ali_collate_func,
-                                 shuffle=False,
-                                 batch_size=1,
-                                 num_workers=0)
+    ali_conf = copy.deepcopy(configs['dataset_conf'])
+
+    ali_conf['filter_conf']['max_length'] = 102400
+    ali_conf['filter_conf']['min_length'] = 0
+    ali_conf['filter_conf']['token_max_length'] = 102400
+    ali_conf['filter_conf']['token_min_length'] = 0
+    ali_conf['filter_conf']['max_output_input_ratio'] = 102400
+    ali_conf['filter_conf']['min_output_input_ratio'] = 0
+    ali_conf['speed_perturb'] = False
+    ali_conf['spec_aug'] = False
+    ali_conf['shuffle'] = False
+    ali_conf['sort'] = False
+    ali_conf['fbank_conf']['dither'] = 0.0
+    ali_conf['batch_conf']['batch_type'] = "static"
+    ali_conf['batch_conf']['batch_size'] = args.batch_size
+    non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
+
+    ali_dataset = Dataset(args.data_type,
+                          args.input_file,
+                          symbol_table,
+                          ali_conf,
+                          args.bpe_model,
+                          non_lang_syms,
+                          partition=False)
+
+    ali_data_loader = DataLoader(ali_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
     model = init_asr_model(configs)

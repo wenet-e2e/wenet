@@ -282,6 +282,43 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
+def compute_mfcc(data,
+                 num_mel_bins=23,
+                 frame_length=25,
+                 frame_shift=10,
+                 dither=0.0,
+                 num_ceps=40,
+                 high_freq=0.0,
+                 low_freq=20.0):
+    """ Extract mfcc
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+
+        Returns:
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'sample_rate' in sample
+        assert 'wav' in sample
+        assert 'key' in sample
+        assert 'label' in sample
+        sample_rate = sample['sample_rate']
+        waveform = sample['wav']
+        waveform = waveform * (1 << 15)
+        # Only keep key, feat, label
+        mat = kaldi.mfcc(waveform,
+                         num_mel_bins=num_mel_bins,
+                         frame_length=frame_length,
+                         frame_shift=frame_shift,
+                         dither=dither,
+                         num_ceps=num_ceps,
+                         high_freq=high_freq,
+                         low_freq=low_freq,
+                         sample_frequency=sample_rate)
+        yield dict(key=sample['key'], label=sample['label'], feat=mat)
+
+
 def __tokenize_by_bpe_model(sp, txt):
     tokens = []
     # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
@@ -299,14 +336,16 @@ def __tokenize_by_bpe_model(sp, txt):
         # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
         # encode ch_or_w using bpe_model.
         else:
-            for w in ch_or_w.strip().split():
-                for p in sp.encode_as_pieces(w):
-                    tokens.append(p)
+            for p in sp.encode_as_pieces(ch_or_w):
+                tokens.append(p)
 
     return tokens
 
 
-def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
+def tokenize(data,
+             symbol_table,
+             bpe_model=None,
+             non_lang_syms=None,
              split_with_space=False):
     """ Decode text to chars or BPE
         Inplace operation

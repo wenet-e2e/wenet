@@ -71,8 +71,13 @@ bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
       }
     }
     CHECK(input_finished_);
-    CHECK(feature_queue_.Empty());
-    return false;
+    // Double check queue.empty, see issue#893 for detailed discussions.
+    if (!feature_queue_.Empty()) {
+      *feat = std::move(feature_queue_.Pop());
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 

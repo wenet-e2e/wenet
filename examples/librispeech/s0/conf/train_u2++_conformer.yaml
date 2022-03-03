@@ -47,8 +47,8 @@ dataset_conf:
         min_length: 50
         token_max_length: 400
         token_min_length: 1
-        min_output_input_ratio: 0.05
-        max_output_input_ratio: 10.0
+        min_output_input_ratio: 0.0005
+        max_output_input_ratio: 0.1
     resample_conf:
         resample_rate: 16000
     speed_perturb: true

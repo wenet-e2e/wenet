@@ -94,10 +94,12 @@ class CtcPrefixBeamSearch : public SearchInterface {
 
   void Search(const torch::Tensor& logp) override;
   void Reset() override;
-  // CtcPrefixBeamSearch do nothing at FinalizeSearch
-  void FinalizeSearch() override {}
+  void FinalizeSearch() override;
   SearchType Type() const override { return SearchType::kPrefixBeamSearch; }
   void UpdateOutputs(const std::pair<std::vector<int>, PrefixScore>& prefix);
+  void UpdateHypotheses(
+      const std::vector<std::pair<std::vector<int>, PrefixScore>>& hpys);
+  void UpdateFinalContext();
 
   const std::vector<float>& viterbi_likelihood() const {
     return viterbi_likelihood_;
