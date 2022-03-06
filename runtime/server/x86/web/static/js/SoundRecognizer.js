@@ -5,15 +5,15 @@ SoundRecognizer = {
     testBitRate: 16,
     isCloseRecorder: false,
     SendInterval: 300,
-    realTimeSendTryType: 'wav',
+    realTimeSendTryType: 'pcm',
     realTimeSendTryEncBusy: 0,
     realTimeSendTryTime: 0,
     realTimeSendTryNumber: 0,
     transferUploadNumberMax: 0,
     realTimeSendTryChunk: null,
-    soundType: "wav",
+    soundType: "pcm",
     init: function (config) {
-        this.soundType = config.soundType || 'wav';
+        this.soundType = config.soundType || 'pcm';
         this.SampleRate = config.sampleRate || 16000;
         this.recwaveElm = config.recwaveElm || '';
         this.TransferUpload = config.translerCallBack || this.TransferProcess;
