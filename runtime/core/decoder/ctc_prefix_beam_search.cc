@@ -34,6 +34,7 @@ void CtcPrefixBeamSearch::Reset() {
   prefix_score.v_ns = 0.0;
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
+  outputs_.emplace_back(empty);
   hypotheses_.emplace_back(empty);
   likelihood_.emplace_back(prefix_score.total_score());
 }
@@ -193,9 +194,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   }
 }
 
-void CtcPrefixBeamSearch::FinalizeSearch() {
-  UpdateFinalContext();
-}
+void CtcPrefixBeamSearch::FinalizeSearch() { UpdateFinalContext(); }
 
 void CtcPrefixBeamSearch::UpdateFinalContext() {
   if (context_graph_ == nullptr) return;
@@ -211,7 +210,7 @@ void CtcPrefixBeamSearch::UpdateFinalContext() {
     }
   }
   std::vector<std::pair<std::vector<int>, PrefixScore>> arr(cur_hyps_.begin(),
-                                                              cur_hyps_.end());
+                                                            cur_hyps_.end());
   std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
   // Update cur_hyps_ and get new result
