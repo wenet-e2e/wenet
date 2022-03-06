@@ -20,6 +20,7 @@ DEFINE_bool(output_nbest, false, "output n-best of decode result");
 DEFINE_string(wav_path, "", "single wave path");
 DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(result, "", "result output file");
+DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
@@ -85,9 +86,12 @@ int main(int argc, char *argv[]) {
         LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
       }
 
-      if (state == wenet::DecodeState::kEndpoint) {
-        decoder.Rescoring();
-        final_result.append(decoder.result()[0].sentence);
+      if (FLAGS_continuous_decoding &&
+          state == wenet::DecodeState::kEndpoint) {
+        if (decoder.DecodedSomething()) {
+          decoder.Rescoring();
+          final_result.append(decoder.result()[0].sentence);
+        }
         decoder.ResetContinuousDecoding();
       }
 

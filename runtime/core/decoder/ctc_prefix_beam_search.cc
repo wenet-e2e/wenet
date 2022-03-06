@@ -34,6 +34,8 @@ void CtcPrefixBeamSearch::Reset() {
   prefix_score.v_ns = 0.0;
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
+  hypotheses_.emplace_back(empty);
+  likelihood_.emplace_back(prefix_score.total_score());
 }
 
 static bool PrefixScoreCompare(
