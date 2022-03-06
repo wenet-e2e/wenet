@@ -9,7 +9,7 @@
   <script src="../static/js/recorder/recorder-core.js"></script>
   <script src="../static/js/recorder/extensions/lib.fft.js"></script>
   <script src="../static/js/recorder/extensions/frequency.histogram.view.js"></script>
-  <script src="../static/js/recorder/engine/wav.js"></script>
+  <script src="../static/js/recorder/engine/pcm.js"></script>
   <script src="../static/js/SoundRecognizer.js"></script>
   <link rel="stylesheet" href="../static/css/style.css">
   <link rel="stylesheet" href="../static/css/font-awesome.min.css">
@@ -44,7 +44,8 @@
         <div class="voice-container">
           <div class="voice-input">
             <span>WebSocket URL：</span>
-            <input type="text" id="socketUrl" class="websocket-url" placeholder="请输入服务器地址，如：ws://127.0.0.1:10086">
+            <input type="text" id="socketUrl" class="websocket-url" value="ws://127.0.0.1:10086"
+              placeholder="请输入服务器地址，如：ws://127.0.0.1:10086">
             <div class="start-voice">
               <button type="primary" id="beginBtn" class="voice-btn">
                 <span class="fa fa-microphone"> 开始识别</span>
@@ -182,7 +183,7 @@
       }
       // init recorder
       SoundRecognizer.init({
-        soundType: 'wav',
+        soundType: 'pcm',
         sampleRate: 16000,
         recwaveElm: '.recwave',
         translerCallBack: TransferUpload
