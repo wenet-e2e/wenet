@@ -89,7 +89,7 @@ void CtcPrefixBeamSearch::UpdateHypotheses(
 void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   CHECK_EQ(logp.dtype(), torch::kFloat);
   CHECK_EQ(logp.dim(), 2);
-  int first_beam_size = std::min(static_cast<int>(logp.size(1)), 
+  int first_beam_size = std::min(static_cast<int>(logp.size(1)),
                                  opts_.first_beam_size);
   for (int t = 0; t < logp.size(0); ++t, ++abs_time_step_) {
     torch::Tensor logp_t = logp[t];
