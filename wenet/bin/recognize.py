@@ -156,12 +156,7 @@ def main():
     model = init_asr_model(configs)
 
     # Load dict
-    char_dict = {}
-    with open(args.dict, 'r') as fin:
-        for line in fin:
-            arr = line.strip().split()
-            assert len(arr) == 2
-            char_dict[int(arr[1])] = arr[0]
+    char_dict = {v: k for k, v in symbol_table.items()}
     eos = len(char_dict) - 1
 
     load_checkpoint(model, args.checkpoint)
