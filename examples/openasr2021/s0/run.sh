@@ -114,7 +114,7 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo "Prepare data, prepare requried format"
-  # For wav feature, just copy the data. Fbank extraction is done in training
+  # For wav feature, just copy the data. mfcc/fbank extraction is done in training
   for x in ${train_set} ${train_dev} ${recog_set}; do
     if [ $data_type == "shard" ]; then
       tools/make_shard_list.py --num_utts_per_shard $num_utts_per_shard \
