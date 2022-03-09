@@ -1,5 +1,4 @@
 #!/bin/bash
-# convert  scp to segmented wav scp
 # dumps such pipe-style-wav to real audio file
 nj=1
 . tools/parse_options.sh || exit 1;
