@@ -16,12 +16,12 @@ if [ ! -d tools/sph2pipe_${sph2pipe_version} ]; then
   wget -T 10 -c -P tools https://sourceforge.net/projects/kaldi/files/sph2pipe_${sph2pipe_version}.tar.gz; \
   tar --no-same-owner -xzf tools/sph2pipe_${sph2pipe_version}.tar.gz -C tools
   cd tools/sph2pipe_${sph2pipe_version}/ && \
-        gcc -o sph2pipe  *.c -lm 
+        gcc -o sph2pipe  *.c -lm
   cd -
 fi
 sph2pipe=`which sph2pipe` || sph2pipe=`pwd`/tools/sph2pipe_${sph2pipe_version}/sph2pipe
 [ ! -x $sph2pipe ] && echo "Could not find the sph2pipe program at $sph2pipe" && exit 1;
-export SPH2PIPE=$sph2pipe 
+export SPH2PIPE=$sph2pipe
 sox=`which sox`
 [ ! -x $sox ] && echo "Could not find the sox program at $sph2pipe" && exit 1;
 

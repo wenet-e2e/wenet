@@ -43,7 +43,7 @@ dataset_conf:
     filter_conf:
         max_length: 40960
         min_length: 0
-        token_max_length: 200 
+        token_max_length: 200
         token_min_length: 1
     resample_conf:
         resample_rate: 16000
@@ -56,7 +56,7 @@ dataset_conf:
         num_ceps: 40
         low_freq: 20
         high_freq: -400
-        dither: 0.1 
+        dither: 0.1
     spec_aug: true
     spec_aug_conf:
         num_t_mask: 2

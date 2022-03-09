@@ -40,7 +40,7 @@ fi
 mkdir -p $output_data_dir/transcription
 mkdir -p $output_data_dir/audio
 
-abs_src_dir=`local/make_absolute.sh $input_data_dir` 
+abs_src_dir=`local/make_absolute.sh $input_data_dir`
 abs_tgt_dir=`local/make_absolute.sh $output_data_dir`
 
 echo "Making subset..."

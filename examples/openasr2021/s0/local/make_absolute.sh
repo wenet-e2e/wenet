@@ -14,7 +14,7 @@ while [ -L "$target_file" ]; do
     target_file=$(basename $target_file)
 done
 
-# Compute the canonicalized name by finding the physical path 
+# Compute the canonicalized name by finding the physical path
 # for the directory we're in and appending the target file.
 phys_dir=$(pwd -P)
 result=$phys_dir/$target_file

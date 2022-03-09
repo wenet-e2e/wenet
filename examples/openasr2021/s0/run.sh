@@ -123,7 +123,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     else
       tools/make_raw_list.py  data/$x/wav.scp data/$x/text \
         data/$x/data.list
-    fi  
+    fi
   done
 fi
 
