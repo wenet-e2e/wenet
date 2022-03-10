@@ -34,6 +34,9 @@ void CtcPrefixBeamSearch::Reset() {
   prefix_score.v_ns = 0.0;
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
+  outputs_.emplace_back(empty);
+  hypotheses_.emplace_back(empty);
+  likelihood_.emplace_back(prefix_score.total_score());
 }
 
 static bool PrefixScoreCompare(
@@ -89,11 +92,13 @@ void CtcPrefixBeamSearch::UpdateHypotheses(
 void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   CHECK_EQ(logp.dtype(), torch::kFloat);
   CHECK_EQ(logp.dim(), 2);
+  int first_beam_size = std::min(static_cast<int>(logp.size(1)),
+                                 opts_.first_beam_size);
   for (int t = 0; t < logp.size(0); ++t, ++abs_time_step_) {
     torch::Tensor logp_t = logp[t];
     std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> next_hyps;
     // 1. First beam prune, only select topk candidates
-    std::tuple<Tensor, Tensor> topk = logp_t.topk(opts_.first_beam_size);
+    std::tuple<Tensor, Tensor> topk = logp_t.topk(first_beam_size);
     Tensor topk_score = std::get<0>(topk);
     Tensor topk_index = std::get<1>(topk);
 
@@ -191,9 +196,7 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
   }
 }
 
-void CtcPrefixBeamSearch::FinalizeSearch() {
-  UpdateFinalContext();
-}
+void CtcPrefixBeamSearch::FinalizeSearch() { UpdateFinalContext(); }
 
 void CtcPrefixBeamSearch::UpdateFinalContext() {
   if (context_graph_ == nullptr) return;
@@ -209,7 +212,7 @@ void CtcPrefixBeamSearch::UpdateFinalContext() {
     }
   }
   std::vector<std::pair<std::vector<int>, PrefixScore>> arr(cur_hyps_.begin(),
-                                                              cur_hyps_.end());
+                                                            cur_hyps_.end());
   std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
   // Update cur_hyps_ and get new result
