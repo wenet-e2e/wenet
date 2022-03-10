@@ -12,7 +12,7 @@ cmd=run.pl
 nlsyms=""
 lang=""
 feat=""
-feat_type="kaldi"
+feat-type="kaldi"
 oov="<unk>"
 bpecode=""
 allow_one_column=false
@@ -20,7 +20,7 @@ raw=""
 verbose=0
 trans_type=char
 filetype=""
-preprocess_conf=""
+preprocess-conf=""
 category=""
 out="" # If omitted, write in stdout
 help_message=$(cat << EOF
@@ -72,12 +72,12 @@ if [ -n "${feat}" ]; then
                 > ${tmpdir}/input_${i}/filetype.scp
         fi
 
-        if [ ${feat_type} == "kaldi" ]; then
+        if [ ${feat-type} == "kaldi" ]; then
             tools/feat_to_shape.sh --cmd "${cmd}" --nj ${nj} \
                 --filetype "${filetype}" \
-                --preprocess-conf "${preprocess_conf}" \
+                --preprocess-conf "${preprocess-conf}" \
                 --verbose ${verbose} ${feat} ${tmpdir}/input_${i}/shape.scp
-        elif [ ${feat_type} == "wav" ] || [ ${feat_type} == "flac" ] || [ ${feat_type} == "opus" ]; then
+        elif [ ${feat-type} == "wav" ] || [ ${feat-type} == "flac" ] || [ ${feat-type} == "opus" ]; then
             if [ -f $dir/segments ]; then
                 # used for segmented wav.scp
                 awk '{print $1" "$4-$3}' $dir/segments > $dir/utt2dur
