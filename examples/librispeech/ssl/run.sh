@@ -65,8 +65,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   ### Task dependent. You have to make data the following preparation part by yourself.
   ### But you can utilize Kaldi recipes in most cases
   echo "stage 0: Data preparation"
-  #for part in dev-clean test-clean test-other train-clean-100 train-clean-360 train-other-500; do
-  for part in dev-other ; do
+  #for part in dev-clean dev-other test-clean test-other train-clean-100 train-clean-360 train-other-500; do
     # use underscore-separated names in data directories.
     local/data_prep_torchaudio.sh ${datadir}/LibriSpeech/${part} $wave_data/${part//-/_}
   done
@@ -121,8 +120,7 @@ fi
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   # Prepare wenet requried data
   echo "Prepare data, prepare requried format"
-  #for x in $dev_set ${recog_set} $train_set ; do
-  for x in  $train_set_100h ; do
+  for x in $dev_set ${recog_set} $train_set  $train_set_100h; do
     tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
         $wave_data/$x/data.list
   done
