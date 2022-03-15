@@ -2,7 +2,7 @@
 # Copyright 2021 Tencent Inc. (Author: Kai Tang).
 # Apach 2.0
 
-. ./path1.sh || exit 1;
+. ./path.sh || exit 1;
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
