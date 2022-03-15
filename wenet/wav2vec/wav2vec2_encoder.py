@@ -347,7 +347,7 @@ class W2vBaseEncoder(torch.nn.Module):
         xs_lens: torch.Tensor,
         decoding_chunk_size: int = 0,
         num_decoding_left_chunks: int = -1,
-        features_only: bool=False,
+        features_only: bool=True,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 

@@ -26,6 +26,7 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
+from wenet.wav2vec.wav2vec2_model import init_wav2vec2_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
@@ -142,6 +143,13 @@ def main():
     test_conf['batch_conf']['batch_size'] = args.batch_size
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    pretrain=configs.get('pretrain',False)
+    if 'wav2vec_conf' in configs:
+        wav2vec_conf=configs['wav2vec_conf']
+        wav2vec_conf['pretrain']=pretrain
+    else:
+        wav2vec_conf=None 
+
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            symbol_table,
@@ -153,7 +161,10 @@ def main():
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    if wav2vec_conf:
+        model=init_wav2vec2_model(configs)
+    else:
+        model = init_asr_model(configs)
 
     # Load dict
     char_dict = {v: k for k, v in symbol_table.items()}

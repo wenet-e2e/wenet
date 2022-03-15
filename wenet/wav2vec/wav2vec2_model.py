@@ -110,7 +110,7 @@ class Wav2vec2Model(torch.nn.Module):
         self.num_updates=num_updates
 
         if self.pretrain:
-            encoder_out, encoder_mask,ext_res = self.encoder(speech, speech_lengths,False)
+            encoder_out, encoder_mask,ext_res = self.encoder(speech, speech_lengths, features_only=False)
             encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         else:
             if self.encoder_grad_mult>0 and self.num_updates>=self.freeze_finetune_updates:
@@ -210,7 +210,7 @@ class Wav2vec2Model(torch.nn.Module):
                 num_decoding_left_chunks=num_decoding_left_chunks
             )  # (B, maxlen, encoder_dim)
         else:
-            encoder_out, encoder_mask = self.encoder(
+            encoder_out, encoder_mask,_ = self.encoder(
                 speech,
                 speech_lengths,
                 decoding_chunk_size=decoding_chunk_size,
