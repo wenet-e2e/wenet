@@ -28,6 +28,7 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
+from wenet.wav2vec.wav2vec2_model import init_wav2vec2_model
 from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
 from wenet.utils.executor import Executor
@@ -179,6 +180,13 @@ def main():
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
     vocab_size = len(symbol_table)
 
+    pretrain=configs.get('pretrain',False)
+    if 'wav2vec_conf' in configs:
+        wav2vec_conf=configs['wav2vec_conf']
+        wav2vec_conf['pretrain']=pretrain
+    else:
+        wav2vec_conf=None 
+
     # Save configs to model_dir/train.yaml for inference and export
     configs['input_dim'] = input_dim
     configs['output_dim'] = vocab_size
@@ -191,7 +199,10 @@ def main():
             fout.write(data)
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    if wav2vec_conf:
+        model=init_wav2vec2_model(configs)
+    else:
+        model = init_asr_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {}'.format(num_params))
@@ -199,7 +210,7 @@ def main():
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements
-    if args.rank == 0:
+    if  args.rank == 0 and not pretrain and wav2vec_conf is None:
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()
@@ -218,6 +229,8 @@ def main():
     num_epochs = configs.get('max_epoch', 100)
     model_dir = args.model_dir
     writer = None
+    if pretrain:
+        model.set_num_updates(step)
     if args.rank == 0:
         os.makedirs(model_dir, exist_ok=True)
         exp_id = os.path.basename(model_dir)
