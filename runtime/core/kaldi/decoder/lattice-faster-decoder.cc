@@ -817,8 +817,22 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
         if (arc.ilabel != 0) {  // propagate..
           BaseFloat ac_cost = cost_offset -
                               decodable->LogLikelihood(frame, arc.ilabel),
-                    graph_cost = arc.weight.Value(), cur_cost = tok->tot_cost,
-                    tot_cost = cur_cost + ac_cost + graph_cost;
+                    graph_cost = arc.weight.Value(), cur_cost = tok->tot_cost;
+          bool is_start_boundary = false;
+          bool is_end_boundary = false;
+          float context_score = 0;
+          int context_state = 0;
+          if (context_graph_) {
+            if (arc.olabel == 0) {
+              context_state = tok->context_state;
+            } else {
+              context_state = context_graph_->GetNextState(
+                  tok->context_state, arc.olabel, &context_score,
+                  &is_start_boundary, &is_end_boundary);
+              graph_cost -= context_score;
+            }
+          }
+          BaseFloat tot_cost = cur_cost + ac_cost + graph_cost;
           if (tot_cost >= next_cutoff)
             continue;
           else if (tot_cost + adaptive_beam < next_cutoff)
@@ -830,18 +844,8 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, NULL);
           // NULL: no change indicator needed
 
-          bool is_start_boundary = false;
-          bool is_end_boundary = false;
-          float context_score = 0;
           if (context_graph_) {
-            if (arc.olabel == 0) {
-              e_next->val->context_state = tok->context_state;
-            } else {
-              e_next->val->context_state = context_graph_->GetNextState(
-                  tok->context_state, arc.olabel, &context_score,
-                  &is_start_boundary, &is_end_boundary);
-              graph_cost -= context_score;
-            }
+            e_next->val->context_state = context_state;
           }
           // Add ForwardLink from tok to next_tok (put on head of list
           // tok->links)
@@ -921,26 +925,32 @@ void LatticeFasterDecoderTpl<FST, Token>::ProcessNonemitting(BaseFloat cutoff) {
          aiter.Next()) {
       const Arc &arc = aiter.Value();
       if (arc.ilabel == 0) {  // propagate nonemitting only...
-        BaseFloat graph_cost = arc.weight.Value(),
-                  tot_cost = cur_cost + graph_cost;
+        BaseFloat graph_cost = arc.weight.Value();
+
+        bool is_start_boundary = false;
+        bool is_end_boundary = false;
+        float context_score = 0;
+        int context_state = 0;
+        if (context_graph_) {
+          if (arc.olabel == 0) {
+            context_state = tok->context_state;
+          } else {
+            context_state = context_graph_->GetNextState(
+                tok->context_state, arc.olabel, &context_score,
+                &is_start_boundary, &is_end_boundary);
+            graph_cost -= context_score;
+          }
+        }
+        BaseFloat tot_cost = cur_cost + graph_cost;
+
         if (tot_cost < cutoff) {
           bool changed;
 
           Elem *e_new =
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, &changed);
 
-          bool is_start_boundary = false;
-          bool is_end_boundary = false;
-          float context_score = 0;
           if (context_graph_) {
-            if (arc.olabel == 0) {
-              e_new->val->context_state = tok->context_state;
-            } else {
-              e_new->val->context_state = context_graph_->GetNextState(
-                  tok->context_state, arc.olabel, &context_score,
-                  &is_start_boundary, &is_end_boundary);
-              graph_cost -= context_score;
-            }
+            e_new->val->context_state = context_state;
           }
 
           tok->links =
