@@ -813,7 +813,6 @@ class W2vConformerEncoder(W2vBaseEncoder):
                     *positionwise_layer_args) if macaron_style else None,
                 convolution_layer(
                     *convolution_layer_args) if use_cnn_module else None,
-                cnn_module_before,
                 dropout_rate,
                 normalize_before,
                 concat_after,
