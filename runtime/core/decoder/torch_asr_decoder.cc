@@ -222,17 +222,19 @@ void TorchAsrDecoder::UpdateResult(bool finish) {
     if (unit_table_ != nullptr && finish) {
       const std::vector<int>& input = inputs[i];
       const std::vector<int>& time_stamp = times[i];
-      CHECK_EQ(input.size(), time_stamp.size());
-      for (size_t j = 0; j < input.size(); j++) {
-        std::string word = unit_table_->Find(input[j]);
-        int start = j > 0 ? ((time_stamp[j - 1] + time_stamp[j]) / 2 *
-                             frame_shift_in_ms())
-                          : 0;
-        int end = j < input.size() - 1 ? ((time_stamp[j] + time_stamp[j + 1]) /
-                                          2 * frame_shift_in_ms())
-                                       : offset_ * frame_shift_in_ms();
-        WordPiece word_piece(word, offset + start, offset + end);
-        path.word_pieces.emplace_back(word_piece);
+      if (input.size() > 0) {
+        CHECK_EQ(input.size(), time_stamp.size());
+        for (size_t j = 0; j < input.size(); j++) {
+          std::string word = unit_table_->Find(input[j]);
+          int start = j > 0 ? ((time_stamp[j - 1] + time_stamp[j]) / 2 *
+                              frame_shift_in_ms())
+                            : 0;
+          int end = j < input.size() - 1 ? ((time_stamp[j] + time_stamp[j + 1]) /
+                                            2 * frame_shift_in_ms())
+                                        : offset_ * frame_shift_in_ms();
+          WordPiece word_piece(word, offset + start, offset + end);
+          path.word_pieces.emplace_back(word_piece);
+        }
       }
     }
     path.sentence = post_processor_->Process(path.sentence, finish);
