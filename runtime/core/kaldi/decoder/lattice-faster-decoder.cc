@@ -921,7 +921,7 @@ void LatticeFasterDecoderTpl<FST, Token>::ProcessNonemitting(BaseFloat cutoff) {
          aiter.Next()) {
       const Arc &arc = aiter.Value();
       if (arc.ilabel == 0) {  // propagate nonemitting only...
-        BaseFloat graph_cost = arc.weight.Value(),
+        BaseFloat graph_cost = arc.weight.Value() - config_.deletion_penalty,
                   tot_cost = cur_cost + graph_cost;
         if (tot_cost < cutoff) {
           bool changed;

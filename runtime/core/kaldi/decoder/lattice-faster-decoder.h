@@ -49,6 +49,7 @@ struct LatticeFasterDecoderConfig {
                              // command-line program.
   BaseFloat beam_delta;
   BaseFloat hash_ratio;
+  BaseFloat deletion_penalty;
   // Note: we don't make prune_scale configurable on the command line, it's not
   // a very important parameter.  It affects the algorithm that prunes the
   // tokens as we go.
@@ -68,6 +69,7 @@ struct LatticeFasterDecoderConfig {
         determinize_lattice(true),
         beam_delta(0.5),
         hash_ratio(2.0),
+        deletion_penalty(0.0),
         prune_scale(0.1) {}
   void Register(OptionsItf *opts) {
     det_opts.Register(opts);
@@ -97,6 +99,9 @@ struct LatticeFasterDecoderConfig {
     opts->Register("hash-ratio", &hash_ratio,
                    "Setting used in decoder to "
                    "control hash behavior");
+    opts->Register("deletion-penalty", &deletion_penalty,
+                   "Setting used in decoder to "
+                   "decrease deletion errors");
   }
   void Check() const {
     KALDI_ASSERT(beam > 0.0 && max_active > 1 && lattice_beam > 0.0 &&
