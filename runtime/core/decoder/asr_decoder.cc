@@ -180,7 +180,7 @@ void AsrDecoder::AttentionRescoring() {
   }
 
   std::vector<float> rescoring_score;
-  model_->AttentionRescoring(hypotheses, opts_.rescoring_weight,
+  model_->AttentionRescoring(hypotheses, opts_.reverse_weight,
                              &rescoring_score);
 
   // Combine ctc score and rescoring score

@@ -180,7 +180,7 @@ void TorchAsrModel::AttentionRescoring(
     score = ComputeAttentionScore(probs[i], hyp, eos_);
     // Optional: Used for right to left score
     float r_score = 0.0f;
-    if (reverse_weight > 0) {
+    if (is_bidirectional_decoder_ && reverse_weight > 0) {
       // right-to-left score
       CHECK_EQ(r_probs.size(0), num_hyps);
       CHECK_EQ(r_probs.size(1), max_hyps_len);
