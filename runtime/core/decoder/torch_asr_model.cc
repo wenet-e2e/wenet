@@ -45,6 +45,29 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   LOG(INFO) << "\tnum threads " << num_threads;
 }
 
+TorchAsrModel::TorchAsrModel(const TorchAsrModel& other) {
+  // 1. Init the model info
+  right_context_ = other.right_context_;
+  subsampling_rate_ = other.subsampling_rate_;
+  sos_ = other.sos_;
+  eos_ = other.eos_;
+  is_bidirectional_decoder_ = other.is_bidirectional_decoder_;
+  chunk_size_ = other.chunk_size_;
+  num_left_chunks_ = other.chunk_size_;
+  offset_ = other.offset_;
+  // 2. Model copy, just copy the model ptr since:
+  // PyTorch allows using multiple CPU threads during TorchScript model
+  // inference, please see https://pytorch.org/docs/stable/notes/cpu_
+  // threading_torchscript_inference.html
+  model_ = other.model_;
+  // 3. Reset status
+  Reset();
+}
+
+std::shared_ptr<AsrModel> TorchAsrModel::Copy() const {
+  auto asr_model = std::make_shared<TorchAsrModel>(*this);
+  return asr_model;
+}
 
 void TorchAsrModel::Reset() {
   offset_ = 0;

@@ -50,6 +50,8 @@ class AsrModel {
       float reverse_weight,
       std::vector<float>* rescoring_score) = 0;
 
+  virtual std::shared_ptr<AsrModel> Copy() const = 0;
+
  protected:
   virtual void ForwardEncoderFunc(
       const std::vector<std::vector<float>>& chunk_feats,

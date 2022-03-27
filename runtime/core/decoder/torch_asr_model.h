@@ -21,6 +21,7 @@ class TorchAsrModel: public AsrModel {
  public:
   using TorchModule = torch::jit::script::Module;
   TorchAsrModel() = default;
+  TorchAsrModel(const TorchAsrModel& other);
   void Read(const std::string& model_path, int num_threads = 1);
   std::shared_ptr<TorchModule> torch_model() const { return model_; }
   void Reset() override;
@@ -28,6 +29,7 @@ class TorchAsrModel: public AsrModel {
       const std::vector<std::vector<int>>& hyps,
       float reverse_weight,
       std::vector<float>* rescoring_score) override;
+  std::shared_ptr<AsrModel> Copy() const override;
 
  protected:
   void ForwardEncoderFunc(
@@ -45,9 +47,6 @@ class TorchAsrModel: public AsrModel {
   // transformer/conformer encoder layers output cache
   torch::jit::IValue elayers_output_cache_;
   torch::jit::IValue conformer_cnn_cache_;
-
- public:
-  WENET_DISALLOW_COPY_AND_ASSIGN(TorchAsrModel);
 };
 
 }  // namespace wenet

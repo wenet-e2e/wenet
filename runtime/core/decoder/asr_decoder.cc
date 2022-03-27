@@ -18,7 +18,9 @@ AsrDecoder::AsrDecoder(
     std::shared_ptr<FeaturePipeline> feature_pipeline,
     std::shared_ptr<DecodeResource> resource, const DecodeOptions& opts)
     : feature_pipeline_(std::move(feature_pipeline)),
-      model_(resource->model),
+      // Make a copy of the model ASR model since we will change the inner
+      // status of the model
+      model_(resource->model->Copy()),
       post_processor_(resource->post_processor),
       symbol_table_(resource->symbol_table),
       fst_(resource->fst),
