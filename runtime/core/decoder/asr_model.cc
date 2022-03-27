@@ -48,7 +48,6 @@ void AsrModel::CacheFeature(
 void AsrModel::ForwardEncoder(
     const std::vector<std::vector<float>>& chunk_feats,
     std::vector<std::vector<float>> *ctc_prob) {
-  CHECK_GT(chunk_feats.size(), 0);
   ctc_prob->clear();
   int num_frames = cached_feature_.size() + chunk_feats.size();
   if (num_frames > right_context_ + 1) {

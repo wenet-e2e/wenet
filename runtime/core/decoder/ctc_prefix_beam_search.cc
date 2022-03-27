@@ -91,7 +91,7 @@ void CtcPrefixBeamSearch::UpdateHypotheses(
 // for how CTC prefix beam search works, and there is a simple graph demo in
 // it.
 void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
-  CHECK_GT(logp.size(), 0);
+  if (logp.size() == 0) return;
   int first_beam_size = std::min(static_cast<int>(logp[0].size()),
                                  opts_.first_beam_size);
   for (int t = 0; t < logp.size(); ++t, ++abs_time_step_) {
