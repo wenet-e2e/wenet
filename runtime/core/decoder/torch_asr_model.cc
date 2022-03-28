@@ -60,12 +60,15 @@ TorchAsrModel::TorchAsrModel(const TorchAsrModel& other) {
   // inference, please see https://pytorch.org/docs/stable/notes/cpu_
   // threading_torchscript_inference.html
   model_ = other.model_;
-  // 3. Reset status
-  Reset();
+
+  // NOTE(Binbin Zhang):
+  // inner states for forward are not copied here.
 }
 
 std::shared_ptr<AsrModel> TorchAsrModel::Copy() const {
   auto asr_model = std::make_shared<TorchAsrModel>(*this);
+  // Reset the inner states for new decoding
+  asr_model->Reset();
   return asr_model;
 }
 
