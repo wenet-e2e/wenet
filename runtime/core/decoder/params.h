@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "decoder/torch_asr_decoder.h"
+#include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"

@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "utils/log.h"
+#include "utils/utils.h"
 
 namespace wenet {
 
@@ -89,23 +90,22 @@ void CtcPrefixBeamSearch::UpdateHypotheses(
 // Please refer https://robin1001.github.io/2020/12/11/ctc-search
 // for how CTC prefix beam search works, and there is a simple graph demo in
 // it.
-void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
-  CHECK_EQ(logp.dtype(), torch::kFloat);
-  CHECK_EQ(logp.dim(), 2);
-  int first_beam_size = std::min(static_cast<int>(logp.size(1)),
+void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
+  if (logp.size() == 0) return;
+  int first_beam_size = std::min(static_cast<int>(logp[0].size()),
                                  opts_.first_beam_size);
-  for (int t = 0; t < logp.size(0); ++t, ++abs_time_step_) {
-    torch::Tensor logp_t = logp[t];
+  for (int t = 0; t < logp.size(); ++t, ++abs_time_step_) {
+    const std::vector<float>& logp_t = logp[t];
     std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> next_hyps;
     // 1. First beam prune, only select topk candidates
-    std::tuple<Tensor, Tensor> topk = logp_t.topk(first_beam_size);
-    Tensor topk_score = std::get<0>(topk);
-    Tensor topk_index = std::get<1>(topk);
+    std::vector<float> topk_score;
+    std::vector<int32_t> topk_index;
+    TopK(logp_t, first_beam_size, &topk_score, &topk_index);
 
     // 2. Token passing
-    for (int i = 0; i < topk_index.size(0); ++i) {
-      int id = topk_index[i].item<int>();
-      auto prob = topk_score[i].item<float>();
+    for (int i = 0; i < topk_index.size(); ++i) {
+      int id = topk_index[i];
+      auto prob = topk_score[i];
       for (const auto& it : cur_hyps_) {
         const std::vector<int>& prefix = it.first;
         const PrefixScore& prefix_score = it.second;

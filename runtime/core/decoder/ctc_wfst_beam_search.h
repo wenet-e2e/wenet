@@ -7,18 +7,12 @@
 #include <memory>
 #include <vector>
 
-#include "torch/script.h"
-#include "torch/torch.h"
-
 #include "decoder/context_graph.h"
 #include "decoder/search_interface.h"
 #include "kaldi/decoder/lattice-faster-online-decoder.h"
 #include "utils/utils.h"
 
 namespace wenet {
-
-using TorchModule = torch::jit::script::Module;
-using Tensor = torch::Tensor;
 
 class DecodableTensorScaled : public kaldi::DecodableInterface {
  public:
@@ -29,15 +23,14 @@ class DecodableTensorScaled : public kaldi::DecodableInterface {
   bool IsLastFrame(int32 frame) const override;
   float LogLikelihood(int32 frame, int32 index) override;
   int32 NumIndices() const override;
-  void AcceptLoglikes(const torch::Tensor& logp);
+  void AcceptLoglikes(const std::vector<float>& logp);
   void SetFinish() { done_ = true; }
 
  private:
   int num_frames_ready_ = 0;
   float scale_ = 1.0;
   bool done_ = false;
-  torch::Tensor logp_;
-  std::unique_ptr<torch::TensorAccessor<float, 1>> accessor_;
+  std::vector<float> logp_;
 };
 
 // LatticeFasterDecoderConfig has the following key members
@@ -57,7 +50,7 @@ class CtcWfstBeamSearch : public SearchInterface {
   explicit CtcWfstBeamSearch(
       const fst::Fst<fst::StdArc>& fst, const CtcWfstBeamSearchOptions& opts,
       const std::shared_ptr<ContextGraph>& context_graph);
-  void Search(const torch::Tensor& logp) override;
+  void Search(const std::vector<std::vector<float>>& logp) override;
   void Reset() override;
   void FinalizeSearch() override;
   SearchType Type() const override { return SearchType::kWfstBeamSearch; }
@@ -82,7 +75,7 @@ class CtcWfstBeamSearch : public SearchInterface {
   std::vector<int> decoded_frames_mapping_;
 
   int last_best_ = 0;  // last none blank best id
-  torch::Tensor last_frame_prob_;
+  std::vector<float> last_frame_prob_;
   bool is_last_frame_blank_ = false;
   std::vector<std::vector<int>> inputs_, outputs_;
   std::vector<float> likelihood_;

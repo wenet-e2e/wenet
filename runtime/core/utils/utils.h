@@ -15,7 +15,9 @@
 #ifndef UTILS_UTILS_H_
 #define UTILS_UTILS_H_
 
+#include <cstdint>
 #include <limits>
+#include <vector>
 
 namespace wenet {
 
@@ -29,6 +31,12 @@ const char kSpaceSymbol[] = "\xe2\x96\x81";
 
 // Return the sum of two probabilities in log scale
 float LogAdd(float x, float y);
+
+template <typename T>
+void TopK(const std::vector<T>& data,
+          int32_t k,
+          std::vector<T>* values,
+          std::vector<int>* indices);
 
 }  // namespace wenet
 

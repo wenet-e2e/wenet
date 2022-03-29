@@ -82,6 +82,9 @@ add_library(utils STATIC
   utils/string.cc
   utils/utils.cc
 )
+add_executable(utils_test utils/utils.cc)
+target_link_libraries(utils_test PUBLIC gtest_main gmock)
+add_test(UTILS_TEST utils_test)
 
 # The original openfst uses GNU Build System to run configure and build.
 # So, we use "OpenFST port for Windows" to build openfst with cmake in Windows.
@@ -137,11 +140,12 @@ add_subdirectory(kaldi)
 
 # decoder
 add_library(decoder STATIC
+  decoder/asr_decoder.cc
+  decoder/asr_model.cc
   decoder/context_graph.cc
   decoder/ctc_prefix_beam_search.cc
   decoder/ctc_wfst_beam_search.cc
   decoder/ctc_endpoint.cc
-  decoder/torch_asr_decoder.cc
   decoder/torch_asr_model.cc
 )
 target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi-decoder utils post_processor)

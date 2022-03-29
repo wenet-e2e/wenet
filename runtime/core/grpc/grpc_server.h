@@ -22,8 +22,7 @@
 #include <utility>
 #include <vector>
 
-#include "decoder/torch_asr_decoder.h"
-#include "decoder/torch_asr_model.h"
+#include "decoder/asr_decoder.h"
 #include "frontend/feature_pipeline.h"
 #include "utils/log.h"
 
@@ -72,7 +71,7 @@ class GrpcConnectionHandler {
   // When endpoint is detected, stop recognition, and stop receiving data.
   bool stop_recognition_ = false;
   std::shared_ptr<FeaturePipeline> feature_pipeline_ = nullptr;
-  std::shared_ptr<TorchAsrDecoder> decoder_ = nullptr;
+  std::shared_ptr<AsrDecoder> decoder_ = nullptr;
   std::shared_ptr<std::thread> decode_thread_ = nullptr;
 };
 

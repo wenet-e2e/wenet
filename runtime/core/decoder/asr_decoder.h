@@ -2,8 +2,8 @@
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 //         di.wu@mobvoi.com (Di Wu)
 
-#ifndef DECODER_TORCH_ASR_DECODER_H_
-#define DECODER_TORCH_ASR_DECODER_H_
+#ifndef DECODER_ASR_DECODER_H_
+#define DECODER_ASR_DECODER_H_
 
 #include <memory>
 #include <string>
@@ -12,21 +12,18 @@
 
 #include "fst/fstlib.h"
 #include "fst/symbol-table.h"
-#include "torch/script.h"
-#include "torch/torch.h"
 
+#include "decoder/asr_model.h"
 #include "decoder/context_graph.h"
 #include "decoder/ctc_endpoint.h"
 #include "decoder/ctc_prefix_beam_search.h"
 #include "decoder/ctc_wfst_beam_search.h"
-#include "decoder/torch_asr_model.h"
+#include "decoder/search_interface.h"
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/utils.h"
 
 namespace wenet {
-
-using TorchModule = torch::jit::script::Module;
 
 struct DecodeOptions {
   // chunk_size is the frame number of one chunk after subsampling.
@@ -79,7 +76,7 @@ enum DecodeState {
 // DecodeResource is thread safe, which can be shared for multiple
 // decoding threads
 struct DecodeResource {
-  std::shared_ptr<TorchAsrModel> model = nullptr;
+  std::shared_ptr<AsrModel> model = nullptr;
   std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
@@ -88,11 +85,11 @@ struct DecodeResource {
 };
 
 // Torch ASR decoder
-class TorchAsrDecoder {
+class AsrDecoder {
  public:
-  TorchAsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
-                  std::shared_ptr<DecodeResource> resource,
-                  const DecodeOptions& opts);
+  AsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
+             std::shared_ptr<DecodeResource> resource,
+             const DecodeOptions& opts);
 
   DecodeState Decode();
   void Rescoring();
@@ -122,12 +119,10 @@ class TorchAsrDecoder {
   DecodeState AdvanceDecoding();
   void AttentionRescoring();
 
-  float AttentionDecoderScore(const torch::Tensor& prob,
-                              const std::vector<int>& hyp, int eos);
   void UpdateResult(bool finish = false);
 
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
-  std::shared_ptr<TorchAsrModel> model_;
+  std::shared_ptr<AsrModel> model_;
   std::shared_ptr<PostProcessor> post_processor_;
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
@@ -137,15 +132,7 @@ class TorchAsrDecoder {
   std::shared_ptr<fst::SymbolTable> unit_table_ = nullptr;
   const DecodeOptions& opts_;
   // cache feature
-  std::vector<std::vector<float>> cached_feature_;
   bool start_ = false;
-
-  torch::jit::IValue subsampling_cache_;
-  // transformer/conformer encoder layers output cache
-  torch::jit::IValue elayers_output_cache_;
-  torch::jit::IValue conformer_cnn_cache_;
-  std::vector<torch::Tensor> encoder_outs_;
-  int offset_ = 0;  // offset
   // For continuous decoding
   int num_frames_ = 0;
   int global_frame_offset_ = 0;
@@ -157,9 +144,9 @@ class TorchAsrDecoder {
   std::vector<DecodeResult> result_;
 
  public:
-  WENET_DISALLOW_COPY_AND_ASSIGN(TorchAsrDecoder);
+  WENET_DISALLOW_COPY_AND_ASSIGN(AsrDecoder);
 };
 
 }  // namespace wenet
 
-#endif  // DECODER_TORCH_ASR_DECODER_H_
+#endif  // DECODER_ASR_DECODER_H_

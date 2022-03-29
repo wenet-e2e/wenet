@@ -66,8 +66,8 @@ int main(int argc, char *argv[]) {
     feature_pipeline->set_input_finished();
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
-    wenet::TorchAsrDecoder decoder(feature_pipeline, decode_resource,
-                                   *decode_config);
+    wenet::AsrDecoder decoder(feature_pipeline, decode_resource,
+                              *decode_config);
 
     int wave_dur =
         static_cast<int>(static_cast<float>(wav_reader.num_sample()) /

@@ -9,17 +9,11 @@
 #include <utility>
 #include <vector>
 
-#include "torch/script.h"
-#include "torch/torch.h"
-
 #include "decoder/context_graph.h"
 #include "decoder/search_interface.h"
 #include "utils/utils.h"
 
 namespace wenet {
-
-using TorchModule = torch::jit::script::Module;
-using Tensor = torch::Tensor;
 
 struct CtcPrefixBeamSearchOptions {
   int blank = 0;  // blank id
@@ -92,7 +86,7 @@ class CtcPrefixBeamSearch : public SearchInterface {
       const CtcPrefixBeamSearchOptions& opts,
       const std::shared_ptr<ContextGraph>& context_graph = nullptr);
 
-  void Search(const torch::Tensor& logp) override;
+  void Search(const std::vector<std::vector<float>>& logp) override;
   void Reset() override;
   void FinalizeSearch() override;
   SearchType Type() const override { return SearchType::kPrefixBeamSearch; }

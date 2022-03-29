@@ -3,7 +3,10 @@
 
 #include "decoder/ctc_endpoint.h"
 
+#include <math.h>
+
 #include <string>
+#include <vector>
 
 #include "utils/log.h"
 
@@ -32,11 +35,12 @@ static bool RuleActivated(const CtcEndpointRule& rule,
   return ans;
 }
 
-bool CtcEndpoint::IsEndpoint(const torch::Tensor& ctc_log_probs,
-                             bool decoded_something) {
-  for (int t = 0; t < ctc_log_probs.size(0); ++t) {
-    torch::Tensor logp_t = ctc_log_probs[t];
-    float blank_prob = expf(logp_t[config_.blank].item<float>());
+bool CtcEndpoint::IsEndpoint(
+    const std::vector<std::vector<float>>& ctc_log_probs,
+    bool decoded_something) {
+  for (int t = 0; t < ctc_log_probs.size(); ++t) {
+    const auto& logp_t = ctc_log_probs[t];
+    float blank_prob = expf(logp_t[config_.blank]);
 
     num_frames_decoded_++;
     if (blank_prob > config_.blank_threshold) {

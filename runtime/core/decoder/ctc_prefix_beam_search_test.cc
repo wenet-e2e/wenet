@@ -15,17 +15,20 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   using ::testing::ElementsAre;
   // See https://robin1001.github.io/2020/12/11/ctc-search for the
   // graph demonstration of the data
-  std::vector<float> data = {0.25, 0.40, 0.35, 0.40, 0.35,
-                             0.25, 0.10, 0.50, 0.40};
-  torch::Tensor input = torch::from_blob(data.data(), {3, 3}, torch::kFloat);
-  EXPECT_EQ(input.size(0), 3);
-  EXPECT_EQ(input.size(1), 3);
-  input = torch::log(input);
+  std::vector<std::vector<float>> data = {{0.25, 0.40, 0.35},
+                                          {0.40, 0.35, 0.25},
+                                          {0.10, 0.50, 0.40}};
+  // Apply log
+  for (int i = 0; i < data.size(); i++) {
+    for (int j = 0; j < data[i].size(); j++) {
+      data[i][j] = std::log(data[i][j]);
+    }
+  }
   wenet::CtcPrefixBeamSearchOptions option;
   option.first_beam_size = 3;
   option.second_beam_size = 3;
   wenet::CtcPrefixBeamSearch prefix_beam_search(option);
-  prefix_beam_search.Search(input);
+  prefix_beam_search.Search(data);
   /* Test case info
   | top k | result index | prefix score | viterbi score | timestamp |
   |-------|--------------|--------------|---------------|-----------|
