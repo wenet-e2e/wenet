@@ -18,6 +18,7 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   model_ = std::make_shared<TorchModule>(std::move(model));
   // For multi-thread performance
   at::set_num_threads(num_threads);
+  at::set_num_interop_threads(1);
   torch::NoGradGuard no_grad;
   model_->eval();
   torch::jit::IValue o1 = model_->run_method("subsampling_rate");
@@ -42,7 +43,8 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   LOG(INFO) << "\tsos " << sos_;
   LOG(INFO) << "\teos " << eos_;
   LOG(INFO) << "\tis bidirectional decoder " << is_bidirectional_decoder_;
-  LOG(INFO) << "\tnum threads " << num_threads;
+  LOG(INFO) << "\tnum intra-op threads " << at::get_num_threads();
+  LOG(INFO) << "\tnum inter-op threads " << at::get_num_interop_threads();
 }
 
 TorchAsrModel::TorchAsrModel(const TorchAsrModel& other) {
