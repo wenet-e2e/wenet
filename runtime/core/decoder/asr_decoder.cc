@@ -75,9 +75,6 @@ void AsrDecoder::Rescoring() {
 
 DecodeState AsrDecoder::AdvanceDecoding() {
   DecodeState state = DecodeState::kEndBatch;
-  const int subsampling_rate = model_->subsampling_rate();
-  const int right_context = model_->right_context();
-  const int feature_dim = feature_pipeline_->feature_dim();
   model_->set_chunk_size(opts_.chunk_size);
   model_->set_num_left_chunks(opts_.num_left_chunks);
   int num_requried_frames = model_->num_frames_for_chunk(start_);
@@ -101,9 +98,11 @@ DecodeState AsrDecoder::AdvanceDecoding() {
           << search_time << " ms";
   UpdateResult();
 
-  if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
-    LOG(INFO) << "Endpoint is detected at " << num_frames_;
-    state = DecodeState::kEndpoint;
+  if (state != DecodeState::kEndFeats) {
+    if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
+      LOG(INFO) << "Endpoint is detected at " << num_frames_;
+      state = DecodeState::kEndpoint;
+    }
   }
 
   start_ = true;
