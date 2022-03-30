@@ -5,7 +5,7 @@ This is a example to use unsupervised pretrained w2v-conformer model to fintune 
 We pretrain conformer encoders using wav2vec 2.0 pre-training method , which we called ch-w2v-conformer. The original pre-training works take raw waveforms
 as input. Unlike these works, we use MFCC features as inputs.
 
-The ch-w2v-conformer model uses following datasets to pretrain: 
+The ch-w2v-conformer model uses following datasets to pretrain:
 
 ISML datasets (6 languages,70k hours): internal dataset contains 40k hours Chinese, Cantonese, Tibetan, Inner Mongolian, Inner Kazakh, Uighur.
 
