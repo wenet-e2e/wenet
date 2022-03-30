@@ -151,6 +151,7 @@ class ConformerEncoderLayer(nn.Module):
         dropout_rate: float = 0.1,
         normalize_before: bool = True,
         concat_after: bool = False,
+        ffn_res: bool = False,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -176,6 +177,7 @@ class ConformerEncoderLayer(nn.Module):
         self.concat_after = concat_after
         self.concat_linear = nn.Linear(size + size, size)
 
+        self.ffn_res=ffn_res
     def forward(
         self,
         x: torch.Tensor,
@@ -255,7 +257,9 @@ class ConformerEncoderLayer(nn.Module):
         if self.normalize_before:
             x = self.norm_ff(x)
 
-        x = residual + self.ff_scale * self.dropout(self.feed_forward(x))
+        x=self.feed_forward(x)
+        layer_out=x
+        x = residual + self.ff_scale * self.dropout(x)
         if not self.normalize_before:
             x = self.norm_ff(x)
 
@@ -265,4 +269,7 @@ class ConformerEncoderLayer(nn.Module):
         if output_cache is not None:
             x = torch.cat([output_cache, x], dim=1)
 
-        return x, mask, new_cnn_cache
+        if self.ffn_res:
+            return x, mask, new_cnn_cache,layer_out
+        else:
+            return x, mask, new_cnn_cache
