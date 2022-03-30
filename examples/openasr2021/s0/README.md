@@ -35,7 +35,7 @@ dev set results trained only with 10 hours training set
 |  ctc_prefix_search |  31.47   | 53.50 |
 | attention_rescoring | 31.45 |  52.96 |
 
-## Conformer （train from scartch）
+## Conformer （train from scratch）
 
 
 |   decoding_method   |  Cantonese(CER)  | mongolian(WER) |
