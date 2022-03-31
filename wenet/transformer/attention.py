@@ -6,7 +6,7 @@
 """Multi-Head Attention layer definition."""
 
 import math
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 from torch import nn
@@ -63,8 +63,10 @@ class MultiHeadedAttention(nn.Module):
 
         return q, k, v
 
-    def forward_attention(self, value: torch.Tensor, scores: torch.Tensor,
-                          mask: Optional[torch.Tensor]) -> torch.Tensor:
+    def forward_attention(
+        self, value: torch.Tensor, scores: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
+    ) -> torch.Tensor:
         """Compute attention context vector.
 
         Args:
@@ -73,7 +75,7 @@ class MultiHeadedAttention(nn.Module):
             scores (torch.Tensor): Attention score, size
                 (#batch, n_head, time1, time2).
             mask (torch.Tensor): Mask, size (#batch, 1, time2) or
-                (#batch, time1, time2).
+                (#batch, time1, time2), (0, 0, 0) means fake mask.
 
         Returns:
             torch.Tensor: Transformed value (#batch, time1, d_model)
@@ -81,7 +83,7 @@ class MultiHeadedAttention(nn.Module):
 
         """
         n_batch = value.size(0)
-        if mask is not None:
+        if mask.size(2) > 0 :  # time2 > 0
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
             scores = scores.masked_fill(mask, -float('inf'))
             attn = torch.softmax(scores, dim=-1).masked_fill(
@@ -99,8 +101,10 @@ class MultiHeadedAttention(nn.Module):
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor,
-                mask: Optional[torch.Tensor],
-                pos_emb: torch.Tensor = torch.empty(0),) -> torch.Tensor:
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                pos_emb: torch.Tensor = torch.empty(0),
+                cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute scaled dot product attention.
 
         Args:
@@ -119,15 +123,31 @@ class MultiHeadedAttention(nn.Module):
                 of the encoder, such as Mocha, the passed in mask could be
                 in (#batch, L, T) shape. But there is no such case in current
                 Wenet.
+            cache (torch.Tensor): Cache tensor (1, head, cache_t, d_k * 2),
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
 
 
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
+            torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
 
         """
         q, k, v = self.forward_qkv(query, key, value)
+
+        if cache.size(2) > 0:  # cache_t > 0
+            key_cache, value_cache = torch.split(
+                cache, cache.size(-1) // 2, dim=-1)
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
+        #   non-trivial to calculate `next_cache_start` here.
+        new_cache = torch.cat((k, v), dim=-1)
+
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
-        return self.forward_attention(v, scores, mask)
+        return self.forward_attention(v, scores, mask), new_cache
 
 
 class RelPositionMultiHeadedAttention(MultiHeadedAttention):
@@ -176,23 +196,41 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         return x
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor,
-                value: torch.Tensor, mask: Optional[torch.Tensor],
-                pos_emb: torch.Tensor):
+    def forward(self, query: torch.Tensor,
+                key: torch.Tensor, value: torch.Tensor,
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                pos_emb: torch.Tensor = torch.empty(0),
+                cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
             key (torch.Tensor): Key tensor (#batch, time2, size).
             value (torch.Tensor): Value tensor (#batch, time2, size).
             mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
-                (#batch, time1, time2).
+                (#batch, time1, time2), (0, 0, 0) means fake mask.
             pos_emb (torch.Tensor): Positional embedding tensor
                 (#batch, time2, size).
+            cache (torch.Tensor): Cache tensor (1, head, cache_t, d_k * 2),
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
+            torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
         """
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
+
+        if cache.size(2) > 0:  # cache_t > 0
+            key_cache, value_cache = torch.split(
+                cache, cache.size(-1) // 2, dim=-1)
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
+        #   non-trivial to calculate `next_cache_start` here.
+        new_cache = torch.cat((k, v), dim=-1)
 
         n_batch_pos = pos_emb.size(0)
         p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
@@ -219,4 +257,4 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k)  # (batch, head, time1, time2)
 
-        return self.forward_attention(v, scores, mask)
+        return self.forward_attention(v, scores, mask), new_cache
