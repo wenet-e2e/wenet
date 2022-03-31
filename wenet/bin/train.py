@@ -218,8 +218,8 @@ def main():
 
     # !!!IMPORTANT!!!
     # Now the pretrain model does not  support jit export  
-    Try to export the model by script, if fails, we should refine
-    the code to satisfy the script export requirements
+    # Try to export the model by script, if fails, we should refine
+    # the code to satisfy the script export requirements
     if  args.rank == 0 and not pretrain and wav2vec_conf is None and data2vec_conf is None:
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
