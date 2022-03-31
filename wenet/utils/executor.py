@@ -7,7 +7,7 @@ from contextlib import nullcontext
 # from contextlib import suppress as nullcontext
 import torch
 from torch.nn.utils import clip_grad_norm_
-
+import math
 
 class Executor:
     def __init__(self):
@@ -25,6 +25,7 @@ class Executor:
         accum_grad = args.get('accum_grad', 1)
         is_distributed = args.get('is_distributed', True)
         use_amp = args.get('use_amp', False)
+        pretrain=args.get('pretrain',False)
         logging.info('using accumulate grad, new batch size is {} times'
                      ' larger than before'.format(accum_grad))
         if use_amp:
@@ -62,8 +63,12 @@ class Executor:
                     # The more details about amp can be found in
                     # https://pytorch.org/docs/stable/notes/amp_examples.html
                     with torch.cuda.amp.autocast(scaler is not None):
-                        loss, loss_att, loss_ctc = model(
-                            feats, feats_lengths, target, target_lengths)
+                        if pretrain:
+                            loss, loss_att, loss_ctc ,sample_size= model(
+                                feats, feats_lengths, target, target_lengths,self.step)
+                        else:
+                            loss, loss_att, loss_ctc = model(
+                                feats, feats_lengths, target, target_lengths)
                         loss = loss / accum_grad
                     if use_amp:
                         scaler.scale(loss).backward()
@@ -96,9 +101,14 @@ class Executor:
                     self.step += 1
                 if batch_idx % log_interval == 0:
                     lr = optimizer.param_groups[0]['lr']
-                    log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
-                        epoch, batch_idx,
-                        loss.item() * accum_grad)
+                    if pretrain:
+                        log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
+                            epoch, batch_idx,
+                            loss.item() * accum_grad/sample_size / math.log(2))
+                    else:
+                        log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
+                            epoch, batch_idx,
+                            loss.item() * accum_grad)
                     if loss_att is not None:
                         log_str += 'loss_att {:.6f} '.format(loss_att.item())
                     if loss_ctc is not None:
@@ -113,6 +123,7 @@ class Executor:
         rank = args.get('rank', 0)
         epoch = args.get('epoch', 0)
         log_interval = args.get('log_interval', 10)
+        pretrain=args.get('pretrain',False)
         # in order to avoid division by 0
         num_seen_utts = 1
         total_loss = 0.0
@@ -126,8 +137,13 @@ class Executor:
                 num_utts = target_lengths.size(0)
                 if num_utts == 0:
                     continue
-                loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
-                                                 target_lengths)
+                if pretrain:
+                    loss, loss_att, loss_ctc ,sample_size= model(feats, feats_lengths, target,
+                                                    target_lengths)
+                    loss=loss / sample_size / math.log(2)
+                else:
+                    loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
+                                                    target_lengths)
                 if torch.isfinite(loss):
                     num_seen_utts += num_utts
                     total_loss += loss.item() * num_utts
