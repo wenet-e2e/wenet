@@ -211,14 +211,16 @@ def main():
         model=init_data2vec_model(configs)
     else:
         model = init_asr_model(configs)
-    print(model)
-    num_params = sum(p.numel() for p in model.parameters())
-    print('the number of model params: {}'.format(num_params))
+    if args.rank == 0:
+        print(model)
+        num_params = sum(p.numel() for p in model.parameters())
+        print('the number of model params: {}'.format(num_params))
 
     # !!!IMPORTANT!!!
-    # Try to export the model by script, if fails, we should refine
-    # the code to satisfy the script export requirements
-    if  args.rank == 0 and not pretrain and wav2vec_conf is None:
+    # Now the pretrain model does not  support jit export  
+    Try to export the model by script, if fails, we should refine
+    the code to satisfy the script export requirements
+    if  args.rank == 0 and not pretrain and wav2vec_conf is None and data2vec_conf is None:
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()

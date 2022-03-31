@@ -3,7 +3,7 @@
 
 
 # The origial Data2vec work is in:
-# Paper: https://arxiv.org/pdf/2006.11477.pdf
+# Paper: https://arxiv.org/pdf/2202.03555.pdf
 # Code in Fairseq: https://github.com/pytorch/fairseq/tree/master/examples/data2vec
 
 from collections import defaultdict
