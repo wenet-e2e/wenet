@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(wenet VERSION 0.1)
 
 option(GRPC "whether to build gRPC" OFF)
+option(JEMALLOC "whether to use jemalloc" OFF)
 
 include_directories(
 ${CMAKE_CURRENT_SOURCE_DIR}
@@ -149,6 +150,26 @@ add_library(decoder STATIC
   decoder/torch_asr_model.cc
 )
 target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi-decoder utils post_processor)
+
+if(JEMALLOC)
+  set(jemalloc_SOURCE_DIR ${fc_base}/jemalloc-src CACHE PATH "jemalloc source directory")
+  set(jemalloc_BINARY_DIR ${fc_base}/jemalloc-build CACHE PATH "jemalloc build directory")
+  set(jemalloc_SUBBUILD_DIR ${fc_base}/jemalloc-subbuild CACHE PATH "jemalloc subbuild directory")
+  set(jemalloc_PREFIX_DIR ${jemalloc_SUBBUILD_DIR}/jemalloc-populate-prefix CACHE PATH "jemalloc prefix directory")
+  ExternalProject_Add(jemalloc
+    URL               https://github.com/jemalloc/jemalloc/releases/download/5.2.1/jemalloc-5.2.1.tar.bz2
+    URL_HASH          SHA256=34330e5ce276099e2e8950d9335db5a875689a4c6a56751ef3b1d8c537f887f6
+    TMP_DIR           ${jemalloc_SUBBUILD_DIR}/tmp
+    STAMP_DIR         ${jemalloc_SUBBUILD_DIR}/src/jemalloc-stamp
+    DOWNLOAD_DIR      ${jemalloc_SUBBUILD_DIR}/src
+    SOURCE_DIR        ${jemalloc_SOURCE_DIR}
+    BINARY_DIR        ${jemalloc_BINARY_DIR}
+    INSTALL_DIR       ${jemalloc_PREFIX_DIR}
+    CONFIGURE_COMMAND ${jemalloc_SOURCE_DIR}/configure --prefix=${jemalloc_PREFIX_DIR}
+    BUILD_COMMAND     make -j 4
+  )
+  target_link_libraries(decoder PUBLIC ${jemalloc_PREFIX_DIR}/lib/libjemalloc.a)
+endif(JEMALLOC)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)

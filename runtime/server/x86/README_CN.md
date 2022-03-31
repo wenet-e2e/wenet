@@ -34,6 +34,12 @@ docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/w
 # 当前目录为 wenet/runtime/server/x86
 mkdir build && cd build && cmake .. && cmake --build .
 ```
+*注意*：编译时可选择`jemalloc`进行内存管理，达到减少内存占用的效果。
+
+``` sh
+mkdir build && cd build && cmake -DJEMALLOC=on .. && cmake --build .
+```
+
 或者使用命令编译以支持 gRPC。
 
 ``` sh
