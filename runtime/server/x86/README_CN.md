@@ -13,7 +13,7 @@ cd wenet/runtime/server/x86
 wget http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz
 tar -xf 20210602_unified_transformer_server.tar.gz
 model_dir=$PWD/20210602_unified_transformer_server
-docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/wenet:mini bash /home/run.sh
+docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model mobvoiwenet/wenet-mini:latest bash /home/run.sh
 ```
 
 `$model_dir` 是模型在本机的目录，将被映射到容器的 `/home/wenet/model` 目录，然后启动 web 服务。
