@@ -44,9 +44,10 @@ class TorchAsrModel: public AsrModel {
   std::shared_ptr<TorchModule> model_ = nullptr;
   std::vector<torch::Tensor> encoder_outs_;
   torch::jit::IValue subsampling_cache_;
-  // transformer/conformer encoder layers output cache
-  torch::jit::IValue elayers_output_cache_;
-  torch::jit::IValue conformer_cnn_cache_;
+  // transformer/conformer attention cache
+  torch::Tensor att_cache_ = torch::zeros({0, 0, 0, 0});
+  // conformer-only conv_module cache
+  torch::Tensor cnn_cache_ = torch::zeros({0, 0, 0, 0});
 };
 
 }  // namespace wenet

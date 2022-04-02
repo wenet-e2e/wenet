@@ -59,48 +59,44 @@ class TransformerEncoderLayer(nn.Module):
         x: torch.Tensor,
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
-        mask_pad: Optional[torch.Tensor] = None,
-        output_cache: Optional[torch.Tensor] = None,
-        cnn_cache: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+    ) -> Tuple[torch.Tensor, torch.tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
         Args:
-            x (torch.Tensor): Input tensor (#batch, time, size).
-            mask (torch.Tensor): Mask tensor for the input (#batch, time).
+            x (torch.Tensor): (#batch, time, size)
+            mask (torch.Tensor): Mask tensor for the input (#batch, time，time),
+                (0, 0, 0) means fake mask.
             pos_emb (torch.Tensor): just for interface compatibility
                 to ConformerEncoderLayer
             mask_pad (torch.Tensor): does not used in transformer layer,
                 just for unified api with conformer.
-            output_cache (torch.Tensor): Cache tensor of the output
-                (#batch, time2, size), time2 < time in x.
-            cnn_cache (torch.Tensor): not used here, it's for interface
-                compatibility to ConformerEncoderLayer
+            att_cache (torch.Tensor): Cache tensor of the KEY & VALUE
+                (#batch=1, head, cache_t1, d_k * 2), head * d_k == size.
+            cnn_cache (torch.Tensor): Convolution cache in conformer layer
+                (#batch=1, size, cache_t2), not used here, it's for interface
+                compatibility to ConformerEncoderLayer.
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
-            torch.Tensor: Mask tensor (#batch, time).
+            torch.Tensor: Mask tensor (#batch, time, time).
+            torch.Tensor: att_cache tensor,
+                (#batch=1, head, cache_t1 + time, d_k * 2).
+            torch.Tensor: cnn_cahce tensor (#batch=1, size, cache_t2).
 
         """
         residual = x
         if self.normalize_before:
             x = self.norm1(x)
 
-        if output_cache is None:
-            x_q = x
-        else:
-            assert output_cache.size(0) == x.size(0)
-            assert output_cache.size(2) == self.size
-            assert output_cache.size(1) < x.size(1)
-            chunk = x.size(1) - output_cache.size(1)
-            x_q = x[:, -chunk:, :]
-            residual = residual[:, -chunk:, :]
-            mask = mask[:, -chunk:, :]
-
+        x_att, new_att_cache = self.self_attn(
+            x, x, x, mask, cache=att_cache)
         if self.concat_after:
-            x_concat = torch.cat((x, self.self_attn(x_q, x, x, mask)), dim=-1)
+            x_concat = torch.cat((x, x_att), dim=-1)
             x = residual + self.concat_linear(x_concat)
         else:
-            x = residual + self.dropout(self.self_attn(x_q, x, x, mask))
+            x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm1(x)
 
@@ -111,11 +107,8 @@ class TransformerEncoderLayer(nn.Module):
         if not self.normalize_before:
             x = self.norm2(x)
 
-        if output_cache is not None:
-            x = torch.cat([output_cache, x], dim=1)
-
-        fake_cnn_cache = torch.tensor([0.0], dtype=x.dtype, device=x.device)
-        return x, mask, fake_cnn_cache
+        fake_cnn_cache = torch.tensor((0, 0, 0), dtype=x.dtype, device=x.device)
+        return x, mask, new_att_cache, fake_cnn_cache
 
 
 class ConformerEncoderLayer(nn.Module):
@@ -181,25 +174,30 @@ class ConformerEncoderLayer(nn.Module):
         x: torch.Tensor,
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
-        mask_pad: Optional[torch.Tensor] = None,
-        output_cache: Optional[torch.Tensor] = None,
-        cnn_cache: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
         Args:
             x (torch.Tensor): (#batch, time, size)
-            mask (torch.Tensor): Mask tensor for the input (#batch, time，time).
+            mask (torch.Tensor): Mask tensor for the input (#batch, time，time),
+                (0, 0, 0) means fake mask.
             pos_emb (torch.Tensor): positional encoding, must not be None
                 for ConformerEncoderLayer.
             mask_pad (torch.Tensor): batch padding mask used for conv module.
-                (#batch, 1，time)
-            output_cache (torch.Tensor): Cache tensor of the output
-                (#batch, time2, size), time2 < time in x.
+                (#batch, 1，time), (0, 0, 0) means fake mask.
+            att_cache (torch.Tensor): Cache tensor of the KEY & VALUE
+                (#batch=1, head, cache_t1, d_k * 2), head * d_k == size.
             cnn_cache (torch.Tensor): Convolution cache in conformer layer
+                (#batch=1, size, cache_t2)
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
-            torch.Tensor: Mask tensor (#batch, time).
+            torch.Tensor: Mask tensor (#batch, time, time).
+            torch.Tensor: att_cache tensor,
+                (#batch=1, head, cache_t1 + time, d_k * 2).
+            torch.Tensor: cnn_cahce tensor (#batch, size, cache_t2).
         """
 
         # whether to use macaron style
@@ -217,18 +215,8 @@ class ConformerEncoderLayer(nn.Module):
         if self.normalize_before:
             x = self.norm_mha(x)
 
-        if output_cache is None:
-            x_q = x
-        else:
-            assert output_cache.size(0) == x.size(0)
-            assert output_cache.size(2) == self.size
-            assert output_cache.size(1) < x.size(1)
-            chunk = x.size(1) - output_cache.size(1)
-            x_q = x[:, -chunk:, :]
-            residual = residual[:, -chunk:, :]
-            mask = mask[:, -chunk:, :]
-
-        x_att = self.self_attn(x_q, x, x, mask, pos_emb)
+        x_att, new_att_cache = self.self_attn(
+            x, x, x, mask, pos_emb, att_cache)
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
             x = residual + self.concat_linear(x_concat)
@@ -239,7 +227,7 @@ class ConformerEncoderLayer(nn.Module):
 
         # convolution module
         # Fake new cnn cache here, and then change it in conv_module
-        new_cnn_cache = torch.tensor([0.0], dtype=x.dtype, device=x.device)
+        new_cnn_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
         if self.conv_module is not None:
             residual = x
             if self.normalize_before:
@@ -262,7 +250,4 @@ class ConformerEncoderLayer(nn.Module):
         if self.conv_module is not None:
             x = self.norm_final(x)
 
-        if output_cache is not None:
-            x = torch.cat([output_cache, x], dim=1)
-
-        return x, mask, new_cnn_cache
+        return x, mask, new_att_cache, new_cnn_cache

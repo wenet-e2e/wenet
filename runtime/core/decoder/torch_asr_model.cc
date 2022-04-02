@@ -76,9 +76,8 @@ std::shared_ptr<AsrModel> TorchAsrModel::Copy() const {
 
 void TorchAsrModel::Reset() {
   offset_ = 0;
-  subsampling_cache_ = std::move(torch::jit::IValue());
-  elayers_output_cache_ = std::move(torch::jit::IValue());
-  conformer_cnn_cache_ = std::move(torch::jit::IValue());
+  att_cache_ = std::move(torch::zeros({0, 0, 0, 0}));
+  cnn_cache_ = std::move(torch::zeros({0, 0, 0, 0}));
   encoder_outs_.clear();
   cached_feature_.clear();
 }
@@ -112,18 +111,16 @@ void TorchAsrModel::ForwardEncoderFunc(
   std::vector<torch::jit::IValue> inputs = {feats,
                                             offset_,
                                             requried_cache_size,
-                                            subsampling_cache_,
-                                            elayers_output_cache_,
-                                            conformer_cnn_cache_};
+                                            att_cache_,
+                                            cnn_cache_};
 
   // Refer interfaces in wenet/transformer/asr_model.py
   auto outputs = model_->get_method(
       "forward_encoder_chunk")(inputs).toTuple()->elements();
-  CHECK_EQ(outputs.size(), 4);
+  CHECK_EQ(outputs.size(), 3);
   torch::Tensor chunk_out = outputs[0].toTensor();
-  subsampling_cache_ = outputs[1];
-  elayers_output_cache_ = outputs[2];
-  conformer_cnn_cache_ = outputs[3];
+  att_cache_ = outputs[1].toTensor();
+  cnn_cache_ = outputs[2].toTensor();
   offset_ += chunk_out.size(1);
 
   // The first dimension of returned value is for batchsize, which is 1
