@@ -16,7 +16,7 @@ For example, the pretrained model on LibriSpeech follows `CC BY 4.0`, since it i
 
 Here is a list of the pretrained models on different datasets. The model structure, model size, and download link are given.
 
-| Datasets  | Languages     | Checkpoint    | Runtime   |
+| Datasets  | Languages     | Checkpoint Model  | Runtime Model     |
 |---    |---    |---    |---    |
 | [aishell](../examples/aishell/s0/README.md)   | CN    | [Conformer](https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_exp.tar.gz)  | [Conformer](https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz)     |
 | [aishell2](../examples/aishell2/s0/README.md)     | CN    | [Conformer](https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/20210618_u2pp_conformer_exp.tar.gz)     | [Conformer](https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/20210618_u2pp_conformer_libtorch.tar.gz)    |
