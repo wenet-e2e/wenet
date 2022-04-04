@@ -109,12 +109,7 @@
 <p>We provide two types of pretrained model in WeNet to facilitate users with different requirements.</p>
 <ol class="simple">
 <li><p><strong>Checkpoint Model</strong>, with suffix <strong>.pt</strong>, the model trained and saved as checkpoint by WeNet python code, you can reproduce our published result with it, or you can use it as checkpoint to continue.</p></li>
-<li><p><strong>Runtime Model</strong>, with suffix <strong>.zip</strong>, you can directly use <code class="docutils literal notranslate"><span class="pre">runtime</span> <span class="pre">model</span></code> in our <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86">x86</a> or <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet">android</a> runtime, the <code class="docutils literal notranslate"><span class="pre">runtime</span> <span class="pre">model</span></code> is export by Pytorch JIT on the <code class="docutils literal notranslate"><span class="pre">checkpoint</span> <span class="pre">model</span></code>. Two kinds of runtime models are provided:</p>
-<ul class="simple">
-<li><p>x86, server model, typically big.</p></li>
-<li><p>android, on-device model, typically small and been quantized.</p></li>
-</ul>
-</li>
+<li><p><strong>Runtime Model</strong>, with suffix <strong>.zip</strong>, you can directly use <code class="docutils literal notranslate"><span class="pre">runtime</span> <span class="pre">model</span></code> in our <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86">x86</a> or <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet">android</a> runtime, the <code class="docutils literal notranslate"><span class="pre">runtime</span> <span class="pre">model</span></code> is export by Pytorch JIT on the <code class="docutils literal notranslate"><span class="pre">checkpoint</span> <span class="pre">model</span></code>. And the runtime models has been quantized to reduce the model size and network traffic.</p></li>
 </ol>
 </div>
 <div class="section" id="model-license">
@@ -131,45 +126,39 @@ For example, the pretrained model on LibriSpeech follows <code class="docutils l
 <th>Datasets</th>
 <th>Languages</th>
 <th>Checkpoint Model</th>
-<th>Runtime Model(x86)</th>
-<th>Runtime Model(android)</th>
+<th>Runtime Model</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><a href="../examples/aishell/s0/README.md">aishell</a></td>
 <td>CN</td>
-<td>Conformer/174M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20211025_conformer_exp.tar.gz">Download</a></td>
-<td>U2 Transformer/127M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_server.tar.gz">Download</a></td>
-<td>U2 Transformer/38M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20210601_unified_transformer_device.tar.gz">Download</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz">Conformer</a></td>
 </tr>
 <tr>
 <td><a href="../examples/aishell2/s0/README.md">aishell2</a></td>
 <td>CN</td>
-<td>U2++ Conformer/187M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210618_u2pp_conformer_exp.tar.gz">Download</a></td>
-<td>U2 Transformer/130M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_server.tar.gz">Download</a></td>
-<td>U2 Transformer/39M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210602_unified_transformer_device.tar.gz">Download</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/20210618_u2pp_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/20210618_u2pp_conformer_libtorch.tar.gz">Conformer</a></td>
 </tr>
 <tr>
 <td><a href="../examples/gigaspeech/s0/README.md">gigaspeech</a></td>
 <td>EN</td>
-<td>U2++ Conformer/472M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210811_conformer_bidecoder_exp.tar.gz">Download</a></td>
-<td>U2++ Conformer/507M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210728_u2pp_conformer_server.tar.gz">Download</a></td>
-<td>U2++ Transformer/51M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210823_u2pp_transformer_device.tar.gz">Download</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/gigaspeech/20210728_u2pp_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/gigaspeech/20210728_u2pp_conformer_libtorch.tar.gz">Conformer</a></td>
 </tr>
 <tr>
 <td><a href="../examples/librispeech/s0/README.md">librispeech</a></td>
 <td>EN</td>
-<td>Conformer/481M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210610_conformer_bidecoder_exp.tar.gz">Download</a></td>
-<td>U2++ Conformer/199M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210610_u2pp_conformer_server.tar.gz">Download</a></td>
-<td></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/librispeech/20210610_u2pp_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/librispeech/20210610_u2pp_conformer_libtorch.tar.gz">Conformer</a></td>
 </tr>
 <tr>
 <td><a href="../examples/multi_cn/s0/README.md">multi_cn</a></td>
 <td>CN</td>
-<td>U2 Conformer/193M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210815_unified_conformer_exp.tar.gz">Download</a></td>
-<td>U2 Conformer/130M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210815_unified_conformer_server.tar.gz">Download</a></td>
-<td>U2 Conformer/65M/<a href="http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210815_unified_conformer_device.tar.gz">Download</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/multi_cn/20210815_unified_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/multi_cn/20210815_unified_conformer_libtorch.tar.gz">Conformer</a></td>
 </tr>
 </tbody>
 </table></div>
