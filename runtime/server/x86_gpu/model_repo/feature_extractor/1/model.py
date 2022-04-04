@@ -122,16 +122,18 @@ class TritonPythonModel:
                 total_waves.append(wav)
 
         features = self.feature_extractor(total_waves)
+        idx = 0
         for b, l in zip(batch_count, batch_len):
             expect_feat_len = _kaldifeat.num_frames(l, self.opts.frame_opts)
             speech = torch.zeros((b, expect_feat_len, self.feature_size),
                                  dtype=self.output0_dtype, device=self.device)
             speech_lengths = torch.zeros((b, 1), dtype=torch.int32, device=self.device)
             for i in range(b):
-                f = features.pop(0)
+                f = features[idx]
                 f_l = f.shape[0]
                 speech[i, 0: f_l, :] = f.to(self.output0_dtype)
                 speech_lengths[i][0] = f_l
+                idx += 1
             # put speech feature on device will cause empty output
             # we will follow this issue and now temporarily put it on cpu
             speech = speech.cpu()
