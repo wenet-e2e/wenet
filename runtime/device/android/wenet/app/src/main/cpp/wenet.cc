@@ -16,7 +16,7 @@
 #include "torch/script.h"
 #include "torch/torch.h"
 
-#include "decoder/torch_asr_decoder.h"
+#include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
@@ -29,18 +29,19 @@ namespace wenet {
 std::shared_ptr<DecodeOptions> decode_config;
 std::shared_ptr<FeaturePipelineConfig> feature_config;
 std::shared_ptr<FeaturePipeline> feature_pipeline;
-std::shared_ptr<TorchAsrDecoder> decoder;
+std::shared_ptr<AsrDecoder> decoder;
 std::shared_ptr<DecodeResource> resource;
 DecodeState state = kEndBatch;
 std::string total_result;  // NOLINT
 
 void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
-  resource = std::make_shared<DecodeResource>();
-  resource->model = std::make_shared<TorchAsrModel>();
+  auto model = std::make_shared<TorchAsrModel>();
   const char *pModelPath = (env)->GetStringUTFChars(jModelPath, nullptr);
   std::string modelPath = std::string(pModelPath);
   LOG(INFO) << "model path: " << modelPath;
-  resource->model->Read(modelPath);
+  model->Read(modelPath);
+  resource = std::make_shared<DecodeResource>();
+  resource->model = model;
 
   const char *pDictPath = (env)->GetStringUTFChars(jDictPath, nullptr);
   std::string dictPath = std::string(pDictPath);
@@ -58,8 +59,8 @@ void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
   decode_config = std::make_shared<DecodeOptions>();
   decode_config->chunk_size = 16;
 
-  decoder = std::make_shared<TorchAsrDecoder>(feature_pipeline, resource,
-                                              *decode_config);
+  decoder = std::make_shared<AsrDecoder>(feature_pipeline, resource,
+                                         *decode_config);
 }
 
 void reset(JNIEnv *env, jobject) {
