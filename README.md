@@ -98,17 +98,10 @@ Or you can directly discuss on [Github Issues](https://github.com/wenet-e2e/wene
   organization={IEEE}
 }
 
-@article{zhang2020unified,
-  title={Unified Streaming and Non-streaming Two-pass End-to-end Model for Speech Recognition},
-  author={Zhang, Binbin and Wu, Di and Yao, Zhuoyuan and Wang, Xiong and Yu, Fan and Yang, Chao and Guo, Liyong and Hu, Yaguang and Xie, Lei and Lei, Xin},
-  journal={arXiv preprint arXiv:2012.05481},
-  year={2020}
-}
-
-@article{wu2021u2++,
-  title={U2++: Unified Two-pass Bidirectional End-to-end Model for Speech Recognition},
-  author={Wu, Di and Zhang, Binbin and Yang, Chao and Peng, Zhendong and Xia, Wenjing and Chen, Xiaoyu and Lei, Xin},
-  journal={arXiv preprint arXiv:2106.05642},
-  year={2021}
+@article{zhang2022wenet,
+  title={WeNet 2.0: More Productive End-to-End Speech Recognition Toolkit},
+  author={Zhang, Binbin and Wu, Di and Peng, Zhendong and Song, Xingchen and Yao, Zhuoyuan and Lv, Hang and Xie, Lei and Yang, Chao and Pan, Fuping and Niu, Jianwei},
+  journal={arXiv preprint arXiv:2203.15455},
+  year={2022}
 }
 ```
