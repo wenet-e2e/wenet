@@ -312,7 +312,7 @@ class BaseEncoder(torch.nn.Module):
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)
-        masks = torch.ones((0, 0, 0), device=ys.device, dtype=torch.bool)
+        masks = torch.ones((1, 1, ys.size(1)), device=ys.device, dtype=torch.bool)
         return ys, masks
 
 
