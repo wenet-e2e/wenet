@@ -7,38 +7,47 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "torch/script.h"
 #include "torch/torch.h"
+
+#include "decoder/asr_model.h"
 #include "utils/utils.h"
 
 namespace wenet {
 
-using TorchModule = torch::jit::script::Module;
-// A wrapper for pytorch asr model
-class TorchAsrModel {
+class TorchAsrModel: public AsrModel {
  public:
+  using TorchModule = torch::jit::script::Module;
   TorchAsrModel() = default;
-
+  TorchAsrModel(const TorchAsrModel& other);
   void Read(const std::string& model_path, int num_threads = 1);
-  int right_context() const { return right_context_; }
-  int subsampling_rate() const { return subsampling_rate_; }
-  int sos() const { return sos_; }
-  int eos() const { return eos_; }
-  bool is_bidirectional_decoder() const { return is_bidirectional_decoder_; }
+  std::shared_ptr<TorchModule> torch_model() const { return model_; }
+  void Reset() override;
+  void AttentionRescoring(
+      const std::vector<std::vector<int>>& hyps,
+      float reverse_weight,
+      std::vector<float>* rescoring_score) override;
+  std::shared_ptr<AsrModel> Copy() const override;
 
-  std::shared_ptr<TorchModule> torch_model() const { return module_; }
+ protected:
+  void ForwardEncoderFunc(
+      const std::vector<std::vector<float>>& chunk_feats,
+      std::vector<std::vector<float>> *ctc_prob) override;
+
+  float ComputeAttentionScore(const torch::Tensor& prob,
+                              const std::vector<int>& hyp,
+                              int eos);
 
  private:
-  std::shared_ptr<TorchModule> module_ = nullptr;
-  int right_context_ = 1;
-  int subsampling_rate_ = 1;
-  int sos_ = 0;
-  int eos_ = 0;
-  bool is_bidirectional_decoder_ = false;
-
- public:
-  WENET_DISALLOW_COPY_AND_ASSIGN(TorchAsrModel);
+  std::shared_ptr<TorchModule> model_ = nullptr;
+  std::vector<torch::Tensor> encoder_outs_;
+  torch::jit::IValue subsampling_cache_;
+  // transformer/conformer attention cache
+  torch::Tensor att_cache_ = torch::zeros({0, 0, 0, 0});
+  // conformer-only conv_module cache
+  torch::Tensor cnn_cache_ = torch::zeros({0, 0, 0, 0});
 };
 
 }  // namespace wenet

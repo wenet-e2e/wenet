@@ -136,9 +136,13 @@ def main():
     test_conf['filter_conf']['min_output_input_ratio'] = 0
     test_conf['speed_perturb'] = False
     test_conf['spec_aug'] = False
+    test_conf['spec_sub'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
-    test_conf['fbank_conf']['dither'] = 0.0
+    if 'fbank_conf' in test_conf:
+        test_conf['fbank_conf']['dither'] = 0.0
+    elif 'mfcc_conf' in test_conf:
+        test_conf['mfcc_conf']['dither'] = 0.0
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
@@ -157,12 +161,7 @@ def main():
     model = init_asr_model(configs)
 
     # Load dict
-    char_dict = {}
-    with open(args.dict, 'r') as fin:
-        for line in fin:
-            arr = line.strip().split()
-            assert len(arr) == 2
-            char_dict[int(arr[1])] = arr[0]
+    char_dict = {v: k for k, v in symbol_table.items()}
     eos = len(char_dict) - 1
 
     load_checkpoint(model, args.checkpoint)

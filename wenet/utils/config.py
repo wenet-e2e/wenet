@@ -14,7 +14,10 @@ def override_config(configs, override_list):
                 print(f"the overrive {item} format not correct, skip it")
             if i == len(keys) - 1:
                 param_type = type(s_configs[key])
-                s_configs[key] = param_type(arr[1])
+                if param_type != bool:
+                    s_configs[key] = param_type(arr[1])
+                else:
+                    s_configs[key] = arr[1] in ['true', 'True']
                 print(f"override {arr[0]} with {arr[1]}")
             else:
                 s_configs = s_configs[key]

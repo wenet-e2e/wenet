@@ -11,10 +11,10 @@ cd wenet/examples/wenetspeech && . ./path.sh
 model_dir=<absolute path to>/20211025_conformer_exp
 onnx_model_dir=<absolute path>
 mkdir $onnx_model_dir
-python3 wenet/bin/export_onnx.py --config=$model_dir/train.yaml --checkpoint=$model_dir/final.pt --cmvn_file=$model_dir/global_cmvn --ctc_weight=0.5 --output_onnx_dir=$onnx_model_dir --fp16
+python3 wenet/bin/export_onnx_gpu.py --config=$model_dir/train.yaml --checkpoint=$model_dir/final.pt --cmvn_file=$model_dir/global_cmvn --ctc_weight=0.5 --output_onnx_dir=$onnx_model_dir --fp16
 cp $model_dir/words.txt $model_dir/train.yaml $onnx_model_dir/
 ```
-Congratulations! You've successully exported the onnx models and now you are able to deploy them.
+Congratulations! You've successully exported the onnx models and now you are able to deploy them. Please also ensure you have set up [NGC](https://catalog.ngc.nvidia.com/) account before the next step!
 
 * Step 2. Build server docker and start server on one gpu:
 ```
@@ -76,7 +76,7 @@ Where:
 * NVIDIA DRIVER: 470.57.02
 * GPU: V100 & T4 & A30
 * CUDA: 11.4
-* Triton Inference Server: 21.10
+* Triton Inference Server: 22.03
 
 ### Perf
 Here are the wenetspeech conformer model and aishell2 u2++ perf on T4.

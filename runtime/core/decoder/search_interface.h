@@ -8,9 +8,6 @@ namespace wenet {
 
 #include <vector>
 
-#include "torch/script.h"
-#include "torch/torch.h"
-
 enum SearchType {
   kPrefixBeamSearch = 0x00,
   kWfstBeamSearch = 0x01,
@@ -19,7 +16,7 @@ enum SearchType {
 class SearchInterface {
  public:
   virtual ~SearchInterface() {}
-  virtual void Search(const torch::Tensor& logp) = 0;
+  virtual void Search(const std::vector<std::vector<float>>& logp) = 0;
   virtual void Reset() = 0;
   virtual void FinalizeSearch() = 0;
 

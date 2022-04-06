@@ -60,6 +60,10 @@ dataset_conf:
         num_f_mask: 2
         max_t: 50
         max_f: 10
+    spec_sub: true
+    spec_sub_conf:
+        num_t_sub: 3
+        max_t: 30
     shuffle: true
     shuffle_conf:
         shuffle_size: 1500

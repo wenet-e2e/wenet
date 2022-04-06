@@ -282,6 +282,43 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
+def compute_mfcc(data,
+                 num_mel_bins=23,
+                 frame_length=25,
+                 frame_shift=10,
+                 dither=0.0,
+                 num_ceps=40,
+                 high_freq=0.0,
+                 low_freq=20.0):
+    """ Extract mfcc
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+
+        Returns:
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'sample_rate' in sample
+        assert 'wav' in sample
+        assert 'key' in sample
+        assert 'label' in sample
+        sample_rate = sample['sample_rate']
+        waveform = sample['wav']
+        waveform = waveform * (1 << 15)
+        # Only keep key, feat, label
+        mat = kaldi.mfcc(waveform,
+                         num_mel_bins=num_mel_bins,
+                         frame_length=frame_length,
+                         frame_shift=frame_shift,
+                         dither=dither,
+                         num_ceps=num_ceps,
+                         high_freq=high_freq,
+                         low_freq=low_freq,
+                         sample_frequency=sample_rate)
+        yield dict(key=sample['key'], label=sample['label'], feat=mat)
+
+
 def __tokenize_by_bpe_model(sp, txt):
     tokens = []
     # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
@@ -305,7 +342,10 @@ def __tokenize_by_bpe_model(sp, txt):
     return tokens
 
 
-def tokenize(data, symbol_table, bpe_model=None, non_lang_syms=None,
+def tokenize(data,
+             symbol_table,
+             bpe_model=None,
+             non_lang_syms=None,
              split_with_space=False):
     """ Decode text to chars or BPE
         Inplace operation
@@ -399,6 +439,35 @@ def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
             length = random.randint(1, max_f)
             end = min(max_freq, start + length)
             y[:, start:end] = 0
+        sample['feat'] = y
+        yield sample
+
+
+def spec_sub(data, max_t=20, num_t_sub=3):
+    """ Do spec substitute
+        Inplace operation
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            max_t: max width of time substitute
+            num_t_sub: number of time substitute to apply
+
+        Returns
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'feat' in sample
+        x = sample['feat']
+        assert isinstance(x, torch.Tensor)
+        y = x.clone().detach()
+        max_frames = y.size(0)
+        for i in range(num_t_sub):
+            start = random.randint(0, max_frames - 1)
+            length = random.randint(1, max_t)
+            end = min(max_frames, start + length)
+            # only substitute the earlier time chosen randomly for current time
+            pos = random.randint(0, start)
+            y[start:end, :] = x[start - pos:end - pos, :]
         sample['feat'] = y
         yield sample
 
