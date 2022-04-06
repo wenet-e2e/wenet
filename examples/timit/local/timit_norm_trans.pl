@@ -36,12 +36,12 @@ die "$usage" unless(@ARGV >= 1);
 my ($in_trans, $phone_map, $num_phones_out);
 my $num_phones_in = 60;
 GetOptions ("i=s" => \$in_trans,          # Input transcription
-	    "m=s" => \$phone_map,         # File containing phone mappings
-	    "from=i" => \$num_phones_in,  # Input #phones: must be 60 or 48
-	    "to=i" => \$num_phones_out ); # Output #phones: must be 48 or 39
+      "m=s" => \$phone_map,         # File containing phone mappings
+      "from=i" => \$num_phones_in,  # Input #phones: must be 60 or 48
+      "to=i" => \$num_phones_out ); # Output #phones: must be 48 or 39
 
 die $usage unless(defined($in_trans) && defined($phone_map) &&
-		  defined($num_phones_out));
+      defined($num_phones_out));
 if ($num_phones_in != 60 && $num_phones_in != 48) {
   die "Can only used 60 or 48 for -from (used $num_phones_in)."
 }
