@@ -31,7 +31,7 @@ else
     trans_type=phn
 fi
 
-. ./path.sh 
+. ./path.sh
 
 sph2pipe_version="v2.5"
 if [ ! -d tools/sph2pipe_${sph2pipe_version} ]; then

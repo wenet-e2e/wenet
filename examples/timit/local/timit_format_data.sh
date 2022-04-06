@@ -18,7 +18,7 @@ for x in train dev test; do
     # cp $srcdir/${x}_wav.scp data/$x/wav.scp || exit 1;
     local/sph2pipe_process.py $srcdir/${x}_wav.scp data/${x}/tmp_wav.scp data/${x}/wav.scp || exit 1;
     while read line
-    do 
+    do
       echo $line
       $line
     done < data/${x}/tmp_wav.scp

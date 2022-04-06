@@ -90,7 +90,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     mkdir -p $(dirname $dict)
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
-  
+
     tools/text2token.py -s 1 -n 1 --space sil --trans_type ${trans_type} data/${train_set}/text  \
       | cut -f 2- -d" " | tr " " "\n" | sort | uniq | grep -v -e '^\s*$' | \
       awk '{print $0 " " NR+1}' >> ${dict}
@@ -154,7 +154,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
       $cmvn_opts \
-      --pin_memory 
+      --pin_memory
   } &
   done
   wait
@@ -195,7 +195,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --reverse_weight $reverse_weight \
       --result_file $test_dir/text \
       ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size} \
-      --connect_symbol ▁ 
+      --connect_symbol ▁
     python tools/compute-wer.py --char=1 --v=1 \
       data/test/text $test_dir/text > $test_dir/wer
   } &
