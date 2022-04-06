@@ -443,6 +443,35 @@ def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
         yield sample
 
 
+def spec_sub(data, max_t=20, num_t_sub=3):
+    """ Do spec substitute
+        Inplace operation
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            max_t: max width of time substitute
+            num_t_sub: number of time substitute to apply
+
+        Returns
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'feat' in sample
+        x = sample['feat']
+        assert isinstance(x, torch.Tensor)
+        y = x.clone().detach()
+        max_frames = y.size(0)
+        for i in range(num_t_sub):
+            start = random.randint(0, max_frames - 1)
+            length = random.randint(1, max_t)
+            end = min(max_frames, start + length)
+            # only substitute the earlier time chosen randomly for current time
+            pos = random.randint(0, start)
+            y[start:end, :] = x[start - pos:end - pos, :]
+        sample['feat'] = y
+        yield sample
+
+
 def shuffle(data, shuffle_size=10000):
     """ Local shuffle the data
 

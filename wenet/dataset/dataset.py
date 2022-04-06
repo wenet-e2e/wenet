@@ -166,9 +166,13 @@ def Dataset(data_type,
         dataset = Processor(dataset, processor.compute_mfcc, **mfcc_conf)
 
     spec_aug = conf.get('spec_aug', True)
+    spec_sub = conf.get('spec_sub', False)
     if spec_aug:
         spec_aug_conf = conf.get('spec_aug_conf', {})
         dataset = Processor(dataset, processor.spec_aug, **spec_aug_conf)
+    if spec_sub:
+        spec_sub_conf = conf.get('spec_sub_conf', {})
+        dataset = Processor(dataset, processor.spec_sub, **spec_sub_conf)
 
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})

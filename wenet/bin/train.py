@@ -149,6 +149,7 @@ def main():
     cv_conf = copy.deepcopy(train_conf)
     cv_conf['speed_perturb'] = False
     cv_conf['spec_aug'] = False
+    cv_conf['spec_sub'] = False
     cv_conf['shuffle'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
