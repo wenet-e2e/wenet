@@ -152,7 +152,7 @@ grep "Rescoring cost latency" server.log | awk '{sum += $NF}; END {print sum/NR}
 如果遇到问题比如无法编译，我们提供了 docker 镜像用于直接执行示例。需要先安装好 docker，运行如下命令，进入 docker 容器环境。
 
 ``` sh
-docker run --rm -it mobvoiwenet/wenet:v0.5.0 bash
+docker run --rm -it mobvoiwenet/wenet:latest bash
 ```
 
 该镜像包含了编译过程中所依赖的所有第三方库、编译好的文件和预训练模型。
