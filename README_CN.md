@@ -6,7 +6,8 @@
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/wenet-e2e/wenet)
 
 [**文档**](https://wenet-e2e.github.io/wenet/)
-| [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial.html)
+| [**训练模型教程 1**](https://wenet.org.cn/wenet/tutorial_librispeech.html)
+| [**训练模型教程 2**](https://wenet.org.cn/wenet/tutorial_aishell.html)
 | [**WeNet 论文**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**x86 识别服务**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
 | [**android 本地识别**](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet)
