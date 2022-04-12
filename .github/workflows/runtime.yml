@@ -2,7 +2,9 @@ name: Build Runtime
 
 on:
   push:
-    branches: main
+    branches:
+    - main
+  pull_request:
 
 env:
   RUNTIME_DIR: runtime/server/x86
