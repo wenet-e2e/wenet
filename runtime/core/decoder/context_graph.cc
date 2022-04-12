@@ -20,7 +20,7 @@ void ContextGraph::BuildContextGraph(
   start_tag_id_ = symbol_table->AddSymbol("<context>");
   end_tag_id_ = symbol_table->AddSymbol("</context>");
   symbol_table_ = symbol_table;
-  if (query_contexts.empty()) {
+  if (query_contexts.empty() && graph_ != nullptr) {
     graph_.reset();
     return;
   }
