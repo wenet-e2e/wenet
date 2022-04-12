@@ -62,7 +62,7 @@ class TransformerEncoderLayer(nn.Module):
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-    ) -> Tuple[torch.Tensor, torch.tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
         Args:
@@ -107,7 +107,7 @@ class TransformerEncoderLayer(nn.Module):
         if not self.normalize_before:
             x = self.norm2(x)
 
-        fake_cnn_cache = torch.tensor((0, 0, 0), dtype=x.dtype, device=x.device)
+        fake_cnn_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
         return x, mask, new_att_cache, fake_cnn_cache
 
 
