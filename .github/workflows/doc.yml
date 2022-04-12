@@ -1,8 +1,5 @@
 name: "Check and Publish Docs"
 on:
-  push:
-    branches:
-    - main
   pull_request:
 
 jobs:
@@ -15,7 +12,7 @@ jobs:
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: "docs/"
-        pre-build-command: "pip install sphinx-markdown-tables nbsphinx recommonmark sphinx_rtd_theme"
+        pre-build-command: "pip install sphinx-markdown-tables nbsphinx jinja2 recommonmark sphinx_rtd_theme"
 
 
     # add .nojekyll to notice Pages use the _* dirs
