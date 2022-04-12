@@ -1,9 +1,6 @@
 name: Build Runtime
 
 on:
-  push:
-    branches:
-    - main
   pull_request:
 
 env:
