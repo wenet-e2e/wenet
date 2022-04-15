@@ -43,6 +43,7 @@ bool MapToLabel(const std::string &text,
       labels->push_back(id);
     }
   }
+  return true;
 }
 
 std::shared_ptr<fst::SymbolTable> MakeSymbolTableForFst(
