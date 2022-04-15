@@ -55,7 +55,7 @@ TorchAsrModel::TorchAsrModel(const TorchAsrModel& other) {
   eos_ = other.eos_;
   is_bidirectional_decoder_ = other.is_bidirectional_decoder_;
   chunk_size_ = other.chunk_size_;
-  num_left_chunks_ = other.chunk_size_;
+  num_left_chunks_ = other.num_left_chunks_;
   offset_ = other.offset_;
   // 2. Model copy, just copy the model ptr since:
   // PyTorch allows using multiple CPU threads during TorchScript model
