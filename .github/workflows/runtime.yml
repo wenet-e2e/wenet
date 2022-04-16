@@ -5,7 +5,6 @@ on:
 
 env:
   RUNTIME_DIR: runtime/server/x86
-  BUILD_DIR: runtime/server/x86/build
   FC_BASE_DIR: runtime/server/x86/fc_base
 
 jobs:
@@ -25,11 +24,11 @@ jobs:
 
       - uses: hendrikmuhs/ccache-action@v1.2
         with:
-          key: ${{ runner.os }}-${{ github.job }}
+          key: ${{ runner.os }}-build
 
       - name: Build
         run: |
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
-          cd $RUNTIME_DIR
+          cd ${{ env.RUNTIME_DIR }}
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build --config Release -j$(nproc)

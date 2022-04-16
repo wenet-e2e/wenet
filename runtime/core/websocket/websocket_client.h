@@ -54,7 +54,7 @@ class WebSocketClient {
 
  private:
   void Connect();
-  std::string host_;
+  std::string hostname_;
   int port_;
   int nbest_ = 1;
   bool continuous_decoding_ = false;
