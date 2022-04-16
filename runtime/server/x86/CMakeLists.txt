@@ -42,6 +42,7 @@ FetchContent_Declare(googletest
   URL      https://github.com/google/googletest/archive/release-1.10.0.zip
   URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
 )
+set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 # third_party: boost
@@ -72,7 +73,6 @@ FetchContent_Declare(libtorch
   URL      ${LIBTORCH_URL}
   URL_HASH ${URL_HASH}
 )
-set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
 FetchContent_MakeAvailable(libtorch)
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
@@ -111,9 +111,9 @@ if(NOT MSVC)
   link_directories(${openfst_PREFIX_DIR}/lib)
   target_link_libraries(utils PUBLIC fst dl)
 else()
-  execute_process(COMMAND bootstrap.bat WORKING_DIRECTORY ${boost_SOURCE_DIR})
-  execute_process(COMMAND b2.exe WORKING_DIRECTORY ${boost_SOURCE_DIR})
-  link_directories(${boost_SOURCE_DIR}/stage/lib)
+  add_compile_options(/W0 /wd4244 /wd4267)
+  add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+  add_definitions(-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB)
   file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
   file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
   FetchContent_Declare(openfst
@@ -163,22 +163,24 @@ add_executable(post_processor_test post_processor/post_processor_test.cc)
 target_link_libraries(post_processor_test PUBLIC post_processor gtest_main gmock)
 add_test(POST_PROCESSOR_TEST post_processor_test)
 
-# websocket
-add_library(websocket STATIC
-  websocket/websocket_client.cc
-  websocket/websocket_server.cc
-)
-target_link_libraries(websocket PUBLIC decoder frontend)
-
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main PUBLIC frontend decoder)
-add_executable(websocket_client_main bin/websocket_client_main.cc)
-target_link_libraries(websocket_client_main PUBLIC websocket)
-add_executable(websocket_server_main bin/websocket_server_main.cc)
-target_link_libraries(websocket_server_main PUBLIC websocket)
+target_link_libraries(decoder_main PUBLIC decoder frontend)
+
+add_executable(websocket_client_main
+  bin/websocket_client_main.cc
+  websocket/websocket_client.cc
+)
+target_link_libraries(websocket_client_main PUBLIC frontend)
+
+add_executable(websocket_server_main
+  bin/websocket_server_main.cc
+  websocket/websocket_server.cc
+)
+target_link_libraries(websocket_server_main PUBLIC decoder frontend)
+
 add_executable(label_checker_main bin/label_checker_main.cc)
-target_link_libraries(label_checker_main PUBLIC frontend decoder)
+target_link_libraries(label_checker_main PUBLIC decoder frontend)
 
 if(GRPC)
   include_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
