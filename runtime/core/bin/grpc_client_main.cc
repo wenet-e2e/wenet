@@ -18,7 +18,7 @@
 #include "utils/log.h"
 #include "utils/timer.h"
 
-DEFINE_string(host, "127.0.0.1", "host of websocket server");
+DEFINE_string(hostname, "127.0.0.1", "hostname of websocket server");
 DEFINE_int32(port, 10086, "port of websocket server");
 DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
@@ -27,7 +27,7 @@ DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 int main(int argc, char *argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
-  wenet::GrpcClient client(FLAGS_host, FLAGS_port, FLAGS_nbest,
+  wenet::GrpcClient client(FLAGS_hostname, FLAGS_port, FLAGS_nbest,
                            FLAGS_continuous_decoding);
 
   wenet::WavReader wav_reader(FLAGS_wav_path);

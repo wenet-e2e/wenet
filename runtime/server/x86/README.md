@@ -115,7 +115,7 @@ export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=your_test_wav_path
 ./build/websocket_client_main \
-    --host 127.0.0.1 --port 10086 \
+    --hostname 127.0.0.1 --port 10086 \
     --wav_path $wav_path 2>&1 | tee client.log
 ```
 
@@ -156,7 +156,7 @@ export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=your_test_wav_path
 ./build/grpc_client_main \
-    --host 127.0.0.1 --port 10086 \
+    --hostname 127.0.0.1 --port 10086 \
     --wav_path $wav_path 2>&1 | tee client.log
 ```
 
