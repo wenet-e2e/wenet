@@ -687,7 +687,7 @@ class ASRModel(BasePipelineModel):
         return decoder_out, r_decoder_out
 
 
-def init_asr_model(configs):
+def init_asr_model(configs, ignore_exports=False):
     if configs['cmvn_file'] is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
@@ -719,6 +719,17 @@ def init_asr_model(configs):
         decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
                                        **configs['decoder_conf'])
     ctc = CTC(vocab_size, encoder.output_size())
+
+    if ignore_exports:
+        ASRModel.forward_attention_decoder = torch.jit.ignore(ASRModel.forward_attention_decoder)
+        ASRModel.is_bidirectional_decoder = torch.jit.ignore(ASRModel.is_bidirectional_decoder)
+        ASRModel.ctc_activation = torch.jit.ignore(ASRModel.ctc_activation)
+        ASRModel.forward_encoder_chunk = torch.jit.ignore(ASRModel.forward_encoder_chunk)
+        ASRModel.eos_symbol = torch.jit.ignore(ASRModel.eos_symbol)
+        ASRModel.sos_symbol = torch.jit.ignore(ASRModel.sos_symbol)
+        ASRModel.right_context = torch.jit.ignore(ASRModel.right_context)
+        ASRModel.subsampling_rate = torch.jit.ignore(ASRModel.subsampling_rate)
+
     model = ASRModel(
         vocab_size=vocab_size,
         encoder=encoder,

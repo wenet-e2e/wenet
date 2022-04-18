@@ -222,7 +222,7 @@ def main():
             fout.write(data)
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    model = init_asr_model(configs, ignore_exports=False)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {}'.format(num_params))
@@ -234,6 +234,9 @@ def main():
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
 
+    # reinitialize the model,
+    # ignoring those torch.jit.export decorator for compiling
+    model = init_asr_model(configs, ignore_exports=True)
     # split model into pipeline
     model.set_start_point_list(configs["ipu_conf"]["pipeline"])
 
