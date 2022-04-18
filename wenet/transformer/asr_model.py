@@ -16,6 +16,7 @@ from collections import defaultdict
 from typing import List, Optional, Tuple
 
 import torch
+import poptorch
 
 from torch.nn.utils.rnn import pad_sequence
 
@@ -96,26 +97,26 @@ class ASRModel(BasePipelineModel):
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # 2a. Attention-decoder branch
+        loss_att = torch.tensor(0.0)
         if self.ctc_weight != 1.0:
             loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
                                                     text, text_lengths)
-        else:
-            loss_att = None
 
         # 2b. CTC branch
+        loss_ctc = torch.tensor(0.0)
         if self.ctc_weight != 0.0:
             loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
                                 text_lengths)
-        else:
-            loss_ctc = None
 
-        if loss_ctc is None:
+        loss = torch.tensor(0.0)
+        if loss_ctc == 0:
             loss = loss_att
-        elif loss_att is None:
+        elif loss_att == 0:
             loss = loss_ctc
         else:
             loss = self.ctc_weight * loss_ctc + (1 -
                                                  self.ctc_weight) * loss_att
+        loss = poptorch.identity_loss(loss, reduction='mean')
         return loss, loss_att, loss_ctc
 
     def _calc_att_loss(
@@ -130,9 +131,14 @@ class ASRModel(BasePipelineModel):
         ys_in_lens = ys_pad_lens + 1
 
         # reverse the seq, used for right to left decoder
-        r_ys_pad = reverse_pad_list(ys_pad, ys_pad_lens, float(self.ignore_id))
-        r_ys_in_pad, r_ys_out_pad = add_sos_eos(r_ys_pad, self.sos, self.eos,
-                                                self.ignore_id)
+        r_ys_in_pad = torch.tensor(0.0)
+        r_ys_out_pad = torch.tensor(0.0)
+        #  we do above to avoid scripting problems. if we use if/else, 
+        #  those tensor will be Optional[Tensor] instead of Tensor
+        if self.reverse_weight > 0.0: # not supported in IPU
+            r_ys_pad = reverse_pad_list(ys_pad, ys_pad_lens, float(self.ignore_id))
+            r_ys_in_pad, r_ys_out_pad = add_sos_eos(r_ys_pad, self.sos, self.eos,
+                                                    self.ignore_id)
         # 1. Forward decoder
         decoder_out, r_decoder_out, _ = self.decoder(encoder_out, encoder_mask,
                                                      ys_in_pad, ys_in_lens,
@@ -145,12 +151,12 @@ class ASRModel(BasePipelineModel):
             r_loss_att = self.criterion_att(r_decoder_out, r_ys_out_pad)
         loss_att = loss_att * (
             1 - self.reverse_weight) + r_loss_att * self.reverse_weight
-        acc_att = th_accuracy(
-            decoder_out.view(-1, self.vocab_size),
-            ys_out_pad,
-            ignore_label=self.ignore_id,
-        )
-        return loss_att, acc_att
+        # acc_att = th_accuracy(
+        #     decoder_out.view(-1, self.vocab_size),
+        #     ys_out_pad,
+        #     ignore_label=self.ignore_id,
+        # )
+        return loss_att, torch.tensor(0.0)
 
     def _forward_encoder(
         self,
