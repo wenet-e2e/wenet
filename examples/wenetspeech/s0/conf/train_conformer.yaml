@@ -63,10 +63,9 @@ dataset_conf:
         sort_size: 1000  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 32
+        batch_size: 1
 
 grad_clip: 5
-accum_grad: 16
 max_epoch: 26
 log_interval: 100
 
