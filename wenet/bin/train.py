@@ -261,6 +261,7 @@ def main():
         exp_id = os.path.basename(model_dir)
         writer = SummaryWriter(os.path.join(args.tensorboard_dir, exp_id))
 
+    distributed = False
     if distributed:
         assert (torch.cuda.is_available())
         # cuda model is required for nn.parallel.DistributedDataParallel
@@ -294,6 +295,22 @@ def main():
         save_model_path = os.path.join(model_dir, 'init.pt')
         save_checkpoint(model, save_model_path)
 
+    # Compile graphs
+    enable_validation = configs['enable_validation']
+
+    if enable_validation:
+        validate_batch = next(iter(cv_data_loader))
+        model.eval()
+        validate_model = poptorch.inferenceModel(model, ipu_option_validate)
+        validate_model.compile(*validate_batch)
+        validate_model.detachFromDevice()
+
+    train_batch = next(iter(train_data_loader))
+    model.train()
+    train_model = poptorch.trainingModel(model, ipu_option_train, optimizer)
+    train_model.compile(*train_batch)
+    train_model.detachFromDevice()
+
     # Start training loop
     executor.step = step
     scheduler.set_step(step)
@@ -307,15 +324,30 @@ def main():
         configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
+        # attach train graph on device
+        train_model.attachToDevice()
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler)
-        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
-                                                configs)
-        cv_loss = total_loss / num_seen_utts
+        # detach train graph from device
+        train_model.detachFromDevice()
+        if enable_validation:
+            # transfer state dict to validation graph
+            # attach validation graph on device
+            validate_model.load_state_dict(train_model.state_dict())
+            validate_model.attachToDevice()
+            total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
+                                                    configs)
+            # detach validation graph from device
+            validate_model.detachFromDevice()
+            cv_loss = total_loss / num_seen_utts
 
-        logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
+            logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
+            # transfer state dict to `model` for saving
+            model.load_state_dict(train_model.state_dict())
+            if not enable_validation:
+                cv_loss = 10000.0
             save_checkpoint(
                 model, save_model_path, {
                     'epoch': epoch,

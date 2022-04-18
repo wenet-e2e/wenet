@@ -128,10 +128,10 @@ def main():
     symbol_table = read_symbol_table(args.dict)
     test_conf = copy.deepcopy(configs['dataset_conf'])
 
-    test_conf['filter_conf']['max_length'] = 102400
-    test_conf['filter_conf']['min_length'] = 0
-    test_conf['filter_conf']['token_max_length'] = 102400
-    test_conf['filter_conf']['token_min_length'] = 0
+    test_conf['filter_conf']['max_length'] = 1200
+    test_conf['filter_conf']['min_length'] = 10
+    test_conf['filter_conf']['token_max_length'] = 100
+    test_conf['filter_conf']['token_min_length'] = 1
     test_conf['filter_conf']['max_output_input_ratio'] = 102400
     test_conf['filter_conf']['min_output_input_ratio'] = 0
     test_conf['speed_perturb'] = False
