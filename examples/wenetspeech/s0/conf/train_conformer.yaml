@@ -76,6 +76,7 @@ optim_conf:
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 5000
+    device_factor: *device_iterations
 
 ipu_conf:
     seed: 1234
@@ -86,7 +87,6 @@ ipu_conf:
     enable_half_partials: true
     enable_stochastic_rounding: true
     device_iterations: &device_iterations 1
-    optimizer_state_offchip: false
     enable_synthetic_data: false
     enable_profile: false
     profile_path: './profiles/'
