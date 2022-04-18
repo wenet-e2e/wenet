@@ -233,6 +233,10 @@ def main():
     if args.rank == 0:
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
+
+    # split model into pipeline
+    model.set_start_point_list(configs["ipu_conf"]["pipeline"])
+
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:

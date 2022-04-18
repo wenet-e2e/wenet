@@ -32,9 +32,10 @@ from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
                                 reverse_pad_list)
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
+from wenet.utils.ipu_pipeline import BasePipelineModel
 
 
-class ASRModel(torch.nn.Module):
+class ASRModel(BasePipelineModel):
     """CTC-attention hybrid Encoder-Decoder model"""
     def __init__(
         self,
