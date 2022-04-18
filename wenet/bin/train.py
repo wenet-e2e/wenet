@@ -277,7 +277,11 @@ def main():
         device = torch.device('cuda' if use_cuda else 'cpu')
         model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
+    optimizer = poptorch.optim.Adam(
+        model.parameters(),
+        accum_type=torch.float16,
+        **configs['optim_conf'],
+        )
     scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
     final_epoch = None
     configs['rank'] = args.rank

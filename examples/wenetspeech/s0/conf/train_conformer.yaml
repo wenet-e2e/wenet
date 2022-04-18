@@ -65,13 +65,14 @@ dataset_conf:
         batch_type: 'static' # static or dynamic
         batch_size: 1
 
-grad_clip: 5
 max_epoch: 26
 log_interval: 100
 
 optim: adam
 optim_conf:
     lr: 0.001
+    loss_scaling: 1024.0
+    max_grad_norm: 5.0
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 5000
