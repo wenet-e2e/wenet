@@ -76,3 +76,22 @@ optim_conf:
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 5000
+
+ipu_conf:
+    seed: 1234
+    available_memory_propotion: [0.1, 0.1, 0.15, 0.11]
+    local_batch_size: 2
+    num_replicas: 4
+    gradient_accumulation: 512
+    enable_half_partials: true
+    enable_stochastic_rounding: true
+    device_iterations: &device_iterations 1
+    optimizer_state_offchip: false
+    enable_synthetic_data: false
+    enable_profile: false
+    profile_path: './profiles/'
+    executable_cache: './exec_cache'
+    pipeline: 
+        - ['encoder.encoders__2', 1]
+        - ['encoder.encoders__8', 2]
+        - ['decoder.decoders__3', 3]
