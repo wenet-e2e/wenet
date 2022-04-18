@@ -23,10 +23,11 @@ import torch
 import torch.distributed as dist
 import torch.optim as optim
 import yaml
+import poptorch
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import Dataset
+from wenet.dataset.dataset import Dataset, IPUCollateFn
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
@@ -155,7 +156,7 @@ def main():
     cv_conf['shuffle'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
-    ipu_option = build_ipu_option(configs['ipu_conf'])
+    ipu_option_train = build_ipu_option(configs['ipu_conf'])
     ipu_option_validate = build_ipu_option_validate(configs['ipu_conf'])
 
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
@@ -168,16 +169,40 @@ def main():
                          non_lang_syms,
                          partition=False)
 
-    train_data_loader = DataLoader(train_dataset,
-                                   batch_size=None,
-                                   pin_memory=args.pin_memory,
-                                   num_workers=args.num_workers,
-                                   prefetch_factor=args.prefetch)
-    cv_data_loader = DataLoader(cv_dataset,
-                                batch_size=None,
-                                pin_memory=args.pin_memory,
-                                num_workers=args.num_workers,
-                                prefetch_factor=args.prefetch)
+    collate_fn = IPUCollateFn(
+        train_conf["filter_conf"]["max_length"],
+        train_conf["filter_conf"]["token_max_length"],
+        type=configs['precision']
+        )
+
+    train_data_loader = poptorch.DataLoader(
+        ipu_option_train,
+        train_dataset,
+        batch_size=configs["ipu_conf"]["local_batch_size"],
+        pin_memory=args.pin_memory,
+        num_workers=1,
+        # TODO there is a little incompatitable for wenet's iterable dataset
+        # and poptorch's dataloader, would be fixed with furture SDK
+        # so we just keep num_workers to 1 for now.
+        mode=poptorch.DataLoaderMode.Async,
+        async_options={
+            "sharing_strategy": poptorch.SharingStrategy.SharedMemory,
+            "buffer_size": 16,
+            "load_indefinitely": True,
+            "miss_sleep_time_in_ms": 0,
+            "early_preload": True
+            },
+        collate_fn=collate_fn
+        )
+
+    cv_data_loader = poptorch.DataLoader(
+        ipu_option_validate,
+        cv_dataset,
+        batch_size=configs["ipu_conf"]["local_batch_size"],
+        pin_memory=args.pin_memory,
+        num_workers=1,
+        collate_fn=collate_fn
+        )
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
