@@ -119,7 +119,7 @@ export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=test.wav
 ./build/websocket_client_main \
-    --host 127.0.0.1 --port 10086 \
+    --hostname 127.0.0.1 --port 10086 \
     --wav_path $wav_path 2>&1 | tee client.log
 ```
 
@@ -129,7 +129,7 @@ wav_path=test.wav
 
 注意 `--port` 需要设置为服务端使用的端口号。
 
-如果有两台机器，也可以在一台机器上运行服务端，在另一台机器运行客户端，此时 `--host` 要指定为服务端所在机器的可访问 ip。
+如果有两台机器，也可以在一台机器上运行服务端，在另一台机器运行客户端，此时 `--hostname` 要指定为服务端所在机器的可访问 ip。
 
 **网页版 websocket 客户端**
 
