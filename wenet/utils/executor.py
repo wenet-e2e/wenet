@@ -2,11 +2,9 @@
 # Author: binbinzhang@mobvoi.com (Binbin Zhang)
 
 import logging
-from contextlib import nullcontext
+# from contextlib import nullcontext
 # if your python version < 3.7 use the below one
-# from contextlib import suppress as nullcontext
 import torch
-from torch.nn.utils import clip_grad_norm_
 
 
 class Executor:

@@ -48,6 +48,7 @@ class LabelSmoothingLoss(nn.Module):
                  normalize_length: bool = False):
         """Construct an LabelSmoothingLoss object."""
         super(LabelSmoothingLoss, self).__init__()
+        self.size = size
         self.padding_idx = padding_idx
         self.smoothing = smoothing
         self.confidence = 1.0 - smoothing
