@@ -5,6 +5,7 @@ import logging
 # from contextlib import nullcontext
 # if your python version < 3.7 use the below one
 import torch
+import time
 
 
 class Executor:
@@ -21,6 +22,7 @@ class Executor:
         epoch = args.get('epoch', 0)
 
         for batch_idx, batch in enumerate(data_loader):
+            start = time.perf_counter()
             feats, feats_lengths, target, target_lengths = batch
             num_utts = target_lengths.size(0)
             if num_utts == 0:
@@ -30,6 +32,7 @@ class Executor:
             scheduler.step()
             model.setOptimizer(optimizer)
             self.step += 1
+            end = time.perf_counter()
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
@@ -40,6 +43,8 @@ class Executor:
                 if loss_ctc is not None:
                     log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
                 log_str += 'lr {:.8f} rank {}'.format(lr, rank)
+                log_str += ' through_put {:.0f} '.format(
+                    num_utts / (end - start))
                 logging.debug(log_str)
 
     def cv(self, model, data_loader, device, args):
