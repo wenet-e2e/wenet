@@ -31,6 +31,10 @@ class WarmupLR(_LRScheduler):
         device_factor: int = 1,
     ):
         assert check_argument_types()
+        # the device factor is used to roughly align GPU and IPU's lr,
+        # and is set as the `device iteration` in ipu options.
+        # concept of `device iteration` see:
+        # https://docs.graphcore.ai/projects/poptorch-user-guide/en/latest/batching.html?highlight=device%20iteration#poptorch-options-deviceiterations
         self.device_factor = device_factor
         self.warmup_steps = round(warmup_steps / (device_factor ** 2))
         # __init__() must be invoked before setting field
