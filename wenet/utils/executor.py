@@ -25,7 +25,8 @@ class Executor:
             num_utts = target_lengths.size(0)
             if num_utts == 0:
                 continue
-            loss, loss_att, loss_ctc = model(feats, feats_lengths, target, target_lengths)
+            loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
+                                             target_lengths)
             scheduler.step()
             model.setOptimizer(optimizer)
             self.step += 1
@@ -65,11 +66,13 @@ class Executor:
                     total_loss += loss.mean().item() * num_utts
                 if batch_idx % log_interval == 0:
                     log_str = 'CV Batch {}/{} loss {:.6f} '.format(
-                        epoch, batch_idx, loss.item())
+                        epoch, batch_idx, loss.mean().item())
                     if loss_att is not None:
-                        log_str += 'loss_att {:.6f} '.format(loss_att.item())
+                        log_str += 'loss_att {:.6f} '.format(
+                            loss_att.mean().item())
                     if loss_ctc is not None:
-                        log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
+                        log_str += 'loss_ctc {:.6f} '.format(
+                            loss_ctc.mean().item())
                     log_str += 'history loss {:.6f}'.format(total_loss /
                                                             num_seen_utts)
                     log_str += ' rank {}'.format(rank)

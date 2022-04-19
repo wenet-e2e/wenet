@@ -237,6 +237,8 @@ def main():
     # reinitialize the model,
     # ignoring those torch.jit.export decorator for compiling
     model = init_asr_model(configs, ignore_exports=True)
+    if configs['precision'] == 'float16':
+        model.half()
     # split model into pipeline
     model.set_start_point_list(configs["ipu_conf"]["pipeline"])
 
@@ -326,7 +328,7 @@ def main():
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         # attach train graph on device
         train_model.attachToDevice()
-        executor.train(model, optimizer, scheduler, train_data_loader, device,
+        executor.train(train_model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler)
         # detach train graph from device
         train_model.detachFromDevice()
@@ -335,7 +337,7 @@ def main():
             # attach validation graph on device
             validate_model.load_state_dict(train_model.state_dict())
             validate_model.attachToDevice()
-            total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
+            total_loss, num_seen_utts = executor.cv(validate_model, cv_data_loader, device,
                                                     configs)
             # detach validation graph from device
             validate_model.detachFromDevice()

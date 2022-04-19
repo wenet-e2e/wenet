@@ -109,9 +109,9 @@ class ASRModel(BasePipelineModel):
                                 text_lengths)
 
         loss = torch.tensor(0.0)
-        if loss_ctc == 0:
+        if loss_ctc == 0.0:
             loss = loss_att
-        elif loss_att == 0:
+        elif loss_att == 0.0:
             loss = loss_ctc
         else:
             loss = self.ctc_weight * loss_ctc + (1 -
