@@ -75,9 +75,11 @@ ipu_conf:
     enable_stochastic_rounding: true
     optimizer_state_offchip: false
     device_iterations: &device_iterations 1
+    validate_device_iterations: 16
     enable_synthetic_data: false
     enable_profile: false
     profile_path: './profiles/'
+    profile_prefix: 'prefix'
     executable_cache: './exec_cache'
     pipeline: 
         - ['encoder.encoders__2', 1]

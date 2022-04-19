@@ -1,76 +1,77 @@
 import torch
 import poptorch
-import popart
 import os
 
 
+class IpuOptionBuilder:
+    def __init__(self, config):
+        self.config = config
+        torch.manual_seed(config['seed'])
 
-def _build_ipu_option(config):
-    opts = poptorch.Options()
-    torch.manual_seed(config["seed"])
-    opts.randomSeed(config["seed"])
-    replicas = config["num_replicas"]
-    amp = config["available_memory_propotion"]
-    if isinstance(amp, float):
-        amp = [amp for _ in range(len(config["pipeline"]) + 1)]
-    opts.setAvailableMemoryProportion({f'IPU{i}': amp_ for i,amp_ in enumerate(amp)})
-    opts.replicationFactor(replicas)
-    opts.autoRoundNumIPUs(True)
-    
-    if config["enable_half_partials"]:
-        opts.Precision.setPartialsType(torch.half)
-    opts.Precision.enableStochasticRounding(config["enable_stochastic_rounding"])
-    opts.Training.accumulationAndReplicationReductionType(poptorch.ReductionType.Mean)
+    def build_train_ipu_options(self):
+        options = self._build_core_ipu_options()
+        options.Training.gradientAccumulation(
+            self.config["gradient_accumulation"])
+        options.deviceIterations(self.config['device_iterations'])
+        options.outputMode(poptorch.OutputMode.Final)
+        options._Popart.set("engineOptions", self.engine_options)
+        return options
 
-    opts.setExecutionStrategy(poptorch.PipelinedExecution(poptorch.AutoStage.AutoIncrement))
-    opts.TensorLocations.setOptimizerLocation(
-                poptorch.TensorLocationSettings()
-                .useOnChipStorage(not config["optimizer_state_offchip"])
-                .useReplicatedTensorSharding(replicas>1)
-            )
-    opts.enableExecutableCaching(config["executable_cache"])
-    # Popart settings
-    opts._Popart.set('autoRecomputation', 3)
-    opts._Popart.set('disableGradAccumulationTensorStreams', True)
-    opts._Popart.set('outlineThreshold', 10.0)
-    opts._Popart.set('accumulateOuterFragmentSettings.excludedVirtualGraphs', ['0'])
-    opts._Popart.set('subgraphCopyingStrategy', int(popart.SubgraphCopyingStrategy.JustInTime))
-    opts._Popart.set('scheduleNonWeightUpdateGradientConsumersEarly', True)
-    opts._Popart.setPatterns({
-        'TiedGather': True,
-        'TiedGatherAccumulate': True,
-        'UpdateInplacePrioritiesForIpu': True
-    })
-    return opts
+    def build_validate_ipu_options(self):
+        options = self._build_core_ipu_options()
+        options.Training.gradientAccumulation(1)
+        options.deviceIterations(self.config['validate_device_iterations'])
+        options.outputMode(poptorch.OutputMode.All)
+        return options
 
+    def _build_core_ipu_options(self):
+        options = poptorch.Options()
+        options.randomSeed(self.config['seed'])
+        options.autoRoundNumIPUs(True)
+        options.replicationFactor(self.config["num_replicas"])
+        options.enableExecutableCaching(self.config["executable_cache"])
+        options.Training.accumulationAndReplicationReductionType(
+            poptorch.ReductionType.Mean)
+        options.setExecutionStrategy(
+            poptorch.PipelinedExecution(poptorch.AutoStage.AutoIncrement))
+        options.TensorLocations.setOptimizerLocation(
+            self.tensor_location_settings)
+        if self.config["enable_half_partials"]:
+            options.Precision.setPartialsType(torch.half)
+        amp = self.config["available_memory_propotion"]
+        options.setAvailableMemoryProportion(
+            {f'IPU{i}': amp_ for i, amp_ in enumerate(amp)})
+        options.Precision.enableStochasticRounding(
+            self.config["enable_stochastic_rounding"])
+        # Popart settings
+        options._Popart.set('autoRecomputation', 3)  # enable recomputation in pipeline mode
+        options._Popart.set('disableGradAccumulationTensorStreams', True)
+        options._Popart.set('outlineThreshold', 10.0)
+        options._Popart.set('accumulateOuterFragmentSettings.excludedVirtualGraphs', ['0'])
+        options._Popart.set('scheduleNonWeightUpdateGradientConsumersEarly', True)
+        options._Popart.setPatterns({
+            'TiedGather': True,
+            'TiedGatherAccumulate': True,
+            'UpdateInplacePrioritiesForIpu': True
+        })
+        return options
 
-def build_ipu_option(config):
-    ga = config["gradient_accumulation"]
-    opts = _build_ipu_option(config)
-    opts.Training.gradientAccumulation(ga)
-    opts.deviceIterations(config['device_iterations'])
-    opts.outputMode(poptorch.OutputMode.Final)
-    lbs = config["local_batch_size"]
-    ga = config["gradient_accumulation"]
-    replicas = config["num_replicas"]
-    amp = config["available_memory_propotion"]
-    if isinstance(amp, float):
-        amp = [amp for _ in range(len(config["pipeline"]) + 1)]
-    if config["enable_profile"]:
-        ampstr = ','.join([str(amp_) for amp_ in amp])
-        sdk_version = "-".join(os.environ.get("POPLAR_SDK_ENABLED").split("/")[-2].split("-")[-3:])
-        profile_path = os.path.join(
-            os.path.abspath(config["profile_path"]),
-            f"bs{lbs}-ga{ga}-amp{ampstr}-rep{replicas}-{sdk_version}")
+    @property
+    def tensor_location_settings(self):
+        tensor_location_settings = poptorch.TensorLocationSettings()
+        tensor_location_settings.useOnChipStorage(
+            not self.config["optimizer_state_offchip"])
+        tensor_location_settings.useReplicatedTensorSharding(
+            self.config["num_replicas"] > 1)
+        return tensor_location_settings
 
-        if not os.path.exists(profile_path):
-            os.makedirs(profile_path)
+    @property
+    def engine_options(self):
         engine_options = {
             "opt.useAutoloader": "true",
             "opt.maxCompilationThreads": 40,
-            "autoReport.directory": profile_path,
+            "autoReport.directory": self.profile_folder_name,
             "target.syncReplicasIndependently": "true",
-            # "opt.internalExchangeOptimisationTarget": "memory",
             "debug.allowOutOfMemory": "true",
             "profiler.format": "v3",
             "profiler.includeFlopEstimates": "true",
@@ -78,13 +79,18 @@ def build_ipu_option(config):
             "autoReport.all": "true",
             "autoReport.executionProfileProgramRunCount": "2",
         }
-        opts._Popart.set("engineOptions", engine_options)
-    return opts
+        return engine_options
 
-
-def build_ipu_option_validate(config):
-    opts = _build_ipu_option(config)
-    opts.Training.gradientAccumulation(1)
-    opts.deviceIterations(16)
-    opts.outputMode(poptorch.OutputMode.All)
-    return opts
+    @property
+    def profile_folder_name(self):
+        prefix = self.config['profile_prefix']
+        lbs = self.config['local_batch_size']
+        ga = self.config['gradient_accumulation']
+        replica = self.config['num_replicas']
+        sdk_version = os.environ.get("POPLAR_SDK_ENABLED").split("/")[-2].split("-")[-3:]
+        sdk_version = "-".join(sdk_version)
+        pipeline = ','.join(i[0] for i in self.config['pipeline'])
+        amp_list = self.config['available_memory_propotion']
+        amp = ','.join([str(i) for i in amp_list])
+        folder_name = f'{prefix}_lbs{lbs}_ga{ga}_rep{replica}_pipe{pipeline}_amp{amp}_sdk{sdk_version}'
+        return folder_name

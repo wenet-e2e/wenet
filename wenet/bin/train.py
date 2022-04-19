@@ -35,7 +35,7 @@ from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.scheduler import WarmupLR
 from wenet.utils.config import override_config
-from wenet.utils.ipu_options import build_ipu_option, build_ipu_option_validate
+from wenet.utils.ipu_options import IpuOptionBuilder
 
 
 def get_args():
@@ -156,8 +156,9 @@ def main():
     cv_conf['shuffle'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
-    ipu_option_train = build_ipu_option(configs['ipu_conf'])
-    ipu_option_validate = build_ipu_option_validate(configs['ipu_conf'])
+    ipu_option_builder = IpuOptionBuilder(configs['ipu_conf'])
+    ipu_option_train = ipu_option_builder.build_train_ipu_options()
+    ipu_option_validate = ipu_option_builder.build_validate_ipu_options()
 
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
                             train_conf, args.bpe_model, non_lang_syms, True)
