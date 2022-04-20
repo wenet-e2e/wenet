@@ -78,7 +78,7 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
     ys_out = torch.nn.functional.pad(ys_pad, [0, 1], value=float(ignore_id))
     # build eos index
     eos_index = ys_pad.ne(ignore_id).sum(1).unsqueeze(1)
-    # fill the eos in ys_pad 
+    # fill the eos in ys_pad
     src = torch.ones_like(eos_index, dtype=ys_in.dtype) * eos
     ys_out = ys_out.scatter(dim=1, index=eos_index, src=src)
     return ys_in, ys_out

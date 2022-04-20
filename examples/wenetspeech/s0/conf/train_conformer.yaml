@@ -81,7 +81,7 @@ ipu_conf:
     profile_path: './profiles/'
     profile_prefix: 'prefix'
     executable_cache: './exec_cache'
-    pipeline: 
+    pipeline:
         - ['encoder.encoders__2', 1]
         - ['encoder.encoders__8', 2]
         - ['decoder.decoders__3', 3]

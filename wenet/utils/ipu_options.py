@@ -47,11 +47,14 @@ class IpuOptionBuilder:
         options.Precision.enableStochasticRounding(
             self.config["enable_stochastic_rounding"])
         # Popart settings
-        options._Popart.set('autoRecomputation', 3)  # enable recomputation in pipeline mode
+        # enable recomputation in pipeline mode
+        options._Popart.set('autoRecomputation', 3)
         options._Popart.set('disableGradAccumulationTensorStreams', True)
         options._Popart.set('outlineThreshold', 10.0)
-        options._Popart.set('accumulateOuterFragmentSettings.excludedVirtualGraphs', ['0'])
-        options._Popart.set('scheduleNonWeightUpdateGradientConsumersEarly', True)
+        options._Popart.set(
+            'accumulateOuterFragmentSettings.excludedVirtualGraphs', ['0'])
+        options._Popart.set(
+            'scheduleNonWeightUpdateGradientConsumersEarly', True)
         options._Popart.setPatterns({
             'TiedGather': True,
             'TiedGatherAccumulate': True,
@@ -90,7 +93,8 @@ class IpuOptionBuilder:
         lbs = self.config['local_batch_size']
         ga = self.config['gradient_accumulation']
         replica = self.config['num_replicas']
-        sdk_version = os.environ.get("POPLAR_SDK_ENABLED").split("/")[-2].split("-")[-3:]
+        sdk_version = os.environ.get(
+            "POPLAR_SDK_ENABLED").split("/")[-2].split("-")[-3:]
         sdk_version = "-".join(sdk_version)
         pipeline = ','.join(i[0] for i in self.config['pipeline'])
         amp_list = self.config['available_memory_propotion']
