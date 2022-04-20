@@ -37,13 +37,13 @@ class Executor:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
                     epoch, batch_idx,
-                    loss.item())
+                    loss.mean().item())
                 if loss_att is not None:
-                    log_str += 'loss_att {:.6f} '.format(loss_att.item())
+                    log_str += 'loss_att {:.6f} '.format(loss_att.mean().item())
                 if loss_ctc is not None:
-                    log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
+                    log_str += 'loss_ctc {:.6f} '.format(loss_ctc.mean().item())
                 log_str += 'lr {:.8f} rank {}'.format(lr, rank)
-                log_str += ' through_put {:.0f} '.format(
+                log_str += ' throughput {:.0f} '.format(
                     num_utts / (end - start))
                 logging.debug(log_str)
 

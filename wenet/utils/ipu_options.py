@@ -14,7 +14,10 @@ class IpuOptionBuilder:
             self.config["gradient_accumulation"])
         options.deviceIterations(self.config['device_iterations'])
         options.outputMode(poptorch.OutputMode.Final)
-        options._Popart.set("engineOptions", self.engine_options)
+        if self.config['enable_profile']:
+            if not os.path.exists(self.config['profile_path']):
+                os.mkdir(self.config['profile_path'])
+            options._Popart.set("engineOptions", self.engine_options)
         return options
 
     def build_validate_ipu_options(self):
@@ -93,4 +96,5 @@ class IpuOptionBuilder:
         amp_list = self.config['available_memory_propotion']
         amp = ','.join([str(i) for i in amp_list])
         folder_name = f'{prefix}_lbs{lbs}_ga{ga}_rep{replica}_pipe{pipeline}_amp{amp}_sdk{sdk_version}'
+        folder_name = os.path.join(self.config['profile_path'], folder_name)
         return folder_name
