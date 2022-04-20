@@ -336,7 +336,7 @@ def main():
             # attach validation graph on device
             validate_model.load_state_dict(train_model.state_dict())
             validate_model.attachToDevice()
-            total_loss, num_seen_utts = executor.cv(validate_model, cv_data_loader, 
+            total_loss, num_seen_utts = executor.cv(validate_model, cv_data_loader,
                                                     device, configs)
             # detach validation graph from device
             validate_model.detachFromDevice()
