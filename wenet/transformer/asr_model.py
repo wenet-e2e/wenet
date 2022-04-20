@@ -29,7 +29,7 @@ from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
-                                remove_duplicates_and_blank, th_accuracy,
+                                remove_duplicates_and_blank,
                                 reverse_pad_list)
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
@@ -38,6 +38,7 @@ from wenet.utils.ipu_pipeline import BasePipelineModel
 
 class ASRModel(BasePipelineModel):
     """CTC-attention hybrid Encoder-Decoder model"""
+
     def __init__(
         self,
         vocab_size: int,
@@ -133,10 +134,11 @@ class ASRModel(BasePipelineModel):
         # reverse the seq, used for right to left decoder
         r_ys_in_pad = torch.tensor(0.0)
         r_ys_out_pad = torch.tensor(0.0)
-        #  we do above to avoid scripting problems. if we use if/else, 
+        #  we do above to avoid scripting problems. if we use if/else,
         #  those tensor will be Optional[Tensor] instead of Tensor
-        if self.reverse_weight > 0.0: # not supported in IPU
-            r_ys_pad = reverse_pad_list(ys_pad, ys_pad_lens, float(self.ignore_id))
+        if self.reverse_weight > 0.0:  # not supported in IPU
+            r_ys_pad = reverse_pad_list(
+                ys_pad, ys_pad_lens, float(self.ignore_id))
             r_ys_in_pad, r_ys_out_pad = add_sos_eos(r_ys_pad, self.sos, self.eos,
                                                     self.ignore_id)
         # 1. Forward decoder
@@ -727,10 +729,13 @@ def init_asr_model(configs, ignore_exports=False):
     ctc = CTC(vocab_size, encoder.output_size())
 
     if ignore_exports:
-        ASRModel.forward_attention_decoder = torch.jit.ignore(ASRModel.forward_attention_decoder)
-        ASRModel.is_bidirectional_decoder = torch.jit.ignore(ASRModel.is_bidirectional_decoder)
+        ASRModel.forward_attention_decoder = torch.jit.ignore(
+            ASRModel.forward_attention_decoder)
+        ASRModel.is_bidirectional_decoder = torch.jit.ignore(
+            ASRModel.is_bidirectional_decoder)
         ASRModel.ctc_activation = torch.jit.ignore(ASRModel.ctc_activation)
-        ASRModel.forward_encoder_chunk = torch.jit.ignore(ASRModel.forward_encoder_chunk)
+        ASRModel.forward_encoder_chunk = torch.jit.ignore(
+            ASRModel.forward_encoder_chunk)
         ASRModel.eos_symbol = torch.jit.ignore(ASRModel.eos_symbol)
         ASRModel.sos_symbol = torch.jit.ignore(ASRModel.sos_symbol)
         ASRModel.right_context = torch.jit.ignore(ASRModel.right_context)

@@ -193,6 +193,7 @@ class IPUCollateFn:
     """
     # TODO move those static padding into Dataset
     """
+
     def __init__(self, max_feature_length, max_target_length, type):
         self.max_feature_length = max_feature_length
         self.max_target_length = max_target_length
@@ -203,8 +204,10 @@ class IPUCollateFn:
         batch_size = len(batch)
         feature_length = torch.cat([i[3] for i in batch])
         target_length = torch.cat([i[4] for i in batch])
-        padded_feature = torch.zeros(size=[batch_size, self.max_feature_length, batch[0][1].size(2)])
-        padded_target = torch.ones(size=[batch_size, self.max_target_length], dtype=torch.long) * -1
+        padded_feature = torch.zeros(
+            size=[batch_size, self.max_feature_length, batch[0][1].size(2)])
+        padded_target = torch.ones(
+            size=[batch_size, self.max_target_length], dtype=torch.long) * -1
         for index, sample in enumerate(batch):
             padded_feature[index, :sample[1][0].size(0), :] = sample[1][0]
             padded_target[index, :sample[2][0].size(0)] = sample[2][0]

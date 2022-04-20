@@ -21,11 +21,9 @@ import os
 
 import torch
 import torch.distributed as dist
-import torch.optim as optim
 import yaml
 import poptorch
 from tensorboardX import SummaryWriter
-from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset, IPUCollateFn
 from wenet.transformer.asr_model import init_asr_model
@@ -116,10 +114,10 @@ def get_args():
                         help="Pre-trained model to initialize encoder")
     parser.add_argument("--enc_init_mods",
                         default="encoder.",
-                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+                        type=lambda s: [str(mod)
+                                        for mod in s.split(",") if s != ""],
                         help="List of encoder modules \
                         to initialize ,separated by a comma")
-
 
     args = parser.parse_args()
     return args
@@ -174,7 +172,7 @@ def main():
         train_conf["filter_conf"]["max_length"],
         train_conf["filter_conf"]["token_max_length"],
         type=configs['precision']
-        )
+    )
 
     train_data_loader = poptorch.DataLoader(
         ipu_option_train,
@@ -192,9 +190,9 @@ def main():
             "load_indefinitely": True,
             "miss_sleep_time_in_ms": 0,
             "early_preload": True
-            },
+        },
         collate_fn=collate_fn
-        )
+    )
 
     cv_data_loader = poptorch.DataLoader(
         ipu_option_validate,
@@ -203,7 +201,7 @@ def main():
         pin_memory=args.pin_memory,
         num_workers=1,
         collate_fn=collate_fn
-        )
+    )
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
@@ -288,7 +286,7 @@ def main():
         model.parameters(),
         accum_type=torch.float16,
         **configs['optim_conf'],
-        )
+    )
     scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
     final_epoch = None
     configs['rank'] = args.rank
@@ -338,8 +336,8 @@ def main():
             # attach validation graph on device
             validate_model.load_state_dict(train_model.state_dict())
             validate_model.attachToDevice()
-            total_loss, num_seen_utts = executor.cv(validate_model, cv_data_loader, device,
-                                                    configs)
+            total_loss, num_seen_utts = executor.cv(validate_model, cv_data_loader,
+                                                    device, configs)
             # detach validation graph from device
             validate_model.detachFromDevice()
             cv_loss = total_loss / num_seen_utts
