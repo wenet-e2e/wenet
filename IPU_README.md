@@ -1,5 +1,5 @@
 # WeNet on IPU
-This is the repo we made minimized changes on the WeNet to allow it running on Graphcore IPU, currently we support training on `wenetspeech` dataset, and it is easy to make a little changes to run with other dataset. 
+This project is a minimal modification to WeNet to allow it to run on Graphcore IPU, currently we support training on `wenetspeech` dataset, and it is easy to make a little changes to run with other dataset.
 
 
 
@@ -15,3 +15,9 @@ source venv/bin/activate
 pip3 install -r requirements.txt
 ````
 
+## How to run
+
+```
+cd examples/wenetspeech/s0/
+bash run.sh
+```
