@@ -26,7 +26,6 @@ import numpy as np
 
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
-from wenet.utils.common import reverse_pad_list, add_sos_eos
 
 try:
     import onnx
@@ -131,7 +130,7 @@ def export_encoder(asr_model, args):
         dynamic_axes.pop('att_cache')
         dynamic_axes.pop('r_att_cache')
     torch.onnx.export(
-        encoder, inputs, encoder_outpath, opset_version=14,
+        encoder, inputs, encoder_outpath, opset_version=13,
         export_params=True, do_constant_folding=True,
         input_names=[
             'chunk', 'offset', 'required_cache_size',
@@ -140,8 +139,14 @@ def export_encoder(asr_model, args):
         output_names=['output', 'r_att_cache', 'r_cnn_cache'],
         dynamic_axes=dynamic_axes, verbose=False)
     onnx_encoder = onnx.load(encoder_outpath)
+    for (k, v) in args.items():
+        meta = onnx_encoder.metadata_props.add()
+        meta.key, meta.value = str(k), str(v)
     onnx.checker.check_model(onnx_encoder)
     onnx.helper.printable_graph(onnx_encoder.graph)
+    # NOTE(xcsong): to add those metadatas we need to reopen
+    #   the file and resave it.
+    onnx.save(onnx_encoder, encoder_outpath)
     print("\t\tonnx_encoder inputs : {}".format(
         [node.name for node in onnx_encoder.graph.input]))
     print("\t\tonnx_encoder outputs: {}".format(
@@ -204,6 +209,8 @@ def export_encoder(asr_model, args):
         if args['left_chunks'] <= 0:  # 16/-1, -1/-1, 16/0
             ort_inputs.pop('required_cache_size')
             ort_inputs.pop('att_mask')
+        if 'conformer' not in args['encoder']:
+            ort_inputs.pop('cnn_cache')  # Transformer
         ort_outs = ort_session.run(None, ort_inputs)
         onnx_att_cache, onnx_cnn_cache = ort_outs[1], ort_outs[2]
         onnx_output.append(ort_outs[0])
@@ -212,6 +219,8 @@ def export_encoder(asr_model, args):
 
     np.testing.assert_allclose(to_numpy(torch_output), onnx_output,
                                rtol=1e-03, atol=1e-05)
+    meta = ort_session.get_modelmeta()
+    print("\t\tcustom_metadata_map={}".format(meta.custom_metadata_map))
     print("\t\tCheck onnx_encoder, pass!")
 
 
@@ -232,13 +241,19 @@ def export_ctc(asr_model, args):
         dynamic_axes.pop('hidden')
         dynamic_axes.pop('probs')
     torch.onnx.export(
-        ctc, hidden, ctc_outpath, opset_version=14,
+        ctc, hidden, ctc_outpath, opset_version=13,
         export_params=True, do_constant_folding=True,
         input_names=['hidden'], output_names=['probs'],
         dynamic_axes=dynamic_axes, verbose=False)
     onnx_ctc = onnx.load(ctc_outpath)
+    for (k, v) in args.items():
+        meta = onnx_ctc.metadata_props.add()
+        meta.key, meta.value = str(k), str(v)
     onnx.checker.check_model(onnx_ctc)
     onnx.helper.printable_graph(onnx_ctc.graph)
+    # NOTE(xcsong): to add those metadatas we need to reopen
+    #   the file and resave it.
+    onnx.save(onnx_ctc, ctc_outpath)
     print("\t\tonnx_ctc inputs : {}".format(
         [node.name for node in onnx_ctc.graph.input]))
     print("\t\tonnx_ctc outputs: {}".format(
@@ -258,40 +273,41 @@ def export_ctc(asr_model, args):
 
 def export_decoder(asr_model, args):
     print("Stage-3: export decoder")
-    decoder = asr_model.decoder
+    decoder = asr_model
+    # NOTE(lzhin): parameters of encoder will be automatically removed
+    #   since they are not used during rescoring.
+    decoder.forward = decoder.forward_attention_decoder
     decoder_outpath = os.path.join(args['output_dir'], 'decoder.onnx')
 
     print("\tStage-3.1: prepare inputs for decoder")
     # hardcode time->200 len->20, they are dynamic axes.
-    encoder_out = torch.randn((args['beam'], 200, args['output_size']))
-    encoder_mask = torch.zeros((0, 0, 0))  # fake mask, never used.
+    encoder_out = torch.randn((1, 200, args['output_size']))
     hyps = torch.randint(low=0, high=args['vocab_size'],
                          size=[args['beam'], 20])
     hyps[:, 0] = args['vocab_size'] - 1  # <sos>
     hyps_lens = torch.randint(low=15, high=21, size=[args['beam']])
-    r_hyps = reverse_pad_list(
-        hyps[:, 1:], hyps_lens - 1, float(asr_model.ignore_id))
-    r_hyps, _ = add_sos_eos(r_hyps, asr_model.sos, asr_model.eos,
-                            asr_model.ignore_id)
 
     print("\tStage-3.2: torch.onnx.export")
     dynamic_axes = {
-        'encoder_out': {1: 'T'}, 'hyps': {1: 'L'}, 'r_hyps': {1: 'L'},
-        'logits': {1: 'L'}, 'r_logits': {1: 'L'}
+        'hyps': {1: 'L'}, 'encoder_out': {1: 'T'},
+        'score': {1: 'L'}, 'r_score': {1: 'L'}
     }
-    inputs = (encoder_out, encoder_mask, hyps,
-              hyps_lens, r_hyps, args['reverse_weight'])
+    inputs = (hyps, hyps_lens, encoder_out)
     torch.onnx.export(
-        decoder, inputs, decoder_outpath, opset_version=14,
+        decoder, inputs, decoder_outpath, opset_version=13,
         export_params=True, do_constant_folding=True,
-        input_names=[
-            'encoder_out', 'encoder_mask', 'hyps', 'hyps_lens', 'r_hyps'],
-        output_names=[
-            'logits_before_logsoftmax', 'r_logits_before_logsoftmax', 'olens'],
+        input_names=['hyps', 'hyps_lens', 'encoder_out'],
+        output_names=['score', 'r_score'],
         dynamic_axes=dynamic_axes, verbose=False)
     onnx_decoder = onnx.load(decoder_outpath)
+    for (k, v) in args.items():
+        meta = onnx_decoder.metadata_props.add()
+        meta.key, meta.value = str(k), str(v)
     onnx.checker.check_model(onnx_decoder)
     onnx.helper.printable_graph(onnx_decoder.graph)
+    # NOTE(xcsong): to add those metadatas we need to reopen
+    #   the file and resave it.
+    onnx.save(onnx_decoder, decoder_outpath)
     print("\t\tonnx_decoder inputs : {}".format(
         [node.name for node in onnx_decoder.graph.input]))
     print("\t\tonnx_decoder outputs: {}".format(
@@ -300,24 +316,20 @@ def export_decoder(asr_model, args):
         decoder_outpath))
 
     print("\tStage-3.3: check onnx_decoder and torch_decoder")
-    torch_logits, torch_r_logits, _ = decoder(
-        encoder_out, encoder_mask, hyps, hyps_lens,
-        r_hyps, args['reverse_weight'])
+    torch_score, torch_r_score = decoder(
+        hyps, hyps_lens, encoder_out)
     ort_session = onnxruntime.InferenceSession(decoder_outpath)
     ort_inputs = {
-        'encoder_out': to_numpy(encoder_out),
         'hyps': to_numpy(hyps),
         'hyps_lens': to_numpy(hyps_lens),
-        'r_hyps': to_numpy(r_hyps),
+        'encoder_out': to_numpy(encoder_out),
     }
-    if args['reverse_weight'] == 0.0:  # r_hyps is removed by ONNX automatically
-        ort_inputs.pop('r_hyps')
     onnx_output = ort_session.run(None, ort_inputs)
 
-    np.testing.assert_allclose(to_numpy(torch_logits), onnx_output[0],
+    np.testing.assert_allclose(to_numpy(torch_score), onnx_output[0],
                                rtol=1e-03, atol=1e-05)
-    if args['reverse_weight'] > 0.0:
-        np.testing.assert_allclose(to_numpy(torch_r_logits), onnx_output[1],
+    if args['is_bidirectional_decoder'] and args['reverse_weight'] > 0.0:
+        np.testing.assert_allclose(to_numpy(torch_r_score), onnx_output[1],
                                    rtol=1e-03, atol=1e-05)
     print("\t\tCheck onnx_decoder, pass!")
 
@@ -354,6 +366,14 @@ def main():
     arguments['decoding_window'] = (args.chunk_size - 1) * \
         model.encoder.embed.subsampling_rate + \
         model.encoder.embed.right_context + 1 if args.chunk_size > 0 else 67
+    arguments['encoder'] = configs['encoder']
+    arguments['decoder'] = configs['decoder']
+    arguments['subsampling_rate'] = model.subsampling_rate()
+    arguments['right_context'] = model.right_context()
+    arguments['sos_symbol'] = model.sos_symbol()
+    arguments['eos_symbol'] = model.eos_symbol()
+    arguments['is_bidirectional_decoder'] = 1 \
+        if model.is_bidirectional_decoder() else 0
 
     export_encoder(model, arguments)
     export_ctc(model, arguments)
