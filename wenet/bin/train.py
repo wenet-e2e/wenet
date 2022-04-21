@@ -282,9 +282,10 @@ def main():
         device = torch.device('cuda' if use_cuda else 'cpu')
         model = model.to(device)
 
+    accum_type = torch.float16 if configs['precision'] == 'float16' else torch.float32,
     optimizer = poptorch.optim.Adam(
         model.parameters(),
-        accum_type=torch.float16,
+        accum_type = accum_type,
         **configs['optim_conf'],
     )
     scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
