@@ -50,6 +50,7 @@ void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
       model_metadata.LookupCustomMetadataMap("output_size", allocator);
   auto num_blocks =
       model_metadata.LookupCustomMetadataMap("num_blocks", allocator);
+  auto head = model_metadata.LookupCustomMetadataMap("head", allocator);
   auto cnn_module_kernel =
       model_metadata.LookupCustomMetadataMap("cnn_module_kernel", allocator);
   auto subsampling_rate =
@@ -69,6 +70,7 @@ void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
 
   encoder_output_size_ = atoi(output_size);
   num_blocks_ = atoi(num_blocks);
+  head_ = atoi(head);
   cnn_module_kernel_ = atoi(cnn_module_kernel);
   subsampling_rate_ = atoi(subsampling_rate);
   right_context_ = atoi(right_context);
@@ -81,6 +83,7 @@ void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
   LOG(INFO) << "Onnx Model Info:";
   LOG(INFO) << "\tencoder_output_size " << encoder_output_size_;
   LOG(INFO) << "\tnum_blocks " << num_blocks_;
+  LOG(INFO) << "\thead " << head_;
   LOG(INFO) << "\tcnn_module_kernel " << cnn_module_kernel_;
   LOG(INFO) << "\tsubsampling_rate " << subsampling_rate_;
   LOG(INFO) << "\tright_context " << right_context_;
@@ -94,6 +97,7 @@ void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
 OnnxAsrModel::OnnxAsrModel(const OnnxAsrModel& other) {
   encoder_output_size_ = other.encoder_output_size_;
   num_blocks_ = other.num_blocks_;
+  head_ = other.head_;
   cnn_module_kernel_ = other.cnn_module_kernel_;
   right_context_ = other.right_context_;
   subsampling_rate_ = other.subsampling_rate_;
@@ -121,10 +125,10 @@ void OnnxAsrModel::Reset() {
   int required_cache_size;
   if (num_left_chunks_ > 0) {
     int required_cache_size = chunk_size_ * num_left_chunks_;
-    att_cache_.resize(num_blocks_ * 4 * required_cache_size *
-                      encoder_output_size_ / 4 * 2);
-    const int64_t att_cache_shape[] = {num_blocks_, 4, required_cache_size,
-                                       encoder_output_size_ / 4 * 2};
+    att_cache_.resize(num_blocks_ * head_ * required_cache_size *
+                      encoder_output_size_ / head_ * 2);
+    const int64_t att_cache_shape[] = {num_blocks_, head_, required_cache_size,
+                                       encoder_output_size_ / head_ * 2};
     att_cache_ort_ = Ort::Value::CreateTensor<float>(
         memory_info_, att_cache_.data(), att_cache_.size(), att_cache_shape, 4);
 
@@ -138,8 +142,8 @@ void OnnxAsrModel::Reset() {
         att_mask_.size(), att_mask_shape, 3);
   } else {
     att_cache_.resize(0);
-    const int64_t att_cache_shape[] = {num_blocks_, 4, 0,
-                                       encoder_output_size_ / 4 * 2};
+    const int64_t att_cache_shape[] = {num_blocks_, head_, 0,
+                                       encoder_output_size_ / head_ * 2};
     att_cache_ort_ = Ort::Value::CreateTensor<float>(
         memory_info_, att_cache_.data(), att_cache_.size(), att_cache_shape, 4);
 

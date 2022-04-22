@@ -41,6 +41,7 @@ class OnnxAsrModel : public AsrModel {
   int encoder_output_size_ = 0;
   int num_blocks_ = 0;
   int cnn_module_kernel_ = 0;
+  int head_ = 0;
 
   Ort::Env env_;
   std::shared_ptr<Ort::Session> encoder_session_ = nullptr;
