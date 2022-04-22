@@ -28,10 +28,15 @@ class WarmupLR(_LRScheduler):
         optimizer: torch.optim.Optimizer,
         warmup_steps: Union[int, float] = 25000,
         last_epoch: int = -1,
+        device_factor: int = 1,
     ):
         assert check_argument_types()
-        self.warmup_steps = warmup_steps
-
+        # the device factor is used to roughly align GPU and IPU's lr,
+        # and is set as the `device iteration` in ipu options.
+        # concept of `device iteration` see:
+        # https://docs.graphcore.ai/projects/poptorch-user-guide/en/latest/batching.html?highlight=device%20iteration#poptorch-options-deviceiterations
+        self.device_factor = device_factor
+        self.warmup_steps = round(warmup_steps / (device_factor ** 2))
         # __init__() must be invoked before setting field
         # because step() is also invoked in __init__()
         super().__init__(optimizer, last_epoch)
@@ -40,7 +45,7 @@ class WarmupLR(_LRScheduler):
         return f"{self.__class__.__name__}(warmup_steps={self.warmup_steps})"
 
     def get_lr(self):
-        step_num = self.last_epoch + 1
+        step_num = (self.last_epoch + 1) / self.device_factor
         return [
             lr
             * self.warmup_steps ** 0.5

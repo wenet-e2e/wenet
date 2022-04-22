@@ -21,12 +21,11 @@ import os
 
 import torch
 import torch.distributed as dist
-import torch.optim as optim
 import yaml
+import poptorch
 from tensorboardX import SummaryWriter
-from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import Dataset
+from wenet.dataset.dataset import Dataset, IPUCollateFn
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
@@ -34,6 +33,8 @@ from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.scheduler import WarmupLR
 from wenet.utils.config import override_config
+from wenet.utils.ipu_options import IpuOptionBuilder
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
@@ -113,10 +114,10 @@ def get_args():
                         help="Pre-trained model to initialize encoder")
     parser.add_argument("--enc_init_mods",
                         default="encoder.",
-                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+                        type=lambda s: [str(mod)
+                                        for mod in s.split(",") if s != ""],
                         help="List of encoder modules \
                         to initialize ,separated by a comma")
-
 
     args = parser.parse_args()
     return args
@@ -153,6 +154,10 @@ def main():
     cv_conf['shuffle'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    ipu_option_builder = IpuOptionBuilder(configs['ipu_conf'])
+    ipu_option_train = ipu_option_builder.build_train_ipu_options()
+    ipu_option_validate = ipu_option_builder.build_validate_ipu_options()
+
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
                             train_conf, args.bpe_model, non_lang_syms, True)
     cv_dataset = Dataset(args.data_type,
@@ -163,16 +168,40 @@ def main():
                          non_lang_syms,
                          partition=False)
 
-    train_data_loader = DataLoader(train_dataset,
-                                   batch_size=None,
-                                   pin_memory=args.pin_memory,
-                                   num_workers=args.num_workers,
-                                   prefetch_factor=args.prefetch)
-    cv_data_loader = DataLoader(cv_dataset,
-                                batch_size=None,
-                                pin_memory=args.pin_memory,
-                                num_workers=args.num_workers,
-                                prefetch_factor=args.prefetch)
+    collate_fn = IPUCollateFn(
+        train_conf["filter_conf"]["max_length"],
+        train_conf["filter_conf"]["token_max_length"],
+        type=configs['precision']
+    )
+
+    train_data_loader = poptorch.DataLoader(
+        ipu_option_train,
+        train_dataset,
+        batch_size=configs["ipu_conf"]["local_batch_size"],
+        pin_memory=args.pin_memory,
+        num_workers=1,
+        # TODO there is a little incompatitable for wenet's iterable dataset
+        # and poptorch's dataloader, would be fixed with furture SDK
+        # so we just keep num_workers to 1 for now.
+        mode=poptorch.DataLoaderMode.Async,
+        async_options={
+            "sharing_strategy": poptorch.SharingStrategy.SharedMemory,
+            "buffer_size": 16,
+            "load_indefinitely": True,
+            "miss_sleep_time_in_ms": 0,
+            "early_preload": True
+        },
+        collate_fn=collate_fn
+    )
+
+    cv_data_loader = poptorch.DataLoader(
+        ipu_option_validate,
+        cv_dataset,
+        batch_size=configs["ipu_conf"]["local_batch_size"],
+        pin_memory=args.pin_memory,
+        num_workers=1,
+        collate_fn=collate_fn
+    )
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
@@ -192,7 +221,7 @@ def main():
             fout.write(data)
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    model = init_asr_model(configs, ignore_exports=False)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {}'.format(num_params))
@@ -203,6 +232,15 @@ def main():
     if args.rank == 0:
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
+
+    # reinitialize the model,
+    # ignoring those torch.jit.export decorator for compiling
+    model = init_asr_model(configs, ignore_exports=True)
+    if configs['precision'] == 'float16':
+        model.half()
+    # split model into pipeline
+    model.set_start_point_list(configs["ipu_conf"]["pipeline"])
+
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
@@ -224,6 +262,7 @@ def main():
         exp_id = os.path.basename(model_dir)
         writer = SummaryWriter(os.path.join(args.tensorboard_dir, exp_id))
 
+    distributed = False
     if distributed:
         assert (torch.cuda.is_available())
         # cuda model is required for nn.parallel.DistributedDataParallel
@@ -243,7 +282,12 @@ def main():
         device = torch.device('cuda' if use_cuda else 'cpu')
         model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
+    accum_type = torch.float16 if configs['precision'] == 'float16' else torch.float32,
+    optimizer = poptorch.optim.Adam(
+        model.parameters(),
+        accum_type=accum_type,
+        **configs['optim_conf'],
+    )
     scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
     final_epoch = None
     configs['rank'] = args.rank
@@ -252,6 +296,22 @@ def main():
     if start_epoch == 0 and args.rank == 0:
         save_model_path = os.path.join(model_dir, 'init.pt')
         save_checkpoint(model, save_model_path)
+
+    # Compile graphs
+    enable_validation = configs['enable_validation']
+
+    if enable_validation:
+        validate_batch = next(iter(cv_data_loader))
+        model.eval()
+        validate_model = poptorch.inferenceModel(model, ipu_option_validate)
+        validate_model.compile(*validate_batch)
+        validate_model.detachFromDevice()
+
+    train_batch = next(iter(train_data_loader))
+    model.train()
+    train_model = poptorch.trainingModel(model, ipu_option_train, optimizer)
+    train_model.compile(*train_batch)
+    train_model.detachFromDevice()
 
     # Start training loop
     executor.step = step
@@ -266,15 +326,30 @@ def main():
         configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
-        executor.train(model, optimizer, scheduler, train_data_loader, device,
+        # attach train graph on device
+        train_model.attachToDevice()
+        executor.train(train_model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler)
-        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
-                                                configs)
-        cv_loss = total_loss / num_seen_utts
+        # detach train graph from device
+        train_model.detachFromDevice()
+        if enable_validation:
+            # transfer state dict to validation graph
+            # attach validation graph on device
+            validate_model.load_state_dict(train_model.state_dict())
+            validate_model.attachToDevice()
+            total_loss, num_seen_utts = executor.cv(validate_model, cv_data_loader,
+                                                    device, configs)
+            # detach validation graph from device
+            validate_model.detachFromDevice()
+            cv_loss = total_loss / num_seen_utts
 
-        logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
+            logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
         if args.rank == 0:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
+            # transfer state dict to `model` for saving
+            model.load_state_dict(train_model.state_dict())
+            if not enable_validation:
+                cv_loss = 10000.0
             save_checkpoint(
                 model, save_model_path, {
                     'epoch': epoch,

@@ -66,7 +66,7 @@ class ConvolutionModule(nn.Module):
             self.norm = nn.BatchNorm1d(channels)
         else:
             self.use_layer_norm = True
-            self.norm = nn.LayerNorm(channels)
+            self.norm = nn.LayerNorm(channels, eps=1e-3)
 
         self.pointwise_conv2 = nn.Conv1d(
             channels,

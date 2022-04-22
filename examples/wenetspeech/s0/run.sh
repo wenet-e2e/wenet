@@ -7,7 +7,7 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES="0"
 stage=0
 stop_stage=5
 
@@ -176,7 +176,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       base=$(basename $decode_checkpoint)
       result_dir=$dir/${testset}_${mode}_${base}
       mkdir -p $result_dir
-      python wenet/bin/recognize.py --gpu 0 \
+      python wenet/bin/recognize.py --gpu -1 \
         --mode $mode \
         --config $dir/train.yaml \
         --data_type "shard" \
