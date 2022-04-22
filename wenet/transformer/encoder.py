@@ -174,6 +174,7 @@ class BaseEncoder(torch.nn.Module):
         required_cache_size: int,
         att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
         cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+        att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Forward just one chunk
 
@@ -217,7 +218,7 @@ class BaseEncoder(torch.nn.Module):
         # NOTE(xcsong): Before embed, shape(xs) is (b=1, time, mel-dim)
         xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
         # NOTE(xcsong): After  embed, shape(xs) is (b=1, chunk_size, hidden-dim)
-        cache_t1 = att_cache.size(2)
+        elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
         chunk_size = xs.size(1)
         attention_key_size = cache_t1 + chunk_size
         pos_emb = self.embed.position_encoding(
@@ -228,8 +229,6 @@ class BaseEncoder(torch.nn.Module):
             next_cache_start = attention_key_size
         else:
             next_cache_start = max(attention_key_size - required_cache_size, 0)
-        # Fake mask for transformer/conformer layers
-        masks = torch.ones((0, 0, 0), device=xs.device, dtype=torch.bool)
         r_att_cache = []
         r_cnn_cache = []
         for i, layer in enumerate(self.encoders):
@@ -237,9 +236,9 @@ class BaseEncoder(torch.nn.Module):
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
             xs, _, new_att_cache, new_cnn_cache = layer(
-                xs, masks, pos_emb,
-                att_cache=att_cache[i:i + 1] if cache_t1 > 0 else att_cache,
-                cnn_cache=cnn_cache[i] if cache_t1 > 0 else cnn_cache
+                xs, att_mask, pos_emb,
+                att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
             )
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),

@@ -88,7 +88,7 @@ class TransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         ys_in_pad: torch.Tensor,
         ys_in_lens: torch.Tensor,
-        r_ys_in_pad: Optional[torch.Tensor] = None,
+        r_ys_in_pad: torch.Tensor = torch.empty(0),
         reverse_weight: float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward decoder.
