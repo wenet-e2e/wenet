@@ -116,7 +116,10 @@ void AsrDecoder::UpdateResult(bool finish) {
   const auto& likelihood = searcher_->Likelihood();
   const auto& times = searcher_->Times();
   result_.clear();
-
+  // we get initial empty hypotheses for all Consecutive chunks
+  if (hypotheses.size() == 1 && hypotheses[0].size() == 0) {
+    return;
+  }
   CHECK_EQ(hypotheses.size(), likelihood.size());
   for (size_t i = 0; i < hypotheses.size(); i++) {
     const std::vector<int>& hypothesis = hypotheses[i];
