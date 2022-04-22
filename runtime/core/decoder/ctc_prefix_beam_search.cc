@@ -38,6 +38,7 @@ void CtcPrefixBeamSearch::Reset() {
   outputs_.emplace_back(empty);
   hypotheses_.emplace_back(empty);
   likelihood_.emplace_back(prefix_score.total_score());
+  times_.emplace_back(empty);
 }
 
 static bool PrefixScoreCompare(
