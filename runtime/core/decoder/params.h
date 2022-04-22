@@ -12,6 +12,7 @@
 
 #include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
+#include "decoder/onnx_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/flags.h"
@@ -20,6 +21,10 @@
 // TorchAsrModel flags
 DEFINE_int32(num_threads, 1, "num threads for GEMM");
 DEFINE_string(model_path, "", "pytorch exported model path");
+
+// OnnxAsrModel flags
+DEFINE_int32(num_onnx_threads, 1, "num threads for Onnx");
+DEFINE_string(onnx_dir, "", "directory where the onnx model is saved");
 
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
@@ -97,10 +102,17 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
 
-  LOG(INFO) << "Reading model " << FLAGS_model_path;
-  auto model = std::make_shared<TorchAsrModel>();
-  model->Read(FLAGS_model_path, FLAGS_num_threads);
-  resource->model = model;
+  if (!FLAGS_onnx_dir.empty()){
+    LOG(INFO) << "Reading onnx model ";
+    auto model = std::make_shared<OnnxAsrModel>();
+    model->Read(FLAGS_onnx_dir,FLAGS_num_onnx_threads);
+    resource->model = model;
+  }else{
+    LOG(INFO) << "Reading model " << FLAGS_model_path;
+    auto model = std::make_shared<TorchAsrModel>();
+    model->Read(FLAGS_model_path, FLAGS_num_threads);
+    resource->model = model;
+  }
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   if (!FLAGS_fst_path.empty()) {

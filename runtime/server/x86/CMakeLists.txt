@@ -77,6 +77,15 @@ FetchContent_MakeAvailable(libtorch)
 find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
 
+# third_party: onnxruntime
+FetchContent_Declare(onnxruntime
+    URL https://github.com/microsoft/onnxruntime/releases/download/v1.9.0/onnxruntime-linux-x64-1.9.0.tgz
+    URL_HASH SHA256=f386ab80e9d6d41f14ed9e61bff4acc6bf375770691bc3ba883ba0ba3cabca7f
+)
+FetchContent_MakeAvailable(onnxruntime)
+include_directories("${onnxruntime_SOURCE_DIR}/include")
+link_directories("${onnxruntime_SOURCE_DIR}/lib")
+
 # utils
 add_library(utils STATIC
   utils/string.cc
@@ -147,8 +156,9 @@ add_library(decoder STATIC
   decoder/ctc_wfst_beam_search.cc
   decoder/ctc_endpoint.cc
   decoder/torch_asr_model.cc
+  decoder/onnx_asr_model.cc
 )
-target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi-decoder utils post_processor)
+target_link_libraries(decoder PUBLIC ${TORCH_LIBRARIES} kaldi-decoder utils post_processor onnxruntime)
 
 add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
 target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
