@@ -282,7 +282,7 @@ def main():
         device = torch.device('cuda' if use_cuda else 'cpu')
         model = model.to(device)
 
-    accum_type = torch.float16 if configs['precision'] == 'float16' else torch.float32,
+    accum_type = torch.float16 if configs['precision'] == 'float16' else torch.float32
     optimizer = poptorch.optim.Adam(
         model.parameters(),
         accum_type=accum_type,
