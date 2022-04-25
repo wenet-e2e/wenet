@@ -63,7 +63,7 @@ class AsrModel {
   bool is_bidirectional_decoder_ = false;
   int chunk_size_ = 16;
   int num_left_chunks_ = -1;  // -1 means all left chunks
-  int offset_ = 0;
+  int64_t offset_ = 0;
 
   std::vector<std::vector<float>> cached_feature_;
 };

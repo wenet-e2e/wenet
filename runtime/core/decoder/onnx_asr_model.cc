@@ -125,6 +125,7 @@ void OnnxAsrModel::Reset() {
   int required_cache_size;
   if (num_left_chunks_ > 0) {
     int required_cache_size = chunk_size_ * num_left_chunks_;
+    offset_ = required_cache_size;
     att_cache_.resize(num_blocks_ * head_ * required_cache_size *
                       encoder_output_size_ / head_ * 2);
     const int64_t att_cache_shape[] = {num_blocks_, head_, required_cache_size,
@@ -170,7 +171,7 @@ void OnnxAsrModel::ForwardEncoderFunc(
     std::vector<std::vector<float>>* out_prob) {
   int num_frames = cached_feature_.size() + chunk_feats.size();
   const int feature_dim = chunk_feats[0].size();
-  int requried_cache_size = chunk_size_ * num_left_chunks_;
+  int64_t requried_cache_size = chunk_size_ * num_left_chunks_;
   std::vector<float> model_input;
   for (size_t i = 0; i < cached_feature_.size(); ++i) {
     for (int j = 0; j < feature_dim; j++) {
@@ -183,21 +184,13 @@ void OnnxAsrModel::ForwardEncoderFunc(
     }
   }
   const int64_t input_shape[3] = {1, num_frames, feature_dim};
-
-  std::vector<int64_t> offset{offset_};
-  const int64_t offset_shape[1] = {1};
-
-  std::vector<int64_t> requried_cache_size_vec{requried_cache_size};
-  const int64_t requried_cache_size_shape[1] = {1};
-
   Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
       memory_info_, model_input.data(), model_input.size(), input_shape, 3);
   Ort::Value offset_tensor = Ort::Value::CreateTensor<int64_t>(
-      memory_info_, offset.data(), 1, offset_shape, 1);
+      memory_info_, &offset_, 1, std::vector<int64_t>{}.data(), 0);
 
   Ort::Value requried_cache_size_tensor = Ort::Value::CreateTensor<int64_t>(
-      memory_info_, requried_cache_size_vec.data(), 1,
-      requried_cache_size_shape, 1);
+      memory_info_, &requried_cache_size, 1, std::vector<int64_t>{}.data(), 0);
 
   std::vector<Ort::Value> tensors;
   tensors.emplace_back(std::move(input_tensor));
