@@ -69,7 +69,7 @@ void AsrDecoder::Rescoring() {
   // Do attention rescoring
   Timer timer;
   AttentionRescoring();
-  LOG(INFO) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
+  VLOG(2) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
 }
 
 
