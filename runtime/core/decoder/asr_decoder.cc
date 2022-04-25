@@ -69,7 +69,7 @@ void AsrDecoder::Rescoring() {
   // Do attention rescoring
   Timer timer;
   AttentionRescoring();
-  LOG(INFO) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
+  VLOG(2) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
 }
 
 
@@ -100,7 +100,7 @@ DecodeState AsrDecoder::AdvanceDecoding() {
 
   if (state != DecodeState::kEndFeats) {
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
-      LOG(INFO) << "Endpoint is detected at " << num_frames_;
+      VLOG(1) << "Endpoint is detected at " << num_frames_;
       state = DecodeState::kEndpoint;
     }
   }
