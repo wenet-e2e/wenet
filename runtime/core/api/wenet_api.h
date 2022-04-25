@@ -57,4 +57,4 @@ const char* wenet_get_result(void* decoder);
 }
 #endif
 
-#endif // API_WENET_API_H_
+#endif  // API_WENET_API_H_

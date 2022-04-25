@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "wenet_api.h"
+#include "api/wenet_api.h"
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
