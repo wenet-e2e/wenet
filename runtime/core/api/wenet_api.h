@@ -37,7 +37,7 @@ void wenet_free(void* decoder);
 void wenet_reset(void* decoder);
 
 /** Decode the input wav data
- * @param data: pcm data, stored as int16_t
+ * @param data: pcm data, encoded as int16_t(16 bits)
  * @param len: data length
  * @param last: if it is the last package
  */
