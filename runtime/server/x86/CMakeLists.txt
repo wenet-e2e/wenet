@@ -163,6 +163,12 @@ add_executable(post_processor_test post_processor/post_processor_test.cc)
 target_link_libraries(post_processor_test PUBLIC post_processor gtest_main gmock)
 add_test(POST_PROCESSOR_TEST post_processor_test)
 
+# wenet api
+add_library(wenet_api SHARED api/wenet_api.cc)
+target_link_libraries(wenet_api PUBLIC decoder frontend)
+add_executable(api_main bin/api_main.cc)
+target_link_libraries(api_main PUBLIC wenet_api)
+
 # binary
 add_executable(decoder_main bin/decoder_main.cc)
 target_link_libraries(decoder_main PUBLIC decoder frontend)
