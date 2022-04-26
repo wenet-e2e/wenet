@@ -69,7 +69,7 @@ void AsrDecoder::Rescoring() {
   // Do attention rescoring
   Timer timer;
   AttentionRescoring();
-  LOG(INFO) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
+  VLOG(2) << "Rescoring cost latency: " << timer.Elapsed() << "ms.";
 }
 
 
@@ -85,8 +85,8 @@ DecodeState AsrDecoder::AdvanceDecoding() {
   }
 
   num_frames_ += chunk_feats.size();
-  LOG(INFO) << "Required " << num_requried_frames << " get "
-            << chunk_feats.size();
+  VLOG(2) << "Required " << num_requried_frames << " get "
+          << chunk_feats.size();
   Timer timer;
   std::vector<std::vector<float>> ctc_log_probs;
   model_->ForwardEncoder(chunk_feats, &ctc_log_probs);
@@ -100,7 +100,7 @@ DecodeState AsrDecoder::AdvanceDecoding() {
 
   if (state != DecodeState::kEndFeats) {
     if (ctc_endpointer_->IsEndpoint(ctc_log_probs, DecodedSomething())) {
-      LOG(INFO) << "Endpoint is detected at " << num_frames_;
+      VLOG(1) << "Endpoint is detected at " << num_frames_;
       state = DecodeState::kEndpoint;
     }
   }
@@ -156,7 +156,10 @@ void AsrDecoder::UpdateResult(bool finish) {
         path.word_pieces.emplace_back(word_piece);
       }
     }
-    path.sentence = post_processor_->Process(path.sentence, finish);
+
+    if (post_processor_ != nullptr) {
+      path.sentence = post_processor_->Process(path.sentence, finish);
+    }
     result_.emplace_back(path);
   }
 

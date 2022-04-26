@@ -83,11 +83,18 @@ class MultiHeadedAttention(nn.Module):
 
         """
         n_batch = value.size(0)
+        # NOTE(xcsong): When will `if mask.size(2) > 0` be True?
+        #   1. onnx(16/4) [WHY? Because we feed real cache & real mask for the
+        #           1st chunk to ease the onnx export.]
+        #   2. pytorch training
         if mask.size(2) > 0 :  # time2 > 0
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
             scores = scores.masked_fill(mask, -1e3)
             attn = torch.softmax(scores, dim=-1).masked_fill(
                 mask, 0.0)  # (batch, head, time1, time2)
+        # NOTE(xcsong): When will `if mask.size(2) > 0` be False?
+        #   1. onnx(16/-1, -1/-1, 16/0)
+        #   2. jit (16/-1, -1/-1, 16/0, 16/4)
         else:
             attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
 
@@ -137,7 +144,23 @@ class MultiHeadedAttention(nn.Module):
         """
         q, k, v = self.forward_qkv(query, key, value)
 
-        if cache.size(2) > 0:  # cache_t > 0
+        # NOTE(xcsong):
+        #   when export onnx model, for 1st chunk, we feed
+        #       cache(1, head, 0, d_k * 2) (16/-1, -1/-1, 16/0 mode)
+        #       or cache(1, head, real_cache_t, d_k * 2) (16/4 mode).
+        #       In all modes, `if cache.size(0) > 0` will alwayse be `True`
+        #       and we will always do splitting and
+        #       concatnation(this will simplify onnx export). Note that
+        #       it's OK to concat & split zero-shaped tensors(see code below).
+        #   when export jit  model, for 1st chunk, we always feed
+        #       cache(0, 0, 0, 0) since jit supports dynamic if-branch.
+        # >>> a = torch.ones((1, 2, 0, 4))
+        # >>> b = torch.ones((1, 2, 3, 4))
+        # >>> c = torch.cat((a, b), dim=2)
+        # >>> torch.equal(b, c)        # True
+        # >>> d = torch.split(a, 2, dim=-1)
+        # >>> torch.equal(d[0], d[1])  # True
+        if cache.size(0) > 0:
             key_cache, value_cache = torch.split(
                 cache, cache.size(-1) // 2, dim=-1)
             k = torch.cat([key_cache, k], dim=2)
@@ -223,7 +246,23 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
 
-        if cache.size(2) > 0:  # cache_t > 0
+        # NOTE(xcsong):
+        #   when export onnx model, for 1st chunk, we feed
+        #       cache(1, head, 0, d_k * 2) (16/-1, -1/-1, 16/0 mode)
+        #       or cache(1, head, real_cache_t, d_k * 2) (16/4 mode).
+        #       In all modes, `if cache.size(0) > 0` will alwayse be `True`
+        #       and we will always do splitting and
+        #       concatnation(this will simplify onnx export). Note that
+        #       it's OK to concat & split zero-shaped tensors(see code below).
+        #   when export jit  model, for 1st chunk, we always feed
+        #       cache(0, 0, 0, 0) since jit supports dynamic if-branch.
+        # >>> a = torch.ones((1, 2, 0, 4))
+        # >>> b = torch.ones((1, 2, 3, 4))
+        # >>> c = torch.cat((a, b), dim=2)
+        # >>> torch.equal(b, c)        # True
+        # >>> d = torch.split(a, 2, dim=-1)
+        # >>> torch.equal(d[0], d[1])  # True
+        if cache.size(0) > 0:
             key_cache, value_cache = torch.split(
                 cache, cache.size(-1) // 2, dim=-1)
             k = torch.cat([key_cache, k], dim=2)

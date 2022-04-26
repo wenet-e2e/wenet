@@ -37,14 +37,14 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   CHECK_EQ(o5.isBool(), true);
   is_bidirectional_decoder_ = o5.toBool();
 
-  LOG(INFO) << "Torch Model Info:";
-  LOG(INFO) << "\tsubsampling_rate " << subsampling_rate_;
-  LOG(INFO) << "\tright context " << right_context_;
-  LOG(INFO) << "\tsos " << sos_;
-  LOG(INFO) << "\teos " << eos_;
-  LOG(INFO) << "\tis bidirectional decoder " << is_bidirectional_decoder_;
-  LOG(INFO) << "\tnum intra-op threads " << at::get_num_threads();
-  LOG(INFO) << "\tnum inter-op threads " << at::get_num_interop_threads();
+  VLOG(1) << "Torch Model Info:";
+  VLOG(1) << "\tsubsampling_rate " << subsampling_rate_;
+  VLOG(1) << "\tright context " << right_context_;
+  VLOG(1) << "\tsos " << sos_;
+  VLOG(1) << "\teos " << eos_;
+  VLOG(1) << "\tis bidirectional decoder " << is_bidirectional_decoder_;
+  VLOG(1) << "\tnum intra-op threads " << at::get_num_threads();
+  VLOG(1) << "\tnum inter-op threads " << at::get_num_interop_threads();
 }
 
 TorchAsrModel::TorchAsrModel(const TorchAsrModel& other) {

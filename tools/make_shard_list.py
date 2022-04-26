@@ -66,8 +66,16 @@ def write_tar_file(data_list,
 
                 # resample
                 if sample_rate != resample:
-                    audio = torchaudio.transforms.Resample(
-                        sample_rate, resample)(audio)
+                    if not audio.is_floating_point():
+                        # normalize the audio before resample
+                        # because resample can't process int audio
+                        audio = audio / (1 << 15)
+                        audio = torchaudio.transforms.Resample(
+                            sample_rate, resample)(audio)
+                        audio = (audio * (1 << 15)).short()
+                    else:
+                        audio = torchaudio.transforms.Resample(
+                            sample_rate, resample)(audio)
 
                 ts = time.time()
                 f = io.BytesIO()
