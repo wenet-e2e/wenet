@@ -146,8 +146,6 @@ def Dataset(data_type,
 
     dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model,
                         non_lang_syms, conf.get('split_with_space', False))
-    filter_conf = conf.get('filter_conf', {})
-    dataset = Processor(dataset, processor.filter, **filter_conf)
 
     resample_conf = conf.get('resample_conf', {})
     dataset = Processor(dataset, processor.resample, **resample_conf)
@@ -155,6 +153,9 @@ def Dataset(data_type,
     speed_perturb = conf.get('speed_perturb', False)
     if speed_perturb:
         dataset = Processor(dataset, processor.speed_perturb)
+
+    filter_conf = conf.get('filter_conf', {})
+    dataset = Processor(dataset, processor.filter, **filter_conf)
 
     feats_type = conf.get('feats_type', 'fbank')
     assert feats_type in ['fbank', 'mfcc']
@@ -185,33 +186,16 @@ def Dataset(data_type,
 
     batch_conf = conf.get('batch_conf', {})
     dataset = Processor(dataset, processor.batch, **batch_conf)
-    dataset = Processor(dataset, processor.padding)
+    padding_conf = conf.get('padding_conf', {})
+    dataset = Processor(dataset, processor.padding, **padding_conf)
     return dataset
 
 
-class IPUCollateFn:
-    """
-    # TODO move those static padding into Dataset
-    """
-
-    def __init__(self, max_feature_length, max_target_length, type):
-        self.max_feature_length = max_feature_length
-        self.max_target_length = max_target_length
-        assert type in ['float32', 'float16']
-        self.type = type
-
-    def __call__(self, batch):
-        batch_size = len(batch)
-        feature_length = torch.cat([i[3] for i in batch])
-        target_length = torch.cat([i[4] for i in batch])
-        padded_feature = torch.zeros(
-            size=[batch_size, self.max_feature_length, batch[0][1].size(2)])
-        padded_target = torch.ones(
-            size=[batch_size, self.max_target_length], dtype=torch.long) * -1
-        for index, sample in enumerate(batch):
-            padded_feature[index, :sample[1][0].size(0), :] = sample[1][0]
-            padded_target[index, :sample[2][0].size(0)] = sample[2][0]
-        if self.type == 'float32':
-            return padded_feature, feature_length, padded_target, target_length
-        else:
-            return padded_feature.half(), feature_length, padded_target, target_length
+def collate_fn(batch):
+    keys = [i[0] for i in batch]
+    feats = torch.cat([i[1] for i in batch])
+    target = torch.cat([i[2] for i in batch])
+    feat_length = torch.cat([i[3] for i in batch])
+    target_length = torch.cat([i[4] for i in batch])
+    # TODO config for precision
+    return feats.half(), feat_length, target, target_length
