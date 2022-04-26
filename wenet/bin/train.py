@@ -294,15 +294,17 @@ def main():
 
     if enable_validation:
         validate_batch = next(iter(cv_data_loader))
+        feats, feats_lengths, target, target_lengths = validate_batch
         model.eval()
         validate_model = poptorch.inferenceModel(model, ipu_option_validate)
-        validate_model.compile(*validate_batch)
+        validate_model.compile(feats, feats_lengths, target, target_lengths)
         validate_model.detachFromDevice()
 
     train_batch = next(iter(train_data_loader))
+    feats, feats_lengths, target, target_lengths = train_batch
     model.train()
     train_model = poptorch.trainingModel(model, ipu_option_train, optimizer)
-    train_model.compile(*train_batch)
+    train_model.compile(feats, feats_lengths, target, target_lengths)
     train_model.detachFromDevice()
     # Start training loop
     executor.step = step
