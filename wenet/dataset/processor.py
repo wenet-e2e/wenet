@@ -612,14 +612,14 @@ def padding(data, feature_length=1200, target_length=100, dynamic=False):
                                         batch_first=True,
                                         padding_value=0)
             padding_labels = pad_sequence(sorted_labels,
-                                        batch_first=True,
-                                        padding_value=-1)
+                                          batch_first=True,
+                                          padding_value=-1)
             yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
-                label_lengths)
+                   label_lengths)
         else:
             padded_feats = torch.zeros(
                 size=[len(sorted_feats), feature_length, sorted_feats[0].size(1)])
-            
+
             padding_labels = torch.ones(
                 size=[len(sorted_feats), target_length], dtype=torch.long) * -1
 

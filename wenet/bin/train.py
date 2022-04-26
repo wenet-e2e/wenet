@@ -314,15 +314,6 @@ def main():
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
 
-    # validate_model.attachToDevice()
-    # feats, feats_lengths, target, target_lengths = train_batch
-    # loss, loss_att, loss_ctc = validate_model(feats, feats_lengths, target, target_lengths)
-    # print(loss.mean(), loss_att.mean(), loss_ctc.mean())
-
-    # feats, feats_lengths, target, target_lengths = validate_batch
-    # loss, loss_att, loss_ctc = validate_model(feats, feats_lengths, target, target_lengths)
-    # print(loss.mean(), loss_att.mean(), loss_ctc.mean())
-    # validate_model.detachFromDevice()
     for epoch in range(start_epoch, num_epochs):
         train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch
