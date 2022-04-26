@@ -11,7 +11,8 @@ encoder_conf:
     attention_dropout_rate: 0.0
     input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
-    cnn_module_kernel: 15
+    cnn_module_kernel: 31
+    cnn_module_norm: 'layer_norm'
     use_cnn_module: True
     activation_type: 'swish'
     pos_enc_layer_type: 'rel_pos'
@@ -37,9 +38,9 @@ model_conf:
 # dataset related
 dataset_conf:
     filter_conf:
-        max_length: 2000
+        max_length: &max_feature_length 1700
         min_length: 50
-        token_max_length: 400
+        token_max_length: &max_token_length 90
         token_min_length: 1
         min_output_input_ratio: 0.0005
         max_output_input_ratio: 0.1
@@ -50,7 +51,7 @@ dataset_conf:
         num_mel_bins: 80
         frame_shift: 10
         frame_length: 25
-        dither: 0.0
+        dither: 0.1
     spec_aug: true
     spec_aug_conf:
         num_t_mask: 2
@@ -65,16 +66,48 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 12
+        batch_size: 1
+    padding_conf:
+        feature_length: *max_feature_length
+        target_length: *max_token_length
+        dynamic: false
 
-grad_clip: 5
-accum_grad: 1
-max_epoch: 70
-log_interval: 100
+ipu_conf:
+    seed: 1234
+    available_memory_propotion: [0.2, 0.2, 0.2, 0.2]
+    local_batch_size: 4
+    num_replicas: 1
+    gradient_accumulation: 96
+    enable_half_partials: true
+    enable_stochastic_rounding: true
+    optimizer_state_offchip: false
+    device_iterations: &device_iterations 1
+    validate_device_iterations: 16
+    enable_synthetic_data: false
+    enable_profile: false
+    profile_path: './profiles/'
+    profile_prefix: 'prefix'
+    executable_cache: './exec_cache'
+    pipeline:
+        - ['encoder.encoders__1', 1]
+        - ['encoder.encoders__6', 2]
+        - ['encoder.encoders__11', 3]
+
+
+max_epoch: 120
+log_interval: 10
+precision: float16
 
 optim: adam
 optim_conf:
-    lr: 0.004
+    lr: 0.0005
+    loss_scaling: 1024.0
+    max_grad_norm: 5.0
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 25000
+    device_factor: 1
+
+enable_validation: true
+
+

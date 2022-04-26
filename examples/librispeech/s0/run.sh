@@ -6,13 +6,13 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES="0"
 stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
 # data
 data_url=www.openslr.org/resources/12
 # use your own data path
-datadir=/export/data/en-asr-data/OpenSLR
+datadir=.
 # wav data dir
 wave_data=data
 # Optional train_config
@@ -29,7 +29,7 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=10
-decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
+decode_modes="attention_rescoring"
 
 . tools/parse_options.sh || exit 1;
 
@@ -43,7 +43,7 @@ set -o pipefail
 
 train_set=train_960
 dev_set=dev
-recog_set="test_clean test_other dev_clean dev_other"
+recog_set="test_clean test_other"
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
   echo "stage -1: Data Download"
@@ -137,7 +137,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   for ((i = 0; i < $num_gpus; ++i)); do
   {
     gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-    python wenet/bin/train.py --gpu $gpu_id \
+    python wenet/bin/train.py --gpu -1 \
       --config $train_config \
       --data_type raw \
       --symbol_table $dict \
@@ -187,7 +187,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         test_dir=$dir/${test}_${mode}
         mkdir -p $test_dir
         gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-        python wenet/bin/recognize.py --gpu $gpu_id \
+        python wenet/bin/recognize.py --gpu -1 \
           --mode $mode \
           --config $dir/train.yaml \
           --data_type raw \

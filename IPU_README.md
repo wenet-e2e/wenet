@@ -1,5 +1,5 @@
 # WeNet on IPU
-This project is a minimal modification to WeNet to allow it to run on Graphcore IPU, currently we support training on `wenetspeech` dataset, and it is easy to make a little changes to run with other dataset.
+This project is a minimal modification to WeNet to allow it to run on Graphcore IPU, currently we support training on `wenetspeech`, `aishell`, `librispeech` dataset, and it is easy to make a little changes to run with other dataset.
 
 
 
@@ -21,3 +21,12 @@ pip3 install -r requirements.txt
 cd examples/wenetspeech/s0/
 bash run.sh
 ```
+
+## performance
+
+
+|model|dataset|test set|decoding method|GPU|IPU|
+|---|---|---|---|---|---|
+|conformer|wenetspeech|Test_Net|attention rescoring|9.7|9.68|
+|conformer|aishell|test|attention rescoring|4.62|4.68|
+|conformer|librispeech|test_other|attention rescoring|8.72|8.5|

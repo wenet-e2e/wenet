@@ -33,6 +33,7 @@ class Executor:
             model.setOptimizer(optimizer)
             self.step += 1
             end = time.perf_counter()
+            writer.add_scalar('train_loss', loss.mean().item(), self.step)
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
@@ -47,19 +48,21 @@ class Executor:
                     num_utts / (end - start))
                 logging.debug(log_str)
 
+
     def cv(self, model, data_loader, device, args):
         ''' Cross validation on
         '''
         model.eval()
         rank = args.get('rank', 0)
         epoch = args.get('epoch', 0)
-        log_interval = args.get('log_interval', 10)
+        # log_interval = args.get('log_interval', 10)
+        log_interval = 1
         # in order to avoid division by 0
         num_seen_utts = 1
         total_loss = 0.0
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
-                feats, target, feats_lengths, target_lengths = batch
+                feats, feats_lengths, target, target_lengths = batch
 
                 num_utts = target_lengths.size(0)
                 if num_utts == 0:
