@@ -25,7 +25,7 @@ import yaml
 import poptorch
 from tensorboardX import SummaryWriter
 
-from wenet.dataset.dataset import Dataset, IPUCollateFn
+from wenet.dataset.dataset import Dataset, collate_fn
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
@@ -168,37 +168,29 @@ def main():
                          non_lang_syms,
                          partition=False)
 
-    collate_fn = IPUCollateFn(
-        train_conf["filter_conf"]["max_length"],
-        train_conf["filter_conf"]["token_max_length"],
-        type=configs['precision']
-    )
-
     train_data_loader = poptorch.DataLoader(
         ipu_option_train,
         train_dataset,
         batch_size=configs["ipu_conf"]["local_batch_size"],
-        pin_memory=args.pin_memory,
-        num_workers=1,
+        num_workers=16,
+        collate_fn=collate_fn,
         # TODO there is a little incompatitable for wenet's iterable dataset
         # and poptorch's dataloader, would be fixed with furture SDK
         # so we just keep num_workers to 1 for now.
-        mode=poptorch.DataLoaderMode.Async,
+        mode=poptorch.DataLoaderMode.AsyncRebatched,
         async_options={
-            "sharing_strategy": poptorch.SharingStrategy.SharedMemory,
             "buffer_size": 16,
             "load_indefinitely": True,
             "miss_sleep_time_in_ms": 0,
             "early_preload": True
         },
-        collate_fn=collate_fn
+        rebatched_worker_size=32,
     )
 
     cv_data_loader = poptorch.DataLoader(
         ipu_option_validate,
         cv_dataset,
         batch_size=configs["ipu_conf"]["local_batch_size"],
-        pin_memory=args.pin_memory,
         num_workers=1,
         collate_fn=collate_fn
     )
@@ -312,7 +304,6 @@ def main():
     train_model = poptorch.trainingModel(model, ipu_option_train, optimizer)
     train_model.compile(*train_batch)
     train_model.detachFromDevice()
-
     # Start training loop
     executor.step = step
     scheduler.set_step(step)
@@ -321,6 +312,15 @@ def main():
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
 
+    # validate_model.attachToDevice()
+    # feats, feats_lengths, target, target_lengths = train_batch
+    # loss, loss_att, loss_ctc = validate_model(feats, feats_lengths, target, target_lengths)
+    # print(loss.mean(), loss_att.mean(), loss_ctc.mean())
+
+    # feats, feats_lengths, target, target_lengths = validate_batch
+    # loss, loss_att, loss_ctc = validate_model(feats, feats_lengths, target, target_lengths)
+    # print(loss.mean(), loss_att.mean(), loss_ctc.mean())
+    # validate_model.detachFromDevice()
     for epoch in range(start_epoch, num_epochs):
         train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch

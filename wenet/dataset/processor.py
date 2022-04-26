@@ -584,7 +584,7 @@ def batch(data, batch_type='static', batch_size=16, max_frames_in_batch=12000):
         logging.fatal('Unsupported batch type {}'.format(batch_type))
 
 
-def padding(data):
+def padding(data, feature_length=1200, target_length=100, dynamic=False):
     """ Padding the data into training data
 
         Args:
@@ -607,13 +607,23 @@ def padding(data):
         ]
         label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
                                      dtype=torch.int32)
+        if dynamic:
+            padded_feats = pad_sequence(sorted_feats,
+                                        batch_first=True,
+                                        padding_value=0)
+            padding_labels = pad_sequence(sorted_labels,
+                                        batch_first=True,
+                                        padding_value=-1)
+            yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
+                label_lengths)
+        else:
+            padded_feats = torch.zeros(
+                size=[len(sorted_feats), feature_length, sorted_feats[0].size(1)])
+            
+            padding_labels = torch.ones(
+                size=[len(sorted_feats), target_length], dtype=torch.long) * -1
 
-        padded_feats = pad_sequence(sorted_feats,
-                                    batch_first=True,
-                                    padding_value=0)
-        padding_labels = pad_sequence(sorted_labels,
-                                      batch_first=True,
-                                      padding_value=-1)
-
-        yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
-               label_lengths)
+            for index, sample in enumerate(zip(sorted_feats, sorted_labels)):
+                padded_feats[index, :sample[0].size(0), :] = sample[0]
+                padding_labels[index, :sample[1].size(0)] = sample[1]
+            yield sorted_keys, padded_feats, padding_labels, feats_lengths, label_lengths

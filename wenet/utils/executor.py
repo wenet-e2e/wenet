@@ -53,7 +53,8 @@ class Executor:
         model.eval()
         rank = args.get('rank', 0)
         epoch = args.get('epoch', 0)
-        log_interval = args.get('log_interval', 10)
+        # log_interval = args.get('log_interval', 10)
+        log_interval = 1
         # in order to avoid division by 0
         num_seen_utts = 1
         total_loss = 0.0
