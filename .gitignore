@@ -36,3 +36,9 @@ data
 raw_wav
 tensorboard
 **/*build*
+data_aishell/
+exec_cache/
+profiles/
+resource_aishell/
+data_aishell.tgz
+resource_aishell.tgz

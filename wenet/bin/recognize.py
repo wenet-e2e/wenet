@@ -145,6 +145,7 @@ def main():
         test_conf['mfcc_conf']['dither'] = 0.0
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
+    test_conf['padding_conf']['dynamic'] = True
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
     test_dataset = Dataset(args.data_type,

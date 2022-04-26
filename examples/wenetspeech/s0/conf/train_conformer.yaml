@@ -63,16 +63,47 @@ dataset_conf:
         sort_size: 1000  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 32
+        batch_size: 1
+    padding_conf:
+        feature_length: 1200
+        target_length: 100
+        dynamic: false
 
-grad_clip: 5
-accum_grad: 16
+ipu_conf:
+    seed: 1234
+    available_memory_propotion: [0.1, 0.1, 0.15, 0.11]
+    local_batch_size: 2
+    num_replicas: 4
+    gradient_accumulation: 512
+    enable_half_partials: true
+    enable_stochastic_rounding: true
+    optimizer_state_offchip: false
+    device_iterations: &device_iterations 1
+    validate_device_iterations: 16
+    enable_synthetic_data: false
+    enable_profile: false
+    profile_path: './profiles/'
+    profile_prefix: 'prefix'
+    executable_cache: './exec_cache'
+    pipeline:
+        - ['encoder.encoders__2', 1]
+        - ['encoder.encoders__8', 2]
+        - ['decoder.decoders__3', 3]
+
+
 max_epoch: 26
-log_interval: 100
+log_interval: 1
 
 optim: adam
 optim_conf:
     lr: 0.001
+    loss_scaling: 1024.0
+    max_grad_norm: 5.0
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
     warmup_steps: 5000
+    device_factor: *device_iterations
+precision: float16
+
+enable_validation: true
+

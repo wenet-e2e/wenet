@@ -1,5 +1,6 @@
 """Unility functions for Transformer."""
 
+
 import math
 from typing import Tuple, List
 
@@ -71,18 +72,16 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
                 [ 4,  5,  6, 11, -1, -1],
                 [ 7,  8,  9, 11, -1, -1]])
     """
-    _sos = torch.tensor([sos],
-                        dtype=torch.long,
-                        requires_grad=False,
-                        device=ys_pad.device)
-    _eos = torch.tensor([eos],
-                        dtype=torch.long,
-                        requires_grad=False,
-                        device=ys_pad.device)
-    ys = [y[y != ignore_id] for y in ys_pad]  # parse padded ys
-    ys_in = [torch.cat([_sos, y], dim=0) for y in ys]
-    ys_out = [torch.cat([y, _eos], dim=0) for y in ys]
-    return pad_list(ys_in, eos), pad_list(ys_out, ignore_id)
+    ys_in = torch.nn.functional.pad(ys_pad, [1, 0], value=float(sos))
+    ys_in = ys_in.masked_fill(ys_in.eq(ignore_id), value=eos)
+    # tail a ignore id for ys_out
+    ys_out = torch.nn.functional.pad(ys_pad, [0, 1], value=float(ignore_id))
+    # build eos index
+    eos_index = ys_pad.ne(ignore_id).sum(1).unsqueeze(1)
+    # fill the eos in ys_pad
+    src = torch.ones_like(eos_index, dtype=ys_in.dtype) * eos
+    ys_out = ys_out.scatter(dim=1, index=eos_index, src=src)
+    return ys_in, ys_out
 
 
 def reverse_pad_list(ys_pad: torch.Tensor,

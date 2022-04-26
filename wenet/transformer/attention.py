@@ -85,7 +85,7 @@ class MultiHeadedAttention(nn.Module):
         n_batch = value.size(0)
         if mask.size(2) > 0 :  # time2 > 0
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
-            scores = scores.masked_fill(mask, -float('inf'))
+            scores = scores.masked_fill(mask, -1e3)
             attn = torch.softmax(scores, dim=-1).masked_fill(
                 mask, 0.0)  # (batch, head, time1, time2)
         else:
