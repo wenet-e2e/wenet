@@ -20,7 +20,7 @@ namespace py = pybind11;
 
 
 PYBIND11_MODULE(_wenet, m) {
-  m.doc() = "wenet pybind11 plugin"; // optional module docstring
+  m.doc() = "wenet pybind11 plugin";  // optional module docstring
   m.def("wenet_init", &wenet_init, py::return_value_policy::reference,
         "wenet init");
   m.def("wenet_free", &wenet_free,
