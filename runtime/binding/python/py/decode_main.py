@@ -5,15 +5,15 @@ import wenet
 
 
 if len(sys.argv) != 3:
-   print('Usage: {} model_dir test.wav'.format(sys.argv[0]))
-   sys.exit(1)
+    print('Usage: {} model_dir test.wav'.format(sys.argv[0]))
+    sys.exit(1)
 
 model_dir = sys.argv[1]
 test_wav = sys.argv[2]
 
 with wave.open(test_wav, 'rb') as fin:
-   assert fin.getnchannels() == 1
-   wav = fin.readframes(fin.getnframes())
+    assert fin.getnchannels() == 1
+    wav = fin.readframes(fin.getnframes())
 
 decoder = wenet.Decoder(model_dir)
 ans = decoder.decode(wav)

@@ -38,4 +38,3 @@ class Decoder:
         _wenet.wenet_decode(self.d, pcm, len(pcm), finish)
         result = _wenet.wenet_get_result(self.d)
         return result
-
