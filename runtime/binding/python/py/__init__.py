@@ -1,1 +1,1 @@
-from .decoder import Decoder
+from .decoder import Decoder  # noqa
