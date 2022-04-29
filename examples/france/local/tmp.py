@@ -4,8 +4,9 @@
 import sys
 import os
 
-def sph2pipe_wav(in_wav, tmp_out_wav, out_wav):
-    pass
+def process(src_str):
+   punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
+   return(re.sub(r"[%s]+" %punc, "",src_str)).upper()
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
@@ -30,7 +31,7 @@ if __name__ == '__main__':
     utt2spk = open(output_dir + "/utt2spk", "w")
     for i in range(len(path_list)):
         temple_str = path_list[i].split(".")[0]
-        now_sentence = sentence[i]
+        now_sentence = process(sentence[i])
         wav_file = src_dir + "/wavs/" + temple_str + ".wav"
         scp_file.writelines(temple_str + " " + wav_file + "\n")
         text_file.writelines(temple_str + " " + now_sentence + "\n")
