@@ -51,8 +51,8 @@ checkpoint=
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
-average_num=30
-decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
+average_num=20
+decode_modes="attention_rescoring"
 
 . tools/parse_options.sh || exit 1;
 

@@ -74,7 +74,7 @@ ipu_conf:
     available_memory_propotion: [0.2, 0.2, 0.2, 0.2]
     local_batch_size: 4
     num_replicas: 1
-    gradient_accumulation: 256
+    gradient_accumulation: 64
     enable_half_partials: true
     enable_stochastic_rounding: true
     optimizer_state_offchip: false
@@ -98,12 +98,12 @@ precision: float16
 
 optim: adam
 optim_conf:
-    lr: 0.004
+    lr: 0.002
     loss_scaling: 1024.0
     max_grad_norm: 5.0
 scheduler: warmuplr     # pytorch v1.1.0+ required
 scheduler_conf:
-    warmup_steps: 10000
+    warmup_steps: 25000
     device_factor: 1
 
 enable_validation: true
