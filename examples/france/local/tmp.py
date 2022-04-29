@@ -9,9 +9,6 @@ def process(src_str):
     return re.sub(r"[{0}]+".format(punc), "", src_str).upper()
 
 if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print('wrong input parameter')
-        raise NotImplementedError(len(sys.argv))
     src_dir = sys.argv[1]
     tsv_file = src_dir + "/" + sys.argv[2] + ".tsv"
     output_dir = sys.argv[3]
