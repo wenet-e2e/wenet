@@ -5,8 +5,8 @@ import sys
 import os
 
 def process(src_str):
-   punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
-   return(re.sub(r"[%s]+" %punc, "",src_str)).upper()
+    punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
+    return(re.sub(r"[%s]+" %punc, "",src_str)).upper()
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
