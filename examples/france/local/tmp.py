@@ -6,7 +6,7 @@ import os
 
 def process(src_str):
     punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
-    return re.sub( r"[{0}]+".format(punc), "", src_str ).upper()
+    return re.sub(r"[{0}]+".format(punc), "", src_str).upper()
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
