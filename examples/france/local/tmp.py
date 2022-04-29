@@ -8,13 +8,13 @@ tsv_file = src_dir+"/"+args[2]+".tsv"
 output_dir = args[3]
 import re,string
 
-def process(src_str):
-    punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
-    return(re.sub(r"[%s]+" %punc, "",src_str)).upper()
-for file_path in os.listdir(src_dir+"/clips"):
-    if(os.path.exists(src_dir+"/wavs/"+file_path.split('.')[0]+".wav")):
-        continue
-    os.system("ffmpeg -i {0} -ac 1 -ar 16000 -f wav {1}".format(src_dir+"/clips/"+file_path, src_dir+"/wavs/"+file_path.split('.')[0]+".wav"))
+#def process(src_str):
+#    punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
+#    return(re.sub(r"[%s]+" %punc, "",src_str)).upper()
+#for file_path in os.listdir(src_dir+"/clips"):
+#    if(os.path.exists(src_dir+"/wavs/"+file_path.split('.')[0]+".wav")):
+#        continue
+#    os.system("ffmpeg -i {0} -ac 1 -ar 16000 -f wav {1}".format(src_dir+"/clips/"+file_path, src_dir+"/wavs/"+file_path.split('.')[0]+".wav"))
 
 #tsv_content = pd.read_csv(tsv_file, sep="\t")
 #path_list = tsv_content["path"]
