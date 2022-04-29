@@ -38,7 +38,8 @@ if __name__ == '__main__':
     text_file = open(output_dir + "/text", "w")
     utt2spk = open(output_dir + "/utt2spk", "w")
     for i in range(len(path_list)):
-        pass
+        temple_str = path_list[i].split(".")[0]
+        now_sentence = sentence[i]
     scp_file.close()
     text_file.close()
     utt2spk.close()
