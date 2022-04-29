@@ -39,9 +39,6 @@ if __name__ == '__main__':
     utt2spk = open(output_dir + "/utt2spk", "w", encoding = "utf-8")
     for i in range(len(path_list)):
         pass
-        #temple_str = path_list[i].split(".")[0]
-        #wav_file = src_dir+"/wavs/"+ temple_str +".wav"
-        #now_sentence = sentence[i]
     scp_file.close()
     text_file.close()
     utt2spk.close()
