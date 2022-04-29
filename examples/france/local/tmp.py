@@ -1,12 +1,12 @@
-import numpy as np
-import os
-import pandas as pd
-import sys
-args = sys.argv
-src_dir = args[1]
-tsv_file = src_dir+"/"+args[2]+".tsv"
-output_dir = args[3]
-import re,string
+#import numpy as np
+#import os
+#import pandas as pd
+#import sys
+#args = sys.argv
+#src_dir = args[1]
+#tsv_file = src_dir+"/"+args[2]+".tsv"
+#output_dir = args[3]
+#import re,string
 
 #def process(src_str):
 #    punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
