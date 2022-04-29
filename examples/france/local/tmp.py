@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import sys
-import os
 
 
 def sph2pipe_wav(in_wav, tmp_out_wav, out_wav):
