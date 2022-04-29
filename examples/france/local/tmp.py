@@ -32,4 +32,11 @@
 #scp_file.close()
 #text_file.close()
 #utt2spk.close()
-
+if __name__ == '__main__':
+    args = sys.argv
+    if len(sys.argv) != 3:
+        print('wrong input parameter')
+        raise NotImplementedError(len(sys.argv))
+    src_dir = args[1]
+    tsv_file = src_dir + "/" + args[2] + ".tsv"
+    output_dir = args[3]
