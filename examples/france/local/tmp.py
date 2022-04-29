@@ -1,8 +1,6 @@
 import numpy as np
 import os
 import pandas as pd
-#src_dir为源数据集的路径
-#
 import sys
 args = sys.argv
 src_dir = args[1]
