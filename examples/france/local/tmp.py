@@ -34,9 +34,9 @@ if __name__ == '__main__':
     path_list = tsv_content["path"]
     sentence = tsv_content["sentence"]
     client_list = tsv_content["client_id"]
-    scp_file = open(output_dir + "/wav.scp", "w", encoding = "utf-8")
-    text_file = open(output_dir + "/text", "w", encoding = "utf-8")
-    utt2spk = open(output_dir + "/utt2spk", "w", encoding = "utf-8")
+    scp_file = open(output_dir + "/wav.scp", "w")
+    text_file = open(output_dir + "/text", "w")
+    utt2spk = open(output_dir + "/utt2spk", "w")
     for i in range(len(path_list)):
         pass
     scp_file.close()
