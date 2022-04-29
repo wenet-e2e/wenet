@@ -3,7 +3,7 @@
 
 import sys
 import os
-import re, string
+import re
 def process(src_str):
     punc = '~`!#$%^&*()_+-=|\';":/.,?><~·！@#￥%……&*（）——+-=“：’；、。，？》《{}'
     return re.sub(r"[{0}]+".format(punc), "", src_str).upper()
