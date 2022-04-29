@@ -15,7 +15,7 @@ if __name__ == '__main__':
     tsv_file = src_dir + "/" + sys.argv[2] + ".tsv"
     output_dir = sys.argv[3]
     for file_path in os.listdir(src_dir + "/clips"):
-        if(os.path.exists(src_dir + "/wavs/" + file_path.split('.')[0]+".wav")):
+        if(os.path.exists(src_dir + "/wavs/" + file_path.split('.')[0] + ".wav")):
             continue
         t_str = src_dir + "/clips/" + file_path
         tt_str = src_dir + "/wavs/" + file_path.split('.')[0] + ".wav"
