@@ -23,10 +23,13 @@ def sph2pipe_wav(in_wav, tmp_out_wav, out_wav):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 3:
         print('wrong input parameter')
         raise NotImplementedError(len(sys.argv))
-    in_wav = sys.argv[1]
-    tmp_out_wav = sys.argv[2]
-    out_wav = sys.argv[3]
-    sph2pipe_wav(in_wav, tmp_out_wav, out_wav)
+    src_dir = sys.argv[1]
+    tsv_file = src_dir + "/" + sys.argv[2] + ".tsv"
+    output_dir = sys.argv[3]
+    import pandas
+    tsv_content = pandas.read_csv(tsv_file, sep="\t")
+    path_list = tsv_content["path"]
+    sentence = tsv_content["sentence"]
