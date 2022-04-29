@@ -13,7 +13,7 @@ if [ ! -d ${dir} ]; then
     mkdir ${dir}
 fi
 
-for x in train dev test; do             
+for x in train dev test; do
     if [ ! ${dir}/${x} ]; then
         mkdir ${dir}/${x}
     else
@@ -25,8 +25,7 @@ done
 if [ ! -d ${src_path}/wavs ]; then
     mkdir ${src_path}/wavs
 fi
- 
-for x in train dev test; do 
+for x in train dev test; do
     python3 ${local}/tmp.py  ${src_path} ${x} ${dir}/${x}
 done
 for x in train dev test; do

@@ -1,5 +1,5 @@
-import numpy as np                     
-import os                      
+import numpy as np
+import os
 import pandas as pd
 #src_dir为源数据集的路径
 #
@@ -31,7 +31,7 @@ for i in range(len(path_list)):
     wav_file = src_dir+"/wavs/"+path_list[i].split(".")[0]+".wav"
     now_sentence = process(sentence[i])
     scp_file.writelines(path_list[i].split(".")[0]+" "+wav_file+"\n")
-    text_file.writelines(path_list[i].split(".")[0]+" "+now_sentence+"\n") 
+    text_file.writelines(path_list[i].split(".")[0]+" "+now_sentence+"\n")
     utt2spk.writelines(path_list[i].split(".")[0]+" "+client_list[i]+"\n")
 scp_file.close()
 text_file.close()

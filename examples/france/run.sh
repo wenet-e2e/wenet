@@ -191,8 +191,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Polling GPU id begin with index 0
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   idx=0
-  
-    for mode in ${decode_modes}; do
+  for mode in ${decode_modes}; do
     {
       {
         test_dir=$dir/test_${mode}
