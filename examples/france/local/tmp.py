@@ -32,7 +32,6 @@ if __name__ == '__main__':
     for file_path in os.listdir(src_dir+"/clips"):
         if(os.path.exists(src_dir + "/wavs/" + file_path.split('.')[0] + ".wav")):
             continue
-        os.system("ffmpeg -i {0} -ac 1 -ar 16000 -f wav {1}".format(src_dir + "/clips/" + file_path, src_dir + "/wavs/" + file_path.split('.')[0] + ".wav"))
     import pandas
     tsv_content = pandas.read_csv(tsv_file, sep="\t")
     path_list = tsv_content["path"]
