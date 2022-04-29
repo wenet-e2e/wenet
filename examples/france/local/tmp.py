@@ -34,3 +34,4 @@ for i in range(len(path_list)):
 scp_file.close()
 text_file.close()
 utt2spk.close()
+
