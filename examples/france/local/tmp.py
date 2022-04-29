@@ -42,7 +42,8 @@ if __name__ == '__main__':
         now_sentence = sentence[i]
         wav_file = src_dir + "/wavs/" + temple_str + ".wav"
         scp_file.writelines(temple_str + " " + wav_file + "\n")
-
+        text_file.writelines(temple_str + " " + now_sentence + "\n")
+        utt2spk.writelines(temple_str + " " + client_list[i] + "\n")
     scp_file.close()
     text_file.close()
     utt2spk.close()
