@@ -40,6 +40,7 @@ if __name__ == '__main__':
     for i in range(len(path_list)):
         temple_str = path_list[i].split(".")[0]
         now_sentence = sentence[i]
+        scp_file.writelines(temple_str + " " + now_sentence + "\n")
     scp_file.close()
     text_file.close()
     utt2spk.close()
