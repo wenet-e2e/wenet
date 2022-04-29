@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
-
+import os
 
 def sph2pipe_wav(in_wav, tmp_out_wav, out_wav):
     pass
@@ -14,6 +14,12 @@ if __name__ == '__main__':
     src_dir = sys.argv[1]
     tsv_file = src_dir + "/" + sys.argv[2] + ".tsv"
     output_dir = sys.argv[3]
+    for file_path in os.listdir(src_dir+"/clips"):
+        if(os.path.exists(src_dir+"/wavs/"+file_path.split('.')[0]+".wav")):
+            continue
+        t_str = src_dir + "/clips/" + file_path
+        tt_str = src_dir + "/wavs/" + file_path.split('.')[0]+".wav"
+        os.system("ffmpeg -i {0} -ac 1 -ar 16000 -f wav {1}".format(t_str, tt_str))
     import pandas
     tsv_content = pandas.read_csv(tsv_file, sep="\t")
     path_list = tsv_content["path"]
