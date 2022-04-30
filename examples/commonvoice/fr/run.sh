@@ -23,7 +23,7 @@ num_nodes=1
 node_rank=0
 # data
 download_path=/root/autodl-tmp
-France_data=/root/autodl-tmp/cv-corpus-8.0-2022-01-19
+french_data=/root/autodl-tmp/cv-corpus-8.0-2022-01-19
 # path to save preproecssed data
 # export data=data
 . ./path.sh
@@ -63,14 +63,14 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 
     echo "stage -1: Data download"
     echo "download Dataset!"
-    local/download_data.sh ${download_path} ${France_data}
+    local/download_data.sh ${download_path} ${french_data}
     echo "Finish stage 0"
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
 
     echo "stage 0: Data preparation"
-    local/prepare_data.sh ${France_data}/fr
+    local/prepare_data.sh ${french_data}/fr
     echo "Finish stage 0"
 fi
 

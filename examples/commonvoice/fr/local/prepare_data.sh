@@ -26,8 +26,5 @@ if [ ! -d ${src_path}/wavs ]; then
     mkdir ${src_path}/wavs
 fi
 for x in train dev test; do
-    python3 ${local}/tmp.py  ${src_path} ${x} ${dir}/${x}
-done
-for x in train dev test; do
-    cat ${dir}/${x}/utt2spk | $local/utt2spk_to_spk2utt.pl > ${dir}/${x}/spk2utt || exit 1;
+    python3 ${local}/create_scp_text.py  ${src_path} ${x} ${dir}/${x}
 done
