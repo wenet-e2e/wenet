@@ -58,9 +58,9 @@ class BuildExtension(build_ext):
                 )
             lib_so = glob.glob(f"{build_dir}/**/*.so*", recursive=True)
             lib_so += glob.glob(f"{cur_dir}/fc_base/**/*.so*", recursive=True)
-            # for so in lib_so:
-            #     print(f"Copying {so} to {self.build_lib}/")
-            #     shutil.copy(f"{so}", f"{self.build_lib}/", follow_symlinks=False)
+            for so in lib_so:
+                print(f"Copying {so} to {self.build_lib}/")
+                shutil.copy(f"{so}", f"{self.build_lib}/", follow_symlinks=False)
 
             # macos
             # also need to copy *fst*.dylib
