@@ -26,18 +26,14 @@ jobs:
         uses: pypa/cibuildwheel@v2.5.0
         env:
           CIBW_BUILD_VERBOSITY: 1
+          # Only build on CPython 3.6
+          CIBW_BUILD: cp36-*
+          # Disable building PyPy wheels on all platforms
+          CIBW_SKIP: pp*
         with:
           package-dir: ${{ env.BINDING_DIR }}
           output-dir: wheelhouse
 
-      # - name: Install cibuildwheel
-      #   run: |
-      #     python3 -m pip install --upgrade pip
-      #     python3 -m pip install wheel twine setuptools
-      #     python -m pip install cibuildwheel==2.5.0
-
-      # - name: Build wheels
-      #   run: |
-      #     cd ${{ env.BINDING_DIR }}
-      #     python setup.py bdist_wheel
-      #     # python -m cibuildwheel --output-dir wheelhouse
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
