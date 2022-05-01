@@ -23,13 +23,9 @@ jobs:
         python-version: 3.6
 
       - name: Install cibuildwheel
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install wheel twine setuptools
-          python -m pip install cibuildwheel==2.5.0
+        run: python -m pip install cibuildwheel==2.5.0
 
       - name: Build wheels
         run: |
           cd ${{ env.BINDING_DIR }}
-          python3 setup.py sdist
-          # python -m cibuildwheel --output-dir wheelhouse
+          python -m cibuildwheel --output-dir wheelhouse
