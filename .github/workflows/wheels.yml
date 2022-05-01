@@ -20,16 +20,22 @@ jobs:
       # Used to host cibuildwheel
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.x'
-
-      - name: Install cibuildwheel
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install wheel twine setuptools
-          python -m pip install cibuildwheel==2.5.0
+          python-version: '3.6'
 
       - name: Build wheels
-        run: |
-          cd ${{ env.BINDING_DIR }}
-          python setup.py bdist_wheel
-          # python -m cibuildwheel --output-dir wheelhouse
+       uses: pypa/cibuildwheel@v2.5.0
+       with:
+         package-dir: ${{ env.BINDING_DIR }}
+         output-dir: wheelhouse
+
+      # - name: Install cibuildwheel
+      #   run: |
+      #     python3 -m pip install --upgrade pip
+      #     python3 -m pip install wheel twine setuptools
+      #     python -m pip install cibuildwheel==2.5.0
+
+      # - name: Build wheels
+      #   run: |
+      #     cd ${{ env.BINDING_DIR }}
+      #     python setup.py bdist_wheel
+      #     # python -m cibuildwheel --output-dir wheelhouse
