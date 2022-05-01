@@ -22,16 +22,6 @@ if(NOT MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
 endif()
 
-# # libtorch: here we use libtorch from python torch
-# execute_process(
-#   COMMAND python -c "import os; import torch; print(os.path.dirname(torch.__file__))"
-#   OUTPUT_STRIP_TRAILING_WHITESPACE
-#   OUTPUT_VARIABLE TORCH_DIR
-# )
-# list(APPEND CMAKE_PREFIX_PATH "${TORCH_DIR}")
-# find_package(Torch REQUIRED PATHS ${TORCH_DIR} NO_DEFAULT_PATH)
-# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
-
 # third_party: libtorch use FetchContent_Declare to download, and
 # use find_package to find since libtorch is not a standard cmake project
 set(PYTORCH_VERSION "1.10.0")
