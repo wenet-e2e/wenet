@@ -35,6 +35,13 @@ jobs:
           package-dir: ${{ env.BINDING_DIR }}
           output-dir: wheelhouse
 
-      - uses: actions/upload-artifact@v2
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
-          path: ./wheelhouse/*.whl
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          packages_dir: ./wheelhouse/
+
+      # - uses: actions/upload-artifact@v2
+      #   with:
+      #     path: ./wheelhouse/*.whl
