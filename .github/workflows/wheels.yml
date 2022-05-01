@@ -18,9 +18,9 @@ jobs:
       - uses: actions/checkout@v2
 
       # Used to host cibuildwheel
-      - uses: actions/setup-python@v2
-      with:
-        python-version: 3.6
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.x'
 
       - name: Install cibuildwheel
         run: python -m pip install cibuildwheel==2.5.0
