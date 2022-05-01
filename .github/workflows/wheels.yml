@@ -27,9 +27,11 @@ jobs:
         env:
           CIBW_BUILD_VERBOSITY: 1
           # Only build on CPython 3.6
-          CIBW_BUILD: cp36-*
+          CIBW_BUILD: "cp36-*"
           # Disable building PyPy wheels on all platforms
-          CIBW_SKIP: pp*
+          CIBW_SKIP: "pp*"
+          # Skip 32-bit builds
+          CIBW_SKIP: "*-win32 *-manylinux_i686"
         with:
           package-dir: ${{ env.BINDING_DIR }}
           output-dir: wheelhouse
