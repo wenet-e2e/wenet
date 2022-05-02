@@ -42,6 +42,6 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
           packages_dir: ./wheelhouse/
 
-      # - uses: actions/upload-artifact@v2
-      #   with:
-      #     path: ./wheelhouse/*.whl
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
