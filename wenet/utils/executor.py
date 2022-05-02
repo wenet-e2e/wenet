@@ -33,6 +33,7 @@ class Executor:
             model.setOptimizer(optimizer)
             self.step += 1
             end = time.perf_counter()
+            writer.add_scalar('train_loss', loss, self.step)
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
@@ -46,6 +47,7 @@ class Executor:
                 log_str += ' throughput {:.0f} '.format(
                     num_utts / (end - start))
                 logging.debug(log_str)
+
 
     def cv(self, model, data_loader, device, args):
         ''' Cross validation on
