@@ -56,19 +56,29 @@ class BuildExtension(build_ext):
                     "You can ask for help by creating an issue on GitHub.\n"
                     "\nClick:\n    https://github.com/wenet-e2e/wenet/issues/new\n"
                 )
+
             lib_so = glob.glob(f"{build_dir}/**/*.so*", recursive=True)
-            lib_so += glob.glob(f"{cur_dir}/fc_base/**/*.so*", recursive=True)
+            fst_lib = 'fc_base/openfst-subbuild/openfst-populate-prefix/lib'
+            torch_lib = 'fc_base/libtorch-src/lib'
+            lib_so.extend([
+                f'{cur_dir}/{fst_lib}/libfst.so',
+                f'{cur_dir}/{fst_lib}/libfstscript.so',
+                f'{cur_dir}/{torch_lib}/libtorch.so',
+                f'{cur_dir}/{torch_lib}/libtorch_cpu.so',
+                f'{cur_dir}/{torch_lib}/libc10.so',
+                f'{cur_dir}/{torch_lib}/libgomp-a34b3233.so.1',
+            ])
             for so in lib_so:
                 print(f"Copying {so} to {self.build_lib}/")
-                shutil.copy(f"{so}", f"{self.build_lib}/", follow_symlinks=False)
+                shutil.copy(f"{so}", f"{self.build_lib}/")
 
             # macos
             # also need to copy *fst*.dylib
-            lib_so = glob.glob(f"{build_dir}/**/*.dylib*", recursive=True)
-            lib_so += glob.glob(f"{cur_dir}/fc_base/**/*.dylib*", recursive=True)
-            for so in lib_so:
-                print(f"Copying {so} to {self.build_lib}/")
-                shutil.copy(f"{so}", f"{self.build_lib}/", follow_symlinks=False)
+            # lib_so = glob.glob(f"{build_dir}/**/*.dylib*", recursive=True)
+            # lib_so += glob.glob(f"{cur_dir}/fc_base/**/*.dylib*", recursive=True)
+            # for so in lib_so:
+            #     print(f"Copying {so} to {self.build_lib}/")
+            #     shutil.copy(f"{so}", f"{self.build_lib}/", follow_symlinks=False)
         # for windows
         else:
             print('Windows is not supported')
@@ -84,7 +94,7 @@ package_name = "wenet"
 
 setuptools.setup(
     name=package_name,
-    version='1.0.0',
+    version='1.0.1',
     author="Binbin Zhang",
     author_email="binbzha@qq.com",
     package_dir={
@@ -103,6 +113,5 @@ setuptools.setup(
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     license="Apache licensed, as found in the LICENSE file",
-    install_requires=['torch>=1.10.0'],
     python_requires=">=3.6",
 )
