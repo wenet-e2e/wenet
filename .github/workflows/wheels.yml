@@ -5,6 +5,7 @@ on:
 
 env:
   BINDING_DIR: runtime/binding/python
+  FC_BASE_DIR: runtime/binding/python/fc_base
 
 jobs:
   build_wheels:
@@ -16,6 +17,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Cache FC Base
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.FC_BASE_DIR }}
+          key: ${{ runner.os }}-fc-base
+
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-build
 
       # Used to host cibuildwheel
       - uses: actions/setup-python@v3
@@ -35,6 +46,10 @@ jobs:
           package-dir: ${{ env.BINDING_DIR }}
           output-dir: wheelhouse
 
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
+
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
@@ -42,6 +57,3 @@ jobs:
           password: ${{ secrets.PYPI_API_TOKEN }}
           packages_dir: ./wheelhouse/
 
-      - uses: actions/upload-artifact@v2
-        with:
-          path: ./wheelhouse/*.whl
