@@ -1,7 +1,7 @@
 name: Build Wheels
 
 on:
-  pull_request:
+  workflow_dispatch:
 
 env:
   BINDING_DIR: runtime/binding/python

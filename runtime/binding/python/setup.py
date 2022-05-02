@@ -61,12 +61,12 @@ class BuildExtension(build_ext):
             fst_lib = 'fc_base/openfst-subbuild/openfst-populate-prefix/lib'
             torch_lib = 'fc_base/libtorch-src/lib'
             lib_so.extend([
-               f'{cur_dir}/{fst_lib}/libfst.so',
-               f'{cur_dir}/{fst_lib}/libfstscript.so',
-               f'{cur_dir}/{torch_lib}/libtorch.so',
-               f'{cur_dir}/{torch_lib}/libtorch_cpu.so',
-               f'{cur_dir}/{torch_lib}/libc10.so',
-               f'{cur_dir}/{torch_lib}/libgomp-a34b3233.so.1',
+                f'{cur_dir}/{fst_lib}/libfst.so',
+                f'{cur_dir}/{fst_lib}/libfstscript.so',
+                f'{cur_dir}/{torch_lib}/libtorch.so',
+                f'{cur_dir}/{torch_lib}/libtorch_cpu.so',
+                f'{cur_dir}/{torch_lib}/libc10.so',
+                f'{cur_dir}/{torch_lib}/libgomp-a34b3233.so.1',
             ])
             for so in lib_so:
                 print(f"Copying {so} to {self.build_lib}/")
