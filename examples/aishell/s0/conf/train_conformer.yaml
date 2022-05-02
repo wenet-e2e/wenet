@@ -98,7 +98,7 @@ precision: float16
 
 optim: adam
 optim_conf:
-    lr: 0.002
+    lr: 0.0005
     loss_scaling: 1024.0
     max_grad_norm: 5.0
 scheduler: warmuplr     # pytorch v1.1.0+ required
