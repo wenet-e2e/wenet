@@ -23,8 +23,8 @@ endif()
 
 # third_party: gflags
 FetchContent_Declare(gflags
-  URL      https://github.com/gflags/gflags/archive/v2.2.1.zip
-  URL_HASH SHA256=4e44b69e709c826734dbbbd5208f61888a2faf63f239d73d8ba0011b2dccc97a
+  URL      https://github.com/gflags/gflags/archive/v2.2.2.zip
+  URL_HASH SHA256=19713a36c9f32b33df59d1c79b4958434cb005b5b47dc5400a7a4b078111d9b5
 )
 FetchContent_MakeAvailable(gflags)
 include_directories(${gflags_BINARY_DIR}/include)
@@ -39,8 +39,8 @@ include_directories(${glog_SOURCE_DIR}/src ${glog_BINARY_DIR})
 
 # third_party: gtest
 FetchContent_Declare(googletest
-  URL      https://github.com/google/googletest/archive/release-1.10.0.zip
-  URL_HASH SHA256=94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91
+  URL      https://github.com/google/googletest/archive/release-1.11.0.zip
+  URL_HASH SHA256=353571c2440176ded91c2de6d6cd88ddd41401d14692ec1f99e35d013feda55a
 )
 set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll" FORCE)
 FetchContent_MakeAvailable(googletest)
@@ -111,6 +111,7 @@ if(NOT MSVC)
   link_directories(${openfst_PREFIX_DIR}/lib)
   target_link_libraries(utils PUBLIC fst dl)
 else()
+  set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   add_compile_options(/W0 /wd4244 /wd4267)
   add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
   add_definitions(-DBOOST_ALL_DYN_LINK -DBOOST_ALL_NO_LIB)
