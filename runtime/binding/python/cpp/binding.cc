@@ -23,12 +23,10 @@ PYBIND11_MODULE(_wenet, m) {
   m.doc() = "wenet pybind11 plugin";  // optional module docstring
   m.def("wenet_init", &wenet_init, py::return_value_policy::reference,
         "wenet init");
-  m.def("wenet_free", &wenet_free,
-        "wenet free");
-  m.def("wenet_reset", &wenet_reset,
-        "wenet reset");
-  m.def("wenet_decode", &wenet_decode,
-        "wenet decode");
+  m.def("wenet_free", &wenet_free, "wenet free");
+  m.def("wenet_reset", &wenet_reset, "wenet reset");
+  m.def("wenet_decode", &wenet_decode, "wenet decode");
   m.def("wenet_get_result", &wenet_get_result, py::return_value_policy::copy,
         "wenet get result");
+  m.def("wenet_set_log_level", &wenet_set_log_level, "set log level");
 }

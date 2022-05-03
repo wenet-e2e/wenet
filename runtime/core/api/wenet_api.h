@@ -53,6 +53,11 @@ void wenet_decode(void* decoder,
 const char* wenet_get_result(void* decoder);
 
 
+/** Set log level
+ *  We use glog in wenet, so the level is the glog level
+ */
+void wenet_set_log_level(int level);
+
 #ifdef __cplusplus
 }
 #endif

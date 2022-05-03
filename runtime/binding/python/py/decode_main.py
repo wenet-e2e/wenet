@@ -15,6 +15,10 @@ with wave.open(test_wav, 'rb') as fin:
     assert fin.getnchannels() == 1
     wav = fin.readframes(fin.getnframes())
 
+# Optional set log level
+wenet.set_log_level(1)
+
+# Init decoder
 decoder = wenet.Decoder(model_dir)
 ans = decoder.decode(wav)
 print('Decode the first utterance, result: {}'.format(ans))
