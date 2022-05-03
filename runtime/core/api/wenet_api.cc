@@ -133,3 +133,8 @@ const char* wenet_get_result(void* decoder) {
   return recognizer->GetResult();
 }
 
+
+void wenet_set_log_level(int level) {
+  FLAGS_logtostderr = true;
+  FLAGS_v = level;
+}
