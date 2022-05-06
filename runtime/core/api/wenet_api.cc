@@ -36,6 +36,9 @@ static std::string JoinPath(const std::string& left, const std::string& right) {
 class Recognizer {
  public:
   explicit Recognizer(const std::string& model_dir) {
+    at::set_num_threads(1);
+    at::set_num_interop_threads(1);
+
     // FeaturePipeline init
     feature_config_ = std::make_shared<wenet::FeaturePipelineConfig>(80, 16000);
     feature_pipeline_ =
@@ -43,7 +46,7 @@ class Recognizer {
     // Resource init
     resource_ = std::make_shared<wenet::DecodeResource>();
     auto model = std::make_shared<wenet::TorchAsrModel>();
-    model->Read(JoinPath(model_dir, "final.zip"), 1);
+    model->Read(JoinPath(model_dir, "final.zip"));
     resource_->model = model;
     auto symbol_table = std::shared_ptr<fst::SymbolTable>(
         fst::SymbolTable::ReadText(JoinPath(model_dir, "words.txt")));

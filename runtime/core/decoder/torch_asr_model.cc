@@ -13,12 +13,9 @@
 
 namespace wenet {
 
-void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
+void TorchAsrModel::Read(const std::string& model_path) {
   torch::jit::script::Module model = torch::jit::load(model_path);
   model_ = std::make_shared<TorchModule>(std::move(model));
-  // For multi-thread performance
-  at::set_num_threads(num_threads);
-  at::set_num_interop_threads(1);
   torch::NoGradGuard no_grad;
   model_->eval();
   torch::jit::IValue o1 = model_->run_method("subsampling_rate");
@@ -43,8 +40,6 @@ void TorchAsrModel::Read(const std::string& model_path, const int num_threads) {
   VLOG(1) << "\tsos " << sos_;
   VLOG(1) << "\teos " << eos_;
   VLOG(1) << "\tis bidirectional decoder " << is_bidirectional_decoder_;
-  VLOG(1) << "\tnum intra-op threads " << at::get_num_threads();
-  VLOG(1) << "\tnum inter-op threads " << at::get_num_interop_threads();
 }
 
 TorchAsrModel::TorchAsrModel(const TorchAsrModel& other) {
