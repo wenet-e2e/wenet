@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" ON)
+option(BUILD_TESTING "whether build unit test" ON)
 option(GRPC "whether to build gRPC" OFF)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
@@ -23,7 +24,6 @@ else()
 endif()
 
 include(boost)
-include(gtest)
 include(libtorch)
 include(openfst)
 
@@ -32,40 +32,14 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
 
-# utils
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/utils)
 add_subdirectory(utils)
 if(NOT MSVC)
   add_dependencies(utils openfst)
 endif()
-
-add_executable(utils_test utils/utils.cc)
-target_link_libraries(utils_test PUBLIC gtest_main gmock)
-add_test(UTILS_TEST utils_test)
-
-# frontend
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/frontend)
 add_subdirectory(frontend)
-
-# post_processor
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/post_processor)
 add_subdirectory(post_processor)
-
-# kaldi: wfst based decoder
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/kaldi)
-add_subdirectory(kaldi)
-
-# decoder
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/decoder)
+add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
-
-add_executable(ctc_prefix_beam_search_test decoder/ctc_prefix_beam_search_test.cc)
-target_link_libraries(ctc_prefix_beam_search_test PUBLIC gtest_main gmock decoder)
-add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
-
-add_executable(post_processor_test post_processor/post_processor_test.cc)
-target_link_libraries(post_processor_test PUBLIC post_processor gtest_main gmock)
-add_test(POST_PROCESSOR_TEST post_processor_test)
 
 # wenet api
 add_library(wenet_api SHARED api/wenet_api.cc)
@@ -93,9 +67,13 @@ target_link_libraries(websocket_server_main PUBLIC decoder frontend)
 add_executable(label_checker_main bin/label_checker_main.cc)
 target_link_libraries(label_checker_main PUBLIC decoder frontend)
 
+if(BUILD_TESTING)
+  include(gtest)
+  add_subdirectory(test)
+endif()
+
 if(GRPC)
   include(grpc)
-  link_directories(${CMAKE_CURRENT_SOURCE_DIR}/grpc)
   add_subdirectory(grpc)
 
   add_executable(grpc_server_main bin/grpc_server_main.cc)
