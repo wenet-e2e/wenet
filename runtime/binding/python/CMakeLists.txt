@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
-set(CMAKE_VERBOSE_MAKEFILE on)
+set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
 include(ExternalProject)
@@ -12,7 +12,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(FETCHCONTENT_QUIET off)
 get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
-option(GRPC "whether to build gRPC" OFF)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 

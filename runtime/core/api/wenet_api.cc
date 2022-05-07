@@ -76,8 +76,10 @@ class Recognizer {
 
     while (true) {
       // TODO(Binbin Zhang): Process streaming call
-      DecodeState state = decoder_->Decode();
-      if (state == DecodeState::kEndFeats) {
+      DecodeState state = decoder_->Decode(false);
+      if (state == DecodeState::kWaitFeats) {
+         break;
+      } else if (state == DecodeState::kEndFeats) {
         decoder_->Rescoring();
         break;
       }
@@ -89,6 +91,7 @@ class Recognizer {
       result_ = decoder_->result()[0].sentence;
       return result_.c_str();
     } else {
+      // TODO(Binbin Zhang): Fix it
       return nullptr;
     }
   }
