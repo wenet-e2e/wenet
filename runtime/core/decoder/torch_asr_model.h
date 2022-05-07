@@ -19,10 +19,14 @@ namespace wenet {
 
 class TorchAsrModel: public AsrModel {
  public:
+  // Note: Do not call the InitEngineThreads function more than once.
+  static void InitEngineThreads(int num_threads = 1);
+
+ public:
   using TorchModule = torch::jit::script::Module;
   TorchAsrModel() = default;
   TorchAsrModel(const TorchAsrModel& other);
-  void Read(const std::string& model_path, int num_threads = 1);
+  void Read(const std::string& model_path);
   std::shared_ptr<TorchModule> torch_model() const { return model_; }
   void Reset() override;
   void AttentionRescoring(

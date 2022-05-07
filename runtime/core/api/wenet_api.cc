@@ -42,8 +42,10 @@ class Recognizer {
         std::make_shared<wenet::FeaturePipeline>(*feature_config_);
     // Resource init
     resource_ = std::make_shared<wenet::DecodeResource>();
+    wenet::TorchAsrModel::InitEngineThreads();
+
     auto model = std::make_shared<wenet::TorchAsrModel>();
-    model->Read(JoinPath(model_dir, "final.zip"), 1);
+    model->Read(JoinPath(model_dir, "final.zip"));
     resource_->model = model;
     auto symbol_table = std::shared_ptr<fst::SymbolTable>(
         fst::SymbolTable::ReadText(JoinPath(model_dir, "words.txt")));

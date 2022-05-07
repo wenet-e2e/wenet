@@ -96,10 +96,11 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
+  TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
 
   LOG(INFO) << "Reading model " << FLAGS_model_path;
   auto model = std::make_shared<TorchAsrModel>();
-  model->Read(FLAGS_model_path, FLAGS_num_threads);
+  model->Read(FLAGS_model_path);
   resource->model = model;
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
