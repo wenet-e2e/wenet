@@ -96,12 +96,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
-
-  // For multi-thread performance
-  at::set_num_threads(FLAGS_num_threads);
-  at::set_num_interop_threads(1);
-  VLOG(1) << "Num intra-op threads: " << at::get_num_threads();
-  VLOG(1) << "Num inter-op threads: " << at::get_num_interop_threads();
+  TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
 
   LOG(INFO) << "Reading model " << FLAGS_model_path;
   auto model = std::make_shared<TorchAsrModel>();

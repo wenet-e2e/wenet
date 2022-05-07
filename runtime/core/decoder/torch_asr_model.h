@@ -19,6 +19,10 @@ namespace wenet {
 
 class TorchAsrModel: public AsrModel {
  public:
+  // Note: Do not call the InitEngineThreads function more than once.
+  static void InitEngineThreads(int num_threads = 1);
+
+ public:
   using TorchModule = torch::jit::script::Module;
   TorchAsrModel() = default;
   TorchAsrModel(const TorchAsrModel& other);

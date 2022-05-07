@@ -13,6 +13,17 @@
 
 namespace wenet {
 
+void TorchAsrModel::InitEngineThreads(int num_threads) {
+  // For multi-thread performance
+  at::set_num_threads(num_threads);
+  // Note: Do not call the set_num_interop_threads function more than once.
+  // Please see https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/
+  // ParallelThreadPoolNative.cpp#L54-L56
+  at::set_num_interop_threads(1);
+  VLOG(1) << "Num intra-op threads: " << at::get_num_threads();
+  VLOG(1) << "Num inter-op threads: " << at::get_num_interop_threads();
+}
+
 void TorchAsrModel::Read(const std::string& model_path) {
   torch::jit::script::Module model = torch::jit::load(model_path);
   model_ = std::make_shared<TorchModule>(std::move(model));
