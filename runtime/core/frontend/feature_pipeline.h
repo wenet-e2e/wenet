@@ -92,7 +92,7 @@ class FeaturePipeline {
     return input_finished_ && (frame == num_frames_ - 1);
   }
 
-  int NumQuquedFrames() const {
+  int NumQueuedFrames() const {
     return feature_queue_.Size();
   }
 

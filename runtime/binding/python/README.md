@@ -9,7 +9,7 @@ The best things of the binding are:
 1. Multiple languages supports, including English, Chinese. Other languages are in development.
 2. Non-streaming and streaming API
 3. N-best, contextual biasing, and timestamp supports, which are very important for speech productions.
-4. Alignment support. You can get get phone level alignments this tool.
+4. Alignment support. You can get phone level alignments this tool.
 
 ## Install
 

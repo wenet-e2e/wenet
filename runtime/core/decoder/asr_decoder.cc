@@ -83,7 +83,7 @@ DecodeState AsrDecoder::AdvanceDecoding(bool block) {
   std::vector<std::vector<float>> chunk_feats;
   // Return immediately if we do not want to block
   if (!block && !feature_pipeline_->input_finished() &&
-      feature_pipeline_->NumQuquedFrames() < num_requried_frames) {
+      feature_pipeline_->NumQueuedFrames() < num_requried_frames) {
     return DecodeState::kWaitFeats;
   }
   // If not okay, that means we reach the end of the input
