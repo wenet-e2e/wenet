@@ -32,21 +32,10 @@ include_directories(
   ${PYTORCH_INCLUDE_DIRS}/torch/csrc/api/include
 )
 
-link_directories(${CMAKE_SOURCE_DIR}/utils)
 add_subdirectory(utils)
-
-link_directories(${CMAKE_SOURCE_DIR}/frontend)
 add_subdirectory(frontend)
-
-# post_processor
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/post_processor)
 add_subdirectory(post_processor)
-
-# kaldi: wfst based decoder
-add_subdirectory(kaldi)
-
-# decoder
-link_directories(${CMAKE_SOURCE_DIR}/decoder)
+add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
 
 link_libraries(frontend decoder android)
