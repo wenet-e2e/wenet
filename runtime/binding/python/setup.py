@@ -40,16 +40,17 @@ class BuildExtension(build_ext):
 
         if make_args == "" and system_make_args == "":
             print("For fast compilation, run:")
-            print('export WENET_MAKE_ARGS="-j"; python setup.py install')
+            print('export WENET_MAKE_ARGS="-j";')
 
         if "PYTHON_EXECUTABLE" not in cmake_args:
             print(f"Setting PYTHON_EXECUTABLE to {sys.executable}")
             cmake_args += f" -DPYTHON_EXECUTABLE={sys.executable}"
 
         if not is_windows():
-            ret = os.system(
-                f"cd {build_dir}; cmake {cmake_args} {cur_dir}; make -j _wenet"
-            )
+            ret = os.system(f"""cd {build_dir};
+                                cmake {cmake_args} {cur_dir};
+                                cmake --build . --target _wenet
+                             """)
             if ret != 0:
                 raise Exception(
                     "\nBuild wenet failed. Please check the error message.\n"

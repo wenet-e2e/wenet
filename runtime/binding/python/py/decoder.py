@@ -38,3 +38,17 @@ class Decoder:
         _wenet.wenet_decode(self.d, pcm, len(pcm), finish)
         result = _wenet.wenet_get_result(self.d)
         return result
+
+    def decode_wav(self, wav_file: str) -> str:
+        """ Decode wav file, we only support:
+            1. 16k sample rate
+            2. mono channel
+            3. sample widths is 16 bits / 2 bytes
+        """
+        import wave
+        with wave.open(wav_file, 'rb') as fin:
+            assert fin.getnchannels() == 1
+            assert fin.getsampwidth() == 2
+            assert fin.getframerate() == 16000
+            wav = fin.readframes(fin.getnframes())
+        return self.decode(wav, True)

@@ -16,15 +16,22 @@ with wave.open(test_wav, 'rb') as fin:
     wav = fin.readframes(fin.getnframes())
 
 # Optional set log level
-wenet.set_log_level(1)
+# wenet.set_log_level(1)
 
 # Init decoder
 decoder = wenet.Decoder(model_dir)
-ans = decoder.decode(wav)
-print('Decode the first utterance, result: {}'.format(ans))
 
-# If you want decode anther wav, just reset decoder, and decode
-for i in range(10):
-    decoder.reset()
-    ans = decoder.decode(wav)
-    print('Reset and decode utterance {}, result: {}'.format(i, ans))
+# Non-streaming decode
+ans = decoder.decode(wav)
+print('Non-streaming decoding result: {}'.format(ans))
+decoder.reset()  # reset status after we finish decoding
+
+# Stream decode
+# We suppose the wav is 16k, 16bits, and decode every 0.5 seconds
+interval = int(0.5 * 16000) * 2
+for i in range(0, len(wav), interval):
+    last = False if i + interval < len(wav) else True
+    chunk_wav = wav[i: min(i + interval, len(wav))]
+    ans = decoder.decode(chunk_wav, last)
+    ans_type = 'final' if last else 'partial'
+    print('Streaming decode {} result: {}'.format(ans_type, ans))
