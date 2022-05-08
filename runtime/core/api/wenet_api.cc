@@ -20,6 +20,7 @@
 
 #include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
+#include "utils/json.h"
 
 
 static std::string JoinPath(const std::string& left, const std::string& right) {
@@ -80,20 +81,31 @@ class Recognizer {
       if (state == DecodeState::kWaitFeats) {
          break;
       } else if (state == DecodeState::kEndFeats) {
+        UpdateResult(true);
         decoder_->Rescoring();
         break;
+      } else {
+        // kEndBatch or kEndpoint(ignore it now)
+        UpdateResult(false);
       }
     }
   }
 
-  const char* GetResult() {
-    if (decoder_->result().size() > 0) {
-      result_ = decoder_->result()[0].sentence;
-      return result_.c_str();
-    } else {
-      // TODO(Binbin Zhang): Fix it
-      return nullptr;
+  void UpdateResult(bool final_result) {
+    json::JSON obj;
+    obj["type"] = final_result ? "final_result" : "partial_result";
+    int nbest = final_result ? nbest_ : 1;
+    obj["nbest"] = json::Array();
+    for (int i = 0; i < nbest && i < decoder_->result().size(); i++) {
+      json::JSON one;
+      one["sentence"] = decoder_->result()[0].sentence;
+      obj["nbest"].append(one);
     }
+    result_ = obj.dump();
+  }
+
+  const char* GetResult() {
+    return result_.c_str();
   }
 
  private:
@@ -103,6 +115,8 @@ class Recognizer {
   std::shared_ptr<wenet::DecodeResource> resource_ = nullptr;
   std::shared_ptr<wenet::DecodeOptions> decode_options_ = nullptr;
   std::shared_ptr<wenet::AsrDecoder> decoder_ = nullptr;
+
+  int nbest_ = 1;
   std::string result_;
 };
 

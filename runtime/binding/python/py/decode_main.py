@@ -22,16 +22,17 @@ with wave.open(test_wav, 'rb') as fin:
 decoder = wenet.Decoder(model_dir)
 
 # Non-streaming decode
+print('-----Non-streaming decoding demo-----')
 ans = decoder.decode(wav)
-print('Non-streaming decoding result: {}'.format(ans))
+print(ans)
 decoder.reset()  # reset status after we finish decoding
 
 # Stream decode
 # We suppose the wav is 16k, 16bits, and decode every 0.5 seconds
 interval = int(0.5 * 16000) * 2
+print('-----Streaming decoding demo-----')
 for i in range(0, len(wav), interval):
     last = False if i + interval < len(wav) else True
     chunk_wav = wav[i: min(i + interval, len(wav))]
     ans = decoder.decode(chunk_wav, last)
-    ans_type = 'final' if last else 'partial'
-    print('Streaming decode {} result: {}'.format(ans_type, ans))
+    print(ans)
