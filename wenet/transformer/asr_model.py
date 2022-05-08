@@ -666,14 +666,22 @@ class ASRModel(torch.nn.Module):
                                   encoder_out.size(1),
                                   dtype=torch.bool,
                                   device=encoder_out.device)
-        # input for right to left decoder
-        # this hyps_lens has count <sos> token, we need minus it.
-        r_hyps_lens = hyps_lens - 1
-        # this hyps has included <sos> token, so it should be
-        # convert the original hyps.
-        r_hyps = hyps[:, 1:]
-        r_hyps = reverse_pad_list(r_hyps, r_hyps_lens, float(self.ignore_id))
-        r_hyps, _ = add_sos_eos(r_hyps, self.sos, self.eos, self.ignore_id)
+        r_hyps = torch.cat([
+            torch.cat((y.int()[0:1], torch.flip(y.int()[1:i], [0]),
+                       y.int()[i:].fill_(self.eos)), dim=-1).unsqueeze(0)
+            for y, i in zip(hyps, hyps_lens)
+        ], dim=0)
+        # `pad_sequence` is not supported by ONNX, it is used
+        # in `reverse_pad_list` thus we have to refine the below code.
+        # Equal to:
+        #   >>> # input for right to left decoder
+        #   >>> # this hyps_lens has count <sos> token, we need minus it.
+        #   >>> r_hyps_lens = hyps_lens - 1
+        #   >>> # this hyps has included <sos> token, so it should be
+        #   >>> # convert the original hyps.
+        #   >>> r_hyps = hyps[:, 1:]
+        #   >>> r_hyps = reverse_pad_list(r_hyps, r_hyps_lens, float(self.ignore_id))
+        #   >>> r_hyps, _ = add_sos_eos(r_hyps, self.sos, self.eos, self.ignore_id)
         decoder_out, r_decoder_out, _ = self.decoder(
             encoder_out, encoder_mask, hyps, hyps_lens, r_hyps,
             reverse_weight)  # (num_hyps, max_hyps_len, vocab_size)
