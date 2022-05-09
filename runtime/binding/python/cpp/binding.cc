@@ -29,4 +29,6 @@ PYBIND11_MODULE(_wenet, m) {
   m.def("wenet_get_result", &wenet_get_result, py::return_value_policy::copy,
         "wenet get result");
   m.def("wenet_set_log_level", &wenet_set_log_level, "set log level");
+  m.def("wenet_set_nbest", &wenet_set_nbest, "set nbest");
+  m.def("wenet_set_timestamp", &wenet_set_timestamp, "set timestamp flag");
 }

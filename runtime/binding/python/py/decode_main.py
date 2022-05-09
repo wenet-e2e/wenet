@@ -20,6 +20,8 @@ with wave.open(test_wav, 'rb') as fin:
 
 # Init decoder
 decoder = wenet.Decoder(model_dir)
+# decoder.set_nbest(2)
+# decoder.enable_timestamp(True)
 
 # Non-streaming decode
 print('-----Non-streaming decoding demo-----')

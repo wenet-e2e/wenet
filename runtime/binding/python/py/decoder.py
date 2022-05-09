@@ -26,6 +26,15 @@ class Decoder:
         """ Reset status for next decoding """
         _wenet.wenet_reset(self.d)
 
+    def set_nbest(self, n: int):
+        assert n >= 1
+        assert n <= 10
+        _wenet.wenet_set_nbest(self.d, n)
+
+    def enable_timestamp(self, flag: bool):
+        tag = 1 if flag else 0
+        _wenet.wenet_set_timestamp(self.d, tag)
+
     def decode(self, pcm: bytes, last: bool = True) -> str:
         """ Decode the input data
 
