@@ -82,6 +82,7 @@ class Recognizer {
       if (state == DecodeState::kWaitFeats) {
          break;
       } else if (state == DecodeState::kEndFeats) {
+        UpdateResult(true);
         decoder_->Rescoring();
         UpdateResult(true);
         break;
@@ -110,6 +111,7 @@ class Recognizer {
           one["word_pieces"].append(piece);
         }
       }
+      one["sentence"] = decoder_->result()[0].sentence;
       obj["nbest"].append(one);
     }
     result_ = obj.dump();

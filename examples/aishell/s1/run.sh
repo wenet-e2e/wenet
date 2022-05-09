@@ -10,7 +10,8 @@
 export CUDA_VISIBLE_DEVICES="0,1,2,3"
 stage=4 # start from 0 if you need to start from data preparation
 stop_stage=6
-# data
+# The aishell dataset location, please change this to your own path
+# make sure of using absolute path. DO-NOT-USE relatvie path!
 data=/export/data/asr-data/OpenSLR/33/
 data_url=www.openslr.org/resources/33
 

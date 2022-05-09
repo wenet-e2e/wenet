@@ -74,6 +74,15 @@ bash run.sh --stage -1
 细节请阅读 [**训练模型教程**](https://wenet-e2e.github.io/wenet/tutorial_aishell.html)
 
 
+### 新手常见问题
+
+1. 请使用具有gpu的机器。确保cuda和torch都已经安装。wenet也支持cpu训练，但是速度非常很慢。
+2. 请使用支持bash的环境。windows的默认cmd是不支持bash的。
+3. run.sh脚本里，`export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"`, 改为自己要用的GPU id，比如你的机器有4张GPU卡，4张卡都用来训练，改为 `export CUDA_VISIBLE_DEVICES="0,1,2,3"`
+4. run.sh脚本里，`data=/export/data/asr-data/OpenSLR/33/`设置为自己的目录。请使用绝对路径而不要用相对路径。
+5. 如果继续训练出错，请先删除实验目录下的 ddp_init文件再试一试。
+
+
 ## 技术支持
 
 欢迎在 [Github Issues](https://github.com/wenet-e2e/wenet/issues) 中提交问题。
