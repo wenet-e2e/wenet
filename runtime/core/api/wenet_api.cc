@@ -51,6 +51,7 @@ class Recognizer {
     auto symbol_table = std::shared_ptr<fst::SymbolTable>(
         fst::SymbolTable::ReadText(JoinPath(model_dir, "words.txt")));
     resource_->symbol_table = symbol_table;
+    resource_->unit_table = symbol_table;
     decode_options_ = std::make_shared<wenet::DecodeOptions>();
     // Decoder init
     decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_,
@@ -83,6 +84,7 @@ class Recognizer {
       } else if (state == DecodeState::kEndFeats) {
         UpdateResult(true);
         decoder_->Rescoring();
+        UpdateResult(true);
         break;
       } else {
         // kEndBatch or kEndpoint(ignore it now)
@@ -98,6 +100,17 @@ class Recognizer {
     obj["nbest"] = json::Array();
     for (int i = 0; i < nbest && i < decoder_->result().size(); i++) {
       json::JSON one;
+      one["sentence"] = decoder_->result()[i].sentence;
+      if (final_result && enable_timestamp_) {
+        one["word_pieces"] = json::Array();
+        for (const auto& word_piece : decoder_->result()[i].word_pieces) {
+          json::JSON piece;
+          piece["word"] = word_piece.word;
+          piece["start"] = word_piece.start;
+          piece["end"] = word_piece.end;
+          one["word_pieces"].append(piece);
+        }
+      }
       one["sentence"] = decoder_->result()[0].sentence;
       obj["nbest"].append(one);
     }
@@ -107,6 +120,9 @@ class Recognizer {
   const char* GetResult() {
     return result_.c_str();
   }
+
+  void set_nbest(int n) { nbest_ = n; }
+  void set_enable_timestamp(bool flag) { enable_timestamp_ = flag; }
 
  private:
   // NOTE(Binbin Zhang): All use shared_ptr for clone in the future
@@ -118,6 +134,7 @@ class Recognizer {
 
   int nbest_ = 1;
   std::string result_;
+  bool enable_timestamp_ = false;
 };
 
 
@@ -157,3 +174,17 @@ void wenet_set_log_level(int level) {
   FLAGS_logtostderr = true;
   FLAGS_v = level;
 }
+
+
+void wenet_set_nbest(void *decoder, int n) {
+  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  recognizer->set_nbest(n);
+}
+
+
+void wenet_set_timestamp(void *decoder, int flag) {
+  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  bool enable = flag > 0 ? true : false;
+  recognizer->set_enable_timestamp(enable);
+}
+
