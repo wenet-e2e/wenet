@@ -59,6 +59,19 @@ def to_numpy(tensor):
         return tensor.cpu().numpy()
 
 
+def print_input_output_info(onnx_model, name, prefix="\t\t"):
+    input_names = [node.name for node in onnx_model.graph.input]
+    input_shapes = [[d.dim_value for d in node.type.tensor_type.shape.dim]
+                    for node in onnx_model.graph.input]
+    output_names = [node.name for node in onnx_model.graph.output]
+    output_shapes = [[d.dim_value for d in node.type.tensor_type.shape.dim]
+                     for node in onnx_model.graph.output]
+    print("{}{} inputs : {}".format(prefix, name, input_names))
+    print("{}{} input shapes : {}".format(prefix, name, input_shapes))
+    print("{}{} outputs: {}".format(prefix, name, output_names))
+    print("{}{} output shapes : {}".format(prefix, name, output_shapes))
+
+
 def export_encoder(asr_model, args):
     print("Stage-1: export encoder")
     encoder = asr_model.encoder
@@ -117,18 +130,23 @@ def export_encoder(asr_model, args):
     dynamic_axes = {
         'chunk': {1: 'T'},
         'att_cache': {2: 'T_CACHE'},
+        'att_mask': {2: 'T_ADD_T_CACHE'},
         'output': {1: 'T'},
         'r_att_cache': {2: 'T_CACHE'},
     }
-    if args['chunk_size'] > 0:  # 16/4, 16/-1, 16/0
-        dynamic_axes.pop('chunk')
-        dynamic_axes.pop('output')
-    if args['left_chunks'] >= 0:  # 16/4, 16/0
-        # NOTE(xsong): since we feed real cache & real mask into the
-        #   model when left_chunks > 0, the shape of cache will never
-        #   be changed.
-        dynamic_axes.pop('att_cache')
-        dynamic_axes.pop('r_att_cache')
+    # NOTE(xcsong): We keep dynamic axes even if in 16/4 mode, this is
+    #   to avoid padding the last chunk (which usually contains less
+    #   frames than required). For users who want static axes, just pop
+    #   out specific axis.
+    # if args['chunk_size'] > 0:  # 16/4, 16/-1, 16/0
+    #     dynamic_axes.pop('chunk')
+    #     dynamic_axes.pop('output')
+    # if args['left_chunks'] >= 0:  # 16/4, 16/0
+    #     # NOTE(xsong): since we feed real cache & real mask into the
+    #     #   model when left_chunks > 0, the shape of cache will never
+    #     #   be changed.
+    #     dynamic_axes.pop('att_cache')
+    #     dynamic_axes.pop('r_att_cache')
     torch.onnx.export(
         encoder, inputs, encoder_outpath, opset_version=13,
         export_params=True, do_constant_folding=True,
@@ -147,12 +165,8 @@ def export_encoder(asr_model, args):
     # NOTE(xcsong): to add those metadatas we need to reopen
     #   the file and resave it.
     onnx.save(onnx_encoder, encoder_outpath)
-    print("\t\tonnx_encoder inputs : {}".format(
-        [node.name for node in onnx_encoder.graph.input]))
-    print("\t\tonnx_encoder outputs: {}".format(
-        [node.name for node in onnx_encoder.graph.output]))
-    print('\t\tExport onnx_encoder, done! see {}'.format(
-        encoder_outpath))
+    print_input_output_info(onnx_encoder, "onnx_encoder")
+    print('\t\tExport onnx_encoder, done! see {}'.format(encoder_outpath))
 
     print("\tStage-1.3: check onnx_encoder and torch_encoder")
     torch_output = []
@@ -187,6 +201,7 @@ def export_encoder(asr_model, args):
     onnx_cnn_cache = to_numpy(cnn_cache)
     onnx_att_mask = to_numpy(att_mask)
     ort_session = onnxruntime.InferenceSession(encoder_outpath)
+    input_names = [node.name for node in onnx_encoder.graph.input]
     for i in range(10):
         print("\t\tonnx  chunk-{}: {}, offset: {}, att_cache: {},"
               " cnn_cache: {}, att_mask: {}".format(
@@ -206,11 +221,9 @@ def export_encoder(asr_model, args):
         #   will be hardcoded to 0 or chunk_size by ONNX, thus
         #   required_cache_size and att_mask are no more needed and they will
         #   be removed by ONNX automatically.
-        if args['left_chunks'] <= 0:  # 16/-1, -1/-1, 16/0
-            ort_inputs.pop('required_cache_size')
-            ort_inputs.pop('att_mask')
-        if 'conformer' not in args['encoder']:
-            ort_inputs.pop('cnn_cache')  # Transformer
+        for k in list(ort_inputs):
+            if k not in input_names:
+                ort_inputs.pop(k)
         ort_outs = ort_session.run(None, ort_inputs)
         onnx_att_cache, onnx_cnn_cache = ort_outs[1], ort_outs[2]
         onnx_output.append(ort_outs[0])
@@ -237,9 +250,6 @@ def export_ctc(asr_model, args):
 
     print("\tStage-2.2: torch.onnx.export")
     dynamic_axes = {'hidden': {1: 'T'}, 'probs': {1: 'T'}}
-    if args['chunk_size'] > 0:  # 16/4, 16/-1, 16/0
-        dynamic_axes.pop('hidden')
-        dynamic_axes.pop('probs')
     torch.onnx.export(
         ctc, hidden, ctc_outpath, opset_version=13,
         export_params=True, do_constant_folding=True,
@@ -251,15 +261,9 @@ def export_ctc(asr_model, args):
         meta.key, meta.value = str(k), str(v)
     onnx.checker.check_model(onnx_ctc)
     onnx.helper.printable_graph(onnx_ctc.graph)
-    # NOTE(xcsong): to add those metadatas we need to reopen
-    #   the file and resave it.
     onnx.save(onnx_ctc, ctc_outpath)
-    print("\t\tonnx_ctc inputs : {}".format(
-        [node.name for node in onnx_ctc.graph.input]))
-    print("\t\tonnx_ctc outputs: {}".format(
-        [node.name for node in onnx_ctc.graph.output]))
-    print('\t\tExport onnx_ctc, done! see {}'.format(
-        ctc_outpath))
+    print_input_output_info(onnx_ctc, "onnx_ctc")
+    print('\t\tExport onnx_ctc, done! see {}'.format(ctc_outpath))
 
     print("\tStage-2.3: check onnx_ctc and torch_ctc")
     torch_output = ctc(hidden)
@@ -289,14 +293,15 @@ def export_decoder(asr_model, args):
 
     print("\tStage-3.2: torch.onnx.export")
     dynamic_axes = {
-        'hyps': {1: 'L'}, 'encoder_out': {1: 'T'},
-        'score': {1: 'L'}, 'r_score': {1: 'L'}
+        'hyps': {0: 'BEAM', 1: 'L'}, 'hyps_lens': {0: 'BEAM'},
+        'encoder_out': {1: 'T'},
+        'score': {0: 'BEAM', 1: 'L'}, 'r_score': {0: 'BEAM', 1: 'L'}
     }
-    inputs = (hyps, hyps_lens, encoder_out)
+    inputs = (hyps, hyps_lens, encoder_out, args['reverse_weight'])
     torch.onnx.export(
         decoder, inputs, decoder_outpath, opset_version=13,
         export_params=True, do_constant_folding=True,
-        input_names=['hyps', 'hyps_lens', 'encoder_out'],
+        input_names=['hyps', 'hyps_lens', 'encoder_out', 'reverse_weight'],
         output_names=['score', 'r_score'],
         dynamic_axes=dynamic_axes, verbose=False)
     onnx_decoder = onnx.load(decoder_outpath)
@@ -305,25 +310,25 @@ def export_decoder(asr_model, args):
         meta.key, meta.value = str(k), str(v)
     onnx.checker.check_model(onnx_decoder)
     onnx.helper.printable_graph(onnx_decoder.graph)
-    # NOTE(xcsong): to add those metadatas we need to reopen
-    #   the file and resave it.
     onnx.save(onnx_decoder, decoder_outpath)
-    print("\t\tonnx_decoder inputs : {}".format(
-        [node.name for node in onnx_decoder.graph.input]))
-    print("\t\tonnx_decoder outputs: {}".format(
-        [node.name for node in onnx_decoder.graph.output]))
+    print_input_output_info(onnx_decoder, "onnx_decoder")
     print('\t\tExport onnx_decoder, done! see {}'.format(
         decoder_outpath))
 
     print("\tStage-3.3: check onnx_decoder and torch_decoder")
     torch_score, torch_r_score = decoder(
-        hyps, hyps_lens, encoder_out)
+        hyps, hyps_lens, encoder_out, args['reverse_weight'])
     ort_session = onnxruntime.InferenceSession(decoder_outpath)
+    input_names = [node.name for node in onnx_decoder.graph.input]
     ort_inputs = {
         'hyps': to_numpy(hyps),
         'hyps_lens': to_numpy(hyps_lens),
         'encoder_out': to_numpy(encoder_out),
+        'reverse_weight': np.array((args['reverse_weight'])),
     }
+    for k in list(ort_inputs):
+        if k not in input_names:
+            ort_inputs.pop(k)
     onnx_output = ort_session.run(None, ort_inputs)
 
     np.testing.assert_allclose(to_numpy(torch_score), onnx_output[0],
@@ -374,6 +379,9 @@ def main():
     arguments['eos_symbol'] = model.eos_symbol()
     arguments['is_bidirectional_decoder'] = 1 \
         if model.is_bidirectional_decoder() else 0
+
+    if arguments['left_chunks'] > 0:
+        assert arguments['chunk_size'] > 0  # -1/4 not supported
 
     export_encoder(model, arguments)
     export_ctc(model, arguments)
