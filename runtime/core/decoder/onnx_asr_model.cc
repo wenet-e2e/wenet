@@ -1,7 +1,7 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 //         di.wu@mobvoi.com (Di Wu)
-// Copyright 2022 Mobvoi Inc. All Rights Reserved.
+// Copyright 2022 Huya Inc. All Rights Reserved.
 // Author: lizexuan@huya.com
 
 #include "decoder/onnx_asr_model.h"
@@ -34,7 +34,6 @@ void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
 
     Ort::Session ctc_session{env_, ctc_onnx_path.data(), session_options};
     ctc_session_ = std::make_shared<Ort::Session>(std::move(ctc_session));
-
   } catch (std::exception const& e) {
     LOG(FATAL) << "error when load onnx model";
     exit(0);
@@ -149,10 +148,8 @@ void OnnxAsrModel::Reset() {
         memory_info_, att_cache_.data(), att_cache_.size(), att_cache_shape, 4);
 
     att_mask_.resize(0);
-    const int64_t att_mask_shape[] = {0, 0, 0};
-    att_mask_ort_ = Ort::Value::CreateTensor<bool>(
-        memory_info_, reinterpret_cast<bool*>(att_mask_.data()),
-        att_mask_.size(), att_mask_shape, 3);
+    input_names_.erase(input_names_.begin() + 2);
+    input_names_.pop_back();
   }
 
   cnn_cache_.resize(num_blocks_ * encoder_output_size_ *
@@ -183,6 +180,16 @@ void OnnxAsrModel::ForwardEncoderFunc(
       model_input.emplace_back(chunk_feats[i][j]);
     }
   }
+  int num_fill =
+      att_mask_.size() + 1 + right_context_ - subsampling_rate_ - num_frames;
+  if (num_fill > 0) {
+    num_frames += num_fill;
+    for (size_t i = 0; i < num_fill; ++i) {
+      for (int j = 0; j < feature_dim; j++) {
+        model_input.emplace_back(0);
+      }
+    }
+  }
   const int64_t input_shape[3] = {1, num_frames, feature_dim};
   Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
       memory_info_, model_input.data(), model_input.size(), input_shape, 3);
@@ -195,14 +202,22 @@ void OnnxAsrModel::ForwardEncoderFunc(
   std::vector<Ort::Value> tensors;
   tensors.emplace_back(std::move(input_tensor));
   tensors.emplace_back(std::move(offset_tensor));
-  tensors.emplace_back(std::move(requried_cache_size_tensor));
-  tensors.emplace_back(std::move(att_cache_ort_));
-  tensors.emplace_back(std::move(cnn_cache_ort_));
-  tensors.emplace_back(std::move(att_mask_ort_));
-
-  std::vector<Ort::Value> ort_outputs =
-      encoder_session_->Run(Ort::RunOptions{nullptr}, input_names_,
-                            tensors.data(), 6, output_names_, 3);
+  if (att_mask_.empty()) {
+    tensors.emplace_back(std::move(att_cache_ort_));
+    tensors.emplace_back(std::move(cnn_cache_ort_));
+  } else {
+    const int64_t att_mask_shape[] = {1, 1, att_mask_.size()};
+    att_mask_ort_ = Ort::Value::CreateTensor<bool>(
+        memory_info_, reinterpret_cast<bool*>(att_mask_.data()),
+        att_mask_.size(), att_mask_shape, 3);
+    tensors.emplace_back(std::move(requried_cache_size_tensor));
+    tensors.emplace_back(std::move(att_cache_ort_));
+    tensors.emplace_back(std::move(cnn_cache_ort_));
+    tensors.emplace_back(std::move(att_mask_ort_));
+  }
+  std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
+      Ort::RunOptions{nullptr}, input_names_.data(), tensors.data(),
+      input_names_.size(), output_names_, 3);
 
   offset_ += ort_outputs[0].GetTensorTypeAndShapeInfo().GetShape()[1];
   att_cache_ort_ = std::move(ort_outputs[1]);

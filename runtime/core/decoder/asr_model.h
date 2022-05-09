@@ -9,6 +9,9 @@
 #include <string>
 #include <vector>
 
+#include "torch/script.h"
+#include "torch/torch.h"
+
 #include "utils/timer.h"
 #include "utils/utils.h"
 

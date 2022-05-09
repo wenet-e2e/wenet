@@ -120,9 +120,6 @@ def export_encoder(asr_model, args):
         'output': {1: 'T'},
         'r_att_cache': {2: 'T_CACHE'},
     }
-    if args['chunk_size'] > 0:  # 16/4, 16/-1, 16/0
-        dynamic_axes.pop('chunk')
-        dynamic_axes.pop('output')
     if args['left_chunks'] >= 0:  # 16/4, 16/0
         # NOTE(xsong): since we feed real cache & real mask into the
         #   model when left_chunks > 0, the shape of cache will never
@@ -289,7 +286,7 @@ def export_decoder(asr_model, args):
 
     print("\tStage-3.2: torch.onnx.export")
     dynamic_axes = {
-        'hyps': {1: 'L'}, 'encoder_out': {1: 'T'},
+        'hyps': {0: "B", 1: 'L'}, 'hyps_lens': {0: "B"}, 'encoder_out': {1: 'T'},
         'score': {1: 'L'}, 'r_score': {1: 'L'}
     }
     inputs = (hyps, hyps_lens, encoder_out)

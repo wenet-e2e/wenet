@@ -1,7 +1,7 @@
 // Copyright 2020 Mobvoi Inc. All Rights Reserved.
 // Author: binbinzhang@mobvoi.com (Binbin Zhang)
 //         di.wu@mobvoi.com (Di Wu)
-// Copyright 2022 Mobvoi Inc. All Rights Reserved.
+// Copyright 2022 Huya Inc. All Rights Reserved.
 // Author: lizexuan@huya.com
 
 #ifndef DECODER_ONNX_ASR_MODEL_H_
@@ -11,8 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "onnxruntime_cxx_api.h"
-
+#include "./onnxruntime_cxx_api.h"
 #include "decoder/asr_model.h"
 #include "utils/utils.h"
 
@@ -50,12 +49,12 @@ class OnnxAsrModel : public AsrModel {
 
   Ort::MemoryInfo memory_info_ =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
-  const char* input_names_[6] = {
+  std::vector<char*> input_names_ = {
       "chunk",     "offset",    "required_cache_size",
       "att_cache", "cnn_cache", "att_mask"};
   const char* output_names_[3] = {"output", "r_att_cache", "r_cnn_cache"};
-  const char* decode_input_names_[3] = {"hyps_pad", "hyps_lens", "encoder_out"};
-  const char* decode_output_names_[2] = {"o1", "o2"};
+  const char* decode_input_names_[3] = {"hyps", "hyps_lens", "encoder_out"};
+  const char* decode_output_names_[2] = {"score", "r_score"};
 
   const char* ctc_input_names_[1] = {"hidden"};
   const char* ctc_output_names_[1] = {"probs"};
