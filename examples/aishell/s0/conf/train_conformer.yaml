@@ -37,9 +37,9 @@ model_conf:
 
 dataset_conf:
     filter_conf:
-        max_length: 1206
+        max_length: &max_feature_length 1206
         min_length: 10
-        token_max_length: 46 # max length of train's text is 44
+        token_max_length: &max_token_length 46 # max length of train's text is 44
         token_min_length: 1
     resample_conf:
         resample_rate: 16000
@@ -65,8 +65,8 @@ dataset_conf:
         batch_type: 'static' # static or dynamic
         batch_size: 1
     padding_conf:
-        feature_length: 1206
-        target_length: 46
+        feature_length: *max_feature_length
+        target_length: *max_token_length
         dynamic: false
 
 ipu_conf:
