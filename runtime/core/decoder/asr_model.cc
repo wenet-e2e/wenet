@@ -6,9 +6,6 @@
 #include <memory>
 #include <utility>
 
-#include "torch/script.h"
-#include "torch/torch.h"
-
 namespace wenet {
 
 int AsrModel::num_frames_for_chunk(bool start) const {
