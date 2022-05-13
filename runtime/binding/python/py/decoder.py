@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List
+
 import _wenet
 
 
@@ -34,6 +36,14 @@ class Decoder:
     def enable_timestamp(self, flag: bool):
         tag = 1 if flag else 0
         _wenet.wenet_set_timestamp(self.d, tag)
+
+    def add_context(self, contexts: List[str]):
+        for c in contexts:
+            assert isinstance(c, str)
+            _wenet.wenet_add_context(self.d, c)
+
+    def set_context_score(self, score: float):
+        _wenet.wenet_set_context_score(self.d, score)
 
     def decode(self, pcm: bytes, last: bool = True) -> str:
         """ Decode the input data

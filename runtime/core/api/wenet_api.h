@@ -90,6 +90,16 @@ void wenet_set_nbest(void* decoder, int n);
 void wenet_set_timestamp(void* decoder, int flag);
 
 
+/** Add one contextual biasing
+ */
+void wenet_add_context(void* decoder, const char* word);
+
+
+/** Set contextual biasing bonus score
+ */
+void wenet_set_context_score(void *decoder, float score);
+
+
 /** Set log level
  *  We use glog in wenet, so the level is the glog level
  */
