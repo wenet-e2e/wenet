@@ -22,8 +22,8 @@ with wave.open(test_wav, 'rb') as fin:
 decoder = wenet.Decoder(model_dir)
 # decoder.set_nbest(2)
 # decoder.enable_timestamp(True)
-decoder.add_context(['停滞'])
-decoder.set_context_score(3.0)
+# decoder.add_context(['停滞'])
+# decoder.set_context_score(3.0)
 
 # Non-streaming decode
 print('-----Non-streaming decoding demo-----')
