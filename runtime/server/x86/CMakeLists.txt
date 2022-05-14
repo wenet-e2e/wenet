@@ -25,6 +25,7 @@ endif()
 
 include(boost)
 include(libtorch)
+include(onnx)
 include(openfst)
 
 include_directories(
