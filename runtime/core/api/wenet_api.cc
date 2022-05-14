@@ -29,7 +29,6 @@ static std::string JoinPath(const std::string& left, const std::string& right) {
       path.push_back('/');
   }
   path.append(right);
-
   return path;
 }
 
@@ -52,10 +51,9 @@ class Recognizer {
         fst::SymbolTable::ReadText(JoinPath(model_dir, "words.txt")));
     resource_->symbol_table = symbol_table;
     resource_->unit_table = symbol_table;
+    // Context config init
+    context_config_ = std::make_shared<wenet::ContextConfig>();
     decode_options_ = std::make_shared<wenet::DecodeOptions>();
-    // Decoder init
-    decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_,
-        resource_, *decode_options_);
   }
 
   void Reset() {
@@ -66,6 +64,20 @@ class Recognizer {
 
   void Decode(const char* data, int len, int last) {
     using wenet::DecodeState;
+    // Init decoder when it is called first time
+    if (decoder_ == nullptr) {
+      // Optional init context graph
+      if (context_.size() > 0) {
+        context_config_->context_score = context_score_;
+        auto context_graph =
+            std::make_shared<wenet::ContextGraph>(*context_config_);
+        context_graph->BuildContextGraph(context_, resource_->symbol_table);
+        resource_->context_graph = context_graph;
+      }
+      decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_,
+          resource_, *decode_options_);
+    }
+    // Convert to 16 bits PCM data to float
     CHECK_EQ(len % 2, 0);
     std::vector<float> wav(len / 2, 0);
     for (int i = 0; i < wav.size(); i++) {
@@ -123,6 +135,10 @@ class Recognizer {
 
   void set_nbest(int n) { nbest_ = n; }
   void set_enable_timestamp(bool flag) { enable_timestamp_ = flag; }
+  void AddContext(const char* word) {
+    context_.push_back(word);
+  }
+  void set_context_score(float score) { context_score_ = score; }
 
  private:
   // NOTE(Binbin Zhang): All use shared_ptr for clone in the future
@@ -131,10 +147,13 @@ class Recognizer {
   std::shared_ptr<wenet::DecodeResource> resource_ = nullptr;
   std::shared_ptr<wenet::DecodeOptions> decode_options_ = nullptr;
   std::shared_ptr<wenet::AsrDecoder> decoder_ = nullptr;
+  std::shared_ptr<wenet::ContextConfig> context_config_ = nullptr;
 
   int nbest_ = 1;
   std::string result_;
   bool enable_timestamp_ = false;
+  std::vector<std::string> context_;
+  float context_score_;
 };
 
 
@@ -188,3 +207,14 @@ void wenet_set_timestamp(void *decoder, int flag) {
   recognizer->set_enable_timestamp(enable);
 }
 
+
+void wenet_add_context(void* decoder, const char* word) {
+  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  recognizer->AddContext(word);
+}
+
+
+void wenet_set_context_score(void *decoder, float score) {
+  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  recognizer->set_context_score(score);
+}
