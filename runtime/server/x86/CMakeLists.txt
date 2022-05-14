@@ -4,7 +4,9 @@ project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" ON)
 option(BUILD_TESTING "whether build unit test" ON)
-option(GRPC "whether to build gRPC" OFF)
+option(GRPC "whether to build with gRPC" OFF)
+# TODO(Binbin Zhang): Support ONNX as an build option
+set(ONNX ON)
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 include(FetchContent)

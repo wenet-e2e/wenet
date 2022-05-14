@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
+set(ONNX OFF)  # ONNX is not used
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
