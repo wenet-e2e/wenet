@@ -191,4 +191,14 @@ std::string Rtrim(const std::string& str) {
 
 std::string Trim(const std::string& str) { return Rtrim(Ltrim(str)); }
 
+
+std::string JoinPath(const std::string& left, const std::string& right) {
+  std::string path(left);
+  if (path.size() && path.back() != '/') {
+      path.push_back('/');
+  }
+  path.append(right);
+  return path;
+}
+
 }  // namespace wenet

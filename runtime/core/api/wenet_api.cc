@@ -21,16 +21,7 @@
 #include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
 #include "utils/json.h"
-
-
-static std::string JoinPath(const std::string& left, const std::string& right) {
-  std::string path(left);
-  if (path.size() && path.back() != '/') {
-      path.push_back('/');
-  }
-  path.append(right);
-  return path;
-}
+#include "utils/string.h"
 
 
 class Recognizer {
@@ -45,10 +36,10 @@ class Recognizer {
     wenet::TorchAsrModel::InitEngineThreads();
 
     auto model = std::make_shared<wenet::TorchAsrModel>();
-    model->Read(JoinPath(model_dir, "final.zip"));
+    model->Read(wenet::JoinPath(model_dir, "final.zip"));
     resource_->model = model;
     auto symbol_table = std::shared_ptr<fst::SymbolTable>(
-        fst::SymbolTable::ReadText(JoinPath(model_dir, "words.txt")));
+        fst::SymbolTable::ReadText(wenet::JoinPath(model_dir, "words.txt")));
     resource_->symbol_table = symbol_table;
     resource_->unit_table = symbol_table;
     // Context config init
