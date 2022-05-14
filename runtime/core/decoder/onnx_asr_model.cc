@@ -235,8 +235,8 @@ void OnnxAsrModel::ForwardEncoderFunc(
       memory_info, &required_cache_size, 1, std::vector<int64_t>{}.data(), 0);
   // att_mask
   Ort::Value att_mask_ort{nullptr};
+  std::vector<uint8_t> att_mask(required_cache_size + chunk_size_, 1);
   if (num_left_chunks_ > 0) {
-    std::vector<uint8_t> att_mask(required_cache_size + chunk_size_, 1);
     int chunk_idx = offset_ / chunk_size_ - num_left_chunks_;
     if (chunk_idx < num_left_chunks_) {
       for (int i = 0; i < (num_left_chunks_ - chunk_idx) * chunk_size_; ++i) {
