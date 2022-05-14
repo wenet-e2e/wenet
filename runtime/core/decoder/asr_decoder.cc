@@ -153,18 +153,20 @@ void AsrDecoder::UpdateResult(bool finish) {
       CHECK_EQ(input.size(), time_stamp.size());
       for (size_t j = 0; j < input.size(); j++) {
         std::string word = unit_table_->Find(input[j]);
-        int start = time_stamp[j] * frame_shift_in_ms() - time_stamp_gap_ > 0?
-            time_stamp[j] * frame_shift_in_ms() - time_stamp_gap_: 0;
+        int start = time_stamp[j] * frame_shift_in_ms() - time_stamp_gap_ > 0 ?
+            time_stamp[j] * frame_shift_in_ms() - time_stamp_gap_ : 0;
         if (j > 0) {
-          start = (time_stamp[j] - time_stamp[j-1]) * frame_shift_in_ms() < time_stamp_gap_?
-                        (time_stamp[j - 1] + time_stamp[j]) / 2 * frame_shift_in_ms()
-                        : start;
+          start = (time_stamp[j] - time_stamp[j-1]) * frame_shift_in_ms() <
+              time_stamp_gap_ ? (time_stamp[j - 1] + time_stamp[j]) / 2 *
+                                frame_shift_in_ms()
+                              : start;
         }
         int end = time_stamp[j] * frame_shift_in_ms();
         if (j < input.size() - 1) {
-          end = (time_stamp[j + 1] - time_stamp[j]) * frame_shift_in_ms() < time_stamp_gap_?
-                        (time_stamp[j + 1] + time_stamp[j]) / 2 * frame_shift_in_ms()
-                        : end;
+          end = (time_stamp[j + 1] - time_stamp[j]) * frame_shift_in_ms() <
+              time_stamp_gap_ ? (time_stamp[j + 1] + time_stamp[j]) / 2 *
+                                frame_shift_in_ms()
+                              : end;
         }
         WordPiece word_piece(word, offset + start, offset + end);
         path.word_pieces.emplace_back(word_piece);
