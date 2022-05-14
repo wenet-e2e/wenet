@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-#include "onnxruntime_cxx_api.h"
+#include "onnxruntime_cxx_api.h"  // NOLINT
 
 #include "decoder/asr_model.h"
 #include "utils/utils.h"
