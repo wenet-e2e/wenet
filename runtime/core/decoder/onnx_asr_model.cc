@@ -61,7 +61,7 @@ void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
 
   // 1. Load sessions
   try {
-    Ort::Env env;
+    static Ort::Env env;
     Ort::SessionOptions session_options;
     session_options.SetIntraOpNumThreads(num_threads);
     session_options.SetInterOpNumThreads(num_threads);
