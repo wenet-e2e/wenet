@@ -4,6 +4,7 @@ project(${TARGET} CXX)
 set(CMAKE_CXX_STANDARD 14)
 include(ExternalProject)
 
+set(ONNX OFF)  # ONNX is not used
 set(CMAKE_VERBOSE_MAKEFILE on)
 set(build_DIR ${CMAKE_SOURCE_DIR}/../../../build)
 string(REPLACE "-Wl,--exclude-libs,libgcc_real.a" "" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
