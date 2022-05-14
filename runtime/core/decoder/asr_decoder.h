@@ -137,6 +137,7 @@ class AsrDecoder {
   // For continuous decoding
   int num_frames_ = 0;
   int global_frame_offset_ = 0;
+  const int time_stamp_gap_ = 100;  // timestamp gap between words in a sentence
 
   std::unique_ptr<SearchInterface> searcher_;
   std::unique_ptr<CtcEndpoint> ctc_endpointer_;
