@@ -69,6 +69,8 @@ std::string Rtrim(const std::string& str);
 
 std::string Trim(const std::string& str);
 
+std::string JoinPath(const std::string& left, const std::string& right);
+
 }  // namespace wenet
 
 #endif  // UTILS_STRING_H_
