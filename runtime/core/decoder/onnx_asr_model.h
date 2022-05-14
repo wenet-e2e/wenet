@@ -60,6 +60,11 @@ class OnnxAsrModel : public AsrModel {
   Ort::Value att_cache_ort_{nullptr};
   Ort::Value cnn_cache_ort_{nullptr};
   std::vector<Ort::Value> encoder_outs_;
+  // NOTE: Instead of making a copy of the xx_cache, ONNX only maintains
+  //  its data pointer when initializing xx_cache_ort (see https://github.com/
+  //  microsoft/onnxruntime/blob/master/onnxruntime/core/framework
+  //  /tensor.cc#L102-L129), so we need the following variables to keep
+  //  our data "alive" during the lifetime of decoder.
   std::vector<float> att_cache_;
   std::vector<float> cnn_cache_;
 };
