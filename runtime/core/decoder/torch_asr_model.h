@@ -47,7 +47,6 @@ class TorchAsrModel: public AsrModel {
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;
   std::vector<torch::Tensor> encoder_outs_;
-  torch::jit::IValue subsampling_cache_;
   // transformer/conformer attention cache
   torch::Tensor att_cache_ = torch::zeros({0, 0, 0, 0});
   // conformer-only conv_module cache
