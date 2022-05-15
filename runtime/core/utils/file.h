@@ -16,6 +16,7 @@
 #define UTILS_FILE_H_
 
 #include <fstream>
+#include <string>
 
 namespace wenet {
 
