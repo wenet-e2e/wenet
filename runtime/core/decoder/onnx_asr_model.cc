@@ -3,6 +3,7 @@
 //         di.wu@mobvoi.com (Di Wu)
 //         lizexuan@huya.com (Zexuan Li)
 //         sxc19@mails.tsinghua.edu.cn (Xingchen Song)
+//         hamddct@gmail.com (Mddct)
 
 #include "decoder/onnx_asr_model.h"
 
@@ -11,6 +12,14 @@
 #include <utility>
 
 namespace wenet {
+
+Ort::Env OnnxAsrModel::env_ = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+Ort::SessionOptions OnnxAsrModel::session_options_ = Ort::SessionOptions();
+
+void OnnxAsrModel::InitEngineThreads(int num_threads) {
+  session_options_.SetIntraOpNumThreads(num_threads);
+  session_options_.SetInterOpNumThreads(num_threads);
+}
 
 void OnnxAsrModel::GetInputOutputInfo(
     const std::shared_ptr<Ort::Session>& session,
@@ -54,29 +63,24 @@ void OnnxAsrModel::GetInputOutputInfo(
   }
 }
 
-void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
+void OnnxAsrModel::Read(const std::string& model_dir) {
   std::string encoder_onnx_path = model_dir + "/encoder.onnx";
   std::string rescore_onnx_path = model_dir + "/decoder.onnx";
   std::string ctc_onnx_path = model_dir + "/ctc.onnx";
 
   // 1. Load sessions
   try {
-    Ort::Env env;
-    Ort::SessionOptions session_options;
-    session_options.SetIntraOpNumThreads(num_threads);
-    session_options.SetInterOpNumThreads(num_threads);
-
-    Ort::Session encoder_session{env, encoder_onnx_path.data(),
-                                 session_options};
+    Ort::Session encoder_session{env_, encoder_onnx_path.data(),
+                                 session_options_};
     encoder_session_ =
         std::make_shared<Ort::Session>(std::move(encoder_session));
 
-    Ort::Session rescore_session{env, rescore_onnx_path.data(),
-                                 session_options};
+    Ort::Session rescore_session{env_, rescore_onnx_path.data(),
+                                 session_options_};
     rescore_session_ =
         std::make_shared<Ort::Session>(std::move(rescore_session));
 
-    Ort::Session ctc_session{env, ctc_onnx_path.data(), session_options};
+    Ort::Session ctc_session{env_, ctc_onnx_path.data(), session_options_};
     ctc_session_ = std::make_shared<Ort::Session>(std::move(ctc_session));
   } catch (std::exception const& e) {
     LOG(ERROR) << "error when load onnx model";

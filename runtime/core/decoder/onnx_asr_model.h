@@ -3,6 +3,7 @@
 //         di.wu@mobvoi.com (Di Wu)
 //         lizexuan@huya.com (Zexuan Li)
 //         sxc19@mails.tsinghua.edu.cn (Xingchen Song)
+//         hamddct@gmail.com (Mddct)
 
 #ifndef DECODER_ONNX_ASR_MODEL_H_
 #define DECODER_ONNX_ASR_MODEL_H_
@@ -21,9 +22,13 @@ namespace wenet {
 
 class OnnxAsrModel : public AsrModel {
  public:
+  // Note: Do not call the InitEngineThreads function more than once.
+  static void InitEngineThreads(int num_threads = 1);
+
+ public:
   OnnxAsrModel() = default;
   OnnxAsrModel(const OnnxAsrModel& other);
-  void Read(const std::string& model_dir, int num_threads = 1);
+  void Read(const std::string& model_dir);
   void Reset() override;
   void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
                           float reverse_weight,
@@ -47,6 +52,10 @@ class OnnxAsrModel : public AsrModel {
   int head_ = 0;
 
   // sessions
+  // NOTE(Mddct): The Env holds the logging state used by all other objects.
+  //  One Env must be created before using any other Onnxruntime functionality.
+  static Ort::Env env_;  // shared environment across threads.
+  static Ort::SessionOptions session_options_;
   std::shared_ptr<Ort::Session> encoder_session_ = nullptr;
   std::shared_ptr<Ort::Session> rescore_session_ = nullptr;
   std::shared_ptr<Ort::Session> ctc_session_ = nullptr;
