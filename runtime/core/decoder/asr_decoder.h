@@ -37,10 +37,10 @@ struct DecodeOptions {
   // right_to_left_score * reverse_weight
   // Please note the concept of ctc_scores in the following two search
   // methods are different.
-  // For CtcPrefixBeamSearch, it's a sum(prefix) score
-  // For CtcWfstBeamSearch, it's a max(viterbi) path score
+  // For CtcPrefixBeamSearch, it's a sum(prefix) score + context score
+  // For CtcWfstBeamSearch, it's a max(viterbi) path score + context score
   // So we should carefully set ctc_weight according to the search methods.
-  float ctc_weight = 0.0;
+  float ctc_weight = 0.5;
   float rescoring_weight = 1.0;
   float reverse_weight = 0.0;
   CtcEndpointConfig ctc_endpoint_config;
