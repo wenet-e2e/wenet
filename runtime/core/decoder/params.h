@@ -104,8 +104,9 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 
   if (!FLAGS_onnx_dir.empty()) {
     LOG(INFO) << "Reading onnx model ";
+    OnnxAsrModel::InitEngineThreads(FLAGS_num_onnx_threads);
     auto model = std::make_shared<OnnxAsrModel>();
-    model->Read(FLAGS_onnx_dir, FLAGS_num_onnx_threads);
+    model->Read(FLAGS_onnx_dir);
     resource->model = model;
   } else {
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
