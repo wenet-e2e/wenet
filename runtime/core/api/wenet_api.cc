@@ -114,7 +114,7 @@ class Recognizer {
           one["word_pieces"].append(piece);
         }
       }
-      one["sentence"] = decoder_->result()[0].sentence;
+      one["sentence"] = decoder_->result()[i].sentence;
       obj["nbest"].append(one);
     }
     result_ = obj.dump();

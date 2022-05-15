@@ -36,7 +36,7 @@ DEFINE_string(fst_path, "", "TLG fst path");
 // DecodeOptions flags
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
 DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
-DEFINE_double(ctc_weight, 0.0,
+DEFINE_double(ctc_weight, 0.5,
               "ctc weight when combining ctc score and rescoring score");
 DEFINE_double(rescoring_weight, 1.0,
               "rescoring weight when combining ctc score and rescoring score");
