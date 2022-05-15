@@ -11,7 +11,7 @@
 #include "fst/compose.h"
 #include "fst/fst.h"
 #include "fst/vector-fst.h"
-
+#include "decoder/hw_scorer.h"
 namespace wenet {
 
 using StateId = fst::StdArc::StateId;
@@ -32,13 +32,16 @@ class ContextGraph {
 
   int start_tag_id() { return start_tag_id_; }
   int end_tag_id() { return end_tag_id_; }
-
+  bool refreash_cache=true; //weather to refreash cached score_output
  private:
+ 
   int start_tag_id_ = -1;
   int end_tag_id_ = -1;
   ContextConfig config_;
   std::shared_ptr<fst::SymbolTable> symbol_table_ = nullptr;
   std::unique_ptr<fst::StdVectorFst> graph_ = nullptr;
+  victor::HWScorer* hwscore_=nullptr;
+  victor::Score_output cache_result_;
   DISALLOW_COPY_AND_ASSIGN(ContextGraph);
 };
 
