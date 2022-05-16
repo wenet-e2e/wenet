@@ -25,8 +25,8 @@ bash run.sh
 ## performance
 
 
-|dataset|test set|decoding method|GPU|IPU|
-|---|---|---|---|---|
-|wenetspeech|test|attention rescoring|9.7|9.68|
-|aishell|test|attention rescoring|4.62|4.68|
-|librispeech|test_others|attention rescoring|8.72|8.5|
+|model|dataset|test set|decoding method|GPU|IPU|
+|---|---|---|---|---|---|
+|conformer|wenetspeech|test|attention rescoring|9.7|9.68|
+|conformer|aishell|test|attention rescoring|4.62|4.68|
+|conformer|librispeech|test_others|attention rescoring|8.72|8.5|
