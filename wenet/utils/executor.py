@@ -33,7 +33,7 @@ class Executor:
             model.setOptimizer(optimizer)
             self.step += 1
             end = time.perf_counter()
-            writer.add_scalar('train_loss', loss, self.step)
+            writer.add_scalar('train_loss', loss.mean().item(), self.step)
             if batch_idx % log_interval == 0:
                 lr = optimizer.param_groups[0]['lr']
                 log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
