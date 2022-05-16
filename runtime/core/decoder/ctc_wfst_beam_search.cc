@@ -109,7 +109,7 @@ void CtcWfstBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
     ConvertToInputs(alignment, &inputs_[0]);
     RemoveContinuousTags(&outputs_[0]);
     VLOG(3) << weight.Value1() << " " << weight.Value2();
-    likelihood_[0] = -weight.Value2();
+    likelihood_[0] = -(weight.Value1() + weight.Value2());
   }
 }
 
@@ -148,7 +148,7 @@ void CtcWfstBeamSearch::FinalizeSearch() {
                                    &weight);
       ConvertToInputs(alignment, &inputs_[i], &times_[i]);
       RemoveContinuousTags(&outputs_[i]);
-      likelihood_[i] = -weight.Value2();
+      likelihood_[i] = -(weight.Value1() + weight.Value2());
     }
   }
 }
