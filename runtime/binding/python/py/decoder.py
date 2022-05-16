@@ -45,6 +45,10 @@ class Decoder:
     def set_context_score(self, score: float):
         _wenet.wenet_set_context_score(self.d, score)
 
+    def set_language(self, lang: str):
+        assert lang in ['chs', 'en']
+        _wenet.wenet_set_language(self.d, lang)
+
     def decode(self, pcm: bytes, last: bool = True) -> str:
         """ Decode the input data
 
