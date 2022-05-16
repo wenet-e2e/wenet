@@ -46,7 +46,7 @@ def get_args():
                         type=int, help='cache chunks')
     parser.add_argument('--beam', required=True,
                         type=int, help='beam wigth')
-    parser.add_argument('--reverse_weight', default=0.0,
+    parser.add_argument('--reverse_weight', default=0.5,
                         type=float, help='reverse_weight in attention_rescoing')
     args = parser.parse_args()
     return args
@@ -380,6 +380,11 @@ def main():
     arguments['is_bidirectional_decoder'] = 1 \
         if model.is_bidirectional_decoder() else 0
 
+    # NOTE(xcsong): Please note that -1/-1 means non-streaming model! It is
+    #   not a [16/4 16/-1 16/0] all-in-one model and it should not be used in
+    #   streaming mode (i.e., setting chunk_size=16 in `decoder_main`). If you
+    #   want to use 16/-1 or any other streaming mode in `decoder_main`,
+    #   please export onnx in the same config.
     if arguments['left_chunks'] > 0:
         assert arguments['chunk_size'] > 0  # -1/4 not supported
 
