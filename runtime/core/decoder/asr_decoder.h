@@ -37,10 +37,10 @@ struct DecodeOptions {
   // right_to_left_score * reverse_weight
   // Please note the concept of ctc_scores in the following two search
   // methods are different.
-  // For CtcPrefixBeamSearch, it's a sum(prefix) score
-  // For CtcWfstBeamSearch, it's a max(viterbi) path score
+  // For CtcPrefixBeamSearch, it's a sum(prefix) score + context score
+  // For CtcWfstBeamSearch, it's a max(viterbi) path score + context score
   // So we should carefully set ctc_weight according to the search methods.
-  float ctc_weight = 0.0;
+  float ctc_weight = 0.5;
   float rescoring_weight = 1.0;
   float reverse_weight = 0.0;
   CtcEndpointConfig ctc_endpoint_config;
@@ -70,7 +70,8 @@ struct DecodeResult {
 enum DecodeState {
   kEndBatch = 0x00,  // End of current decoding batch, normal case
   kEndpoint = 0x01,  // Endpoint is detected
-  kEndFeats = 0x02   // All feature is decoded
+  kEndFeats = 0x02,  // All feature is decoded
+  kWaitFeats = 0x03  // Feat is not enough for one chunk inference, wait
 };
 
 // DecodeResource is thread safe, which can be shared for multiple
@@ -90,8 +91,9 @@ class AsrDecoder {
   AsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
              std::shared_ptr<DecodeResource> resource,
              const DecodeOptions& opts);
-
-  DecodeState Decode();
+  // @param block: if true, block when feature is not enough for one chunk
+  //               inference. Otherwise, return kWaitFeats.
+  DecodeState Decode(bool block = true);
   void Rescoring();
   void Reset();
   void ResetContinuousDecoding();
@@ -115,8 +117,7 @@ class AsrDecoder {
   const std::vector<DecodeResult>& result() const { return result_; }
 
  private:
-  // Return true if we reach the end of the feature pipeline
-  DecodeState AdvanceDecoding();
+  DecodeState AdvanceDecoding(bool block = true);
   void AttentionRescoring();
 
   void UpdateResult(bool finish = false);
@@ -136,6 +137,7 @@ class AsrDecoder {
   // For continuous decoding
   int num_frames_ = 0;
   int global_frame_offset_ = 0;
+  const int time_stamp_gap_ = 100;  // timestamp gap between words in a sentence
 
   std::unique_ptr<SearchInterface> searcher_;
   std::unique_ptr<CtcEndpoint> ctc_endpointer_;

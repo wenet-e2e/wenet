@@ -71,6 +71,7 @@ class FeaturePipeline {
   // The caller should call this method when speech input is end.
   // Never call AcceptWaveform() after calling set_input_finished() !
   void set_input_finished();
+  bool input_finished() const { return input_finished_; }
 
   // Return False if input is finished and no feature could be read.
   // Return True if a feature is read.
@@ -89,6 +90,10 @@ class FeaturePipeline {
   void Reset();
   bool IsLastFrame(int frame) const {
     return input_finished_ && (frame == num_frames_ - 1);
+  }
+
+  int NumQueuedFrames() const {
+    return feature_queue_.Size();
   }
 
  private:

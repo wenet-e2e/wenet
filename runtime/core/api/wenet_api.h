@@ -46,12 +46,64 @@ void wenet_decode(void* decoder,
                   int len,
                   int last = 1);
 
-/** Get decode result
- *  It returns partial result when finish is false
- *  It returns final result when finish is true
+
+/** Get decode result in json format
+ *  It returns partial result when last is 0
+ *  It returns final result when last is 1
+
+    {
+      "nbest" : [{
+          "sentence" : "are you okay"
+          "word_pieces" : [{
+              "end" : 960,
+              "start" : 0,
+              "word" : "are"
+            }, {
+              "end" : 1200,
+              "start" : 960,
+              "word" : "you"
+            }, {
+            ...}]
+        }, {
+          "sentence" : "are you ok"
+        }],
+      "type" : "final_result"
+    }
+
+    "type": final_result/partial_result
+    "nbest": nbest is enabled when n > 1 in final_result
+        "sentence": the ASR result
+        "word_pieces": optional, output timestamp when enabled
  */
 const char* wenet_get_result(void* decoder);
 
+
+/** Set n-best, range 1~10
+ *  wenet_get_result will return top-n best results
+ */
+void wenet_set_nbest(void* decoder, int n);
+
+
+/** Whether to enable word level timestamp in results
+    disable it when flag = 0, otherwise enable
+ */
+void wenet_set_timestamp(void* decoder, int flag);
+
+
+/** Add one contextual biasing
+ */
+void wenet_add_context(void* decoder, const char* word);
+
+
+/** Set contextual biasing bonus score
+ */
+void wenet_set_context_score(void *decoder, float score);
+
+
+/** Set log level
+ *  We use glog in wenet, so the level is the glog level
+ */
+void wenet_set_log_level(int level);
 
 #ifdef __cplusplus
 }

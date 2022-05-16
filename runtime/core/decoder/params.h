@@ -12,6 +12,7 @@
 
 #include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
+#include "decoder/onnx_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/flags.h"
@@ -20,6 +21,10 @@
 // TorchAsrModel flags
 DEFINE_int32(num_threads, 1, "num threads for GEMM");
 DEFINE_string(model_path, "", "pytorch exported model path");
+
+// OnnxAsrModel flags
+DEFINE_int32(num_onnx_threads, 1, "num threads for Onnx");
+DEFINE_string(onnx_dir, "", "directory where the onnx model is saved");
 
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
@@ -31,7 +36,7 @@ DEFINE_string(fst_path, "", "TLG fst path");
 // DecodeOptions flags
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
 DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
-DEFINE_double(ctc_weight, 0.0,
+DEFINE_double(ctc_weight, 0.5,
               "ctc weight when combining ctc score and rescoring score");
 DEFINE_double(rescoring_weight, 1.0,
               "rescoring weight when combining ctc score and rescoring score");
@@ -97,10 +102,19 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
 
-  LOG(INFO) << "Reading model " << FLAGS_model_path;
-  auto model = std::make_shared<TorchAsrModel>();
-  model->Read(FLAGS_model_path, FLAGS_num_threads);
-  resource->model = model;
+  if (!FLAGS_onnx_dir.empty()) {
+    LOG(INFO) << "Reading onnx model ";
+    OnnxAsrModel::InitEngineThreads(FLAGS_num_onnx_threads);
+    auto model = std::make_shared<OnnxAsrModel>();
+    model->Read(FLAGS_onnx_dir);
+    resource->model = model;
+  } else {
+    LOG(INFO) << "Reading torch model " << FLAGS_model_path;
+    TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
+    auto model = std::make_shared<TorchAsrModel>();
+    model->Read(FLAGS_model_path);
+    resource->model = model;
+  }
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   if (!FLAGS_fst_path.empty()) {

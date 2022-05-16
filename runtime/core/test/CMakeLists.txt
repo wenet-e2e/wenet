@@ -1,0 +1,13 @@
+link_libraries(gtest_main gmock)
+
+add_executable(utils_test utils_test.cc)
+target_link_libraries(utils_test PUBLIC utils)
+add_test(UTILS_TEST utils_test)
+
+add_executable(ctc_prefix_beam_search_test ctc_prefix_beam_search_test.cc)
+target_link_libraries(ctc_prefix_beam_search_test PUBLIC decoder)
+add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
+
+add_executable(post_processor_test post_processor_test.cc)
+target_link_libraries(post_processor_test PUBLIC post_processor)
+add_test(POST_PROCESSOR_TEST post_processor_test)

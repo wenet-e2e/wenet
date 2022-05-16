@@ -33,6 +33,7 @@ bash run.sh --stage -1 --stop-stage 6
 #### Stage -1: Download data
 
 This stage downloads the aishell-1 data to the local path `$data`. This may take several hours. If you have already downloaded the data, please change the `$data` variable in `run.sh` and start from `--stage 0`.
+Please set a **absolute path** for `$data`, e.g. `/home/username/asr-data/aishell/`
 
 #### Stage 0: Prepare Training data
 

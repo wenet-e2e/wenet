@@ -29,6 +29,7 @@ jobs:
           mkdir -p wenet/kaldi
           cp build/*.dll wenet
           cp build/Release/*.exe wenet
+          cp build/Release/*.dll wenet
           cp build/kaldi/Release/*.exe wenet/kaldi
 
       - name: Upload OpenFST Binary

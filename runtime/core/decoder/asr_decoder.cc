@@ -62,7 +62,9 @@ void AsrDecoder::ResetContinuousDecoding() {
 }
 
 
-DecodeState AsrDecoder::Decode() { return this->AdvanceDecoding(); }
+DecodeState AsrDecoder::Decode(bool block) {
+  return this->AdvanceDecoding(block);
+}
 
 
 void AsrDecoder::Rescoring() {
@@ -73,12 +75,17 @@ void AsrDecoder::Rescoring() {
 }
 
 
-DecodeState AsrDecoder::AdvanceDecoding() {
+DecodeState AsrDecoder::AdvanceDecoding(bool block) {
   DecodeState state = DecodeState::kEndBatch;
   model_->set_chunk_size(opts_.chunk_size);
   model_->set_num_left_chunks(opts_.num_left_chunks);
   int num_requried_frames = model_->num_frames_for_chunk(start_);
   std::vector<std::vector<float>> chunk_feats;
+  // Return immediately if we do not want to block
+  if (!block && !feature_pipeline_->input_finished() &&
+      feature_pipeline_->NumQueuedFrames() < num_requried_frames) {
+    return DecodeState::kWaitFeats;
+  }
   // If not okay, that means we reach the end of the input
   if (!feature_pipeline_->Read(num_requried_frames, &chunk_feats)) {
     state = DecodeState::kEndFeats;
@@ -146,12 +153,21 @@ void AsrDecoder::UpdateResult(bool finish) {
       CHECK_EQ(input.size(), time_stamp.size());
       for (size_t j = 0; j < input.size(); j++) {
         std::string word = unit_table_->Find(input[j]);
-        int start = j > 0 ? ((time_stamp[j - 1] + time_stamp[j]) / 2 *
-                             frame_shift_in_ms())
-                          : 0;
-        int end = j < input.size() - 1 ?
-            ((time_stamp[j] + time_stamp[j + 1]) / 2 * frame_shift_in_ms()) :
-            model_->offset() * frame_shift_in_ms();
+        int start = time_stamp[j] * frame_shift_in_ms() - time_stamp_gap_ > 0 ?
+            time_stamp[j] * frame_shift_in_ms() - time_stamp_gap_ : 0;
+        if (j > 0) {
+          start = (time_stamp[j] - time_stamp[j-1]) * frame_shift_in_ms() <
+              time_stamp_gap_ ? (time_stamp[j - 1] + time_stamp[j]) / 2 *
+                                frame_shift_in_ms()
+                              : start;
+        }
+        int end = time_stamp[j] * frame_shift_in_ms();
+        if (j < input.size() - 1) {
+          end = (time_stamp[j + 1] - time_stamp[j]) * frame_shift_in_ms() <
+              time_stamp_gap_ ? (time_stamp[j + 1] + time_stamp[j]) / 2 *
+                                frame_shift_in_ms()
+                              : end;
+        }
         WordPiece word_piece(word, offset + start, offset + end);
         path.word_pieces.emplace_back(word_piece);
       }
