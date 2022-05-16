@@ -20,6 +20,7 @@
 
 #include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
+#include "utils/file.h"
 #include "utils/json.h"
 #include "utils/string.h"
 
@@ -34,14 +35,33 @@ class Recognizer {
     // Resource init
     resource_ = std::make_shared<wenet::DecodeResource>();
     wenet::TorchAsrModel::InitEngineThreads();
+    std::string model_path = wenet::JoinPath(model_dir, "final.zip");
+    CHECK(wenet::FileExists(model_path));
 
     auto model = std::make_shared<wenet::TorchAsrModel>();
-    model->Read(wenet::JoinPath(model_dir, "final.zip"));
+    model->Read(model_path);
     resource_->model = model;
+
+    std::string symbol_path = wenet::JoinPath(model_dir, "words.txt");
+    CHECK(wenet::FileExists(symbol_path));
     auto symbol_table = std::shared_ptr<fst::SymbolTable>(
-        fst::SymbolTable::ReadText(wenet::JoinPath(model_dir, "words.txt")));
+        fst::SymbolTable::ReadText(symbol_path));
     resource_->symbol_table = symbol_table;
-    resource_->unit_table = symbol_table;
+
+    std::string fst_path = wenet::JoinPath(model_dir, "TLG.fst");
+    if (wenet::FileExists(fst_path)) {
+      resource_->fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
+         fst::Fst<fst::StdArc>::Read(fst_path));
+    } else {
+      // LM is not applied, unit_table is the same as symbol_table
+      resource_->unit_table = symbol_table;
+    }
+    // units.txt: E2E model unit
+    std::string unit_path = wenet::JoinPath(model_dir, "units.txt");
+    if (wenet::FileExists(unit_path)) {
+      resource_->unit_table = std::shared_ptr<fst::SymbolTable>(
+          fst::SymbolTable::ReadText(unit_path));
+    }
     // Context config init
     context_config_ = std::make_shared<wenet::ContextConfig>();
     decode_options_ = std::make_shared<wenet::DecodeOptions>();
