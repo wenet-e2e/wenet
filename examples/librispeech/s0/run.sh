@@ -29,7 +29,7 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=10
-decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
+decode_modes="attention_rescoring"
 
 . tools/parse_options.sh || exit 1;
 
@@ -43,7 +43,7 @@ set -o pipefail
 
 train_set=train_960
 dev_set=dev
-recog_set="test_clean test_other dev_clean dev_other"
+recog_set="test_clean test_other"
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
   echo "stage -1: Data Download"
