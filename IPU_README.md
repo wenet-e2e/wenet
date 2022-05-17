@@ -1,5 +1,5 @@
 # WeNet on IPU
-This project is a minimal modification to WeNet to allow it to run on Graphcore IPU, currently we support training on `wenetspeech` dataset, and it is easy to make a little changes to run with other dataset.
+This project is a minimal modification to WeNet to allow it to run on Graphcore IPU, currently we support training on `wenetspeech`, `aishell`, `librispeech` dataset, and it is easy to make a little changes to run with other dataset.
 
 
 
