@@ -34,4 +34,5 @@ PYBIND11_MODULE(_wenet, m) {
   m.def("wenet_add_context", &wenet_add_context, "add one context word");
   m.def("wenet_set_context_score", &wenet_set_context_score,
         "set context bonus score");
+  m.def("wenet_set_language", &wenet_set_language, "set language");
 }

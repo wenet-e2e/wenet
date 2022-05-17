@@ -100,6 +100,11 @@ void wenet_add_context(void* decoder, const char* word);
 void wenet_set_context_score(void *decoder, float score);
 
 
+/** Set language, has effect on the postpocessing
+ *  @param: lang, could be chs/en now
+ */
+void wenet_set_language(void *decoder, const char* lang);
+
 /** Set log level
  *  We use glog in wenet, so the level is the glog level
  */
