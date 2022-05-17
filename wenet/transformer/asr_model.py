@@ -666,22 +666,60 @@ class ASRModel(torch.nn.Module):
                                   encoder_out.size(1),
                                   dtype=torch.bool,
                                   device=encoder_out.device)
-        r_hyps = torch.cat([
-            torch.cat((y.int()[0:1], torch.flip(y.int()[1:i], [0]),
-                       y.int()[i:].fill_(self.eos)), dim=-1).unsqueeze(0)
-            for y, i in zip(hyps, hyps_lens)
-        ], dim=0)
-        # `pad_sequence` is not supported by ONNX, it is used
-        # in `reverse_pad_list` thus we have to refine the below code.
+
+        # input for right to left decoder
+        # this hyps_lens has count <sos> token, we need minus it.
+        r_hyps_lens = hyps_lens - 1
+        # this hyps has included <sos> token, so it should be
+        # convert the original hyps.
+        r_hyps = hyps[:, 1:]
+        #   >>> r_hyps
+        #   >>> tensor([[ 1,  2,  3],
+        #   >>>         [ 9,  8,  4],
+        #   >>>         [ 2, -1, -1]])
+        #   >>> r_hyps_lens
+        #   >>> tensor([3, 3, 1])
+
+        # NOTE(Mddct): `pad_sequence` is not supported by ONNX, it is used
+        #   in `reverse_pad_list` thus we have to refine the below code.
+        #   Issue: https://github.com/wenet-e2e/wenet/issues/1113
         # Equal to:
-        #   >>> # input for right to left decoder
-        #   >>> # this hyps_lens has count <sos> token, we need minus it.
-        #   >>> r_hyps_lens = hyps_lens - 1
-        #   >>> # this hyps has included <sos> token, so it should be
-        #   >>> # convert the original hyps.
-        #   >>> r_hyps = hyps[:, 1:]
         #   >>> r_hyps = reverse_pad_list(r_hyps, r_hyps_lens, float(self.ignore_id))
         #   >>> r_hyps, _ = add_sos_eos(r_hyps, self.sos, self.eos, self.ignore_id)
+        max_len = torch.max(r_hyps_lens)
+        index_range = torch.arange(0, max_len, 1).to(encoder_out.device)
+        seq_len_expand = r_hyps_lens.unsqueeze(1)
+        seq_mask = seq_len_expand > index_range  # (beam, max_len)
+        #   >>> seq_mask
+        #   >>> tensor([[ True,  True,  True],
+        #   >>>         [ True,  True,  True],
+        #   >>>         [ True, False, False]])
+        index = (seq_len_expand - 1) - index_range  # (beam, max_len)
+        #   >>> index
+        #   >>> tensor([[ 2,  1,  0],
+        #   >>>         [ 2,  1,  0],
+        #   >>>         [ 0, -1, -2]])
+        index = index * seq_mask
+        #   >>> index
+        #   >>> tensor([[2, 1, 0],
+        #   >>>         [2, 1, 0],
+        #   >>>         [0, 0, 0]])
+        r_hyps = torch.gather(r_hyps, 1, index)
+        #   >>> r_hyps
+        #   >>> tensor([[3, 2, 1],
+        #   >>>         [4, 8, 9],
+        #   >>>         [2, 2, 2]])
+        r_hyps = torch.where(seq_mask, r_hyps, self.eos)
+        #   >>> r_hyps
+        #   >>> tensor([[3, 2, 1],
+        #   >>>         [4, 8, 9],
+        #   >>>         [2, eos, eos]])
+        r_hyps = torch.cat([hyps[:, 0:1], r_hyps], dim=1)
+        #   >>> r_hyps
+        #   >>> tensor([[sos, 3, 2, 1],
+        #   >>>         [sos, 4, 8, 9],
+        #   >>>         [sos, 2, eos, eos]])
+
         decoder_out, r_decoder_out, _ = self.decoder(
             encoder_out, encoder_mask, hyps, hyps_lens, r_hyps,
             reverse_weight)  # (num_hyps, max_hyps_len, vocab_size)
