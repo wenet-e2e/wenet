@@ -153,7 +153,7 @@ def Dataset(data_type,
     speed_perturb = conf.get('speed_perturb', False)
     if speed_perturb:
         dataset = Processor(dataset, processor.speed_perturb)
-    
+
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 
@@ -189,6 +189,7 @@ def Dataset(data_type,
     padding_conf = conf.get('padding_conf', {})
     dataset = Processor(dataset, processor.padding, **padding_conf)
     return dataset
+
 
 def collate_fn(batch):
     keys = [i[0] for i in batch]
