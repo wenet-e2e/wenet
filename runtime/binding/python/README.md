@@ -13,6 +13,8 @@ The best things of the binding are:
 
 ## Install
 
+Only linux is supported now.
+
 ``` sh
 pip3 install wenet
 ```
@@ -82,3 +84,13 @@ for i in range(0, len(wav), interval):
 ```
 
 You can use the same parameters as we introduced above to control the behavior of `wenet.Decoder`
+
+
+## Build on Your Local Machine
+
+``` sh
+git clone git@github.com:wenet-e2e/wenet.git
+cd runtime/binding/python
+python setup.py install
+```
+
