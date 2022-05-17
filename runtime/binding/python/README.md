@@ -38,7 +38,7 @@ print(ans)
 * `words.txt`: symbol table for decoding.
 Please refer https://github.com/wenet-e2e/wenet/blob/main/docs/pretrained_models.md for the details of `Runtime Model`.
 
-You can also specify the follow parameter for `wenet.Decoder`
+You can also specify the following parameter in `wenet.Decoder`
 
 * `lang` (str): The language you used, `chs` for Chinese, and `en` for English.
 * `nbest` (int): Output the top-n best result.
