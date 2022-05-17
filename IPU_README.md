@@ -26,6 +26,6 @@ bash run.sh
 
 |model|dataset|test set|decoding method|GPU|IPU|
 |---|---|---|---|---|---|
-|conformer|wenetspeech|test|attention rescoring|9.7|9.68|
+|conformer|wenetspeech|Test_Net|attention rescoring|9.7|9.68|
 |conformer|aishell|test|attention rescoring|4.62|4.68|
-|conformer|librispeech|test_others|attention rescoring|8.72|8.5|
+|conformer|librispeech|test_other|attention rescoring|8.72|8.5|
