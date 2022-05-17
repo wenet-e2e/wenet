@@ -18,8 +18,29 @@ import _wenet
 
 
 class Decoder:
-    def __init__(self, model_dir: str):
+    def __init__(self,
+                 model_dir: str,
+                 lang: str = 'chs',
+                 nbest: int = 1,
+                 enable_timestamp: bool = False,
+                 context: List[str] = None,
+                 context_score: float = 3.0):
+        """ Init WeNet decoder
+        Args:
+            lang: language type of the model
+            nbest: nbest number for the final result
+            enable_timestamp: whether to enable word level timestamp
+               for the final result
+            context: context words
+            context_score: bonus score when the context is matched
+        """
         self.d = _wenet.wenet_init(model_dir)
+        self.set_language(lang)
+        self.set_nbest(nbest)
+        self.enable_timestamp(enable_timestamp)
+        if context is not None:
+            self.add_context(context)
+        self.set_context_score(context_score)
 
     def __del__(self):
         _wenet.wenet_free(self.d)
