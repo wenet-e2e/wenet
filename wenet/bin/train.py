@@ -174,9 +174,6 @@ def main():
         batch_size=configs["ipu_conf"]["local_batch_size"],
         num_workers=16,
         collate_fn=collate_fn,
-        # TODO there is a little incompatitable for wenet's iterable dataset
-        # and poptorch's dataloader, would be fixed with furture SDK
-        # so we just keep num_workers to 1 for now.
         mode=poptorch.DataLoaderMode.AsyncRebatched,
         async_options={
             "buffer_size": 16,

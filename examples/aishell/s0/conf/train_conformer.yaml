@@ -91,7 +91,6 @@ ipu_conf:
         - ['encoder.encoders__11', 3]
 
 
-grad_clip: 5
 max_epoch: 240
 log_interval: 10
 precision: float16
