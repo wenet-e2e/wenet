@@ -20,6 +20,7 @@
 
 #include "decoder/asr_decoder.h"
 #include "decoder/torch_asr_model.h"
+#include "post_processor/post_processor.h"
 #include "utils/file.h"
 #include "utils/json.h"
 #include "utils/string.h"
@@ -65,6 +66,7 @@ class Recognizer {
     // Context config init
     context_config_ = std::make_shared<wenet::ContextConfig>();
     decode_options_ = std::make_shared<wenet::DecodeOptions>();
+    post_process_opts_ = std::make_shared<wenet::PostProcessOptions>();
   }
 
   void Reset() {
@@ -73,20 +75,34 @@ class Recognizer {
     result_.clear();
   }
 
+  void InitDecoder() {
+    CHECK(decoder_ == nullptr);
+    // Optional init context graph
+    if (context_.size() > 0) {
+      context_config_->context_score = context_score_;
+      auto context_graph =
+          std::make_shared<wenet::ContextGraph>(*context_config_);
+      context_graph->BuildContextGraph(context_, resource_->symbol_table);
+      resource_->context_graph = context_graph;
+    }
+    // PostProcessor
+    if (language_ == "chs") {  // TODO(Binbin Zhang): CJK(chs, jp, kr)
+      post_process_opts_->language_type = wenet::kMandarinEnglish;
+    } else {
+      post_process_opts_->language_type = wenet::kIndoEuropean;
+    }
+    resource_->post_processor =
+        std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+    // Init decoder
+    decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_,
+        resource_, *decode_options_);
+  }
+
   void Decode(const char* data, int len, int last) {
     using wenet::DecodeState;
     // Init decoder when it is called first time
     if (decoder_ == nullptr) {
-      // Optional init context graph
-      if (context_.size() > 0) {
-        context_config_->context_score = context_score_;
-        auto context_graph =
-            std::make_shared<wenet::ContextGraph>(*context_config_);
-        context_graph->BuildContextGraph(context_, resource_->symbol_table);
-        resource_->context_graph = context_graph;
-      }
-      decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_,
-          resource_, *decode_options_);
+      InitDecoder();
     }
     // Convert to 16 bits PCM data to float
     CHECK_EQ(len % 2, 0);
@@ -150,6 +166,7 @@ class Recognizer {
     context_.push_back(word);
   }
   void set_context_score(float score) { context_score_ = score; }
+  void set_language(const char* lang) { language_ = lang; }
 
  private:
   // NOTE(Binbin Zhang): All use shared_ptr for clone in the future
@@ -159,12 +176,14 @@ class Recognizer {
   std::shared_ptr<wenet::DecodeOptions> decode_options_ = nullptr;
   std::shared_ptr<wenet::AsrDecoder> decoder_ = nullptr;
   std::shared_ptr<wenet::ContextConfig> context_config_ = nullptr;
+  std::shared_ptr<wenet::PostProcessOptions> post_process_opts_ = nullptr;
 
   int nbest_ = 1;
   std::string result_;
   bool enable_timestamp_ = false;
   std::vector<std::string> context_;
   float context_score_;
+  std::string language_ = "chs";
 };
 
 
@@ -228,4 +247,10 @@ void wenet_add_context(void* decoder, const char* word) {
 void wenet_set_context_score(void *decoder, float score) {
   Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
   recognizer->set_context_score(score);
+}
+
+
+void wenet_set_language(void *decoder, const char* lang) {
+  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  recognizer->set_language(lang);
 }
