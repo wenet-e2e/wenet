@@ -64,6 +64,9 @@ import sys
 import wave
 import wenet
 
+model_dir = sys.argv[1]
+test_wav = sys.argv[2]
+
 with wave.open(test_wav, 'rb') as fin:
     assert fin.getnchannels() == 1
     wav = fin.readframes(fin.getnframes())
@@ -71,7 +74,6 @@ with wave.open(test_wav, 'rb') as fin:
 decoder = wenet.Decoder(model_dir)
 # We suppose the wav is 16k, 16bits, and decode every 0.5 seconds
 interval = int(0.5 * 16000) * 2
-print('-----Streaming decoding demo-----')
 for i in range(0, len(wav), interval):
     last = False if i + interval < len(wav) else True
     chunk_wav = wav[i: min(i + interval, len(wav))]
