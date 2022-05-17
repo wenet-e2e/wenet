@@ -25,7 +25,8 @@ import yaml
 import poptorch
 from tensorboardX import SummaryWriter
 
-from wenet.dataset.dataset import Dataset, IPUCollateFn
+
+from wenet.dataset.dataset import Dataset, collate_fn
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
@@ -168,37 +169,26 @@ def main():
                          non_lang_syms,
                          partition=False)
 
-    collate_fn = IPUCollateFn(
-        train_conf["filter_conf"]["max_length"],
-        train_conf["filter_conf"]["token_max_length"],
-        type=configs['precision']
-    )
-
     train_data_loader = poptorch.DataLoader(
         ipu_option_train,
         train_dataset,
         batch_size=configs["ipu_conf"]["local_batch_size"],
-        pin_memory=args.pin_memory,
-        num_workers=1,
-        # TODO there is a little incompatitable for wenet's iterable dataset
-        # and poptorch's dataloader, would be fixed with furture SDK
-        # so we just keep num_workers to 1 for now.
-        mode=poptorch.DataLoaderMode.Async,
+        num_workers=16,
+        collate_fn=collate_fn,
+        mode=poptorch.DataLoaderMode.AsyncRebatched,
         async_options={
-            "sharing_strategy": poptorch.SharingStrategy.SharedMemory,
             "buffer_size": 16,
             "load_indefinitely": True,
             "miss_sleep_time_in_ms": 0,
             "early_preload": True
         },
-        collate_fn=collate_fn
+        rebatched_worker_size=32,
     )
 
     cv_data_loader = poptorch.DataLoader(
         ipu_option_validate,
         cv_dataset,
         batch_size=configs["ipu_conf"]["local_batch_size"],
-        pin_memory=args.pin_memory,
         num_workers=1,
         collate_fn=collate_fn
     )
@@ -302,17 +292,18 @@ def main():
 
     if enable_validation:
         validate_batch = next(iter(cv_data_loader))
+        feats, feats_lengths, target, target_lengths = validate_batch
         model.eval()
         validate_model = poptorch.inferenceModel(model, ipu_option_validate)
-        validate_model.compile(*validate_batch)
+        validate_model.compile(feats, feats_lengths, target, target_lengths)
         validate_model.detachFromDevice()
 
     train_batch = next(iter(train_data_loader))
+    feats, feats_lengths, target, target_lengths = train_batch
     model.train()
     train_model = poptorch.trainingModel(model, ipu_option_train, optimizer)
-    train_model.compile(*train_batch)
+    train_model.compile(feats, feats_lengths, target, target_lengths)
     train_model.detachFromDevice()
-
     # Start training loop
     executor.step = step
     scheduler.set_step(step)

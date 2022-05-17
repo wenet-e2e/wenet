@@ -37,9 +37,9 @@ model_conf:
 
 dataset_conf:
     filter_conf:
-        max_length: 1200
+        max_length: &max_feature_length 1200
         min_length: 10
-        token_max_length: 100
+        token_max_length: &max_token_length 100
         token_min_length: 1
     resample_conf:
         resample_rate: 16000
@@ -64,6 +64,10 @@ dataset_conf:
     batch_conf:
         batch_type: 'static' # static or dynamic
         batch_size: 1
+    padding_conf:
+        feature_length: *max_feature_length
+        target_length: *max_token_length
+        dynamic: false
 
 ipu_conf:
     seed: 1234
