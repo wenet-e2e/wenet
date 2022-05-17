@@ -46,6 +46,16 @@ You can also specify the following parameter in `wenet.Decoder`
 * `context` (List[str]): a list of context biasing words.
 * `context_score` (float): context bonus score.
 
+For example:
+``` python
+decoder = wenet.Decoder(model_dir,
+                        lang='chs',
+                        nbest=5,
+                        enable_timestamp=True,
+                        context=['不忘初心', '牢记使命'],
+                        context_score=3.0)
+```
+
 ### Streaming Usage
 
 ``` python
