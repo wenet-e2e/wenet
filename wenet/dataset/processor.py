@@ -626,5 +626,6 @@ def padding(data, feature_length=1200, target_length=100, dynamic=False):
             for index, sample in enumerate(zip(sorted_feats, sorted_labels)):
                 padded_feats[index, :sample[0].size(0), :] = sample[0]
                 padding_labels[index, :sample[1].size(0)] = sample[1]
-            yield 
-            (sorted_keys, padded_feats, padding_labels, feats_lengths, label_lengths)
+            yield (
+                sorted_keys, padded_feats, padding_labels, feats_lengths, label_lengths
+            )
