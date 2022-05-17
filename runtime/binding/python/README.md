@@ -90,7 +90,7 @@ You can use the same parameters as we introduced above to control the behavior o
 
 ``` sh
 git clone git@github.com:wenet-e2e/wenet.git
-cd runtime/binding/python
+cd wenet/runtime/binding/python
 python setup.py install
 ```
 
