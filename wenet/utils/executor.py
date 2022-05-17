@@ -63,7 +63,6 @@ class Executor:
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
                 feats, feats_lengths, target, target_lengths = batch
-
                 num_utts = target_lengths.size(0)
                 if num_utts == 0:
                     continue

@@ -21,7 +21,6 @@ pip3 install -r requirements.txt
 cd examples/wenetspeech/s0/
 bash run.sh
 ```
-
 ## performance
 
 
