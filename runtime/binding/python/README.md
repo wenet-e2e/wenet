@@ -19,15 +19,52 @@ pip3 install wenet
 
 ## Usage
 
+### Non-streaming Usage
+
 ``` python
 import sys
 import wenet
 
 model_dir = sys.argv[1]
 wav_file = sys.argv[2]
-# Init wenet decoder
 decoder = wenet.Decoder(model_dir)
-# Decode and get result
 ans = decoder.decode_wav(wav_file)
 print(ans)
+# call decoder.reset() if you want to do the next decoding
 ```
+
+`model_dir` is the `Runtime Model` directory of WeNet, it contains:
+* `final.zip`: pytorch ASR model.
+* `words.txt`: symbol table for decoding.
+Please refer https://github.com/wenet-e2e/wenet/blob/main/docs/pretrained_models.md for the details of `Runtime Model`.
+
+You can also specify the follow parameter for `wenet.Decoder`
+
+* `lang` (str): The language you used, `chs` for Chinese, and `en` for English.
+* `nbest` (int): Output the top-n best result.
+* `enable_timestamp` (bool): Whether to enable the word level timestamp.
+* `context` (List[str]): a list of context biasing words.
+* `context_score` (float): context bonus score.
+
+### Streaming Usage
+
+``` python
+import sys
+import wave
+import wenet
+
+with wave.open(test_wav, 'rb') as fin:
+    assert fin.getnchannels() == 1
+    wav = fin.readframes(fin.getnframes())
+
+decoder = wenet.Decoder(model_dir)
+# We suppose the wav is 16k, 16bits, and decode every 0.5 seconds
+interval = int(0.5 * 16000) * 2
+print('-----Streaming decoding demo-----')
+for i in range(0, len(wav), interval):
+    last = False if i + interval < len(wav) else True
+    chunk_wav = wav[i: min(i + interval, len(wav))]
+    ans = decoder.decode(chunk_wav, last)
+    print(ans)
+```
+

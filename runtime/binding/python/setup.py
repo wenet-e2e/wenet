@@ -95,7 +95,7 @@ package_name = "wenet"
 
 setuptools.setup(
     name=package_name,
-    version='1.0.1',
+    version='1.0.2',
     author="Binbin Zhang",
     author_email="binbzha@qq.com",
     package_dir={
