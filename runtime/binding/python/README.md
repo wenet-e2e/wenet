@@ -79,3 +79,4 @@ for i in range(0, len(wav), interval):
     print(ans)
 ```
 
+You can use the same parameters as we introduced above to control the behavior of `wenet.Decoder`
