@@ -38,9 +38,9 @@ model_conf:
 # dataset related
 dataset_conf:
     filter_conf:
-        max_length: 1700
+        max_length: &max_feature_length 1700
         min_length: 50
-        token_max_length: 90
+        token_max_length: &max_token_length 90
         token_min_length: 1
         min_output_input_ratio: 0.0005
         max_output_input_ratio: 0.1
@@ -68,8 +68,8 @@ dataset_conf:
         batch_type: 'static' # static or dynamic
         batch_size: 1
     padding_conf:
-        feature_length: 1700
-        target_length: 90
+        feature_length: *max_feature_length
+        target_length: *max_token_length
         dynamic: false
 
 ipu_conf:
