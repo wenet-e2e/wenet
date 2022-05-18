@@ -1,6 +1,15 @@
 include(gflags)
 include(glog)
 
+set(CONFIG_FLAGS "")
+if(NOT FST_HAVE_BIN)
+  if(MSVC)
+    set(HAVE_BIN OFF CACHE BOOL "Build the fst binaries" FORCE)
+  else()
+    set(CONFIG_FLAGS "--disable-bin")
+  endif()
+endif()
+
 # The original openfst uses GNU Build System to run configure and build.
 # So, we use "OpenFST port for Windows" to build openfst with cmake in Windows.
 # Openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch.
@@ -15,12 +24,12 @@ if(NOT MSVC)
     PREFIX            ${openfst_PREFIX_DIR}
     SOURCE_DIR        ${openfst_SOURCE_DIR}
     BINARY_DIR        ${openfst_BINARY_DIR}
-    CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure --prefix=${openfst_PREFIX_DIR}
+    CONFIGURE_COMMAND ${openfst_SOURCE_DIR}/configure ${CONFIG_FLAGS} --prefix=${openfst_PREFIX_DIR}
                         "CPPFLAGS=-I${gflags_BINARY_DIR}/include -I${glog_SOURCE_DIR}/src -I${glog_BINARY_DIR} ${TORCH_CXX_FLAGS}"
                         "LDFLAGS=-L${gflags_BINARY_DIR} -L${glog_BINARY_DIR}"
                         "LIBS=-lgflags_nothreads -lglog -lpthread"
     COMMAND           ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
-    BUILD_COMMAND     make -j 4
+    BUILD_COMMAND     make -j$(nproc)
   )
   add_dependencies(openfst gflags glog)
   link_directories(${openfst_PREFIX_DIR}/lib)
