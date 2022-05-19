@@ -176,6 +176,7 @@ std::shared_ptr<AsrModel> OnnxAsrModel::Copy() const {
 void OnnxAsrModel::Reset() {
   offset_ = 0;
   encoder_outs_.clear();
+  cached_feature_.clear();
   // Reset att_cache
   Ort::MemoryInfo memory_info =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
