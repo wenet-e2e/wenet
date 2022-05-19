@@ -26,13 +26,15 @@ jobs:
         rm -rf wenet/*
         mkdir wenet/lib
         root_dir=/home/wenet/runtime/server/x86
+        torch_lib=$root_dir/fc_base/libtorch-src/lib
+        fst_lib=$root_dir/fc_base/openfst-build/src/lib/.libs
         id=$(docker create ${{ secrets.DOCKERHUB_USERNAME }}/wenet:latest)
         docker cp $id:$root_dir/build/websocket_server_main wenet
-        docker cp $id:$root_dir/fc_base/libtorch-src/lib/libc10.so wenet/lib
-        docker cp $id:$root_dir/fc_base/libtorch-src/lib/libtorch.so wenet/lib
-        docker cp $id:$root_dir/fc_base/libtorch-src/lib/libtorch_cpu.so wenet/lib
-        docker cp $id:$root_dir/fc_base/libtorch-src/lib/libgomp-52f2fd74.so.1 wenet/lib
-        docker cp -L $id:$root_dir/fc_base/openfst-build/src/lib/.libs/libfst.so.8 wenet/lib
+        docker cp $id:$torch_lib/libc10.so wenet/lib
+        docker cp $id:$torch_lib/libtorch.so wenet/lib
+        docker cp $id:$torch_lib/libtorch_cpu.so wenet/lib
+        docker cp $id:$(docker exec $id sh -c "ls ${torch_lib}/libgomp-*") wenet/lib
+        docker cp -L $id:$fst_lib/libfst.so.8 wenet/lib
         docker rm -v $id
 
         ls -al wenet/lib

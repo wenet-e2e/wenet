@@ -13,8 +13,6 @@ The best things of the binding are:
 
 ## Install
 
-Only linux is supported now.
-
 ``` sh
 pip3 install wenet
 ```
