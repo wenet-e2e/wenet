@@ -22,7 +22,6 @@ This is a Chinese speech recognition recipe that trains on all Chinese corpora i
 * Training info: lr 0.004, batch size 18, 3 machines, 3*8 = 24 GPUs, acc_grad 1, 220 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 013794572a55c7d0dbea23a66106ccf3e5d3b8d4
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210315_unified_transformer_exp.tar.gz
 
 ### WER
 
@@ -46,7 +45,6 @@ This is a Chinese speech recognition recipe that trains on all Chinese corpora i
 * Training info: lr 0.001, batch size 8, 1 machines, 1*8 = 8 GPUs, acc_grad 12, 60 epochs
 * Decoding info: ctc_weight 0.5, average_num 10
 * Git hash: 5bdf436e671ef4c696d1b039f29cc33109e072fa
-* Model link:
 
 ### WER
 
@@ -70,7 +68,6 @@ This is a Chinese speech recognition recipe that trains on all Chinese corpora i
 * Training info: lr 0.001, batch size 22, 4 GPUs, acc_grad 4, 120 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 10
 * Git hash: 66f30c197d00c59fdeda3bc8ada801f867b73f78
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/multi_cn/20210815_unified_conformer_exp.tar.gz
 
 ### WER
 
