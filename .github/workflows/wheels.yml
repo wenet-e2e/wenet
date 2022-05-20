@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04]
+        os: [ubuntu-20.04, macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -38,7 +38,7 @@ jobs:
         env:
           CIBW_BUILD_VERBOSITY: 1
           # Only build on CPython 3.6
-          CIBW_BUILD: "cp36-*"
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-*"
           # Disable building PyPy wheels on all platforms
           # Skip 32-bit builds
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux_*"

@@ -13,6 +13,8 @@ The best things of the binding are:
 
 ## Install
 
+Python 3.6+ is required.
+
 ``` sh
 pip3 install wenet
 ```
