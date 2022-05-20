@@ -13,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-20.04, macos-latest]
+        os: [macos-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -37,7 +37,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.5.0
         env:
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-*"
+          CIBW_BUILD: "cp36-*"
           # Disable building PyPy wheels on all platforms
           # Skip 32-bit builds
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux_*"
@@ -54,10 +54,18 @@ jobs:
         with:
           path: ./wheelhouse/*.whl
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.4.2
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
-          packages_dir: ./wheelhouse/
+      - name: Publish on pypi.org
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m pip install -U twine
+          python -m twine upload --skip-existing ./wheelhouse/*
+
+      # - name: Publish to PyPI
+      #   uses: pypa/gh-action-pypi-publish@v1.4.2
+      #   with:
+      #     user: __token__
+      #     password: ${{ secrets.PYPI_API_TOKEN }}
+      #     packages_dir: ./wheelhouse/
 
