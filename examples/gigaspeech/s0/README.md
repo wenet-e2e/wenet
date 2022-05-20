@@ -9,7 +9,6 @@ A Large, modern and evolving dataset for automatic speech recognition. More deta
 * Training info: conf/train_conformer_bidecoder.yaml, subsample 4, kernel size 31, lr 0.001, batch size 24, 8 gpu, acc_grad 4, 40 epochs
 * Decoding info: ctc_weight 0.3, reverse_weight 0.5, average_num 10
 * Git hash: 9a0c270f9f976d7e887f777690e6c358a45a1c27
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210811_conformer_bidecoder_exp.tar.gz
 
 ### test set gigaspeech scoring
 
@@ -35,7 +34,6 @@ A Large, modern and evolving dataset for automatic speech recognition. More deta
 * Training info: conf/train_u2++_conformer.yaml, subsample 6, kernel size 31, lr 0.001, batch size 28, 8 gpu, acc_grad 1, 50 epochs
 * Decoding info: ctc_weight 0.3, reverse_weight 0.5, average_num 10
 * Git hash: 9a0c270f9f976d7e887f777690e6c358a45a1c27
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210728_u2pp_conformer_exp.tar.gz
 
 ### test set gigaspeech scoring, full chunk (non-streaming)
 
@@ -61,7 +59,6 @@ A Large, modern and evolving dataset for automatic speech recognition. More deta
 * Training info: conf/train_conformer.yaml, kernel size 31, lr 0.001, batch size 24, 8 gpu, acc_grad 4, 30 epochs
 * Decoding info: ctc_weight 0.5, average_num 5
 * Git hash: 9a0c270f9f976d7e887f777690e6c358a45a1c27
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/gigaspeech/20210618_conformer_exp.tar.gz
 
 ### test set gigaspeech scoring
 

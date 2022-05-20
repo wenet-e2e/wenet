@@ -13,8 +13,7 @@ Babel datasets (17 languages, 2k hours): Assamese, Bengali, Cantonese, Cebuano, 
 
 After pretraining, we build ASR system based on CTC-Attention structure. In very low resource task, we find that if too many initialization network structures are constructed in the upper layer of pre-training conformer encoder, the migration performance of the pre-training model will be destroyed, so we only build a single-layer transformer decoder for joint training.
 
-pretrained model link:
-https://huggingface.co/emiyasstar/ch-w2v-conformer
+pretrained model link: https://huggingface.co/emiyasstar/ch-w2v-conformer
 
 
 ## constrained-plus Task Performance
