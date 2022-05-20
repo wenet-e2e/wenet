@@ -13,20 +13,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
-
-      - name: Cache FC Base
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.FC_BASE_DIR }}
-          key: ${{ runner.os }}-fc-base
-
-      - uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ runner.os }}-build
 
       # Used to host cibuildwheel
       - uses: actions/setup-python@v3
@@ -37,7 +27,7 @@ jobs:
         uses: pypa/cibuildwheel@v2.5.0
         env:
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_BUILD: "cp36-*"
+          CIBW_BUILD: "cp37-* cp38-* cp39-*"
           # Disable building PyPy wheels on all platforms
           # Skip 32-bit builds
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux_*"
