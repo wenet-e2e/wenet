@@ -6,24 +6,25 @@
 #define DECODER_PARAMS_H_
 
 #include <memory>
-#include <utility>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "decoder/asr_decoder.h"
-#include "decoder/torch_asr_model.h"
+#ifdef USE_ONNX
 #include "decoder/onnx_asr_model.h"
+#endif
+#include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/flags.h"
 #include "utils/string.h"
 
-// TorchAsrModel flags
-DEFINE_int32(num_threads, 1, "num threads for GEMM");
-DEFINE_string(model_path, "", "pytorch exported model path");
+DEFINE_int32(num_threads, 1, "num threads for ASR model");
 
+// TorchAsrModel flags
+DEFINE_string(model_path, "", "pytorch exported model path");
 // OnnxAsrModel flags
-DEFINE_int32(num_onnx_threads, 1, "num threads for Onnx");
 DEFINE_string(onnx_dir, "", "directory where the onnx model is saved");
 
 // FeaturePipelineConfig flags
@@ -103,11 +104,15 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
 
   if (!FLAGS_onnx_dir.empty()) {
+#ifdef USE_ONNX
     LOG(INFO) << "Reading onnx model ";
-    OnnxAsrModel::InitEngineThreads(FLAGS_num_onnx_threads);
+    OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
     auto model = std::make_shared<OnnxAsrModel>();
     model->Read(FLAGS_onnx_dir);
     resource->model = model;
+#else
+    LOG(FATAL) << "Please rebuild with cmake options '-DONNX=ON'.";
+#endif
   } else {
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
     TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
@@ -157,10 +162,10 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 
   PostProcessOptions post_process_opts;
   post_process_opts.language_type =
-    FLAGS_language_type == 0 ? kMandarinEnglish : kIndoEuropean;
+      FLAGS_language_type == 0 ? kMandarinEnglish : kIndoEuropean;
   post_process_opts.lowercase = FLAGS_lowercase;
   resource->post_processor =
-    std::make_shared<PostProcessor>(std::move(post_process_opts));
+      std::make_shared<PostProcessor>(std::move(post_process_opts));
   return resource;
 }
 
