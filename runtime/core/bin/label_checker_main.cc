@@ -9,7 +9,6 @@
 #include "decoder/params.h"
 #include "frontend/wav.h"
 #include "utils/flags.h"
-#include "utils/log.h"
 #include "utils/string.h"
 
 DEFINE_string(text, "", "kaldi style text input file");

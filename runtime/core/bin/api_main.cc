@@ -15,7 +15,6 @@
 #include "api/wenet_api.h"
 #include "frontend/wav.h"
 #include "utils/flags.h"
-#include "utils/log.h"
 
 DEFINE_string(model_dir, "", "model dir path");
 DEFINE_string(wav_path, "", "single wave path");
