@@ -15,8 +15,8 @@
 #include "onnxruntime_cxx_api.h"  // NOLINT
 
 #include "decoder/asr_model.h"
-#include "utils/utils.h"
 #include "utils/log.h"
+#include "utils/utils.h"
 
 namespace wenet {
 

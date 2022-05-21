@@ -5,12 +5,9 @@
 #include <iomanip>
 #include <utility>
 
-#include "torch/script.h"
-
 #include "decoder/params.h"
 #include "frontend/wav.h"
 #include "utils/flags.h"
-#include "utils/log.h"
 #include "utils/string.h"
 #include "utils/timer.h"
 #include "utils/utils.h"

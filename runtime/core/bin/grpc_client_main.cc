@@ -15,7 +15,6 @@
 #include "frontend/wav.h"
 #include "grpc/grpc_client.h"
 #include "utils/flags.h"
-#include "utils/log.h"
 #include "utils/timer.h"
 
 DEFINE_string(hostname, "127.0.0.1", "hostname of websocket server");

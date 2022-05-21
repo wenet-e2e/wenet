@@ -14,7 +14,6 @@
 
 #include "frontend/wav.h"
 #include "utils/flags.h"
-#include "utils/log.h"
 #include "utils/timer.h"
 #include "websocket/websocket_client.h"
 

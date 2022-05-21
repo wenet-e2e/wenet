@@ -4,9 +4,7 @@ include(glog)
 set(CONFIG_FLAGS "")
 if(NOT FST_HAVE_BIN)
   if(MSVC)
-    # There is a bug of windows openfst HAVE_BIN=OFF
-    #   https://github.com/kkm000/openfst/pull/36
-    # set(HAVE_BIN OFF CACHE BOOL "Build the fst binaries" FORCE)
+    set(HAVE_BIN OFF CACHE BOOL "Build the fst binaries" FORCE)
   else()
     set(CONFIG_FLAGS "--disable-bin")
   endif()
