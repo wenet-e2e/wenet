@@ -21,14 +21,14 @@ DEFINE_string(timestamp, "", "timestamp output file");
 
 namespace wenet {
 
-const char *kDeletion = "<del>";
+const char* kDeletion = "<del>";
 // Is: Insertion and substitution
-const char *kIsStart = "<is>";
-const char *kIsEnd = "</is>";
+const char* kIsStart = "<is>";
+const char* kIsEnd = "</is>";
 
-bool MapToLabel(const std::string &text,
+bool MapToLabel(const std::string& text,
                 std::shared_ptr<fst::SymbolTable> symbol_table,
-                std::vector<int> *labels) {
+                std::vector<int>* labels) {
   labels->clear();
   // Split label to char sequence
   std::vector<std::string> chars;
@@ -64,7 +64,7 @@ std::shared_ptr<fst::SymbolTable> MakeSymbolTableForFst(
 }
 
 void CompileCtcFst(std::shared_ptr<fst::SymbolTable> symbol_table,
-                   fst::StdVectorFst *ofst) {
+                   fst::StdVectorFst* ofst) {
   ofst->DeleteStates();
   int start = ofst->AddState();
   ofst->SetStart(start);
@@ -84,7 +84,7 @@ void CompileCtcFst(std::shared_ptr<fst::SymbolTable> symbol_table,
 
 void CompileAlignFst(std::vector<int> labels,
                      std::shared_ptr<fst::SymbolTable> symbol_table,
-                     fst::StdVectorFst *ofst) {
+                     fst::StdVectorFst* ofst) {
   ofst->DeleteStates();
   int deletion = symbol_table->Find(kDeletion);
   int insertion_start = symbol_table->Find(kIsStart);
@@ -123,7 +123,7 @@ void CompileAlignFst(std::vector<int> labels,
 
 }  // namespace wenet
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_timestamp.empty()) {
     timestamp_out.open(FLAGS_timestamp, std::ios::out);
   }
-  std::ostream &timestamp_os =
+  std::ostream& timestamp_os =
       FLAGS_timestamp.empty() ? std::cout : timestamp_out;
 
   while (std::getline(text_is, line)) {
@@ -206,10 +206,10 @@ int main(int argc, char *argv[]) {
       std::string final_result;
       std::string timestamp_str;
       if (decoder.DecodedSomething()) {
-        const wenet::DecodeResult &result = decoder.result()[0];
+        const wenet::DecodeResult& result = decoder.result()[0];
         final_result = result.sentence;
         std::stringstream ss;
-        for (const auto &w : result.word_pieces) {
+        for (const auto& w : result.word_pieces) {
           ss << " " << w.word << " " << w.start << " " << w.end;
         }
         timestamp_str = ss.str();

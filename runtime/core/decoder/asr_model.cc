@@ -11,7 +11,7 @@ namespace wenet {
 int AsrModel::num_frames_for_chunk(bool start) const {
   int num_requried_frames = 0;
   if (chunk_size_ > 0) {
-    if (!start) {  // First batch
+    if (!start) {                        // First batch
       int context = right_context_ + 1;  // Add current frame
       num_requried_frames = (chunk_size_ - 1) * subsampling_rate_ + context;
     } else {
@@ -22,7 +22,6 @@ int AsrModel::num_frames_for_chunk(bool start) const {
   }
   return num_requried_frames;
 }
-
 
 void AsrModel::CacheFeature(
     const std::vector<std::vector<float>>& chunk_feats) {
@@ -36,15 +35,14 @@ void AsrModel::CacheFeature(
     cached_feature_.resize(cached_feature_size);
     for (int i = 0; i < cached_feature_size; ++i) {
       cached_feature_[i] =
-        chunk_feats[chunk_feats.size() - cached_feature_size + i];
+          chunk_feats[chunk_feats.size() - cached_feature_size + i];
     }
   }
 }
 
-
 void AsrModel::ForwardEncoder(
     const std::vector<std::vector<float>>& chunk_feats,
-    std::vector<std::vector<float>> *ctc_prob) {
+    std::vector<std::vector<float>>* ctc_prob) {
   ctc_prob->clear();
   int num_frames = cached_feature_.size() + chunk_feats.size();
   if (num_frames > right_context_ + 1) {
@@ -54,6 +52,3 @@ void AsrModel::ForwardEncoder(
 }
 
 }  // namespace wenet
-
-
-

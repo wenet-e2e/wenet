@@ -17,7 +17,7 @@
 
 namespace wenet {
 
-class TorchAsrModel: public AsrModel {
+class TorchAsrModel : public AsrModel {
  public:
   // Note: Do not call the InitEngineThreads function more than once.
   static void InitEngineThreads(int num_threads = 1);
@@ -29,20 +29,17 @@ class TorchAsrModel: public AsrModel {
   void Read(const std::string& model_path);
   std::shared_ptr<TorchModule> torch_model() const { return model_; }
   void Reset() override;
-  void AttentionRescoring(
-      const std::vector<std::vector<int>>& hyps,
-      float reverse_weight,
-      std::vector<float>* rescoring_score) override;
+  void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
+                          float reverse_weight,
+                          std::vector<float>* rescoring_score) override;
   std::shared_ptr<AsrModel> Copy() const override;
 
  protected:
-  void ForwardEncoderFunc(
-      const std::vector<std::vector<float>>& chunk_feats,
-      std::vector<std::vector<float>> *ctc_prob) override;
+  void ForwardEncoderFunc(const std::vector<std::vector<float>>& chunk_feats,
+                          std::vector<std::vector<float>>* ctc_prob) override;
 
   float ComputeAttentionScore(const torch::Tensor& prob,
-                              const std::vector<int>& hyp,
-                              int eos);
+                              const std::vector<int>& hyp, int eos);
 
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;

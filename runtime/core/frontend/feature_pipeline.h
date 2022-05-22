@@ -32,8 +32,8 @@ struct FeaturePipelineConfig {
   int frame_length;
   int frame_shift;
   FeaturePipelineConfig(int num_bins, int sample_rate)
-      : num_bins(num_bins),         // 80 dim fbank
-        sample_rate(sample_rate) {  // 16k sample rate
+      : num_bins(num_bins),                  // 80 dim fbank
+        sample_rate(sample_rate) {           // 16k sample rate
     frame_length = sample_rate / 1000 * 25;  // frame length 25ms
     frame_shift = sample_rate / 1000 * 10;   // frame shift 10ms
   }
@@ -92,9 +92,7 @@ class FeaturePipeline {
     return input_finished_ && (frame == num_frames_ - 1);
   }
 
-  int NumQueuedFrames() const {
-    return feature_queue_.Size();
-  }
+  int NumQueuedFrames() const { return feature_queue_.Size(); }
 
  private:
   const FeaturePipelineConfig& config_;

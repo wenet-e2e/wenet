@@ -23,7 +23,7 @@ DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
 DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
   wenet::GrpcClient client(FLAGS_hostname, FLAGS_port, FLAGS_nbest,

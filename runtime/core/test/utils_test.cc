@@ -9,9 +9,9 @@
 #include "gtest/gtest.h"
 
 TEST(UtilsTest, TopKTest) {
-  using ::testing::Pointwise;
-  using ::testing::FloatNear;
   using ::testing::ElementsAre;
+  using ::testing::FloatNear;
+  using ::testing::Pointwise;
   std::vector<float> data = {1, 3, 5, 7, 9, 2, 4, 6, 8, 10};
   std::vector<float> values;
   std::vector<int32_t> indices;

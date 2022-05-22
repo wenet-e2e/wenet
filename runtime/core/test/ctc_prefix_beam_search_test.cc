@@ -15,9 +15,8 @@ TEST(CtcPrefixBeamSearchTest, CtcPrefixBeamSearchLogicTest) {
   using ::testing::ElementsAre;
   // See https://robin1001.github.io/2020/12/11/ctc-search for the
   // graph demonstration of the data
-  std::vector<std::vector<float>> data = {{0.25, 0.40, 0.35},
-                                          {0.40, 0.35, 0.25},
-                                          {0.10, 0.50, 0.40}};
+  std::vector<std::vector<float>> data = {
+      {0.25, 0.40, 0.35}, {0.40, 0.35, 0.25}, {0.10, 0.50, 0.40}};
   // Apply log
   for (int i = 0; i < data.size(); i++) {
     for (int j = 0; j < data[i].size(); j++) {
