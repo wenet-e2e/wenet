@@ -17,5 +17,10 @@ FetchContent_Declare(onnxruntime
   URL_HASH ${URL_HASH}
 )
 FetchContent_MakeAvailable(onnxruntime)
-include_directories("${onnxruntime_SOURCE_DIR}/include")
-link_directories("${onnxruntime_SOURCE_DIR}/lib")
+include_directories(${onnxruntime_SOURCE_DIR}/include)
+link_directories(${onnxruntime_SOURCE_DIR}/lib)
+
+if(MSVC)
+  file(GLOB ONNX_DLLS "${onnxruntime_SOURCE_DIR}/lib/*.dll")
+  file(COPY ${ONNX_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
+endif()
