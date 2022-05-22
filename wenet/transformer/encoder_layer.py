@@ -166,7 +166,8 @@ class ConformerEncoderLayer(nn.Module):
         self.size = size
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        self.concat_linear = nn.Linear(size + size, size)
+        if self.concat_after:
+            self.concat_linear = nn.Linear(size + size, size)
 
     def forward(
         self,
