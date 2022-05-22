@@ -105,11 +105,8 @@ class Recognizer {
     }
     // Convert to 16 bits PCM data to float
     CHECK_EQ(len % 2, 0);
-    std::vector<float> wav(len / 2, 0);
-    for (int i = 0; i < wav.size(); i++) {
-      wav[i] = *reinterpret_cast<const int16_t*>(data + i * 2);
-    }
-    feature_pipeline_->AcceptWaveform(wav);
+    feature_pipeline_->AcceptWaveform(reinterpret_cast<const int16_t*>(data),
+                                      len / 2);
     if (last > 0) {
       feature_pipeline_->set_input_finished();
     }

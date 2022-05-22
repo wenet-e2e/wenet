@@ -41,7 +41,7 @@ struct FeaturePipelineConfig {
   void Info() const {
     LOG(INFO) << "feature pipeline config"
               << " num_bins " << num_bins << " frame_length " << frame_length
-              << "frame_shift" << frame_shift;
+              << " frame_shift " << frame_shift;
   }
 };
 
@@ -61,7 +61,8 @@ class FeaturePipeline {
   explicit FeaturePipeline(const FeaturePipelineConfig& config);
 
   // The feature extraction is done in AcceptWaveform().
-  void AcceptWaveform(const std::vector<float>& wav);
+  void AcceptWaveform(const float* pcm, const int size);
+  void AcceptWaveform(const int16_t* pcm, const int size);
 
   // Current extracted frames number.
   int num_frames() const { return num_frames_; }
