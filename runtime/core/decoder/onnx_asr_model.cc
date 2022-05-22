@@ -88,7 +88,7 @@ void OnnxAsrModel::Read(const std::string& model_dir) {
                                                   session_options_);
 #endif
   } catch (std::exception const& e) {
-    LOG(ERROR) << "error when load onnx model";
+    LOG(ERROR) << "error when load onnx model: " << e.what();
     exit(0);
   }
 
