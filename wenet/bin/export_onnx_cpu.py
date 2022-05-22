@@ -31,7 +31,7 @@ try:
     import onnx
     import onnxruntime
 except ImportError:
-    print('Please install onnxruntime!')
+    print('Please install onnx and onnxruntime!')
     sys.exit(1)
 
 
@@ -44,8 +44,6 @@ def get_args():
                         type=int, help='decoding chunk size')
     parser.add_argument('--num_decoding_left_chunks', required=True,
                         type=int, help='cache chunks')
-    parser.add_argument('--beam', required=True,
-                        type=int, help='beam wigth')
     parser.add_argument('--reverse_weight', default=0.5,
                         type=float, help='reverse_weight in attention_rescoing')
     args = parser.parse_args()
@@ -268,7 +266,7 @@ def export_ctc(asr_model, args):
     print("\tStage-2.3: check onnx_ctc and torch_ctc")
     torch_output = ctc(hidden)
     ort_session = onnxruntime.InferenceSession(ctc_outpath)
-    onnx_output = ort_session.run(None, {'hidden' : to_numpy(hidden)})
+    onnx_output = ort_session.run(None, {'hidden': to_numpy(hidden)})
 
     np.testing.assert_allclose(to_numpy(torch_output), onnx_output[0],
                                rtol=1e-03, atol=1e-05)
@@ -284,18 +282,18 @@ def export_decoder(asr_model, args):
     decoder_outpath = os.path.join(args['output_dir'], 'decoder.onnx')
 
     print("\tStage-3.1: prepare inputs for decoder")
-    # hardcode time->200 len->20, they are dynamic axes.
+    # hardcode time->200 nbest->10 len->20, they are dynamic axes.
     encoder_out = torch.randn((1, 200, args['output_size']))
     hyps = torch.randint(low=0, high=args['vocab_size'],
-                         size=[args['beam'], 20])
+                         size=[10, 20])
     hyps[:, 0] = args['vocab_size'] - 1  # <sos>
-    hyps_lens = torch.randint(low=15, high=21, size=[args['beam']])
+    hyps_lens = torch.randint(low=15, high=21, size=[10])
 
     print("\tStage-3.2: torch.onnx.export")
     dynamic_axes = {
-        'hyps': {0: 'BEAM', 1: 'L'}, 'hyps_lens': {0: 'BEAM'},
+        'hyps': {0: 'NBEST', 1: 'L'}, 'hyps_lens': {0: 'NBEST'},
         'encoder_out': {1: 'T'},
-        'score': {0: 'BEAM', 1: 'L'}, 'r_score': {0: 'BEAM', 1: 'L'}
+        'score': {0: 'NBEST', 1: 'L'}, 'r_score': {0: 'NBEST', 1: 'L'}
     }
     inputs = (hyps, hyps_lens, encoder_out, args['reverse_weight'])
     torch.onnx.export(
@@ -359,7 +357,6 @@ def main():
     arguments['batch'] = 1
     arguments['chunk_size'] = args.chunk_size
     arguments['left_chunks'] = args.num_decoding_left_chunks
-    arguments['beam'] = args.beam
     arguments['reverse_weight'] = args.reverse_weight
     arguments['output_size'] = configs['encoder_conf']['output_size']
     arguments['num_blocks'] = configs['encoder_conf']['num_blocks']
@@ -391,6 +388,7 @@ def main():
     export_encoder(model, arguments)
     export_ctc(model, arguments)
     export_decoder(model, arguments)
+
 
 if __name__ == '__main__':
     main()
