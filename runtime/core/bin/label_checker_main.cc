@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
       auto feature_pipeline =
           std::make_shared<wenet::FeaturePipeline>(*feature_config);
       feature_pipeline->AcceptWaveform(std::vector<float>(
-          wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
+          wav_reader.data(), wav_reader.data() + wav_reader.num_samples()));
       feature_pipeline->set_input_finished();
       decode_resource->fst = decoding_fst;
       LOG(INFO) << "num frames " << feature_pipeline->num_frames();

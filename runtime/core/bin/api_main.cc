@@ -29,8 +29,8 @@ int main(int argc, char *argv[]) {
   void* decoder = wenet_init(FLAGS_model_dir.c_str());
   wenet_set_timestamp(decoder, FLAGS_enable_timestamp == true ? 1 : 0);
   wenet::WavReader wav_reader(FLAGS_wav_path);
-  std::vector<int16_t> data(wav_reader.num_sample());
-  for  (int i = 0; i < wav_reader.num_sample(); i++) {
+  std::vector<int16_t> data(wav_reader.num_samples());
+  for  (int i = 0; i < wav_reader.num_samples(); i++) {
     data[i] = static_cast<int16_t>(*(wav_reader.data() + i));
   }
 

@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
     auto feature_pipeline =
         std::make_shared<wenet::FeaturePipeline>(*feature_config);
     feature_pipeline->AcceptWaveform(std::vector<float>(
-        wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
+        wav_reader.data(), wav_reader.data() + wav_reader.num_samples()));
     feature_pipeline->set_input_finished();
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
                               *decode_config);
 
     int wave_dur =
-        static_cast<int>(static_cast<float>(wav_reader.num_sample()) /
+        static_cast<int>(static_cast<float>(wav_reader.num_samples()) /
                          wav_reader.sample_rate() * 1000);
     int decode_time = 0;
     std::string final_result;
