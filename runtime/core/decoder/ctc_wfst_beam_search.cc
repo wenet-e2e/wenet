@@ -15,8 +15,7 @@ void DecodableTensorScaled::Reset() {
   logp_.clear();
 }
 
-void DecodableTensorScaled::AcceptLoglikes(
-    const std::vector<float>& logp) {
+void DecodableTensorScaled::AcceptLoglikes(const std::vector<float>& logp) {
   ++num_frames_ready_;
   // TODO(Binbin Zhang): Avoid copy here
   logp_ = logp;
@@ -74,8 +73,8 @@ void CtcWfstBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
       last_frame_prob_ = logp[i];
     } else {
       // Get the best symbol
-      int cur_best = std::max_element(logp[i].begin(),
-                                      logp[i].end()) - logp[i].begin();
+      int cur_best =
+          std::max_element(logp[i].begin(), logp[i].end()) - logp[i].begin();
       // Optional, adding one blank frame if we has skipped it in two same
       // symbols
       if (cur_best != 0 && is_last_frame_blank_ && cur_best == last_best_) {

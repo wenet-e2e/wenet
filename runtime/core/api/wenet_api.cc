@@ -25,7 +25,6 @@
 #include "utils/json.h"
 #include "utils/string.h"
 
-
 class Recognizer {
  public:
   explicit Recognizer(const std::string& model_dir) {
@@ -52,7 +51,7 @@ class Recognizer {
     std::string fst_path = wenet::JoinPath(model_dir, "TLG.fst");
     if (wenet::FileExists(fst_path)) {
       resource_->fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
-         fst::Fst<fst::StdArc>::Read(fst_path));
+          fst::Fst<fst::StdArc>::Read(fst_path));
     } else {
       // LM is not applied, unit_table is the same as symbol_table
       resource_->unit_table = symbol_table;
@@ -94,8 +93,8 @@ class Recognizer {
     resource_->post_processor =
         std::make_shared<wenet::PostProcessor>(*post_process_opts_);
     // Init decoder
-    decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_,
-        resource_, *decode_options_);
+    decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_, resource_,
+                                                   *decode_options_);
   }
 
   void Decode(const char* data, int len, int last) {
@@ -119,7 +118,7 @@ class Recognizer {
       // TODO(Binbin Zhang): Process streaming call
       DecodeState state = decoder_->Decode(false);
       if (state == DecodeState::kWaitFeats) {
-         break;
+        break;
       } else if (state == DecodeState::kEndFeats) {
         UpdateResult(true);
         decoder_->Rescoring();
@@ -156,15 +155,11 @@ class Recognizer {
     result_ = obj.dump();
   }
 
-  const char* GetResult() {
-    return result_.c_str();
-  }
+  const char* GetResult() { return result_.c_str(); }
 
   void set_nbest(int n) { nbest_ = n; }
   void set_enable_timestamp(bool flag) { enable_timestamp_ = flag; }
-  void AddContext(const char* word) {
-    context_.push_back(word);
-  }
+  void AddContext(const char* word) { context_.push_back(word); }
   void set_context_score(float score) { context_score_ = score; }
   void set_language(const char* lang) { language_ = lang; }
 
@@ -186,71 +181,57 @@ class Recognizer {
   std::string language_ = "chs";
 };
 
-
 void* wenet_init(const char* model_dir) {
   Recognizer* decoder = new Recognizer(model_dir);
   return reinterpret_cast<void*>(decoder);
 }
 
-
 void wenet_free(void* decoder) {
-  delete reinterpret_cast<Recognizer *>(decoder);
+  delete reinterpret_cast<Recognizer*>(decoder);
 }
 
-
 void wenet_reset(void* decoder) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->Reset();
 }
 
-
-void wenet_decode(void* decoder,
-                  const char* data,
-                  int len,
-                  int last) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+void wenet_decode(void* decoder, const char* data, int len, int last) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->Decode(data, len, last);
 }
 
-
 const char* wenet_get_result(void* decoder) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   return recognizer->GetResult();
 }
-
 
 void wenet_set_log_level(int level) {
   FLAGS_logtostderr = true;
   FLAGS_v = level;
 }
 
-
-void wenet_set_nbest(void *decoder, int n) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+void wenet_set_nbest(void* decoder, int n) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_nbest(n);
 }
 
-
-void wenet_set_timestamp(void *decoder, int flag) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+void wenet_set_timestamp(void* decoder, int flag) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   bool enable = flag > 0 ? true : false;
   recognizer->set_enable_timestamp(enable);
 }
 
-
 void wenet_add_context(void* decoder, const char* word) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->AddContext(word);
 }
 
-
-void wenet_set_context_score(void *decoder, float score) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+void wenet_set_context_score(void* decoder, float score) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_context_score(score);
 }
 
-
-void wenet_set_language(void *decoder, const char* lang) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+void wenet_set_language(void* decoder, const char* lang) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_language(lang);
 }

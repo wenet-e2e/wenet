@@ -18,7 +18,7 @@
 
 DEFINE_int32(port, 10086, "websocket listening port");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 

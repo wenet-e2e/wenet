@@ -14,7 +14,6 @@
 
 namespace wenet {
 
-
 class AsrModel {
  public:
   virtual int right_context() const { return right_context_; }
@@ -27,9 +26,7 @@ class AsrModel {
   virtual int offset() const { return offset_; }
 
   // If chunk_size > 0, streaming case. Otherwise, none streaming case
-  virtual void set_chunk_size(int chunk_size) {
-    chunk_size_ = chunk_size;
-  }
+  virtual void set_chunk_size(int chunk_size) { chunk_size_ = chunk_size; }
   virtual void set_num_left_chunks(int num_left_chunks) {
     num_left_chunks_ = num_left_chunks;
   }
@@ -40,21 +37,19 @@ class AsrModel {
 
   virtual void ForwardEncoder(
       const std::vector<std::vector<float>>& chunk_feats,
-      std::vector<std::vector<float>> *ctc_prob);
+      std::vector<std::vector<float>>* ctc_prob);
 
-  virtual void AttentionRescoring(
-      const std::vector<std::vector<int>>& hyps,
-      float reverse_weight,
-      std::vector<float>* rescoring_score) = 0;
+  virtual void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
+                                  float reverse_weight,
+                                  std::vector<float>* rescoring_score) = 0;
 
   virtual std::shared_ptr<AsrModel> Copy() const = 0;
 
  protected:
   virtual void ForwardEncoderFunc(
       const std::vector<std::vector<float>>& chunk_feats,
-      std::vector<std::vector<float>> *ctc_prob) = 0;
-  virtual void CacheFeature(
-      const std::vector<std::vector<float>>& chunk_feats);
+      std::vector<std::vector<float>>* ctc_prob) = 0;
+  virtual void CacheFeature(const std::vector<std::vector<float>>& chunk_feats);
 
   int right_context_ = 1;
   int subsampling_rate_ = 1;
@@ -68,9 +63,6 @@ class AsrModel {
   std::vector<std::vector<float>> cached_feature_;
 };
 
-
-
 }  // namespace wenet
 
 #endif  // DECODER_ASR_MODEL_H_
-

@@ -19,7 +19,7 @@ DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(result, "", "result output file");
 DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
@@ -48,11 +48,11 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_result.empty()) {
     result.open(FLAGS_result, std::ios::out);
   }
-  std::ostream &buffer = FLAGS_result.empty() ? std::cout : result;
+  std::ostream& buffer = FLAGS_result.empty() ? std::cout : result;
 
   int total_waves_dur = 0;
   int total_decode_time = 0;
-  for (auto &wav : waves) {
+  for (auto& wav : waves) {
     wenet::WavReader wav_reader(wav.second);
     CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
 
@@ -83,8 +83,7 @@ int main(int argc, char *argv[]) {
         LOG(INFO) << "Partial result: " << decoder.result()[0].sentence;
       }
 
-      if (FLAGS_continuous_decoding &&
-          state == wenet::DecodeState::kEndpoint) {
+      if (FLAGS_continuous_decoding && state == wenet::DecodeState::kEndpoint) {
         if (decoder.DecodedSomething()) {
           decoder.Rescoring();
           final_result.append(decoder.result()[0].sentence);
@@ -119,10 +118,9 @@ int main(int argc, char *argv[]) {
       buffer << wav.first << " " << final_result << std::endl;
     } else {
       buffer << "wav " << wav.first << std::endl;
-      auto &results = decoder.result();
-      for (auto &r : results) {
-        if (r.sentence.empty())
-          continue;
+      auto& results = decoder.result();
+      for (auto& r : results) {
+        if (r.sentence.empty()) continue;
         buffer << "candidate " << r.score << " " << r.sentence << std::endl;
       }
     }

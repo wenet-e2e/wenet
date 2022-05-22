@@ -26,7 +26,7 @@ DEFINE_int32(workers, 4, "grpc num workers");
 using grpc::Server;
 using grpc::ServerBuilder;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 

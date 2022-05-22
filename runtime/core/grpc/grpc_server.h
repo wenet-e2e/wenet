@@ -39,7 +39,7 @@ using wenet::Response;
 
 class GrpcConnectionHandler {
  public:
-  GrpcConnectionHandler(ServerReaderWriter<Response, Request> *stream,
+  GrpcConnectionHandler(ServerReaderWriter<Response, Request>* stream,
                         std::shared_ptr<Request> request,
                         std::shared_ptr<Response> response,
                         std::shared_ptr<FeaturePipelineConfig> feature_config,
@@ -59,7 +59,7 @@ class GrpcConnectionHandler {
 
   bool continuous_decoding_ = false;
   int nbest_ = 1;
-  ServerReaderWriter<Response, Request> *stream_;
+  ServerReaderWriter<Response, Request>* stream_;
   std::shared_ptr<Request> request_;
   std::shared_ptr<Response> response_;
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
@@ -83,8 +83,8 @@ class GrpcServer final : public ASR::Service {
       : feature_config_(std::move(feature_config)),
         decode_config_(std::move(decode_config)),
         decode_resource_(std::move(decode_resource)) {}
-  Status Recognize(ServerContext *context,
-                   ServerReaderWriter<Response, Request> *reader) override;
+  Status Recognize(ServerContext* context,
+                   ServerReaderWriter<Response, Request>* reader) override;
 
  private:
   std::shared_ptr<FeaturePipelineConfig> feature_config_;

@@ -93,8 +93,8 @@ void CtcPrefixBeamSearch::UpdateHypotheses(
 // it.
 void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
   if (logp.size() == 0) return;
-  int first_beam_size = std::min(static_cast<int>(logp[0].size()),
-                                 opts_.first_beam_size);
+  int first_beam_size =
+      std::min(static_cast<int>(logp[0].size()), opts_.first_beam_size);
   for (int t = 0; t < logp.size(); ++t, ++abs_time_step_) {
     const std::vector<float>& logp_t = logp[t];
     std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> next_hyps;
