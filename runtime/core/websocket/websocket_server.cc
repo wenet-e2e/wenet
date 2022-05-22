@@ -46,8 +46,8 @@ void ConnectionHandler::OnSpeechStart() {
   ws_.text(true);
   ws_.write(asio::buffer(json::serialize(rv)));
   feature_pipeline_ = std::make_shared<FeaturePipeline>(*feature_config_);
-  decoder_ = std::make_shared<AsrDecoder>(
-      feature_pipeline_, decode_resource_, *decode_config_);
+  decoder_ = std::make_shared<AsrDecoder>(feature_pipeline_, decode_resource_,
+                                          *decode_config_);
   // Start decoder thread
   decode_thread_ =
       std::make_shared<std::thread>(&ConnectionHandler::DecodeThreadFunc, this);
