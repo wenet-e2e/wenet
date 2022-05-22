@@ -55,6 +55,9 @@ class DecoderLayer(nn.Module):
         if self.concat_after:
             self.concat_linear1 = nn.Linear(size + size, size)
             self.concat_linear2 = nn.Linear(size + size, size)
+        else:
+            self.concat_linear1 = nn.Identity()
+            self.concat_linear2 = nn.Identity()
 
     def forward(
         self,

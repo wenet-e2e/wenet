@@ -52,6 +52,8 @@ class TransformerEncoderLayer(nn.Module):
         self.concat_after = concat_after
         if concat_after:
             self.concat_linear = nn.Linear(size + size, size)
+        else:
+            self.concat_linear = nn.Identity()
 
     def forward(
         self,
@@ -168,6 +170,9 @@ class ConformerEncoderLayer(nn.Module):
         self.concat_after = concat_after
         if self.concat_after:
             self.concat_linear = nn.Linear(size + size, size)
+        else:
+            self.concat_linear = nn.Identity()
+
 
     def forward(
         self,
