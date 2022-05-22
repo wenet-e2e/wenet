@@ -50,9 +50,8 @@ class TransformerEncoderLayer(nn.Module):
         self.size = size
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        # concat_linear may be not used in forward fuction,
-        # but will be saved in the *.pt
-        self.concat_linear = nn.Linear(size + size, size)
+        if concat_after == True:
+            self.concat_linear = nn.Linear(size + size, size)
 
     def forward(
         self,
