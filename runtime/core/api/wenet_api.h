@@ -26,11 +26,9 @@ extern "C" {
  */
 void* wenet_init(const char* model_dir);
 
-
 /** Free wenet decoder and corresponding resource
  */
 void wenet_free(void* decoder);
-
 
 /** Reset decoder for next decoding
  */
@@ -41,11 +39,7 @@ void wenet_reset(void* decoder);
  * @param len: data length
  * @param last: if it is the last package
  */
-void wenet_decode(void* decoder,
-                  const char* data,
-                  int len,
-                  int last = 1);
-
+void wenet_decode(void* decoder, const char* data, int len, int last = 1);
 
 /** Get decode result in json format
  *  It returns partial result when last is 0
@@ -77,33 +71,28 @@ void wenet_decode(void* decoder,
  */
 const char* wenet_get_result(void* decoder);
 
-
 /** Set n-best, range 1~10
  *  wenet_get_result will return top-n best results
  */
 void wenet_set_nbest(void* decoder, int n);
-
 
 /** Whether to enable word level timestamp in results
     disable it when flag = 0, otherwise enable
  */
 void wenet_set_timestamp(void* decoder, int flag);
 
-
 /** Add one contextual biasing
  */
 void wenet_add_context(void* decoder, const char* word);
 
-
 /** Set contextual biasing bonus score
  */
-void wenet_set_context_score(void *decoder, float score);
-
+void wenet_set_context_score(void* decoder, float score);
 
 /** Set language, has effect on the postpocessing
  *  @param: lang, could be chs/en now
  */
-void wenet_set_language(void *decoder, const char* lang);
+void wenet_set_language(void* decoder, const char* lang);
 
 /** Set log level
  *  We use glog in wenet, so the level is the glog level

@@ -20,7 +20,7 @@ DEFINE_string(model_dir, "", "model dir path");
 DEFINE_string(wav_path, "", "single wave path");
 DEFINE_bool(enable_timestamp, false, "enable timestamps");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
@@ -29,13 +29,13 @@ int main(int argc, char *argv[]) {
   void* decoder = wenet_init(FLAGS_model_dir.c_str());
   wenet_set_timestamp(decoder, FLAGS_enable_timestamp == true ? 1 : 0);
   wenet::WavReader wav_reader(FLAGS_wav_path);
-  std::vector<int16_t> data(wav_reader.num_sample());
-  for  (int i = 0; i < wav_reader.num_sample(); i++) {
+  std::vector<int16_t> data(wav_reader.num_samples());
+  for (int i = 0; i < wav_reader.num_samples(); i++) {
     data[i] = static_cast<int16_t>(*(wav_reader.data() + i));
   }
 
   for (int i = 0; i < 10; i++) {
-    wenet_decode(decoder, reinterpret_cast<const char *>(data.data()),
+    wenet_decode(decoder, reinterpret_cast<const char*>(data.data()),
                  data.size() * 2);
     const char* result = wenet_get_result(decoder);
     LOG(INFO) << i << " " << result;

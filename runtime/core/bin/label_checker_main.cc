@@ -186,11 +186,11 @@ int main(int argc, char *argv[]) {
         LOG(WARNING) << "Error in reading " << wav_table[key];
         continue;
       }
+      int num_samples = wav_reader.num_samples();
       CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
       auto feature_pipeline =
           std::make_shared<wenet::FeaturePipeline>(*feature_config);
-      feature_pipeline->AcceptWaveform(std::vector<float>(
-          wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
+      feature_pipeline->AcceptWaveform(wav_reader.data(), num_samples);
       feature_pipeline->set_input_finished();
       decode_resource->fst = decoding_fst;
       LOG(INFO) << "num frames " << feature_pipeline->num_frames();
