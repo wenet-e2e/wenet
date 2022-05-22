@@ -156,7 +156,7 @@ class Recognizer {
 
   void set_nbest(int n) { nbest_ = n; }
   void set_enable_timestamp(bool flag) { enable_timestamp_ = flag; }
-  void AddContext(const char* word) { context_.push_back(word); }
+  void AddContext(const char* word) { context_.emplace_back(word); }
   void set_context_score(float score) { context_score_ = score; }
   void set_language(const char* lang) { language_ = lang; }
 

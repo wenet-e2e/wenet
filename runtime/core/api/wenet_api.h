@@ -39,7 +39,7 @@ void wenet_reset(void* decoder);
  * @param len: data length
  * @param last: if it is the last package
  */
-void wenet_decode(void* decoder, const char* data, int len, int last = 1);
+void wenet_decode(void* decoder, const char* data, int len, int last);
 
 /** Get decode result in json format
  *  It returns partial result when last is 0
