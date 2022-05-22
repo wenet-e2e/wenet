@@ -54,21 +54,20 @@ int main(int argc, char* argv[]) {
   int total_decode_time = 0;
   for (auto& wav : waves) {
     wenet::WavReader wav_reader(wav.second);
+    int num_samples = wav_reader.num_samples();
     CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
 
     auto feature_pipeline =
         std::make_shared<wenet::FeaturePipeline>(*feature_config);
-    feature_pipeline->AcceptWaveform(std::vector<float>(
-        wav_reader.data(), wav_reader.data() + wav_reader.num_samples()));
+    feature_pipeline->AcceptWaveform(wav_reader.data(), num_samples);
     feature_pipeline->set_input_finished();
     LOG(INFO) << "num frames " << feature_pipeline->num_frames();
 
     wenet::AsrDecoder decoder(feature_pipeline, decode_resource,
                               *decode_config);
 
-    int wave_dur =
-        static_cast<int>(static_cast<float>(wav_reader.num_samples()) /
-                         wav_reader.sample_rate() * 1000);
+    int wave_dur = static_cast<int>(static_cast<float>(num_samples) /
+                                    wav_reader.sample_rate() * 1000);
     int decode_time = 0;
     std::string final_result;
     while (true) {

@@ -87,16 +87,11 @@ void ConnectionHandler::OnFinish() {
 void ConnectionHandler::OnSpeechData(const beast::flat_buffer& buffer) {
   // Read binary PCM data
   int num_samples = buffer.size() / sizeof(int16_t);
-  std::vector<float> pcm_data(num_samples);
-  const int16_t* pdata = static_cast<const int16_t*>(buffer.data().data());
-  for (int i = 0; i < num_samples; i++) {
-    pcm_data[i] = static_cast<float>(*pdata);
-    pdata++;
-  }
   VLOG(2) << "Received " << num_samples << " samples";
   CHECK(feature_pipeline_ != nullptr);
   CHECK(decoder_ != nullptr);
-  feature_pipeline_->AcceptWaveform(pcm_data);
+  const auto* pcm_data = static_cast<const int16_t*>(buffer.data().data());
+  feature_pipeline_->AcceptWaveform(pcm_data, num_samples);
 }
 
 std::string ConnectionHandler::SerializeResult(bool finish) {
