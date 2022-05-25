@@ -5,6 +5,7 @@ set(decoder_srcs
   ctc_prefix_beam_search.cc
   ctc_wfst_beam_search.cc
   ctc_endpoint.cc
+  hw_scorer.cc
   torch_asr_model.cc
 )
 if(ONNX)

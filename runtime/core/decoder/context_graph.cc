@@ -22,23 +22,23 @@ ContextGraph::ContextGraph(ContextConfig config) : config_(config) {}
 // }
 int a =1;
 std::vector<string> split(const string& str, const string& delim) {
-	std::vector<string> res;
-	if("" == str) return res;
-	//先将要切割的字符串从string类型转换为char*类型
-	char * strs = new char[str.length() + 1] ; //不要忘了
-	strcpy(strs, str.c_str()); 
+    std::vector<string> res;
+    if("" == str) return res;
+    //先将要切割的字符串从string类型转换为char*类型
+    char * strs = new char[str.length() + 1] ; //不要忘了
+    strcpy(strs, str.c_str()); 
 
-	char * d = new char[delim.length() + 1];
-	strcpy(d, delim.c_str());
+    char * d = new char[delim.length() + 1];
+    strcpy(d, delim.c_str());
 
-	char *p = strtok(strs, d);
-	while(p) {
-		string s = p; //分割获得的字符串转换为string类型
-		res.push_back(s); //存入结果数组
-		p = strtok(NULL, d);
-	}
+    char *p = strtok(strs, d);
+    while(p) {
+        string s = p; //分割获得的字符串转换为string类型
+        res.push_back(s); //存入结果数组
+        p = strtok(NULL, d);
+    }
 
-	return res;
+    return res;
 }
 
 
@@ -72,7 +72,7 @@ void ContextGraph::BuildContextGraph(
       LOG(INFO) << "Skip long context: " << context;
       continue;
     }
-	
+    
     if (++count > config_.max_contexts) break;
 
     std::vector<std::string> words;
@@ -91,11 +91,11 @@ void ContextGraph::BuildContextGraph(
       LOG(WARNING) << "Ignore unknown word found during compilation.";
       continue;
     }
-	hwlist.push_back({});
-	for (size_t i = 0; i < words.size(); ++i) {
+    hwlist.push_back({});
+    for (size_t i = 0; i < words.size(); ++i) {
       int word_id = symbol_table_->Find(words[i]);
-	  hwlist.back().push_back(word_id);
-	}
+      hwlist.back().push_back(word_id);
+    }
 /*
     int prev_state = start_state;
     int next_state = start_state;
@@ -135,16 +135,16 @@ int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
   *is_end_boundary = false;   //I ignore these because they are not accurate anyway
   if(refreash_cache)
   {
-	  cache_result_=hwscore_->score(cur_state);
-	  refreash_cache=false;
+      cache_result_=hwscore_->score(cur_state);
+      refreash_cache=false;
   }
   
   int next_state = 0;
 
   if (cache_result_.outputw_2_scrore_next_states->find(word_id) == cache_result_.outputw_2_scrore_next_states->end())
   {
-		next_state = 0;
-		*score=cache_result_.return_cost;
+        next_state = 0;
+        *score=cache_result_.return_cost;
   }
   else
   {
@@ -152,7 +152,7 @@ int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
     *score = (*cache_result_.outputw_2_scrore_next_states)[word_id].first;
   }
 
-		
+        
   
   return next_state;
 }

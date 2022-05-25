@@ -104,12 +104,12 @@ void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
     TopK(logp_t, first_beam_size, &topk_score, &topk_index);
 
     // 2. Token passing
-	for (const auto& it : cur_hyps_) {
-		  if (context_graph_) {
-			context_graph_->refreash_cache=true;
+   for (const auto& it : cur_hyps_) {
+          if (context_graph_) {
+            context_graph_->refreash_cache=true;
           }
-		
-		for (int i = 0; i < topk_index.size(); ++i) {
+        
+        for (int i = 0; i < topk_index.size(); ++i) {
       int id = topk_index[i];
       auto prob = topk_score[i];
 
