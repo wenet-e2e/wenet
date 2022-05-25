@@ -19,6 +19,7 @@ lattice_beam=12.0
 min_active=200
 max_active=7000
 blank_skip_thresh=1.0
+length_penalty=0.0
 
 . tools/parse_options.sh || exit 1;
 if [ $# != 5 ]; then
@@ -56,6 +57,7 @@ if [ ! -z $fst_path ]; then
   wfst_decode_opts="$wfst_decode_opts --min_active $min_active"
   wfst_decode_opts="$wfst_decode_opts --acoustic_scale $acoustic_scale"
   wfst_decode_opts="$wfst_decode_opts --blank_skip_thresh $blank_skip_thresh"
+  wfst_decode_opts="$wfst_decode_opts --length_penalty $length_penalty"
   echo $wfst_decode_opts > $dir/config
 fi
 for n in $(seq ${nj}); do
