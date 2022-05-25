@@ -34,7 +34,7 @@ class ContextGraph {
   int end_tag_id() { return end_tag_id_; }
   bool refreash_cache=true; //weather to refreash cached score_output
  private:
- 
+
   int start_tag_id_ = -1;
   int end_tag_id_ = -1;
   ContextConfig config_;
