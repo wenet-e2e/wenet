@@ -26,7 +26,7 @@ std::vector<string> split(const string& str, const string& delim) {
     if("" == str) return res;
     //先将要切割的字符串从string类型转换为char*类型
     char * strs = new char[str.length() + 1] ; //不要忘了
-    strcpy(strs, str.c_str()); 
+    strcpy(strs, str.c_str());
 
     char * d = new char[delim.length() + 1];
     strcpy(d, delim.c_str());
@@ -72,7 +72,7 @@ void ContextGraph::BuildContextGraph(
       LOG(INFO) << "Skip long context: " << context;
       continue;
     }
-    
+
     if (++count > config_.max_contexts) break;
 
     std::vector<std::string> words;
@@ -115,22 +115,22 @@ void ContextGraph::BuildContextGraph(
       escape_score += score;
     }*/
   }
-  
+
   //std::cout<<"vdebug:"<<hwlist.size()<<std::endl;
   hwscore_=new victor::HWScorer(hwlist,config_.context_score);
-  
+
 /*   std::unique_ptr<fst::StdVectorFst> det_fst(new fst::StdVectorFst());
   fst::Determinize(*ofst, det_fst.get());
   graph_ = std::move(det_fst); */
 
-  
-  
+
+
 }
 
 int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
                                bool* is_start_boundary, bool* is_end_boundary) {
-  
-  
+
+
   *is_start_boundary = false;
   *is_end_boundary = false;   //I ignore these because they are not accurate anyway
   if(refreash_cache)
@@ -138,7 +138,7 @@ int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
       cache_result_=hwscore_->score(cur_state);
       refreash_cache=false;
   }
-  
+
   int next_state = 0;
 
   if (cache_result_.outputw_2_scrore_next_states->find(word_id) == cache_result_.outputw_2_scrore_next_states->end())
@@ -152,8 +152,8 @@ int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
     *score = (*cache_result_.outputw_2_scrore_next_states)[word_id].first;
   }
 
-        
-  
+
+
   return next_state;
 }
 

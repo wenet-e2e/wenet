@@ -17,7 +17,7 @@ namespace victor {
         vector<double> next_nodes_cost;
         unordered_map<int, pair<double, int>> outputw_2_scrore_next_states;
         bool next_node(int w, Node** next_node, double* cost);
-        // return wether w is in the next node of current node. 
+        // return wether w is in the next node of current node.
         //if true change the two pointer to point at the next node ant its cost
         //if not change the two pointer to point at the fail node ant fail cost
 
@@ -37,7 +37,7 @@ namespace victor {
     {
 
     public:
-        
+
         Node root_node;
         HWScorer(vector<vector<int>> hotwords,double weight);
         int init_state(void);
@@ -51,7 +51,7 @@ namespace victor {
         double weight_ = 1;
         void BFS_re_route_failpath(void);  //go through all node with BFS and reroute all the fail path
         void re_route_failpath(Node* node);
-        void optimize_node(Node* node); //optimize this node 
+        void optimize_node(Node* node); //optimize this node
 
     };
 

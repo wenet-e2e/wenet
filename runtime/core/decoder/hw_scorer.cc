@@ -59,7 +59,7 @@ namespace victor {
 
 
         BFS_re_route_failpath();
-        
+
         for (int i = 0; i < all_nodes.size(); i++)
         {
             optimize_node(all_nodes[i]);
