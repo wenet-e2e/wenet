@@ -45,7 +45,7 @@ class PositionalEncoding(torch.nn.Module):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: Union[int, torch.tensor] = 0) \
+                offset: Union[int, torch.Tensor] = 0) \
             -> Tuple[torch.Tensor, torch.Tensor]:
         """Add positional encoding.
 
@@ -63,7 +63,7 @@ class PositionalEncoding(torch.nn.Module):
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
-    def position_encoding(self, offset: Union[int, torch.tensor], size: int,
+    def position_encoding(self, offset: Union[int, torch.Tensor], size: int,
                           apply_dropout=True) -> torch.Tensor:
         """ For getting encoding in a streaming fashion
 
@@ -110,7 +110,7 @@ class RelPositionalEncoding(PositionalEncoding):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: Union[int, torch.tensor] = 0) \
+                offset: Union[int, torch.Tensor] = 0) \
             -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute positional encoding.
         Args:
@@ -135,7 +135,7 @@ class NoPositionalEncoding(torch.nn.Module):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: Union[int, torch.tensor] = 0) \
+                offset: Union[int, torch.Tensor] = 0) \
             -> Tuple[torch.Tensor, torch.Tensor]:
         """ Just return zero vector for interface compatibility
         """
