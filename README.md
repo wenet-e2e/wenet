@@ -35,8 +35,8 @@ Please see `examples/$dataset/s0/README.md` for benchmark on different speech da
 
 ## Installation(Python Only)
 
-If you just want to use WeNet as a python package for speech recognition application.
-You can just install it by `pip`, please note python 3.6+ is required.
+If you just want to use WeNet as a python package for speech recognition application,
+just install it by `pip`, please note python 3.6+ is required.
 ``` sh
 pip3 install wenet
 ```
