@@ -70,7 +70,7 @@ input [
   {
     name: "chunk_xs"
     data_type: TYPE_#DTYPE
-    dims: [#decoding_window, #num_mel_bins] 
+    dims: [#decoding_window, #num_mel_bins]
   },
   {
     name: "chunk_lens"

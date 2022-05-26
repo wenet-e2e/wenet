@@ -96,7 +96,7 @@ parameters [
     value: { string_value: "1" }
   },
   {
-   key: "FORCE_CPU_ONLY_INPUT_TENSORS", 
+   key: "FORCE_CPU_ONLY_INPUT_TENSORS",
    value: {string_value:"yes"}
   }
 ]

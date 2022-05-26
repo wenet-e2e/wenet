@@ -135,9 +135,9 @@ class StreamingEncoder(torch.nn.Module):
         cnn_cache = torch.transpose(cnn_cache, 0, 1)
 
         # rewrite encoder.forward_chunk
-        # <---------forward_chunk START---------> 
+        # <---------forward_chunk START--------->
         xs = self.global_cmvn(chunk_xs)
-        # chunk mask is important for batch inferencing since 
+        # chunk mask is important for batch inferencing since
         # different sequence in a batch has different length
         xs, pos_emb, chunk_mask = self.embed(xs, chunk_mask, offset)
         cache_size = att_cache.size(3)  # required cache size
@@ -167,9 +167,9 @@ class StreamingEncoder(torch.nn.Module):
 
         r_att_cache = torch.cat(r_att_cache, dim=1)  # concat on layers idx
         if not self.transformer:
-            r_cnn_cache = torch.cat(r_cnn_cache, dim=1)  # concat on layers 
+            r_cnn_cache = torch.cat(r_cnn_cache, dim=1)  # concat on layers
 
-        # <---------forward_chunk END---------> 
+        # <---------forward_chunk END--------->
 
         log_ctc_probs = self.ctc.log_softmax(chunk_out)
         log_probs, log_probs_idx = torch.topk(log_ctc_probs,
@@ -178,8 +178,8 @@ class StreamingEncoder(torch.nn.Module):
         log_probs = log_probs.to(chunk_xs.dtype)
 
         r_offset = offset + chunk_out.shape[1]
-        # the below ops not supported in Tensorrt 
-        # chunk_out_lens = torch.div(chunk_lens, subsampling_rate, 
+        # the below ops not supported in Tensorrt
+        # chunk_out_lens = torch.div(chunk_lens, subsampling_rate,
         #                   rounding_mode='floor')
         chunk_out_lens = chunk_lens // self.subsampling_rate
         r_offset = r_offset.unsqueeze(1)
@@ -374,7 +374,7 @@ def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
                             cnn_module_kernel, dtype=torch.float32)
 
     cache_mask = torch.ones(batch_size, 1, required_cache_size, dtype=torch.float32)
-    input_names = ['chunk_xs', 'chunk_lens', 'offset', 
+    input_names = ['chunk_xs', 'chunk_lens', 'offset',
                    'att_cache', 'cnn_cache', 'cache_mask']
     output_names = ['log_probs', 'log_probs_idx', 'chunk_out',
                     'chunk_out_lens', 'r_offset', 'r_att_cache',
@@ -529,7 +529,7 @@ if __name__ == '__main__':
     parser.add_argument('--streaming',
                         action='store_true',
                         help="whether to export streaming encoder, default false")
-    parser.add_argument('--decoding_chunk_size', 
+    parser.add_argument('--decoding_chunk_size',
                         default=16,
                         type=int,
                         required=False,

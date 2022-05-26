@@ -88,14 +88,14 @@ input [
   {
     name: "wav_lens"
     data_type: TYPE_INT32
-    dims: [1] 
+    dims: [1]
   }
 ]
 output [
   {
     name: "speech"
     data_type: TYPE_#DTYPE # FP32
-    dims: [#decoding_window, #num_mel_bins] 
+    dims: [#decoding_window, #num_mel_bins]
   },
   {
     name: "speech_lengths"

@@ -13,7 +13,7 @@ def generate_offline_input(args):
     mat = np.array([waveform] * batch_size, dtype=np.float32)
 
     out_dict = {"data": [{"WAV_LENS": [len(waveform)],
-                "WAV": {"shape": [len(waveform)], 
+                "WAV": {"shape": [len(waveform)],
                         "content": mat.flatten().tolist()}}]}
     json.dump(out_dict, open("offline_input.json", "w"))
 

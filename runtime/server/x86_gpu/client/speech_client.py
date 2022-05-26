@@ -62,7 +62,7 @@ class StreamingSpeechClient(object):
         frame_shift_ms = args.frame_shift_ms
         frame_length_ms = args.frame_length_ms
         # for the first chunk
-        # we need additional frames to generate 
+        # we need additional frames to generate
         # the exact first chunk length frames
         # since the subsampling will look ahead several frames
         first_chunk_length = (chunk_size - 1) * subsampling + context

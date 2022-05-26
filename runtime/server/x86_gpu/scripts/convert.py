@@ -35,7 +35,7 @@ if __name__ == "__main__":
     with open(os.path.join(args.onnx_model_dir, 'config.yaml'), 'r') as fin:
         onnx_configs = yaml.load(fin, Loader=yaml.FullLoader)
 
-    params = [("#beam_size", 10), ("#num_mel_bins", 80), ("#frame_shift", 10), 
+    params = [("#beam_size", 10), ("#num_mel_bins", 80), ("#frame_shift", 10),
               ("#frame_length", 25), ("#sample_rate", 16000), ("#output_size", 256),
               ("#lm_path", ""), ("#bidecoder", 0), ("#vocabulary_path", ""),
               ("#DTYPE", "FP32")]

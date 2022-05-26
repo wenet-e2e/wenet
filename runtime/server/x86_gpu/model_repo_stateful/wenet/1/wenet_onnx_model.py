@@ -57,7 +57,7 @@ class WenetModel(object):
 
         self.dtype = torch.float16
 
-    def generate_init_cache(self): 
+    def generate_init_cache(self):
         encoder_out = None
         return encoder_out
 
@@ -77,7 +77,7 @@ class WenetModel(object):
                 elif char == "<blank>":
                     blank_id = int(id)
                 elif char == "<sos/eos>":
-                    sos_eos = int(id) 
+                    sos_eos = int(id)
         vocab = [0] * len(id2vocab)
         for id, char in id2vocab.items():
             vocab[id] = char
@@ -109,7 +109,7 @@ class WenetModel(object):
     def infer(self, batch_log_probs, batch_log_probs_idx,
               seq_lens, rescore_index, batch_states):
         """
-        batch_states = [trieVector, batch_start, 
+        batch_states = [trieVector, batch_start,
                        batch_encoder_hist, cur_encoder_out]
         """
         trie_vector, batch_start, batch_encoder_hist, cur_encoder_out = batch_states
@@ -146,7 +146,7 @@ class WenetModel(object):
                 rescore_hyps.append(score_hyps[idx])
                 if cur_enc.shape[0] > max_length:
                     max_length = cur_enc.shape[0]
-            best_index = self.batch_rescoring(rescore_hyps, rescore_encoder_hist, 
+            best_index = self.batch_rescoring(rescore_hyps, rescore_encoder_hist,
                                               rescore_encoder_lens, max_length)
 
         best_sent = []
@@ -162,7 +162,7 @@ class WenetModel(object):
 
         return final_result, cur_encoder_out
 
-    def batch_ctc_prefix_beam_search_cpu(self, batch_log_probs_seq, 
+    def batch_ctc_prefix_beam_search_cpu(self, batch_log_probs_seq,
                                          batch_log_probs_idx,
                                          batch_len, batch_root,
                                          batch_start, beam_size,
@@ -171,7 +171,7 @@ class WenetModel(object):
                                          scorer):
         """
         Return: Batch x Beam_size elements, each element is a tuple
-                (score, list of ids),  
+                (score, list of ids),
         """
 
         batch_len_list = batch_len
@@ -181,8 +181,8 @@ class WenetModel(object):
             cur_len = int(batch_len_list[i])
             batch_log_probs_seq_list.append(batch_log_probs_seq[i][0:cur_len].tolist())
             batch_log_probs_idx_list.append(batch_log_probs_idx[i][0:cur_len].tolist())
-        score_hyps = ctc_beam_search_decoder_batch(batch_log_probs_seq_list, 
-                                                   batch_log_probs_idx_list, 
+        score_hyps = ctc_beam_search_decoder_batch(batch_log_probs_seq_list,
+                                                   batch_log_probs_idx_list,
                                                    batch_root,
                                                    batch_start,
                                                    beam_size,

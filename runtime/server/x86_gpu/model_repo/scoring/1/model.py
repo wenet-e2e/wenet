@@ -77,7 +77,7 @@ class TritonPythonModel:
             elif key == "beta":
                 beta = float(value)
             elif key == "vocabulary":
-                vocab_path = value     
+                vocab_path = value
             elif key == "bidecoder":
                 bidecoder = int(value)
 

@@ -59,7 +59,7 @@ class Feat(object):
         if self.frames is None:
             self.frames = frames
         else:
-            self.frames = torch.cat([self.frames, frames], axis=0)    
+            self.frames = torch.cat([self.frames, frames], axis=0)
 
     def get_frames(self, num_frames: int):
         seg = self.frames[0: num_frames]
@@ -96,7 +96,7 @@ class TritonPythonModel:
 
         # Get OUTPUT0 configuration
         output0_config = pb_utils.get_output_config_by_name(
-            model_config, "speech")        
+            model_config, "speech")
         # Convert Triton types to numpy types
         self.output0_dtype = pb_utils.triton_string_to_numpy(
             output0_config['data_type'])
@@ -110,7 +110,7 @@ class TritonPythonModel:
         self.decoding_window = output0_config['dims'][-2]
         # Get OUTPUT1 configuration
         output1_config = pb_utils.get_output_config_by_name(
-            model_config, "speech_lengths")        
+            model_config, "speech_lengths")
         # Convert Triton types to numpy types
         self.output1_dtype = pb_utils.triton_string_to_numpy(
             output1_config['data_type'])
@@ -135,7 +135,7 @@ class TritonPythonModel:
         self.frame_stride = (chunk_size_s * 1000) // frame_shift_ms
 
         first_chunk_size = int(self.chunk_size)
-        cur_frames = _kaldifeat.num_frames(first_chunk_size, opts.frame_opts) 
+        cur_frames = _kaldifeat.num_frames(first_chunk_size, opts.frame_opts)
         while cur_frames < self.decoding_window:
             first_chunk_size += frame_shift_ms * sample_rate // 1000
             cur_frames = _kaldifeat.num_frames(first_chunk_size, opts.frame_opts)
@@ -209,7 +209,7 @@ class TritonPythonModel:
             end = in_end.as_numpy()[0][0]
 
             if start:
-                self.seq_feat[corrid] = Feat(corrid, self.offset_ms, 
+                self.seq_feat[corrid] = Feat(corrid, self.offset_ms,
                                              self.sample_rate,
                                              self.first_chunk_size,
                                              self.frame_stride,
@@ -235,7 +235,7 @@ class TritonPythonModel:
         features = self.feature_extractor(total_waves)
 
         batch_size = len(batch_seqid)
-        batch_speech = torch.zeros((batch_size, self.decoding_window, 
+        batch_speech = torch.zeros((batch_size, self.decoding_window,
                                     self.feature_size), dtype=self.dtype)
         batch_speech_lens = torch.zeros((batch_size, 1), dtype=torch.int32)
         i = 0
@@ -244,7 +244,7 @@ class TritonPythonModel:
             r_frames = self.seq_feat[corrid].get_frames(self.decoding_window)
             speech = batch_speech[i: i + 1]
             speech_lengths = batch_speech_lens[i: i + 1]
-            i += 1 
+            i += 1
             speech_lengths[0] = r_frames.size(0)
             speech[0][0:r_frames.size(0)] = r_frames.to(speech.device)
             # out_tensor0 = pb_utils.Tensor.from_dlpack("speech", to_dlpack(speech))
