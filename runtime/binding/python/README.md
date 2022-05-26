@@ -38,6 +38,8 @@ print(ans)
 `model_dir` is the `Runtime Model` directory of WeNet, it contains:
 * `final.zip`: runtime TorchScript ASR model.
 * `words.txt`: symbol table for decoding.
+* `TLG.fst`: optional, it means decoding with LM when `TLG.fst` is given.
+* `units.txt`: optional, e2e model units which is for generating unit level timestamp when decoded with LM.
 
 Please refer https://github.com/wenet-e2e/wenet/blob/main/docs/pretrained_models.md for the details of `Runtime Model`.
 
