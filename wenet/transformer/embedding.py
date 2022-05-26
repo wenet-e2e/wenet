@@ -64,7 +64,7 @@ class PositionalEncoding(torch.nn.Module):
         return self.dropout(x), self.dropout(pos_emb)
 
     def position_encoding(self, offset: Union[int, torch.Tensor], size: int,
-                          apply_dropout=True) -> torch.Tensor:
+                          apply_dropout: bool = True) -> torch.Tensor:
         """ For getting encoding in a streaming fashion
 
         Attention!!!!!
@@ -80,7 +80,7 @@ class PositionalEncoding(torch.nn.Module):
         Returns:
             torch.Tensor: Corresponding encoding
         """
-        if type(offset) == int:
+        if isinstance(offset, int):
             assert offset + size < self.max_len
             pos_emb = self.pe[:, offset:offset + size]
         else:
