@@ -21,7 +21,7 @@ input [
   {
     name: "encoder_out"
     data_type: TYPE_#DTYPE
-    dims: [-1, #encoder_out_feat_size] # [-1, feature_size]
+    dims: [-1, #output_size] # [-1, feature_size]
   },
   {
     name: "encoder_out_lens"
