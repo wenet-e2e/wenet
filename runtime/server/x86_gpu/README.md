@@ -201,17 +201,17 @@ chunksize = 16
 |Scoring                | left-full | left-8 | left-4 | left-2 | left-1 | left-0 |
 |-----------------------|-----------|--------|--------|--------|--------|--------|
 | DEV |
-|ctc greedy             | 9.16	    | 9.19   |9.12	  |9.05    |9.08	  | 9.3    |
-|ctc prefix beam	      | 9.1	      | 9.11	 |9.04	  |8.98	   |9	      |9.23    |
-|attention rescoring	  | 8.76      |	8.75	 |8.69	  |8.62	   |8.61	  |8.74    |
+|ctc greedy             | 9.16        | 9.19   |9.12      |9.05    |9.08      | 9.3    |
+|ctc prefix beam          | 9.1          | 9.11     |9.04      |8.98       |9          |9.23    |
+|attention rescoring      | 8.76      |    8.75     |8.69      |8.62       |8.61      |8.74    |
 | Test Meeting |
-| ctc greedy	          |18.43	    |18.47	 |18.53	  |18.81	 |19.27	  |20.37   |
-| ctc prefix beam	      |18.27	    |18.29	 |18.35	  |18.65	 |19.13	  |20.22   |
-| attention rescoring	  |17.77	    |17.81	 |17.9	  |18.19	 |18.66	  |19.68   |
+| ctc greedy              |18.43        |18.47     |18.53      |18.81     |19.27      |20.37   |
+| ctc prefix beam          |18.27        |18.29     |18.35      |18.65     |19.13      |20.22   |
+| attention rescoring      |17.77        |17.81     |17.9      |18.19     |18.66      |19.68   |
 | Test Net |
-|ctc greedy	            |10.91	    |10.93	 |10.98	  |11.12	 |11.29	  |11.77   |
-|ctc prefix beam	      |10.86	    |10.88	 |10.93	  |11.07	 |11.24	  |11.72   |
-|attention rescoring	  |10.13	    |10.16	 |10.2	  |10.34	 |10.51	  |10.93   |
+|ctc greedy                |10.91        |10.93     |10.98      |11.12     |11.29      |11.77   |
+|ctc prefix beam          |10.86        |10.88     |10.93      |11.07     |11.24      |11.72   |
+|attention rescoring      |10.13        |10.16     |10.2      |10.34     |10.51      |10.93   |
 
 With dynamic left = False in training and chunk size=16 when inferencing, we take all the left chunks:
 |Scoring            | DEV | Test Meeting | Test Net |
