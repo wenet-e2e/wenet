@@ -33,7 +33,18 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 Please see `examples/$dataset/s0/README.md` for benchmark on different speech datasets.
 
-## Installation
+## Installation(Python Only)
+
+If you just want to use WeNet as a python package for speech recognition application,
+just install it by `pip`, please note python 3.6+ is required.
+``` sh
+pip3 install wenet
+```
+
+And please see [doc](runtime/binding/python/README.md) for usage.
+
+
+## Installation(Training and Developing)
 
 - Clone the repo
 ``` sh
