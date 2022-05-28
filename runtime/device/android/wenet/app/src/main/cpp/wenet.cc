@@ -72,12 +72,9 @@ void reset(JNIEnv *env, jobject) {
 
 void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
   jsize size = env->GetArrayLength(jWaveform);
-  std::vector<int16_t> waveform(size);
-  env->GetShortArrayRegion(jWaveform, 0, size, &waveform[0]);
-  std::vector<float> floatWaveform(waveform.begin(), waveform.end());
-  feature_pipeline->AcceptWaveform(floatWaveform);
-  LOG(INFO) << "wenet accept waveform in ms: "
-            << int(floatWaveform.size() / 16);
+  int16_t* waveform = env->GetShortArrayElements(jWaveform, 0);
+  feature_pipeline->AcceptWaveform(waveform, size);
+  LOG(INFO) << "wenet accept waveform in ms: " << int(size / 16);
 }
 
 void set_input_finished() {
