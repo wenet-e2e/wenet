@@ -53,7 +53,7 @@ struct LatticeFasterDecoderConfig {
   // a very important parameter.  It affects the algorithm that prunes the
   // tokens as we go.
   BaseFloat prune_scale;
-  BaseFloat length_penalty; // for balancing the del/ins ratio, suggest set to -3.0
+  BaseFloat length_penalty;  // for balancing the del/ins ratio, suggested -3.0
 
   // Most of the options inside det_opts are not actually queried by the
   // LatticeFasterDecoder class itself, but by the code that calls it, for
