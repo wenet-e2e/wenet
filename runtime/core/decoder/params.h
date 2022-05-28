@@ -14,7 +14,9 @@
 #ifdef USE_ONNX
 #include "decoder/onnx_asr_model.h"
 #endif
+#ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
+#endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/flags.h"
@@ -118,11 +120,15 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
     LOG(FATAL) << "Please rebuild with cmake options '-DONNX=ON'.";
 #endif
   } else {
+#ifdef USE_TORCH
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
     TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
     auto model = std::make_shared<TorchAsrModel>();
     model->Read(FLAGS_model_path);
     resource->model = model;
+#else
+    LOG(FATAL) << "Please rebuild with cmake options '-DTORCH=ON'.";
+#endif
   }
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
