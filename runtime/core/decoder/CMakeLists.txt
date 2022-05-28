@@ -6,6 +6,10 @@ set(decoder_srcs
   ctc_wfst_beam_search.cc
   ctc_endpoint.cc
 )
+
+if(NOT TORCH AND NOT ONNX)
+  message(FATAL_ERROR "Please build with TORCH or ONNX!!!")
+endif()
 if(TORCH)
   list(APPEND decoder_srcs torch_asr_model.cc)
 endif()
