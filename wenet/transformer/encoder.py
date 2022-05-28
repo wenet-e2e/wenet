@@ -170,11 +170,10 @@ class BaseEncoder(torch.nn.Module):
     def forward_chunk(
         self,
         xs: torch.Tensor,
-        offset: int,
-        required_cache_size: int,
-        att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-        cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-        att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        offset: torch.Tensor,
+        required_cache_size: torch.Tensor,
+        att_cache: torch.Tensor,
+        cnn_cache: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Forward just one chunk
 
@@ -183,7 +182,7 @@ class BaseEncoder(torch.nn.Module):
                 where `time == (chunk_size - 1) * subsample_rate + \
                         subsample.right_context + 1`
             offset (int): current offset in encoder output time stamp
-            required_cache_size (int): cache size required for next chunk
+            required_cache_size (torch.Tensor: int): cache size required for next chunk
                 compuation
                 >=0: actual cache size
                 <0: means all history cache is required
@@ -223,12 +222,31 @@ class BaseEncoder(torch.nn.Module):
         attention_key_size = cache_t1 + chunk_size
         pos_emb = self.embed.position_encoding(
             offset=offset - cache_t1, size=attention_key_size)
-        if required_cache_size < 0:
-            next_cache_start = 0
-        elif required_cache_size == 0:
-            next_cache_start = attention_key_size
-        else:
-            next_cache_start = max(attention_key_size - required_cache_size, 0)
+        # below code equal to:
+        # if required_cache_size < 0:
+        #   next_cache_start = 0
+        # elif required_cache_size == 0:
+        #   next_cache_start = attention_key_size
+        # else:
+        #   next_cache_start = max(attention_key_size - required_cache_size, 0)
+        zeor_tensor = torch.tensor(0)
+        lt_zero = torch.less(required_cache_size, zeor_tensor)
+        gt_zero = torch.greater(required_cache_size, zeor_tensor)
+        # here attention_key_size and required_cache_size are tensors
+        tmp_next_cache_start = attention_key_size - required_cache_size
+        tmp_next_cache_start = torch.where(
+            torch.greater(tmp_next_cache_start, 0),
+            tmp_next_cache_start, 0)
+        next_cache_start= torch.where(
+            lt_zero,
+            zeor_tensor,
+            attention_key_size)
+        next_cache_start = torch.where(
+            gt_zero,
+            tmp_next_cache_start,
+            next_cache_start)
+        # att_mask.size(2) will alway equal to att_cache.size(2)+chunk_size
+        att_mask = torch.ones(xs.size(0), 1, att_cache.size(2)+chunk_size)
         r_att_cache = []
         r_cnn_cache = []
         for i, layer in enumerate(self.encoders):
