@@ -246,7 +246,7 @@ class BaseEncoder(torch.nn.Module):
             tmp_next_cache_start,
             next_cache_start)
                
-        # att_cache.size(2) == 0 means: fake cache and real mask
+        # att_cache.size(2) == 1 means: fake cache and real mask
         # else real cache and fake mask
         mask_id = torch.where(att_cache.size(2) == 1, 1, 0)
         att_mask = torch.ones(xs.size(0), 1, mask_id+att_cache.size(2)+chunk_size)
