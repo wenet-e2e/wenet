@@ -170,7 +170,7 @@ class BaseEncoder(torch.nn.Module):
     def forward_chunk(
         self,
         xs: torch.Tensor,
-        offset: int,
+        offset: torch.Tensor,
         required_cache_size: torch.Tensor,
         att_cache: torch.Tensor,
         cnn_cache: torch.Tensor,
