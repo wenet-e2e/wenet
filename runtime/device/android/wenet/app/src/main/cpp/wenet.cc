@@ -34,31 +34,30 @@ std::shared_ptr<DecodeResource> resource;
 DecodeState state = kEndBatch;
 std::string total_result;  // NOLINT
 
-void init(JNIEnv *env, jobject, jstring jModelPath, jstring jDictPath) {
+void init(JNIEnv* env, jobject, jstring jModelDir) {
+  const char* pModelDir = env->GetStringUTFChars(jModelDir, nullptr);
+
+  std::string modelPath = std::string(pModelDir) + "/final.zip";
+  std::string dictPath = std::string(pModelDir) + "/words.txt";
   auto model = std::make_shared<TorchAsrModel>();
-  const char *pModelPath = (env)->GetStringUTFChars(jModelPath, nullptr);
-  std::string modelPath = std::string(pModelPath);
-  LOG(INFO) << "model path: " << modelPath;
   model->Read(modelPath);
+  LOG(INFO) << "model path: " << modelPath;
+
   resource = std::make_shared<DecodeResource>();
   resource->model = model;
-
-  const char *pDictPath = (env)->GetStringUTFChars(jDictPath, nullptr);
-  std::string dictPath = std::string(pDictPath);
-  LOG(INFO) << "dict path: " << dictPath;
   resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
           fst::SymbolTable::ReadText(dictPath));
+  LOG(INFO) << "dict path: " << dictPath;
 
   PostProcessOptions post_process_opts;
   resource->post_processor =
-    std::make_shared<PostProcessor>(std::move(post_process_opts));
+    std::make_shared<PostProcessor>(post_process_opts);
 
   feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
   feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
 
   decode_config = std::make_shared<DecodeOptions>();
   decode_config->chunk_size = 16;
-
   decoder = std::make_shared<AsrDecoder>(feature_pipeline, resource,
                                          *decode_config);
 }
@@ -145,8 +144,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
   }
 
   static const JNINativeMethod methods[] = {
-    {"init", "(Ljava/lang/String;Ljava/lang/String;)V",
-     reinterpret_cast<void *>(wenet::init)},
+    {"init", "(Ljava/lang/String;)V", reinterpret_cast<void*>(wenet::init)},
     {"reset", "()V", reinterpret_cast<void *>(wenet::reset)},
     {"acceptWaveform", "([S)V",
      reinterpret_cast<void *>(wenet::accept_waveform)},
