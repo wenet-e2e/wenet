@@ -4,8 +4,10 @@ project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
 option(FST_HAVE_BIN "whether to build fst binaries" OFF)
-set(ONNX OFF)  # ONNX is not used
 set(CMAKE_VERBOSE_MAKEFILE OFF)
+
+option(TORCH "whether to build with Torch" OFF)
+option(ONNX "whether to build with ONNX" ON)
 
 include(FetchContent)
 include(ExternalProject)
@@ -26,6 +28,7 @@ else()
 endif()
 
 include(libtorch)
+include(onnx)
 include(openfst)
 include(pybind11)
 

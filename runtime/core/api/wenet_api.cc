@@ -19,7 +19,12 @@
 #include <vector>
 
 #include "decoder/asr_decoder.h"
+#ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
+#endif
+#ifdef USE_ONNX
+#include "decoder/onnx_asr_model.h"
+#endif
 #include "post_processor/post_processor.h"
 #include "utils/file.h"
 #include "utils/json.h"
@@ -34,13 +39,20 @@ class Recognizer {
         std::make_shared<wenet::FeaturePipeline>(*feature_config_);
     // Resource init
     resource_ = std::make_shared<wenet::DecodeResource>();
-    wenet::TorchAsrModel::InitEngineThreads();
+
+#ifdef USE_TORCH
     std::string model_path = wenet::JoinPath(model_dir, "final.zip");
     CHECK(wenet::FileExists(model_path));
-
+    wenet::TorchAsrModel::InitEngineThreads();
     auto model = std::make_shared<wenet::TorchAsrModel>();
     model->Read(model_path);
     resource_->model = model;
+#else
+    wenet::OnnxAsrModel::InitEngineThreads();
+    auto model = std::make_shared<wenet::OnnxAsrModel>();
+    model->Read(model_dir);
+    resource_->model = model;
+#endif
 
     std::string symbol_path = wenet::JoinPath(model_dir, "words.txt");
     CHECK(wenet::FileExists(symbol_path));
@@ -77,7 +89,7 @@ class Recognizer {
   void InitDecoder() {
     CHECK(decoder_ == nullptr);
     // Optional init context graph
-    if (context_.size() > 0) {
+    if (!context_.empty()) {
       context_config_->context_score = context_score_;
       auto context_graph =
           std::make_shared<wenet::ContextGraph>(*context_config_);
@@ -174,7 +186,7 @@ class Recognizer {
   std::string result_;
   bool enable_timestamp_ = false;
   std::vector<std::string> context_;
-  float context_score_;
+  float context_score_ = 0;
   std::string language_ = "chs";
 };
 
@@ -214,7 +226,7 @@ void wenet_set_nbest(void* decoder, int n) {
 
 void wenet_set_timestamp(void* decoder, int flag) {
   Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
-  bool enable = flag > 0 ? true : false;
+  bool enable = flag > 0;
   recognizer->set_enable_timestamp(enable);
 }
 

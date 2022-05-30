@@ -47,6 +47,7 @@ class BuildExtension(build_ext):
 
         libs = []
         torch_lib = 'fc_base/libtorch-src/lib'
+        onnx_lib = 'fc_base/onnxruntime-src/lib'
         for ext in ['so', 'pyd']:
             libs.extend(glob.glob(
                 f"{self.build_temp}/**/_wenet*.{ext}", recursive=True))
@@ -55,6 +56,7 @@ class BuildExtension(build_ext):
                 f"{self.build_temp}/**/*wenet_api.{ext}", recursive=True))
             libs.extend(glob.glob(f'{src_dir}/{torch_lib}/*c10.{ext}'))
             libs.extend(glob.glob(f'{src_dir}/{torch_lib}/*torch_cpu.{ext}'))
+            libs.extend(glob.glob(f'{src_dir}/{onnx_lib}/*onnxruntime.{ext}'))
 
         if not is_windows():
             fst_lib = 'fc_base/openfst-build/src/lib/.libs'
