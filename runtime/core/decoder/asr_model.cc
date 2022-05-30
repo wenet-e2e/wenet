@@ -9,18 +9,18 @@
 namespace wenet {
 
 int AsrModel::num_frames_for_chunk(bool start) const {
-  int num_requried_frames = 0;
+  int num_required_frames = 0;
   if (chunk_size_ > 0) {
     if (!start) {                        // First batch
       int context = right_context_ + 1;  // Add current frame
-      num_requried_frames = (chunk_size_ - 1) * subsampling_rate_ + context;
+      num_required_frames = (chunk_size_ - 1) * subsampling_rate_ + context;
     } else {
-      num_requried_frames = chunk_size_ * subsampling_rate_;
+      num_required_frames = chunk_size_ * subsampling_rate_;
     }
   } else {
-    num_requried_frames = std::numeric_limits<int>::max();
+    num_required_frames = std::numeric_limits<int>::max();
   }
-  return num_requried_frames;
+  return num_required_frames;
 }
 
 void AsrModel::CacheFeature(

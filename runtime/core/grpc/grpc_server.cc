@@ -34,7 +34,7 @@ GrpcConnectionHandler::GrpcConnectionHandler(
       decode_resource_(std::move(decode_resource)) {}
 
 void GrpcConnectionHandler::OnSpeechStart() {
-  LOG(INFO) << "Recieved speech start signal, start reading speech";
+  LOG(INFO) << "Received speech start signal, start reading speech";
   got_start_tag_ = true;
   response_->set_status(Response::ok);
   response_->set_type(Response::server_ready);
@@ -48,7 +48,7 @@ void GrpcConnectionHandler::OnSpeechStart() {
 }
 
 void GrpcConnectionHandler::OnSpeechEnd() {
-  LOG(INFO) << "Recieved speech end signal";
+  LOG(INFO) << "Received speech end signal";
   CHECK(feature_pipeline_ != nullptr);
   feature_pipeline_->set_input_finished();
   got_end_tag_ = true;
@@ -80,7 +80,7 @@ void GrpcConnectionHandler::OnSpeechData() {
   const int16_t* pcm_data =
       reinterpret_cast<const int16_t*>(request_->audio_data().c_str());
   int num_samples = request_->audio_data().length() / sizeof(int16_t);
-  VLOG(2) << "Recieved " << num_samples << " samples";
+  VLOG(2) << "Received " << num_samples << " samples";
   CHECK(feature_pipeline_ != nullptr);
   CHECK(decoder_ != nullptr);
   feature_pipeline_->AcceptWaveform(pcm_data, num_samples);
@@ -122,7 +122,7 @@ void GrpcConnectionHandler::DecodeThreadFunc() {
       decoder_->Rescoring();
       SerializeResult(true);
       OnFinalResult();
-      // If it's not continuous decoidng, continue to do next recognition
+      // If it's not continuous decoding, continue to do next recognition
       // otherwise stop the recognition
       if (continuous_decoding_) {
         decoder_->ResetContinuousDecoding();
