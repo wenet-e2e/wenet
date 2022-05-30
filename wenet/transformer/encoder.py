@@ -245,10 +245,10 @@ class BaseEncoder(torch.nn.Module):
             gt_zero,
             tmp_next_cache_start,
             next_cache_start)
-               
+        
         # att_mask.size(2) will alway equal to att_cache.size(2)+chunk_size
         att_mask = torch.ones(xs.size(0), 1, att_cache.size(2)+chunk_size)
-          
+        
         r_att_cache = []
         r_cnn_cache = []
         for i, layer in enumerate(self.encoders):
