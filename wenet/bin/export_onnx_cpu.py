@@ -92,6 +92,12 @@ def export_encoder(asr_model, args):
     #   3. 16/0  mode: next_cache_start == chunk_size for all chunks
     #   4. -1/-1 mode: next_cache_start == 0 for all chunks
     #   NO MORE DYNAMIC CHANGES!!
+    #
+    # NOTE(Mddct): We retain the current design for the convenience of supporting some
+    #   inference frameworks without dynamic shapes. If you're interested in all-in-one
+    #   model that supports different chunks please see:
+    #   https://github.com/wenet-e2e/wenet/pull/1174
+
     if args['left_chunks'] > 0:  # 16/4
         required_cache_size = args['chunk_size'] * args['left_chunks']
         offset = required_cache_size
