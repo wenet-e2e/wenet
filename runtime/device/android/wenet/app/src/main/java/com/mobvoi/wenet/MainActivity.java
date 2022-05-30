@@ -3,6 +3,7 @@ package com.mobvoi.wenet;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
@@ -20,6 +21,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
@@ -29,32 +32,35 @@ public class MainActivity extends AppCompatActivity {
   private static final String LOG_TAG = "WENET";
   private static final int SAMPLE_RATE = 16000;  // The sampling rate
   private static final int MAX_QUEUE_SIZE = 2500;  // 100 seconds audio, 1 / 0.04 * 100
+  private static final List<String> resource = Arrays.asList(
+    "final.zip", "words.txt", "ctc.ort", "decoder.ort", "encoder.ort"
+  );
 
   private boolean startRecord = false;
   private AudioRecord record = null;
   private int miniBufferSize = 0;  // 1280 bytes 648 byte 40ms, 0.04s
   private final BlockingQueue<short[]> bufferQueue = new ArrayBlockingQueue<>(MAX_QUEUE_SIZE);
 
-  public static String assetFilePath(Context context, String assetName) {
-    File file = new File(context.getFilesDir(), assetName);
-    if (file.exists() && file.length() > 0) {
-      return file.getAbsolutePath();
-    }
-
-    try (InputStream is = context.getAssets().open(assetName)) {
-      try (OutputStream os = new FileOutputStream(file)) {
-        byte[] buffer = new byte[4 * 1024];
-        int read;
-        while ((read = is.read(buffer)) != -1) {
-          os.write(buffer, 0, read);
+  public static void assetsInit(Context context) throws IOException {
+    AssetManager assetMgr = context.getAssets();
+    // Unzip all files in resource from assets to context.
+    // Note: Uninstall the APP will remove the resource files in the context.
+    for (String file : assetMgr.list("")) {
+      if (resource.contains(file)) {
+        File dst = new File(context.getFilesDir(), file);
+        if (!dst.exists() || dst.length() == 0) {
+          Log.i(LOG_TAG, "Unzipping " + file + " to " + dst.getAbsolutePath());
+          InputStream is = assetMgr.open(file);
+          OutputStream os = new FileOutputStream(dst);
+          byte[] buffer = new byte[4 * 1024];
+          int read;
+          while ((read = is.read(buffer)) != -1) {
+            os.write(buffer, 0, read);
+          }
+          os.flush();
         }
-        os.flush();
       }
-      return file.getAbsolutePath();
-    } catch (IOException e) {
-      Log.e(LOG_TAG, "Error process asset " + assetName + " to file path");
     }
-    return null;
   }
 
   @Override
@@ -63,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
     if (requestCode == MY_PERMISSIONS_RECORD_AUDIO) {
       if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
         Log.i(LOG_TAG, "record permission is granted");
-        initRecoder();
+        initRecorder();
       } else {
         Toast.makeText(this, "Permissions denied to record audio", Toast.LENGTH_LONG).show();
         Button button = findViewById(R.id.button);
@@ -76,14 +82,16 @@ public class MainActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-
     requestAudioPermissions();
+    try {
+      assetsInit(this);
+    } catch (IOException e) {
+      Log.e(LOG_TAG, "Error process asset files to file path");
+    }
 
-    final String modelPath = new File(assetFilePath(this, "final.zip")).getAbsolutePath();
-    final String dictPath = new File(assetFilePath(this, "words.txt")).getAbsolutePath();
     TextView textView = findViewById(R.id.textView);
     textView.setText("");
-    Recognize.init(modelPath, dictPath);
+    Recognize.init(getFilesDir().getPath());
 
     Button button = findViewById(R.id.button);
     button.setText("Start Record");
@@ -111,11 +119,11 @@ public class MainActivity extends AppCompatActivity {
           new String[]{Manifest.permission.RECORD_AUDIO},
           MY_PERMISSIONS_RECORD_AUDIO);
     } else {
-      initRecoder();
+      initRecorder();
     }
   }
 
-  private void initRecoder() {
+  private void initRecorder() {
     // buffer size in bytes 1280
     miniBufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE,
         AudioFormat.CHANNEL_IN_MONO,
