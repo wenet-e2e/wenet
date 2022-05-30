@@ -19,9 +19,7 @@ android {
         }
     }
     packagingOptions {
-        jniLibs {
-            pickFirsts += ['lib/arm64-v8a/libc++_shared.so']
-        }
+        pickFirst 'lib/arm64-v8a/libc++_shared.so'
     }
     configurations {
         extractForNativeBuild
