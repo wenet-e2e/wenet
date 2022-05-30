@@ -228,18 +228,18 @@ class BaseEncoder(torch.nn.Module):
         # elif required_cache_size == 0:
         #   next_cache_start = attention_key_size
         # else:
-        #   next_cache_start = max(attention_key_size - required_cache_size, 0)    
+        #   next_cache_start = max(attention_key_size - required_cache_size, 0)
         zeor_tensor = torch.tensor(0)
         lt_zero = torch.less(required_cache_size, zeor_tensor)
         gt_zero = torch.greater(required_cache_size, zeor_tensor)
         # here attention_key_size and required_cache_size are tensors
         tmp_next_cache_start = attention_key_size - required_cache_size
         tmp_next_cache_start = torch.where(
-            torch.greater(tmp_next_cache_start, 0), 
+            torch.greater(tmp_next_cache_start, 0),
             tmp_next_cache_start, 0)
         next_cache_start= torch.where(
-            lt_zero, 
-            zeor_tensor, 
+            lt_zero,
+            zeor_tensor,
             attention_key_size)
         next_cache_start = torch.where(
             gt_zero,
