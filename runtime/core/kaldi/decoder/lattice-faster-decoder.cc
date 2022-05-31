@@ -4,6 +4,7 @@
 //           2013-2018  Johns Hopkins University (Author: Daniel Povey)
 //                2014  Guoguo Chen
 //                2018  Zhehuai Chen
+//                2021  Binbin Zhang, Zhendong Peng
 
 // See ../../COPYING for clarification regarding multiple authors
 //
