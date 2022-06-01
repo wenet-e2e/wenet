@@ -132,7 +132,7 @@ void ConnectionHandler::DecodeThreadFunc() {
         decoder_->Rescoring();
         std::string result = SerializeResult(true);
         OnFinalResult(result);
-        // If it's not continuous decoidng, continue to do next recognition
+        // If it's not continuous decoding, continue to do next recognition
         // otherwise stop the recognition
         if (continuous_decoding_) {
           decoder_->ResetContinuousDecoding();

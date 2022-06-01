@@ -81,7 +81,7 @@ class FeaturePipeline {
   bool ReadOne(std::vector<float>* feat);
 
   // Read #num_frames frame features.
-  // Return False if less then #num_frames features are read and the
+  // Return False if less than #num_frames features are read and the
   // input is finished.
   // Return True if #num_frames features are read.
   // This function is a blocking method when there is no feature
@@ -105,8 +105,8 @@ class FeaturePipeline {
   bool input_finished_;
 
   // The feature extraction is done in AcceptWaveform().
-  // This wavefrom sample points are consumed by frame size.
-  // The residual wavefrom sample points after framing are
+  // This waveform sample points are consumed by frame size.
+  // The residual waveform sample points after framing are
   // kept to be used in next AcceptWaveform() calling.
   std::vector<float> remained_wav_;
 

@@ -26,7 +26,7 @@
 
 namespace wenet {
 
-// This code is based on kaldi Fbank implentation, please see
+// This code is based on kaldi Fbank implementation, please see
 // https://github.com/kaldi-asr/kaldi/blob/master/src/feat/feature-fbank.cc
 class Fbank {
  public:
@@ -117,7 +117,7 @@ class Fbank {
     return static_cast<int>(pow(2, ceil(log(n) / log(2))));
   }
 
-  // preemphasis
+  // pre emphasis
   void PreEmphasis(float coeff, std::vector<float>* data) const {
     if (coeff == 0.0) return;
     for (int i = data->size() - 1; i > 0; i--)
@@ -188,9 +188,7 @@ class Fbank {
         }
 
         (*feat)[i][j] = mel_energy;
-        // printf("%f ", mel_energy);
       }
-      // printf("\n");
     }
     return num_frames;
   }
