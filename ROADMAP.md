@@ -8,7 +8,7 @@ Please open up [issues](https://github.com/wenet-e2e/wenet/issues/) or
 Feel free to volunteer yourself if you are interested in trying out some items(they do not have to be on the list).
 
 
-## WeNet 3.0
+## WeNet 3.0 (2023.06)
 
 - [x] ONNX support
 - [ ] [Vosk](https://github.com/alphacep/vosk-api/) like models and API for developers.
@@ -24,7 +24,7 @@ Feel free to volunteer yourself if you are interested in trying out some items(t
   - [ ] GraphCore
   - [ ] TO ADD
 
-## WeNet 2.0
+## WeNet 2.0 (2022.06)
 
 - [x] U2++ framework for better accuracy
 - [x] n-gram + WFST language model solution
@@ -32,7 +32,7 @@ Feel free to volunteer yourself if you are interested in trying out some items(t
 - [x] Very big data training support with UIO
 - [x] More dataset support, including WenetSpeech, GigaSpeech, HKUST and so on.
 
-## WeNet 1.0
+## WeNet 1.0 (2021.02)
 
 - [x] Streaming solution(U2 framework)
 - [x] Production runtime solution with `TorchScript` training and `LibTorch` inference.
