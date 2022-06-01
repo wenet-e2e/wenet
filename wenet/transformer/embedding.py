@@ -80,7 +80,7 @@ class PositionalEncoding(torch.nn.Module):
         Returns:
             torch.Tensor: Corresponding encoding
         """
-        if isinstance(offset, int):
+        if isinstance(offset, int) or offset.dim() == 0:  # dim=0, torch.scalar
             assert offset + size < self.max_len
             pos_emb = self.pe[:, offset:offset + size]
         else:
