@@ -15,7 +15,8 @@ Feel free to volunteer yourself if you are interested in trying out some items(t
   - [ ] Models(Chinese/English/Japanese/Korean/French/German/Spanish/Portuguese)
   - [ ] API(python/c/c++/go/java)
 - [ ] Self training, streaming
-- [ ] Light weight and on-device model exploration
+- [ ] Light weight, low latency, on-device model exploration
+- [ ] Audio-Visual speech recognition
 - [ ] Platforms
   - [ ] Rasphberry Pi
   - [ ] Harmony OS
@@ -37,5 +38,4 @@ Feel free to volunteer yourself if you are interested in trying out some items(t
 - [x] Streaming solution(U2 framework)
 - [x] Production runtime solution with `TorchScript` training and `LibTorch` inference.
 - [x] Unified streaming and non-streaming model(U2 framework)
-
 
