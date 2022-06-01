@@ -1,5 +1,5 @@
 // Copyright (c) From https://github.com/nbsdx/SimpleJSON
-//               2022 Binbin Zhang(binbzha@qq.com)
+//               2022 Binbin Zhang (binbzha@qq.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
