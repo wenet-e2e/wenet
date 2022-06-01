@@ -16,10 +16,10 @@
 """Positonal Encoding Module."""
 
 import math
-from typing import Tuple
+from typing import Tuple, Union
 
 import torch
-
+import torch.nn.functional as F
 
 class PositionalEncoding(torch.nn.Module):
     """Positional encoding.
@@ -55,24 +55,26 @@ class PositionalEncoding(torch.nn.Module):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+                offset: Union[int, torch.Tensor] = 0) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
         """Add positional encoding.
 
         Args:
             x (torch.Tensor): Input. Its shape is (batch, time, ...)
-            offset (int): position offset
+            offset (int, torch.tensor): position offset
 
         Returns:
             torch.Tensor: Encoded tensor. Its shape is (batch, time, ...)
             torch.Tensor: for compatibility to RelPositionalEncoding
         """
-        assert offset + x.size(1) < self.max_len
+
         self.pe = self.pe.to(x.device)
-        pos_emb = self.pe[:, offset:offset + x.size(1)]
+        pos_emb = self.position_encoding(offset, x.size(1), False)
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
-    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
+    def position_encoding(self, offset: Union[int, torch.Tensor], size: int,
+                          apply_dropout: bool = True) -> torch.Tensor:
         """ For getting encoding in a streaming fashion
 
         Attention!!!!!
@@ -82,15 +84,27 @@ class PositionalEncoding(torch.nn.Module):
         be applied several times.
 
         Args:
-            offset (int): start offset
+            offset (int or torch.tensor): start offset
             size (int): requried size of position encoding
 
         Returns:
             torch.Tensor: Corresponding encoding
         """
-        assert offset + size < self.max_len
-        return self.dropout(self.pe[:, offset:offset + size])
+        if isinstance(offset, int):
+            assert offset + size < self.max_len
+            pos_emb = self.pe[:, offset:offset + size]
+        else:
+            assert torch.max(offset) + size < self.max_len
+            index = offset.unsqueeze(1) + \
+                torch.arange(0, size).to(offset.device)  # B X T
+            flag = index > 0
+            # remove negative offset
+            index = index * flag
+            pos_emb = F.embedding(index, self.pe[0])  # B X T X d_model
 
+        if apply_dropout:
+            pos_emb = self.dropout(pos_emb)
+        return pos_emb
 
 class RelPositionalEncoding(PositionalEncoding):
     """Relative positional encoding module.
@@ -106,7 +120,8 @@ class RelPositionalEncoding(PositionalEncoding):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+                offset: Union[int, torch.Tensor] = 0) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute positional encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, `*`).
@@ -114,10 +129,9 @@ class RelPositionalEncoding(PositionalEncoding):
             torch.Tensor: Encoded tensor (batch, time, `*`).
             torch.Tensor: Positional embedding tensor (1, time, `*`).
         """
-        assert offset + x.size(1) < self.max_len
         self.pe = self.pe.to(x.device)
         x = x * self.xscale
-        pos_emb = self.pe[:, offset:offset + x.size(1)]
+        pos_emb = self.position_encoding(offset, x.size(1), False)
         return self.dropout(x), self.dropout(pos_emb)
 
 
@@ -131,7 +145,8 @@ class NoPositionalEncoding(torch.nn.Module):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: int = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+                offset: Union[int, torch.Tensor] = 0) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
         """ Just return zero vector for interface compatibility
         """
         pos_emb = torch.zeros(1, x.size(1), self.d_model).to(x.device)

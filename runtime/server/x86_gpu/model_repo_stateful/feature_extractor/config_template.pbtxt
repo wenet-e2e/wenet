@@ -1,0 +1,111 @@
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "feature_extractor"
+backend: "python"
+max_batch_size: 512
+
+parameters [
+  {
+    key: "frame_length_ms",
+    value: { string_value: "#frame_length" }
+  },
+  {
+    key: "frame_shift_ms"
+    value: { string_value: "#frame_shift" }
+  },
+  {
+    key: "sample_rate"
+    value: { string_value: "#sample_rate" }
+  },
+  {
+    key: "chunk_size_s",
+    value: { string_value: "#chunk_size_in_seconds" }
+  }
+]
+sequence_batching{
+    max_sequence_idle_microseconds: 5000000
+    oldest {
+      max_candidate_sequences: 512
+      preferred_batch_size: [ 32, 64, 128, 256]
+    }
+    control_input [
+        {
+            name: "START",
+            control [
+                {
+                    kind: CONTROL_SEQUENCE_START
+                    fp32_false_true: [0, 1]
+                }
+            ]
+        },
+        {
+            name: "READY"
+            control [
+                {
+                    kind: CONTROL_SEQUENCE_READY
+                    fp32_false_true: [0, 1]
+                }
+            ]
+        },
+        {
+            name: "CORRID",
+            control [
+                {
+                    kind: CONTROL_SEQUENCE_CORRID
+                    data_type: TYPE_UINT64
+                }
+            ]
+        },
+        {
+            name: "END",
+            control [
+                {
+                    kind: CONTROL_SEQUENCE_END
+                    fp32_false_true: [0, 1]
+                }
+            ]
+        }
+    ]
+}
+input [
+  {
+    name: "wav"
+    data_type: TYPE_FP32
+    dims: [-1]
+  },
+  {
+    name: "wav_lens"
+    data_type: TYPE_INT32
+    dims: [1]
+  }
+]
+output [
+  {
+    name: "speech"
+    data_type: TYPE_#DTYPE # FP32
+    dims: [#decoding_window, #num_mel_bins]
+  },
+  {
+    name: "speech_lengths"
+    data_type: TYPE_INT32
+    dims: [1]
+  }
+]
+instance_group [
+    {
+      count: 2
+      kind: KIND_GPU
+    }
+]

@@ -59,7 +59,6 @@ class TritonPythonModel:
         blank_id = 0
         alpha = 2.0
         beta = 1.0
-        ignore_id = -1
         bidecoder = 0
         lm_path, vocab_path = None, None
         for li in parameters.items():
@@ -79,8 +78,6 @@ class TritonPythonModel:
                 beta = float(value)
             elif key == "vocabulary":
                 vocab_path = value
-            if key == 'ignore_id':
-                ignore_id = int(value)
             elif key == "bidecoder":
                 bidecoder = int(value)
 
@@ -96,7 +93,6 @@ class TritonPythonModel:
         sos = eos = len(vocab) - 1
         self.sos = sos
         self.eos = eos
-        self.ignore_id = ignore_id
 
     def load_vocab(self, vocab_file):
         """
@@ -207,10 +203,10 @@ class TritonPythonModel:
         hyps_max_len = max_seq_len + 2
         in_ctc_score = np.zeros((total, beam_size), dtype=self.data_type)
         in_hyps_pad_sos_eos = np.ones(
-            (total, beam_size, hyps_max_len), dtype=np.int64) * self.ignore_id
+            (total, beam_size, hyps_max_len), dtype=np.int64) * self.eos
         if self.bidecoder:
             in_r_hyps_pad_sos_eos = np.ones(
-                (total, beam_size, hyps_max_len), dtype=np.int64) * self.ignore_id
+                (total, beam_size, hyps_max_len), dtype=np.int64) * self.eos
 
         in_hyps_lens_sos = np.ones((total, beam_size), dtype=np.int32)
 

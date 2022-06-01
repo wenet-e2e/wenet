@@ -73,6 +73,121 @@ class Encoder(torch.nn.Module):
             beam_log_probs, beam_log_probs_idx
 
 
+class StreamingEncoder(torch.nn.Module):
+    def __init__(self, model, required_cache_size, beam_size, transformer=False):
+        super().__init__()
+        self.ctc = model.ctc
+        self.subsampling_rate = model.encoder.embed.subsampling_rate
+        self.embed = model.encoder.embed
+        self.global_cmvn = model.encoder.global_cmvn
+        self.required_cache_size = required_cache_size
+        self.beam_size = beam_size
+        self.encoder = model.encoder
+        self.transformer = transformer
+
+    def forward(self, chunk_xs, chunk_lens, offset,
+                att_cache, cnn_cache, cache_mask):
+        """Streaming Encoder
+        Args:
+            xs (torch.Tensor): chunk input, with shape (b, time, mel-dim),
+                where `time == (chunk_size - 1) * subsample_rate + \
+                        subsample.right_context + 1`
+            offset (torch.Tensor): offset with shape (b, 1)
+                        1 is retained for triton deployment
+            required_cache_size (int): cache size required for next chunk
+                compuation
+                > 0: actual cache size
+                <= 0: not allowed in streaming gpu encoder                   `
+            att_cache (torch.Tensor): cache tensor for KEY & VALUE in
+                transformer/conformer attention, with shape
+                (b, elayers, head, cache_t1, d_k * 2), where
+                `head * d_k == hidden-dim` and
+                `cache_t1 == chunk_size * num_decoding_left_chunks`.
+            cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,
+                (b, elayers, b, hidden-dim, cache_t2), where
+                `cache_t2 == cnn.lorder - 1`
+            cache_mask: (torch.Tensor): cache mask with shape (b, required_cache_size)
+                 in a batch of request, each request may have different
+                 history cache. Cache mask is used to indidate the effective
+                 cache for each request
+        Returns:
+            torch.Tensor: log probabilities of ctc output and cutoff by beam size
+                with shape (b, chunk_size, beam)
+            torch.Tensor: index of top beam size probabilities for each timestep
+                with shape (b, chunk_size, beam)
+            torch.Tensor: output of current input xs,
+                with shape (b, chunk_size, hidden-dim).
+            torch.Tensor: new attention cache required for next chunk, with
+                same shape (b, elayers, head, cache_t1, d_k * 2)
+                as the original att_cache
+            torch.Tensor: new conformer cnn cache required for next chunk, with
+                same shape as the original cnn_cache.
+            torch.Tensor: new cache mask, with same shape as the original
+                cache mask
+        """
+        offset = offset.squeeze(1)
+        T = chunk_xs.size(1)
+        chunk_mask = ~make_pad_mask(chunk_lens, T).unsqueeze(1)
+        # B X 1 X T
+        chunk_mask = chunk_mask.to(chunk_xs.dtype)
+        # transpose batch & num_layers dim
+        att_cache = torch.transpose(att_cache, 0, 1)
+        cnn_cache = torch.transpose(cnn_cache, 0, 1)
+
+        # rewrite encoder.forward_chunk
+        # <---------forward_chunk START--------->
+        xs = self.global_cmvn(chunk_xs)
+        # chunk mask is important for batch inferencing since
+        # different sequence in a batch has different length
+        xs, pos_emb, chunk_mask = self.embed(xs, chunk_mask, offset)
+        cache_size = att_cache.size(3)  # required cache size
+        masks = torch.cat((cache_mask, chunk_mask), dim=2)
+        index = offset - cache_size
+
+        pos_emb = self.embed.position_encoding(index, cache_size + xs.size(1))
+        pos_emb = pos_emb.to(dtype=xs.dtype)
+
+        next_cache_start = -self.required_cache_size
+        r_cache_mask = masks[:, :, next_cache_start:]
+
+        r_att_cache = []
+        r_cnn_cache = []
+        for i, layer in enumerate(self.encoder.encoders):
+            xs, _, new_att_cache, new_cnn_cache = layer(
+                xs, masks, pos_emb,
+                att_cache=att_cache[i],
+                cnn_cache=cnn_cache[i])
+            #   shape(new_att_cache) is (B, head, attention_key_size, d_k * 2),
+            #   shape(new_cnn_cache) is (B, hidden-dim, cache_t2)
+            r_att_cache.append(new_att_cache[:, :, next_cache_start:, :].unsqueeze(1))
+            if not self.transformer:
+                r_cnn_cache.append(new_cnn_cache.unsqueeze(1))
+        if self.encoder.normalize_before:
+            chunk_out = self.encoder.after_norm(xs)
+
+        r_att_cache = torch.cat(r_att_cache, dim=1)  # concat on layers idx
+        if not self.transformer:
+            r_cnn_cache = torch.cat(r_cnn_cache, dim=1)  # concat on layers
+
+        # <---------forward_chunk END--------->
+
+        log_ctc_probs = self.ctc.log_softmax(chunk_out)
+        log_probs, log_probs_idx = torch.topk(log_ctc_probs,
+                                              self.beam_size,
+                                              dim=2)
+        log_probs = log_probs.to(chunk_xs.dtype)
+
+        r_offset = offset + chunk_out.shape[1]
+        # the below ops not supported in Tensorrt
+        # chunk_out_lens = torch.div(chunk_lens, subsampling_rate,
+        #                   rounding_mode='floor')
+        chunk_out_lens = chunk_lens // self.subsampling_rate
+        r_offset = r_offset.unsqueeze(1)
+
+        return log_probs, log_probs_idx, chunk_out, chunk_out_lens, \
+            r_offset, r_att_cache, r_cnn_cache, r_cache_mask
+
+
 class Decoder(torch.nn.Module):
     def __init__(self,
                  decoder: TransformerDecoder,
@@ -150,46 +265,29 @@ class Decoder(torch.nn.Module):
         return best_index
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='export your script model')
-    parser.add_argument('--config', required=True, help='config file')
-    parser.add_argument('--checkpoint', required=True, help='checkpoint model')
-    parser.add_argument('--cmvn_file', required=False, default='', type=str,
-                        help='global_cmvn file, default path is in config file')
-    parser.add_argument('--reverse_weight', default=-1.0, type=float,
-                        required=False,
-                        help='reverse weight for bitransformer,' +
-                        'default value is in config file')
-    parser.add_argument('--ctc_weight', default=-1.0, type=float,
-                        required=False,
-                        help='ctc weight, default value is in config file')
-    parser.add_argument('--beam_size', default=10, type=int, required=False,
-                        help="beam size would be ctc output size")
-    parser.add_argument('--output_onnx_dir',
-                        default="onnx_model",
-                        help='output onnx encoder and decoder directory')
-    parser.add_argument('--fp16',
-                        action='store_true',
-                        help='whether to export fp16 model, default false')
-    args = parser.parse_args()
+def to_numpy(tensors):
+    out = []
+    if type(tensors) == torch.tensor:
+        tensors = [tensors]
+    for tensor in tensors:
+        if tensor.requires_grad:
+            tensor = tensor.detach().cpu().numpy()
+        else:
+            tensor = tensor.cpu().numpy()
+        out.append(tensor)
+    return out
 
-    torch.manual_seed(0)
-    torch.set_printoptions(precision=10)
+def test(xlist, blist, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=True):
+    for a, b in zip(xlist, blist):
+        try:
+            torch.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
+        except AssertionError as error:
+            if tolerate_small_mismatch:
+                print(error)
+            else:
+                raise
 
-    with open(args.config, 'r') as fin:
-        configs = yaml.load(fin, Loader=yaml.FullLoader)
-    if args.cmvn_file and os.path.exists(args.cmvn_file):
-        configs['cmvn_file'] = args.cmvn_file
-    if args.reverse_weight != -1.0 and 'reverse_weight' in configs['model_conf']:
-        configs['model_conf']['reverse_weight'] = args.reverse_weight
-        print("Update reverse weight to", args.reverse_weight)
-    if args.ctc_weight != -1:
-        print("Update ctc weight to ", args.ctc_weight)
-        configs['model_conf']['ctc_weight'] = args.ctc_weight
-    configs["encoder_conf"]["use_dynamic_chunk"] = False
-    model = init_asr_model(configs)
-    load_checkpoint(model, args.checkpoint)
-    model.eval()
+def export_offline_encoder(model, configs, args, logger, encoder_onnx_path):
     bz = 32
     seq_len = 100
     beam_size = args.beam_size
@@ -199,9 +297,6 @@ if __name__ == '__main__':
     speech_lens = torch.randint(low=10, high=seq_len, size=(bz,), dtype=torch.int32)
     encoder = Encoder(model.encoder, model.ctc, beam_size)
     encoder.eval()
-    if not os.path.exists(args.output_onnx_dir):
-        os.mkdir(args.output_onnx_dir)
-    encoder_onnx_path = os.path.join(args.output_onnx_dir, 'encoder.onnx')
 
     torch.onnx.export(encoder,
                       (speech, speech_lens),
@@ -225,46 +320,125 @@ if __name__ == '__main__':
                       verbose=False
                       )
 
-    def to_numpy(tensor):
-        if tensor.requires_grad:
-            return tensor.detach().cpu().numpy()
-        else:
-            return tensor.cpu().numpy()
-
     with torch.no_grad():
         o0, o1, o2, o3, o4 = encoder(speech, speech_lens)
 
     providers = ["CUDAExecutionProvider"]
     ort_session = onnxruntime.InferenceSession(encoder_onnx_path,
                                                providers=providers)
-    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(speech),
-                  ort_session.get_inputs()[1].name: to_numpy(speech_lens)}
+    ort_inputs = {'speech': to_numpy(speech),
+                  'speech_lengths': to_numpy(speech_lens)}
     ort_outs = ort_session.run(None, ort_inputs)
 
-    def test(a, b, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=True):
-        try:
-            torch.testing.assert_allclose(a, b, rtol=rtol, atol=atol)
-        except AssertionError as error:
-            if tolerate_small_mismatch:
-                print(error)
-            else:
-                raise
-
     # check encoder output
-    test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-5)
-    test(to_numpy(o1), ort_outs[1], rtol=1e-03, atol=1e-05)
-    test(to_numpy(o2), ort_outs[2], rtol=1e-03, atol=1e-05)
-    test(to_numpy(o3), ort_outs[3], rtol=1e-03, atol=1e-05)
-    test(to_numpy(o4), ort_outs[4], rtol=1e-03, atol=1e-05)
-    logger.info("export to onnx encoder succeed!")
+    test(to_numpy([o0, o1, o2, o3, o4]), ort_outs)
+    logger.info("export offline onnx encoder succeed!")
+    onnx_config = {"beam_size": args.beam_size,
+                   "reverse_weight": args.reverse_weight,
+                   "ctc_weight": args.ctc_weight,
+                   "fp16": args.fp16}
+    return onnx_config
 
-    decoder = Decoder(
-        model.decoder,
-        model.ctc_weight,
-        model.reverse_weight,
-        beam_size)
+def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
+    decoding_chunk_size = args.decoding_chunk_size
+    subsampling = model.encoder.embed.subsampling_rate
+    context = model.encoder.embed.right_context + 1
+    decoding_window = (decoding_chunk_size - 1) * subsampling + context
+    batch_size = 32
+    audio_len = decoding_window
+    feature_size = configs["input_dim"]
+    output_size = configs["encoder_conf"]["output_size"]
+    num_layers = configs["encoder_conf"]["num_blocks"]
+    # in transformer the cnn module will not be available
+    transformer = False
+    cnn_module_kernel = configs["encoder_conf"].get("cnn_module_kernel", 1) - 1
+    if not cnn_module_kernel:
+        transformer = True
+    num_decoding_left_chunks = args.num_decoding_left_chunks
+    required_cache_size = decoding_chunk_size * num_decoding_left_chunks
+    encoder = StreamingEncoder(model, required_cache_size, args.beam_size, transformer)
+    encoder.eval()
+
+    # begin to export encoder
+    chunk_xs = torch.randn(batch_size, audio_len, feature_size, dtype=torch.float32)
+    chunk_lens = torch.ones(batch_size, dtype=torch.int32) * audio_len
+
+    offset = torch.arange(0, batch_size).unsqueeze(1)
+    #  (elayers, b, head, cache_t1, d_k * 2)
+    head = configs["encoder_conf"]["attention_heads"]
+    d_k = configs["encoder_conf"]["output_size"] // head
+    att_cache = torch.randn(batch_size, num_layers, head,
+                            required_cache_size, d_k * 2,
+                            dtype=torch.float32)
+    cnn_cache = torch.randn(batch_size, num_layers, output_size,
+                            cnn_module_kernel, dtype=torch.float32)
+
+    cache_mask = torch.ones(batch_size, 1, required_cache_size, dtype=torch.float32)
+    input_names = ['chunk_xs', 'chunk_lens', 'offset',
+                   'att_cache', 'cnn_cache', 'cache_mask']
+    output_names = ['log_probs', 'log_probs_idx', 'chunk_out',
+                    'chunk_out_lens', 'r_offset', 'r_att_cache',
+                    'r_cnn_cache', 'r_cache_mask']
+    input_tensors = (chunk_xs, chunk_lens, offset, att_cache, cnn_cache, cache_mask)
+    if transformer:
+        output_names.pop(6)
+
+    all_names = input_names + output_names
+    dynamic_axes = {}
+    for name in all_names:
+        # only the first dimension is dynamic
+        # all other dimension is fixed
+        dynamic_axes[name] = {0: 'B'}
+
+    torch.onnx.export(encoder,
+                      input_tensors,
+                      encoder_onnx_path,
+                      export_params=True,
+                      opset_version=14,
+                      do_constant_folding=True,
+                      input_names=input_names,
+                      output_names=output_names,
+                      dynamic_axes=dynamic_axes,
+                      verbose=False)
+
+    with torch.no_grad():
+        torch_outs = encoder(chunk_xs, chunk_lens, offset,
+                             att_cache, cnn_cache, cache_mask)
+    if transformer:
+        torch_outs = list(torch_outs).pop(6)
+    ort_session = onnxruntime.InferenceSession(encoder_onnx_path,
+                                               providers=["CUDAExecutionProvider"])
+    ort_inputs = {}
+
+    input_tensors = to_numpy(input_tensors)
+    for idx, name in enumerate(input_names):
+        ort_inputs[name] = input_tensors[idx]
+    if transformer:
+        del ort_inputs['cnn_cache']
+    ort_outs = ort_session.run(None, ort_inputs)
+    test(to_numpy(torch_outs), ort_outs, rtol=1e-03, atol=1e-05)
+    logger.info("export to onnx streaming encoder succeed!")
+    onnx_config = {
+        "subsampling_rate": subsampling,
+        "context": context,
+        "decoding_chunk_size": decoding_chunk_size,
+        "num_decoding_left_chunks": num_decoding_left_chunks,
+        "beam_size": args.beam_size,
+        "fp16": args.fp16,
+        "feat_size": feature_size,
+        "decoding_window": decoding_window,
+        "cnn_module_kernel_cache": cnn_module_kernel
+    }
+    return onnx_config
+
+def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
+    bz, seq_len = 32, 100
+    beam_size = args.beam_size
+    decoder = Decoder(model.decoder,
+                      model.ctc_weight,
+                      model.reverse_weight,
+                      beam_size)
     decoder.eval()
-    decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder.onnx')
 
     hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
     hyps_lens_sos = torch.randint(low=3, high=seq_len, size=(bz, beam_size),
@@ -275,6 +449,11 @@ if __name__ == '__main__':
     encoder_out = torch.randn(bz, seq_len, output_size, dtype=torch.float32)
     encoder_out_lens = torch.randint(low=3, high=seq_len, size=(bz,), dtype=torch.int32)
     ctc_score = torch.randn(bz, beam_size, dtype=torch.float32)
+
+    input_names = ['encoder_out', 'encoder_out_lens',
+                   'hyps_pad_sos_eos', 'hyps_lens_sos',
+                   'r_hyps_pad_sos_eos', 'ctc_score']
+
     torch.onnx.export(decoder,
                       (encoder_out, encoder_out_lens,
                        hyps_pad_sos_eos, hyps_lens_sos,
@@ -283,9 +462,7 @@ if __name__ == '__main__':
                       export_params=True,
                       opset_version=13,
                       do_constant_folding=True,
-                      input_names=['encoder_out', 'encoder_out_lens',
-                                   'hyps_pad_sos_eos', 'hyps_lens_sos',
-                                   'r_hyps_pad_sos_eos', 'ctc_score'],
+                      input_names=input_names,
                       output_names=['best_index'],
                       dynamic_axes={'encoder_out': {0: 'B', 1: 'T'},
                                     'encoder_out_lens': {0: 'B'},
@@ -298,32 +475,106 @@ if __name__ == '__main__':
                       verbose=False
                       )
     with torch.no_grad():
-        o0 = decoder(
-            encoder_out,
-            encoder_out_lens,
-            hyps_pad_sos_eos,
-            hyps_lens_sos,
-            r_hyps_pad_sos_eos,
-            ctc_score)
-
+        o0 = decoder(encoder_out,
+                     encoder_out_lens,
+                     hyps_pad_sos_eos,
+                     hyps_lens_sos,
+                     r_hyps_pad_sos_eos,
+                     ctc_score)
+    providers = ["CUDAExecutionProvider"]
     ort_session = onnxruntime.InferenceSession(decoder_onnx_path,
                                                providers=providers)
-    ort_inputs = {ort_session.get_inputs()[0].name: to_numpy(encoder_out),
-                  ort_session.get_inputs()[1].name: to_numpy(encoder_out_lens),
-                  ort_session.get_inputs()[2].name: to_numpy(hyps_pad_sos_eos),
-                  ort_session.get_inputs()[3].name: to_numpy(hyps_lens_sos),
-                  ort_session.get_inputs()[-1].name: to_numpy(ctc_score)
-                  }
+
+    input_tensors = [encoder_out, encoder_out_lens, hyps_pad_sos_eos,
+                     hyps_lens_sos, r_hyps_pad_sos_eos, ctc_score]
+    ort_inputs = {}
+    input_tensors = to_numpy(input_tensors)
+    for idx, name in enumerate(input_names):
+        ort_inputs[name] = input_tensors[idx]
+
     # if model.reverse weight == 0,
     # the r_hyps_pad will be removed
     # from the onnx decoder since it doen't play any role
-    if model.reverse_weight > 0:
-        ort_inputs[ort_session.get_inputs()[4].name] = to_numpy(r_hyps_pad_sos_eos)
+    if model.reverse_weight == 0:
+        del ort_inputs['r_hyps_pad_sos_eos']
     ort_outs = ort_session.run(None, ort_inputs)
 
-    # check encoder output
-    test(to_numpy(o0), ort_outs[0], rtol=1e-03, atol=1e-05)
+    # check decoder output
+    test(to_numpy([o0]), ort_outs, rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='export x86_gpu model')
+    parser.add_argument('--config', required=True, help='config file')
+    parser.add_argument('--checkpoint', required=True, help='checkpoint model')
+    parser.add_argument('--cmvn_file', required=False, default='', type=str,
+                        help='global_cmvn file, default path is in config file')
+    parser.add_argument('--reverse_weight', default=-1.0, type=float,
+                        required=False,
+                        help='reverse weight for bitransformer,' +
+                        'default value is in config file')
+    parser.add_argument('--ctc_weight', default=-1.0, type=float,
+                        required=False,
+                        help='ctc weight, default value is in config file')
+    parser.add_argument('--beam_size', default=10, type=int, required=False,
+                        help="beam size would be ctc output size")
+    parser.add_argument('--output_onnx_dir',
+                        default="onnx_model",
+                        help='output onnx encoder and decoder directory')
+    parser.add_argument('--fp16',
+                        action='store_true',
+                        help='whether to export fp16 model, default false')
+    # arguments for streaming encoder
+    parser.add_argument('--streaming',
+                        action='store_true',
+                        help="whether to export streaming encoder, default false")
+    parser.add_argument('--decoding_chunk_size',
+                        default=16,
+                        type=int,
+                        required=False,
+                        help='the decoding chunk size, <=0 is not supported')
+    parser.add_argument('--num_decoding_left_chunks',
+                        default=5,
+                        type=int,
+                        required=False,
+                        help="number of left chunks, <= 0 is not supported")
+    args = parser.parse_args()
+
+    torch.manual_seed(0)
+    torch.set_printoptions(precision=10)
+
+    with open(args.config, 'r') as fin:
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
+    if args.cmvn_file and os.path.exists(args.cmvn_file):
+        configs['cmvn_file'] = args.cmvn_file
+    if args.reverse_weight != -1.0 and 'reverse_weight' in configs['model_conf']:
+        configs['model_conf']['reverse_weight'] = args.reverse_weight
+        print("Update reverse weight to", args.reverse_weight)
+    if args.ctc_weight != -1:
+        print("Update ctc weight to ", args.ctc_weight)
+        configs['model_conf']['ctc_weight'] = args.ctc_weight
+    configs["encoder_conf"]["use_dynamic_chunk"] = False
+
+    model = init_asr_model(configs)
+    load_checkpoint(model, args.checkpoint)
+    model.eval()
+
+    if not os.path.exists(args.output_onnx_dir):
+        os.mkdir(args.output_onnx_dir)
+    encoder_onnx_path = os.path.join(args.output_onnx_dir, 'encoder.onnx')
+    export_enc_func = None
+    if args.streaming:
+        assert args.decoding_chunk_size > 0
+        assert args.num_decoding_left_chunks > 0
+        export_enc_func = export_online_encoder
+    else:
+        export_enc_func = export_offline_encoder
+
+    onnx_config = export_enc_func(model, configs, args, logger, encoder_onnx_path)
+
+    decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder.onnx')
+    export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path)
 
     if args.fp16:
         try:
@@ -341,10 +592,6 @@ if __name__ == '__main__':
         decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder_fp16.onnx')
         onnxmltools.utils.save_model(decoder_onnx_model, decoder_onnx_path)
     # dump configurations
-    onnx_config = {"beam_size": args.beam_size,
-                   "reverse_weight": args.reverse_weight,
-                   "ctc_weight": args.ctc_weight,
-                   "fp16": args.fp16}
 
     config_dir = os.path.join(args.output_onnx_dir, "config.yaml")
     with open(config_dir, "w") as out:
