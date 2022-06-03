@@ -14,6 +14,7 @@
 
 
 #include <iomanip>
+#include <thread>
 #include <utility>
 
 #include "decoder/params.h"
