@@ -90,10 +90,15 @@ class PositionalEncoding(torch.nn.Module):
         Returns:
             torch.Tensor: Corresponding encoding
         """
-        if isinstance(offset, int) or offset.dim() == 0:  # dim=0, torch.scalar
+        # How to subscript a Union type:
+        #   https://github.com/pytorch/pytorch/issues/69434
+        if isinstance(offset, int):
             assert offset + size < self.max_len
             pos_emb = self.pe[:, offset:offset + size]
-        else:
+        elif isinstance(offset, torch.Tensor) and offset.dim() == 0:  # scalar
+            assert offset + size < self.max_len
+            pos_emb = self.pe[:, offset:offset + size]
+        else:  # for batched streaming decoding on GPU
             assert torch.max(offset) + size < self.max_len
             index = offset.unsqueeze(1) + \
                 torch.arange(0, size).to(offset.device)  # B X T
