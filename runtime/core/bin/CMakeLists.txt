@@ -10,8 +10,10 @@ target_link_libraries(websocket_server_main PUBLIC websocket)
 add_executable(label_checker_main label_checker_main.cc)
 target_link_libraries(label_checker_main PUBLIC decoder)
 
-add_executable(api_main api_main.cc)
-target_link_libraries(api_main PUBLIC wenet_api)
+if(TORCH)
+ add_executable(api_main api_main.cc)
+ target_link_libraries(api_main PUBLIC wenet_api)
+endif()
 
 if(GRPC)
   add_executable(grpc_server_main grpc_server_main.cc)

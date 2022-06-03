@@ -20,4 +20,4 @@ add_library(wenet_grpc STATIC
   wenet.pb.cc
   wenet.grpc.pb.cc
 )
-target_link_libraries(wenet_grpc PUBLIC grpc++ grpc++_reflection decoder frontend)
+target_link_libraries(wenet_grpc PUBLIC grpc++ grpc++_reflection decoder)
