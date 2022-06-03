@@ -18,7 +18,7 @@ if(ONNX)
 endif()
 
 add_library(decoder STATIC ${decoder_srcs})
-target_link_libraries(decoder PUBLIC kaldi-decoder post_processor utils)
+target_link_libraries(decoder PUBLIC kaldi-decoder frontend post_processor utils)
 
 if(ANDROID)
   target_link_libraries(decoder PUBLIC ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY})

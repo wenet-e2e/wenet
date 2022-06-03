@@ -9,7 +9,7 @@ option(GRPC "whether to build with gRPC" OFF)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 
-set(CMAKE_VERBOSE_MAKEFILE on)
+set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
 include(ExternalProject)
@@ -45,42 +45,16 @@ add_subdirectory(frontend)
 add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
+add_subdirectory(websocket)
 add_subdirectory(api)
-
-# binary
-add_executable(api_main bin/api_main.cc)
-target_link_libraries(api_main PUBLIC wenet_api)
-
-add_executable(decoder_main bin/decoder_main.cc)
-target_link_libraries(decoder_main PUBLIC decoder frontend)
-
-add_executable(websocket_client_main
-  bin/websocket_client_main.cc
-  websocket/websocket_client.cc
-)
-target_link_libraries(websocket_client_main PUBLIC frontend)
-
-add_executable(websocket_server_main
-  bin/websocket_server_main.cc
-  websocket/websocket_server.cc
-)
-target_link_libraries(websocket_server_main PUBLIC decoder frontend)
-
-add_executable(label_checker_main bin/label_checker_main.cc)
-target_link_libraries(label_checker_main PUBLIC decoder frontend)
-
-if(BUILD_TESTING)
-  include(gtest)
-  add_subdirectory(test)
-endif()
-
 if(GRPC)
   include(grpc)
   add_subdirectory(grpc)
+endif()
+add_subdirectory(bin)
 
-  add_executable(grpc_server_main bin/grpc_server_main.cc)
-  target_link_libraries(grpc_server_main PUBLIC wenet_grpc)
-
-  add_executable(grpc_client_main bin/grpc_client_main.cc)
-  target_link_libraries(grpc_client_main PUBLIC wenet_grpc)
+# Unit Test
+if(BUILD_TESTING)
+  include(gtest)
+  add_subdirectory(test)
 endif()
