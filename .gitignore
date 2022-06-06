@@ -36,3 +36,9 @@ data
 raw_wav
 tensorboard
 **/*build*
+
+# protoc output files
+runtime/core/grpc/wenet.grpc.pb.cc
+runtime/core/grpc/wenet.grpc.pb.h
+runtime/core/grpc/wenet.pb.cc
+runtime/core/grpc/wenet.pb.h
