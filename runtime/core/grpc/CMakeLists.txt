@@ -1,5 +1,5 @@
 # compile wenet.proto
-set(PROTO_DIR "${CMAKE_CURRENT_SOURCE_DIR}/grpc")
+set(PROTO_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 add_custom_command(
   OUTPUT  ${PROTO_DIR}/wenet.pb.cc
           ${PROTO_DIR}/wenet.pb.h
