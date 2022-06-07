@@ -1,5 +1,5 @@
 ## Introduction
-The below example shows how to deploy WeNet offline ASR models on GPUs.
+The below example shows how to deploy WeNet offline and online ASR models on GPUs.
 
 ## Instructions
 * Step 1. Convert your model/pretrained model to onnx models. For example:
@@ -15,7 +15,7 @@ python3 wenet/bin/export_onnx_gpu.py --config=$model_dir/train.yaml --checkpoint
 cp $model_dir/words.txt $model_dir/train.yaml $onnx_model_dir/
 ```
 
-If you want to export model for later streaming usage, you should add `--streaming` option:
+If you want to export streaming model (u2/u2++) for streaming inference (inference by chunks) instead of offline inference (inference by audio segments/utterance), you should add `--streaming` option:
 
 ```
 python3 wenet/bin/export_onnx_gpu.py --config=$model_dir/train.yaml --checkpoint=$model_dir/final.pt --cmvn_file=$model_dir/global_cmvn  --ctc_weight=0.1 --reverse_weight=0.4 --output_onnx_dir=$onnx_model_dir --fp16 --streaming
