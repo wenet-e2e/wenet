@@ -96,7 +96,7 @@ def load_trained_modules(model: torch.nn.Module, args: None):
                 partial_state_dict[key] = value
         main_state_dict.update(partial_state_dict)
     else:
-        logging.warning("model was not found : %s", model_path)
+        logging.warning("model was not found : %s", enc_model_path)
 
     model.load_state_dict(main_state_dict)
     configs = {}
