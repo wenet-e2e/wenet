@@ -16,11 +16,11 @@ with wave.open(test_wav, 'rb') as fin:
     wav = fin.readframes(fin.getnframes())
 
 # Optional set log level
-# wenet.set_log_level(1)
+# wenet.set_log_level(2)
 
 # Init decoder
 decoder = wenet.Decoder(model_dir)
-# decoder.set_nbest(2)
+# decoder.set_nbest(10)
 # decoder.enable_timestamp(True)
 # decoder.add_context(['停滞'])
 # decoder.set_context_score(3.0)

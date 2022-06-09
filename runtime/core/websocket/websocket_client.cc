@@ -88,7 +88,7 @@ void WebSocketClient::ReadLoopFunc() {
 void WebSocketClient::Join() { t_->join(); }
 
 void WebSocketClient::SendStartSignal() {
-  // TODO(Binbin Zhang): Add sample rate and other setting surpport
+  // TODO(Binbin Zhang): Add sample rate and other setting support
   json::value start_tag = {{"signal", "start"},
                            {"nbest", nbest_},
                            {"continuous_decoding", continuous_decoding_}};

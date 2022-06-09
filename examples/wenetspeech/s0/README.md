@@ -5,7 +5,6 @@
 * Feature info: using fbank feature, with dither 1.0, with cmvn
 * Training info: lr 0.001, batch size 32, 24 gpus on V100, acc_grad 16, 26 epochs
 * Decoding info: ctc_weight 0.5, average_num 10
-* model link: https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20211025_conformer_exp.tar.gz
 
 |   decoding_method   |  Dev | Test\_Net | Test\_Meeting |
 |:-------------------:|:----:|:---------:|:-------------:|
@@ -30,7 +29,6 @@
 * Feature info: using fbank feature, with dither 1.0, with cmvn
 * Training info: lr 0.001, batch size 48, 8 gpus on A100, acc_grad 16, 50 epochs
 * Decoding info: ctc_weight 0.5, reverse_weight 0.3, average_num 10
-* model link: <TO ADD>
 
 | Decoding mode - Chunk size    | Dev  | Test\_Net | Test\_Meeting |
 |:-----------------------------:|:----:|:---------:|:-------------:|

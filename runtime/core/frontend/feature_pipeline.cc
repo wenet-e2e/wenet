@@ -27,11 +27,11 @@ FeaturePipeline::FeaturePipeline(const FeaturePipelineConfig& config)
       num_frames_(0),
       input_finished_(false) {}
 
-void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
+void FeaturePipeline::AcceptWaveform(const float* pcm, const int size) {
   std::vector<std::vector<float>> feats;
   std::vector<float> waves;
   waves.insert(waves.end(), remained_wav_.begin(), remained_wav_.end());
-  waves.insert(waves.end(), wav.begin(), wav.end());
+  waves.insert(waves.end(), pcm, pcm + size);
   int num_frames = fbank_.Compute(waves, &feats);
   for (size_t i = 0; i < feats.size(); ++i) {
     feature_queue_.Push(std::move(feats[i]));
@@ -44,6 +44,15 @@ void FeaturePipeline::AcceptWaveform(const std::vector<float>& wav) {
             remained_wav_.begin());
   // We are still adding wave, notify input is not finished
   finish_condition_.notify_one();
+}
+
+void FeaturePipeline::AcceptWaveform(const int16_t* pcm, const int size) {
+  auto* float_pcm = new float[size];
+  for (size_t i = 0; i < size; i++) {
+    float_pcm[i] = static_cast<float>(pcm[i]);
+  }
+  this->AcceptWaveform(float_pcm, size);
+  delete[] float_pcm;
 }
 
 void FeaturePipeline::set_input_finished() {

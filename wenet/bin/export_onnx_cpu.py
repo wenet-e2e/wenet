@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright (c) 2022, Xingchen Song (sxc19@mails.tsinghua.edu.cn)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +30,7 @@ try:
     import onnx
     import onnxruntime
 except ImportError:
-    print('Please install onnxruntime!')
+    print('Please install onnx and onnxruntime!')
     sys.exit(1)
 
 
@@ -44,9 +43,7 @@ def get_args():
                         type=int, help='decoding chunk size')
     parser.add_argument('--num_decoding_left_chunks', required=True,
                         type=int, help='cache chunks')
-    parser.add_argument('--beam', required=True,
-                        type=int, help='beam wigth')
-    parser.add_argument('--reverse_weight', default=0.0,
+    parser.add_argument('--reverse_weight', default=0.5,
                         type=float, help='reverse_weight in attention_rescoing')
     args = parser.parse_args()
     return args
@@ -94,6 +91,12 @@ def export_encoder(asr_model, args):
     #   3. 16/0  mode: next_cache_start == chunk_size for all chunks
     #   4. -1/-1 mode: next_cache_start == 0 for all chunks
     #   NO MORE DYNAMIC CHANGES!!
+    #
+    # NOTE(Mddct): We retain the current design for the convenience of supporting some
+    #   inference frameworks without dynamic shapes. If you're interested in all-in-one
+    #   model that supports different chunks please see:
+    #   https://github.com/wenet-e2e/wenet/pull/1174
+
     if args['left_chunks'] > 0:  # 16/4
         required_cache_size = args['chunk_size'] * args['left_chunks']
         offset = required_cache_size
@@ -268,7 +271,7 @@ def export_ctc(asr_model, args):
     print("\tStage-2.3: check onnx_ctc and torch_ctc")
     torch_output = ctc(hidden)
     ort_session = onnxruntime.InferenceSession(ctc_outpath)
-    onnx_output = ort_session.run(None, {'hidden' : to_numpy(hidden)})
+    onnx_output = ort_session.run(None, {'hidden': to_numpy(hidden)})
 
     np.testing.assert_allclose(to_numpy(torch_output), onnx_output[0],
                                rtol=1e-03, atol=1e-05)
@@ -284,18 +287,18 @@ def export_decoder(asr_model, args):
     decoder_outpath = os.path.join(args['output_dir'], 'decoder.onnx')
 
     print("\tStage-3.1: prepare inputs for decoder")
-    # hardcode time->200 len->20, they are dynamic axes.
+    # hardcode time->200 nbest->10 len->20, they are dynamic axes.
     encoder_out = torch.randn((1, 200, args['output_size']))
     hyps = torch.randint(low=0, high=args['vocab_size'],
-                         size=[args['beam'], 20])
+                         size=[10, 20])
     hyps[:, 0] = args['vocab_size'] - 1  # <sos>
-    hyps_lens = torch.randint(low=15, high=21, size=[args['beam']])
+    hyps_lens = torch.randint(low=15, high=21, size=[10])
 
     print("\tStage-3.2: torch.onnx.export")
     dynamic_axes = {
-        'hyps': {0: 'BEAM', 1: 'L'}, 'hyps_lens': {0: 'BEAM'},
+        'hyps': {0: 'NBEST', 1: 'L'}, 'hyps_lens': {0: 'NBEST'},
         'encoder_out': {1: 'T'},
-        'score': {0: 'BEAM', 1: 'L'}, 'r_score': {0: 'BEAM', 1: 'L'}
+        'score': {0: 'NBEST', 1: 'L'}, 'r_score': {0: 'NBEST', 1: 'L'}
     }
     inputs = (hyps, hyps_lens, encoder_out, args['reverse_weight'])
     torch.onnx.export(
@@ -359,7 +362,6 @@ def main():
     arguments['batch'] = 1
     arguments['chunk_size'] = args.chunk_size
     arguments['left_chunks'] = args.num_decoding_left_chunks
-    arguments['beam'] = args.beam
     arguments['reverse_weight'] = args.reverse_weight
     arguments['output_size'] = configs['encoder_conf']['output_size']
     arguments['num_blocks'] = configs['encoder_conf']['num_blocks']
@@ -380,12 +382,18 @@ def main():
     arguments['is_bidirectional_decoder'] = 1 \
         if model.is_bidirectional_decoder() else 0
 
+    # NOTE(xcsong): Please note that -1/-1 means non-streaming model! It is
+    #   not a [16/4 16/-1 16/0] all-in-one model and it should not be used in
+    #   streaming mode (i.e., setting chunk_size=16 in `decoder_main`). If you
+    #   want to use 16/-1 or any other streaming mode in `decoder_main`,
+    #   please export onnx in the same config.
     if arguments['left_chunks'] > 0:
         assert arguments['chunk_size'] > 0  # -1/4 not supported
 
     export_encoder(model, arguments)
     export_ctc(model, arguments)
     export_decoder(model, arguments)
+
 
 if __name__ == '__main__':
     main()

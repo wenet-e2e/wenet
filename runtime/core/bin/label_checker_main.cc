@@ -1,5 +1,17 @@
-// Copyright 2021 Mobvoi Inc. All Rights Reserved.
-// Author: binbinzhang@mobvoi.com (Binbin Zhang)
+// Copyright (c) 2021 Mobvoi Inc (Binbin Zhang, Di Wu)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 
 #include <memory>
 #include <sstream>
@@ -9,7 +21,6 @@
 #include "decoder/params.h"
 #include "frontend/wav.h"
 #include "utils/flags.h"
-#include "utils/log.h"
 #include "utils/string.h"
 
 DEFINE_string(text, "", "kaldi style text input file");
@@ -22,14 +33,14 @@ DEFINE_string(timestamp, "", "timestamp output file");
 
 namespace wenet {
 
-const char *kDeletion = "<del>";
+const char* kDeletion = "<del>";
 // Is: Insertion and substitution
-const char *kIsStart = "<is>";
-const char *kIsEnd = "</is>";
+const char* kIsStart = "<is>";
+const char* kIsEnd = "</is>";
 
-bool MapToLabel(const std::string &text,
+bool MapToLabel(const std::string& text,
                 std::shared_ptr<fst::SymbolTable> symbol_table,
-                std::vector<int> *labels) {
+                std::vector<int>* labels) {
   labels->clear();
   // Split label to char sequence
   std::vector<std::string> chars;
@@ -65,7 +76,7 @@ std::shared_ptr<fst::SymbolTable> MakeSymbolTableForFst(
 }
 
 void CompileCtcFst(std::shared_ptr<fst::SymbolTable> symbol_table,
-                   fst::StdVectorFst *ofst) {
+                   fst::StdVectorFst* ofst) {
   ofst->DeleteStates();
   int start = ofst->AddState();
   ofst->SetStart(start);
@@ -85,7 +96,7 @@ void CompileCtcFst(std::shared_ptr<fst::SymbolTable> symbol_table,
 
 void CompileAlignFst(std::vector<int> labels,
                      std::shared_ptr<fst::SymbolTable> symbol_table,
-                     fst::StdVectorFst *ofst) {
+                     fst::StdVectorFst* ofst) {
   ofst->DeleteStates();
   int deletion = symbol_table->Find(kDeletion);
   int insertion_start = symbol_table->Find(kIsStart);
@@ -124,7 +135,7 @@ void CompileAlignFst(std::vector<int> labels,
 
 }  // namespace wenet
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
 
@@ -160,7 +171,7 @@ int main(int argc, char *argv[]) {
   if (!FLAGS_timestamp.empty()) {
     timestamp_out.open(FLAGS_timestamp, std::ios::out);
   }
-  std::ostream &timestamp_os =
+  std::ostream& timestamp_os =
       FLAGS_timestamp.empty() ? std::cout : timestamp_out;
 
   while (std::getline(text_is, line)) {
@@ -187,11 +198,11 @@ int main(int argc, char *argv[]) {
         LOG(WARNING) << "Error in reading " << wav_table[key];
         continue;
       }
+      int num_samples = wav_reader.num_samples();
       CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
       auto feature_pipeline =
           std::make_shared<wenet::FeaturePipeline>(*feature_config);
-      feature_pipeline->AcceptWaveform(std::vector<float>(
-          wav_reader.data(), wav_reader.data() + wav_reader.num_sample()));
+      feature_pipeline->AcceptWaveform(wav_reader.data(), num_samples);
       feature_pipeline->set_input_finished();
       decode_resource->fst = decoding_fst;
       LOG(INFO) << "num frames " << feature_pipeline->num_frames();
@@ -207,10 +218,10 @@ int main(int argc, char *argv[]) {
       std::string final_result;
       std::string timestamp_str;
       if (decoder.DecodedSomething()) {
-        const wenet::DecodeResult &result = decoder.result()[0];
+        const wenet::DecodeResult& result = decoder.result()[0];
         final_result = result.sentence;
         std::stringstream ss;
-        for (const auto &w : result.word_pieces) {
+        for (const auto& w : result.word_pieces) {
           ss << " " << w.word << " " << w.start << " " << w.end;
         }
         timestamp_str = ss.str();

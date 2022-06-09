@@ -1,8 +1,20 @@
-// Copyright 2020 Mobvoi Inc. All Rights Reserved.
-// Author: binbinzhang@mobvoi.com (Binbin Zhang)
-//         di.wu@mobvoi.com (Di Wu)
-//         lizexuan@huya.com (Zexuan Li)
-//         sxc19@mails.tsinghua.edu.cn (Xingchen Song)
+// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
+//               2022 ZeXuan Li (lizexuan@huya.com)
+//                    Xingchen Song(sxc19@mails.tsinghua.edu.cn)
+//                    hamddct@gmail.com (Mddct)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 
 #include "decoder/onnx_asr_model.h"
 
@@ -10,7 +22,17 @@
 #include <memory>
 #include <utility>
 
+#include "utils/string.h"
+
 namespace wenet {
+
+Ort::Env OnnxAsrModel::env_ = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+Ort::SessionOptions OnnxAsrModel::session_options_ = Ort::SessionOptions();
+
+void OnnxAsrModel::InitEngineThreads(int num_threads) {
+  session_options_.SetIntraOpNumThreads(num_threads);
+  session_options_.SetInterOpNumThreads(num_threads);
+}
 
 void OnnxAsrModel::GetInputOutputInfo(
     const std::shared_ptr<Ort::Session>& session,
@@ -54,32 +76,30 @@ void OnnxAsrModel::GetInputOutputInfo(
   }
 }
 
-void OnnxAsrModel::Read(const std::string& model_dir, const int num_threads) {
+void OnnxAsrModel::Read(const std::string& model_dir) {
   std::string encoder_onnx_path = model_dir + "/encoder.onnx";
   std::string rescore_onnx_path = model_dir + "/decoder.onnx";
   std::string ctc_onnx_path = model_dir + "/ctc.onnx";
 
   // 1. Load sessions
   try {
-    Ort::Env env;
-    Ort::SessionOptions session_options;
-    session_options.SetIntraOpNumThreads(num_threads);
-    session_options.SetInterOpNumThreads(num_threads);
-
-    Ort::Session encoder_session{env, encoder_onnx_path.data(),
-                                 session_options};
-    encoder_session_ =
-        std::make_shared<Ort::Session>(std::move(encoder_session));
-
-    Ort::Session rescore_session{env, rescore_onnx_path.data(),
-                                 session_options};
-    rescore_session_ =
-        std::make_shared<Ort::Session>(std::move(rescore_session));
-
-    Ort::Session ctc_session{env, ctc_onnx_path.data(), session_options};
-    ctc_session_ = std::make_shared<Ort::Session>(std::move(ctc_session));
+#ifdef _MSC_VER
+    encoder_session_ = std::make_shared<Ort::Session>(
+        env_, ToWString(encoder_onnx_path).c_str(), session_options_);
+    rescore_session_ = std::make_shared<Ort::Session>(
+        env_, ToWString(rescore_onnx_path).c_str(), session_options_);
+    ctc_session_ = std::make_shared<Ort::Session>(
+        env_, ToWString(ctc_onnx_path).c_str(), session_options_);
+#else
+    encoder_session_ = std::make_shared<Ort::Session>(
+        env_, encoder_onnx_path.c_str(), session_options_);
+    rescore_session_ = std::make_shared<Ort::Session>(
+        env_, rescore_onnx_path.c_str(), session_options_);
+    ctc_session_ = std::make_shared<Ort::Session>(env_, ctc_onnx_path.c_str(),
+                                                  session_options_);
+#endif
   } catch (std::exception const& e) {
-    LOG(ERROR) << "error when load onnx model";
+    LOG(ERROR) << "error when load onnx model: " << e.what();
     exit(0);
   }
 
@@ -172,6 +192,7 @@ std::shared_ptr<AsrModel> OnnxAsrModel::Copy() const {
 void OnnxAsrModel::Reset() {
   offset_ = 0;
   encoder_outs_.clear();
+  cached_feature_.clear();
   // Reset att_cache
   Ort::MemoryInfo memory_info =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);

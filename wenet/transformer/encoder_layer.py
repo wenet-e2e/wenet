@@ -1,8 +1,19 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# Copyright (c) 2021 Mobvoi Inc (Binbin Zhang, Di Wu)
+#               2022 Xingchen Song (sxc19@mails.tsinghua.edu.cn)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Modified from ESPnet(https://github.com/espnet/espnet)
 
-# Copyright 2019 Mobvoi Inc. All Rights Reserved.
-# Author: di.wu@mobvoi.com (DI WU)
 """Encoder self-attention layer definition."""
 
 from typing import Optional, Tuple
@@ -50,9 +61,10 @@ class TransformerEncoderLayer(nn.Module):
         self.size = size
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        # concat_linear may be not used in forward fuction,
-        # but will be saved in the *.pt
-        self.concat_linear = nn.Linear(size + size, size)
+        if concat_after:
+            self.concat_linear = nn.Linear(size + size, size)
+        else:
+            self.concat_linear = nn.Identity()
 
     def forward(
         self,
@@ -167,7 +179,11 @@ class ConformerEncoderLayer(nn.Module):
         self.size = size
         self.normalize_before = normalize_before
         self.concat_after = concat_after
-        self.concat_linear = nn.Linear(size + size, size)
+        if self.concat_after:
+            self.concat_linear = nn.Linear(size + size, size)
+        else:
+            self.concat_linear = nn.Identity()
+
 
     def forward(
         self,

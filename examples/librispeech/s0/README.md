@@ -6,7 +6,6 @@
 * Training info: train_conformer_bidecoder_large.yaml, kernel size 31, lr 0.002, batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 1.0
 * Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 30
 * Git hash: 65270043fc8c2476d1ab95e7c39f730017a670e0
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210610_conformer_bidecoder_exp.tar.gz
 * LM-tgmed: [3-gram.pruned.1e-7.arpa.gz](http://www.openslr.org/resources/11/3-gram.pruned.1e-7.arpa.gz)
 * LM-tglarge: [3-gram.arpa.gz](http://www.openslr.org/resources/11/3-gram.arpa.gz)
 * LM-fglarge: [4-gram.arpa.gz](http://www.openslr.org/resources/11/4-gram.arpa.gz)
@@ -25,7 +24,6 @@
 * Training info: train_conformer.yaml, kernel size 31, lr 0.004, batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 90d9a559840e765e82119ab72a11a1f7c1a01b78
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210216_conformer_exp.tar.gz
 * LM-fglarge: [4-gram.arpa.gz](http://www.openslr.org/resources/11/4-gram.arpa.gz)
 
 | decoding mode                    | test clean | test other |
@@ -43,7 +41,6 @@
 * Training info: train_u2++_conformer.yaml lr 0.001, batch size 24, 8 gpu, acc_grad 1, 120 epochs, dither 1.0
 * Decoding info: ctc_weight 0.3,  reverse weight 0.5, average_num 30
 * Git hash: 65270043fc8c2476d1ab95e7c39f730017a670e0
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210610_u2pp_conformer_exp.tar.gz
 
 test clean
 | decoding mode                  | full | 16   |
@@ -63,7 +60,6 @@ test other
 * Training info: train_unified_conformer.yaml lr 0.001, batch size 10, 8 gpu, acc_grad 1, 120 epochs, dither 1.0
 * Decoding info: ctc_weight 0.5, average_num 30
 * Git hash: 90d9a559840e765e82119ab72a11a1f7c1a01b78
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/librispeech/20210215_unified_conformer_exp.tar.gz
 * LM-tgmed: [3-gram.pruned.1e-7.arpa.gz](http://www.openslr.org/resources/11/3-gram.pruned.1e-7.arpa.gz)
 * LM-tglarge: [3-gram.arpa.gz](http://www.openslr.org/resources/11/3-gram.arpa.gz)
 * LM-fglarge: [4-gram.arpa.gz](http://www.openslr.org/resources/11/4-gram.arpa.gz)

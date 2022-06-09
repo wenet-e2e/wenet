@@ -14,7 +14,6 @@
 
 #include "frontend/wav.h"
 #include "utils/flags.h"
-#include "utils/log.h"
 #include "utils/timer.h"
 #include "websocket/websocket_client.h"
 
@@ -24,7 +23,7 @@ DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
 DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
   wenet::WebSocketClient client(FLAGS_hostname, FLAGS_port);
@@ -36,22 +35,20 @@ int main(int argc, char *argv[]) {
   const int sample_rate = 16000;
   // Only support 16K
   CHECK_EQ(wav_reader.sample_rate(), sample_rate);
-  const int num_sample = wav_reader.num_sample();
-  std::vector<float> pcm_data(wav_reader.data(),
-                              wav_reader.data() + num_sample);
+  const int num_samples = wav_reader.num_samples();
   // Send data every 0.5 second
   const float interval = 0.5;
   const int sample_interval = interval * sample_rate;
-  for (int start = 0; start < num_sample; start += sample_interval) {
+  for (int start = 0; start < num_samples; start += sample_interval) {
     if (client.done()) {
       break;
     }
-    int end = std::min(start + sample_interval, num_sample);
+    int end = std::min(start + sample_interval, num_samples);
     // Convert to short
     std::vector<int16_t> data;
     data.reserve(end - start);
     for (int j = start; j < end; j++) {
-      data.push_back(static_cast<int16_t>(pcm_data[j]));
+      data.push_back(static_cast<int16_t>(wav_reader.data()[j]));
     }
     // TODO(Binbin Zhang): Network order?
     // Send PCM data

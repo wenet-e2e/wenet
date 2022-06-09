@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/wenet-e2e/wenet)
 
-[**Discussions**](https://github.com/wenet-e2e/wenet/discussions)
+[**Roadmap**](ROADMAP.md)
 | [**Docs**](https://wenet-e2e.github.io/wenet/)
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
@@ -33,7 +33,18 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 Please see `examples/$dataset/s0/README.md` for benchmark on different speech datasets.
 
-## Installation
+## Installation(Python Only)
+
+If you just want to use WeNet as a python package for speech recognition application,
+just install it by `pip`, please note python 3.6+ is required.
+``` sh
+pip3 install wenet
+```
+
+And please see [doc](runtime/binding/python/README.md) for usage.
+
+
+## Installation(Training and Developing)
 
 - Clone the repo
 ``` sh
@@ -78,6 +89,7 @@ Or you can directly discuss on [Github Issues](https://github.com/wenet-e2e/wene
 
 | <a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="250px"></a> | <a href="http://lxie.npu-aslp.org" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/colleges/nwpu.png" width="250px"></a> | <a href="http://www.aishelltech.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/aishelltech.png" width="250px"></a> | <a href="http://www.ximalaya.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/ximalaya.png" width="250px"></a> | <a href="https://www.jd.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/jd.jpeg" width="250px"></a> |
 | ---- | ---- | ---- | ---- | ---- |
+| <a href="https://horizon.ai" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/hobot.png" width="250px"></a> | <a href="https://thuhcsi.github.io" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/colleges/thu.png" width="250px"></a> | <a href="https://www.nvidia.com/en-us" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/nvidia.png" width="250px"></a> | | | |
 
 ## Acknowledge
 

@@ -1,8 +1,20 @@
-// Copyright 2020 Mobvoi Inc. All Rights Reserved.
-// Author: binbinzhang@mobvoi.com (Binbin Zhang)
-//         di.wu@mobvoi.com (Di Wu)
-//         lizexuan@huya.com (Zexuan Li)
-//         sxc19@mails.tsinghua.edu.cn (Xingchen Song)
+// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
+//               2022 ZeXuan Li (lizexuan@huya.com)
+//                    Xingchen Song(sxc19@mails.tsinghua.edu.cn)
+//                    hamddct@gmail.com (Mddct)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 
 #ifndef DECODER_ONNX_ASR_MODEL_H_
 #define DECODER_ONNX_ASR_MODEL_H_
@@ -14,16 +26,20 @@
 #include "onnxruntime_cxx_api.h"  // NOLINT
 
 #include "decoder/asr_model.h"
-#include "utils/utils.h"
 #include "utils/log.h"
+#include "utils/utils.h"
 
 namespace wenet {
 
 class OnnxAsrModel : public AsrModel {
  public:
+  // Note: Do not call the InitEngineThreads function more than once.
+  static void InitEngineThreads(int num_threads = 1);
+
+ public:
   OnnxAsrModel() = default;
   OnnxAsrModel(const OnnxAsrModel& other);
-  void Read(const std::string& model_dir, int num_threads = 1);
+  void Read(const std::string& model_dir);
   void Reset() override;
   void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
                           float reverse_weight,
@@ -47,6 +63,10 @@ class OnnxAsrModel : public AsrModel {
   int head_ = 0;
 
   // sessions
+  // NOTE(Mddct): The Env holds the logging state used by all other objects.
+  //  One Env must be created before using any other Onnxruntime functionality.
+  static Ort::Env env_;  // shared environment across threads.
+  static Ort::SessionOptions session_options_;
   std::shared_ptr<Ort::Session> encoder_session_ = nullptr;
   std::shared_ptr<Ort::Session> rescore_session_ = nullptr;
   std::shared_ptr<Ort::Session> ctc_session_ = nullptr;

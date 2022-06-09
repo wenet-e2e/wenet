@@ -25,8 +25,8 @@
 #include <string>
 #include <thread>
 
-#include "utils/utils.h"
 #include "grpc/wenet.grpc.pb.h"
+#include "utils/utils.h"
 
 namespace wenet {
 

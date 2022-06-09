@@ -1,29 +1,44 @@
-// Copyright 2021 Mobvoi Inc. All Rights Reserved.
-// Author: binbinzhang@mobvoi.com (Binbin Zhang)
-//         di.wu@mobvoi.com (Di Wu)
+// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
+//               2022 Binbin Zhang (binbzha@qq.com)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 
 #ifndef DECODER_PARAMS_H_
 #define DECODER_PARAMS_H_
 
 #include <memory>
-#include <utility>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "decoder/asr_decoder.h"
-#include "decoder/torch_asr_model.h"
+#ifdef USE_ONNX
 #include "decoder/onnx_asr_model.h"
+#endif
+#ifdef USE_TORCH
+#include "decoder/torch_asr_model.h"
+#endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/flags.h"
 #include "utils/string.h"
 
-// TorchAsrModel flags
-DEFINE_int32(num_threads, 1, "num threads for GEMM");
-DEFINE_string(model_path, "", "pytorch exported model path");
+DEFINE_int32(num_threads, 1, "num threads for ASR model");
 
+// TorchAsrModel flags
+DEFINE_string(model_path, "", "pytorch exported model path");
 // OnnxAsrModel flags
-DEFINE_int32(num_onnx_threads, 1, "num threads for Onnx");
 DEFINE_string(onnx_dir, "", "directory where the onnx model is saved");
 
 // FeaturePipelineConfig flags
@@ -36,7 +51,7 @@ DEFINE_string(fst_path, "", "TLG fst path");
 // DecodeOptions flags
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
 DEFINE_int32(num_left_chunks, -1, "left chunks in decoding");
-DEFINE_double(ctc_weight, 0.0,
+DEFINE_double(ctc_weight, 0.5,
               "ctc weight when combining ctc score and rescoring score");
 DEFINE_double(rescoring_weight, 1.0,
               "rescoring weight when combining ctc score and rescoring score");
@@ -51,6 +66,9 @@ DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
 DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
 DEFINE_double(blank_skip_thresh, 1.0,
               "blank skip thresh for ctc wfst search, 1.0 means no skip");
+DEFINE_double(length_penalty, 0.0, "length penalty ctc wfst search, will not"
+              "apply on self-loop arc, for balancing the del/ins ratio, "
+              "suggest set to -3.0");
 DEFINE_int32(nbest, 10, "nbest for ctc wfst or prefix search");
 
 // SymbolTable flags
@@ -93,6 +111,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->ctc_wfst_search_opts.acoustic_scale = FLAGS_acoustic_scale;
   decode_config->ctc_wfst_search_opts.blank_skip_thresh =
       FLAGS_blank_skip_thresh;
+  decode_config->ctc_wfst_search_opts.length_penalty = FLAGS_length_penalty;
   decode_config->ctc_wfst_search_opts.nbest = FLAGS_nbest;
   decode_config->ctc_prefix_search_opts.first_beam_size = FLAGS_nbest;
   decode_config->ctc_prefix_search_opts.second_beam_size = FLAGS_nbest;
@@ -103,16 +122,25 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
 
   if (!FLAGS_onnx_dir.empty()) {
+#ifdef USE_ONNX
     LOG(INFO) << "Reading onnx model ";
+    OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
     auto model = std::make_shared<OnnxAsrModel>();
-    model->Read(FLAGS_onnx_dir, FLAGS_num_onnx_threads);
+    model->Read(FLAGS_onnx_dir);
     resource->model = model;
+#else
+    LOG(FATAL) << "Please rebuild with cmake options '-DONNX=ON'.";
+#endif
   } else {
+#ifdef USE_TORCH
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
     TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
     auto model = std::make_shared<TorchAsrModel>();
     model->Read(FLAGS_model_path);
     resource->model = model;
+#else
+    LOG(FATAL) << "Please rebuild with cmake options '-DTORCH=ON'.";
+#endif
   }
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
@@ -156,10 +184,10 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 
   PostProcessOptions post_process_opts;
   post_process_opts.language_type =
-    FLAGS_language_type == 0 ? kMandarinEnglish : kIndoEuropean;
+      FLAGS_language_type == 0 ? kMandarinEnglish : kIndoEuropean;
   post_process_opts.lowercase = FLAGS_lowercase;
   resource->post_processor =
-    std::make_shared<PostProcessor>(std::move(post_process_opts));
+      std::make_shared<PostProcessor>(std::move(post_process_opts));
   return resource;
 }
 

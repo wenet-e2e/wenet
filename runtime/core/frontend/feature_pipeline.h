@@ -32,8 +32,8 @@ struct FeaturePipelineConfig {
   int frame_length;
   int frame_shift;
   FeaturePipelineConfig(int num_bins, int sample_rate)
-      : num_bins(num_bins),         // 80 dim fbank
-        sample_rate(sample_rate) {  // 16k sample rate
+      : num_bins(num_bins),                  // 80 dim fbank
+        sample_rate(sample_rate) {           // 16k sample rate
     frame_length = sample_rate / 1000 * 25;  // frame length 25ms
     frame_shift = sample_rate / 1000 * 10;   // frame shift 10ms
   }
@@ -41,7 +41,7 @@ struct FeaturePipelineConfig {
   void Info() const {
     LOG(INFO) << "feature pipeline config"
               << " num_bins " << num_bins << " frame_length " << frame_length
-              << "frame_shift" << frame_shift;
+              << " frame_shift " << frame_shift;
   }
 };
 
@@ -61,7 +61,8 @@ class FeaturePipeline {
   explicit FeaturePipeline(const FeaturePipelineConfig& config);
 
   // The feature extraction is done in AcceptWaveform().
-  void AcceptWaveform(const std::vector<float>& wav);
+  void AcceptWaveform(const float* pcm, const int size);
+  void AcceptWaveform(const int16_t* pcm, const int size);
 
   // Current extracted frames number.
   int num_frames() const { return num_frames_; }
@@ -80,7 +81,7 @@ class FeaturePipeline {
   bool ReadOne(std::vector<float>* feat);
 
   // Read #num_frames frame features.
-  // Return False if less then #num_frames features are read and the
+  // Return False if less than #num_frames features are read and the
   // input is finished.
   // Return True if #num_frames features are read.
   // This function is a blocking method when there is no feature
@@ -92,9 +93,7 @@ class FeaturePipeline {
     return input_finished_ && (frame == num_frames_ - 1);
   }
 
-  int NumQueuedFrames() const {
-    return feature_queue_.Size();
-  }
+  int NumQueuedFrames() const { return feature_queue_.Size(); }
 
  private:
   const FeaturePipelineConfig& config_;
@@ -106,8 +105,8 @@ class FeaturePipeline {
   bool input_finished_;
 
   // The feature extraction is done in AcceptWaveform().
-  // This wavefrom sample points are consumed by frame size.
-  // The residual wavefrom sample points after framing are
+  // This waveform sample points are consumed by frame size.
+  // The residual waveform sample points after framing are
   // kept to be used in next AcceptWaveform() calling.
   std::vector<float> remained_wav_;
 
