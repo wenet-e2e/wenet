@@ -42,26 +42,25 @@ class Recognizer {
     model->Read(model_path);
     resource_->model = model;
 
-    std::string symbol_path = wenet::JoinPath(model_dir, "words.txt");
-    CHECK(wenet::FileExists(symbol_path));
-    auto symbol_table = std::shared_ptr<fst::SymbolTable>(
-        fst::SymbolTable::ReadText(symbol_path));
-    resource_->symbol_table = symbol_table;
-
-    std::string fst_path = wenet::JoinPath(model_dir, "TLG.fst");
-    if (wenet::FileExists(fst_path)) {
-      resource_->fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
-          fst::Fst<fst::StdArc>::Read(fst_path));
-    } else {
-      // LM is not applied, unit_table is the same as symbol_table
-      resource_->unit_table = symbol_table;
-    }
     // units.txt: E2E model unit
     std::string unit_path = wenet::JoinPath(model_dir, "units.txt");
-    if (wenet::FileExists(unit_path)) {
-      resource_->unit_table = std::shared_ptr<fst::SymbolTable>(
-          fst::SymbolTable::ReadText(unit_path));
+    CHECK(wenet::FileExists(unit_path));
+    resource_->unit_table = std::shared_ptr<fst::SymbolTable>(
+      fst::SymbolTable::ReadText(unit_path));
+
+    std::string fst_path = wenet::JoinPath(model_dir, "TLG.fst");
+    if (wenet::FileExists(fst_path)) {  // With LM
+      resource_->fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
+          fst::Fst<fst::StdArc>::Read(fst_path));
+
+      std::string symbol_path = wenet::JoinPath(model_dir, "words.txt");
+      CHECK(wenet::FileExists(symbol_path));
+      resource_->symbol_table = std::shared_ptr<fst::SymbolTable>(
+          fst::SymbolTable::ReadText(symbol_path));
+    } else {  // Without LM, symbol_table is the same as unit_table
+      resource_->symbol_table = resource_->unit_table;
     }
+
     // Context config init
     context_config_ = std::make_shared<wenet::ContextConfig>();
     decode_options_ = std::make_shared<wenet::DecodeOptions>();
