@@ -49,7 +49,7 @@ jobs:
           --port 10086 \
           --chunk_size 16 \
           --model_path \$model/final.zip \
-          --dict_path \$model/words.txt 2>&1 | tee server.log
+          --unit_path \$model/units.txt 2>&1 | tee server.log
         EOF
 
         id=$(docker create ubuntu:latest)
