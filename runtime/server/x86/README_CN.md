@@ -74,7 +74,7 @@ model_dir=./20210602_unified_transformer_server
     --chunk_size -1 \
     --wav_path $wav_path \
     --model_path $model_dir/final.zip \
-    --dict_path $model_dir/words.txt 2>&1 | tee log.txt
+    --unit_path $model_dir/units.txt 2>&1 | tee log.txt
 ```
 
 `decoder_main`工具支持两种wav文件模式：
@@ -101,7 +101,7 @@ model_dir=./20210602_unified_transformer_server
     --port 10086 \
     --chunk_size 16 \
     --model_path $model_dir/final.zip \
-    --dict_path $model_dir/words.txt 2>&1 | tee server.log
+    --unit_path $model_dir/units.txt 2>&1 | tee server.log
 ```
 
 上述服务启动后，会监听 10086 端口。若想使用其他端口，请修改 `--port` 对应的参数.

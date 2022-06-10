@@ -60,7 +60,7 @@ model_dir=docker_resource/model
     --chunk_size -1 \
     --wav_path $wav_path \
     --model_path $model_dir/final.zip \
-    --dict_path $model_dir/words.txt 2>&1 | tee log.txt
+    --unit_path $model_dir/units.txt 2>&1 | tee log.txt
 ```
 
 Or you can do the WebSocket server/client testing as described in the `WebSocket` section.
@@ -86,7 +86,7 @@ model_dir=your_model_dir
     --chunk_size -1 \
     --wav_path $wav_path \
     --model_path $model_dir/final.zip \
-    --dict_path $model_dir/words.txt 2>&1 | tee log.txt
+    --unit_path $model_dir/units.txt 2>&1 | tee log.txt
 ```
 
 
@@ -106,7 +106,7 @@ model_dir=your_model_dir
     --port 10086 \
     --chunk_size 16 \
     --model_path $model_dir/final.zip \
-    --dict_path $model_dir/words.txt 2>&1 | tee server.log
+    --unit_path $model_dir/units.txt 2>&1 | tee server.log
 ```
 * Step 4. Start WebSocket client.
 
@@ -146,7 +146,7 @@ model_dir=your_model_dir
     --workers 4 \
     --chunk_size 16 \
     --model_path $model_dir/final.zip \
-    --dict_path $model_dir/words.txt 2>&1 | tee server.log
+    --unit_path $model_dir/units.txt 2>&1 | tee server.log
 ```
 
 * Step 4. Start gRPC client.
