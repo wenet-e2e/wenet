@@ -81,7 +81,7 @@ parameters [
   },
   {
     key: "vocab_path",
-    value: { string_value: "/ws/onnx_model/words.txt"}
+    value: { string_value: "/ws/onnx_model/units.txt"}
   },
   {
     key: "lm_path",
