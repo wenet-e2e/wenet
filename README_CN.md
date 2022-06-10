@@ -115,7 +115,7 @@ WeNet 借鉴了一些优秀的开源项目，包括
   author={Yao, Zhuoyuan and Wu, Di and Wang, Xiong and Zhang, Binbin and Yu, Fan and Yang, Chao and Peng, Zhendong and Chen, Xiaoyu and Xie, Lei and Lei, Xin},
   booktitle={Proc. Interspeech},
   year={2021},
-  address={Brno, Czech Republic }
+  address={Brno, Czech Republic },
   organization={IEEE}
 }
 
