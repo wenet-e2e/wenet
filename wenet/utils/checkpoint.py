@@ -93,7 +93,8 @@ def load_trained_modules(model: torch.nn.Module, args: None):
         partial_state_dict = OrderedDict()
         for key, value in model_state_dict.items():
             if any(key.startswith(m) for m in modules):
-                partial_state_dict[key] = value
+                if 'global_cmvn' not in key:
+                    partial_state_dict[key] = value
         main_state_dict.update(partial_state_dict)
     else:
         logging.warning("model was not found : %s", enc_model_path)
