@@ -13,6 +13,7 @@ reverse_weight=0.0
 rescoring_weight=1.0
 # For CTC WFST based decoding
 fst_path=
+dict_path=
 acoustic_scale=1.0
 beam=15.0
 lattice_beam=12.0
@@ -23,7 +24,7 @@ length_penalty=0.0
 
 . tools/parse_options.sh || exit 1;
 if [ $# != 5 ]; then
-  echo "Usage: $0 [options] <wav.scp> <label_file> <model_file> <dict_file> <output_dir>"
+  echo "Usage: $0 [options] <wav.scp> <label_file> <model_file> <unit_file> <output_dir>"
   exit 1;
 fi
 
@@ -35,7 +36,7 @@ fi
 scp=$1
 label_file=$2
 model_file=$3
-dict_file=$4
+unit_file=$4
 dir=$5
 
 mkdir -p $dir/split${nj}
@@ -52,6 +53,7 @@ wfst_decode_opts=
 if [ ! -z $fst_path ]; then
   wfst_decode_opts="--fst_path $fst_path"
   wfst_decode_opts="$wfst_decode_opts --beam $beam"
+  wfst_decode_opts="$wfst_decode_opts --dict_path $dict_path"
   wfst_decode_opts="$wfst_decode_opts --lattice_beam $lattice_beam"
   wfst_decode_opts="$wfst_decode_opts --max_active $max_active"
   wfst_decode_opts="$wfst_decode_opts --min_active $min_active"
@@ -69,7 +71,7 @@ for n in $(seq ${nj}); do
      --chunk_size $chunk_size \
      --wav_scp ${dir}/split${nj}/wav.${n}.scp \
      --model_path $model_file \
-     --dict_path $dict_file \
+     --unit_path $unit_file \
      $wfst_decode_opts \
      --result ${dir}/split${nj}/${n}.text &> ${dir}/split${nj}/${n}.log
 } &

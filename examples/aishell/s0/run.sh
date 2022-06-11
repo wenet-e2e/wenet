@@ -233,8 +233,9 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
     --chunk_size $chunk_size \
     --fst_path data/lang_test/TLG.fst \
+    --dict_path data/lang_test/words.fst \
     data/test/wav.scp data/test/text $dir/final.zip \
-    data/lang_test/words.txt $dir/lm_with_runtime
+    data/lang_test/units.txt $dir/lm_with_runtime
   # Please see $dir/lm_with_runtime for wer
 fi
 

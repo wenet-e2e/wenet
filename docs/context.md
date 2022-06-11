@@ -132,7 +132,7 @@ model_dir=docker_resource/model
     --model_path $model_dir/final.zip \
     --context_path $context_path \
     --context_score 3 \
-    --dict_path $model_dir/words.txt 2>&1 | tee log.txt
+    --unit_path $model_dir/units.txt 2>&1 | tee log.txt
 ```
 
 
