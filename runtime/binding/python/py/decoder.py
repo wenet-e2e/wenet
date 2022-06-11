@@ -49,7 +49,7 @@ class Decoder:
             self.set_context_score(context_score)
 
         self.set_chunk_size(chunk_size, num_left_chunks)
-        
+
     def __del__(self):
         _wenet.wenet_free(self.d)
 
