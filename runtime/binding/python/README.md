@@ -50,11 +50,6 @@ You can also specify the following parameter in `wenet.Decoder`
 * `enable_timestamp` (bool): Whether to enable the word level timestamp.
 * `context` (List[str]): a list of context biasing words.
 * `context_score` (float): context bonus score.
-* `chunk_size` (int): chunk size
-* `num_left_chunks` (int): num left chunks
-* `ctc_weight` (float): ctc weight
-* `rescoring_weight` (float):  rescoring weight for attention rescore
-* `reverse_weight` (float): reverse weight for u2++
 
 For example:
 ``` python
@@ -80,7 +75,7 @@ with wave.open(test_wav, 'rb') as fin:
     assert fin.getnchannels() == 1
     wav = fin.readframes(fin.getnframes())
 
-decoder = wenet.Decoder(model_dir, chunk_size=16)
+decoder = wenet.Decoder(model_dir)
 # We suppose the wav is 16k, 16bits, and decode every 0.5 seconds
 interval = int(0.5 * 16000) * 2
 for i in range(0, len(wav), interval):

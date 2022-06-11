@@ -18,16 +18,10 @@ import _wenet
 
 
 class Decoder:
-
     def __init__(self,
                  model_dir: str,
                  lang: str = 'chs',
                  nbest: int = 1,
-                 ctc_weight: float = 0.5,
-                 rescoring_weight: float = 1.0,
-                 reverse_weight: float = 0.0,
-                 chunk_size: int = -1,
-                 num_left_chunks: int = -1,
                  enable_timestamp: bool = False,
                  context: List[str] = None,
                  context_score: float = 3.0):
@@ -47,8 +41,6 @@ class Decoder:
         if context is not None:
             self.add_context(context)
             self.set_context_score(context_score)
-
-        self.set_chunk_size(chunk_size, num_left_chunks)
 
     def __del__(self):
         _wenet.wenet_free(self.d)
@@ -77,16 +69,6 @@ class Decoder:
     def set_language(self, lang: str):
         assert lang in ['chs', 'en']
         _wenet.wenet_set_language(self.d, lang)
-
-    def set_chunk_size(self, chunk_size: int, num_left_chunks: int):
-        _wenet.wenet_set_chunk_size(chunk_size, num_left_chunks)
-
-    def set_weights(self, ctc_weight: float, rescoring_weight: float,
-                    reverse_weight: float):
-        assert ctc_weight >= 0.0
-        assert rescoring_weight >= 0.0
-        assert reverse_weight >= 0.0
-        _wenet.wenet_set_weights(ctc_weight, rescoring_weight, reverse_weight)
 
     def decode(self, pcm: bytes, last: bool = True) -> str:
         """ Decode the input data
