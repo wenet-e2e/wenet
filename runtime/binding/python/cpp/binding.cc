@@ -36,5 +36,5 @@ PYBIND11_MODULE(_wenet, m) {
         "set context bonus score");
   m.def("wenet_set_language", &wenet_set_language, "set language");
   m.def("wenet_set_chunk_size", &wenet_set_chunk_size, "set chunk size");
-  m.def("wenet_set_weights, &wenet_set_weights, "set decode weights");
+  m.def("wenet_set_weights", &wenet_set_weights, "set decode weights");
 }
