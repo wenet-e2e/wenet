@@ -256,15 +256,15 @@ void wenet_set_language(void* decoder, const char* lang) {
   recognizer->set_language(lang);
 }
 
-void wenet_set_chunk_size(void *decoder, int chunk_size,
+void wenet_set_chunk_size(void* decoder, int chunk_size,
                           int num_left_chunks) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_chunk_size(chunk_size, num_left_chunks);
 }
 
-void wenet_set_weights(void *decoder, float ctc_weight, float rescoring_weight,
+void wenet_set_weights(void* decoder, float ctc_weight, float rescoring_weight,
                        float reverse_weight) {
-  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_weights(ctc_weight, rescoring_weight, reverse_weight);
 }
 
