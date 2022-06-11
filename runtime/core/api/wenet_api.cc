@@ -92,6 +92,14 @@ class Recognizer {
     }
     resource_->post_processor =
         std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+
+    // Set decode opts
+    decode_options_->chunk_size = chunk_size_;
+    decode_options->num_left_chunks = num_left_chunks_;
+    decode_options_->ctc_weight = ctc_weight_;
+    decode_options_->reverse_weight = reverse_weight_;
+    decode_options_->rescoring_weight = rescoring_weight_;
+
     // Init decoder
     decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_, resource_,
                                                    *decode_options_);
@@ -159,6 +167,16 @@ class Recognizer {
   void AddContext(const char* word) { context_.emplace_back(word); }
   void set_context_score(float score) { context_score_ = score; }
   void set_language(const char* lang) { language_ = lang; }
+  void set_chunk_size(int chunk_size, int num_left_chunks) {
+    chunk_size_ = chunk_size;
+    num_left_chunks_ = num_left_chunks;
+  }
+  void set_weights(float ctc_weight, float rescoring_weight,
+                   float reverse_weight) {
+    ctc_weight_ = ctc_weight;
+    rescoring_weight_ = rescoring_weight;
+    reverse_weight_ = reverse_weight;
+  }
 
  private:
   // NOTE(Binbin Zhang): All use shared_ptr for clone in the future
@@ -176,6 +194,11 @@ class Recognizer {
   std::vector<std::string> context_;
   float context_score_;
   std::string language_ = "chs";
+  int chunk_size_ = -1;
+  int num_left_chunks_ = -1;
+  float ctc_weight_ = 0.5;
+  float rescoring_weight_ = 1.0;
+  float reverse_weight_ = 0.0;
 };
 
 void* wenet_init(const char* model_dir) {
@@ -232,3 +255,16 @@ void wenet_set_language(void* decoder, const char* lang) {
   Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_language(lang);
 }
+
+void wenet_set_chunk_size(void *decoder, int chunk_size,
+                          int num_left_chunks) {
+  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  recognizer->set_chunk_size(chunk_size, num_left_chunks);
+}
+
+void wenet_set_weights(void *decoder, float ctc_weight, float rescoring_weight,
+                       float reverse_weight) {
+  Recognizer *recognizer = reinterpret_cast<Recognizer *>(decoder);
+  recognizer->set_weights(ctc_weight, rescoring_weight, reverse_weight);
+}
+
