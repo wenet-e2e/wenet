@@ -50,6 +50,11 @@ You can also specify the following parameter in `wenet.Decoder`
 * `enable_timestamp` (bool): Whether to enable the word level timestamp.
 * `context` (List[str]): a list of context biasing words.
 * `context_score` (float): context bonus score.
+* `chunk_size` (int): chunk size
+* `num_left_chunks` (int): num left chunks
+* `ctc_weight` (float): ctc weight
+* ` rescoring_weight` (float):  rescoring weight for attention rescore
+* `reverse_weight)` (float): reverse weight for u2++
 
 For example:
 ``` python
