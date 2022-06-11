@@ -46,9 +46,10 @@ class Decoder:
         self.enable_timestamp(enable_timestamp)
         if context is not None:
             self.add_context(context)
-        self.set_context_score(context_score)
-        self.set_chunk_size(chunk_size, num_left_chunks)
+            self.set_context_score(context_score)
 
+        self.set_chunk_size(chunk_size, num_left_chunks)
+        
     def __del__(self):
         _wenet.wenet_free(self.d)
 
