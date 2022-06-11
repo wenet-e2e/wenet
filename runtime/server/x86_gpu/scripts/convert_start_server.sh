@@ -19,7 +19,7 @@ onnx_model_dir=/ws/onnx_model
 model_repo=/ws/model_repo
 
 # Convert config.pbtxt in model_repo and move models
-python3 scripts/convert.py --config=$onnx_model_dir/train.yaml --vocab=$onnx_model_dir/words.txt \
+python3 scripts/convert.py --config=$onnx_model_dir/train.yaml --vocab=$onnx_model_dir/units.txt \
         --model_repo=$model_repo --onnx_model_dir=$onnx_model_dir
 
 # Start server

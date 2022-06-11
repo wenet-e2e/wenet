@@ -22,7 +22,7 @@ import onnx
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='generate config.pbtxt for model_repo')
     parser.add_argument('--config', required=True, help='config file')
-    parser.add_argument('--vocab', required=True, help='vocabulary file, words.txt')
+    parser.add_argument('--vocab', required=True, help='vocabulary file, units.txt')
     parser.add_argument('--model_repo', required=True, help='model repo directory')
     parser.add_argument('--onnx_model_dir', default=True, type=str, required=False,
                         help="onnx model path")
