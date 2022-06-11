@@ -99,6 +99,21 @@ void wenet_set_language(void* decoder, const char* lang);
  */
 void wenet_set_log_level(int level);
 
+/** Set chunk size
+ * @param chunk_size: chunk size
+ * @param left_chunk_size: left chunk size
+*/
+void wenet_set_chunk_size(void* decoder, int chunk_size,
+                          int num_left_chunks);
+
+/** Set decode weights
+ * @param ctc_weight: ctc weight
+ * @param rescoring_weight: rescoring weight
+ * @param reverse_weight: reverse_weight
+*/
+void wenet_set_weights(void* decoder, float ctc_weight, float rescoring_weight,
+                       float reverse_weight);
+
 #ifdef __cplusplus
 }
 #endif
