@@ -95,7 +95,7 @@ class Recognizer {
 
     // Set decode opts
     decode_options_->chunk_size = chunk_size_;
-    decode_options->num_left_chunks = num_left_chunks_;
+    decode_options_->num_left_chunks = num_left_chunks_;
     decode_options_->ctc_weight = ctc_weight_;
     decode_options_->reverse_weight = reverse_weight_;
     decode_options_->rescoring_weight = rescoring_weight_;
