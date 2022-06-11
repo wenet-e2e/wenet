@@ -38,7 +38,7 @@ void init(JNIEnv* env, jobject, jstring jModelDir) {
   const char* pModelDir = env->GetStringUTFChars(jModelDir, nullptr);
 
   std::string modelPath = std::string(pModelDir) + "/final.zip";
-  std::string dictPath = std::string(pModelDir) + "/words.txt";
+  std::string dictPath = std::string(pModelDir) + "/units.txt";
   auto model = std::make_shared<TorchAsrModel>();
   model->Read(modelPath);
   LOG(INFO) << "model path: " << modelPath;

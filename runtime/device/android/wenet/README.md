@@ -24,7 +24,7 @@ Or you can train your own model using WeNet training pipeline on your data.
 
 ### 2) Build APK
 
-When your model is ready, put `final.zip` and `words.txt` into Android assets (`app/src/main/assets`) folder,
+When your model is ready, put `final.zip` and `units.txt` into Android assets (`app/src/main/assets`) folder,
 then just build and run the APK. Here is a gif demo, which shows how our on-device streaming e2e ASR runs with low latency.
 Please note the wifi and data has been disabled in the demo so there is no network connection ^\_^.
 
