@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
   private static final int SAMPLE_RATE = 16000;  // The sampling rate
   private static final int MAX_QUEUE_SIZE = 2500;  // 100 seconds audio, 1 / 0.04 * 100
   private static final List<String> resource = Arrays.asList(
-    "final.zip", "words.txt", "ctc.ort", "decoder.ort", "encoder.ort"
+    "final.zip", "units.txt", "ctc.ort", "decoder.ort", "encoder.ort"
   );
 
   private boolean startRecord = false;
