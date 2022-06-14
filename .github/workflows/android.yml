@@ -28,7 +28,7 @@ jobs:
       run: |
         wget ${{ github.event.inputs.modelURL}}
         tar -xf *.tar.gz
-        find . \( -name "final.zip" -o -name "words.txt" \) |\
+        find . \( -name "final.zip" -o -name "units.txt" \) |\
           xargs -I  {} cp {} ${{ env.ANDROID_DIR }}/app/src/main/assets
 
     - name: Build with Gradle
