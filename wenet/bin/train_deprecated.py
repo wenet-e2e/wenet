@@ -240,6 +240,7 @@ the future, please move to the new IO !!!
     for epoch in range(start_epoch, num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
+        configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,
