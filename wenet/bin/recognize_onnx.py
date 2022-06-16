@@ -27,8 +27,8 @@
 # limitations under the License.
 
 """
-This script is for testing exported onnx encoder and decoder.
-The exported onnx models only support batch offline ASR inference.
+This script is for testing exported onnx encoder and decoder from
+export_onnx_gpu.py. The exported onnx models only support batch offline ASR inference.
 It requires a python wrapped c++ ctc decoder.
 Please install it by following:
 https://github.com/Slyne/ctc_decoder.git
