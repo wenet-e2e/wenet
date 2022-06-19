@@ -90,7 +90,7 @@ class Decoder:
         return model_path
 
     def download_model(self, model_url: str, model_dir: str):
-        assert os.path.exists(model_url)
+        assert os.path.exists(model_dir)
 
         def progress_hook(t):
             last_b = [0]
