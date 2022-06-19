@@ -23,6 +23,7 @@ def cmake_extension(name, *args, **kwargs) -> setuptools.Extension:
 
 
 class BuildExtension(build_ext):
+
     def build_extension(self, ext: setuptools.extension.Extension):
         os.makedirs(self.build_temp, exist_ok=True)
         os.makedirs(self.build_lib, exist_ok=True)
@@ -48,11 +49,13 @@ class BuildExtension(build_ext):
         libs = []
         torch_lib = 'fc_base/libtorch-src/lib'
         for ext in ['so', 'pyd']:
-            libs.extend(glob.glob(
-                f"{self.build_temp}/**/_wenet*.{ext}", recursive=True))
+            libs.extend(
+                glob.glob(f"{self.build_temp}/**/_wenet*.{ext}",
+                          recursive=True))
         for ext in ['so', 'dylib', 'dll']:
-            libs.extend(glob.glob(
-                f"{self.build_temp}/**/*wenet_api.{ext}", recursive=True))
+            libs.extend(
+                glob.glob(f"{self.build_temp}/**/*wenet_api.{ext}",
+                          recursive=True))
             libs.extend(glob.glob(f'{src_dir}/{torch_lib}/*c10.{ext}'))
             libs.extend(glob.glob(f'{src_dir}/{torch_lib}/*torch_cpu.{ext}'))
 
@@ -95,6 +98,8 @@ setuptools.setup(
     ext_modules=[cmake_extension("_wenet")],
     cmdclass={"build_ext": BuildExtension},
     zip_safe=False,
+    setup_requires=["tqdm"],
+    install_requires=["tqdm"],
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python",
