@@ -37,7 +37,7 @@ class Decoder:
             context: context words
             context_score: bonus score when the context is matched
         """
-        if model_dir is not None:
+        if model_dir is None:
             model_dir = Hub.get_model_by_lang(lang)
 
         self.d = _wenet.wenet_init(model_dir)
