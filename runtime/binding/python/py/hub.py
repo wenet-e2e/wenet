@@ -10,23 +10,19 @@ def download(url: str, dest: str, only_child=True):
     """ download from url to dest
     """
     assert os.path.exists(dest)
-
     def progress_hook(t):
         last_b = [0]
-
         def update_to(b=1, bsize=1, tsize=None):
             if tsize not in (None, -1):
                 t.total = tsize
             displayed = t.update((b - last_b[0]) * bsize)
             last_b[0] = b
             return displayed
-
         return update_to
 
     # *.tar.gz
     name = url.split("/")[-1]
     tar_path = os.path.join(dest, name)
-
     with tqdm.tqdm(unit='B',
                    unit_scale=True,
                    unit_divisor=1024,
@@ -52,7 +48,6 @@ def download(url: str, dest: str, only_child=True):
 class Hub(object):
     """Hub for wenet pretrain runtime model
     """
-
     # TODO(Mddct): make assets class to support other language
     Assets = {
         # wenetspeech
@@ -69,7 +64,6 @@ class Hub(object):
     @staticmethod
     def get_model_by_lang(lang: str) -> str:
         assert lang in Hub.Assets.keys()
-
         # NOTE(Mddct): model_dir structure
         # Path.Home()/.went
         # - chs
@@ -82,11 +76,9 @@ class Hub(object):
         model_dir = os.path.join(Path.home(), ".wenet", lang)
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
-
         # TODO(Mddct): model metadata
         if set(["final.zip",
                 "units.txt"]).issubset(set(os.listdir(model_dir))):
             return model_dir
-
         download(model_url, model_dir, only_child=True)
         return model_dir
