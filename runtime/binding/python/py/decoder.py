@@ -12,24 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import tarfile
-from pathlib import Path
 from typing import List, Optional
-from urllib.request import urlretrieve
 
 import _wenet
-import tqdm
 
-# TODO(Mddct): make assets class to support other language
-Assets = {
-    # wenetspeech
-    "chs":
-    "https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20220506_u2pp_conformer_libtorch.tar.gz",
-    # gigaspeech
-    "en":
-    "https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/gigaspeech/20210728_u2pp_conformer_libtorch.tar.gz"
-}
+from .hub import Hub
 
 
 class Decoder:
@@ -50,8 +37,8 @@ class Decoder:
             context: context words
             context_score: bonus score when the context is matched
         """
-        if not model_dir:
-            model_dir = self.get_model_by_lang(lang)
+        if model_dir is not None:
+            model_dir = Hub.get_model_by_lang(lang)
 
         self.d = _wenet.wenet_init(model_dir)
 
@@ -68,61 +55,6 @@ class Decoder:
     def reset(self):
         """ Reset status for next decoding """
         _wenet.wenet_reset(self.d)
-
-    def get_model_by_lang(self, lang: str):
-
-        assert lang in ['chs', 'en']
-        # NOTE(Mddct): model_dir structure
-        # Path.Home()/.went
-        # - chs
-        #    - 20220506_u2pp_conformer_libtorch
-        #       - words.txt
-        #       - ....
-        # - en
-        model_dir_parent = os.path.join(Path.home(), ".wenet", lang)
-
-        model_dir = Assets[lang].split("/")[-1].replace(".tar.gz", "")
-        model_path = os.path.join(model_dir_parent, model_dir)
-        if not os.path.exists(model_path):
-            os.makedirs(model_dir_parent, exist_ok=True)
-            return self.download_model(Assets[lang], model_dir)
-
-        return model_path
-
-    def download_model(self, model_url: str, model_dir: str):
-        assert os.path.exists(model_dir)
-
-        def progress_hook(t):
-            last_b = [0]
-
-            def update_to(b=1, bsize=1, tsize=None):
-                if tsize not in (None, -1):
-                    t.total = tsize
-                displayed = t.update((b - last_b[0]) * bsize)
-                last_b[0] = b
-                return displayed
-
-            return update_to
-
-        # *.tar.gz
-        model_name = model_url.split("/")[-1]
-        tar_model_path = os.path.join(model_dir, model_name)
-
-        with tqdm.tqdm(unit='B',
-                       unit_scale=True,
-                       unit_divisor=1024,
-                       miniters=1,
-                       desc=(model_name)) as t:
-            urlretrieve(model_url,
-                        filename=tar_model_path,
-                        reporthook=progress_hook(t),
-                        data=None)
-            t.total = t.n
-
-            with tarfile.open(tar_model_path) as f:
-                for name in f.getnames():
-                    f.extract(name, path=model_dir)
-        return os.path.join(model_dir, model_name).replace(".tar.gz", "", -1)
 
     def set_nbest(self, n: int):
         assert n >= 1

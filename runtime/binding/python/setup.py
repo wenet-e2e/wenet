@@ -23,7 +23,6 @@ def cmake_extension(name, *args, **kwargs) -> setuptools.Extension:
 
 
 class BuildExtension(build_ext):
-
     def build_extension(self, ext: setuptools.extension.Extension):
         os.makedirs(self.build_temp, exist_ok=True)
         os.makedirs(self.build_lib, exist_ok=True)
