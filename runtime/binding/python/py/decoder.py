@@ -12,18 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Optional
 
 import _wenet
 
+from .hub import Hub
+
 
 class Decoder:
+
     def __init__(self,
-                 model_dir: str,
+                 model_dir: Optional[str] = None,
                  lang: str = 'chs',
                  nbest: int = 1,
                  enable_timestamp: bool = False,
-                 context: List[str] = None,
+                 context: Optional[List[str]] = None,
                  context_score: float = 3.0):
         """ Init WeNet decoder
         Args:
@@ -34,7 +37,11 @@ class Decoder:
             context: context words
             context_score: bonus score when the context is matched
         """
+        if model_dir is None:
+            model_dir = Hub.get_model_by_lang(lang)
+
         self.d = _wenet.wenet_init(model_dir)
+
         self.set_language(lang)
         self.set_nbest(nbest)
         self.enable_timestamp(enable_timestamp)
