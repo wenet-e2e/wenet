@@ -10,8 +10,10 @@ def download(url: str, dest: str, only_child=True):
     """ download from url to dest
     """
     assert os.path.exists(dest)
+
     def progress_hook(t):
         last_b = [0]
+
         def update_to(b=1, bsize=1, tsize=None):
             if tsize not in (None, -1):
                 t.total = tsize
