@@ -157,5 +157,6 @@ class NoPositionalEncoding(torch.nn.Module):
         pos_emb = torch.zeros(1, x.size(1), self.d_model).to(x.device)
         return self.dropout(x), pos_emb
 
-    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
+    def position_encoding(
+            self, offset: Union[int, torch.Tensor], size: int) -> torch.Tensor:
         return torch.zeros(1, size, self.d_model)
