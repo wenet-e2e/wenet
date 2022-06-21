@@ -44,6 +44,7 @@ You can also specify the following parameter in `wenet.Decoder`
   * `units.txt`: modeling units file
   * `TLG.fst`: optional, it means decoding with LM when `TLG.fst` is given.
   * `words.txt`: optional, word level symbol table for decoding with `TLG.fst`
+
   Please refer https://github.com/wenet-e2e/wenet/blob/main/docs/pretrained_models.md for the details of `Runtime Model`.
 
 * `nbest` (int): Output the top-n best result.
