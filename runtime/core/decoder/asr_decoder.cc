@@ -68,7 +68,8 @@ void AsrDecoder::ResetContinuousDecoding() {
   global_frame_offset_ = num_frames_;
   start_ = false;
   result_.clear();
-  model_->Reset();
+  // We should not reset the model, in order to reuse the cache.
+  // model_->Reset();
   searcher_->Reset();
   ctc_endpointer_->Reset();
 }
