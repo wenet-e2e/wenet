@@ -24,6 +24,7 @@ def download(url: str, dest: str, only_child=True):
     """ download from url to dest
     """
     assert os.path.exists(dest)
+    print('Downloading {} to {}'.format(url, dest))
 
     def progress_hook(t):
         last_b = [0]
@@ -70,10 +71,10 @@ class Hub(object):
     Assets = {
         # wenetspeech
         "chs":
-        "https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20220506_u2pp_conformer_libtorch.tar.gz",
+        "https://github.com/wenet-e2e/wenet/releases/download/v2.0.1/chs.tar.gz",
         # gigaspeech
         "en":
-        "https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/gigaspeech/20210728_u2pp_conformer_libtorch.tar.gz"
+        "https://github.com/wenet-e2e/wenet/releases/download/v2.0.1/en.tar.gz"
     }
 
     def __init__(self) -> None:
