@@ -59,7 +59,9 @@ def download(url: str, dest: str, only_child=True):
                     if "/" not in tarinfo.name:
                         continue
                     name = os.path.basename(tarinfo.name)
-                    f.extract(tarinfo, os.path.join(dest, name))
+                    fileobj = f.extractfile(tarinfo)
+                    with open(os.path.join(dest, name), "wb") as writer:
+                        writer.write(fileobj.read())
 
 
 class Hub(object):
