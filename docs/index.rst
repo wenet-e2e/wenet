@@ -13,7 +13,7 @@ Wenet is an tansformer-based end-to-end ASR toolkit.
    :maxdepth: 1
    :caption: Tutorial:
 
-   ../runtime/binding/python/README.md
+   ./python_binding.md
    ./papers.md
    ./tutorial_librispeech.md
    ./tutorial_aishell.md
