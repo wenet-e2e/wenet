@@ -1,6 +1,9 @@
 name: "Check and Publish Docs"
 on:
   pull_request:
+  push:
+    branches:
+    - main
 
 jobs:
   docs:
