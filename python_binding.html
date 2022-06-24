@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeNet Python Binding &mdash; Wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Papers" href="papers.html" />
+    <link rel="prev" title="Welcome to Wenet’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> Wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Tutorial:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">WeNet Python Binding</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#install">Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#non-streaming-usage">Non-streaming Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#streaming-usage">Streaming Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#build-on-your-local-machine">Build on Your Local Machine</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained Models in WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lm.html">LM for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="context.html">Context Biasing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="UIO.html">UIO for WeNet</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>WeNet Python Binding</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/python_binding.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="wenet-python-binding">
+<h1>WeNet Python Binding<a class="headerlink" href="#wenet-python-binding" title="Permalink to this headline"></a></h1>
+<p>This is a python binding of WeNet.</p>
+<p>WeNet is a production first and production ready end-to-end speech recognition toolkit.</p>
+<p>The best things of the binding are:</p>
+<ol class="simple">
+<li><p>Multiple languages supports, including English, Chinese. Other languages are in development.</p></li>
+<li><p>Non-streaming and streaming API</p></li>
+<li><p>N-best, contextual biasing, and timestamp supports, which are very important for speech productions.</p></li>
+<li><p>Alignment support. You can get phone level alignments this tool, on developing.</p></li>
+</ol>
+<div class="section" id="install">
+<h2>Install<a class="headerlink" href="#install" title="Permalink to this headline"></a></h2>
+<p>Python 3.6+ is required.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip3 install wenet
+</pre></div>
+</div>
+</div>
+<div class="section" id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
+<div class="section" id="non-streaming-usage">
+<h3>Non-streaming Usage<a class="headerlink" href="#non-streaming-usage" title="Permalink to this headline"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">wenet</span>
+
+<span class="n">wav_file</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">decoder</span> <span class="o">=</span> <span class="n">wenet</span><span class="o">.</span><span class="n">Decoder</span><span class="p">(</span><span class="n">lang</span><span class="o">=</span><span class="s1">&#39;chs&#39;</span><span class="p">)</span>
+<span class="n">ans</span> <span class="o">=</span> <span class="n">decoder</span><span class="o">.</span><span class="n">decode_wav</span><span class="p">(</span><span class="n">wav_file</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ans</span><span class="p">)</span>
+<span class="c1"># call decoder.reset() if you want to do the next decoding</span>
+</pre></div>
+</div>
+<p>You can also specify the following parameter in <code class="docutils literal notranslate"><span class="pre">wenet.Decoder</span></code></p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">lang</span></code> (str): The language you used, <code class="docutils literal notranslate"><span class="pre">chs</span></code> for Chinese, and <code class="docutils literal notranslate"><span class="pre">en</span></code> for English.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model_dir</span></code> (str): is the <code class="docutils literal notranslate"><span class="pre">Runtime</span> <span class="pre">Model</span></code> directory, it contains the following files.
+If not provided, official model for specific <code class="docutils literal notranslate"><span class="pre">lang</span></code> will be downloaded automatically.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">final.zip</span></code>: runtime TorchScript ASR model.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">units.txt</span></code>: modeling units file</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">TLG.fst</span></code>: optional, it means decoding with LM when <code class="docutils literal notranslate"><span class="pre">TLG.fst</span></code> is given.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">words.txt</span></code>: optional, word level symbol table for decoding with <code class="docutils literal notranslate"><span class="pre">TLG.fst</span></code></p></li>
+</ul>
+<p>Please refer https://github.com/wenet-e2e/wenet/blob/main/docs/pretrained_models.md for the details of <code class="docutils literal notranslate"><span class="pre">Runtime</span> <span class="pre">Model</span></code>.</p>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">nbest</span></code> (int): Output the top-n best result.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">enable_timestamp</span></code> (bool): Whether to enable the word level timestamp.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">context</span></code> (List[str]): a list of context biasing words.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">context_score</span></code> (float): context bonus score.</p></li>
+</ul>
+<p>For example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">decoder</span> <span class="o">=</span> <span class="n">wenet</span><span class="o">.</span><span class="n">Decoder</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span>
+                        <span class="n">lang</span><span class="o">=</span><span class="s1">&#39;chs&#39;</span><span class="p">,</span>
+                        <span class="n">nbest</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+                        <span class="n">enable_timestamp</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">context</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;不忘初心&#39;</span><span class="p">,</span> <span class="s1">&#39;牢记使命&#39;</span><span class="p">],</span>
+                        <span class="n">context_score</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="streaming-usage">
+<h3>Streaming Usage<a class="headerlink" href="#streaming-usage" title="Permalink to this headline"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">wave</span>
+<span class="kn">import</span> <span class="nn">wenet</span>
+
+<span class="n">test_wav</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="k">with</span> <span class="n">wave</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">test_wav</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>
+    <span class="k">assert</span> <span class="n">fin</span><span class="o">.</span><span class="n">getnchannels</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="n">wav</span> <span class="o">=</span> <span class="n">fin</span><span class="o">.</span><span class="n">readframes</span><span class="p">(</span><span class="n">fin</span><span class="o">.</span><span class="n">getnframes</span><span class="p">())</span>
+
+<span class="n">decoder</span> <span class="o">=</span> <span class="n">wenet</span><span class="o">.</span><span class="n">Decoder</span><span class="p">(</span><span class="n">lang</span><span class="o">=</span><span class="s1">&#39;chs&#39;</span><span class="p">)</span>
+<span class="c1"># We suppose the wav is 16k, 16bits, and decode every 0.5 seconds</span>
+<span class="n">interval</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="mi">16000</span><span class="p">)</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">wav</span><span class="p">),</span> <span class="n">interval</span><span class="p">):</span>
+    <span class="n">last</span> <span class="o">=</span> <span class="kc">False</span> <span class="k">if</span> <span class="n">i</span> <span class="o">+</span> <span class="n">interval</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">wav</span><span class="p">)</span> <span class="k">else</span> <span class="kc">True</span>
+    <span class="n">chunk_wav</span> <span class="o">=</span> <span class="n">wav</span><span class="p">[</span><span class="n">i</span><span class="p">:</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">interval</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">wav</span><span class="p">))]</span>
+    <span class="n">ans</span> <span class="o">=</span> <span class="n">decoder</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="n">chunk_wav</span><span class="p">,</span> <span class="n">last</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">ans</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>You can use the same parameters as we introduced above to control the behavior of <code class="docutils literal notranslate"><span class="pre">wenet.Decoder</span></code></p>
+</div>
+</div>
+<div class="section" id="build-on-your-local-machine">
+<h2>Build on Your Local Machine<a class="headerlink" href="#build-on-your-local-machine" title="Permalink to this headline"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone git@github.com:wenet-e2e/wenet.git
+<span class="nb">cd</span> wenet/runtime/binding/python
+python setup.py install
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Wenet’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="papers.html" class="btn btn-neutral float-right" title="Papers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

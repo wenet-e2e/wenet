@@ -38,6 +38,7 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption"><span class="caption-text">Tutorial:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="python_binding.html">WeNet Python Binding</a></li>
 <li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
@@ -199,8 +200,9 @@ tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test <span class="
     --beam <span class="m">15</span>.0 --lattice_beam <span class="m">7</span>.5 --max_active <span class="m">7000</span> <span class="se">\</span>
     --blank_skip_thresh <span class="m">0</span>.98 --ctc_weight <span class="m">0</span>.5 --rescoring_weight <span class="m">1</span>.0 <span class="se">\</span>
     --fst_path data/lang_test/TLG.fst <span class="se">\</span>
+    --dict_path data/lang_test/words.txt <span class="se">\</span>
     data/test/wav.scp data/test/text <span class="nv">$dir</span>/final.zip <span class="se">\</span>
-    data/lang_test/words.txt <span class="nv">$dir</span>/lm_with_runtime
+    data/lang_test/units.txt <span class="nv">$dir</span>/lm_with_runtime
 </pre></div>
 </div>
 </div>

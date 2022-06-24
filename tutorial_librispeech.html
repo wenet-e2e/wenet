@@ -38,6 +38,7 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption"><span class="caption-text">Tutorial:</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="python_binding.html">WeNet Python Binding</a></li>
 <li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Tutorial on LibriSpeech</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#setup-environment">Setup environment</a></li>
@@ -505,7 +506,8 @@ It is required if you want to integrate language model(LM), as shown in Stage 7.
       --beam <span class="m">10</span>.0 --lattice_beam <span class="m">5</span> --max_active <span class="m">7000</span> --blank_skip_thresh <span class="m">0</span>.98 <span class="se">\</span>
       --ctc_weight <span class="m">0</span>.5 --rescoring_weight <span class="m">1</span>.0 --acoustic_scale <span class="m">1</span>.2 <span class="se">\</span>
       --fst_path <span class="nv">$fst_dir</span>/TLG.fst <span class="se">\</span>
-      data/<span class="nv">$test</span>/wav.scp data/<span class="nv">$test</span>/text <span class="nv">$dir</span>/final.zip <span class="nv">$fst_dir</span>/words.txt <span class="se">\</span>
+      --dict_path <span class="nv">$fst_dir</span>/words.txt <span class="se">\</span>
+      data/<span class="nv">$test</span>/wav.scp data/<span class="nv">$test</span>/text <span class="nv">$dir</span>/final.zip <span class="nv">$fst_dir</span>/units.txt <span class="se">\</span>
       <span class="nv">$dir</span>/lm_with_runtime_<span class="si">${</span><span class="nv">test</span><span class="si">}</span>
     tail <span class="nv">$dir</span>/lm_with_runtime_<span class="si">${</span><span class="nv">test</span><span class="si">}</span>/wer
   <span class="k">done</span>
