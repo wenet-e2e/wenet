@@ -11,3 +11,8 @@ add_test(CTC_PREFIX_BEAM_SEARCH_TEST ctc_prefix_beam_search_test)
 add_executable(post_processor_test post_processor_test.cc)
 target_link_libraries(post_processor_test PUBLIC post_processor)
 add_test(POST_PROCESSOR_TEST post_processor_test)
+
+
+add_executable(feature_pipeline_test feature_pipeline_test.cc)
+target_link_libraries(feature_pipeline_test PUBLIC frontend)
+add_test(FEATURE_PIPELINE_TEST feature_pipeline_test)

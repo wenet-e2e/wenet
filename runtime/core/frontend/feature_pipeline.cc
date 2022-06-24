@@ -25,6 +25,7 @@ FeaturePipeline::FeaturePipeline(const FeaturePipelineConfig& config)
       fbank_(config.num_bins, config.sample_rate, config.frame_length,
              config.frame_shift),
       num_frames_(0),
+      wait_frames_(0),
       input_finished_(false) {}
 
 void FeaturePipeline::AcceptWaveform(const float* pcm, const int size) {
@@ -33,8 +34,10 @@ void FeaturePipeline::AcceptWaveform(const float* pcm, const int size) {
   waves.insert(waves.end(), remained_wav_.begin(), remained_wav_.end());
   waves.insert(waves.end(), pcm, pcm + size);
   int num_frames = fbank_.Compute(waves, &feats);
-  for (size_t i = 0; i < feats.size(); ++i) {
-    feature_queue_.Push(std::move(feats[i]));
+  feature_queue_.Push(std::move(feats));
+  {
+    std::lock_guard<std::mutex> lock(wait_mutex_);
+    wait_frames_ += num_frames;
   }
   num_frames_ += num_frames;
 
@@ -64,9 +67,9 @@ void FeaturePipeline::set_input_finished() {
   finish_condition_.notify_one();
 }
 
-bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
+bool FeaturePipeline::ReadFromQueue(std::vector<std::vector<float>>* feats) {
   if (!feature_queue_.Empty()) {
-    *feat = std::move(feature_queue_.Pop());
+    *feats = std::move(feature_queue_.Pop());
     return true;
   } else {
     std::unique_lock<std::mutex> lock(mutex_);
@@ -75,14 +78,14 @@ bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
       // from AcceptWaveform() or set_input_finished()
       finish_condition_.wait(lock);
       if (!feature_queue_.Empty()) {
-        *feat = std::move(feature_queue_.Pop());
+        *feats = std::move(feature_queue_.Pop());
         return true;
       }
     }
     CHECK(input_finished_);
     // Double check queue.empty, see issue#893 for detailed discussions.
     if (!feature_queue_.Empty()) {
-      *feat = std::move(feature_queue_.Pop());
+      *feats = std::move(feature_queue_.Pop());
       return true;
     } else {
       return false;
@@ -92,23 +95,61 @@ bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
 
 bool FeaturePipeline::Read(int num_frames,
                            std::vector<std::vector<float>>* feats) {
+  bool b = true;
   feats->clear();
-  std::vector<float> feat;
-  while (feats->size() < num_frames) {
-    if (ReadOne(&feat)) {
-      feats->push_back(std::move(feat));
+  std::vector<std::vector<float>> tmp_feats;
+  std::vector<std::vector<float>> chunk_feats;
+  tmp_feats.insert(tmp_feats.end(), remained_feats_.begin(),
+                   remained_feats_.end());
+  while (tmp_feats.size() < num_frames) {
+    if (ReadFromQueue(&chunk_feats)) {
+      tmp_feats.insert(tmp_feats.end(), chunk_feats.begin(), chunk_feats.end());
     } else {
-      return false;
+      b = false;
+      break;
     }
   }
-  return true;
+  if (num_frames > tmp_feats.size()) {
+    num_frames = tmp_feats.size();
+  }
+  if (num_frames > 0) {
+    feats->insert(feats->end(), tmp_feats.begin(),
+                  tmp_feats.begin() + num_frames);
+    remained_feats_.resize(tmp_feats.size() - num_frames);
+    std::copy(tmp_feats.begin() + num_frames, tmp_feats.end(),
+              remained_feats_.begin());
+    {
+      std::lock_guard<std::mutex> lock(wait_mutex_);
+      wait_frames_ -= num_frames;
+    }
+  }
+  return b;
+}
+
+int FeaturePipeline::NumQueuedFrames() const {
+  std::lock_guard<std::mutex> lock(wait_mutex_);
+  return wait_frames_;
 }
 
 void FeaturePipeline::Reset() {
   input_finished_ = false;
   num_frames_ = 0;
   remained_wav_.clear();
+  remained_feats_.clear();
   feature_queue_.Clear();
+  {
+    std::lock_guard<std::mutex> lock(wait_mutex_);
+    wait_frames_ = 0;
+  }
+}
+bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
+  feat->clear();
+  std::vector<std::vector<float>> tmp_feats;
+  bool b = Read(1, &tmp_feats);
+  if (!tmp_feats.empty()) {
+    *feat = std::move(tmp_feats[0]);
+  }
+  return b;
 }
 
 }  // namespace wenet

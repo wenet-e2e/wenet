@@ -93,14 +93,16 @@ class FeaturePipeline {
     return input_finished_ && (frame == num_frames_ - 1);
   }
 
-  int NumQueuedFrames() const { return feature_queue_.Size(); }
+  int NumQueuedFrames() const;
 
  private:
+  bool ReadFromQueue(std::vector<std::vector<float>>* feats);
+
   const FeaturePipelineConfig& config_;
   int feature_dim_;
   Fbank fbank_;
 
-  BlockingQueue<std::vector<float>> feature_queue_;
+  BlockingQueue<std::vector<std::vector<float>>> feature_queue_;
   int num_frames_;
   bool input_finished_;
 
@@ -109,6 +111,10 @@ class FeaturePipeline {
   // The residual waveform sample points after framing are
   // kept to be used in next AcceptWaveform() calling.
   std::vector<float> remained_wav_;
+
+  std::vector<std::vector<float>> remained_feats_;
+  int wait_frames_;
+  mutable std::mutex wait_mutex_;
 
   // Used to block the Read when there is no feature in feature_queue_
   // and the input is not finished.
