@@ -28,11 +28,12 @@ class Transducer(nn.Module):
         self.predictor = predictor
         self.joint = joint
 
-        self.sos = vocab_size - 1
-        self.eos = vocab_size - 1
+        # NOTE(Mddct): in transducer sos eos blank_id should be same
+        self.blank_id = blank_id
+        self.sos = self.blank_id
+        self.eos = self.blank_id
         self.vocab_size = vocab_size
         self.ignore_id = ignore_id
-        self.blank_id = blank_id
 
     def forward(
         self,
