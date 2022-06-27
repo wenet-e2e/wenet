@@ -23,7 +23,7 @@ if(ONNX)
 
   if(MSVC)
     file(GLOB ONNX_DLLS "${onnxruntime_SOURCE_DIR}/lib/*.dll")
-    file(COPY ${ONNX_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE})
+    file(COPY ${ONNX_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
   endif()
 
   add_definitions(-DUSE_ONNX)
