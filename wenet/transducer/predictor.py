@@ -73,6 +73,7 @@ class RNNPredictor(torch.nn.Module):
         embed = self.dropout(embed)
         if state is None:
             state = self.init_state(batch_size=input.size(0))
+            state = (state[0].to(input.device), state[1].to(input.device))
         out, (m, c) = self.rnn(embed, state)
         out = self.projection(out)
 
@@ -104,9 +105,10 @@ class RNNPredictor(torch.nn.Module):
         embed = self.embed(input)  # [batch, 1, emb_size]
         embed = self.dropout(embed)
         out, (m, c) = self.rnn(embed, (state_m, state_c))
+
         out = self.projection(out)
-        m = ApplyPadding(out, padding, 0)
-        c = ApplyPadding(out, padding, 0)
+        m = ApplyPadding(m, padding, state_m)
+        c = ApplyPadding(c, padding, state_c)
         return out, m, c
 
 

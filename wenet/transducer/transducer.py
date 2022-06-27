@@ -1,3 +1,5 @@
+from typing import List, Optional, Tuple
+
 import torch
 import torchaudio
 from torch import nn
@@ -81,6 +83,115 @@ class Transducer(nn.Module):
                                                reduction="none")
         return loss.sum()
 
+    def greedy_search(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        simulate_streaming: bool = False,
+    ) -> List[List[int]]:
+        """ greedy search
+
+        Args:
+            speech (torch.Tensor): (batch=1, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            beam_size (int): beam size for beam search
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
+            simulate_streaming (bool): whether do encoder forward in a
+                streaming fashion
+        Returns:
+            List[List[int]]: best path result
+        """
+        # TODO(Mddct): batch decode
+        assert speech.size(0) == 1
+        assert speech.shape[0] == speech_lengths.shape[0]
+        assert decoding_chunk_size != 0
+        batch_size = speech.shape[0]
+        # Let's assume B = batch_size
+        # NOTE(Mddct): only support non streamming for now
+        num_decoding_left_chunks = -1
+        decoding_chunk_size = -1
+        simulate_streaming = False
+        encoder_out, encoder_mask = self.encoder(
+            speech,
+            speech_lengths,
+            decoding_chunk_size,
+            num_decoding_left_chunks,
+        )
+        maxlen = encoder_out.size(1)
+        encoder_out_lens = encoder_mask.squeeze(1).sum()
+
+        # fake padding
+        padding = torch.zeros(1, 1)
+        # sos
+        pred_input_step = torch.tensor([self.sos]).reshape(1, 1)
+        state_m, state_c = self.predictor.init_state(1, method="zero")
+        t = 0
+        hyps = []
+        prev_out_nblk = False
+        pred_out_step = None
+        per_frame_max_noblk = 5
+        per_frame_noblk = 0
+        while t < encoder_out_lens:
+            encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
+            if not prev_out_nblk:
+                pred_out_step, state_m, state_c = self.predictor.forward_step(
+                    pred_input_step, padding, state_m, state_c)  # [1, 1, P]
+
+            joint_out_step = self.joint(encoder_out_step,
+                                        pred_out_step)  # [1,1,v]
+            joint_out_probs = joint_out_step.log_softmax(dim=-1)
+            joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
+            if joint_out_max != self.blank_id:
+                hyps.append(joint_out_max)
+                prev_out_nblk = True
+                per_frame_noblk = per_frame_noblk + 1
+
+            if joint_out_max == self.blank_id or per_frame_noblk > per_frame_max_noblk:
+                prev_out_nblk = False
+                # TODO(Mddct): make t in chunk for streamming
+                # or t should't be too lang to predict none blank
+                t = t + 1
+                per_frame_noblk = 0
+
+        return [hyps]
+
+    @torch.jit.export
+    def forward_encoder_chunk(
+        self,
+        xs: torch.Tensor,
+        offset: int,
+        required_cache_size: int,
+        att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+        cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        return self.encoder.forward_chunk(xs, offset, required_cache_size,
+                                          att_cache, cnn_cache)
+
+    @torch.jit.export
+    def forward_predictor_step(
+        self, xs: torch.Tensor, state_m: torch.Tensor, state_c: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        # fake padding
+        padding = torch.zeros(1, 1)
+        return self.predictor.forward_step(xs, padding, state_m, state_c)
+
+    @torch.jit.export
+    def forward_joint_step(self, enc_out: torch.Tensor,
+                           pred_out: torch.Tensor) -> torch.Tensor:
+        return self.joint(enc_out, pred_out)
+
+    @torch.jit.export
+    def forward_predictor_init_state(
+            self) -> Tuple[torch.Tensor, torch.Tensor]:
+        return self.predictor.init_state(1)
+
 
 def init_transducer_asr_model(configs):
     assert "blank_id" in configs
@@ -93,7 +204,7 @@ def init_transducer_asr_model(configs):
         global_cmvn = None
 
     input_dim = configs['input_dim']
-    vocab_size = configs['output_dim']
+    vocab_size = configs['vocab_size']
 
     encoder_type = configs.get('encoder', 'conformer')
     predictor_type = configs.get('predictor', 'rnn')

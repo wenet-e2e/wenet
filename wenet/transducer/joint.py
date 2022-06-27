@@ -28,6 +28,8 @@ class TransducerJoint(torch.nn.Module):
         if self.prejoin_linear:
             self.enc_ffn = nn.Linear(enc_output_size, join_dim)
             self.pred_ffn = nn.Linear(pred_output_size, join_dim)
+            # just for torchscript
+            self.post_ffn = nn.Linear(enc_output_size, join_dim)
 
         if self.postjoni_linear:
             # post join means: enc_output_size == pred_output_size
