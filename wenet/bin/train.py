@@ -27,6 +27,7 @@ from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
+from wenet.transducer.transducer import init_transducer_asr_model
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
@@ -42,6 +43,10 @@ def get_args():
                         default='raw',
                         choices=['raw', 'shard'],
                         help='train and cv data type')
+    parser.add_argument('--model_type',
+                        default='AED',
+                        choices=['AED', 'Transducer'],
+                        help='model type')
     parser.add_argument('--train_data', required=True, help='train data file')
     parser.add_argument('--cv_data', required=True, help='cv data file')
     parser.add_argument('--gpu',
@@ -192,7 +197,10 @@ def main():
             fout.write(data)
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    if args.model_type == "AED":
+        model = init_asr_model(configs)
+    else:
+        model = init_transducer_asr_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {}'.format(num_params))

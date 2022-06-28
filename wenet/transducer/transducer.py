@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import torch
 import torchaudio
@@ -7,6 +7,8 @@ from typeguard import check_argument_types
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import RNNPredictor
 from wenet.transformer.cmvn import GlobalCMVN
+from wenet.transformer.ctc import CTC
+from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.cmvn import load_cmvn
@@ -23,14 +25,19 @@ class Transducer(nn.Module):
         encoder: nn.Module,
         predictor: nn.Module,
         joint: nn.Module,
+        attention_decoder: Optional[Union[TransformerDecoder,
+                                          BiTransformerDecoder]] = None,
+        ctc: Optional[CTC] = None,
+        ctc_weight: float = 0,
         ignore_id: int = IGNORE_ID,
-        attention_decoder: Optional[nn.Module] = None,
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
         transducer_weight: float = 1.0,
+        attention_weight: float = 0.0,
     ) -> None:
         assert check_argument_types()
+        assert attention_weight + ctc_weight + transducer_weight == 1.0
         super().__init__()
 
         self.encoder = encoder
@@ -45,9 +52,13 @@ class Transducer(nn.Module):
         self.ignore_id = ignore_id
 
         self.transducer_weight = transducer_weight
-        if not attention_decoder:
-            self.attention_decoder = attention_decoder
-            self.reverse_weight = reverse_weight
+        self.attention_decoder = attention_decoder
+        self.reverse_weight = reverse_weight
+        self.ctc = ctc
+        self.ctc_weight = ctc_weight
+        self.attention_decoder_weight = 1 - self.transducer_weight - self.ctc_weight
+        assert self.attention_decoder_weight >= 0
+        if attention_decoder is not None:
             self.criterion_att = LabelSmoothingLoss(
                 size=vocab_size,
                 padding_idx=ignore_id,
@@ -80,11 +91,18 @@ class Transducer(nn.Module):
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
-        loss_att = None
+        loss_att: Optional[torch.Tensor] = None
         # optional attention decoder
-        if self.transducer_weight != 1.0:
+        if self.transducer_weight != 1.0 and self.attention_decoder is not None:
             loss_att, _ = self._calc_att_loss(encoder_out, encoder_mask, text,
                                               text_lengths)
+        loss_ctc: Optional[torch.Tensor] = None
+        # optional ctc
+        if self.ctc_weight != 0.0 and self.ctc is not None:
+            loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
+                                text_lengths)
+        else:
+            loss_ctc = None
 
         # predictor
         ys_in_pad, _ = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
@@ -104,11 +122,12 @@ class Transducer(nn.Module):
                                                encoder_out_lens,
                                                text_lengths,
                                                blank=self.blank_id,
-                                               reduction="none")
-        loss = loss.sum()
+                                               reduction="mean")
+        if loss_ctc is not None:
+            loss = loss + self.ctc_weight * loss_ctc.sum()
         if loss_att is not None:
-            loss = loss + (1 - self.transducer_weight) * loss_att.sum()
-        return loss
+            loss = loss + self.attention_decoder_weight * loss_att.sum()
+        return loss, loss_att, loss_ctc
 
     def _calc_att_loss(
         self,
@@ -282,13 +301,30 @@ def init_transducer_asr_model(configs):
     else:
         raise NotImplementedError("only rnn type support now")
 
+    configs['joint_conf']['enc_output_size'] = configs['encoder_conf'][
+        'output_size']
+    configs['joint_conf']['pred_output_size'] = configs['predictor_conf'][
+        'output_size']
     joint = TransducerJoint(vocab_size, **configs['joint_conf'])
 
-    model = Transducer(
-        vocab_size=vocab_size,
-        blank_id=configs["blank_id"],
-        predictor=predictor,
-        encoder=encoder,
-        joint=joint,
-    )
+    # optional attention decoder
+    decoder_type = configs.get('decoder', '')
+    if decoder_type == 'transformer':
+        decoder = TransformerDecoder(vocab_size, encoder.output_size(),
+                                     **configs['decoder_conf'])
+    elif decoder_type == 'bitransformer':
+        assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
+        assert configs['decoder_conf']['r_num_blocks'] > 0
+        decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
+                                       **configs['decoder_conf'])
+    else:
+        decoder = None
+
+    model = Transducer(vocab_size=vocab_size,
+                       blank_id=configs["blank_id"],
+                       predictor=predictor,
+                       encoder=encoder,
+                       attention_decoder=decoder,
+                       joint=joint,
+                       **configs['model_conf'])
     return model

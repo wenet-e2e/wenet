@@ -25,27 +25,44 @@ encoder_conf:
     cnn_module_norm: 'layer_norm' # using nn.LayerNorm makes model converge faster
     use_dynamic_left_chunk: false
 
+# hybrid transducer+ctc+attention
+model_conf:
+    transducer_weight: 0.7
+    ctc_weight: 0.0
+    attention_weight: 0.3
+    lsm_weight: 0.1     # label smoothing option
+    length_normalized_loss: false
 
-joint_conf:
-    enc_output_size: 256
-    pred_output_size: 256
-    join_dim: 512
-    prejoin_linear: true
-    postjoin_linear: false
-    joint_mode: 'add'
-    activation: 'tanh'
+# optional attention decoder related
+decoder: transformer
+decoder_conf:
+    attention_heads: 4
+    linear_units: 2048
+    num_blocks: 6
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.0
+    src_attention_dropout_rate: 0.0
 
 predictor: rnn
 predictor_conf:
+    rnn_type: 'lstm'
     embed_size: 256
     output_size: 256
     embed_dropout: 0.1
     hidden_size: 256
     num_layers: 4
     bias: true
-    rnn_type: 'lstm'
     dropout: 0.1
 
+joint_conf:
+    # enc_output_size: 256
+    # pred_output_size: 256
+    join_dim: 512
+    prejoin_linear: false 
+    postjoin_linear: false
+    joint_mode: 'add'
+    activation: 'tanh'
 
 dataset_conf:
     filter_conf:

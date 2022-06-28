@@ -16,12 +16,12 @@ print(model)
 script_model = torch.jit.script(model)
 script_model.save(os.path.join(".", 'init.zip'))
 
-# input = torch.ones(2, 100, 80)
-# input_length = torch.ones(2, dtype=torch.int) * 100
+input = torch.ones(2, 100, 80)
+input_length = torch.ones(2, dtype=torch.int) * 100
 
-# text = torch.ones(2, 3, dtype=torch.int) * 3
-# text_length = torch.ones(2, dtype=torch.int) * 3
+text = torch.ones(2, 3, dtype=torch.int) * 3
+text_length = torch.ones(2, dtype=torch.int) * 3
 
-# print(model(input, input_length, text, text_length))
+print(model(input, input_length, text, text_length))
 
-# model.greedy_search(input[:1, :, :], input_length[:1])
+model.greedy_search(input[:1, :, :], input_length[:1])

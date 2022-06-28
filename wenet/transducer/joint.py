@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import nn
 from typeguard import check_argument_types
@@ -22,18 +24,20 @@ class TransducerJoint(torch.nn.Module):
 
         self.activatoin = get_activation(activation)
         self.prejoin_linear = prejoin_linear
-        self.postjoni_linear = postjoin_linear
+        self.postjoin_linear = postjoin_linear
         self.joint_mode = joint_mode
 
+        if not self.prejoin_linear and not self.postjoin_linear:
+            assert enc_output_size == pred_output_size == join_dim
+        # torchscript compatibility
+        self.enc_ffn: Optional[nn.Linear] = None
+        self.pred_ffn: Optional[nn.Linear] = None
         if self.prejoin_linear:
             self.enc_ffn = nn.Linear(enc_output_size, join_dim)
             self.pred_ffn = nn.Linear(pred_output_size, join_dim)
-            # just for torchscript
-            self.post_ffn = nn.Linear(enc_output_size, join_dim)
-
-        if self.postjoni_linear:
-            # post join means: enc_output_size == pred_output_size
-            assert enc_output_size == pred_output_size
+        # torchscript compatibility
+        self.post_ffn: Optional[nn.Linear] = None
+        if self.postjoin_linear:
             self.post_ffn = nn.Linear(enc_output_size, join_dim)
 
         self.ffn_out = nn.Linear(join_dim, voca_size)
@@ -46,18 +50,19 @@ class TransducerJoint(torch.nn.Module):
         Return:
             [B,T,U,V]
         """
-        if self.prejoin_linear:
+        if (self.prejoin_linear and self.enc_ffn is not None
+                and self.pred_ffn is not None):
             enc_out = self.enc_ffn(enc_out)  # [B,T,E] -> [B,T,V]
             pred_out = self.pred_ffn(pred_out)
 
         enc_out = enc_out.unsqueeze(2)  # [B,T,V] -> [B,T,1,V]
-        pred_out = pred_out.unsqueeze(1)  #[B,U,V] -> [B,1 U, V]
+        pred_out = pred_out.unsqueeze(1)  # [B,U,V] -> [B,1 U, V]
 
         # TODO(Mddct): concat joint
         _ = self.joint_mode
         out = enc_out + pred_out  # [B,T,U,V]
 
-        if self.postjoni_linear:
+        if self.postjoin_linear and self.post_ffn is not None:
             out = self.post_ffn(out)
 
         out = self.activatoin(out)
