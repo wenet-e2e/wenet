@@ -8,8 +8,10 @@ from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import RNNPredictor
 from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
+from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.cmvn import load_cmvn
-from wenet.utils.common import IGNORE_ID, add_sos_eos
+from wenet.utils.common import (IGNORE_ID, add_sos_eos, reverse_pad_list,
+                                th_accuracy)
 
 
 class Transducer(nn.Module):
@@ -22,6 +24,11 @@ class Transducer(nn.Module):
         predictor: nn.Module,
         joint: nn.Module,
         ignore_id: int = IGNORE_ID,
+        attention_decoder: Optional[nn.Module] = None,
+        reverse_weight: float = 0.0,
+        lsm_weight: float = 0.0,
+        length_normalized_loss: bool = False,
+        transducer_weight: float = 1.0,
     ) -> None:
         assert check_argument_types()
         super().__init__()
@@ -36,6 +43,17 @@ class Transducer(nn.Module):
         self.eos = self.blank_id
         self.vocab_size = vocab_size
         self.ignore_id = ignore_id
+
+        self.transducer_weight = transducer_weight
+        if not attention_decoder:
+            self.attention_decoder = attention_decoder
+            self.reverse_weight = reverse_weight
+            self.criterion_att = LabelSmoothingLoss(
+                size=vocab_size,
+                padding_idx=ignore_id,
+                smoothing=lsm_weight,
+                normalize_length=length_normalized_loss,
+            )
 
     def forward(
         self,
@@ -62,6 +80,12 @@ class Transducer(nn.Module):
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
+        loss_att = None
+        # optional attention decoder
+        if self.transducer_weight != 1.0:
+            loss_att, _ = self._calc_att_loss(encoder_out, encoder_mask, text,
+                                              text_lengths)
+
         # predictor
         ys_in_pad, _ = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
         predictor_out = self.predictor(ys_in_pad)
@@ -81,7 +105,43 @@ class Transducer(nn.Module):
                                                text_lengths,
                                                blank=self.blank_id,
                                                reduction="none")
-        return loss.sum()
+        loss = loss.sum()
+        if loss_att is not None:
+            loss = loss + (1 - self.transducer_weight) * loss_att.sum()
+        return loss
+
+    def _calc_att_loss(
+        self,
+        encoder_out: torch.Tensor,
+        encoder_mask: torch.Tensor,
+        ys_pad: torch.Tensor,
+        ys_pad_lens: torch.Tensor,
+    ) -> Tuple[torch.Tensor, float]:
+        ys_in_pad, ys_out_pad = add_sos_eos(ys_pad, self.sos, self.eos,
+                                            self.ignore_id)
+        ys_in_lens = ys_pad_lens + 1
+
+        # reverse the seq, used for right to left decoder
+        r_ys_pad = reverse_pad_list(ys_pad, ys_pad_lens, float(self.ignore_id))
+        r_ys_in_pad, r_ys_out_pad = add_sos_eos(r_ys_pad, self.sos, self.eos,
+                                                self.ignore_id)
+        # 1. Forward decoder
+        decoder_out, r_decoder_out, _ = self.attention_decoder(
+            encoder_out, encoder_mask, ys_in_pad, ys_in_lens, r_ys_in_pad,
+            self.reverse_weight)
+        # 2. Compute attention loss
+        loss_att = self.criterion_att(decoder_out, ys_out_pad)
+        r_loss_att = torch.tensor(0.0)
+        if self.reverse_weight > 0.0:
+            r_loss_att = self.criterion_att(r_decoder_out, r_ys_out_pad)
+        loss_att = loss_att * (
+            1 - self.reverse_weight) + r_loss_att * self.reverse_weight
+        acc_att = th_accuracy(
+            decoder_out.view(-1, self.vocab_size),
+            ys_out_pad,
+            ignore_label=self.ignore_id,
+        )
+        return loss_att, acc_att
 
     def greedy_search(
         self,
