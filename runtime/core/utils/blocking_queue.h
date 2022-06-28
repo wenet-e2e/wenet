@@ -20,6 +20,7 @@
 #include <mutex>
 #include <queue>
 #include <utility>
+#include <vector>
 
 #include "utils/utils.h"
 
@@ -53,6 +54,32 @@ class BlockingQueue {
     not_empty_condition_.notify_one();
   }
 
+  void Push(const std::vector<T>& values) {
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      for (auto& value : values) {
+        while (queue_.size() >= capacity_) {
+          not_empty_condition_.notify_one();
+          not_full_condition_.wait(lock);
+        }
+        queue_.push(value);
+      }
+    }
+    not_empty_condition_.notify_one();
+  }
+
+  void Push(std::vector<T>&& values) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    for (auto& value : values) {
+      while (queue_.size() >= capacity_) {
+        not_empty_condition_.notify_one();
+        not_full_condition_.wait(lock);
+      }
+      queue_.push(std::move(value));
+    }
+    not_empty_condition_.notify_one();
+  }
+
   T Pop() {
     std::unique_lock<std::mutex> lock(mutex_);
     while (queue_.empty()) {
@@ -62,6 +89,22 @@ class BlockingQueue {
     queue_.pop();
     not_full_condition_.notify_one();
     return t;
+  }
+
+  // num can be greater than capacity,but it needs to be used with care
+  std::vector<T> Pop(size_t num) {
+    std::unique_lock<std::mutex> lock(mutex_);
+    std::vector<T> block_data;
+    while (block_data.size() < num) {
+      while (queue_.empty()) {
+        not_full_condition_.notify_one();
+        not_empty_condition_.wait(lock);
+      }
+      block_data.push_back(std::move(queue_.front()));
+      queue_.pop();
+    }
+    not_full_condition_.notify_one();
+    return block_data;
   }
 
   bool Empty() const {

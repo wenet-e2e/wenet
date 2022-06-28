@@ -33,9 +33,7 @@ void FeaturePipeline::AcceptWaveform(const float* pcm, const int size) {
   waves.insert(waves.end(), remained_wav_.begin(), remained_wav_.end());
   waves.insert(waves.end(), pcm, pcm + size);
   int num_frames = fbank_.Compute(waves, &feats);
-  for (size_t i = 0; i < feats.size(); ++i) {
-    feature_queue_.Push(std::move(feats[i]));
-  }
+  feature_queue_.Push(std::move(feats));
   num_frames_ += num_frames;
 
   int left_samples = waves.size() - config_.frame_shift * num_frames;
@@ -93,15 +91,30 @@ bool FeaturePipeline::ReadOne(std::vector<float>* feat) {
 bool FeaturePipeline::Read(int num_frames,
                            std::vector<std::vector<float>>* feats) {
   feats->clear();
-  std::vector<float> feat;
-  while (feats->size() < num_frames) {
-    if (ReadOne(&feat)) {
-      feats->push_back(std::move(feat));
+  if (feature_queue_.Size() >= num_frames) {
+    *feats = std::move(feature_queue_.Pop(num_frames));
+    return true;
+  } else {
+    std::unique_lock<std::mutex> lock(mutex_);
+    while (!input_finished_) {
+      // This will release the lock and wait for notify_one()
+      // from AcceptWaveform() or set_input_finished()
+      finish_condition_.wait(lock);
+      if (feature_queue_.Size() >= num_frames) {
+        *feats = std::move(feature_queue_.Pop(num_frames));
+        return true;
+      }
+    }
+    CHECK(input_finished_);
+    // Double check queue.empty, see issue#893 for detailed discussions.
+    if (feature_queue_.Size() >= num_frames) {
+      *feats = std::move(feature_queue_.Pop(num_frames));
+      return true;
     } else {
+      *feats = std::move(feature_queue_.Pop(feature_queue_.Size()));
       return false;
     }
   }
-  return true;
 }
 
 void FeaturePipeline::Reset() {
