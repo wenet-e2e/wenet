@@ -6,6 +6,9 @@ option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
 option(FST_HAVE_BIN "whether to build fst binaries" OFF)
 option(BUILD_TESTING "whether to build unit test" ON)
 option(GRPC "whether to build with gRPC" OFF)
+# TODO(Binbin Zhang): Change websocket to OFF since it depends on boost
+#                     which is a very big library
+option(WEBSOCKET "whether to build with websocket" ON)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 
@@ -27,16 +30,18 @@ else()
   add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 endif()
 
-include(boost)
+# Include all dependency
 include(libtorch)
-include(onnx)
+if(ONNX)
+  include(onnx)
+endif()
 include(openfst)
-
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
 
+# Build all libraries
 add_subdirectory(utils)
 if(NOT MSVC)
   add_dependencies(utils openfst)
@@ -45,12 +50,21 @@ add_subdirectory(frontend)
 add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
-add_subdirectory(websocket)
 add_subdirectory(api)
+
+# Optionally, you can build with websocket
+if(WEBSOCKET)
+  include(boost)
+  add_subdirectory(websocket)
+endif()
+
+# Optionally, you can build with gRPC
 if(GRPC)
   include(grpc)
   add_subdirectory(grpc)
 endif()
+
+# Build all bins
 add_subdirectory(bin)
 
 # Unit Test
