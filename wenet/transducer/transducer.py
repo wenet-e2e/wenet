@@ -109,7 +109,7 @@ class Transducer(nn.Module):
 
         # optional attention decoder
         loss_att: Optional[torch.Tensor] = None
-        if self.transducer_weight != 1.0 and self.attention_decoder is not None:
+        if self.attention_decoder_weight != 0.0 and self.attention_decoder is not None:
             loss_att, _ = self._calc_att_loss(encoder_out, encoder_mask, text,
                                               text_lengths)
 
@@ -128,9 +128,9 @@ class Transducer(nn.Module):
         # NOTE: 'loss' must be in dict
         return {
             'loss': loss,
-            'loss_rnnt': loss_rnnt,
             'loss_att': loss_att,
-            'loss_ctc': loss_ctc
+            'loss_ctc': loss_ctc,
+            'loss_rnnt': loss_rnnt,
         }
 
     def _calc_att_loss(
@@ -277,7 +277,6 @@ class Transducer(nn.Module):
 
 
 def init_transducer_asr_model(configs):
-    assert "blank" in configs
     if configs['cmvn_file'] is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
@@ -325,7 +324,7 @@ def init_transducer_asr_model(configs):
         decoder = None
 
     model = Transducer(vocab_size=vocab_size,
-                       blank=configs["blank"],
+                       blank=0,
                        predictor=predictor,
                        encoder=encoder,
                        attention_decoder=decoder,
