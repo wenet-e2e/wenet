@@ -22,7 +22,7 @@ For each platform, we will create a subdirectory on in runtime. Currently, we ha
 - [x] android: in java, it shows an APP demo.
 - [ ] Language bingding
   - [x] bingding/python: python is the first class for binding.
-  - [x] bingding/go: ongoing.
+  - [ ] bingding/go: ongoing.
 
 
 Please note `server` and `device` is depreated, it will be removed in the future.
