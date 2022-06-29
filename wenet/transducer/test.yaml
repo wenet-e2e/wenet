@@ -1,6 +1,6 @@
-# blank_id : 0
-# input_dim: 80
-# vocab_size: 5000
+blank: 0
+input_dim: 80
+vocab_size: 5000
 
 # network architecture
 # encoder related
@@ -59,7 +59,7 @@ joint_conf:
     # enc_output_size: 256
     # pred_output_size: 256
     join_dim: 512
-    prejoin_linear: false 
+    prejoin_linear: true
     postjoin_linear: false
     joint_mode: 'add'
     activation: 'tanh'

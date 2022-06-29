@@ -12,8 +12,8 @@ from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.cmvn import load_cmvn
-from wenet.utils.common import (IGNORE_ID, add_sos_eos, reverse_pad_list,
-                                th_accuracy)
+from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
+                                reverse_pad_list, th_accuracy)
 
 
 class Transducer(nn.Module):
@@ -21,7 +21,7 @@ class Transducer(nn.Module):
     def __init__(
         self,
         vocab_size: int,
-        blank_id: int,
+        blank: int,
         encoder: nn.Module,
         predictor: nn.Module,
         joint: nn.Module,
@@ -40,24 +40,22 @@ class Transducer(nn.Module):
         assert attention_weight + ctc_weight + transducer_weight == 1.0
         super().__init__()
 
+        self.blank = blank
+        self.sos = vocab_size - 1
+        self.eos = vocab_size - 1
+        self.vocab_size = vocab_size
+        self.ignore_id = ignore_id
+        self.transducer_weight = transducer_weight
+        self.ctc_weight = ctc_weight
+        self.reverse_weight = reverse_weight
+        self.attention_decoder_weight = 1 - self.transducer_weight - self.ctc_weight
+        assert self.attention_decoder_weight >= 0
+
         self.encoder = encoder
         self.predictor = predictor
         self.joint = joint
-
-        # NOTE(Mddct): in transducer sos eos blank_id should be same
-        self.blank_id = blank_id
-        self.sos = self.blank_id
-        self.eos = self.blank_id
-        self.vocab_size = vocab_size
-        self.ignore_id = ignore_id
-
-        self.transducer_weight = transducer_weight
-        self.attention_decoder = attention_decoder
-        self.reverse_weight = reverse_weight
         self.ctc = ctc
-        self.ctc_weight = ctc_weight
-        self.attention_decoder_weight = 1 - self.transducer_weight - self.ctc_weight
-        assert self.attention_decoder_weight >= 0
+        self.attention_decoder = attention_decoder
         if attention_decoder is not None:
             self.criterion_att = LabelSmoothingLoss(
                 size=vocab_size,
@@ -90,29 +88,13 @@ class Transducer(nn.Module):
         # Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-
-        loss_att: Optional[torch.Tensor] = None
-        # optional attention decoder
-        if self.transducer_weight != 1.0 and self.attention_decoder is not None:
-            loss_att, _ = self._calc_att_loss(encoder_out, encoder_mask, text,
-                                              text_lengths)
-        loss_ctc: Optional[torch.Tensor] = None
-        # optional ctc
-        if self.ctc_weight != 0.0 and self.ctc is not None:
-            loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
-                                text_lengths)
-        else:
-            loss_ctc = None
-
         # predictor
-        ys_in_pad, _ = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
+        ys_in_pad = add_blank(text, self.blank)
         predictor_out = self.predictor(ys_in_pad)
-
         # joint
         joint_out = self.joint(encoder_out, predictor_out)
-
         # NOTE(Mddct): some loss implementation require pad valid is zero
-        # torch.int32 rnn_loss required
+        # torch.int32 rnnt_loss required
         text = text.to(torch.int64)
         text = torch.where(text == self.ignore_id, 0, text).to(torch.int32)
         text_lengths = text_lengths.to(torch.int32)
@@ -121,9 +103,24 @@ class Transducer(nn.Module):
                                                text,
                                                encoder_out_lens,
                                                text_lengths,
-                                               blank=self.blank_id,
+                                               blank=self.blank,
                                                reduction="mean")
         loss_rnnt = loss
+
+        # optional attention decoder
+        loss_att: Optional[torch.Tensor] = None
+        if self.transducer_weight != 1.0 and self.attention_decoder is not None:
+            loss_att, _ = self._calc_att_loss(encoder_out, encoder_mask, text,
+                                              text_lengths)
+
+        # optional ctc
+        loss_ctc: Optional[torch.Tensor] = None
+        if self.ctc_weight != 0.0 and self.ctc is not None:
+            loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
+                                text_lengths)
+        else:
+            loss_ctc = None
+
         if loss_ctc is not None:
             loss = loss + self.ctc_weight * loss_ctc.sum()
         if loss_att is not None:
@@ -215,7 +212,7 @@ class Transducer(nn.Module):
         # fake padding
         padding = torch.zeros(1, 1)
         # sos
-        pred_input_step = torch.tensor([self.sos]).reshape(1, 1)
+        pred_input_step = torch.tensor([self.blank]).reshape(1, 1)
         state_m, state_c = self.predictor.init_state(1, method="zero")
         t = 0
         hyps = []
@@ -233,12 +230,12 @@ class Transducer(nn.Module):
                                         pred_out_step)  # [1,1,v]
             joint_out_probs = joint_out_step.log_softmax(dim=-1)
             joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
-            if joint_out_max != self.blank_id:
+            if joint_out_max != self.blank:
                 hyps.append(joint_out_max)
                 prev_out_nblk = True
                 per_frame_noblk = per_frame_noblk + 1
 
-            if joint_out_max == self.blank_id or per_frame_noblk > per_frame_max_noblk:
+            if joint_out_max == self.blank or per_frame_noblk > per_frame_max_noblk:
                 prev_out_nblk = False
                 # TODO(Mddct): make t in chunk for streamming
                 # or t should't be too lang to predict none blank
@@ -280,7 +277,7 @@ class Transducer(nn.Module):
 
 
 def init_transducer_asr_model(configs):
-    assert "blank_id" in configs
+    assert "blank" in configs
     if configs['cmvn_file'] is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
@@ -328,7 +325,7 @@ def init_transducer_asr_model(configs):
         decoder = None
 
     model = Transducer(vocab_size=vocab_size,
-                       blank_id=configs["blank_id"],
+                       blank=configs["blank"],
                        predictor=predictor,
                        encoder=encoder,
                        attention_decoder=decoder,
