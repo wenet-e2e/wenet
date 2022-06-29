@@ -44,8 +44,8 @@ def get_args():
                         choices=['raw', 'shard'],
                         help='train and cv data type')
     parser.add_argument('--model_type',
-                        default='AED',
-                        choices=['AED', 'Transducer'],
+                        default='aed',
+                        choices=['aed', 'transducer'],
                         help='model type')
     parser.add_argument('--train_data', required=True, help='train data file')
     parser.add_argument('--cv_data', required=True, help='cv data file')
@@ -190,6 +190,8 @@ def main():
     configs['output_dim'] = vocab_size
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
+    if args.model_type == "transducer":
+        configs["blank_id"] = symbol_table['blank_id']
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')
         with open(saved_config_path, 'w') as fout:
@@ -197,7 +199,7 @@ def main():
             fout.write(data)
 
     # Init asr model from configs
-    if args.model_type == "AED":
+    if args.model_type == "aed":
         model = init_asr_model(configs)
     else:
         model = init_transducer_asr_model(configs)

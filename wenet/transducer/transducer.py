@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import torch
 import torchaudio
@@ -72,7 +72,7 @@ class Transducer(nn.Module):
         speech_lengths: torch.Tensor,
         text: torch.Tensor,
         text_lengths: torch.Tensor,
-    ):
+    ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + predictor + joint + loss
 
         Args:
@@ -123,11 +123,18 @@ class Transducer(nn.Module):
                                                text_lengths,
                                                blank=self.blank_id,
                                                reduction="mean")
+        loss_rnnt = loss
         if loss_ctc is not None:
             loss = loss + self.ctc_weight * loss_ctc.sum()
         if loss_att is not None:
             loss = loss + self.attention_decoder_weight * loss_att.sum()
-        return loss, loss_att, loss_ctc
+        # NOTE: 'loss' must be in dict
+        return {
+            'loss': loss,
+            'loss_rnnt': loss_rnnt,
+            'loss_att': loss_att,
+            'loss_ctc': loss_ctc
+        }
 
     def _calc_att_loss(
         self,

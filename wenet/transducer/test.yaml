@@ -1,6 +1,6 @@
-blank_id : 0
-input_dim: 80
-vocab_size: 5000
+# blank_id : 0
+# input_dim: 80
+# vocab_size: 5000
 
 # network architecture
 # encoder related
