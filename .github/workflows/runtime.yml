@@ -2,6 +2,8 @@ name: Build Runtime
 
 on:
   pull_request:
+    paths:
+      - 'runtime/**'
 
 env:
   RUNTIME_DIR: runtime/server/x86

@@ -2,6 +2,8 @@ name: UnitTest
 
 on:
   pull_request:
+    paths:
+      - '**.py'
 
 jobs:
   unit-test:
