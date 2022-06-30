@@ -1,9 +1,13 @@
 name: "Check and Publish Docs"
 on:
   pull_request:
+    paths:
+      - '**.md'
   push:
     branches:
-    - main
+      - main
+    paths:
+      - '**.md'
 
 jobs:
   docs:
