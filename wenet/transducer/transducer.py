@@ -49,7 +49,6 @@ class Transducer(nn.Module):
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
         self.attention_decoder_weight = 1 - self.transducer_weight - self.ctc_weight
-        assert self.attention_decoder_weight >= 0
 
         self.encoder = encoder
         self.predictor = predictor
@@ -89,20 +88,21 @@ class Transducer(nn.Module):
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         # predictor
-        ys_in_pad = add_blank(text, self.blank)
+        ys_in_pad = add_blank(text, self.blank, self.ignore_id)
         predictor_out = self.predictor(ys_in_pad)
         # joint
         joint_out = self.joint(encoder_out, predictor_out)
         # NOTE(Mddct): some loss implementation require pad valid is zero
         # torch.int32 rnnt_loss required
-        text = text.to(torch.int64)
-        text = torch.where(text == self.ignore_id, 0, text).to(torch.int32)
-        text_lengths = text_lengths.to(torch.int32)
+        rnnt_text = text.to(torch.int64)
+        rnnt_text = torch.where(rnnt_text == self.ignore_id, 0,
+                                rnnt_text).to(torch.int32)
+        rnnt_text_lengths = text_lengths.to(torch.int32)
         encoder_out_lens = encoder_out_lens.to(torch.int32)
         loss = torchaudio.functional.rnnt_loss(joint_out,
-                                               text,
+                                               rnnt_text,
                                                encoder_out_lens,
-                                               text_lengths,
+                                               rnnt_text_lengths,
                                                blank=self.blank,
                                                reduction="mean")
         loss_rnnt = loss
@@ -323,11 +323,13 @@ def init_transducer_asr_model(configs):
     else:
         decoder = None
 
+    ctc = CTC(vocab_size, encoder.output_size())
     model = Transducer(vocab_size=vocab_size,
                        blank=0,
                        predictor=predictor,
                        encoder=encoder,
                        attention_decoder=decoder,
                        joint=joint,
+                       ctc=ctc,
                        **configs['model_conf'])
     return model

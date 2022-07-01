@@ -27,9 +27,9 @@ encoder_conf:
 
 # hybrid transducer+ctc+attention
 model_conf:
-    transducer_weight: 0.7
-    ctc_weight: 0.0
-    attention_weight: 0.3
+    transducer_weight: 0.5
+    ctc_weight: 0.3
+    attention_weight: 0.2
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
 
