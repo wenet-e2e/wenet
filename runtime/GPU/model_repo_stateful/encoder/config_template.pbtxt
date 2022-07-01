@@ -1,0 +1,122 @@
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "encoder"
+backend: "onnxruntime"
+default_model_filename: "encoder.onnx"
+
+max_batch_size: 512
+
+sequence_batching{
+    max_sequence_idle_microseconds: 5000000
+    oldest {
+      max_candidate_sequences: 1024
+      preferred_batch_size: [32, 64, 128, 256]
+      max_queue_delay_microseconds: 5000
+    }
+    control_input [
+    ]
+    state [
+    {
+      input_name: "offset"
+      output_name: "r_offset"
+      data_type: TYPE_INT64
+      dims: [ 1 ]
+      initial_state: {
+       data_type: TYPE_INT64
+       dims: [ 1 ]
+       zero_data: true
+       name: "initial state"
+      }
+    },
+    {
+      input_name: "att_cache"
+      output_name: "r_att_cache"
+      data_type: TYPE_#DTYPE
+      dims: [ #num_layers, #num_head, #cache_size, #att_cache_output_size ]
+      initial_state: {
+       data_type: TYPE_#DTYPE
+       dims: [ #num_layers, #num_head, #cache_size, #att_cache_output_size ]
+       zero_data: true
+       name: "initial state"
+      }
+    },
+    {
+      input_name: "cnn_cache"
+      output_name: "r_cnn_cache"
+      data_type: TYPE_#DTYPE
+      dims: [#num_layers, #output_size, #cnn_module_cache]
+      initial_state: {
+       data_type: TYPE_#DTYPE
+       dims: [#num_layers, #output_size, #cnn_module_cache]
+       zero_data: true
+       name: "initial state"
+      }
+    },
+    {
+      input_name: "cache_mask"
+      output_name: "r_cache_mask"
+      data_type: TYPE_#DTYPE
+      dims: [1, #cache_size]
+      initial_state: {
+       data_type: TYPE_#DTYPE
+       dims: [1, #cache_size]
+       zero_data: true
+       name: "initial state"
+      }
+    }
+  ]
+}
+input [
+  {
+    name: "chunk_xs"
+    data_type: TYPE_#DTYPE
+    dims: [#decoding_window, #num_mel_bins]
+  },
+  {
+    name: "chunk_lens"
+    data_type: TYPE_INT32
+    dims: [ 1 ]
+    reshape: { shape: [] }
+  }
+]
+output [
+  {
+    name: "log_probs"
+    data_type: TYPE_#DTYPE
+    dims: [-1, #beam_size] # [-1, beam_size]
+  },
+  {
+    name: "log_probs_idx"
+    data_type: TYPE_INT64
+    dims: [-1, #beam_size] # [-1, beam_size]
+  },
+  {
+    name: "chunk_out"
+    data_type: TYPE_#DTYPE
+    dims: [-1, #encoder_output_size]
+  },
+  {
+    name: "chunk_out_lens"
+    data_type: TYPE_INT32
+    dims: [1]
+    reshape: { shape: [] }
+  }
+]
+instance_group [
+    {
+      count: 2
+      kind: KIND_GPU
+    }
+]

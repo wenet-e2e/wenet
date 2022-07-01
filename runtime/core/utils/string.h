@@ -15,11 +15,11 @@
 #ifndef UTILS_STRING_H_
 #define UTILS_STRING_H_
 
+#include <codecvt>
+#include <locale>
 #include <memory>
 #include <string>
 #include <vector>
-#include <locale>
-#include <codecvt>
 
 #include "fst/symbol-table.h"
 
@@ -68,6 +68,12 @@ std::string Ltrim(const std::string& str);
 std::string Rtrim(const std::string& str);
 
 std::string Trim(const std::string& str);
+
+std::string JoinPath(const std::string& left, const std::string& right);
+
+#ifdef _MSC_VER
+std::wstring ToWString(const std::string& str);
+#endif
 
 }  // namespace wenet
 

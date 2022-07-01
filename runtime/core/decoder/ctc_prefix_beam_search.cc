@@ -1,5 +1,17 @@
-// Copyright 2020 Mobvoi Inc. All Rights Reserved.
-// Author: binbinzhang@mobvoi.com (Binbin Zhang)
+// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang)
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 
 #include "decoder/ctc_prefix_beam_search.h"
 
@@ -9,6 +21,7 @@
 #include <utility>
 
 #include "utils/log.h"
+#include "utils/utils.h"
 
 namespace wenet {
 
@@ -34,6 +47,10 @@ void CtcPrefixBeamSearch::Reset() {
   prefix_score.v_ns = 0.0;
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
+  outputs_.emplace_back(empty);
+  hypotheses_.emplace_back(empty);
+  likelihood_.emplace_back(prefix_score.total_score());
+  times_.emplace_back(empty);
 }
 
 static bool PrefixScoreCompare(
@@ -65,24 +82,43 @@ void CtcPrefixBeamSearch::UpdateOutputs(
   outputs_.emplace_back(output);
 }
 
+void CtcPrefixBeamSearch::UpdateHypotheses(
+    const std::vector<std::pair<std::vector<int>, PrefixScore>>& hpys) {
+  cur_hyps_.clear();
+  outputs_.clear();
+  hypotheses_.clear();
+  likelihood_.clear();
+  viterbi_likelihood_.clear();
+  times_.clear();
+  for (auto& item : hpys) {
+    cur_hyps_[item.first] = item.second;
+    UpdateOutputs(item);
+    hypotheses_.emplace_back(std::move(item.first));
+    likelihood_.emplace_back(item.second.total_score());
+    viterbi_likelihood_.emplace_back(item.second.viterbi_score());
+    times_.emplace_back(item.second.times());
+  }
+}
+
 // Please refer https://robin1001.github.io/2020/12/11/ctc-search
 // for how CTC prefix beam search works, and there is a simple graph demo in
 // it.
-void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
-  CHECK_EQ(logp.dtype(), torch::kFloat);
-  CHECK_EQ(logp.dim(), 2);
-  for (int t = 0; t < logp.size(0); ++t, ++abs_time_step_) {
-    torch::Tensor logp_t = logp[t];
+void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
+  if (logp.size() == 0) return;
+  int first_beam_size =
+      std::min(static_cast<int>(logp[0].size()), opts_.first_beam_size);
+  for (int t = 0; t < logp.size(); ++t, ++abs_time_step_) {
+    const std::vector<float>& logp_t = logp[t];
     std::unordered_map<std::vector<int>, PrefixScore, PrefixHash> next_hyps;
     // 1. First beam prune, only select topk candidates
-    std::tuple<Tensor, Tensor> topk = logp_t.topk(opts_.first_beam_size);
-    Tensor topk_score = std::get<0>(topk);
-    Tensor topk_index = std::get<1>(topk);
+    std::vector<float> topk_score;
+    std::vector<int32_t> topk_index;
+    TopK(logp_t, first_beam_size, &topk_score, &topk_index);
 
     // 2. Token passing
-    for (int i = 0; i < topk_index.size(0); ++i) {
-      int id = topk_index[i].item<int>();
-      auto prob = topk_score[i].item<float>();
+    for (int i = 0; i < topk_index.size(); ++i) {
+      int id = topk_index[i];
+      auto prob = topk_score[i];
       for (const auto& it : cur_hyps_) {
         const std::vector<int>& prefix = it.first;
         const PrefixScore& prefix_score = it.second;
@@ -169,21 +205,31 @@ void CtcPrefixBeamSearch::Search(const torch::Tensor& logp) {
     std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
 
     // 4. Update cur_hyps_ and get new result
-    cur_hyps_.clear();
-    outputs_.clear();
-    hypotheses_.clear();
-    likelihood_.clear();
-    viterbi_likelihood_.clear();
-    times_.clear();
-    for (auto& item : arr) {
-      cur_hyps_[item.first] = item.second;
-      UpdateOutputs(item);
-      hypotheses_.emplace_back(std::move(item.first));
-      likelihood_.emplace_back(item.second.total_score());
-      viterbi_likelihood_.emplace_back(item.second.viterbi_score());
-      times_.emplace_back(item.second.times());
+    UpdateHypotheses(arr);
+  }
+}
+
+void CtcPrefixBeamSearch::FinalizeSearch() { UpdateFinalContext(); }
+
+void CtcPrefixBeamSearch::UpdateFinalContext() {
+  if (context_graph_ == nullptr) return;
+  CHECK_EQ(hypotheses_.size(), cur_hyps_.size());
+  CHECK_EQ(hypotheses_.size(), likelihood_.size());
+  // We should backoff the context score/state when the context is
+  // not fully matched at the last time.
+  for (const auto& prefix : hypotheses_) {
+    PrefixScore& prefix_score = cur_hyps_[prefix];
+    if (prefix_score.context_state != 0) {
+      prefix_score.UpdateContext(context_graph_, prefix_score, 0,
+                                 prefix.size());
     }
   }
+  std::vector<std::pair<std::vector<int>, PrefixScore>> arr(cur_hyps_.begin(),
+                                                            cur_hyps_.end());
+  std::sort(arr.begin(), arr.end(), PrefixScoreCompare);
+
+  // Update cur_hyps_ and get new result
+  UpdateHypotheses(arr);
 }
 
 }  // namespace wenet

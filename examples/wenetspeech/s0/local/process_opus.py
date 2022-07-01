@@ -66,7 +66,8 @@ def output(output_wav_scp, utt_list, seg_path_list, start_time_list,
 
             start = int(start_time_list[i] * 1000)
             end = int(end_time_list[i] * 1000)
-            target_audio = source_wav[start:end].set_frame_rate(16000)
+            target_audio = source_wav[start:end].set_frame_rate(16000) \
+                .set_sample_width(2)
             target_audio.export(seg_wav_path, format="wav")
 
             fout.write("{} {}\n".format(utt_id, seg_wav_path))

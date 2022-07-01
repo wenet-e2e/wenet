@@ -22,7 +22,8 @@ num_nodes=1
 # You should set the node_rank=0 on the first machine, set the node_rank=1
 # on the second machine, and so on.
 node_rank=0
-# data
+# The aishell dataset location, please change this to your own path
+# make sure of using absolute path. DO-NOT-USE relatvie path!
 data=/export/data/asr-data/OpenSLR/33/
 data_url=www.openslr.org/resources/33
 
@@ -234,8 +235,9 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
     --chunk_size $chunk_size \
     --fst_path data/lang_test/TLG.fst \
+    --dict_path data/lang_test/words.fst \
     data/test/wav.scp data/test/text $dir/final.zip \
-    data/lang_test/words.txt $dir/lm_with_runtime
+    data/lang_test/units.txt $dir/lm_with_runtime
   # Please see $dir/lm_with_runtime for wer
 fi
 

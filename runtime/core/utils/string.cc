@@ -171,7 +171,7 @@ std::string ProcessBlank(const std::string& str, bool lowercase) {
     std::locale loc("");
     std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
     std::wstring wsresult = converter.from_bytes(result);
-    for (auto &c : wsresult) {
+    for (auto& c : wsresult) {
       c = lowercase ? tolower(c, loc) : toupper(c, loc);
     }
     result = converter.to_bytes(wsresult);
@@ -190,5 +190,26 @@ std::string Rtrim(const std::string& str) {
 }
 
 std::string Trim(const std::string& str) { return Rtrim(Ltrim(str)); }
+
+std::string JoinPath(const std::string& left, const std::string& right) {
+  std::string path(left);
+  if (path.size() && path.back() != '/') {
+    path.push_back('/');
+  }
+  path.append(right);
+  return path;
+}
+
+#ifdef _MSC_VER
+std::wstring ToWString(const std::string& str) {
+  unsigned len = str.size() * 2;
+  setlocale(LC_CTYPE, "");
+  wchar_t* p = new wchar_t[len];
+  mbstowcs(p, str.c_str(), len);
+  std::wstring wstr(p);
+  delete[] p;
+  return wstr;
+}
+#endif
 
 }  // namespace wenet

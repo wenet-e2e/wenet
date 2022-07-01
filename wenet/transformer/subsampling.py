@@ -1,11 +1,22 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# Copyright (c) 2021 Mobvoi Inc (Binbin Zhang, Di Wu)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Modified from ESPnet(https://github.com/espnet/espnet)
 
-# Copyright 2019 Mobvoi Inc. All Rights Reserved.
-# Author: di.wu@mobvoi.com (DI WU)
+
 """Subsampling layer definition."""
 
-from typing import Tuple
+from typing import Tuple, Union
 
 import torch
 
@@ -16,7 +27,8 @@ class BaseSubsampling(torch.nn.Module):
         self.right_context = 0
         self.subsampling_rate = 1
 
-    def position_encoding(self, offset: int, size: int) -> torch.Tensor:
+    def position_encoding(self, offset: Union[int, torch.Tensor],
+                          size: int) -> torch.Tensor:
         return self.pos_enc.position_encoding(offset, size)
 
 
@@ -35,7 +47,7 @@ class LinearNoSubsampling(BaseSubsampling):
         super().__init__()
         self.out = torch.nn.Sequential(
             torch.nn.Linear(idim, odim),
-            torch.nn.LayerNorm(odim, eps=1e-12),
+            torch.nn.LayerNorm(odim, eps=1e-5),
             torch.nn.Dropout(dropout_rate),
         )
         self.pos_enc = pos_enc_class
@@ -46,7 +58,7 @@ class LinearNoSubsampling(BaseSubsampling):
             self,
             x: torch.Tensor,
             x_mask: torch.Tensor,
-            offset: int = 0
+            offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Input x.
 
@@ -98,7 +110,7 @@ class Conv2dSubsampling4(BaseSubsampling):
             self,
             x: torch.Tensor,
             x_mask: torch.Tensor,
-            offset: int = 0
+            offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
 
@@ -151,7 +163,7 @@ class Conv2dSubsampling6(BaseSubsampling):
             self,
             x: torch.Tensor,
             x_mask: torch.Tensor,
-            offset: int = 0
+            offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
         Args:
@@ -205,7 +217,7 @@ class Conv2dSubsampling8(BaseSubsampling):
             self,
             x: torch.Tensor,
             x_mask: torch.Tensor,
-            offset: int = 0
+            offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
 

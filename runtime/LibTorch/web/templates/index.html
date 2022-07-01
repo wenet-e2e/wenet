@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>WeNet-语音实时转写</title>
+  <link rel="shortcut icon" href="./static/favicon.ico">
+  <script src="../static/js/jquery-3.2.1.min.js"></script>
+  <script src="../static/js/recorder/recorder-core.js"></script>
+  <script src="../static/js/recorder/extensions/lib.fft.js"></script>
+  <script src="../static/js/recorder/extensions/frequency.histogram.view.js"></script>
+  <script src="../static/js/recorder/engine/pcm.js"></script>
+  <script src="../static/js/SoundRecognizer.js"></script>
+  <link rel="stylesheet" href="../static/css/style.css">
+  <link rel="stylesheet" href="../static/css/font-awesome.min.css">
+</head>
+
+<body>
+  <div class="asr-content">
+    <div class="audio-banner">
+      <div class="weaper">
+        <div class="text-content">
+          <p><span class="title">WeNet简介</span></p>
+          <p class="con-container">
+            <span class="con">WeNet是全球首个面向工业级产品的、全栈式的、开源的端到端语音识别解决方案，其提供模型训练、模型推理、云侧和端侧模型部署的一站式服务。</span>
+          </p>
+        </div>
+        <div class="img-con">
+          <img src="../static/image/voice-pic.png" alt="" />
+        </div>
+      </div>
+    </div>
+    <div class="audio-experience">
+      <div class="asr-box">
+        <h2>产品体验</h2>
+        <div id="client-word-recorder" style="position: relative;">
+          <div class="pd">
+            <div style="text-align:center;height:20px;width:100%;
+                        border:0px solid #bcbcbc;color:#000;box-sizing: border-box;display:inline-block"
+              class="recwave">
+            </div>
+          </div>
+        </div>
+        <div class="voice-container">
+          <div class="voice-input">
+            <span>WebSocket URL：</span>
+            <input type="text" id="socketUrl" class="websocket-url" value="ws://127.0.0.1:10086"
+              placeholder="请输入服务器地址，如：ws://127.0.0.1:10086">
+            <div class="start-voice">
+              <button type="primary" id="beginBtn" class="voice-btn">
+                <span class="fa fa-microphone"> 开始识别</span>
+              </button>
+              <button type="primary" id="endBtn" class="voice-btn end">
+                <span class="fa fa-microphone-slash"> 结束识别</span>
+              </button>
+              <div id="timeBox" class="time-box flex-display-1">
+                <span class="total-time">识别中，<i id="timeCount"></i> 秒后自动停止识别</span>
+              </div>
+            </div>
+          </div>
+          <div class="voice">
+            <div class="result-text" id="resultPanel">此处显示识别结果</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="audio-advantage">
+      <div class="asr-advantage">
+        <h2>核心特点</h2>
+        <ul class="service-item-content">
+          <li class="icons-advantage-mb35">
+            <i class="icons icons-advantage icons-advantage-1"> </i>
+            <div class="service-item-content-title">产品优先和产品就绪的设计</div>
+            <div class="service-item-content-desc">WeNet训练的模型可以直接无缝应用到产品环境中，<br>并提供长语音、端点检测、时间戳、语言模型等<br>产品级别特性支持。</div>
+          </li>
+          <li class="icons-advantage-mb35">
+            <i class="icons icons-advantage icons-advantage-2"> </i>
+            <div class="service-item-content-title">统一的流式和非流式模型</div>
+            <div class="service-item-content-desc">WeNet训练的模型既能应用到低延迟的流式语音识别场景，也能应用到高识别率要求的非流式语音识别场景。</div>
+          </li>
+          <li>
+            <i class="icons icons-advantage icons-advantage-3"> </i>
+            <div class="service-item-content-title">云侧和端侧解决方案</div>
+            <div class="service-item-content-desc">WeNet中同时集成了云侧和端侧的解决方案。</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="audio-scene-con">
+      <div class="audio-scene">
+        <h2>联系我们</h2>
+        <ul class="service-item-content">
+          <li>
+            <div class="service-item-content-desc">WeNet企业版</div>
+            <img src="../static/image/qrcode-enterprise.png" alt="" />
+          </li>
+          <li>
+            <div class="service-item-content-desc">商务合作</div>
+            <img src="../static/image/qrcode-group.png" alt="" />
+          </li>
+          <li>
+            <div class="service-item-content-desc">公众号</div>
+            <img src="../static/image/qrcode-official-account.png" alt="" />
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="voice-footer">Copyright © 2021 Mobvoi Inc. All Rights Reserved. 北京出门问问信息科技有限公司沪 ICP 备 13010933 号-5 京公网安备
+      11010802023145</div>
+  </div>
+  <script>
+    var wenetWs = null
+    var timeLoop = null
+    var result = ""
+    $(document).ready(function () {
+      $('#beginBtn').on('click', startRecording)
+      $('#endBtn').on('click', stopRecording)
+    })
+
+    function openWebSocket(url) {
+      if ("WebSocket" in window) {
+        wenetWs = new WebSocket(url)
+        wenetWs.onopen = function () {
+          console.log("Websocket 连接成功，开始识别")
+          wenetWs.send(JSON.stringify({
+            "signal": "start",
+            "nbest": 1,
+            "continuous_decoding": true
+          }))
+        }
+        wenetWs.onmessage = function (_msg) { parseResult(_msg.data) }
+        wenetWs.onclose = function () {
+          console.log("WebSocket 连接断开")
+          if (result.length > 0) {
+            if (result.endsWith("，")) {
+              result = result.slice(0, -1)
+            }
+            $("#resultPanel").html(result + "。")
+            result = ""
+          }
+        }
+        wenetWs.onerror = function () { console.log("WebSocket 连接失败") }
+      }
+    }
+
+    function parseResult(data) {
+      var data = JSON.parse(data)
+      if (data.type == 'partial_result') {
+        nbest = JSON.parse(data.nbest)
+        var sentence = nbest[0].sentence
+        if (sentence.length > 0) {
+          $("#resultPanel").html(result + sentence)
+        }
+      } else if (data.type == 'final_result') {
+        nbest = JSON.parse(data.nbest)
+        var sentence = nbest[0].sentence
+        if (sentence.length > 0) {
+          result += sentence + "，"
+          $("#resultPanel").html(result)
+        }
+        console.log(nbest)
+      }
+    }
+
+    function TransferUpload(number, blobOrNull, duration, blobRec, isClose) {
+      if (blobOrNull) {
+        var blob = blobOrNull
+        var encTime = blob.encTime
+        var reader = new FileReader()
+        reader.onloadend = function () { wenetWs.send(reader.result) }
+        reader.readAsArrayBuffer(blob)
+      }
+    }
+
+    function startRecording() {
+      // Check socket url
+      var socketUrl = $('#socketUrl').val()
+      if (!socketUrl.trim()) {
+        alert('请输入 WebSocket 服务器地址，如：ws://127.0.0.1:10086')
+        $('#socketUrl').focus()
+        return
+      }
+      // init recorder
+      SoundRecognizer.init({
+        soundType: 'pcm',
+        sampleRate: 16000,
+        recwaveElm: '.recwave',
+        translerCallBack: TransferUpload
+      })
+      openWebSocket(socketUrl)
+
+      // Change button state
+      $('#beginBtn').hide()
+      $('#endBtn, #timeBox').addClass('show')
+      // Start countdown
+      var seconds = 180
+      $('#timeCount').text(seconds)
+      timeLoop = setInterval(function () {
+        seconds--
+        $('#timeCount').text(seconds)
+        if (seconds === 0) {
+          stopRecording()
+        }
+      }, 1000)
+    }
+
+    function stopRecording() {
+      wenetWs.send(JSON.stringify({ "signal": "end" }))
+      SoundRecognizer.recordClose()
+
+      $('#endBtn').add($('#timeBox')).removeClass('show')
+      $('#beginBtn').show()
+      $('#timeCount').text('')
+      clearInterval(timeLoop)
+    }
+  </script>
+</body>
+
+</html>

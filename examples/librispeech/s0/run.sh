@@ -141,6 +141,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --config $train_config \
       --data_type raw \
       --symbol_table $dict \
+      --bpe_model ${bpemodel}.model \
       --train_data $wave_data/$train_set/data.list \
       --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
@@ -190,12 +191,13 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
           --mode $mode \
           --config $dir/train.yaml \
           --data_type raw \
+          --dict $dict \
+          --bpe_model ${bpemodel}.model \
           --test_data $wave_data/$test/data.list \
           --checkpoint $decode_checkpoint \
           --beam_size 10 \
           --batch_size 1 \
           --penalty 0.0 \
-          --dict $dict \
           --result_file $test_dir/text_bpe \
           --ctc_weight $ctc_weight \
           ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
@@ -271,7 +273,8 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
       --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
       --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
       --fst_path $fst_dir/TLG.fst \
-      data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
+      --dict_path $fst_dir/words.txt \
+      data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/units.txt \
       $dir/lm_with_runtime_${test}
     tail $dir/lm_with_runtime_${test}/wer
   done

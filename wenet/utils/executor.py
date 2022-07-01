@@ -1,5 +1,16 @@
-# Copyright 2019 Mobvoi Inc. All Rights Reserved.
-# Author: binbinzhang@mobvoi.com (Binbin Zhang)
+# Copyright (c) 2020 Mobvoi Inc (Binbin Zhang)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import logging
 from contextlib import nullcontext
@@ -62,9 +73,8 @@ class Executor:
                     # The more details about amp can be found in
                     # https://pytorch.org/docs/stable/notes/amp_examples.html
                     with torch.cuda.amp.autocast(scaler is not None):
-                        loss, loss_att, loss_ctc = model(
-                            feats, feats_lengths, target, target_lengths)
-                        loss = loss / accum_grad
+                        loss_dict = model(feats, feats_lengths, target_lengths)
+                        loss = loss_dict['loss'] / accum_grad
                     if use_amp:
                         scaler.scale(loss).backward()
                     else:
@@ -99,10 +109,10 @@ class Executor:
                     log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
                         epoch, batch_idx,
                         loss.item() * accum_grad)
-                    if loss_att is not None:
-                        log_str += 'loss_att {:.6f} '.format(loss_att.item())
-                    if loss_ctc is not None:
-                        log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
+                    for loss_name in loss_dict:
+                        value = loss_dict[loss_name]
+                        if loss_name != 'loss' and value is not None:
+                            log_str += '{} {:.6f} '.format(loss_name, value.item())
                     log_str += 'lr {:.8f} rank {}'.format(lr, rank)
                     logging.debug(log_str)
 
@@ -126,18 +136,18 @@ class Executor:
                 num_utts = target_lengths.size(0)
                 if num_utts == 0:
                     continue
-                loss, loss_att, loss_ctc = model(feats, feats_lengths, target,
-                                                 target_lengths)
+                loss_dict = model(feats, feats_lengths, target, target_lengths)
+                loss = loss_dict['loss']
                 if torch.isfinite(loss):
                     num_seen_utts += num_utts
                     total_loss += loss.item() * num_utts
                 if batch_idx % log_interval == 0:
                     log_str = 'CV Batch {}/{} loss {:.6f} '.format(
                         epoch, batch_idx, loss.item())
-                    if loss_att is not None:
-                        log_str += 'loss_att {:.6f} '.format(loss_att.item())
-                    if loss_ctc is not None:
-                        log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
+                    for loss_name in loss_dict:
+                        value = loss_dict[loss_name]
+                        if loss_name != 'loss' and value is not None:
+                            log_str += '{} {:.6f} '.format(loss_name, value.item())
                     log_str += 'history loss {:.6f}'.format(total_loss /
                                                             num_seen_utts)
                     log_str += ' rank {}'.format(rank)

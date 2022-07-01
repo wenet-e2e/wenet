@@ -6,7 +6,6 @@
 * Training info: lr 0.002, batch size 18, 4 gpu, acc_grad 4, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.5, average_num 20
 * Git hash: 919f07c4887ac500168ba84b39b535fd8e58918a
-* Model link: http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell/20211025_conformer_exp.tar.gz
 
 | decoding mode             | CER   |
 |---------------------------|-------|

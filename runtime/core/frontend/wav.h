@@ -1,5 +1,4 @@
 // Copyright (c) 2016 Personal (Binbin Zhang)
-// Created on 2016-08-15
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 
 #ifndef FRONTEND_WAV_H_
 #define FRONTEND_WAV_H_
@@ -70,13 +70,13 @@ class WavReader {
     }
     // check "riff" "WAVE" "fmt " "data"
 
-    // Skip any subchunks between "fmt" and "data".  Usually there will
-    // be a single "fact" subchunk, but on Windows there can also be a
-    // "list" subchunk.
+    // Skip any sub-chunks between "fmt" and "data".  Usually there will
+    // be a single "fact" sub chunk, but on Windows there can also be a
+    // "list" sub chunk.
     while (0 != strncmp(header.data, "data", 4)) {
       // We will just ignore the data in these chunks.
       fseek(fp, header.data_size, SEEK_CUR);
-      // read next subchunk
+      // read next sub chunk
       fread(header.data, 8, sizeof(char), fp);
     }
 
@@ -85,7 +85,7 @@ class WavReader {
     bits_per_sample_ = header.bit;
     int num_data = header.data_size / (bits_per_sample_ / 8);
     data_ = new float[num_data];
-    num_sample_ = num_data / num_channel_;
+    num_samples_ = num_data / num_channel_;
 
     for (int i = 0; i < num_data; ++i) {
       switch (bits_per_sample_) {
@@ -119,10 +119,10 @@ class WavReader {
   int num_channel() const { return num_channel_; }
   int sample_rate() const { return sample_rate_; }
   int bits_per_sample() const { return bits_per_sample_; }
-  int num_sample() const { return num_sample_; }
+  int num_samples() const { return num_samples_; }
 
   ~WavReader() {
-    if (data_ != NULL) delete[] data_;
+    delete[] data_;
   }
 
   const float* data() const { return data_; }
@@ -131,16 +131,16 @@ class WavReader {
   int num_channel_;
   int sample_rate_;
   int bits_per_sample_;
-  int num_sample_;  // sample points per channel
+  int num_samples_;  // sample points per channel
   float* data_;
 };
 
 class WavWriter {
  public:
-  WavWriter(const float* data, int num_sample, int num_channel, int sample_rate,
-            int bits_per_sample)
+  WavWriter(const float* data, int num_samples, int num_channel,
+            int sample_rate, int bits_per_sample)
       : data_(data),
-        num_sample_(num_sample),
+        num_samples_(num_samples),
         num_channel_(num_channel),
         sample_rate_(sample_rate),
         bits_per_sample_(bits_per_sample) {}
@@ -158,7 +158,7 @@ class WavWriter {
     header.channels = num_channel_;
     header.bit = bits_per_sample_;
     header.sample_rate = sample_rate_;
-    header.data_size = num_sample_ * num_channel_ * (bits_per_sample_ / 8);
+    header.data_size = num_samples_ * num_channel_ * (bits_per_sample_ / 8);
     header.size = sizeof(header) - 8 + header.data_size;
     header.bytes_per_second =
         sample_rate_ * num_channel_ * (bits_per_sample_ / 8);
@@ -166,7 +166,7 @@ class WavWriter {
 
     fwrite(&header, 1, sizeof(header), fp);
 
-    for (int i = 0; i < num_sample_; ++i) {
+    for (int i = 0; i < num_samples_; ++i) {
       for (int j = 0; j < num_channel_; ++j) {
         switch (bits_per_sample_) {
           case 8: {
@@ -192,7 +192,7 @@ class WavWriter {
 
  private:
   const float* data_;
-  int num_sample_;  // total float points in data_
+  int num_samples_;  // total float points in data_
   int num_channel_;
   int sample_rate_;
   int bits_per_sample_;

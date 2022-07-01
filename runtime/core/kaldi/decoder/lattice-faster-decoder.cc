@@ -4,6 +4,7 @@
 //           2013-2018  Johns Hopkins University (Author: Daniel Povey)
 //                2014  Guoguo Chen
 //                2018  Zhehuai Chen
+//                2021  Binbin Zhang, Zhendong Peng
 
 // See ../../COPYING for clarification regarding multiple authors
 //
@@ -791,6 +792,9 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
         BaseFloat new_weight = arc.weight.Value() + cost_offset -
                                decodable->LogLikelihood(frame, arc.ilabel) +
                                tok->tot_cost;
+        if (state != arc.nextstate) {
+          new_weight += config_.length_penalty;
+        }
         if (new_weight + adaptive_beam < next_cutoff)
           next_cutoff = new_weight + adaptive_beam;
       }
@@ -817,7 +821,11 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
         if (arc.ilabel != 0) {  // propagate..
           BaseFloat ac_cost = cost_offset -
                               decodable->LogLikelihood(frame, arc.ilabel),
-                    graph_cost = arc.weight.Value(), cur_cost = tok->tot_cost,
+                    graph_cost = arc.weight.Value();
+          if (state != arc.nextstate) {
+            graph_cost += config_.length_penalty;
+          }
+          BaseFloat cur_cost = tok->tot_cost,
                     tot_cost = cur_cost + ac_cost + graph_cost;
           if (tot_cost >= next_cutoff)
             continue;

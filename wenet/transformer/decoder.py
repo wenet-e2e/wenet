@@ -1,6 +1,18 @@
-# Copyright 2021 Mobvoi Inc. All Rights Reserved.
-# Author: di.wu@mobvoi.com (DI WU)
-#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
+# Copyright (c) 2021 Mobvoi Inc. (authors: Binbin Zhang, Di Wu)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Modified from ESPnet(https://github.com/espnet/espnet)
+
 """Decoder definition."""
 from typing import Tuple, List, Optional
 
@@ -64,7 +76,7 @@ class TransformerDecoder(torch.nn.Module):
             raise ValueError(f"only 'embed' is supported: {input_layer}")
 
         self.normalize_before = normalize_before
-        self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-12)
+        self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
         self.use_output_layer = use_output_layer
         self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
         self.num_blocks = num_blocks
@@ -90,7 +102,7 @@ class TransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         ys_in_pad: torch.Tensor,
         ys_in_lens: torch.Tensor,
-        r_ys_in_pad: Optional[torch.Tensor] = None,
+        r_ys_in_pad: torch.Tensor = torch.empty(0),
         reverse_weight: float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Forward decoder.

@@ -16,8 +16,8 @@
 #define POST_PROCESSOR_POST_PROCESSOR_H_
 
 #include <memory>
-#include <utility>
 #include <string>
+#include <utility>
 
 #include "utils/utils.h"
 
@@ -38,7 +38,8 @@ struct PostProcessOptions {
   // space options
   // The decoded result may contain spaces (' ' or '_'),
   // we will process those spaces according to language_type. More details can
-  // be found in https://github.com/wenet-e2e/wenet/issues/583#issuecomment-907994058
+  // be found in
+  // https://github.com/wenet-e2e/wenet/issues/583#issuecomment-907994058
   LanguageType language_type = kMandarinEnglish;
   // whether lowercase letters are required
   bool lowercase = true;

@@ -1,3 +1,18 @@
+# Copyright (c) 2020 Mobvoi Inc (Binbin Zhang)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Modified from ESPnet(https://github.com/espnet/espnet)
+
 """Unility functions for Transformer."""
 
 import math
@@ -38,6 +53,35 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
 
     return pad
 
+def add_blank(ys_pad: torch.Tensor, blank: int) -> torch.Tensor:
+    """ Prepad blank for transducer predictor
+
+    Args:
+        ys_pad (torch.Tensor): batch of padded target sequences (B, Lmax)
+        blank (int): index of <blank>
+
+    Returns:
+        ys_in (torch.Tensor) : (B, Lmax + 1)
+
+    Examples:
+        >>> blank = 0
+        >>> ys_pad
+        tensor([[ 1,  2,  3,  4,  5],
+                [ 4,  5,  6, -1, -1],
+                [ 7,  8,  9, -1, -1]], dtype=torch.int32)
+        >>> ys_in,ys_out=add_blank(ys_pad, 0)
+        >>> ys_in
+        tensor([[0,  1,  2,  3,  4,  5],
+                [0,  4,  5,  6, -1, -1],
+                [0,  7,  8,  9, -1, -1]])
+    """
+    bs, lmax = ys_pad.size(0), ys_pad.size(1)
+    _blank = torch.tensor([blank],
+                          dtype=torch.long,
+                          requires_grad=False,
+                          device=ys_pad.device)
+    _blank = _blank.repeat(bs).unsqueeze(1)  # [bs,1]
+    return torch.cat([_blank, ys_pad], dim=1)  # [bs, Lmax+1]
 
 def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
                 ignore_id: int) -> Tuple[torch.Tensor, torch.Tensor]:

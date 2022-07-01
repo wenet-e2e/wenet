@@ -1,0 +1,45 @@
+name: Build Windows Runtime
+
+on:
+  workflow_dispatch:
+
+env:
+  RUNTIME_DIR: runtime/server/x86
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build
+        run: |
+          cd ${{ env.RUNTIME_DIR }}
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release -j$(nproc)
+
+      - name: Prepare Release Binary
+        run: |
+          cd ${{ env.RUNTIME_DIR }}
+          mkdir openfst
+          cp -r fc_base/openfst-build/src/bin/Release/*.exe openfst
+
+          mkdir -p wenet/kaldi
+          cp build/*.dll wenet
+          cp build/bin/Release/*.exe wenet
+          cp build/bin/Release/*.dll wenet
+          cp build/kaldi/Release/*.exe wenet/kaldi
+
+      - name: Upload OpenFST Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-openfst-binary
+          path: ${{ env.RUNTIME_DIR }}/openfst
+
+      - name: Upload WeNet Binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-wenet-binary
+          path: ${{ env.RUNTIME_DIR }}/wenet

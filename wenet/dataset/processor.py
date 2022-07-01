@@ -86,19 +86,19 @@ def tar_file_and_group(data):
                     yield example
                 example = {}
                 valid = True
-            file_obj = stream.extractfile(tarinfo)
-            try:
-                if postfix == 'txt':
-                    example['txt'] = file_obj.read().decode('utf8').strip()
-                elif postfix in AUDIO_FORMAT_SETS:
-                    waveform, sample_rate = torchaudio.load(file_obj)
-                    example['wav'] = waveform
-                    example['sample_rate'] = sample_rate
-                else:
-                    example[postfix] = file_obj.read()
-            except Exception as ex:
-                valid = False
-                logging.warning('error to parse {}'.format(name))
+            with stream.extractfile(tarinfo) as file_obj:
+                try:
+                    if postfix == 'txt':
+                        example['txt'] = file_obj.read().decode('utf8').strip()
+                    elif postfix in AUDIO_FORMAT_SETS:
+                        waveform, sample_rate = torchaudio.load(file_obj)
+                        example['wav'] = waveform
+                        example['sample_rate'] = sample_rate
+                    else:
+                        example[postfix] = file_obj.read()
+                except Exception as ex:
+                    valid = False
+                    logging.warning('error to parse {}'.format(name))
             prev_prefix = prefix
         if prev_prefix is not None:
             example['key'] = prev_prefix
@@ -282,7 +282,71 @@ def compute_fbank(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
+def compute_mfcc(data,
+                 num_mel_bins=23,
+                 frame_length=25,
+                 frame_shift=10,
+                 dither=0.0,
+                 num_ceps=40,
+                 high_freq=0.0,
+                 low_freq=20.0):
+    """ Extract mfcc
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+
+        Returns:
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'sample_rate' in sample
+        assert 'wav' in sample
+        assert 'key' in sample
+        assert 'label' in sample
+        sample_rate = sample['sample_rate']
+        waveform = sample['wav']
+        waveform = waveform * (1 << 15)
+        # Only keep key, feat, label
+        mat = kaldi.mfcc(waveform,
+                         num_mel_bins=num_mel_bins,
+                         frame_length=frame_length,
+                         frame_shift=frame_shift,
+                         dither=dither,
+                         num_ceps=num_ceps,
+                         high_freq=high_freq,
+                         low_freq=low_freq,
+                         sample_frequency=sample_rate)
+        yield dict(key=sample['key'], label=sample['label'], feat=mat)
+
+
+def __tokenize_by_bpe_model(sp, txt):
+    tokens = []
+    # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
+    # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
+    pattern = re.compile(r'([\u4e00-\u9fff])')
+    # Example:
+    #   txt   = "你好 ITS'S OKAY 的"
+    #   chars = ["你", "好", " ITS'S OKAY ", "的"]
+    chars = pattern.split(txt.upper())
+    mix_chars = [w for w in chars if len(w.strip()) > 0]
+    for ch_or_w in mix_chars:
+        # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
+        if pattern.fullmatch(ch_or_w) is not None:
+            tokens.append(ch_or_w)
+        # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
+        # encode ch_or_w using bpe_model.
+        else:
+            for p in sp.encode_as_pieces(ch_or_w):
+                tokens.append(p)
+
+    return tokens
+
+
+def tokenize(data,
+             symbol_table,
+             bpe_model=None,
+             non_lang_syms=None,
+             split_with_space=False):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -292,33 +356,43 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         Returns:
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
-    # TODO(Binbin Zhang): Support BPE
+    if non_lang_syms is not None:
+        non_lang_syms_pattern = re.compile(r"(\[[^\[\]]+\]|<[^<>]+>|{[^{}]+})")
+    else:
+        non_lang_syms = {}
+        non_lang_syms_pattern = None
+
     if bpe_model is not None:
         import sentencepiece as spm
         sp = spm.SentencePieceProcessor()
         sp.load(bpe_model)
+    else:
+        sp = None
+
     for sample in data:
         assert 'txt' in sample
-        txt = sample['txt']
+        txt = sample['txt'].strip()
+        if non_lang_syms_pattern is not None:
+            parts = non_lang_syms_pattern.split(txt.upper())
+            parts = [w for w in parts if len(w.strip()) > 0]
+        else:
+            parts = [txt]
+
         label = []
         tokens = []
-        if bpe_model is not None:
-            txt = bpe_preprocess(txt)
-            mix_chars = seg_char(txt)
-            for j in mix_chars:
-                for k in j.strip().split("▁"):
-                    if not k.encode('UTF-8').isalpha():
-                        tokens.append(k)
-                    else:
-                        for l in sp.encode_as_pieces(k):
-                            tokens.append(l)
-        else:
-            if split_with_space:
-                txt = txt.split(" ")
-            for ch in txt:
-                if ch == ' ':
-                    ch = "▁"
-                tokens.append(ch)
+        for part in parts:
+            if part in non_lang_syms:
+                tokens.append(part)
+            else:
+                if bpe_model is not None:
+                    tokens.extend(__tokenize_by_bpe_model(sp, part))
+                else:
+                    if split_with_space:
+                        part = part.split(" ")
+                    for ch in part:
+                        if ch == ' ':
+                            ch = "▁"
+                        tokens.append(ch)
 
         for ch in tokens:
             if ch in symbol_table:
@@ -329,25 +403,6 @@ def tokenize(data, symbol_table, bpe_model=None, split_with_space=False):
         sample['tokens'] = tokens
         sample['label'] = label
         yield sample
-
-
-def bpe_preprocess(text):
-    """ Use ▁ for blank among english words
-        Warning: it is "▁" symbol, not "_" symbol
-    """
-    text = text.upper()
-    text = re.sub(r'([A-Z])[ ]([A-Z])', r'\1▁\2', text)
-    text = re.sub(r'([A-Z])[ ]([A-Z])', r'\1▁\2', text)
-    text = text.replace(' ', '')
-    text = text.replace('\xEF\xBB\xBF', '')
-    return text
-
-
-def seg_char(text):
-    pattern = re.compile(r'([\u4e00-\u9fa5])')
-    chars = pattern.split(text)
-    chars = [w for w in chars if len(w.strip()) > 0]
-    return chars
 
 
 def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
@@ -384,6 +439,35 @@ def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
             length = random.randint(1, max_f)
             end = min(max_freq, start + length)
             y[:, start:end] = 0
+        sample['feat'] = y
+        yield sample
+
+
+def spec_sub(data, max_t=20, num_t_sub=3):
+    """ Do spec substitute
+        Inplace operation
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            max_t: max width of time substitute
+            num_t_sub: number of time substitute to apply
+
+        Returns
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'feat' in sample
+        x = sample['feat']
+        assert isinstance(x, torch.Tensor)
+        y = x.clone().detach()
+        max_frames = y.size(0)
+        for i in range(num_t_sub):
+            start = random.randint(0, max_frames - 1)
+            length = random.randint(1, max_t)
+            end = min(max_frames, start + length)
+            # only substitute the earlier time chosen randomly for current time
+            pos = random.randint(0, start)
+            y[start:end, :] = x[start - pos:end - pos, :]
         sample['feat'] = y
         yield sample
 

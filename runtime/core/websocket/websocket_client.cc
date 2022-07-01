@@ -27,8 +27,8 @@ namespace asio = boost::asio;            // from <boost/asio.hpp>
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 namespace json = boost::json;
 
-WebSocketClient::WebSocketClient(const std::string& host, int port)
-    : host_(host), port_(port) {
+WebSocketClient::WebSocketClient(const std::string& hostname, int port)
+    : hostname_(hostname), port_(port) {
   Connect();
   t_.reset(new std::thread(&WebSocketClient::ReadLoopFunc, this));
 }
@@ -36,13 +36,12 @@ WebSocketClient::WebSocketClient(const std::string& host, int port)
 void WebSocketClient::Connect() {
   tcp::resolver resolver{ioc_};
   // Look up the domain name
-  auto const results = resolver.resolve(host_, std::to_string(port_));
+  auto const results = resolver.resolve(hostname_, std::to_string(port_));
   // Make the connection on the IP address we get from a lookup
   auto ep = asio::connect(ws_.next_layer(), results);
-  // Update the host_ string. This will provide the value of the
-  // Host HTTP header during the WebSocket handshake.
+  // Provide the value of the Host HTTP header during the WebSocket handshake.
   // See https://tools.ietf.org/html/rfc7230#section-5.4
-  std::string host = host_ + ":" + std::to_string(ep.port());
+  std::string host = hostname_ + ":" + std::to_string(ep.port());
   // Perform the websocket handshake
   ws_.handshake(host, "/");
 }
@@ -89,7 +88,7 @@ void WebSocketClient::ReadLoopFunc() {
 void WebSocketClient::Join() { t_->join(); }
 
 void WebSocketClient::SendStartSignal() {
-  // TODO(Binbin Zhang): Add sample rate and other setting surpport
+  // TODO(Binbin Zhang): Add sample rate and other setting support
   json::value start_tag = {{"signal", "start"},
                            {"nbest", nbest_},
                            {"continuous_decoding", continuous_decoding_}};

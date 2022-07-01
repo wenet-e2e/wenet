@@ -1,0 +1,7 @@
+FROM  nvcr.io/nvidia/tritonserver:22.03-py3-sdk
+LABEL maintainer="NVIDIA"
+LABEL repository="tritonserver"
+
+RUN apt-get update && apt-get install -y libsndfile1
+RUN pip3 install soundfile
+WORKDIR /workspace

@@ -1,5 +1,18 @@
-# Copyright 2020 Mobvoi Inc. All Rights Reserved.
-# Author: di.wu@mobvoi.com (DI WU)
+# Copyright (c) 2020 Mobvoi Inc (Di Wu)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 import os
 import argparse
 import glob
@@ -60,7 +73,7 @@ def main():
             for epoch in sorted_val_scores[:args.num, 0]
         ]
     else:
-        path_list = glob.glob('{}/[!avg][!final]*.pt'.format(args.src_path))
+        path_list = glob.glob('{}/[0-9]*.pt'.format(args.src_path))
         path_list = sorted(path_list, key=os.path.getmtime)
         path_list = path_list[-args.num:]
     print(path_list)

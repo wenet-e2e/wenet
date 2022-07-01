@@ -422,7 +422,8 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
       --beam 10.0 --lattice_beam 5 --max_active 7000 --blank_skip_thresh 0.98 \
       --ctc_weight 0.5 --rescoring_weight 1.0 --acoustic_scale 1.2 \
       --fst_path $fst_dir/TLG.fst \
-      data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/words.txt \
+      --dict_path $fst_dir/words.txt \
+      data/$test/wav.scp data/$test/text $dir/final.zip $fst_dir/units.txt \
       $dir/lm_with_runtime_${test}
     tail $dir/lm_with_runtime_${test}/wer
   done

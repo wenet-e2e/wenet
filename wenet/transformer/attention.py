@@ -1,12 +1,23 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# Copyright (c) 2019 Shigeki Karita
+#               2020 Mobvoi Inc (Binbin Zhang)
+#               2022 Xingchen Song (sxc19@mails.tsinghua.edu.cn)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-# Copyright 2019 Shigeki Karita
-#  Apache 2.0  (http://www.apache.org/licenses/LICENSE-2.0)
 """Multi-Head Attention layer definition."""
 
 import math
-from typing import Optional, Tuple
+from typing import Tuple
 
 import torch
 from torch import nn
@@ -63,8 +74,10 @@ class MultiHeadedAttention(nn.Module):
 
         return q, k, v
 
-    def forward_attention(self, value: torch.Tensor, scores: torch.Tensor,
-                          mask: Optional[torch.Tensor]) -> torch.Tensor:
+    def forward_attention(
+        self, value: torch.Tensor, scores: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
+    ) -> torch.Tensor:
         """Compute attention context vector.
 
         Args:
@@ -73,7 +86,7 @@ class MultiHeadedAttention(nn.Module):
             scores (torch.Tensor): Attention score, size
                 (#batch, n_head, time1, time2).
             mask (torch.Tensor): Mask, size (#batch, 1, time2) or
-                (#batch, time1, time2).
+                (#batch, time1, time2), (0, 0, 0) means fake mask.
 
         Returns:
             torch.Tensor: Transformed value (#batch, time1, d_model)
@@ -81,11 +94,20 @@ class MultiHeadedAttention(nn.Module):
 
         """
         n_batch = value.size(0)
-        if mask is not None:
+        # NOTE(xcsong): When will `if mask.size(2) > 0` be True?
+        #   1. onnx(16/4) [WHY? Because we feed real cache & real mask for the
+        #           1st chunk to ease the onnx export.]
+        #   2. pytorch training
+        if mask.size(2) > 0 :  # time2 > 0
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
+            # For last chunk, time2 might be larger than scores.size(-1)
+            mask = mask[:, :, :, :scores.size(-1)]  # (batch, 1, *, time2)
             scores = scores.masked_fill(mask, -float('inf'))
             attn = torch.softmax(scores, dim=-1).masked_fill(
                 mask, 0.0)  # (batch, head, time1, time2)
+        # NOTE(xcsong): When will `if mask.size(2) > 0` be False?
+        #   1. onnx(16/-1, -1/-1, 16/0)
+        #   2. jit (16/-1, -1/-1, 16/0, 16/4)
         else:
             attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
 
@@ -99,8 +121,10 @@ class MultiHeadedAttention(nn.Module):
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor,
-                mask: Optional[torch.Tensor],
-                pos_emb: torch.Tensor = torch.empty(0),) -> torch.Tensor:
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                pos_emb: torch.Tensor = torch.empty(0),
+                cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute scaled dot product attention.
 
         Args:
@@ -119,15 +143,47 @@ class MultiHeadedAttention(nn.Module):
                 of the encoder, such as Mocha, the passed in mask could be
                 in (#batch, L, T) shape. But there is no such case in current
                 Wenet.
+            cache (torch.Tensor): Cache tensor (1, head, cache_t, d_k * 2),
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
 
 
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
+            torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
 
         """
         q, k, v = self.forward_qkv(query, key, value)
+
+        # NOTE(xcsong):
+        #   when export onnx model, for 1st chunk, we feed
+        #       cache(1, head, 0, d_k * 2) (16/-1, -1/-1, 16/0 mode)
+        #       or cache(1, head, real_cache_t, d_k * 2) (16/4 mode).
+        #       In all modes, `if cache.size(0) > 0` will alwayse be `True`
+        #       and we will always do splitting and
+        #       concatnation(this will simplify onnx export). Note that
+        #       it's OK to concat & split zero-shaped tensors(see code below).
+        #   when export jit  model, for 1st chunk, we always feed
+        #       cache(0, 0, 0, 0) since jit supports dynamic if-branch.
+        # >>> a = torch.ones((1, 2, 0, 4))
+        # >>> b = torch.ones((1, 2, 3, 4))
+        # >>> c = torch.cat((a, b), dim=2)
+        # >>> torch.equal(b, c)        # True
+        # >>> d = torch.split(a, 2, dim=-1)
+        # >>> torch.equal(d[0], d[1])  # True
+        if cache.size(0) > 0:
+            key_cache, value_cache = torch.split(
+                cache, cache.size(-1) // 2, dim=-1)
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
+        #   non-trivial to calculate `next_cache_start` here.
+        new_cache = torch.cat((k, v), dim=-1)
+
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
-        return self.forward_attention(v, scores, mask)
+        return self.forward_attention(v, scores, mask), new_cache
 
 
 class RelPositionMultiHeadedAttention(MultiHeadedAttention):
@@ -176,23 +232,57 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         return x
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor,
-                value: torch.Tensor, mask: Optional[torch.Tensor],
-                pos_emb: torch.Tensor):
+    def forward(self, query: torch.Tensor,
+                key: torch.Tensor, value: torch.Tensor,
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                pos_emb: torch.Tensor = torch.empty(0),
+                cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
             key (torch.Tensor): Key tensor (#batch, time2, size).
             value (torch.Tensor): Value tensor (#batch, time2, size).
             mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
-                (#batch, time1, time2).
+                (#batch, time1, time2), (0, 0, 0) means fake mask.
             pos_emb (torch.Tensor): Positional embedding tensor
                 (#batch, time2, size).
+            cache (torch.Tensor): Cache tensor (1, head, cache_t, d_k * 2),
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
+            torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
         """
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
+
+        # NOTE(xcsong):
+        #   when export onnx model, for 1st chunk, we feed
+        #       cache(1, head, 0, d_k * 2) (16/-1, -1/-1, 16/0 mode)
+        #       or cache(1, head, real_cache_t, d_k * 2) (16/4 mode).
+        #       In all modes, `if cache.size(0) > 0` will alwayse be `True`
+        #       and we will always do splitting and
+        #       concatnation(this will simplify onnx export). Note that
+        #       it's OK to concat & split zero-shaped tensors(see code below).
+        #   when export jit  model, for 1st chunk, we always feed
+        #       cache(0, 0, 0, 0) since jit supports dynamic if-branch.
+        # >>> a = torch.ones((1, 2, 0, 4))
+        # >>> b = torch.ones((1, 2, 3, 4))
+        # >>> c = torch.cat((a, b), dim=2)
+        # >>> torch.equal(b, c)        # True
+        # >>> d = torch.split(a, 2, dim=-1)
+        # >>> torch.equal(d[0], d[1])  # True
+        if cache.size(0) > 0:
+            key_cache, value_cache = torch.split(
+                cache, cache.size(-1) // 2, dim=-1)
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
+        #   non-trivial to calculate `next_cache_start` here.
+        new_cache = torch.cat((k, v), dim=-1)
 
         n_batch_pos = pos_emb.size(0)
         p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
@@ -219,4 +309,4 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k)  # (batch, head, time1, time2)
 
-        return self.forward_attention(v, scores, mask)
+        return self.forward_attention(v, scores, mask), new_cache

@@ -28,7 +28,8 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
 from wenet.transformer.asr_model import init_asr_model
-from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
+from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
+                                    load_trained_modules)
 from wenet.utils.executor import Executor
 from wenet.utils.scheduler import WarmupLR
 
@@ -83,6 +84,15 @@ the future, please move to the new IO !!!
                         default=False,
                         help='Use automatic mixed precision training')
     parser.add_argument('--cmvn', default=None, help='global cmvn file')
+    parser.add_argument("--enc_init",
+                        default=None,
+                        type=str,
+                        help="Pre-trained model to initialize encoder")
+    parser.add_argument("--enc_init_mods",
+                        default="encoder.",
+                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+                        help="List of encoder modules \
+                        to initialize ,separated by a comma")
 
     args = parser.parse_args()
 
@@ -181,6 +191,9 @@ the future, please move to the new IO !!!
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
         infos = load_checkpoint(model, args.checkpoint)
+    elif args.enc_init is not None:
+        logging.debug('load pretrained encoders: {}'.format(args.enc_init))
+        infos = load_trained_modules(model, args)
     else:
         infos = {}
     start_epoch = infos.get('epoch', -1) + 1
@@ -227,6 +240,7 @@ the future, please move to the new IO !!!
     for epoch in range(start_epoch, num_epochs):
         if distributed:
             train_sampler.set_epoch(epoch)
+        configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         executor.train(model, optimizer, scheduler, train_data_loader, device,

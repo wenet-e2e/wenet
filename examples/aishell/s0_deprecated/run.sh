@@ -239,8 +239,9 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
         --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
         --reverse_weight $reverse_weight --chunk_size $chunk_size \
         --fst_path data/lang_test/TLG.fst \
+        --dict_path data/lang_test/words.txt \
         data/test/wav.scp data/test/text $dir/final.zip \
-        data/lang_test/words.txt $dir/lm_with_runtime
+        data/lang_test/units.txt $dir/lm_with_runtime
     # See $dir/lm_with_runtime for wer
 fi
 
@@ -250,7 +251,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
     ali_format=$feat_dir/test/format.data
     # alignment output
     ali_result=$dir/ali
-    python wenet/bin/alignment.py --gpu -1 \
+    python wenet/bin/alignment_deprecated.py --gpu -1 \
         --config $dir/train.yaml \
         --input_file $ali_format \
         --checkpoint $checkpoint \
