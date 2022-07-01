@@ -254,7 +254,7 @@ class BaseEncoder(torch.nn.Module):
                 # NOTE(xcsong): Before layer.forward
                 #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
                 #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
-                start = j* len(self.encoders) + i
+                start = j * len(self.encoders) + i
                 xs, _, new_att_cache, new_cnn_cache = layer(
                     xs, att_mask, pos_emb,
                     att_cache=att_cache[start:start + 1] if elayers > 0 else att_cache,
