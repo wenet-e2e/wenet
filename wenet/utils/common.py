@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """Unility functions for Transformer."""
 
 import math
-from typing import Tuple, List
+from typing import List, Tuple
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -53,7 +52,9 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
 
     return pad
 
-def add_blank(ys_pad: torch.Tensor, blank: int) -> torch.Tensor:
+
+def add_blank(ys_pad: torch.Tensor, blank: int,
+              ignore_id: int) -> torch.Tensor:
     """ Prepad blank for transducer predictor
 
     Args:
@@ -65,23 +66,26 @@ def add_blank(ys_pad: torch.Tensor, blank: int) -> torch.Tensor:
 
     Examples:
         >>> blank = 0
+        >>> ignore_id = -1
         >>> ys_pad
-        tensor([[ 1,  2,  3,  4,  5],
-                [ 4,  5,  6, -1, -1],
-                [ 7,  8,  9, -1, -1]], dtype=torch.int32)
-        >>> ys_in,ys_out=add_blank(ys_pad, 0)
+        tensor([[ 1,  2,  3,   4,   5],
+                [ 4,  5,  6,  -1,  -1],
+                [ 7,  8,  9,  -1,  -1]], dtype=torch.int32)
+        >>> ys_in = add_blank(ys_pad, 0, -1)
         >>> ys_in
         tensor([[0,  1,  2,  3,  4,  5],
-                [0,  4,  5,  6, -1, -1],
-                [0,  7,  8,  9, -1, -1]])
+                [0,  4,  5,  6,  0,  0],
+                [0,  7,  8,  9,  0,  0]])
     """
-    bs, lmax = ys_pad.size(0), ys_pad.size(1)
+    bs = ys_pad.size(0)
     _blank = torch.tensor([blank],
                           dtype=torch.long,
                           requires_grad=False,
                           device=ys_pad.device)
     _blank = _blank.repeat(bs).unsqueeze(1)  # [bs,1]
-    return torch.cat([_blank, ys_pad], dim=1)  # [bs, Lmax+1]
+    out = torch.cat([_blank, ys_pad], dim=1)  # [bs, Lmax+1]
+    return torch.where(out == ignore_id, blank, out)
+
 
 def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
                 ignore_id: int) -> Tuple[torch.Tensor, torch.Tensor]:
