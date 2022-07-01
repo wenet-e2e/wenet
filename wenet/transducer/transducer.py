@@ -286,7 +286,7 @@ def init_transducer_asr_model(configs):
         global_cmvn = None
 
     input_dim = configs['input_dim']
-    vocab_size = configs['vocab_size']
+    vocab_size = configs['output_dim']
 
     encoder_type = configs.get('encoder', 'conformer')
     predictor_type = configs.get('predictor', 'rnn')
