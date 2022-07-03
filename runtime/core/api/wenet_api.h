@@ -99,6 +99,11 @@ void wenet_set_language(void* decoder, const char* lang);
  */
 void wenet_set_log_level(int level);
 
+/** Enable continous decoding or not
+ *  flag > 0: enable, otherwise disable
+ */
+void wenet_set_continuous_decoding(void* decoder, int flag);
+
 #ifdef __cplusplus
 }
 #endif
