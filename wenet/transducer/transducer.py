@@ -234,7 +234,7 @@ class Transducer(nn.Module):
                 hyps.append(joint_out_max)
                 prev_out_nblk = True
                 per_frame_noblk = per_frame_noblk + 1
-                pred_input_step = joint_out_max.reshape(1,1)
+                pred_input_step = joint_out_max.reshape(1, 1)
                 state_m, state_c = state_out_m, state_out_c
 
             if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
