@@ -239,7 +239,7 @@ class Transducer(nn.Module):
 
             if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
                 if per_frame_noblk >= per_frame_max_noblk:
-                  prev_out_nblk = False
+                    prev_out_nblk = False
                 # TODO(Mddct): make t in chunk for streamming
                 # or t should't be too lang to predict none blank
                 t = t + 1
