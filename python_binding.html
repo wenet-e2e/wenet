@@ -156,6 +156,7 @@ If not provided, official model for specific <code class="docutils literal notra
 <li><p><code class="docutils literal notranslate"><span class="pre">enable_timestamp</span></code> (bool): Whether to enable the word level timestamp.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">context</span></code> (List[str]): a list of context biasing words.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">context_score</span></code> (float): context bonus score.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">continuous_decoding</span></code> (bool): Whether to enable continuous(long) decoding.</p></li>
 </ul>
 <p>For example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">decoder</span> <span class="o">=</span> <span class="n">wenet</span><span class="o">.</span><span class="n">Decoder</span><span class="p">(</span><span class="n">model_dir</span><span class="p">,</span>

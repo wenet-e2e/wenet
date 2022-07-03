@@ -51,6 +51,7 @@ You can also specify the following parameter in `wenet.Decoder`
 * `enable_timestamp` (bool): Whether to enable the word level timestamp.
 * `context` (List[str]): a list of context biasing words.
 * `context_score` (float): context bonus score.
+* `continuous_decoding` (bool): Whether to enable continuous(long) decoding.
 
 For example:
 ``` python
