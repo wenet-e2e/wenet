@@ -231,7 +231,7 @@ class Transducer(nn.Module):
             joint_out_probs = joint_out_step.log_softmax(dim=-1)
             joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
             if joint_out_max != self.blank:
-                hyps.append(joint_out_max)
+                hyps.append(joint_out_max.item())
                 prev_out_nblk = True
                 per_frame_noblk = per_frame_noblk + 1
                 pred_input_step = joint_out_max.reshape(1, 1)
