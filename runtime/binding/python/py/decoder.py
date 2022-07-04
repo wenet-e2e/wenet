@@ -27,7 +27,8 @@ class Decoder:
                  nbest: int = 1,
                  enable_timestamp: bool = False,
                  context: Optional[List[str]] = None,
-                 context_score: float = 3.0):
+                 context_score: float = 3.0,
+                 continuous_decoding: bool = False):
         """ Init WeNet decoder
         Args:
             lang: language type of the model
@@ -36,6 +37,7 @@ class Decoder:
                for the final result
             context: context words
             context_score: bonus score when the context is matched
+            continuous_decoding: enable countinous decoding or not
         """
         if model_dir is None:
             model_dir = Hub.get_model_by_lang(lang)
@@ -48,6 +50,7 @@ class Decoder:
         if context is not None:
             self.add_context(context)
             self.set_context_score(context_score)
+        self.set_continuous_decoding(continuous_decoding)
 
     def __del__(self):
         _wenet.wenet_free(self.d)
@@ -76,6 +79,10 @@ class Decoder:
     def set_language(self, lang: str):
         assert lang in ['chs', 'en']
         _wenet.wenet_set_language(self.d, lang)
+
+    def set_continuous_decoding(self, continuous_decoding: bool):
+        flag = 1 if continuous_decoding else 0
+        _wenet.wenet_set_continuous_decoding(self.d, flag)
 
     def decode(self, pcm: bytes, last: bool = True) -> str:
         """ Decode the input data

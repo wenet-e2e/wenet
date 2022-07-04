@@ -74,6 +74,8 @@ void* decode(std::pair<std::string, std::string> wav) {
     if (FLAGS_continuous_decoding && state == wenet::DecodeState::kEndpoint) {
       if (decoder.DecodedSomething()) {
         decoder.Rescoring();
+        LOG(INFO) << "Final result (continuous decoding): "
+                  << decoder.result()[0].sentence;
         final_result.append(decoder.result()[0].sentence);
       }
       decoder.ResetContinuousDecoding();
