@@ -216,14 +216,14 @@ class Transducer(nn.Module):
         state_m, state_c = self.predictor.init_state(1, method="zero")
         t = 0
         hyps = []
-        prev_out_nblk = False
+        prev_out_nblk = True
         pred_out_step = None
-        per_frame_max_noblk = 5
+        per_frame_max_noblk = 100
         per_frame_noblk = 0
         while t < encoder_out_lens:
             encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
-            if not prev_out_nblk:
-                pred_out_step, state_m, state_c = self.predictor.forward_step(
+            if prev_out_nblk:
+                pred_out_step, state_out_m, state_out_c = self.predictor.forward_step(
                     pred_input_step, padding, state_m, state_c)  # [1, 1, P]
 
             joint_out_step = self.joint(encoder_out_step,
@@ -231,12 +231,15 @@ class Transducer(nn.Module):
             joint_out_probs = joint_out_step.log_softmax(dim=-1)
             joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
             if joint_out_max != self.blank:
-                hyps.append(joint_out_max)
+                hyps.append(joint_out_max.item())
                 prev_out_nblk = True
                 per_frame_noblk = per_frame_noblk + 1
+                pred_input_step = joint_out_max.reshape(1, 1)
+                state_m, state_c = state_out_m, state_out_c
 
-            if joint_out_max == self.blank or per_frame_noblk > per_frame_max_noblk:
-                prev_out_nblk = False
+            if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
+                if per_frame_noblk >= per_frame_max_noblk:
+                    prev_out_nblk = False
                 # TODO(Mddct): make t in chunk for streamming
                 # or t should't be too lang to predict none blank
                 t = t + 1
