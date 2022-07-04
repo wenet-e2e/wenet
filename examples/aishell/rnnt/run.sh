@@ -131,7 +131,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --config $train_config \
       --data_type $data_type \
       --symbol_table $dict \
-      --model_type transducer \
       --train_data data/$train_set/data.list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \

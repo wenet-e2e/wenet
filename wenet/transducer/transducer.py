@@ -4,14 +4,9 @@ import torch
 import torchaudio
 from torch import nn
 from typeguard import check_argument_types
-from wenet.transducer.joint import TransducerJoint
-from wenet.transducer.predictor import RNNPredictor
-from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
-from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
-from wenet.utils.cmvn import load_cmvn
 from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list, th_accuracy)
 
@@ -277,62 +272,3 @@ class Transducer(nn.Module):
     def forward_predictor_init_state(
             self) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.predictor.init_state(1)
-
-
-def init_transducer_asr_model(configs):
-    if configs['cmvn_file'] is not None:
-        mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
-        global_cmvn = GlobalCMVN(
-            torch.from_numpy(mean).float(),
-            torch.from_numpy(istd).float())
-    else:
-        global_cmvn = None
-
-    input_dim = configs['input_dim']
-    vocab_size = configs['output_dim']
-
-    encoder_type = configs.get('encoder', 'conformer')
-    predictor_type = configs.get('predictor', 'rnn')
-
-    if encoder_type == 'conformer':
-        encoder = ConformerEncoder(input_dim,
-                                   global_cmvn=global_cmvn,
-                                   **configs['encoder_conf'])
-    else:
-        encoder = TransformerEncoder(input_dim,
-                                     global_cmvn=global_cmvn,
-                                     **configs['encoder_conf'])
-    if predictor_type == 'rnn':
-        predictor = RNNPredictor(vocab_size, **configs['predictor_conf'])
-    else:
-        raise NotImplementedError("only rnn type support now")
-
-    configs['joint_conf']['enc_output_size'] = configs['encoder_conf'][
-        'output_size']
-    configs['joint_conf']['pred_output_size'] = configs['predictor_conf'][
-        'output_size']
-    joint = TransducerJoint(vocab_size, **configs['joint_conf'])
-
-    # optional attention decoder
-    decoder_type = configs.get('decoder', '')
-    if decoder_type == 'transformer':
-        decoder = TransformerDecoder(vocab_size, encoder.output_size(),
-                                     **configs['decoder_conf'])
-    elif decoder_type == 'bitransformer':
-        assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
-        assert configs['decoder_conf']['r_num_blocks'] > 0
-        decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
-                                       **configs['decoder_conf'])
-    else:
-        decoder = None
-
-    ctc = CTC(vocab_size, encoder.output_size())
-    model = Transducer(vocab_size=vocab_size,
-                       blank=0,
-                       predictor=predictor,
-                       encoder=encoder,
-                       attention_decoder=decoder,
-                       joint=joint,
-                       ctc=ctc,
-                       **configs['model_conf'])
-    return model

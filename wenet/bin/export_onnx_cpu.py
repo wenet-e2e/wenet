@@ -23,8 +23,8 @@ import torch
 import yaml
 import numpy as np
 
-from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.init_model import init_model
 
 try:
     import onnx
@@ -352,7 +352,7 @@ def main():
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
 
-    model = init_asr_model(configs)
+    model = init_model(configs)
     load_checkpoint(model, args.checkpoint)
     model.eval()
     print(model)
