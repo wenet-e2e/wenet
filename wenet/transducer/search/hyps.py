@@ -1,8 +1,6 @@
-import heapq
 from typing import List, Tuple
 
 import torch
-from torch.functional import Tensor
 
 
 class Hyp(object):
@@ -29,7 +27,8 @@ class Hyp(object):
         self.state_c = state_c
 
     def push_add(self, id: int, logp: float):
-        self.ids.append(id)
+        if id != 0:
+            self.ids.append(id)
         self.logp_ = self.logp_ + logp
 
     @property
@@ -43,7 +42,20 @@ class Hyp(object):
     def state(self) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.state_m, self.state_c
 
-    @property
     def end(self) -> int:
         assert len(self.ids) > 0
         return self.ids[-1]
+
+
+# a = Hyp(([0], 0.0, torch.ones(1, 1), torch.ones(1, 1)))
+# b = Hyp(([1], 1.0, torch.ones(1, 1), torch.ones(1, 1)))
+
+# l = []
+# heapq.heappush(l, b)
+# heapq.heappush(l, a)
+
+# l2 = copy.deepcopy(l)
+# heapq.heappop(l2)
+
+# print(l2[0].prefix)
+# print(l[0].prefix)

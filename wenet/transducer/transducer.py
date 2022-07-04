@@ -4,6 +4,7 @@ import torch
 import torchaudio
 from torch import nn
 from typeguard import check_argument_types
+from wenet.transducer.search import beam_search, greedy_search
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
@@ -200,13 +201,13 @@ class Transducer(nn.Module):
         )
         encoder_out_lens = encoder_mask.squeeze(1).sum()
 
-        hyps = basic_greedy_search(self,
-                                   encoder_out,
-                                   encoder_out_lens.item(),
-                                   n_step=100)
+        hyps = greedy_search.basic_greedy_search(self,
+                                                 encoder_out,
+                                                 encoder_out_lens.item(),
+                                                 n_step=100)
         return hyps
 
-    def beam_search(
+    def transducer_beam_search(
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
@@ -246,11 +247,11 @@ class Transducer(nn.Module):
         )
         encoder_out_lens = encoder_mask.squeeze(1).sum()
 
-        hyps = basic_beam_search(self,
-                                 encoder_out,
-                                 encoder_out_lens.item(),
-                                 beam_szie=beam_size,
-                                 n_step=100)
+        hyps = beam_search.basic_beam_search(self,
+                                             encoder_out,
+                                             encoder_out_lens.item(),
+                                             beam_size=beam_size,
+                                             n_step=1)
         return hyps
 
     @torch.jit.export
