@@ -1,7 +1,3 @@
-# blank: 0
-# input_dim: 80
-# vocab_size: 5000
-
 # network architecture
 # encoder related
 encoder: conformer
@@ -15,7 +11,7 @@ encoder_conf:
     attention_dropout_rate: 0.0
     input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
-    cnn_module_kernel: 15
+    cnn_module_kernel: 8
     use_cnn_module: True
     activation_type: 'swish'
     pos_enc_layer_type: 'rel_pos'
@@ -25,49 +21,49 @@ encoder_conf:
     cnn_module_norm: 'layer_norm' # using nn.LayerNorm makes model converge faster
     use_dynamic_left_chunk: false
 
-# hybrid transducer+ctc+attention
-model_conf:
-    transducer_weight: 0.5
-    ctc_weight: 0.3
-    attention_weight: 0.2
-    lsm_weight: 0.1     # label smoothing option
-    length_normalized_loss: false
-
-# optional attention decoder related
-decoder: transformer
-decoder_conf:
-    attention_heads: 4
-    linear_units: 2048
-    num_blocks: 6
-    dropout_rate: 0.1
-    positional_dropout_rate: 0.1
-    self_attention_dropout_rate: 0.0
-    src_attention_dropout_rate: 0.0
-
-predictor: rnn
-predictor_conf:
-    rnn_type: 'lstm'
-    embed_size: 256
-    output_size: 256
-    embed_dropout: 0.1
-    hidden_size: 256
-    num_layers: 4
-    bias: true
-    dropout: 0.1
 
 joint_conf:
-    # enc_output_size: 256
-    # pred_output_size: 256
     join_dim: 512
-    prejoin_linear: true
+    prejoin_linear: True
     postjoin_linear: false
     joint_mode: 'add'
     activation: 'tanh'
 
+predictor: rnn
+predictor_conf:
+    embed_size: 256
+    output_size: 256
+    embed_dropout: 0.1
+    hidden_size: 256
+    num_layers: 2
+    bias: true
+    rnn_type: 'lstm'
+    dropout: 0.1
+
+decoder: bitransformer
+decoder_conf:
+  attention_heads: 4
+  dropout_rate: 0.1
+  linear_units: 2048
+  num_blocks: 3
+  positional_dropout_rate: 0.1
+  r_num_blocks: 3
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.1
+
+# hybrid transducer+ctc+attention
+model_conf:
+    transducer_weight: 0.75
+    ctc_weight: 0.1
+    attention_weight: 0.15
+    lsm_weight: 0.1     # label smoothing option
+    length_normalized_loss: false
+    reverse_weight: 0.3
+
 dataset_conf:
     filter_conf:
         max_length: 40960
-        min_length: 0
+        min_length: 10
         token_max_length: 200
         token_min_length: 1
     resample_conf:
@@ -92,11 +88,11 @@ dataset_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
-        batch_size: 16
+        batch_size: 4
 
-grad_clip: 5
+grad_clip: 4
 accum_grad: 1
-max_epoch: 180
+max_epoch: 500
 log_interval: 100
 
 optim: adam
