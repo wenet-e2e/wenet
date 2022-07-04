@@ -49,7 +49,6 @@ class Transducer(nn.Module):
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
         self.attention_decoder_weight = 1 - self.transducer_weight - self.ctc_weight
-        assert self.attention_decoder_weight >= 0
 
         self.encoder = encoder
         self.predictor = predictor
@@ -89,20 +88,21 @@ class Transducer(nn.Module):
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         # predictor
-        ys_in_pad = add_blank(text, self.blank)
+        ys_in_pad = add_blank(text, self.blank, self.ignore_id)
         predictor_out = self.predictor(ys_in_pad)
         # joint
         joint_out = self.joint(encoder_out, predictor_out)
         # NOTE(Mddct): some loss implementation require pad valid is zero
         # torch.int32 rnnt_loss required
-        text = text.to(torch.int64)
-        text = torch.where(text == self.ignore_id, 0, text).to(torch.int32)
-        text_lengths = text_lengths.to(torch.int32)
+        rnnt_text = text.to(torch.int64)
+        rnnt_text = torch.where(rnnt_text == self.ignore_id, 0,
+                                rnnt_text).to(torch.int32)
+        rnnt_text_lengths = text_lengths.to(torch.int32)
         encoder_out_lens = encoder_out_lens.to(torch.int32)
         loss = torchaudio.functional.rnnt_loss(joint_out,
-                                               text,
+                                               rnnt_text,
                                                encoder_out_lens,
-                                               text_lengths,
+                                               rnnt_text_lengths,
                                                blank=self.blank,
                                                reduction="mean")
         loss_rnnt = loss
@@ -216,14 +216,14 @@ class Transducer(nn.Module):
         state_m, state_c = self.predictor.init_state(1, method="zero")
         t = 0
         hyps = []
-        prev_out_nblk = False
+        prev_out_nblk = True
         pred_out_step = None
-        per_frame_max_noblk = 5
+        per_frame_max_noblk = 100
         per_frame_noblk = 0
         while t < encoder_out_lens:
             encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
-            if not prev_out_nblk:
-                pred_out_step, state_m, state_c = self.predictor.forward_step(
+            if prev_out_nblk:
+                pred_out_step, state_out_m, state_out_c = self.predictor.forward_step(
                     pred_input_step, padding, state_m, state_c)  # [1, 1, P]
 
             joint_out_step = self.joint(encoder_out_step,
@@ -231,12 +231,15 @@ class Transducer(nn.Module):
             joint_out_probs = joint_out_step.log_softmax(dim=-1)
             joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
             if joint_out_max != self.blank:
-                hyps.append(joint_out_max)
+                hyps.append(joint_out_max.item())
                 prev_out_nblk = True
                 per_frame_noblk = per_frame_noblk + 1
+                pred_input_step = joint_out_max.reshape(1, 1)
+                state_m, state_c = state_out_m, state_out_c
 
-            if joint_out_max == self.blank or per_frame_noblk > per_frame_max_noblk:
-                prev_out_nblk = False
+            if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
+                if per_frame_noblk >= per_frame_max_noblk:
+                    prev_out_nblk = False
                 # TODO(Mddct): make t in chunk for streamming
                 # or t should't be too lang to predict none blank
                 t = t + 1
@@ -323,11 +326,13 @@ def init_transducer_asr_model(configs):
     else:
         decoder = None
 
+    ctc = CTC(vocab_size, encoder.output_size())
     model = Transducer(vocab_size=vocab_size,
                        blank=0,
                        predictor=predictor,
                        encoder=encoder,
                        attention_decoder=decoder,
                        joint=joint,
+                       ctc=ctc,
                        **configs['model_conf'])
     return model

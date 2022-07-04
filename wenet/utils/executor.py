@@ -14,6 +14,7 @@
 
 import logging
 from contextlib import nullcontext
+
 # if your python version < 3.7 use the below one
 # from contextlib import suppress as nullcontext
 import torch
@@ -21,6 +22,7 @@ from torch.nn.utils import clip_grad_norm_
 
 
 class Executor:
+
     def __init__(self):
         self.step = 0
 
@@ -73,7 +75,8 @@ class Executor:
                     # The more details about amp can be found in
                     # https://pytorch.org/docs/stable/notes/amp_examples.html
                     with torch.cuda.amp.autocast(scaler is not None):
-                        loss_dict = model(feats, feats_lengths, target, target_lengths)
+                        loss_dict = model(feats, feats_lengths, target,
+                                          target_lengths)
                         loss = loss_dict['loss'] / accum_grad
                     if use_amp:
                         scaler.scale(loss).backward()
@@ -109,10 +112,9 @@ class Executor:
                     log_str = 'TRAIN Batch {}/{} loss {:.6f} '.format(
                         epoch, batch_idx,
                         loss.item() * accum_grad)
-                    for loss_name in loss_dict:
-                        value = loss_dict[loss_name]
-                        if loss_name != 'loss' and value is not None:
-                            log_str += '{} {:.6f} '.format(loss_name, value.item())
+                    for name, value in loss_dict.items():
+                        if name != 'loss' and value is not None:
+                            log_str += '{} {:.6f} '.format(name, value.item())
                     log_str += 'lr {:.8f} rank {}'.format(lr, rank)
                     logging.debug(log_str)
 
@@ -144,10 +146,9 @@ class Executor:
                 if batch_idx % log_interval == 0:
                     log_str = 'CV Batch {}/{} loss {:.6f} '.format(
                         epoch, batch_idx, loss.item())
-                    for loss_name in loss_dict:
-                        value = loss_dict[loss_name]
-                        if loss_name != 'loss' and value is not None:
-                            log_str += '{} {:.6f} '.format(loss_name, value.item())
+                    for name, value in loss_dict:
+                        if name != 'loss' and value is not None:
+                            log_str += '{} {:.6f} '.format(name, value.item())
                     log_str += 'history loss {:.6f}'.format(total_loss /
                                                             num_seen_utts)
                     log_str += ' rank {}'.format(rank)
