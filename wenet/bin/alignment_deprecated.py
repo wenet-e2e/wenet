@@ -26,10 +26,10 @@ from torch.utils.data import DataLoader
 from textgrid import TextGrid, IntervalTier
 
 from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
-from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.ctc_util import forced_align
 from wenet.utils.common import get_subsample
+from wenet.utils.init_model import init_model
 
 
 def generator_textgrid(maxtime, lines, output):
@@ -164,7 +164,7 @@ if __name__ == '__main__':
                                  num_workers=0)
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    model = init_model(configs)
 
     load_checkpoint(model, args.checkpoint)
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()

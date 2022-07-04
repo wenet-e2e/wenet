@@ -25,8 +25,8 @@ import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset_deprecated import AudioDataset, CollateFunc
-from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.init_model import init_model
 
 if __name__ == '__main__':
     print("""
@@ -127,7 +127,7 @@ the future, please move to the new IO !!!
                                   num_workers=0)
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    model = init_model(configs)
 
     # Load dict
     char_dict = {}

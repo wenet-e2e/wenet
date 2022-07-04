@@ -22,11 +22,11 @@ import torch
 import yaml
 import logging
 
-from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import BaseEncoder
+from wenet.utils.init_model import init_model
 from wenet.utils.mask import make_pad_mask
 
 try:
@@ -556,7 +556,7 @@ if __name__ == '__main__':
         configs['model_conf']['ctc_weight'] = args.ctc_weight
     configs["encoder_conf"]["use_dynamic_chunk"] = False
 
-    model = init_asr_model(configs)
+    model = init_model(configs)
     load_checkpoint(model, args.checkpoint)
     model.eval()
 
