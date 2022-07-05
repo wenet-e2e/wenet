@@ -62,7 +62,8 @@ def get_args():
     parser.add_argument('--mode',
                         choices=[
                             'attention', 'ctc_greedy_search',
-                            'ctc_prefix_beam_search', 'attention_rescoring'
+                            'ctc_prefix_beam_search', 'attention_rescoring',
+                            'rnnt_greedy_search'
                         ],
                         default='attention',
                         help='decoding mode')
@@ -188,6 +189,13 @@ def main():
                 hyps = [hyp.tolist() for hyp in hyps]
             elif args.mode == 'ctc_greedy_search':
                 hyps, _ = model.ctc_greedy_search(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming)
+            elif args.mode == 'rnnt_greedy_search':
+                hyps = model.greedy_search(
                     feats,
                     feats_lengths,
                     decoding_chunk_size=args.decoding_chunk_size,
