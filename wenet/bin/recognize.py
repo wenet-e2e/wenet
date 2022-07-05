@@ -195,6 +195,8 @@ def main():
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
             elif args.mode == 'rnnt_greedy_search':
+                assert (feats.size(0) == 1)
+                assert 'predictor' in configs
                 hyps = model.greedy_search(
                     feats,
                     feats_lengths,
