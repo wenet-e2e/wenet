@@ -15,6 +15,9 @@
 | decoding mode             | CER   |
 |---------------------------|-------|
 | rnnt greedy search        | 5.02  |
+| ctc prefix beam search    | 5.17  |
+| ctc prefix beam + rescore | 4.48  |
+
 
 ## U2++ Conformer Result
 
