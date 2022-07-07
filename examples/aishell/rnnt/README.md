@@ -11,6 +11,7 @@
 | rnnt greedy search        | 5.24  |
 
 * after 165 epochs and avg 30
+
 | decoding mode             | CER   |
 |---------------------------|-------|
 | rnnt greedy search        | 5.02  |
