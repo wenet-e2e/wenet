@@ -5,6 +5,7 @@
 * Feature info: using fbank feature, dither, cmvn, online speed perturb
 * Training info: lr 0.001, batch size 8, 8 gpu, acc_grad 1, 100 epochs, dither 0.1
 * Decoding info: transducer_weight 0.75, ctc_weight 0.1, attention_weight 0.15, average_num 10
+* Predictor type: lstm
 
 | decoding mode             | CER   |
 |---------------------------|-------|
@@ -23,6 +24,7 @@
 * Feature info: using fbank feature, dither, cmvn, online speed perturb
 * Training info: lr 0.001, batch size 20, 8 gpu, acc_grad 1, 140 epochs, dither 0.1
 * Decoding info: transducer_weight 0.4, ctc_weight 0.2, attention_weight 0.4, average_num 10
+* Predictor type: lstm
 
 | decoding mode             | CER   |
 |---------------------------|-------|
@@ -36,6 +38,7 @@
 * Feature info: using fbank feature, dither, cmvn, oneline speed perturb
 * Training info: lr 0.001, batch size 4, 32 gpu, acc_grad 1, 360 epochs
 * Decoding info: transducer_weight 0.75,  ctc_weight 0.1, reverse_weight 0.15  average_num 30
+* Predictor type: lstm
 
 | decoding mode/chunk size  | full  | 16    |
 |---------------------------|-------|-------|
