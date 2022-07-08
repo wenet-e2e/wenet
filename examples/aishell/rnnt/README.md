@@ -18,7 +18,7 @@
 | ctc prefix beam search    | 5.17  |
 | ctc prefix beam + rescore | 4.48  |
 
-# conformer Result 
+## conformer Result 
 
 * Feature info: using fbank feature, dither, cmvn, online speed perturb
 * Training info: lr 0.001, batch size 20, 8 gpu, acc_grad 1, 140 epochs, dither 0.1
