@@ -11,8 +11,8 @@ Wenet 基于 pytorch 框架进行语音识别模型训练，而在使用训练�
 ``` sh
 cd wenet/runtime/server/x86
 wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
-tar -xf 20210602_u2++_conformer_libtorch.tar.gz
-model_dir=$PWD/20210602_u2++_conformer_libtorch
+tar -xf 20210601_u2++_conformer_libtorch.tar.gz
+model_dir=$PWD/20210601_u2++_conformer_libtorch
 docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenetorg/wenet-mini:latest bash /home/run.sh
 ```
 
