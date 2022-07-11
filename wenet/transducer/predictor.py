@@ -162,7 +162,7 @@ class RNNPredictor(PredictorBase):
         return (out, [m, c])
 
 
-class EmbeddingPredictor(torch.nn.Module):
+class EmbeddingPredictor(PredictorBase):
     """Embedding predictor
 
     Described in:
@@ -178,6 +178,7 @@ class EmbeddingPredictor(torch.nn.Module):
                  n_head: int,
                  history_size: int = 2,
                  activation: str = "swish",
+                 bias: bool = False,
                  layer_norm_epsilon: float = 1e-5) -> None:
 
         assert check_argument_types()
@@ -188,7 +189,7 @@ class EmbeddingPredictor(torch.nn.Module):
         self.context_size = history_size + 1
         self.pos_embed = torch.nn.Linear(n_head,
                                          embed_size * self.context_size,
-                                         bias=False)
+                                         bias=bias)
         self.embed = nn.Embedding(voca_size, self.embed_size)
         self.embed_dropout = nn.Dropout(p=embed_dropout)
         self.ffn = nn.Linear(self.embed_size, self.embed_size)
