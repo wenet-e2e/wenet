@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
+from typing import Optional
 
+import torch
 from wenet.transducer.joint import TransducerJoint
+from wenet.transducer.predictor import EmbeddingPredictor, RNNPredictor
 from wenet.transducer.transducer import Transducer
-from wenet.transducer.predictor import RNNPredictor
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.ctc import CTC
-from wenet.transformer.decoder import (TransformerDecoder,
-                                       BiTransformerDecoder)
-from wenet.transformer.encoder import (ConformerEncoder, TransformerEncoder)
+from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
+from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.utils.cmvn import load_cmvn
+
 
 def init_model(configs):
     if configs['cmvn_file'] is not None:
@@ -63,13 +64,22 @@ def init_model(configs):
         predictor_type = configs.get('predictor', 'rnn')
         if predictor_type == 'rnn':
             predictor = RNNPredictor(vocab_size, **configs['predictor_conf'])
+        elif predictor_type == "embedding":
+            predictor = EmbeddingPredictor(vocab_size,
+                                           **configs['predictor_conf'])
         else:
-            raise NotImplementedError("only rnn type support now")
+            raise NotImplementedError(
+                "only rnn and embedding type support now")
         configs['joint_conf']['enc_output_size'] = configs['encoder_conf'][
             'output_size']
         configs['joint_conf']['pred_output_size'] = configs['predictor_conf'][
             'output_size']
-        joint = TransducerJoint(vocab_size, **configs['joint_conf'])
+        embed_weight: Optional[torch.Tensor] = None
+        if configs['joint_conf'].get('tie_embedding', False):
+            embed_weight = predictor.embedding_weight
+        joint = TransducerJoint(vocab_size,
+                                **configs['joint_conf'],
+                                embed_weight=embed_weight)
         model = Transducer(vocab_size=vocab_size,
                            blank=0,
                            predictor=predictor,

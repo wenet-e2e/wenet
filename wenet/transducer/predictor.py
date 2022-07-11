@@ -130,6 +130,15 @@ class RNNPredictor(PredictorBase):
                         device=device)
         ]
 
+    @property
+    def embedding_weight(self) -> torch.Tensor:
+        """
+        Returns:
+          output (torch.Tensor): [vocab, embed_size]
+        """
+        # To see how it works:
+        return self.embed.weight
+
     def forward_step(
             self, input: torch.Tensor, padding: torch.Tensor,
             cache: List[torch.Tensor]
@@ -188,6 +197,10 @@ class EmbeddingPredictor(torch.nn.Module):
 
     @property
     def embedding_weight(self) -> torch.Tensor:
+        """
+        Returns:
+          output (torch.Tensor): [vocab, embed_size]
+        """
         # To see how it works:
         return self.embed.weight
 
@@ -210,6 +223,7 @@ class EmbeddingPredictor(torch.nn.Module):
         """ forward for training
         """
         input = self.embed(input)  # [bs, seq_len, embed]
+        input = self.embed_dropout(input)
         if cache is None:
             zeros = self.init_state(input.size(0), device=input.device)[0]
         else:
@@ -263,6 +277,7 @@ class EmbeddingPredictor(torch.nn.Module):
         history = cache[0]
         assert history.size(1) == self.context_size - 1
         input = self.embed(input)  # [bs, 1, embed]
+        input = self.embed_dropout(input)
         context_input = torch.cat((history, input), dim=1)
         input_expand = context_input.unsqueeze(1).unsqueeze(
             2)  # [bs, 1, 1, context_size, embed]
