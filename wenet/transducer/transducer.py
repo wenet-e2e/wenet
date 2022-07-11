@@ -4,6 +4,7 @@ import torch
 import torchaudio
 from torch import nn
 from typeguard import check_argument_types
+from wenet.transducer.predictor import PredictorBase
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
@@ -18,7 +19,7 @@ class Transducer(nn.Module):
         vocab_size: int,
         blank: int,
         encoder: nn.Module,
-        predictor: nn.Module,
+        predictor: PredictorBase,
         joint: nn.Module,
         attention_decoder: Optional[Union[TransformerDecoder,
                                           BiTransformerDecoder]] = None,
@@ -201,14 +202,16 @@ class Transducer(nn.Module):
             decoding_chunk_size,
             num_decoding_left_chunks,
         )
-        maxlen = encoder_out.size(1)
         encoder_out_lens = encoder_mask.squeeze(1).sum()
 
         # fake padding
         padding = torch.zeros(1, 1)
         # sos
         pred_input_step = torch.tensor([self.blank]).reshape(1, 1)
-        state_m, state_c = self.predictor.init_state(1, method="zero")
+        cache = self.predictor.init_state(1,
+                                          method="zero",
+                                          device=speech.device)
+        new_cache: List[torch.Tensor] = []
         t = 0
         hyps = []
         prev_out_nblk = True
@@ -218,8 +221,9 @@ class Transducer(nn.Module):
         while t < encoder_out_lens:
             encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
             if prev_out_nblk:
-                pred_out_step, state_out_m, state_out_c = self.predictor.forward_step(
-                    pred_input_step, padding, state_m, state_c)  # [1, 1, P]
+                step_outs = self.predictor.forward_step(
+                    pred_input_step, padding, cache)  # [1, 1, P]
+                pred_out_step, new_cache = step_outs[0], step_outs[1]
 
             joint_out_step = self.joint(encoder_out_step,
                                         pred_out_step)  # [1,1,v]
@@ -230,7 +234,8 @@ class Transducer(nn.Module):
                 prev_out_nblk = True
                 per_frame_noblk = per_frame_noblk + 1
                 pred_input_step = joint_out_max.reshape(1, 1)
-                state_m, state_c = state_out_m, state_out_c
+                # state_m, state_c =  clstate_out_m, state_out_c
+                cache = new_cache
 
             if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
                 if per_frame_noblk >= per_frame_max_noblk:
@@ -257,11 +262,12 @@ class Transducer(nn.Module):
 
     @torch.jit.export
     def forward_predictor_step(
-        self, xs: torch.Tensor, state_m: torch.Tensor, state_c: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            self, xs: torch.Tensor, cache: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        assert len(cache) == 2
         # fake padding
         padding = torch.zeros(1, 1)
-        return self.predictor.forward_step(xs, padding, state_m, state_c)
+        return self.predictor.forward_step(xs, padding, cache)
 
     @torch.jit.export
     def forward_joint_step(self, enc_out: torch.Tensor,
@@ -269,6 +275,5 @@ class Transducer(nn.Module):
         return self.joint(enc_out, pred_out)
 
     @torch.jit.export
-    def forward_predictor_init_state(
-            self) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.predictor.init_state(1)
+    def forward_predictor_init_state(self) -> List[torch.Tensor]:
+        return self.predictor.init_state(1, device=torch.device("cpu"))

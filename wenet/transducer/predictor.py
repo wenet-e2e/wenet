@@ -1,21 +1,9 @@
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import torch
 from torch import nn
-from torch.random import initial_seed
 from typeguard import check_argument_types
-from wenet.utils.common import get_activation
-
-
-# TODO(Mddct): move to utils
-def get_rnn(rnn_type: str) -> nn.Module:
-    assert rnn_type in ["rnn", "lstm", "gru"]
-    if rnn_type == "rnn":
-        return torch.nn.RNN
-    elif rnn_type == "lstm":
-        return torch.nn.LSTM
-    else:
-        return torch.nn.GRU
+from wenet.utils.common import get_activation, get_rnn
 
 
 def ApplyPadding(input, padding, pad_value) -> torch.Tensor:
@@ -27,7 +15,37 @@ def ApplyPadding(input, padding, pad_value) -> torch.Tensor:
     return padding * pad_value + input * (1 - padding)
 
 
-class RNNPredictor(torch.nn.Module):
+class PredictorBase(torch.nn.Module):
+
+    # NOTE(Mddct): We can use ABC abstract here, but
+    # keep this class simple enough for now
+    def __init__(self) -> None:
+        super().__init__()
+
+    def init_state(self,
+                   batch_size: int,
+                   device: torch.device,
+                   method: str = "zero") -> List[torch.Tensor]:
+        _, _, _ = batch_size, method, device
+        raise NotImplementedError("this is a base precictor")
+
+    def forward(
+        self,
+        input: Optional[torch.Tensor],
+        cache: Optional[List[torch.Tensor]] = None,
+    ):
+        _, _, = input, cache
+        raise NotImplementedError("this is a base precictor")
+
+    def forward_step(
+            self, input: torch.Tensor, padding: torch.Tensor,
+            cache: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        _, _, _, = input, padding, cache
+        raise NotImplementedError("this is a base precictor")
+
+
+class RNNPredictor(PredictorBase):
 
     def __init__(self,
                  voca_size: int,
@@ -60,12 +78,14 @@ class RNNPredictor(torch.nn.Module):
     def forward(
         self,
         input: torch.Tensor,
-        state: Optional[Tuple[torch.Tensor,
-                              torch.Tensor]] = None) -> torch.Tensor:
+        cache: Optional[List[torch.Tensor]] = None,
+    ) -> torch.Tensor:
         """
         Args:
             input (torch.Tensor): [batch, max_time).
             padding (torch.Tensor): [batch, max_time]
+            cache : rnn predictor cache[0] == state_m
+                    cache[1] == state_c
         Returns:
             output: [batch, max_time, output_size]
         """
@@ -73,10 +93,15 @@ class RNNPredictor(torch.nn.Module):
         # NOTE(Mddct): we don't use pack input format
         embed = self.embed(input)  # [batch, max_time, emb_size]
         embed = self.dropout(embed)
-        if state is None:
-            state = self.init_state(batch_size=input.size(0))
-            state = (state[0].to(input.device), state[1].to(input.device))
-        out, (m, c) = self.rnn(embed, state)
+        states: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+        if cache is None:
+            state = self.init_state(batch_size=input.size(0),
+                                    device=input.device)
+            states = (state[0], state[1])
+        else:
+            assert len(cache) == 2
+            states = (cache[0], cache[1])
+        out, (m, c) = self.rnn(embed, states)
         out = self.projection(out)
 
         # NOTE(Mddct): Although we don't use staate in transducer
@@ -85,25 +110,39 @@ class RNNPredictor(torch.nn.Module):
         _, _ = m, c
         return out
 
-    def init_state(self,
-                   batch_size: int,
-                   method: str = "zero") -> Tuple[torch.Tensor, torch.Tensor]:
+    def init_state(
+        self,
+        batch_size: int,
+        device: torch.device,
+        method: str = "zero",
+    ) -> List[torch.Tensor]:
         assert batch_size > 0
         # TODO(Mddct): xavier init method
         _ = method
-        return torch.zeros(1 * self.n_layers, batch_size,
-                           self.hidden_size), torch.zeros(
-                               1 * self.n_layers, batch_size, self.hidden_size)
+        return [
+            torch.zeros(1 * self.n_layers,
+                        batch_size,
+                        self.hidden_size,
+                        device=device),
+            torch.zeros(1 * self.n_layers,
+                        batch_size,
+                        self.hidden_size,
+                        device=device)
+        ]
 
     def forward_step(
-        self, input: torch.Tensor, padding: torch.Tensor,
-        state_m: torch.Tensor, state_c: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            self, input: torch.Tensor, padding: torch.Tensor,
+            cache: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """
         Args:
             input (torch.Tensor): [batch_size, time_step=1]
             padding (torch.Tensor): [batch_size,1], 1 is padding value
+            cache : rnn predictor cache[0] == state_m
+                    cache[1] == state_c
         """
+        assert len(cache) == 2
+        state_m, state_c = cache[0], cache[1]
         embed = self.embed(input)  # [batch, 1, emb_size]
         embed = self.dropout(embed)
         out, (m, c) = self.rnn(embed, (state_m, state_c))
@@ -111,7 +150,7 @@ class RNNPredictor(torch.nn.Module):
         out = self.projection(out)
         m = ApplyPadding(m, padding, state_m)
         c = ApplyPadding(c, padding, state_c)
-        return out, m, c
+        return (out, [m, c])
 
 
 class EmbeddingPredictor(torch.nn.Module):
@@ -154,18 +193,29 @@ class EmbeddingPredictor(torch.nn.Module):
 
     def init_state(self,
                    batch_size: int,
-                   method: str = "zero") -> torch.Tensor:
+                   device: torch.device,
+                   method: str = "zero") -> List[torch.Tensor]:
         assert batch_size > 0
         _ = method
-        return torch.zeros(batch_size, self.context_size - 1, self.embed_size)
+        return [
+            torch.zeros(batch_size,
+                        self.context_size - 1,
+                        self.embed_size,
+                        device=device)
+        ]
 
-    def forward(self, input: torch.Tensor):
+    def forward(self,
+                input: torch.Tensor,
+                cache: Optional[List[torch.Tensor]] = None):
         """ forward for training
         """
         input = self.embed(input)  # [bs, seq_len, embed]
-        # zeros = torch.zeros(input.size(0), self.history_size,
-        #                     self.embed_size).to(input.device)
-        zeros = self.init_state(input.size(0))
+        if cache is None:
+            zeros = self.init_state(input.size(0), device=input.device)[0]
+        else:
+            assert len(cache) == 1
+            zeros = cache[0]
+
         input = torch.cat((zeros, input),
                           dim=1)  # [bs, context_size-1 + seq_len, embed]
 
@@ -180,8 +230,10 @@ class EmbeddingPredictor(torch.nn.Module):
         input_expand = input.unsqueeze(
             2)  # [bs, seq_len, 1, context_size, embed]
         multi_head_pos = multi_head_pos.permute(
-            0, 2, 1)  #[num_heads, context_size, embed]
-        weight = input_expand * multi_head_pos  # [bs, seq_len, num_heads, context_size, embed]
+            0, 2, 1)  # [num_heads, context_size, embed]
+
+        # [bs, seq_len, num_heads, context_size, embed]
+        weight = input_expand * multi_head_pos
         weight = weight.sum(dim=-1, keepdim=False).unsqueeze(
             3)  # [bs, seq_len, num_heads, 1, context_size]
         output = weight.matmul(input_expand).squeeze(
@@ -198,21 +250,22 @@ class EmbeddingPredictor(torch.nn.Module):
         self,
         input: torch.Tensor,
         padding: torch.Tensor,
-        history: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        cache: List[torch.Tensor],
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """ forward step for inference
         Args:
             input (torch.Tensor): [batch_size, time_step=1]
-            history (torch.Tensor): [batch_size, history_size, embed]
             padding (torch.Tensor): [batch_size,1], 1 is padding value
-
+            cache: for embedding predictor, cache[0] == history
         """
         assert input.size(1) == 1
+        assert len(cache) == 1
+        history = cache[0]
         assert history.size(1) == self.context_size - 1
         input = self.embed(input)  # [bs, 1, embed]
-        input_expand = torch.cat(
-            (history, input),
-            dim=1).unsqueeze(1).unsqueeze(2)  # [bs, 1, 1, context_size, embed]
+        context_input = torch.cat((history, input), dim=1)
+        input_expand = context_input.unsqueeze(1).unsqueeze(
+            2)  # [bs, 1, 1, context_size, embed]
 
         # multi head pos: [n_head, embed, context_size]
         multi_head_pos = self.pos_embed.weight.view(self.num_heads,
@@ -221,7 +274,8 @@ class EmbeddingPredictor(torch.nn.Module):
 
         multi_head_pos = multi_head_pos.permute(
             0, 2, 1)  # [num_heads, context_size, embed]
-        weight = input_expand * multi_head_pos  # [bs, 1, num_heads, history_size, embed]
+        # [bs, 1, num_heads, history_size, embed]
+        weight = input_expand * multi_head_pos
         weight = weight.sum(dim=-1, keepdim=False).unsqueeze(
             3)  # [bs, 1, num_heads, 1, context_size]
         output = weight.matmul(input_expand).squeeze(
@@ -233,4 +287,4 @@ class EmbeddingPredictor(torch.nn.Module):
         output = self.norm(output)
         output = self.activatoin(output)
         output = ApplyPadding(input, padding, output)
-        return output, input[1:, :, :]
+        return (output, [context_input[:, 1:, :]])
