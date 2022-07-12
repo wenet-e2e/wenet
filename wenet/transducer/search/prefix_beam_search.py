@@ -41,9 +41,9 @@ class PrefixBeamSearch():
         c_0: torch.Tensor,
     ):
         pre_t, h_1, c_1 = self.predictor.forward_step(
-            pre_t.unsqueeze(-1), 
-            None, 
-            h_0, 
+            pre_t.unsqueeze(-1),
+            None,
+            h_0,
             c_0
         )
         x = self.joint(encoder_x, pre_t)
@@ -122,8 +122,12 @@ class PrefixBeamSearch():
 
             # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
-            logp = torch.log(torch.add(transducer_weight * torch.exp(logp),
-                ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))))
+            logp = torch.log(
+                torch.add(
+                    transducer_weight * torch.exp(logp),
+                    ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))
+                )
+            )
 
             # 3.4 first beam prune
             top_k_logp, top_k_index = logp.topk(beam_size)  # (N, N)
