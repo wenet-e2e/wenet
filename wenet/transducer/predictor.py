@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple
 
 import torch
 from torch import nn
+from torch._C import device
 from typeguard import check_argument_types
 from wenet.utils.common import get_activation, get_rnn
 
@@ -187,8 +188,8 @@ class EmbeddingPredictor(PredictorBase):
         self.num_heads = n_head
         self.embed_size = embed_size
         self.context_size = history_size + 1
-        self.pos_embed = torch.nn.Linear(n_head,
-                                         embed_size * self.context_size,
+        self.pos_embed = torch.nn.Linear(embed_size * self.context_size,
+                                         self.num_heads,
                                          bias=bias)
         self.embed = nn.Embedding(voca_size, self.embed_size)
         self.embed_dropout = nn.Dropout(p=embed_dropout)
@@ -215,7 +216,7 @@ class EmbeddingPredictor(PredictorBase):
             torch.zeros(batch_size,
                         self.context_size - 1,
                         self.embed_size,
-                        device=device)
+                        device=device),
         ]
 
     def forward(self,
@@ -290,7 +291,7 @@ class EmbeddingPredictor(PredictorBase):
 
         multi_head_pos = multi_head_pos.permute(
             0, 2, 1)  # [num_heads, context_size, embed]
-        # [bs, 1, num_heads, history_size, embed]
+        # [bs, 1, num_heads, context_size, embed]
         weight = input_expand * multi_head_pos
         weight = weight.sum(dim=-1, keepdim=False).unsqueeze(
             3)  # [bs, 1, num_heads, 1, context_size]
@@ -302,5 +303,7 @@ class EmbeddingPredictor(PredictorBase):
         output = self.ffn(output)
         output = self.norm(output)
         output = self.activatoin(output)
-        output = ApplyPadding(input, padding, output)
-        return (output, [context_input[:, 1:, :]])
+        new_cache = context_input[:, 1:, :]
+        # TODO(Mddct): we need padding new_cache in future
+        # new_cache = ApplyPadding(history, padding, new_cache)
+        return (output, [new_cache])

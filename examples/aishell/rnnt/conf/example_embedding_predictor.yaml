@@ -17,19 +17,18 @@ encoder_conf:
 
 
 joint_conf:
-    join_dim: 256
+    join_dim: 320
     prejoin_linear: true
     postjoin_linear: false
     joint_mode: 'add'
     activation: 'tanh'
-    tie_embedding: true
 
 predictor: embedding
 predictor_conf:
-    embed_size: 256
+    embed_size: 320
     embed_dropout: 0.1
     n_head: 4
-    history_size: 2
+    history_size: 5
     bias: false
 
 decoder: bitransformer
