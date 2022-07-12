@@ -2,7 +2,9 @@ import torch
 from wenet.utils.common import log_add
 
 class Sequence():
+
     __slots__ = {'hyp', 'score', 'h_0', 'c_0', 'last'}
+
     def __init__(
         self,
         hyp: torch.Tensor,
