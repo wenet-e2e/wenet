@@ -80,18 +80,18 @@ def get_args():
     parser.add_argument('--ctc_weight',
                         type=float,
                         default=0.0,
-                        help='ctc weight for attention rescoring decode mode
-                              ctc weight for nbest generation in beam search decode mode
+                        help='ctc weight for attention rescoring decode mode \
+                              ctc weight for nbest generation in beam search decode mode \
                               ctc weight for rescoring weight in transducer attention rescore mode')
     parser.add_argument('--transducer_weight',
                         type=float,
                         default=0.0,
-                        help='transducer weight for nbest generation in beam search decode mode
+                        help='transducer weight for nbest generation in beam search decode mode \
                               transducer weight for rescoring weight in transducer attention rescore mode')
     parser.add_argument('--attn_weight',
                         type=float,
                         default=0.0,
-                        help='attention weight for attention rescoring decode mode
+                        help='attention weight for attention rescoring decode mode \
                               attention weight for rescoring weight in transducer attention rescore mode')
     parser.add_argument('--decoding_chunk_size',
                         type=int,

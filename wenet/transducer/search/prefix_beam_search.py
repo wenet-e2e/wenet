@@ -96,7 +96,7 @@ class PrefixBeamSearch():
             # decoder taking the last token to predict the next token
             input_hyp = [ s.hyp[-1]  for s in beam_init]
             input_hyp_tensor = torch.tensor(input_hyp, dtype=torch.int, device=device)
-            # building statement from beam 
+            # building statement from beam
             h_0 = torch.cat(
                 [s.h_0 for s in beam_init], dim = 1
             ).to(device)
@@ -120,7 +120,7 @@ class PrefixBeamSearch():
             # 3.4 first beam prune
             top_k_logp, top_k_index = logp.topk(beam_size)  # (N, N)
             scores = torch.add(scores.unsqueeze(1), top_k_logp)
-            
+
             # 3.5 generate new beam (N*N)
             beam_A = []
             for j in range(len(beam_init)):
@@ -185,7 +185,7 @@ class PrefixBeamSearch():
                         fusion_A[t].score = log_add([fusion_A[t].score, s1.score])
                         if_do_append = False
                         break
-                if if_do_append: 
+                if if_do_append:
                     fusion_A.append(s1)
 
             # 4. second pruned
