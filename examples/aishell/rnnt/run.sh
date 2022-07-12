@@ -44,7 +44,7 @@ checkpoint=
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=30
-decode_modes="rnnt_greedy_search"
+decode_modes="rnnt_beam_search"
 
 . tools/parse_options.sh || exit 1;
 
@@ -162,22 +162,23 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # non-streaming model. The default value is -1, which is full chunk
   # for non-streaming inference.
   decoding_chunk_size=
-  # 1. when beam search these two weight means the prob add weight
-  # 2. when ctc+rnnt nbest ->  rnnt+attn rescoring these two weight means the prob weight rescoring nbest
-  ctc_weight=0.3
-  transducer_weight=0.7
-  # 2. for ctc+rnnt nbest -> rnnt+attn rescoring this weight meas the weight rescoring nbest
-  attn_weight=1.0
-  # 2. for ctc+rnnt nbest this weight means the prob weights decoding nbest
-  search_ctc_weight=0.3
-  search_transducer_weight=0.7
-
+  # only used in rescore mode for weighting different scores
+  rescore_ctc_weight=0.5
+  rescore_transducer_weight=0.5
+  rescore_attn_weight=1.0
+  # only used in beam search, either pure beam search mode OR beam search inside rescoring
+  beam_search_ctc_weight=0.3
+  beam_search_transducer_weight=0.7 
+ 
   reverse_weight=0.0
-
   for mode in ${decode_modes}; do
   {
     test_dir=$dir/test_${mode}
     mkdir -p $test_dir
+    ctc_weight=$([ "$decode_modes" == "rnnt_beam_attn_rescoring" ] && \
+        echo $rescore_ctc_weight || echo $beam_search_ctc_weight)
+    transducer_weight=$([ "$decode_modes" == "rnnt_beam_attn_rescoring" ] && \
+        echo $rescore_transducer_weight || echo $beam_search_transducer_weight)
     python wenet/bin/recognize.py --gpu 0 \
       --mode $mode \
       --config $dir/train.yaml \
@@ -190,7 +191,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --dict $dict \
       --ctc_weight $ctc_weight \
       --transducer_weight $transducer_weight \
-      --attn_weight $attn_weight \
+      --attn_weight $rescore_attn_weight \
       --search_ctc_weight $search_ctc_weight \
       --search_transducer_weight $search_transducer_weigth \
       --ctc_weight $ctc_weight \
