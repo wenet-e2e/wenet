@@ -1,5 +1,4 @@
 from typing import Dict, List, Optional, Tuple, Union
-from collections import defaultdict
 
 import torch
 import torchaudio
@@ -8,7 +7,7 @@ from typeguard import check_argument_types
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
-from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,log_add,
+from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list, th_accuracy)
 from wenet.transducer.search.prefix_beam_search import PrefixBeamSearch
 from torch.nn.utils.rnn import pad_sequence
@@ -183,7 +182,7 @@ class Transducer(nn.Module):
         beam_size: int = 5,
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
-        ctc_weight: float= 0.3,
+        ctc_weight: float = 0.3,
         transducer_weight: float = 0.7,
     ):
         """beam search
@@ -209,7 +208,7 @@ class Transducer(nn.Module):
 
         """
         self.init_bs()
-        beam,_ = self.bs.prefix_beam_search(
+        beam, _ = self.bs.prefix_beam_search(
             speech,
             speech_lengths,
             decoding_chunk_size,
@@ -234,8 +233,8 @@ class Transducer(nn.Module):
         reverse_weight: float = 0.0,
         ctc_weight: float = 0.0,
         attn_weight: float = 0.0,
-        transducer_weight: float=0.0,
-        search_ctc_weight: float=1.0,
+        transducer_weight: float = 0.0,
+        search_ctc_weight: float = 1.0,
         search_transducer_weight: float = 0.0
     ) -> List[List[int]]:
         """beam search
@@ -252,13 +251,16 @@ class Transducer(nn.Module):
             simulate_streaming (bool): whether do encoder forward in a
                 streaming fashion
             ctc_weight (float): ctc probability weight using in rescoring.
-                rescore_prob = ctc_weight * ctc_prob + transducer_weight * (transducer_loss * -1 )
-                             + attn_weight * attn_prob
+                rescore_prob = ctc_weight * ctc_prob + 
+                               transducer_weight * (transducer_loss * -1) +
+                               attn_weight * attn_prob
             attn_weight (float): attn probability weight using in rescoring.
             transducer_weight (float): transducer probability weight using in
                 rescoring
-            search_ctc_weight (float): ctc weight using in rnnt beam search (seeing in self.beam_search)
-            search_transducer_weight (float): transducer weight using in rnnt beam search (seeing in self.beam_search)
+            search_ctc_weight (float): ctc weight using 
+                               in rnnt beam search (seeing in self.beam_search)
+            search_transducer_weight (float): transducer weight using 
+                               in rnnt beam search (seeing in self.beam_search)
         Returns:
             List[List[int]]: best path result
 
@@ -285,15 +287,16 @@ class Transducer(nn.Module):
             transducer_weight=search_transducer_weight,
         )
 
-        hyps = [s.hyp[1:]  for s in beam]
+        hyps = [s.hyp[1:] for s in beam]
         beam_score = [s.score for s in beam]
 
         assert len(hyps) == beam_size
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long)
             for hyp in hyps
-        ], True, self.ignore_id)  # (beam_size, max_hyps_len)
-        hyps_pad_blank = add_blank(hyps_pad,self.blank, self.ignore_id) # (beam_size, max_hyps_len)
+        ], True, self.ignore_id)# (beam_size, max_hyps_len)
+        # (beam_size, max_hyps_len)
+        hyps_pad_blank = add_blank(hyps_pad, self.blank, self.ignore_id)
         ori_hyps_pad = hyps_pad
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
@@ -319,11 +322,11 @@ class Transducer(nn.Module):
                                 rnnt_text).to(torch.int32)
         # 2. Compute attention loss
         loss_td = torchaudio.functional.rnnt_loss(joint_out,
-                                               rnnt_text,
-                                               xs_in_lens,
-                                               hyps_lens.int(),
-                                               blank=self.blank,
-                                               reduction='none')
+                                                  rnnt_text,
+                                                  xs_in_lens,
+                                                  hyps_lens.int(),
+                                                  blank=self.blank,
+                                                  reduction='none')
 
         td_score = loss_td * -1
         hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos, self.ignore_id)
@@ -358,7 +361,9 @@ class Transducer(nn.Module):
                 r_score += r_decoder_out[i][len(hyp)][self.eos]
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
             # add ctc score
-            score = score * attn_weight + beam_score[i] * ctc_weight + td_s * transducer_weight
+            score = score * attn_weight + \
+                    beam_score[i] * ctc_weight + \
+                    td_s * transducer_weight
             if score > best_score:
                 best_score = score
                 best_index = i
@@ -413,7 +418,7 @@ class Transducer(nn.Module):
         # fake padding
         padding = torch.zeros(1, 1).to(device)
         # sos
-        pred_input_step = torch.tensor([self.blank],device=device).reshape(1, 1)
+        pred_input_step = torch.tensor([self.blank], device=device).reshape(1, 1)
         state_m, state_c = self.predictor.init_state(1, method="zero")
         state_m = state_m.to(device)
         state_c = state_c.to(device)
