@@ -168,8 +168,8 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   rescore_attn_weight=1.0
   # only used in beam search, either pure beam search mode OR beam search inside rescoring
   beam_search_ctc_weight=0.3
-  beam_search_transducer_weight=0.7 
- 
+  beam_search_transducer_weight=0.7
+
   reverse_weight=0.0
   for mode in ${decode_modes}; do
   {
