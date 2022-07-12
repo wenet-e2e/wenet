@@ -25,13 +25,13 @@ class PrefixBeamSearch():
         sos,
         blank
     ):
-        self.encoder = encoder 
+        self.encoder = encoder
         self.predictor = predictor
         self.joint = joint
         self.ctc = ctc
         self.sos = sos
         self.blank = blank
-    
+
     def forward_decoder_one_step(
         self,
         encoder_x: torch.Tensor,
@@ -39,11 +39,9 @@ class PrefixBeamSearch():
         h_0: torch.Tensor,
         c_0: torch.Tensor,
     ):
-        
         pre_t,h_1, c_1 = self.predictor.forward_step(pre_t.unsqueeze(-1),None, h_0,c_0 )
         x = self.joint(encoder_x, pre_t)
         x = x.log_softmax(dim=-1)
-        
         return x, (h_1,c_1)
 
     def prefix_beam_search(
@@ -78,17 +76,17 @@ class PrefixBeamSearch():
         ctc_probs = self.ctc.log_softmax(
                 encoder_out).squeeze(0)
         beam_init=[]
-        
+
         # 2. init beam using Sequence to save beam unit
         h_0,c_0 = self.predictor.init_state(1, method="zero")
-        beam_init.append( 
+        beam_init.append(
             Sequence(
                 hyp = [self.blank],
                 score = torch.tensor(0.0),
                 h_0 = h_0,
                 c_0 = c_0,
                 last = self.blank,
-            ) 
+            )
         )
         # 3. start decoding (notice: we use breathwise first searching)
         # !!!! In this decoding method: one frame do not output multi units. !!!!
@@ -110,7 +108,7 @@ class PrefixBeamSearch():
                 [s.score.unsqueeze(0) for s in beam_init], dim = 0
             ).to(device)
 
-            # 3.2 forward decoder 
+            # 3.2 forward decoder
             logp, (h_1, c_1) = self.forward_decoder_one_step(
                 encoder_out[:,i,:].unsqueeze(1), input_hyp_tensor, h_0, c_0
             )# logp: (N, 1, 1, vocab_size)
@@ -118,7 +116,7 @@ class PrefixBeamSearch():
 
             # 3.3 shallow fusion for transducer score and ctc score where we can also add the LM score
             logp = torch.log(torch.add(transducer_weight * torch.exp(logp), ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))))
-           
+
             # 3.4 first beam prune
             top_k_logp, top_k_index = logp.topk(beam_size)  # (N, N)
             scores = torch.add(scores.unsqueeze(1), top_k_logp)
@@ -129,7 +127,7 @@ class PrefixBeamSearch():
                 # update seq
                 base_seq = beam_init[j]
                 for t in range(beam_size):
-                    # blank: only update the score and last 
+                    # blank: only update the score and last
                     if top_k_index[j,t] == self.blank:
                         new_seq = Sequence(
                             hyp = base_seq.hyp.copy(),
@@ -140,7 +138,7 @@ class PrefixBeamSearch():
                         )
 
                         beam_A.append(new_seq)
-                    # hyp[-1]: if last is blank{update hyp and statement} 
+                    # hyp[-1]: if last is blank{update hyp and statement}
                     #          else {dont update hyp and statement}
                     elif top_k_index[j,t] == base_seq.hyp[-1] :
                         if base_seq.last == self.blank:
@@ -153,7 +151,6 @@ class PrefixBeamSearch():
                                 c_0 = c_1[:,j,:].unsqueeze(1),
                                 last = top_k_index[j,t].item()
                             )
-                            
                             beam_A.append(new_seq)
                         else:
                             new_seq = Sequence(
@@ -163,7 +160,6 @@ class PrefixBeamSearch():
                                 c_0 = c_0[:,j,:].unsqueeze(1),
                                 last=top_k_index[j,t].item()
                             )
-
                             beam_A.append(new_seq)
                     # other unit: update hyp score statement and last
                     else:
@@ -176,27 +172,23 @@ class PrefixBeamSearch():
                             c_0 = c_1[:,j,:].unsqueeze(1),
                             last = top_k_index[j,t].item()
                         )
-                        
                         beam_A.append(new_seq)
-            
+
             # 3.6 prefix fusion
             fusion_A = [beam_A[0]]
             for j in range(1,len(beam_A)):
                 s1 = beam_A[j]
                 if_do_append = True
                 for t in range(len(fusion_A)):
-                    # notice: A_ can not fusion with A  
+                    # notice: A_ can not fusion with A
                     if s1.hyp == fusion_A[t].hyp and s1.last == fusion_A[t].last :
                         fusion_A[t].score = log_add([fusion_A[t].score, s1.score])
                         if_do_append = False
                         break
-                if if_do_append:   
+                if if_do_append: 
                     fusion_A.append(s1)
 
             # 4. second pruned
             fusion_A.sort(key=lambda x:x.score, reverse=True)
             beam_init = fusion_A[:beam_size]
-        
         return beam_init,encoder_out
-
-    

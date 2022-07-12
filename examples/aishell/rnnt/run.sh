@@ -166,7 +166,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # 2. when ctc+rnnt nbest ->  rnnt+attn rescoring these two weight means the prob weight rescoring nbest
   ctc_weight=0.3
   transducer_weight=0.7
-  # 2. for ctc+rnnt nbest -> rnnt+attn rescoring this weight meas the weight rescoring nbest 
+  # 2. for ctc+rnnt nbest -> rnnt+attn rescoring this weight meas the weight rescoring nbest
   attn_weight=1.0
   # 2. for ctc+rnnt nbest this weight means the prob weights decoding nbest
   search_ctc_weight=0.3

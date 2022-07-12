@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional, Tuple, Union
 from collections import defaultdict
- 
+
 import torch
 import torchaudio
 from torch import nn
@@ -168,8 +168,8 @@ class Transducer(nn.Module):
     def init_bs(self):
         if self.bs is None:
             self.bs = PrefixBeamSearch(
-                self.encoder, 
-                self.predictor, 
+                self.encoder,
+                self.predictor,
                 self.joint,
                 self.ctc,
                 self.sos,
@@ -199,10 +199,10 @@ class Transducer(nn.Module):
                 0: used for training, it's prohibited here
             simulate_streaming (bool): whether do encoder forward in a
                 streaming fashion
-            ctc_weight (float): ctc probability weight in transducer 
+            ctc_weight (float): ctc probability weight in transducer
                 prefix beam search.
                 final_prob = ctc_weight * ctc_prob + transducer_weight * transducer_prob
-            transducer_weight (float): transducer probability weight in 
+            transducer_weight (float): transducer probability weight in
                 prefix beam search
         Returns:
             List[List[int]]: best path result
@@ -252,8 +252,8 @@ class Transducer(nn.Module):
             simulate_streaming (bool): whether do encoder forward in a
                 streaming fashion
             ctc_weight (float): ctc probability weight using in rescoring.
-                rescore_prob = ctc_weight * ctc_prob + transducer_weight * (transducer_loss * -1 ) 
-                             + attn_weight * attn_prob 
+                rescore_prob = ctc_weight * ctc_prob + transducer_weight * (transducer_loss * -1 )
+                             + attn_weight * attn_prob
             attn_weight (float): attn probability weight using in rescoring.
             transducer_weight (float): transducer probability weight using in
                 rescoring
@@ -284,11 +284,9 @@ class Transducer(nn.Module):
             ctc_weight=search_ctc_weight,
             transducer_weight=search_transducer_weight,
         )
-        
 
         hyps = [s.hyp[1:]  for s in beam]
         beam_score = [s.score for s in beam]
-        
 
         assert len(hyps) == beam_size
         hyps_pad = pad_sequence([
@@ -309,7 +307,7 @@ class Transducer(nn.Module):
                                   encoder_out.size(1),
                                   dtype=torch.bool,
                                   device=device)
-        
+
         xs_in_lens = encoder_mask.squeeze(1).sum(1).int()
 
         # 1. Forward decoder
@@ -326,7 +324,7 @@ class Transducer(nn.Module):
                                                hyps_lens.int(),
                                                blank=self.blank,
                                                reduction='none')
-    
+
         td_score = loss_td * -1
         hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos, self.ignore_id)
         hyps_lens = hyps_lens + 1  # Add <sos> at begining
@@ -360,7 +358,6 @@ class Transducer(nn.Module):
                 r_score += r_decoder_out[i][len(hyp)][self.eos]
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
             # add ctc score
-            
             score = score * attn_weight + beam_score[i] * ctc_weight + td_s * transducer_weight
             if score > best_score:
                 best_score = score
@@ -435,7 +432,7 @@ class Transducer(nn.Module):
             joint_out_step = self.joint(encoder_out_step,
                                         pred_out_step)  # [1,1,v]
             joint_out_probs = joint_out_step.log_softmax(dim=-1)
-            
+
             joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
             if joint_out_max != self.blank:
                 hyps.append(joint_out_max.item())
@@ -443,10 +440,8 @@ class Transducer(nn.Module):
                 per_frame_noblk = per_frame_noblk + 1
                 pred_input_step = joint_out_max.reshape(1, 1)
                 state_m, state_c = state_out_m, state_out_c
-                t = t+1
 
-            # if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
-            if joint_out_max == self.blank:
+            if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
                 if per_frame_noblk >= per_frame_max_noblk:
                     prev_out_nblk = False
                 # TODO(Mddct): make t in chunk for streamming
