@@ -40,7 +40,12 @@ class PrefixBeamSearch():
         h_0: torch.Tensor,
         c_0: torch.Tensor,
     ):
-        pre_t, h_1, c_1 = self.predictor.forward_step(pre_t.unsqueeze(-1), None, h_0, c_0)
+        pre_t, h_1, c_1 = self.predictor.forward_step(
+            pre_t.unsqueeze(-1), 
+            None, 
+            h_0, 
+            c_0
+        )
         x = self.joint(encoder_x, pre_t)
         x = x.log_softmax(dim=-1)
         return x, (h_1, c_1)
@@ -115,10 +120,10 @@ class PrefixBeamSearch():
             )  # logp: (N, 1, 1, vocab_size)
             logp = logp.squeeze(1).squeeze(1)  # logp: (N, vocab_size)
 
-            # 3.3 shallow fusion for transducer score 
+            # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
-            logp = torch.log(torch.add(transducer_weight * torch.exp(logp), \
-                          ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))))
+            logp = torch.log(torch.add(transducer_weight * torch.exp(logp),
+                ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))))
 
             # 3.4 first beam prune
             top_k_logp, top_k_index = logp.topk(beam_size)  # (N, N)
@@ -149,7 +154,7 @@ class PrefixBeamSearch():
                             hyp_new.append(top_k_index[j, t].item())
                             new_seq = Sequence(
                                 hyp=hyp_new,
-                                score=scores[j,t],
+                                score=scores[j, t],
                                 h_0=h_1[:, j, :].unsqueeze(1),
                                 c_0=c_1[:, j, :].unsqueeze(1),
                                 last=top_k_index[j, t].item()

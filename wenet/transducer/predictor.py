@@ -107,8 +107,9 @@ class RNNPredictor(torch.nn.Module):
         out, (m, c) = self.rnn(embed, (state_m, state_c))
 
         out = self.projection(out)
-        m = ApplyPadding(m, padding, state_m)
-        c = ApplyPadding(c, padding, state_c)
+        if padding is not None:
+            m = ApplyPadding(m, padding, state_m)
+            c = ApplyPadding(c, padding, state_c)
         return out, m, c
 
 

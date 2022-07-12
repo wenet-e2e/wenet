@@ -251,15 +251,15 @@ class Transducer(nn.Module):
             simulate_streaming (bool): whether do encoder forward in a
                 streaming fashion
             ctc_weight (float): ctc probability weight using in rescoring.
-                rescore_prob = ctc_weight * ctc_prob + 
+                rescore_prob = ctc_weight * ctc_prob +
                                transducer_weight * (transducer_loss * -1) +
                                attn_weight * attn_prob
             attn_weight (float): attn probability weight using in rescoring.
             transducer_weight (float): transducer probability weight using in
                 rescoring
-            search_ctc_weight (float): ctc weight using 
+            search_ctc_weight (float): ctc weight using
                                in rnnt beam search (seeing in self.beam_search)
-            search_transducer_weight (float): transducer weight using 
+            search_transducer_weight (float): transducer weight using
                                in rnnt beam search (seeing in self.beam_search)
         Returns:
             List[List[int]]: best path result
@@ -294,7 +294,7 @@ class Transducer(nn.Module):
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long)
             for hyp in hyps
-        ], True, self.ignore_id)# (beam_size, max_hyps_len)
+        ], True, self.ignore_id)  # (beam_size, max_hyps_len)
         # (beam_size, max_hyps_len)
         hyps_pad_blank = add_blank(hyps_pad, self.blank, self.ignore_id)
         ori_hyps_pad = hyps_pad
@@ -362,8 +362,8 @@ class Transducer(nn.Module):
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
             # add ctc score
             score = score * attn_weight + \
-                    beam_score[i] * ctc_weight + \
-                    td_s * transducer_weight
+                beam_score[i] * ctc_weight + \
+                td_s * transducer_weight
             if score > best_score:
                 best_score = score
                 best_index = i
