@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
-
 import torch
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import EmbeddingPredictor, RNNPredictor
@@ -76,12 +74,7 @@ def init_model(configs):
             'output_size']
         configs['joint_conf']['pred_output_size'] = configs['predictor_conf'][
             'output_size']
-        embed_weight: Optional[torch.Tensor] = None
-        if configs['joint_conf'].get('tie_embedding', False):
-            embed_weight = predictor.embedding_weight
-        joint = TransducerJoint(vocab_size,
-                                **configs['joint_conf'],
-                                embed_weight=embed_weight)
+        joint = TransducerJoint(vocab_size, **configs['joint_conf'])
         model = Transducer(vocab_size=vocab_size,
                            blank=0,
                            predictor=predictor,

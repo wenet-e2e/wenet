@@ -2,7 +2,6 @@ from typing import List, Optional, Tuple
 
 import torch
 from torch import nn
-from torch._C import device
 from typeguard import check_argument_types
 from wenet.utils.common import get_activation, get_rnn
 
@@ -131,15 +130,6 @@ class RNNPredictor(PredictorBase):
                         device=device)
         ]
 
-    @property
-    def embedding_weight(self) -> torch.Tensor:
-        """
-        Returns:
-          output (torch.Tensor): [vocab, embed_size]
-        """
-        # To see how it works:
-        return self.embed.weight
-
     def forward_step(
             self, input: torch.Tensor, padding: torch.Tensor,
             cache: List[torch.Tensor]
@@ -196,15 +186,6 @@ class EmbeddingPredictor(PredictorBase):
         self.ffn = nn.Linear(self.embed_size, self.embed_size)
         self.norm = nn.LayerNorm(self.embed_size, eps=layer_norm_epsilon)
         self.activatoin = get_activation(activation)
-
-    @property
-    def embedding_weight(self) -> torch.Tensor:
-        """
-        Returns:
-          output (torch.Tensor): [vocab, embed_size]
-        """
-        # To see how it works:
-        return self.embed.weight
 
     def init_state(self,
                    batch_size: int,

@@ -13,8 +13,6 @@ class TransducerJoint(torch.nn.Module):
                  enc_output_size: int,
                  pred_output_size: int,
                  join_dim: int,
-                 tie_embedding: bool = False,
-                 embed_weight: Optional[torch.Tensor] = None,
                  prejoin_linear: bool = True,
                  postjoin_linear: bool = False,
                  joint_mode: str = 'add',
@@ -43,9 +41,6 @@ class TransducerJoint(torch.nn.Module):
             self.post_ffn = nn.Linear(enc_output_size, join_dim)
 
         self.ffn_out = nn.Linear(join_dim, voca_size)
-        if tie_embedding and embed_weight is not None:
-            assert join_dim == embed_weight.size(0)
-            self.ffn_out.weight = embed_weight
 
     def forward(self, enc_out: torch.Tensor, pred_out: torch.Tensor):
         """
