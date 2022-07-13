@@ -80,8 +80,10 @@ def get_args():
     parser.add_argument('--ctc_weight',
                         type=float,
                         default=0.0,
-                        help='ctc weight for rescoring weight in attention rescoring decode mode \
-                              ctc weight for rescoring weight in transducer attention rescore decode mode')
+                        help='ctc weight for rescoring weight in \
+                                  attention rescoring decode mode \
+                              ctc weight for rescoring weight in \
+                                  transducer attention rescore decode mode')
 
     parser.add_argument('--transducer_weight',
                         type=float,
