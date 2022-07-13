@@ -64,7 +64,7 @@ def get_args():
                             'attention', 'ctc_greedy_search',
                             'ctc_prefix_beam_search', 'attention_rescoring',
                             'rnnt_greedy_search', 'rnnt_beam_search',
-                            'rnnt_attn_rescoring', 'rnnt_beam_attn_rescoring'
+                            'rnnt_beam_attn_rescoring'
                         ],
                         default='attention',
                         help='decoding mode')
