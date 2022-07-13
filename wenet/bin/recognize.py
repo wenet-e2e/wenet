@@ -79,7 +79,7 @@ def get_args():
                         default=0.0,
                         help='transducer weight for nbest generation in transducer \
                                   attention rescoring decode mode')
-    parser.add_argument('--ctc_weight',
+    parser.add_argument('--rescore_ctc_weight',
                         type=float,
                         default=0.0,
                         help='ctc weight for attention rescoring decode mode \
@@ -87,14 +87,14 @@ def get_args():
                                   decode mode \
                               ctc weight for rescoring weight in transducer attention \
                                   rescore mode')
-    parser.add_argument('--transducer_weight',
+    parser.add_argument('--rescore_transducer_weight',
                         type=float,
                         default=0.0,
                         help='transducer weight for nbest generation in beam \
                                  search decode mode \
                               transducer weight for rescoring weight in transducer \
                                  attention rescore mode')
-    parser.add_argument('--attn_weight',
+    parser.add_argument('--rescore_attn_weight',
                         type=float,
                         default=0.0,
                         help='attention weight for attention rescoring decode mode \
@@ -242,8 +242,8 @@ def main():
                     beam_size=args.beam_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming,
-                    ctc_weight=args.ctc_weight,
-                    transducer_weight=args.transducer_weight)
+                    ctc_weight=args.search_ctc_weight,
+                    transducer_weight=args.search_transducer_weight)
             elif args.mode == 'rnnt_beam_attn_rescoring':
                 assert (feats.size(0) == 1)
                 assert 'predictor' in configs
@@ -254,9 +254,9 @@ def main():
                     beam_size=args.beam_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming,
-                    ctc_weight=args.ctc_weight,
-                    transducer_weight=args.transducer_weight,
-                    attn_weight=args.attn_weight,
+                    ctc_weight=args.rescore_ctc_weight,
+                    transducer_weight=args.rescore_transducer_weight,
+                    attn_weight=args.rescore_attn_weight,
                     reverse_weight=args.reverse_weight,
                     search_ctc_weight=args.search_ctc_weight,
                     search_transducer_weight=args.search_transducer_weight)
@@ -281,7 +281,7 @@ def main():
                     args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
-                    ctc_weight=args.ctc_weight,
+                    ctc_weight=args.rescore_ctc_weight,
                     simulate_streaming=args.simulate_streaming,
                     reverse_weight=args.reverse_weight)
                 hyps = [hyp]

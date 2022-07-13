@@ -167,18 +167,14 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   rescore_transducer_weight=0.5
   rescore_attn_weight=1.0
   # only used in beam search, either pure beam search mode OR beam search inside rescoring
-  beam_search_ctc_weight=0.3
-  beam_search_transducer_weight=0.7
+  search_ctc_weight=0.3
+  search_transducer_weight=0.7
 
   reverse_weight=0.0
   for mode in ${decode_modes}; do
   {
     test_dir=$dir/test_${mode}
     mkdir -p $test_dir
-    ctc_weight=$([ "$decode_modes" == "rnnt_beam_attn_rescoring" ] && \
-        echo $rescore_ctc_weight || echo $beam_search_ctc_weight)
-    transducer_weight=$([ "$decode_modes" == "rnnt_beam_attn_rescoring" ] && \
-        echo $rescore_transducer_weight || echo $beam_search_transducer_weight)
     python wenet/bin/recognize.py --gpu 0 \
       --mode $mode \
       --config $dir/train.yaml \
@@ -189,9 +185,9 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --batch_size 1 \
       --penalty 0.0 \
       --dict $dict \
-      --ctc_weight $ctc_weight \
-      --transducer_weight $transducer_weight \
-      --attn_weight $rescore_attn_weight \
+      --rescore_ctc_weight $rescore_ctc_weight \
+      --rescore_transducer_weight $rescore_transducer_weight \
+      --rescore_attn_weight $rescore_attn_weight \
       --search_ctc_weight $search_ctc_weight \
       --search_transducer_weight $search_transducer_weigth \
       --reverse_weight $reverse_weight \
