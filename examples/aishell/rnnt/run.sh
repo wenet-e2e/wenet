@@ -189,7 +189,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --transducer_weight $rescore_transducer_weight \
       --attn_weight $rescore_attn_weight \
       --search_ctc_weight $search_ctc_weight \
-      --search_transducer_weight $search_transducer_weigth \
+      --search_transducer_weight $search_transducer_weight \
       --reverse_weight $reverse_weight \
       --result_file $test_dir/text \
       ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
