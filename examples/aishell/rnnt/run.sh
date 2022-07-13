@@ -44,7 +44,7 @@ checkpoint=
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=30
-decode_modes="rnnt_greedy_search"
+decode_modes="rnnt_beam_search"
 
 . tools/parse_options.sh || exit 1;
 
@@ -162,7 +162,14 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # non-streaming model. The default value is -1, which is full chunk
   # for non-streaming inference.
   decoding_chunk_size=
-  ctc_weight=0.5
+  # only used in rescore mode for weighting different scores
+  rescore_ctc_weight=0.5
+  rescore_transducer_weight=0.5
+  rescore_attn_weight=1.0
+  # only used in beam search, either pure beam search mode OR beam search inside rescoring
+  search_ctc_weight=0.3
+  search_transducer_weight=0.7
+
   reverse_weight=0.0
   for mode in ${decode_modes}; do
   {
@@ -178,7 +185,11 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --batch_size 1 \
       --penalty 0.0 \
       --dict $dict \
-      --ctc_weight $ctc_weight \
+      --ctc_weight $rescore_ctc_weight \
+      --transducer_weight $rescore_transducer_weight \
+      --attn_weight $rescore_attn_weight \
+      --search_ctc_weight $search_ctc_weight \
+      --search_transducer_weight $search_transducer_weight \
       --reverse_weight $reverse_weight \
       --result_file $test_dir/text \
       ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}

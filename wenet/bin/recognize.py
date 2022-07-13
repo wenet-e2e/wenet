@@ -63,14 +63,38 @@ def get_args():
                         choices=[
                             'attention', 'ctc_greedy_search',
                             'ctc_prefix_beam_search', 'attention_rescoring',
-                            'rnnt_greedy_search'
+                            'rnnt_greedy_search', 'rnnt_beam_search',
+                            'rnnt_beam_attn_rescoring'
                         ],
                         default='attention',
                         help='decoding mode')
+
+    parser.add_argument('--search_ctc_weight',
+                        type=float,
+                        default=1.0,
+                        help='ctc weight for nbest generation')
+    parser.add_argument('--search_transducer_weight',
+                        type=float,
+                        default=0.0,
+                        help='transducer weight for nbest generation')
     parser.add_argument('--ctc_weight',
                         type=float,
                         default=0.0,
-                        help='ctc weight for attention rescoring decode mode')
+                        help='ctc weight for rescoring weight in \
+                                  attention rescoring decode mode \
+                              ctc weight for rescoring weight in \
+                                  transducer attention rescore decode mode')
+
+    parser.add_argument('--transducer_weight',
+                        type=float,
+                        default=0.0,
+                        help='transducer weight for rescoring weight in transducer \
+                                 attention rescore mode')
+    parser.add_argument('--attn_weight',
+                        type=float,
+                        default=0.0,
+                        help='attention weight for rescoring weight in transducer \
+                              attention rescore mode')
     parser.add_argument('--decoding_chunk_size',
                         type=int,
                         default=-1,
@@ -203,6 +227,34 @@ def main():
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
+            elif args.mode == 'rnnt_beam_search':
+                assert (feats.size(0) == 1)
+                assert 'predictor' in configs
+                hyps = model.beam_search(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    beam_size=args.beam_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    ctc_weight=args.search_ctc_weight,
+                    transducer_weight=args.search_transducer_weight)
+            elif args.mode == 'rnnt_beam_attn_rescoring':
+                assert (feats.size(0) == 1)
+                assert 'predictor' in configs
+                hyps = model.transducer_attention_rescoring(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    beam_size=args.beam_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    ctc_weight=args.ctc_weight,
+                    transducer_weight=args.transducer_weight,
+                    attn_weight=args.attn_weight,
+                    reverse_weight=args.reverse_weight,
+                    search_ctc_weight=args.search_ctc_weight,
+                    search_transducer_weight=args.search_transducer_weight)
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
             # with other batch decoding mode
