@@ -539,6 +539,14 @@ class ASRModel(torch.nn.Module):
         return hyps[best_index][0], best_score
 
     @torch.jit.export
+    def cmvn_to_cuda(self) -> bool:
+        """ Export interface for c++ call, return True as success state
+        """
+        self.encoder.global_cmvn.mean = self.encoder.global_cmvn.mean.to('cuda')
+        self.encoder.global_cmvn.istd = self.encoder.global_cmvn.istd.to('cuda')
+        return True
+
+    @torch.jit.export
     def subsampling_rate(self) -> int:
         """ Export interface for c++ call, return subsampling_rate of the
             model
