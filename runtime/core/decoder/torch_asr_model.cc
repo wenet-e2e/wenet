@@ -45,7 +45,7 @@ void TorchAsrModel::Read(const std::string& model_path) {
 #ifdef USE_GPU
   if (!torch::cuda::is_available()) {
     VLOG(1) << "CUDA is not available! Please check your GPU settings";
-    throw std::runtime_error("CUDA is not available! Please check your GPU settings");
+    throw std::runtime_error("CUDA is not available!");
   } else {
     VLOG(1) << "CUDA available! Running on GPU";
   }
@@ -166,7 +166,8 @@ void TorchAsrModel::ForwardEncoderFunc(
 #ifdef USE_GPU
   chunk_out = chunk_out.to(at::kCUDA);
   torch::Tensor ctc_log_probs =
-      model_->run_method("ctc_activation", chunk_out).toTensor().to(at::kCPU)[0];
+      model_->run_method("ctc_activation", chunk_out).toTensor();
+  ctc_log_probs = ctc_log_probs.to(at::kCPU)[0];
   encoder_outs_.push_back(std::move(chunk_out.to(at::kCPU)));
 #else
   torch::Tensor ctc_log_probs =
