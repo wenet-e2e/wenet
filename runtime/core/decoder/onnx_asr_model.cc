@@ -107,29 +107,25 @@ void OnnxAsrModel::Read(const std::string& model_dir) {
   auto model_metadata = encoder_session_->GetModelMetadata();
 
   Ort::AllocatorWithDefaultOptions allocator;
-  encoder_output_size_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("output_size", allocator)));
-  num_blocks_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("num_blocks", allocator)));
-  head_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("head", allocator)));
-  cnn_module_kernel_ = std::move(atoi(
-      model_metadata.LookupCustomMetadataMap("cnn_module_kernel", allocator)));
-  subsampling_rate_ = std::move(atoi(
-      model_metadata.LookupCustomMetadataMap("subsampling_rate", allocator)));
-  right_context_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("right_context", allocator)));
-  sos_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("sos_symbol", allocator)));
-  eos_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("eos_symbol", allocator)));
-  is_bidirectional_decoder_ =
-      std::move(atoi(model_metadata.LookupCustomMetadataMap(
-          "is_bidirectional_decoder", allocator)));
-  chunk_size_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("chunk_size", allocator)));
-  num_left_chunks_ = std::move(
-      atoi(model_metadata.LookupCustomMetadataMap("left_chunks", allocator)));
+  encoder_output_size_ =
+      atoi(model_metadata.LookupCustomMetadataMap("output_size", allocator));
+  num_blocks_ =
+      atoi(model_metadata.LookupCustomMetadataMap("num_blocks", allocator));
+  head_ = atoi(model_metadata.LookupCustomMetadataMap("head", allocator));
+  cnn_module_kernel_ = atoi(
+      model_metadata.LookupCustomMetadataMap("cnn_module_kernel", allocator));
+  subsampling_rate_ = atoi(
+      model_metadata.LookupCustomMetadataMap("subsampling_rate", allocator));
+  right_context_ =
+      atoi(model_metadata.LookupCustomMetadataMap("right_context", allocator));
+  sos_ = atoi(model_metadata.LookupCustomMetadataMap("sos_symbol", allocator));
+  eos_ = atoi(model_metadata.LookupCustomMetadataMap("eos_symbol", allocator));
+  is_bidirectional_decoder_ = atoi(model_metadata.LookupCustomMetadataMap(
+      "is_bidirectional_decoder", allocator));
+  chunk_size_ =
+      atoi(model_metadata.LookupCustomMetadataMap("chunk_size", allocator));
+  num_left_chunks_ =
+      atoi(model_metadata.LookupCustomMetadataMap("left_chunks", allocator));
 
   LOG(INFO) << "Onnx Model Info:";
   LOG(INFO) << "\tencoder_output_size " << encoder_output_size_;
@@ -234,14 +230,11 @@ void OnnxAsrModel::ForwardEncoderFunc(
   const int feature_dim = chunk_feats[0].size();
   std::vector<float> feats;
   for (size_t i = 0; i < cached_feature_.size(); ++i) {
-    for (size_t j = 0; j < feature_dim; ++j) {
-      feats.emplace_back(cached_feature_[i][j]);
-    }
+    feats.insert(feats.end(), cached_feature_[i].begin(),
+                 cached_feature_[i].end());
   }
   for (size_t i = 0; i < chunk_feats.size(); ++i) {
-    for (size_t j = 0; j < feature_dim; ++j) {
-      feats.emplace_back(chunk_feats[i][j]);
-    }
+    feats.insert(feats.end(), chunk_feats[i].begin(), chunk_feats[i].end());
   }
   const int64_t feats_shape[3] = {1, num_frames, feature_dim};
   Ort::Value feats_ort = Ort::Value::CreateTensor<float>(
