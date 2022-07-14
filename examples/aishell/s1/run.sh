@@ -88,8 +88,8 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    # Prepare wenet requried data
-    echo "Prepare data, prepare requried format"
+    # Prepare wenet required data
+    echo "Prepare data, prepare required format"
     for x in dev test ${train_set}; do
         tools/format_data.sh --nj ${nj} --feat $feat_dir/$x/feats.scp \
             $feat_dir/$x ${dict} > $feat_dir/$x/format.data

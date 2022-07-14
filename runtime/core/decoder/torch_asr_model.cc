@@ -125,9 +125,9 @@ void TorchAsrModel::ForwardEncoderFunc(
   }
 
   // 2. Encoder chunk forward
-  int requried_cache_size = chunk_size_ * num_left_chunks_;
+  int required_cache_size = chunk_size_ * num_left_chunks_;
   torch::NoGradGuard no_grad;
-  std::vector<torch::jit::IValue> inputs = {feats, offset_, requried_cache_size,
+  std::vector<torch::jit::IValue> inputs = {feats, offset_, required_cache_size,
                                             att_cache_, cnn_cache_};
 
   // Refer interfaces in wenet/transformer/asr_model.py

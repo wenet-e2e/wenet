@@ -99,7 +99,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  echo "Prepare data, prepare requried format"
+  echo "Prepare data, prepare required format"
   for x in ${dev_set} ${train_set}; do
     tools/make_raw_list.py --segments $data/$x/segments \
       $data/$x/wav.scp $data/$x/text $data/$x/data.list
