@@ -170,8 +170,8 @@ ZZ 5000
 
 ``` sh
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  # Prepare wenet requried data
-  echo "Prepare data, prepare requried format"
+  # Prepare wenet required data
+  echo "Prepare data, prepare required format"
   for x in dev ${recog_set} $train_set ; do
     tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
         $wave_data/$x/data.list

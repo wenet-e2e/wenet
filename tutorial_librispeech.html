@@ -270,8 +270,8 @@ ZZ 5000
 <div class="section" id="stage-3-prepare-wenet-data-format">
 <h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this headline"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">3</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">3</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c1"># Prepare wenet requried data</span>
-  <span class="nb">echo</span> <span class="s2">&quot;Prepare data, prepare requried format&quot;</span>
+  <span class="c1"># Prepare wenet required data</span>
+  <span class="nb">echo</span> <span class="s2">&quot;Prepare data, prepare required format&quot;</span>
   <span class="k">for</span> x in dev <span class="si">${</span><span class="nv">recog_set</span><span class="si">}</span> <span class="nv">$train_set</span> <span class="p">;</span> <span class="k">do</span>
     tools/make_raw_list.py <span class="nv">$wave_data</span>/<span class="nv">$x</span>/wav.scp <span class="nv">$wave_data</span>/<span class="nv">$x</span>/text <span class="se">\</span>
         <span class="nv">$wave_data</span>/<span class="nv">$x</span>/data.list
