@@ -109,7 +109,7 @@ fi
 
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  echo "stage 3: Prepare data, prepare requried format"
+  echo "stage 3: Prepare data, prepare required format"
   for x in dev test ${train_set}; do
     if [ $data_type == "shard" ]; then
       python tools/make_shard_list.py --num_utts_per_shard $num_utts_per_shard \

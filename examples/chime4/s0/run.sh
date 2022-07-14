@@ -59,7 +59,7 @@ if [ $end -ge 3 ] && [ $beg -le 3 ]; then
    --train_config $train_config \
     --in_scp $data_dir/train/wav.scp \
     --out_cmvn $data_dir/train/global_cmvn
-  echo "Prepare data, prepare requried format"
+  echo "Prepare data, prepare required format"
   for x in train dev; do
   tools/make_raw_list.py $data_dir/$x/wav.scp $data_dir/$x/char \
     $data_dir/$x/data.list

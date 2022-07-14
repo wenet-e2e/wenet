@@ -85,7 +85,7 @@ class PositionalEncoding(torch.nn.Module):
 
         Args:
             offset (int or torch.tensor): start offset
-            size (int): requried size of position encoding
+            size (int): required size of position encoding
 
         Returns:
             torch.Tensor: Corresponding encoding
