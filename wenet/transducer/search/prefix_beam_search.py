@@ -124,7 +124,7 @@ class PrefixBeamSearch():
 
             # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
-            
+
             logp = torch.log(
                 torch.add(
                     transducer_weight * torch.exp(logp),
@@ -142,7 +142,7 @@ class PrefixBeamSearch():
                 # update seq
                 base_seq = beam_init[j]
                 for t in range(beam_size):
-                    # blank: only update the score and last
+                    # blank: only update the score
                     if top_k_index[j, t] == self.blank:
                         new_seq = Sequence(
                             hyp=base_seq.hyp.copy(),
@@ -152,7 +152,8 @@ class PrefixBeamSearch():
                         )
 
                         beam_A.append(new_seq)
-                    # other unit: update hyp score statement and last
+
+                    # other unit: update hyp score statement
                     else:
                         hyp_new = base_seq.hyp.copy()
                         hyp_new.append(top_k_index[j, t].item())
@@ -172,15 +173,13 @@ class PrefixBeamSearch():
                 for t in range(len(fusion_A)):
                     # notice: A_ can not fusion with A
                     if s1.hyp == fusion_A[t].hyp :
-                    # if s1.hyp == fusion_A[t].hyp:
                         fusion_A[t].score = log_add([fusion_A[t].score, s1.score])
                         if_do_append = False
                         break
                 if if_do_append:
                     fusion_A.append(s1)
-            
+
             # 4. second pruned
             fusion_A.sort(key=lambda x: x.score, reverse=True)
             beam_init = fusion_A[:beam_size]
         return beam_init, encoder_out
-
