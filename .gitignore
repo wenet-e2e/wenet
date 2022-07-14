@@ -42,3 +42,7 @@ runtime/core/grpc/wenet.grpc.pb.cc
 runtime/core/grpc/wenet.grpc.pb.h
 runtime/core/grpc/wenet.pb.cc
 runtime/core/grpc/wenet.pb.h
+
+# Clangd files
+.cache
+compile_commands.json
