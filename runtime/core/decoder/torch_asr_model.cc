@@ -159,8 +159,8 @@ void TorchAsrModel::ForwardEncoderFunc(
   torch::Tensor chunk_out = outputs[0].toTensor();
   att_cache_ = outputs[1].toTensor();
   cnn_cache_ = outputs[2].toTensor();
-  offset_ += chunk_out.size(1);
 #endif
+  offset_ += chunk_out.size(1);
 
   // The first dimension of returned value is for batchsize, which is 1
 #ifdef USE_GPU
