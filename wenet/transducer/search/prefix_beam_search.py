@@ -91,10 +91,9 @@ class PrefixBeamSearch():
         beam_init.append(
             Sequence(
                 hyp=[self.blank],
-                score=torch.tensor(0.0),
+                score=0.0,
                 h_0=h_0,
                 c_0=c_0,
-                last=self.blank,
             )
         )
         # 3. start decoding (notice: we use breathwise first searching)
@@ -106,15 +105,15 @@ class PrefixBeamSearch():
             input_hyp = [s.hyp[-1] for s in beam_init]
             input_hyp_tensor = torch.tensor(input_hyp, dtype=torch.int, device=device)
             # building statement from beam
-            h_0 = torch.cat(
+            h_0 = torch.concat(
                 [s.h_0 for s in beam_init], dim=1
             ).to(device)
             c_0 = torch.concat(
                 [s.c_0 for s in beam_init], dim=1
             ).to(device)
             # build score tensor to do torch.add() function
-            scores = torch.concat(
-                [s.score.unsqueeze(0) for s in beam_init], dim=0
+            scores = torch.tensor(
+                [s.score for s in beam_init]
             ).to(device)
 
             # 3.2 forward decoder
@@ -125,6 +124,7 @@ class PrefixBeamSearch():
 
             # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
+
             logp = torch.log(
                 torch.add(
                     transducer_weight * torch.exp(logp),
@@ -142,50 +142,26 @@ class PrefixBeamSearch():
                 # update seq
                 base_seq = beam_init[j]
                 for t in range(beam_size):
-                    # blank: only update the score and last
+                    # blank: only update the score
                     if top_k_index[j, t] == self.blank:
                         new_seq = Sequence(
                             hyp=base_seq.hyp.copy(),
-                            score=scores[j, t],
+                            score=scores[j, t].item(),
                             h_0=h_0[:, j, :].unsqueeze(1),
                             c_0=c_0[:, j, :].unsqueeze(1),
-                            last=self.blank
                         )
 
                         beam_A.append(new_seq)
-                    # hyp[-1]: if last is blank{update hyp and statement}
-                    #          else {dont update hyp and statement}
-                    elif top_k_index[j, t] == base_seq.hyp[-1] :
-                        if base_seq.last == self.blank:
-                            hyp_new = base_seq.hyp.copy()
-                            hyp_new.append(top_k_index[j, t].item())
-                            new_seq = Sequence(
-                                hyp=hyp_new,
-                                score=scores[j, t],
-                                h_0=h_1[:, j, :].unsqueeze(1),
-                                c_0=c_1[:, j, :].unsqueeze(1),
-                                last=top_k_index[j, t].item()
-                            )
-                            beam_A.append(new_seq)
-                        else:
-                            new_seq = Sequence(
-                                hyp=base_seq.hyp.copy(),
-                                score=scores[j, t],
-                                h_0=h_0[:, j, :].unsqueeze(1),
-                                c_0=c_0[:, j, :].unsqueeze(1),
-                                last=top_k_index[j, t].item()
-                            )
-                            beam_A.append(new_seq)
-                    # other unit: update hyp score statement and last
+
+                    # other unit: update hyp score statement
                     else:
                         hyp_new = base_seq.hyp.copy()
                         hyp_new.append(top_k_index[j, t].item())
                         new_seq = Sequence(
                             hyp=hyp_new,
-                            score=scores[j, t],
+                            score=scores[j, t].item(),
                             h_0=h_1[:, j, :].unsqueeze(1),
                             c_0=c_1[:, j, :].unsqueeze(1),
-                            last=top_k_index[j, t].item()
                         )
                         beam_A.append(new_seq)
 
@@ -196,7 +172,7 @@ class PrefixBeamSearch():
                 if_do_append = True
                 for t in range(len(fusion_A)):
                     # notice: A_ can not fusion with A
-                    if s1.hyp == fusion_A[t].hyp and s1.last == fusion_A[t].last :
+                    if s1.hyp == fusion_A[t].hyp :
                         fusion_A[t].score = log_add([fusion_A[t].score, s1.score])
                         if_do_append = False
                         break
