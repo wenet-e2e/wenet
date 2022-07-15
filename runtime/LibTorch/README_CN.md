@@ -39,6 +39,10 @@ mkdir build && cd build && cmake .. && cmake --build .
 ``` sh
 mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
 ```
+或者使用命令编译以支持 GPU。
+``` sh
+mkdir build && cd build && cmake -DGPU=ON .. && cmake --build .
+```
 
 编译好的可执行程序在 `wenet/runtime/server/x86/build/` 下：
 

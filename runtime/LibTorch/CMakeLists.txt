@@ -11,6 +11,7 @@ option(GRPC "whether to build with gRPC" OFF)
 option(WEBSOCKET "whether to build with websocket" ON)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
+option(GPU "whether to build with GPU" OFF)
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
