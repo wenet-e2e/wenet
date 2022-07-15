@@ -38,21 +38,20 @@ void TorchAsrModel::InitEngineThreads(int num_threads) {
 }
 
 void TorchAsrModel::Read(const std::string& model_path) {
-  torch::jit::script::Module model = torch::jit::load(model_path);
-  model_ = std::make_shared<TorchModule>(std::move(model));
-  torch::NoGradGuard no_grad;
-  model_->eval();
+  torch::DeviceType device = at::kCPU;
 #ifdef USE_GPU
   if (!torch::cuda::is_available()) {
     VLOG(1) << "CUDA is not available! Please check your GPU settings";
     throw std::runtime_error("CUDA is not available!");
   } else {
     VLOG(1) << "CUDA available! Running on GPU";
+    device = at::kCUDA;
   }
-  model_->to(at::kCUDA);
-  torch::jit::IValue o0 = model_->run_method("cmvn_to_cuda");
-  CHECK_EQ(o0.isBool(), true);
 #endif
+  torch::jit::script::Module model = torch::jit::load(model_path, device);
+  model_ = std::make_shared<TorchModule>(std::move(model));
+  torch::NoGradGuard no_grad;
+  model_->eval();
   torch::jit::IValue o1 = model_->run_method("subsampling_rate");
   CHECK_EQ(o1.isInt(), true);
   subsampling_rate_ = o1.toInt();
