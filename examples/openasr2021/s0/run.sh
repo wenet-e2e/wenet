@@ -113,7 +113,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
 fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-  echo "Prepare data, prepare requried format"
+  echo "Prepare data, prepare required format"
   # For wav feature, just copy the data. mfcc/fbank extraction is done in training
   for x in ${train_set} ${train_dev} ${recog_set}; do
     if [ $data_type == "shard" ]; then

@@ -104,8 +104,8 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-    # Prepare wenet requried data
-    echo "Prepare data, prepare requried format"
+    # Prepare wenet required data
+    echo "Prepare data, prepare required format"
     for x in dev ${recog_set} ${train_set}; do
         tools/format_data.sh --nj ${nj} --feat data/$x/feats.scp --bpecode ${bpemodel}.model \
             data/$x ${dict} > data/$x/format.data.tmp

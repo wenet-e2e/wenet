@@ -233,6 +233,7 @@ class Transducer(nn.Module):
         r_decoder_out = r_decoder_out.cpu().numpy()
         return decoder_out, r_decoder_out
 
+
     def beam_search(
         self,
         speech: torch.Tensor,
@@ -367,7 +368,7 @@ class Transducer(nn.Module):
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long)
             for hyp in hyps
-        ], True, self.ignore_id)  # (beam_size, max_hyps_len)
+        ], True, self.ignore_id)  # (beam_size, max_hyps_len)        
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
@@ -395,6 +396,7 @@ class Transducer(nn.Module):
             hyps_lens,
             reverse_weight,
         )
+
         # Only use decoder score for rescoring
         best_score = -float('inf')
         best_index = 0

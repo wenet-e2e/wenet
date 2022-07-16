@@ -160,8 +160,8 @@ fi
 
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-  # Prepare wenet requried data
-  echo "Prepare data, prepare requried format"
+  # Prepare wenet required data
+  echo "Prepare data, prepare required format"
   for x in $train_set ; do
     python csj_tools/wn.4.make_raw_list.py $wave_data/$x/wav.scp_$minsec $wave_data/$x/text \
         $wave_data/$x/data.list

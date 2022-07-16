@@ -88,20 +88,20 @@ DecodeState AsrDecoder::AdvanceDecoding(bool block) {
   DecodeState state = DecodeState::kEndBatch;
   model_->set_chunk_size(opts_.chunk_size);
   model_->set_num_left_chunks(opts_.num_left_chunks);
-  int num_requried_frames = model_->num_frames_for_chunk(start_);
+  int num_required_frames = model_->num_frames_for_chunk(start_);
   std::vector<std::vector<float>> chunk_feats;
   // Return immediately if we do not want to block
   if (!block && !feature_pipeline_->input_finished() &&
-      feature_pipeline_->NumQueuedFrames() < num_requried_frames) {
+      feature_pipeline_->NumQueuedFrames() < num_required_frames) {
     return DecodeState::kWaitFeats;
   }
   // If not okay, that means we reach the end of the input
-  if (!feature_pipeline_->Read(num_requried_frames, &chunk_feats)) {
+  if (!feature_pipeline_->Read(num_required_frames, &chunk_feats)) {
     state = DecodeState::kEndFeats;
   }
 
   num_frames_ += chunk_feats.size();
-  VLOG(2) << "Required " << num_requried_frames << " get "
+  VLOG(2) << "Required " << num_required_frames << " get "
           << chunk_feats.size();
   Timer timer;
   std::vector<std::vector<float>> ctc_log_probs;
