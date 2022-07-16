@@ -296,7 +296,7 @@ class Transducer(nn.Module):
         transducer_weight: float = 0.0,
         search_ctc_weight: float = 1.0,
         search_transducer_weight: float = 0.0,
-        beam_search_type :str = 'transducer'
+        beam_search_type: str = 'transducer'
     ) -> List[List[int]]:
         """beam search
 
@@ -338,7 +338,7 @@ class Transducer(nn.Module):
         assert batch_size == 1
         # encoder_out: (1, maxlen, encoder_dim), len(hyps) = beam_size
         self.init_bs()
-        if beam_search_type == 'transducer': 
+        if beam_search_type == 'transducer':
             beam, encoder_out = self.bs.transducer_prefix_beam_search(
                 speech,
                 speech_lengths,
@@ -350,14 +350,14 @@ class Transducer(nn.Module):
             )
             beam_score = [s.score for s in beam]
             hyps = [s.hyp[1:] for s in beam]
-            
+
         elif beam_search_type == 'ctc':
             hyps, encoder_out = self.bs.ctc_prefix_beam_search(
-                speech, 
-                speech_lengths, 
-                beam_size=beam_size, 
+                speech,
+                speech_lengths,
+                beam_size=beam_size,
                 decoding_chunk_size=decoding_chunk_size,
-                num_decoding_left_chunks=num_decoding_left_chunks, 
+                num_decoding_left_chunks=num_decoding_left_chunks,
                 simulate_streaming=simulate_streaming
             )
             beam_score = [hyp[1] for hyp in hyps]
@@ -368,7 +368,7 @@ class Transducer(nn.Module):
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long)
             for hyp in hyps
-        ], True, self.ignore_id)  # (beam_size, max_hyps_len)        
+        ], True, self.ignore_id)  # (beam_size, max_hyps_len) 
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)

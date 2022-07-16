@@ -52,7 +52,7 @@ class PrefixBeamSearch():
         x = self.joint(encoder_x, pre_t)
         x = x.log_softmax(dim=-1)
         return x, (h_1, c_1)
-        
+ 
     def _forward_encoder(
         self,
         speech: torch.Tensor,
@@ -293,4 +293,3 @@ class PrefixBeamSearch():
             cur_hyps = next_hyps[:beam_size]
         hyps = [(y[0], log_add([y[1][0], y[1][1]])) for y in cur_hyps]
         return hyps, encoder_out
-

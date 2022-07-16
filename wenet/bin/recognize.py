@@ -271,7 +271,7 @@ def main():
                     reverse_weight=args.reverse_weight,
                     search_ctc_weight=args.search_ctc_weight,
                     search_transducer_weight=args.search_transducer_weight,
-                    beam_search_type = 'ctc')
+                    beam_search_type='ctc')
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
             # with other batch decoding mode
