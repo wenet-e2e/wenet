@@ -51,7 +51,8 @@ class PrefixBeamSearch():
         )
         x = self.joint(encoder_x, pre_t)
         x = x.log_softmax(dim=-1)
-        return x, (h_1, c_1) 
+        return x, (h_1, c_1)
+
     def _forward_encoder(
         self,
         speech: torch.Tensor,
