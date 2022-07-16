@@ -88,6 +88,10 @@ DEFINE_int32(language_type, 0,
              "0x00 = kMandarinEnglish, "
              "0x01 = kIndoEuropean");
 DEFINE_bool(lowercase, true, "lowercase final result if needed");
+#ifdef USE_ITN
+DEFINE_string(itn_tagger_fst_path, "", "path of tagger.fst");
+DEFINE_string(itn_verbalizer_fst_path, "", "path of verbalizer.fst");
+#endif
 
 namespace wenet {
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
@@ -184,8 +188,24 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   post_process_opts.language_type =
       FLAGS_language_type == 0 ? kMandarinEnglish : kIndoEuropean;
   post_process_opts.lowercase = FLAGS_lowercase;
+#ifdef USE_ITN
+  auto post_process_resource = std::make_shared<PostProcessResource>();
+  if (!FLAGS_itn_tagger_fst_path.empty() &&
+      !FLAGS_itn_verbalizer_fst_path.empty()) {
+    LOG(INFO) << "Reading ITN tagger.fst "
+              << FLAGS_itn_tagger_fst_path;
+    LOG(INFO) << "Reading ITN verbalizer.fst "
+              << FLAGS_itn_verbalizer_fst_path;
+    post_process_resource->itn_processor = std::make_shared<TextProcessor>(
+        FLAGS_itn_tagger_fst_path, FLAGS_itn_verbalizer_fst_path);
+  }
+  resource->post_processor =
+      std::make_shared<PostProcessor>(std::move(post_process_opts),
+                                      post_process_resource);
+#else
   resource->post_processor =
       std::make_shared<PostProcessor>(std::move(post_process_opts));
+#endif
   return resource;
 }
 

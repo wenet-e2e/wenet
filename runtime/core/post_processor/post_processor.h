@@ -19,6 +19,10 @@
 #include <string>
 #include <utility>
 
+#ifdef USE_ITN
+#include "text_processor/text_processor.h"
+#endif
+
 #include "utils/utils.h"
 
 namespace wenet {
@@ -45,24 +49,36 @@ struct PostProcessOptions {
   bool lowercase = true;
 };
 
-// TODO(xcsong): add itn/punctuation related resource
-struct PostProcessResource {};
+// TODO(xcsong): add punctuation related resource
+struct PostProcessResource {
+#ifdef USE_ITN
+  std::shared_ptr<TextProcessor> itn_processor = nullptr;
+#endif
+};
 
 // Post Processor
 class PostProcessor {
  public:
   explicit PostProcessor(PostProcessOptions&& opts) : opts_(std::move(opts)) {}
   explicit PostProcessor(const PostProcessOptions& opts) : opts_(opts) {}
+#ifdef USE_ITN
+  explicit PostProcessor(PostProcessOptions&& opts,
+                         std::shared_ptr<PostProcessResource> resource)
+    : opts_(std::move(opts)), itn_processor_(resource->itn_processor) {}
+  explicit PostProcessor(const PostProcessOptions& opts,
+                         std::shared_ptr<PostProcessResource> resource)
+    : opts_(opts), itn_processor_(resource->itn_processor) {}
+#endif
   // call other functions to do post processing
   std::string Process(const std::string& str, bool finish);
   // process spaces according to configurations
   std::string ProcessSpace(const std::string& str);
-  // TODO(xcsong): add itn/punctuation
-  // void InverseTN(const std::string& str);
-  // void Punctuate(const std::string& str);
 
  private:
   const PostProcessOptions opts_;
+#ifdef USE_ITN
+  std::shared_ptr<TextProcessor> itn_processor_ = nullptr;
+#endif
 
  public:
   WENET_DISALLOW_COPY_AND_ASSIGN(PostProcessor);

@@ -59,7 +59,14 @@ std::string PostProcessor::ProcessSpace(const std::string& str) {
 std::string PostProcessor::Process(const std::string& str, bool finish) {
   std::string result;
   result = ProcessSpace(str);
-  // TODO(xcsong): do itn/punctuation if finish == true
+#ifdef USE_ITN
+  // TODO(xcsong): do punctuation if finish == true
+  if (finish == true) {
+    if (itn_processor_ != nullptr) {
+      result = itn_processor_->ProcessInput(result, false);
+    }
+  }
+#endif
   return result;
 }
 
