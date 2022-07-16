@@ -368,7 +368,7 @@ class Transducer(nn.Module):
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long)
             for hyp in hyps
-        ], True, self.ignore_id)  # (beam_size, max_hyps_len) 
+        ], True, self.ignore_id)  # (beam_size, max_hyps_len)
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
