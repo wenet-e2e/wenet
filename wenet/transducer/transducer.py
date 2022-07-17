@@ -11,9 +11,10 @@ from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list, th_accuracy)
 from wenet.transducer.search.prefix_beam_search import PrefixBeamSearch
 from torch.nn.utils.rnn import pad_sequence
+from wenet.transformer.asr_model import ASRModel
 
 
-class Transducer(nn.Module):
+class Transducer(ASRModel):
 
     def __init__(
         self,
@@ -35,19 +36,22 @@ class Transducer(nn.Module):
     ) -> None:
         assert check_argument_types()
         assert attention_weight + ctc_weight + transducer_weight == 1.0
-        super().__init__()
+        super().__init__(
+            vocab_size,
+            encoder,
+            attention_decoder,
+            ctc,
+            ctc_weight,
+            ignore_id,
+            reverse_weight,
+            lsm_weight,
+            length_normalized_loss
+        )
 
         self.blank = blank
-        self.sos = vocab_size - 1
-        self.eos = vocab_size - 1
-        self.vocab_size = vocab_size
-        self.ignore_id = ignore_id
         self.transducer_weight = transducer_weight
-        self.ctc_weight = ctc_weight
-        self.reverse_weight = reverse_weight
         self.attention_decoder_weight = 1 - self.transducer_weight - self.ctc_weight
 
-        self.encoder = encoder
         self.predictor = predictor
         self.joint = joint
         self.ctc = ctc
