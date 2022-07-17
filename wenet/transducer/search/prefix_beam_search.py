@@ -1,9 +1,10 @@
 import torch
 from wenet.utils.common import log_add
+from typing import Tuple
 
 class Sequence():
 
-    __slots__ = {'hyp', 'score', 'h_0', 'c_0', 'last'}
+    __slots__ = {'hyp', 'score', 'h_0', 'c_0'}
 
     def __init__(
         self,
@@ -17,7 +18,6 @@ class Sequence():
         self.score = score
         self.h_0 = h_0
         self.c_0 = c_0
-        self.last = last
 
 class PrefixBeamSearch():
     def __init__(
@@ -52,6 +52,31 @@ class PrefixBeamSearch():
         x = self.joint(encoder_x, pre_t)
         x = x.log_softmax(dim=-1)
         return x, (h_1, c_1)
+
+    def _forward_encoder(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        simulate_streaming: bool = False,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Let's assume B = batch_size
+        # 1. Encoder
+        if simulate_streaming and decoding_chunk_size > 0:
+            encoder_out, encoder_mask = self.encoder.forward_chunk_by_chunk(
+                speech,
+                decoding_chunk_size=decoding_chunk_size,
+                num_decoding_left_chunks=num_decoding_left_chunks
+            )  # (B, maxlen, encoder_dim)
+        else:
+            encoder_out, encoder_mask = self.encoder(
+                speech,
+                speech_lengths,
+                decoding_chunk_size=decoding_chunk_size,
+                num_decoding_left_chunks=num_decoding_left_chunks
+            )  # (B, maxlen, encoder_dim)
+        return encoder_out, encoder_mask
 
     def prefix_beam_search(
         self,
@@ -124,7 +149,6 @@ class PrefixBeamSearch():
 
             # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
-
             logp = torch.log(
                 torch.add(
                     transducer_weight * torch.exp(logp),
@@ -152,6 +176,7 @@ class PrefixBeamSearch():
                         )
 
                         beam_A.append(new_seq)
+
 
                     # other unit: update hyp score statement
                     else:

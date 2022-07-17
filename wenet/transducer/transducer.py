@@ -11,9 +11,10 @@ from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list, th_accuracy)
 from wenet.transducer.search.prefix_beam_search import PrefixBeamSearch
 from torch.nn.utils.rnn import pad_sequence
+from wenet.transformer.asr_model import ASRModel
 
 
-class Transducer(nn.Module):
+class Transducer(ASRModel):
 
     def __init__(
         self,
@@ -35,19 +36,22 @@ class Transducer(nn.Module):
     ) -> None:
         assert check_argument_types()
         assert attention_weight + ctc_weight + transducer_weight == 1.0
-        super().__init__()
+        super().__init__(
+            vocab_size,
+            encoder,
+            attention_decoder,
+            ctc,
+            ctc_weight,
+            ignore_id,
+            reverse_weight,
+            lsm_weight,
+            length_normalized_loss
+        )
 
         self.blank = blank
-        self.sos = vocab_size - 1
-        self.eos = vocab_size - 1
-        self.vocab_size = vocab_size
-        self.ignore_id = ignore_id
         self.transducer_weight = transducer_weight
-        self.ctc_weight = ctc_weight
-        self.reverse_weight = reverse_weight
         self.attention_decoder_weight = 1 - self.transducer_weight - self.ctc_weight
 
-        self.encoder = encoder
         self.predictor = predictor
         self.joint = joint
         self.ctc = ctc
@@ -174,6 +178,66 @@ class Transducer(nn.Module):
                 self.sos,
                 self.blank)
 
+    def _cal_transducer_score(
+        self,
+        encoder_out: torch.Tensor,
+        encoder_mask: torch.Tensor,
+        hyps: List[List],
+        hyps_lens: torch.Tensor,
+        hyps_pad: torch.Tensor,
+        beam_size: int,
+    ):
+        device = encoder_out.device
+        # ignore id -> blank, add blank at head
+        hyps_pad_blank = add_blank(hyps_pad, self.blank, self.ignore_id)
+        xs_in_lens = encoder_mask.squeeze(1).sum(1).int()
+
+        # 1. Forward predictor
+        predictor_out = self.predictor(hyps_pad_blank)
+        # 2. Forward joint
+        joint_out = self.joint(encoder_out, predictor_out)
+        rnnt_text = hyps_pad.to(torch.int64)
+        rnnt_text = torch.where(rnnt_text == self.ignore_id, 0,
+                                rnnt_text).to(torch.int32)
+        # 3. Compute transducer loss
+        loss_td = torchaudio.functional.rnnt_loss(joint_out,
+                                                  rnnt_text,
+                                                  xs_in_lens,
+                                                  hyps_lens.int(),
+                                                  blank=self.blank,
+                                                  reduction='none')
+        return loss_td * -1
+
+    def _cal_attn_score(
+        self,
+        encoder_out: torch.Tensor,
+        encoder_mask: torch.Tensor,
+        hyps_pad: torch.Tensor,
+        hyps_lens: torch.Tensor,
+        reverse_weight: float,
+    ):
+        # (beam_size, max_hyps_len)
+        ori_hyps_pad = hyps_pad
+
+        # td_score = loss_td * -1
+        hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos, self.ignore_id)
+        hyps_lens = hyps_lens + 1  # Add <sos> at begining
+        # used for right to left decoder
+        r_hyps_pad = reverse_pad_list(ori_hyps_pad, hyps_lens, self.ignore_id)
+        r_hyps_pad, _ = add_sos_eos(r_hyps_pad, self.sos, self.eos,
+                                    self.ignore_id)
+        decoder_out, r_decoder_out, _ = self.attention_decoder(
+            encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
+            reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
+        decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
+        decoder_out = decoder_out.cpu().numpy()
+        # r_decoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a
+        # conventional transformer decoder.
+        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
+        r_decoder_out = r_decoder_out.cpu().numpy()
+        return decoder_out, r_decoder_out
+
+
     def beam_search(
         self,
         speech: torch.Tensor,
@@ -235,7 +299,8 @@ class Transducer(nn.Module):
         attn_weight: float = 0.0,
         transducer_weight: float = 0.0,
         search_ctc_weight: float = 1.0,
-        search_transducer_weight: float = 0.0
+        search_transducer_weight: float = 0.0,
+        beam_search_type: str = 'transducer'
     ) -> List[List[int]]:
         """beam search
 
@@ -277,33 +342,40 @@ class Transducer(nn.Module):
         assert batch_size == 1
         # encoder_out: (1, maxlen, encoder_dim), len(hyps) = beam_size
         self.init_bs()
-        beam, encoder_out = self.bs.prefix_beam_search(
-            speech,
-            speech_lengths,
-            decoding_chunk_size=decoding_chunk_size,
-            beam_size=beam_size,
-            num_decoding_left_chunks=num_decoding_left_chunks,
-            ctc_weight=search_ctc_weight,
-            transducer_weight=search_transducer_weight,
-        )
+        if beam_search_type == 'transducer':
+            beam, encoder_out = self.bs.transducer_prefix_beam_search(
+                speech,
+                speech_lengths,
+                decoding_chunk_size=decoding_chunk_size,
+                beam_size=beam_size,
+                num_decoding_left_chunks=num_decoding_left_chunks,
+                ctc_weight=search_ctc_weight,
+                transducer_weight=search_transducer_weight,
+            )
+            beam_score = [s.score for s in beam]
+            hyps = [s.hyp[1:] for s in beam]
 
-        hyps = [s.hyp[1:] for s in beam]
-        beam_score = [s.score for s in beam]
-
+        elif beam_search_type == 'ctc':
+            hyps, encoder_out = self.bs.ctc_prefix_beam_search(
+                speech,
+                speech_lengths,
+                beam_size=beam_size,
+                decoding_chunk_size=decoding_chunk_size,
+                num_decoding_left_chunks=num_decoding_left_chunks,
+                simulate_streaming=simulate_streaming
+            )
+            beam_score = [hyp[1] for hyp in hyps]
+            hyps = [hyp[0] for hyp in hyps]
         assert len(hyps) == beam_size
+
+        # build hyps and encoder output
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long)
             for hyp in hyps
         ], True, self.ignore_id)  # (beam_size, max_hyps_len)
-        # (beam_size, max_hyps_len)
-        hyps_pad_blank = add_blank(hyps_pad, self.blank, self.ignore_id)
-        ori_hyps_pad = hyps_pad
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
-
-
-
         encoder_out = encoder_out.repeat(beam_size, 1, 1)
         encoder_mask = torch.ones(beam_size,
                                   1,
@@ -311,39 +383,24 @@ class Transducer(nn.Module):
                                   dtype=torch.bool,
                                   device=device)
 
-        xs_in_lens = encoder_mask.squeeze(1).sum(1).int()
+        # 2.1 calculate transducer score
+        td_score = self._cal_transducer_score(
+            encoder_out,
+            encoder_mask,
+            hyps,
+            hyps_lens,
+            hyps_pad,
+            beam_size,
+        )
+        # 2.2 calculate attention score
+        decoder_out, r_decoder_out = self._cal_attn_score(
+            encoder_out,
+            encoder_mask,
+            hyps_pad,
+            hyps_lens,
+            reverse_weight,
+        )
 
-        # 1. Forward decoder
-        predictor_out = self.predictor(hyps_pad_blank)
-        # joint
-        joint_out = self.joint(encoder_out, predictor_out)
-        rnnt_text = hyps_pad.to(torch.int64)
-        rnnt_text = torch.where(rnnt_text == self.ignore_id, 0,
-                                rnnt_text).to(torch.int32)
-        # 2. Compute attention loss
-        loss_td = torchaudio.functional.rnnt_loss(joint_out,
-                                                  rnnt_text,
-                                                  xs_in_lens,
-                                                  hyps_lens.int(),
-                                                  blank=self.blank,
-                                                  reduction='none')
-
-        td_score = loss_td * -1
-        hyps_pad, _ = add_sos_eos(hyps_pad, self.sos, self.eos, self.ignore_id)
-        hyps_lens = hyps_lens + 1  # Add <sos> at begining
-        # used for right to left decoder
-        r_hyps_pad = reverse_pad_list(ori_hyps_pad, hyps_lens, self.ignore_id)
-        r_hyps_pad, _ = add_sos_eos(r_hyps_pad, self.sos, self.eos,
-                                    self.ignore_id)
-        decoder_out, r_decoder_out, _ = self.attention_decoder(
-            encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
-            reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
-        decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
-        decoder_out = decoder_out.cpu().numpy()
-        # r_decoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a
-        # conventional transformer decoder.
-        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
-        r_decoder_out = r_decoder_out.cpu().numpy()
         # Only use decoder score for rescoring
         best_score = -float('inf')
         best_index = 0

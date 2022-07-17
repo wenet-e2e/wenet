@@ -165,7 +165,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # only used in rescore mode for weighting different scores
   rescore_ctc_weight=0.5
   rescore_transducer_weight=0.5
-  rescore_attn_weight=1.0
+  rescore_attn_weight=0.5
   # only used in beam search, either pure beam search mode OR beam search inside rescoring
   search_ctc_weight=0.3
   search_transducer_weight=0.7
