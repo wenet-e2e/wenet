@@ -4,7 +4,7 @@ from typing import Dict, List, Optional, Tuple
 
 class Sequence():
 
-    __slots__ = {'hyp', 'score', 'h_0', 'c_0', 'last'}
+    __slots__ = {'hyp', 'score', 'h_0', 'c_0'}
 
     def __init__(
         self,
@@ -18,7 +18,6 @@ class Sequence():
         self.score = score
         self.h_0 = h_0
         self.c_0 = c_0
-        self.last = last
 
 class PrefixBeamSearch():
     def __init__(
