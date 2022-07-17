@@ -1,6 +1,6 @@
 import torch
 from wenet.utils.common import log_add
-from typing import Dict, List, Optional, Tuple
+from typing import Tuple
 
 class Sequence():
 
