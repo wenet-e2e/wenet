@@ -65,8 +65,8 @@ def init_model(configs):
         elif predictor_type == "embedding":
             predictor = EmbeddingPredictor(vocab_size,
                                            **configs['predictor_conf'])
-            configs['predictor_conf']['output_size'] = configs['predictor'][
-                'embed_size']
+            configs['predictor_conf']['output_size'] = configs[
+                'predictor_conf']['embed_size']
         else:
             raise NotImplementedError(
                 "only rnn and embedding type support now")

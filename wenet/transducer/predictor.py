@@ -247,6 +247,22 @@ class EmbeddingPredictor(PredictorBase):
                         device=device),
         ]
 
+    def batch_to_cache(self,
+                       cache: List[torch.Tensor]) -> List[List[torch.Tensor]]:
+        """
+        Args:
+            cache : [history]
+                history: [bs, ...]
+        Returns:
+            new_ache : [[history_1], [history_2], [history_3]...]
+        """
+        assert len(cache) == 1
+        cache_0 = cache[0]
+        history: List[List[torch.Tensor]] = []
+        for h in torch.split(cache_0, 1, dim=0):
+            history.append([h])
+        return history
+
     def cache_to_batch(self,
                        cache: List[List[torch.Tensor]]) -> List[torch.Tensor]:
         """

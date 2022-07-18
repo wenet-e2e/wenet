@@ -30,38 +30,14 @@ class PrefixBeamSearch():
 
     def forward_decoder_one_step(
             self, encoder_x: torch.Tensor, pre_t: torch.Tensor,
-            cache: List[torch.Tensor],
-            padding: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+            cache: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        padding = torch.zeros(pre_t.size(0), 1, device=encoder_x.device)
         pre_t, new_cache = self.predictor.forward_step(pre_t.unsqueeze(-1),
                                                        padding, cache)
-        x = self.joint(encoder_x, pre_t)
+        x = self.joint(encoder_x, pre_t)  # [beam, 1, 1, vocab]
         x = x.log_softmax(dim=-1)
         return x, new_cache
-
-    def _forward_encoder(
-        self,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
-        decoding_chunk_size: int = -1,
-        num_decoding_left_chunks: int = -1,
-        simulate_streaming: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Let's assume B = batch_size
-        # 1. Encoder
-        if simulate_streaming and decoding_chunk_size > 0:
-            encoder_out, encoder_mask = self.encoder.forward_chunk_by_chunk(
-                speech,
-                decoding_chunk_size=decoding_chunk_size,
-                num_decoding_left_chunks=num_decoding_left_chunks
-            )  # (B, maxlen, encoder_dim)
-        else:
-            encoder_out, encoder_mask = self.encoder(
-                speech,
-                speech_lengths,
-                decoding_chunk_size=decoding_chunk_size,
-                num_decoding_left_chunks=num_decoding_left_chunks
-            )  # (B, maxlen, encoder_dim)
-        return encoder_out, encoder_mask
 
     def prefix_beam_search(self,
                            speech: torch.Tensor,
@@ -92,12 +68,7 @@ class PrefixBeamSearch():
 
         # 2. init beam using Sequence to save beam unit
         cache = self.predictor.init_state(1, method="zero", device=device)
-        beam_init.append(
-            Sequence(
-                hyp=[torch.tensor(self.blank)],
-                score=torch.tensor(0.0),
-                cache=cache,
-            ))
+        beam_init.append(Sequence(hyp=[self.blank], score=0.0, cache=cache))
         # 3. start decoding (notice: we use breathwise first searching)
         # !!!! In this decoding method: one frame do not output multi units. !!!!
         # !!!!    Experiments show that this strategy has little impact      !!!!
@@ -112,19 +83,16 @@ class PrefixBeamSearch():
             cache_batch = self.predictor.cache_to_batch(
                 [s.cache for s in beam_init])
             # build score tensor to do torch.add() function
-            scores = torch.concat([s.score.unsqueeze(0) for s in beam_init],
-                                  dim=0).to(device)
-            # build score tensor to do torch.add() function
             scores = torch.tensor([s.score for s in beam_init]).to(device)
 
             # 3.2 forward decoder
-            padding = torch.ones(scores.size(0), device=device)
             logp, new_cache = self.forward_decoder_one_step(
                 encoder_out[:, i, :].unsqueeze(1),
                 input_hyp_tensor,
                 cache_batch,
-                padding=padding)  # logp: (N, 1, 1, vocab_size)
+            )  # logp: (N, 1, 1, vocab_size)
             logp = logp.squeeze(1).squeeze(1)  # logp: (N, vocab_size)
+            new_cache = self.predictor.batch_to_cache(new_cache)
 
             # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
@@ -138,7 +106,6 @@ class PrefixBeamSearch():
 
             # 3.5 generate new beam (N*N)
             beam_A = []
-            new_cache = self.predictor.batch_to_cache(new_cache)
             for j in range(len(beam_init)):
                 # update seq
                 base_seq = beam_init[j]
@@ -146,8 +113,8 @@ class PrefixBeamSearch():
                     # blank: only update the score
                     if top_k_index[j, t] == self.blank:
                         new_seq = Sequence(hyp=base_seq.hyp.copy(),
-                                           score=scores[j, t],
-                                           cache=new_cache[j])
+                                           score=scores[j, t].item(),
+                                           cache=base_seq.cache)
 
                         beam_A.append(new_seq)
                     # other unit: update hyp score statement and last
@@ -155,7 +122,7 @@ class PrefixBeamSearch():
                         hyp_new = base_seq.hyp.copy()
                         hyp_new.append(top_k_index[j, t].item())
                         new_seq = Sequence(hyp=hyp_new,
-                                           score=scores[j, t],
+                                           score=scores[j, t].item(),
                                            cache=new_cache[j])
                         beam_A.append(new_seq)
 
@@ -177,4 +144,5 @@ class PrefixBeamSearch():
             # 4. second pruned
             fusion_A.sort(key=lambda x: x.score, reverse=True)
             beam_init = fusion_A[:beam_size]
+
         return beam_init, encoder_out

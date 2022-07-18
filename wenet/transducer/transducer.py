@@ -50,7 +50,7 @@ class Transducer(ASRModel):
         self.joint = joint
         self.ctc = ctc
         self.attention_decoder = attention_decoder
-        self.bs: PrefixBeamSearch
+        self.bs = None
         if attention_decoder is not None:
             self.criterion_att = LabelSmoothingLoss(
                 size=vocab_size,
@@ -165,8 +165,7 @@ class Transducer(ASRModel):
     def init_bs(self):
         if self.bs is None:
             self.bs = PrefixBeamSearch(self.encoder, self.predictor,
-                                       self.joint, self.ctc, self.sos,
-                                       self.blank)
+                                       self.joint, self.ctc, self.blank)
 
     def _cal_transducer_score(
         self,
@@ -201,7 +200,6 @@ class Transducer(ASRModel):
         encoder_mask: torch.Tensor,
         hyps_pad: torch.Tensor,
         hyps_lens: torch.Tensor,
-        reverse_weight: float,
     ):
         # (beam_size, max_hyps_len)
         ori_hyps_pad = hyps_pad
@@ -215,7 +213,7 @@ class Transducer(ASRModel):
                                     self.ignore_id)
         decoder_out, r_decoder_out, _ = self.attention_decoder(
             encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
-            reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
+            self.reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
         # r_decoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a
@@ -369,10 +367,8 @@ class Transducer(ASRModel):
         td_score = self._cal_transducer_score(
             encoder_out,
             encoder_mask,
-            hyps,
             hyps_lens,
             hyps_pad,
-            beam_size,
         )
         # 2.2 calculate attention score
         decoder_out, r_decoder_out = self._cal_attn_score(
@@ -380,7 +376,6 @@ class Transducer(ASRModel):
             encoder_mask,
             hyps_pad,
             hyps_lens,
-            reverse_weight,
         )
 
         # Only use decoder score for rescoring
