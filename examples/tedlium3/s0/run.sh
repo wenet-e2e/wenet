@@ -103,7 +103,7 @@ fi
 
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  echo "Prepare data, prepare requried format"
+  echo "Prepare data, prepare required format"
   if [ ! -f $feat_dir/$train_set/segments ]; then
     echo "$0: No such file segments" && exit 1;
   else

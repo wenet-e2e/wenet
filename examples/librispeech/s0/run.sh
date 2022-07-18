@@ -109,8 +109,8 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  # Prepare wenet requried data
-  echo "Prepare data, prepare requried format"
+  # Prepare wenet required data
+  echo "Prepare data, prepare required format"
   for x in $dev_set ${recog_set} $train_set ; do
     tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
         $wave_data/$x/data.list

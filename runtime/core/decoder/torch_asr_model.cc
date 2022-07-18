@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <memory>
 #include <utility>
+#include <stdexcept>
 
 #include "torch/script.h"
 #include "torch/torch.h"
@@ -37,7 +38,17 @@ void TorchAsrModel::InitEngineThreads(int num_threads) {
 }
 
 void TorchAsrModel::Read(const std::string& model_path) {
-  torch::jit::script::Module model = torch::jit::load(model_path);
+  torch::DeviceType device = at::kCPU;
+#ifdef USE_GPU
+  if (!torch::cuda::is_available()) {
+    VLOG(1) << "CUDA is not available! Please check your GPU settings";
+    throw std::runtime_error("CUDA is not available!");
+  } else {
+    VLOG(1) << "CUDA available! Running on GPU";
+    device = at::kCUDA;
+  }
+#endif
+  torch::jit::script::Module model = torch::jit::load(model_path, device);
   model_ = std::make_shared<TorchModule>(std::move(model));
   torch::NoGradGuard no_grad;
   model_->eval();
@@ -125,24 +136,43 @@ void TorchAsrModel::ForwardEncoderFunc(
   }
 
   // 2. Encoder chunk forward
-  int requried_cache_size = chunk_size_ * num_left_chunks_;
+#ifdef USE_GPU
+  feats = feats.to(at::kCUDA);
+  att_cache_ = att_cache_.to(at::kCUDA);
+  cnn_cache_ = cnn_cache_.to(at::kCUDA);
+#endif
+  int required_cache_size = chunk_size_ * num_left_chunks_;
   torch::NoGradGuard no_grad;
-  std::vector<torch::jit::IValue> inputs = {feats, offset_, requried_cache_size,
+  std::vector<torch::jit::IValue> inputs = {feats, offset_, required_cache_size,
                                             att_cache_, cnn_cache_};
 
   // Refer interfaces in wenet/transformer/asr_model.py
   auto outputs =
       model_->get_method("forward_encoder_chunk")(inputs).toTuple()->elements();
   CHECK_EQ(outputs.size(), 3);
+#ifdef USE_GPU
+  torch::Tensor chunk_out = outputs[0].toTensor().to(at::kCPU);
+  att_cache_ = outputs[1].toTensor().to(at::kCPU);
+  cnn_cache_ = outputs[2].toTensor().to(at::kCPU);
+#else
   torch::Tensor chunk_out = outputs[0].toTensor();
   att_cache_ = outputs[1].toTensor();
   cnn_cache_ = outputs[2].toTensor();
+#endif
   offset_ += chunk_out.size(1);
 
   // The first dimension of returned value is for batchsize, which is 1
+#ifdef USE_GPU
+  chunk_out = chunk_out.to(at::kCUDA);
+  torch::Tensor ctc_log_probs =
+      model_->run_method("ctc_activation", chunk_out).toTensor();
+  ctc_log_probs = ctc_log_probs.to(at::kCPU)[0];
+  encoder_outs_.push_back(std::move(chunk_out.to(at::kCPU)));
+#else
   torch::Tensor ctc_log_probs =
       model_->run_method("ctc_activation", chunk_out).toTensor()[0];
   encoder_outs_.push_back(std::move(chunk_out));
+#endif
 
   // Copy to output
   int num_outputs = ctc_log_probs.size(0);
@@ -203,13 +233,23 @@ void TorchAsrModel::AttentionRescoring(
 
   // Step 2: Forward attention decoder by hyps and corresponding encoder_outs_
   torch::Tensor encoder_out = torch::cat(encoder_outs_, 1);
+#ifdef USE_GPU
+  hyps_tensor = hyps_tensor.to(at::kCUDA);
+  hyps_length = hyps_length.to(at::kCUDA);
+  encoder_out = encoder_out.to(at::kCUDA);
+#endif
   auto outputs = model_
                      ->run_method("forward_attention_decoder", hyps_tensor,
                                   hyps_length, encoder_out, reverse_weight)
                      .toTuple()
                      ->elements();
+#ifdef USE_GPU
+  auto probs = outputs[0].toTensor().to(at::kCPU);
+  auto r_probs = outputs[1].toTensor().to(at::kCPU);
+#else
   auto probs = outputs[0].toTensor();
   auto r_probs = outputs[1].toTensor();
+#endif
   CHECK_EQ(probs.size(0), num_hyps);
   CHECK_EQ(probs.size(1), max_hyps_len);
 

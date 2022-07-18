@@ -89,7 +89,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  echo "Prepare data, prepare requried format"
+  echo "Prepare data, prepare required format"
   for x in dev test ${train_set}; do
     if [ $data_type == "shard" ]; then
       tools/make_shard_list.py --num_utts_per_shard $num_utts_per_shard \
@@ -165,7 +165,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # only used in rescore mode for weighting different scores
   rescore_ctc_weight=0.5
   rescore_transducer_weight=0.5
-  rescore_attn_weight=1.0
+  rescore_attn_weight=0.5
   # only used in beam search, either pure beam search mode OR beam search inside rescoring
   search_ctc_weight=0.3
   search_transducer_weight=0.7

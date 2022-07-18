@@ -75,6 +75,12 @@ Or you can do the WebSocket server/client testing as described in the `WebSocket
 mkdir build && cd build && cmake .. && cmake --build .
 ```
 
+For building with GPU, you should turn on `GPU`:
+
+``` sh
+mkdir build && cd build && cmake -DGPU=ON .. && cmake --build .
+```
+
 * Step 3. Testing, the RTF(real time factor) is shown in the console.
 
 ``` sh

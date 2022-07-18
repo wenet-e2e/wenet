@@ -7,21 +7,17 @@ from wenet.utils.common import log_add
 
 class Sequence():
 
-    __slots__ = {'hyp', 'score', 'cache', 'last'}
+    __slots__ = {'hyp', 'score', 'cache'}
 
     def __init__(
         self,
         hyp: List[torch.Tensor],
         score,
         cache: List[torch.Tensor],
-        last,
     ):
         self.hyp = hyp
         self.score = score
-        # self.h_0 = h_0
-        # self.c_0 = c_0
         self.cache = cache
-        self.last = last
 
 
 class PrefixBeamSearch():
@@ -45,6 +41,31 @@ class PrefixBeamSearch():
         x = self.joint(encoder_x, pre_t)
         x = x.log_softmax(dim=-1)
         return x, new_cache
+
+    def _forward_encoder(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        simulate_streaming: bool = False,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # Let's assume B = batch_size
+        # 1. Encoder
+        if simulate_streaming and decoding_chunk_size > 0:
+            encoder_out, encoder_mask = self.encoder.forward_chunk_by_chunk(
+                speech,
+                decoding_chunk_size=decoding_chunk_size,
+                num_decoding_left_chunks=num_decoding_left_chunks
+            )  # (B, maxlen, encoder_dim)
+        else:
+            encoder_out, encoder_mask = self.encoder(
+                speech,
+                speech_lengths,
+                decoding_chunk_size=decoding_chunk_size,
+                num_decoding_left_chunks=num_decoding_left_chunks
+            )  # (B, maxlen, encoder_dim)
+        return encoder_out, encoder_mask
 
     def prefix_beam_search(self,
                            speech: torch.Tensor,
@@ -80,7 +101,6 @@ class PrefixBeamSearch():
                 hyp=[torch.tensor(self.blank)],
                 score=torch.tensor(0.0),
                 cache=cache,
-                last=self.blank,
             ))
         # 3. start decoding (notice: we use breathwise first searching)
         # !!!! In this decoding method: one frame do not output multi units. !!!!
@@ -98,6 +118,8 @@ class PrefixBeamSearch():
             # build score tensor to do torch.add() function
             scores = torch.concat([s.score.unsqueeze(0) for s in beam_init],
                                   dim=0).to(device)
+            # build score tensor to do torch.add() function
+            scores = torch.tensor([s.score for s in beam_init]).to(device)
 
             # 3.2 forward decoder
             logp, new_cache = self.forward_decoder_one_step(
@@ -122,12 +144,11 @@ class PrefixBeamSearch():
                 # update seq
                 base_seq = beam_init[j]
                 for t in range(beam_size):
-                    # blank: only update the score and last
+                    # blank: only update the score
                     if top_k_index[j, t] == self.blank:
                         new_seq = Sequence(hyp=base_seq.hyp.copy(),
                                            score=scores[j, t],
-                                           cache=new_cache[j],
-                                           last=self.blank)
+                                           cache=new_cache[j])
 
                         beam_A.append(new_seq)
                     # hyp[-1]: if last is blank{update hyp and statement}
@@ -138,14 +159,14 @@ class PrefixBeamSearch():
                             hyp_new.append(top_k_index[j, t].item())
                             new_seq = Sequence(hyp=hyp_new,
                                                score=scores[j, t],
-                                               cache=new_cache[j],
-                                               last=top_k_index[j, t].item())
+                                               cache=new_cache[j])
                             beam_A.append(new_seq)
                         else:
-                            new_seq = Sequence(hyp=base_seq.hyp.copy(),
-                                               score=scores[j, t],
-                                               cache=new_cache[j],
-                                               last=top_k_index[j, t].item())
+                            new_seq = Sequence(
+                                hyp=base_seq.hyp.copy(),
+                                score=scores[j, t],
+                                cache=new_cache[j],
+                            )
                             beam_A.append(new_seq)
                     # other unit: update hyp score statement and last
                     else:
@@ -153,8 +174,7 @@ class PrefixBeamSearch():
                         hyp_new.append(top_k_index[j, t].item())
                         new_seq = Sequence(hyp=hyp_new,
                                            score=scores[j, t],
-                                           cache=new_cache[j],
-                                           last=top_k_index[j, t].item())
+                                           cache=new_cache[j])
                         beam_A.append(new_seq)
 
             # 3.6 prefix fusion
@@ -164,8 +184,7 @@ class PrefixBeamSearch():
                 if_do_append = True
                 for t in range(len(fusion_A)):
                     # notice: A_ can not fusion with A
-                    if s1.hyp == fusion_A[t].hyp and s1.last == fusion_A[
-                            t].last:
+                    if s1.hyp == fusion_A[t].hyp:
                         fusion_A[t].score = log_add(
                             [fusion_A[t].score, s1.score])
                         if_do_append = False
