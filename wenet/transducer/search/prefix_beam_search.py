@@ -1,7 +1,6 @@
 from typing import List, Tuple
 
 import torch
-from wenet.transducer.predictor import PredictorBase
 from wenet.utils.common import log_add
 
 
@@ -22,22 +21,19 @@ class Sequence():
 
 class PrefixBeamSearch():
 
-    def __init__(self, encoder, predictor: PredictorBase, joint, ctc, sos,
-                 blank):
+    def __init__(self, encoder, predictor, joint, ctc, blank):
         self.encoder = encoder
         self.predictor = predictor
         self.joint = joint
         self.ctc = ctc
-        self.sos = sos
         self.blank = blank
-        self.padding = torch.zeros(1, 1)
 
     def forward_decoder_one_step(
             self, encoder_x: torch.Tensor, pre_t: torch.Tensor,
-            cache: List[torch.Tensor]
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+            cache: List[torch.Tensor],
+            padding: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         pre_t, new_cache = self.predictor.forward_step(pre_t.unsqueeze(-1),
-                                                       self.padding, cache)
+                                                       padding, cache)
         x = self.joint(encoder_x, pre_t)
         x = x.log_softmax(dim=-1)
         return x, new_cache
@@ -122,9 +118,12 @@ class PrefixBeamSearch():
             scores = torch.tensor([s.score for s in beam_init]).to(device)
 
             # 3.2 forward decoder
+            padding = torch.ones(scores.size(0), device=device)
             logp, new_cache = self.forward_decoder_one_step(
-                encoder_out[:, i, :].unsqueeze(1), input_hyp_tensor,
-                cache_batch)  # logp: (N, 1, 1, vocab_size)
+                encoder_out[:, i, :].unsqueeze(1),
+                input_hyp_tensor,
+                cache_batch,
+                padding=padding)  # logp: (N, 1, 1, vocab_size)
             logp = logp.squeeze(1).squeeze(1)  # logp: (N, vocab_size)
 
             # 3.3 shallow fusion for transducer score

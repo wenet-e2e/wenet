@@ -1,11 +1,10 @@
 from typing import List
 
 import torch
-from wenet.transducer.transducer import Transducer
 
 
 def basic_greedy_search(
-    model: Transducer,
+    model: torch.nn.Module,
     encoder_out: torch.Tensor,
     encoder_out_lens: torch.Tensor,
     n_steps: int = 64,
