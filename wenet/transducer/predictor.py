@@ -29,6 +29,16 @@ class PredictorBase(torch.nn.Module):
         _, _, _ = batch_size, method, device
         raise NotImplementedError("this is a base precictor")
 
+    def batch_to_cache(self,
+                       cache: List[torch.Tensor]) -> List[List[torch.Tensor]]:
+        _ = cache
+        raise NotImplementedError("this is a base precictor")
+
+    def cache_to_batch(self,
+                       cache: List[List[torch.Tensor]]) -> List[torch.Tensor]:
+        _ = cache
+        raise NotImplementedError("this is a base precictor")
+
     def forward(
         self,
         input: Optional[torch.Tensor],
@@ -109,6 +119,43 @@ class RNNPredictor(PredictorBase):
         # so we create forward_step for infering, forward for training
         _, _ = m, c
         return out
+
+    def batch_to_cache(self,
+                       cache: List[torch.Tensor]) -> List[List[torch.Tensor]]:
+        """
+        Args:
+           cache: [state_m, state_c]
+               state_ms: [1*n_layers, bs, ...]
+               state_cs: [1*n_layers, bs, ...]
+        Returns:
+           new_cache: [[state_m_1, state_c_1], [state_m_2, state_c_2]...]
+        """
+        assert len(cache) == 2
+        state_ms = cache[0]
+        state_cs = cache[1]
+
+        assert state_ms.size(1) == state_cs.size(1)
+
+        new_cache: List[List[torch.Tensor]] = []
+        for state_m, state_c in zip(torch.split(state_ms, 1, dim=1),
+                                    torch.split(state_cs, 1, dim=1)):
+            new_cache.append([state_m, state_c])
+        return new_cache
+
+    def cache_to_batch(self,
+                       cache: List[List[torch.Tensor]]) -> List[torch.Tensor]:
+        """
+        Args:
+            cache : [[state_m_1, state_c_1], [state_m_1, state_c_1]...]
+
+        Returns:
+            new_caceh: [state_ms, state_cs],
+                state_ms: [1*n_layers, bs, ...]
+                state_cs: [1*n_layers, bs, ...]
+        """
+        state_ms = torch.cat([states[0] for states in cache], dim=1)
+        state_cs = torch.cat([states[1] for states in cache], dim=1)
+        return [state_ms, state_cs]
 
     def init_state(
         self,
@@ -199,6 +246,19 @@ class EmbeddingPredictor(PredictorBase):
                         self.embed_size,
                         device=device),
         ]
+
+    def cache_to_batch(self,
+                       cache: List[List[torch.Tensor]]) -> List[torch.Tensor]:
+        """
+        Args:
+            cache : [[history_1], [history_2], [history3]...]
+
+        Returns:
+            new_caceh: [history],
+                history: [bs, ...]
+        """
+        history = torch.cat([h[0] for h in cache], dim=0)
+        return [history]
 
     def forward(self,
                 input: torch.Tensor,
