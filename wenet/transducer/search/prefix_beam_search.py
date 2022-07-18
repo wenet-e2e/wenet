@@ -151,23 +151,6 @@ class PrefixBeamSearch():
                                            cache=new_cache[j])
 
                         beam_A.append(new_seq)
-                    # hyp[-1]: if last is blank{update hyp and statement}
-                    #          else {dont update hyp and statement}
-                    elif top_k_index[j, t] == base_seq.hyp[-1]:
-                        if base_seq.last == self.blank:
-                            hyp_new = base_seq.hyp.copy()
-                            hyp_new.append(top_k_index[j, t].item())
-                            new_seq = Sequence(hyp=hyp_new,
-                                               score=scores[j, t],
-                                               cache=new_cache[j])
-                            beam_A.append(new_seq)
-                        else:
-                            new_seq = Sequence(
-                                hyp=base_seq.hyp.copy(),
-                                score=scores[j, t],
-                                cache=new_cache[j],
-                            )
-                            beam_A.append(new_seq)
                     # other unit: update hyp score statement and last
                     else:
                         hyp_new = base_seq.hyp.copy()
