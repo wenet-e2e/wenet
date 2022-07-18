@@ -41,7 +41,7 @@ std::mutex g_mutex;
 int g_total_waves_dur = 0;
 int g_total_decode_time = 0;
 
-void* decode(std::pair<std::string, std::string> wav) {
+void decode(std::pair<std::string, std::string> wav) {
   wenet::WavReader wav_reader(wav.second);
   int num_samples = wav_reader.num_samples();
   CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
