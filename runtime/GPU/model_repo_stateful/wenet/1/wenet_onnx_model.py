@@ -23,7 +23,7 @@ from swig_decoders import ctc_beam_search_decoder_batch, Scorer, map_batch
 
 class WenetModel(object):
     def __init__(self, model_config, device):
-        params = self.parse_model_parameters(model_config)
+        params = self.parse_model_parameters(model_config['parameters'])
 
         self.device = device
         print("Using device", device)
@@ -55,7 +55,16 @@ class WenetModel(object):
         print("Using rescoring:", bool(self.rescoring))
         print("Successfully load all parameters!")
 
-        self.dtype = torch.float16
+        log_probs_config = pb_utils.get_input_config_by_name(
+            model_config, "log_probs")
+        # Convert Triton types to numpy types
+        log_probs_dtype = pb_utils.triton_string_to_numpy(
+            log_probs_config['data_type'])
+
+        if log_probs_dtype == np.float32:
+            self.dtype = torch.float32
+        else:
+            self.dtype = torch.float16
 
     def generate_init_cache(self):
         encoder_out = None

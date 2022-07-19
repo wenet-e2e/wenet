@@ -57,7 +57,7 @@ class TritonPythonModel:
             self.device = 'cpu'
 
         # get parameter configurations
-        self.model = WenetModel(model_config["parameters"], self.device)
+        self.model = WenetModel(self.model_config, self.device)
 
         # Get OUTPUT0 configuration
         output0_config = pb_utils.get_output_config_by_name(
