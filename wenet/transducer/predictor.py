@@ -41,7 +41,7 @@ class PredictorBase(torch.nn.Module):
 
     def forward(
         self,
-        input: Optional[torch.Tensor],
+        input: torch.Tensor,
         cache: Optional[List[torch.Tensor]] = None,
     ):
         _, _, = input, cache
@@ -364,3 +364,118 @@ class EmbeddingPredictor(PredictorBase):
         # TODO(Mddct): we need padding new_cache in future
         # new_cache = ApplyPadding(history, padding, new_cache)
         return (output, [new_cache])
+
+
+class ConvPredictor(PredictorBase):
+
+    def __init__(self,
+                 voca_size: int,
+                 embed_size: int,
+                 embed_dropout: float,
+                 history_size: int = 2,
+                 activation: str = "relu",
+                 bias: bool = False,
+                 layer_norm_epsilon: float = 1e-5) -> None:
+        assert check_argument_types()
+        super().__init__()
+
+        assert history_size >= 0
+        self.embed_size = embed_size
+        self.context_size = history_size + 1
+        self.embed = nn.Embedding(voca_size, self.embed_size)
+        self.embed_dropout = nn.Dropout(p=embed_dropout)
+        self.conv = nn.Conv1d(in_channels=embed_size,
+                              out_channels=embed_size,
+                              kernel_size=self.context_size,
+                              padding=0,
+                              groups=embed_size,
+                              bias=bias)
+        self.norm = nn.LayerNorm(embed_size, eps=layer_norm_epsilon)
+        self.activatoin = get_activation(activation)
+
+    def init_state(self,
+                   batch_size: int,
+                   device: torch.device,
+                   method: str = "zero") -> List[torch.Tensor]:
+        assert batch_size > 0
+        assert method == "zero"
+        return [
+            torch.zeros(batch_size,
+                        self.context_size - 1,
+                        self.embed_size,
+                        device=device)
+        ]
+
+    def cache_to_batch(self,
+                       cache: List[List[torch.Tensor]]) -> List[torch.Tensor]:
+        """
+        Args:
+            cache : [[history_1], [history_2], [history3]...]
+
+        Returns:
+            new_caceh: [history],
+                history: [bs, ...]
+        """
+        history = torch.cat([h[0] for h in cache], dim=0)
+        return [history]
+
+    def batch_to_cache(self,
+                       cache: List[torch.Tensor]) -> List[List[torch.Tensor]]:
+        """
+        Args:
+            cache : [history]
+                history: [bs, ...]
+        Returns:
+            new_ache : [[history_1], [history_2], [history_3]...]
+        """
+        assert len(cache) == 1
+        cache_0 = cache[0]
+        history: List[List[torch.Tensor]] = []
+        for h in torch.split(cache_0, 1, dim=0):
+            history.append([h])
+        return history
+
+    def forward(self,
+                input: torch.Tensor,
+                cache: Optional[List[torch.Tensor]] = None):
+        """ forward for training
+        """
+        input = self.embed(input)  # [bs, seq_len, embed]
+        input = self.embed_dropout(input)
+        if cache is None:
+            zeros = self.init_state(input.size(0), device=input.device)[0]
+        else:
+            assert len(cache) == 1
+            zeros = cache[0]
+
+        input = torch.cat((zeros, input),
+                          dim=1)  # [bs, context_size-1 + seq_len, embed]
+        input = input.permute(0, 2, 1)
+        out = self.conv(input).permute(0, 2, 1)
+        out = self.activatoin(self.norm(out))
+        return out
+
+    def forward_step(
+            self, input: torch.Tensor, padding: torch.Tensor,
+            cache: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        """ forward step for inference
+        Args:
+            input (torch.Tensor): [batch_size, time_step=1]
+            padding (torch.Tensor): [batch_size,1], 1 is padding value
+            cache: for embedding predictor, cache[0] == history
+        """
+        assert input.size(1) == 1
+        assert len(cache) == 1
+        history = cache[0]
+        assert history.size(1) == self.context_size - 1
+        input = self.embed(input)  # [bs, 1, embed]
+        input = self.embed_dropout(input)
+        context_input = torch.cat((history, input), dim=1)
+        input = context_input.permute(0, 2, 1)
+        out = self.conv(context_input).permute(0, 2, 1)
+        out = self.activatoin(self.norm(out))
+
+        new_cache = context_input[:, 1:, :]
+        # TODO(Mddct): apply padding in future
+        return (out, [new_cache])
