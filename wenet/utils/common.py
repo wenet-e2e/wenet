@@ -183,6 +183,16 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
     return float(numerator) / float(denominator)
 
 
+def get_rnn(rnn_type: str) -> torch.nn.Module:
+    assert rnn_type in ["rnn", "lstm", "gru"]
+    if rnn_type == "rnn":
+        return torch.nn.RNN
+    elif rnn_type == "lstm":
+        return torch.nn.LSTM
+    else:
+        return torch.nn.GRU
+
+
 def get_activation(act):
     """Return activation function."""
     # Lazy load to avoid unused import
