@@ -26,11 +26,14 @@
 * Training weight info: transducer_weight 0.4, ctc_weight 0.2, attention_weight 0.4, average_num 10
 * Predictor type: lstm
 
-| decoding mode             | CER   |
-|---------------------------|-------|
-| rnnt greedy search        | 4.88  |
-| ctc prefix beam search    | 5.02  |
-| ctc prefix beam + rescore | 4.51  |
+| decoding mode                         | CER   |
+|---------------------------------------|-------|
+| rnnt greedy search                    | 4.88  |
+| rnnt beam search                      | 4.67  |
+| ctc prefix beam search                | 5.02  |
+| ctc prefix beam + rescore             | 4.51  |
+| ctc prefix beam + rnnt&attn rescore   | 4.45  |
+| rnnt prefix beam + rnnt&attn rescore  | 4.49  |
 
 
 ## U2++ Conformer Result
