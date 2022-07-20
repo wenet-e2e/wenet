@@ -29,10 +29,11 @@
 | decoding mode             | CER   |
 |---------------------------|-------|
 | rnnt greedy search        | 4.88  |
+| rnnt beam search          | 4.67  |
 | ctc prefix beam search    | 5.02  |
 | ctc prefix beam + rescore | 4.51  |
-
-
+| ctc prefix beam + rnnt&attn rescore | 4.45  |
+| rnnt prefix beam + rnnt&attn rescore | 4.49 |
 ## U2++ Conformer Result
 
 * Feature info: using fbank feature, dither, cmvn, oneline speed perturb
