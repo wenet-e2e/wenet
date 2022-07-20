@@ -3,15 +3,17 @@ from typing import Dict, List, Optional, Tuple, Union
 import torch
 import torchaudio
 from torch import nn
+from torch.nn.utils.rnn import pad_sequence
 from typeguard import check_argument_types
+from wenet.transducer.predictor import PredictorBase
+from wenet.transducer.search.greedy_search import basic_greedy_search
+from wenet.transducer.search.prefix_beam_search import PrefixBeamSearch
+from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list, th_accuracy)
-from wenet.transducer.search.prefix_beam_search import PrefixBeamSearch
-from torch.nn.utils.rnn import pad_sequence
-from wenet.transformer.asr_model import ASRModel
 
 
 class Transducer(ASRModel):
@@ -21,7 +23,7 @@ class Transducer(ASRModel):
         vocab_size: int,
         blank: int,
         encoder: nn.Module,
-        predictor: nn.Module,
+        predictor: PredictorBase,
         joint: nn.Module,
         attention_decoder: Optional[Union[TransformerDecoder,
                                           BiTransformerDecoder]] = None,
@@ -36,17 +38,9 @@ class Transducer(ASRModel):
     ) -> None:
         assert check_argument_types()
         assert attention_weight + ctc_weight + transducer_weight == 1.0
-        super().__init__(
-            vocab_size,
-            encoder,
-            attention_decoder,
-            ctc,
-            ctc_weight,
-            ignore_id,
-            reverse_weight,
-            lsm_weight,
-            length_normalized_loss
-        )
+        super().__init__(vocab_size, encoder, attention_decoder, ctc,
+                         ctc_weight, ignore_id, reverse_weight, lsm_weight,
+                         length_normalized_loss)
 
         self.blank = blank
         self.transducer_weight = transducer_weight
@@ -170,24 +164,16 @@ class Transducer(ASRModel):
 
     def init_bs(self):
         if self.bs is None:
-            self.bs = PrefixBeamSearch(
-                self.encoder,
-                self.predictor,
-                self.joint,
-                self.ctc,
-                self.sos,
-                self.blank)
+            self.bs = PrefixBeamSearch(self.encoder, self.predictor,
+                                       self.joint, self.ctc, self.blank)
 
     def _cal_transducer_score(
         self,
         encoder_out: torch.Tensor,
         encoder_mask: torch.Tensor,
-        hyps: List[List],
         hyps_lens: torch.Tensor,
         hyps_pad: torch.Tensor,
-        beam_size: int,
     ):
-        device = encoder_out.device
         # ignore id -> blank, add blank at head
         hyps_pad_blank = add_blank(hyps_pad, self.blank, self.ignore_id)
         xs_in_lens = encoder_mask.squeeze(1).sum(1).int()
@@ -214,7 +200,6 @@ class Transducer(ASRModel):
         encoder_mask: torch.Tensor,
         hyps_pad: torch.Tensor,
         hyps_lens: torch.Tensor,
-        reverse_weight: float,
     ):
         # (beam_size, max_hyps_len)
         ori_hyps_pad = hyps_pad
@@ -228,7 +213,7 @@ class Transducer(ASRModel):
                                     self.ignore_id)
         decoder_out, r_decoder_out, _ = self.attention_decoder(
             encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
-            reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
+            self.reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
         decoder_out = decoder_out.cpu().numpy()
         # r_decoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a
@@ -236,7 +221,6 @@ class Transducer(ASRModel):
         r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         r_decoder_out = r_decoder_out.cpu().numpy()
         return decoder_out, r_decoder_out
-
 
     def beam_search(
         self,
@@ -284,24 +268,21 @@ class Transducer(ASRModel):
         )
         return beam[0].hyp[1:], beam[0].score
 
-
-
     def transducer_attention_rescoring(
-        self,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
-        beam_size: int,
-        decoding_chunk_size: int = -1,
-        num_decoding_left_chunks: int = -1,
-        simulate_streaming: bool = False,
-        reverse_weight: float = 0.0,
-        ctc_weight: float = 0.0,
-        attn_weight: float = 0.0,
-        transducer_weight: float = 0.0,
-        search_ctc_weight: float = 1.0,
-        search_transducer_weight: float = 0.0,
-        beam_search_type: str = 'transducer'
-    ) -> List[List[int]]:
+            self,
+            speech: torch.Tensor,
+            speech_lengths: torch.Tensor,
+            beam_size: int,
+            decoding_chunk_size: int = -1,
+            num_decoding_left_chunks: int = -1,
+            simulate_streaming: bool = False,
+            reverse_weight: float = 0.0,
+            ctc_weight: float = 0.0,
+            attn_weight: float = 0.0,
+            transducer_weight: float = 0.0,
+            search_ctc_weight: float = 1.0,
+            search_transducer_weight: float = 0.0,
+            beam_search_type: str = 'transducer') -> List[List[int]]:
         """beam search
 
         Args:
@@ -343,7 +324,7 @@ class Transducer(ASRModel):
         # encoder_out: (1, maxlen, encoder_dim), len(hyps) = beam_size
         self.init_bs()
         if beam_search_type == 'transducer':
-            beam, encoder_out = self.bs.transducer_prefix_beam_search(
+            beam, encoder_out = self.bs.prefix_beam_search(
                 speech,
                 speech_lengths,
                 decoding_chunk_size=decoding_chunk_size,
@@ -356,26 +337,25 @@ class Transducer(ASRModel):
             hyps = [s.hyp[1:] for s in beam]
 
         elif beam_search_type == 'ctc':
-            hyps, encoder_out = self.bs.ctc_prefix_beam_search(
+            hyps, encoder_out = self.ctc_prefix_beam_search(
                 speech,
                 speech_lengths,
                 beam_size=beam_size,
                 decoding_chunk_size=decoding_chunk_size,
                 num_decoding_left_chunks=num_decoding_left_chunks,
-                simulate_streaming=simulate_streaming
-            )
+                simulate_streaming=simulate_streaming)
             beam_score = [hyp[1] for hyp in hyps]
             hyps = [hyp[0] for hyp in hyps]
         assert len(hyps) == beam_size
 
         # build hyps and encoder output
         hyps_pad = pad_sequence([
-            torch.tensor(hyp, device=device, dtype=torch.long)
-            for hyp in hyps
+            torch.tensor(hyp, device=device, dtype=torch.long) for hyp in hyps
         ], True, self.ignore_id)  # (beam_size, max_hyps_len)
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
+
         encoder_out = encoder_out.repeat(beam_size, 1, 1)
         encoder_mask = torch.ones(beam_size,
                                   1,
@@ -387,10 +367,8 @@ class Transducer(ASRModel):
         td_score = self._cal_transducer_score(
             encoder_out,
             encoder_mask,
-            hyps,
             hyps_lens,
             hyps_pad,
-            beam_size,
         )
         # 2.2 calculate attention score
         decoder_out, r_decoder_out = self._cal_attn_score(
@@ -398,7 +376,6 @@ class Transducer(ASRModel):
             encoder_mask,
             hyps_pad,
             hyps_lens,
-            reverse_weight,
         )
 
         # Only use decoder score for rescoring
@@ -427,7 +404,6 @@ class Transducer(ASRModel):
 
         return hyps[best_index], best_score
 
-
     def greedy_search(
         self,
         speech: torch.Tensor,
@@ -435,6 +411,7 @@ class Transducer(ASRModel):
         decoding_chunk_size: int = -1,
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
+        n_steps: int = 64,
     ) -> List[List[int]]:
         """ greedy search
 
@@ -456,62 +433,22 @@ class Transducer(ASRModel):
         assert speech.size(0) == 1
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
-        batch_size = speech.shape[0]
-        device = speech.device
+        # TODO(Mddct): forward chunk by chunk
+        _ = simulate_streaming
         # Let's assume B = batch_size
-        # NOTE(Mddct): only support non streamming for now
-        num_decoding_left_chunks = -1
-        decoding_chunk_size = -1
-        simulate_streaming = False
         encoder_out, encoder_mask = self.encoder(
             speech,
             speech_lengths,
             decoding_chunk_size,
             num_decoding_left_chunks,
         )
-        maxlen = encoder_out.size(1)
         encoder_out_lens = encoder_mask.squeeze(1).sum()
+        hyps = basic_greedy_search(self,
+                                   encoder_out,
+                                   encoder_out_lens,
+                                   n_steps=n_steps)
 
-        # fake padding
-        padding = torch.zeros(1, 1).to(device)
-        # sos
-        pred_input_step = torch.tensor([self.blank], device=device).reshape(1, 1)
-        state_m, state_c = self.predictor.init_state(1, method="zero")
-        state_m = state_m.to(device)
-        state_c = state_c.to(device)
-        t = 0
-        hyps = []
-        prev_out_nblk = True
-        pred_out_step = None
-        per_frame_max_noblk = 100
-        per_frame_noblk = 0
-        while t < encoder_out_lens:
-            encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
-            if prev_out_nblk:
-                pred_out_step, state_out_m, state_out_c = self.predictor.forward_step(
-                    pred_input_step, padding, state_m, state_c)  # [1, 1, P]
-
-            joint_out_step = self.joint(encoder_out_step,
-                                        pred_out_step)  # [1,1,v]
-            joint_out_probs = joint_out_step.log_softmax(dim=-1)
-
-            joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
-            if joint_out_max != self.blank:
-                hyps.append(joint_out_max.item())
-                prev_out_nblk = True
-                per_frame_noblk = per_frame_noblk + 1
-                pred_input_step = joint_out_max.reshape(1, 1)
-                state_m, state_c = state_out_m, state_out_c
-
-            if joint_out_max == self.blank or per_frame_noblk >= per_frame_max_noblk:
-                if per_frame_noblk >= per_frame_max_noblk:
-                    prev_out_nblk = False
-                # TODO(Mddct): make t in chunk for streamming
-                # or t should't be too lang to predict none blank
-                t = t + 1
-                per_frame_noblk = 0
-
-        return [hyps]
+        return hyps
 
     @torch.jit.export
     def forward_encoder_chunk(
@@ -528,11 +465,12 @@ class Transducer(ASRModel):
 
     @torch.jit.export
     def forward_predictor_step(
-        self, xs: torch.Tensor, state_m: torch.Tensor, state_c: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+            self, xs: torch.Tensor, cache: List[torch.Tensor]
+    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        assert len(cache) == 2
         # fake padding
         padding = torch.zeros(1, 1)
-        return self.predictor.forward_step(xs, padding, state_m, state_c)
+        return self.predictor.forward_step(xs, padding, cache)
 
     @torch.jit.export
     def forward_joint_step(self, enc_out: torch.Tensor,
@@ -540,6 +478,5 @@ class Transducer(ASRModel):
         return self.joint(enc_out, pred_out)
 
     @torch.jit.export
-    def forward_predictor_init_state(
-            self) -> Tuple[torch.Tensor, torch.Tensor]:
-        return self.predictor.init_state(1)
+    def forward_predictor_init_state(self) -> List[torch.Tensor]:
+        return self.predictor.init_state(1, device=torch.device("cpu"))
