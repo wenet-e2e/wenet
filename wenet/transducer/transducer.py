@@ -337,7 +337,7 @@ class Transducer(ASRModel):
             hyps = [s.hyp[1:] for s in beam]
 
         elif beam_search_type == 'ctc':
-            hyps, encoder_out = self.ctc_prefix_beam_search(
+            hyps, encoder_out = self._ctc_prefix_beam_search(
                 speech,
                 speech_lengths,
                 beam_size=beam_size,
