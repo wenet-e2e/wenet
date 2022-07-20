@@ -8,7 +8,7 @@
 [**Roadmap**](ROADMAP.md)
 | [**Docs**](https://wenet-e2e.github.io/wenet/)
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
-| [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
+| [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/LibTorch)
 | [**Runtime (android)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet)
 | [**Pretrained Models**](docs/pretrained_models.md)
 
