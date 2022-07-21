@@ -473,7 +473,7 @@ class ConvPredictor(PredictorBase):
         input = self.embed_dropout(input)
         context_input = torch.cat((history, input), dim=1)
         input = context_input.permute(0, 2, 1)
-        out = self.conv(context_input).permute(0, 2, 1)
+        out = self.conv(input).permute(0, 2, 1)
         out = self.activatoin(self.norm(out))
 
         new_cache = context_input[:, 1:, :]
