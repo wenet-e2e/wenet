@@ -14,7 +14,8 @@
 
 import torch
 from wenet.transducer.joint import TransducerJoint
-from wenet.transducer.predictor import EmbeddingPredictor, RNNPredictor
+from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
+                                        RNNPredictor)
 from wenet.transducer.transducer import Transducer
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.cmvn import GlobalCMVN
@@ -62,14 +63,18 @@ def init_model(configs):
         predictor_type = configs.get('predictor', 'rnn')
         if predictor_type == 'rnn':
             predictor = RNNPredictor(vocab_size, **configs['predictor_conf'])
-        elif predictor_type == "embedding":
+        elif predictor_type == 'embedding':
             predictor = EmbeddingPredictor(vocab_size,
                                            **configs['predictor_conf'])
             configs['predictor_conf']['output_size'] = configs[
                 'predictor_conf']['embed_size']
+        elif predictor_type == 'conv':
+            predictor = ConvPredictor(vocab_size, **configs['predictor_conf'])
+            configs['predictor_conf']['output_size'] = configs[
+                'predictor_conf']['embed_size']
         else:
             raise NotImplementedError(
-                "only rnn and embedding type support now")
+                "only rnn, embedding and conv type support now")
         configs['joint_conf']['enc_output_size'] = configs['encoder_conf'][
             'output_size']
         configs['joint_conf']['pred_output_size'] = configs['predictor_conf'][
