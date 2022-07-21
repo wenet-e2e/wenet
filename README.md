@@ -17,7 +17,7 @@
 The main motivation of WeNet is to close the gap between research and production end-to-end (E2E) speech recognition models,
 to reduce the effort of productionizing E2E models, and to explore better E2E models for production.
 
-## :fire: News 
+## :fire: News
 
 * 2022.07.21: RNN-T is supported now, see [rnnt](https://github.com/wenet-e2e/wenet/tree/main/examples/aishell/rnnt) for benchmark.
 * 2022.07.03: Python binding is stable, see [python binding](https://github.com/wenet-e2e/wenet/tree/main/runtime/binding/python) for usage.
