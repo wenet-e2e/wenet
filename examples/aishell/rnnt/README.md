@@ -19,12 +19,13 @@
 | ctc prefix beam search    | 5.17  |
 | ctc prefix beam + rescore | 4.48  |
 
-## conformer Result
+## Conformer Result
 
 * Feature info: using fbank feature, dither, cmvn, online speed perturb
 * Training info: lr 0.001, batch size 20, 8 gpu, acc_grad 1, 140 epochs, dither 0.1
 * Training weight info: transducer_weight 0.4, ctc_weight 0.2, attention_weight 0.4, average_num 10
 * Predictor type: lstm
+* Model link: https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20220728_conformer_rnnt_exp.tar.gz
 
 | decoding mode                         | CER   |
 |---------------------------------------|-------|
