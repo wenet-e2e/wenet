@@ -48,19 +48,25 @@
 | rnnt greedy search        | 5.68  | 6.26  |
 
 ## training loss ablation study
+
 note: 
+
 1 If rnnt is checked, greedy means rnnt  greedy search; so is beam 
+
 2 if rnnt is checked, rescoring means rnnt beam & attention rescoring
+
 3 if only 'ctc & att' is checked, greedy means ctc gredy search; so is beam 
+
 4 if only  'ctc & att' (AED)  is checked, rescoring means ctc beam & attention rescoring
+
 5 what if rnnt model do search of wenet's style, comming soon
 
 | rnnt | ctc | att | greedy | beam | rescoring | fusion |
-|------------------------------------------------------------------------|
+|-------------------------------------------------------|
 | √    | √   | √   |   4.88 | 4.67 |      4.45 |   4.49 |
-| √    | √   |       |   5.56 |        |              |           |
-| √    |       | √   |   5.03 |        |              |           |
-| √    |       |       |          |         |              |           |
-|        | √   | √   |   4.94 | 4.94 |      4.61 |       / |
+| √    | √   |     |   5.56 |      |           |        |
+| √    |     | √   |   5.03 |      |           |        |
+| √    |     |     |        |      |           |        |
+|      | √   | √   |   4.94 | 4.94 |      4.61 |        |
 
 
