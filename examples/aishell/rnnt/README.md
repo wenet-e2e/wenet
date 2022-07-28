@@ -62,7 +62,7 @@ note:
 5 what if rnnt model do search of wenet's style, comming soon
 
 | rnnt | ctc | att | greedy | beam | rescoring | fusion |
-|-------------------------------------------------------|
+|------|-----|-----|--------|------|-----------|--------|
 | √    | √   | √   |   4.88 | 4.67 |      4.45 |   4.49 |
 | √    | √   |     |   5.56 |      |           |        |
 | √    |     | √   |   5.03 |      |           |        |
