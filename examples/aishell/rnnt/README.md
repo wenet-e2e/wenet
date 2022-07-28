@@ -47,7 +47,7 @@
 |---------------------------|-------|-------|
 | rnnt greedy search        | 5.68  | 6.26  |
 
-## training loss ablation study
+## Training loss ablation study
 
 note: 
 
