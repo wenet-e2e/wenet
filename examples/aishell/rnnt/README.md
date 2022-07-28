@@ -51,11 +51,11 @@
 
 note: 
 
-1 If rnnt is checked, greedy means rnnt  greedy search; so is beam 
+1 If rnnt is checked, greedy means rnnt  greedy search; so is beam
 
 2 if rnnt is checked, rescoring means rnnt beam & attention rescoring
 
-3 if only 'ctc & att' is checked, greedy means ctc gredy search; so is beam 
+3 if only 'ctc & att' is checked, greedy means ctc gredy search; so is beam
 
 4 if only  'ctc & att' (AED)  is checked, rescoring means ctc beam & attention rescoring
 
@@ -68,5 +68,3 @@ note:
 | ✔    |     |✔    |   5.03 |      |           |        |
 | ✔    |     |     |        |      |           |        |
 |      | ✔   | ✔   |   4.94 | 4.94 |      4.61 |        |
-
-
