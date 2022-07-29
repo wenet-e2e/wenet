@@ -15,7 +15,7 @@ fi
 
 srilm_url="https://github.com/BitSpeech/SRILM/archive/refs/tags/1.7.3.tar.gz"
 
-if [ -z ./srilm.tar.gz ];  then
+if [ ! -f ./srilm.tar.gz ];  then
   if ! wget -O ./srilm.tar.gz "$srilm_url"; then
     echo 'There was a problem downloading the file.'
     echo 'Check you internet connection and try again.'
