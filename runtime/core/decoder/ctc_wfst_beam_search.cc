@@ -89,17 +89,11 @@ void CtcWfstBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
           std::max_element(logp[i].begin(), logp[i].end()) - logp[i].begin();
       // Optional, adding one blank frame if we has skipped it in two same
       // symbols
-      if (cur_best != 0 && cur_best == last_best_) {
-        if (is_last_frame_blank_){
-          decodable_.AcceptLoglikes(last_frame_prob_);
-          decoder_.AdvanceDecoding(&decodable_, 1);
-          decoded_frames_mapping_.push_back(num_frames_ - 1);
-          VLOG(2) << "Adding blank frame at symbol " << cur_best;
-        }
-        else{
-          // skip it(merge it)
-          continue;
-        }
+      if (cur_best != 0 && is_last_frame_blank_ && cur_best == last_best_) {
+        decodable_.AcceptLoglikes(last_frame_prob_);
+        decoder_.AdvanceDecoding(&decodable_, 1);
+        decoded_frames_mapping_.push_back(num_frames_ - 1);
+        VLOG(2) << "Adding blank frame at symbol " << cur_best;
       }
       last_best_ = cur_best;
 
