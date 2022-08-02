@@ -138,8 +138,10 @@ bool SplitUTF8StringToWords(
       }
       if (end == start + 1) {
         ++start;
-        no_oov = false;
-        LOG(WARNING) << word << " is oov.";
+        if (word != " "){
+          no_oov = false;
+          LOG(WARNING) << word << " is oov.";
+        }  
       }
     }
   }
