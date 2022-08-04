@@ -222,4 +222,28 @@ void AsrDecoder::AttentionRescoring() {
   std::sort(result_.begin(), result_.end(), DecodeResult::CompareFunc);
 }
 
+void AsrDecoder::ComputeTextConfidence(const std::vector<std::string>& text,
+                                       std::vector<float>* confidence) {
+  // 1. Decode until kEndFeats
+  while (this->Decode() != DecodeState::kEndFeats) {}
+  // 2. Mapping text to unit id
+  std::vector<int> ids;
+  for (const auto& u : text) {
+    auto id = unit_table_->Find(u);
+    CHECK(id != fst::SymbolTable::kNoSymbol);
+    ids.push_back(id);
+  }
+  // 3. Compute confidence of each model unit
+  std::vector<std::vector<int>> hyps(1);
+  std::vector<float> rescoring_score;
+  std::vector<std::vector<float>> units_score;
+  hyps[0] = std::move(ids);
+  model_->AttentionRescoring(hyps, opts_.reverse_weight,
+                             &rescoring_score, &units_score);
+  confidence->resize(hyps[0].size());
+  for (int i = 0; i < hyps[0].size(); i++) {
+    (*confidence)[i] = std::exp(units_score[0][i]);
+  }
+}
+
 }  // namespace wenet

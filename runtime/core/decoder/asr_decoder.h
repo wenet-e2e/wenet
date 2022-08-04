@@ -127,6 +127,8 @@ class AsrDecoder {
            feature_pipeline_->config().sample_rate;
   }
   const std::vector<DecodeResult>& result() const { return result_; }
+  void ComputeTextConfidence(const std::vector<std::string>& text,
+                             std::vector<float>* confidence);
 
  private:
   DecodeState AdvanceDecoding(bool block = true);

@@ -41,9 +41,11 @@ class TorchAsrModel : public AsrModel {
   void Read(const std::string& model_path);
   std::shared_ptr<TorchModule> torch_model() const { return model_; }
   void Reset() override;
-  void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
-                          float reverse_weight,
-                          std::vector<float>* rescoring_score) override;
+  void AttentionRescoring(
+      const std::vector<std::vector<int>>& hyps,
+      float reverse_weight,
+      std::vector<float>* rescoring_score,
+      std::vector<std::vector<float>>* units_score = nullptr) override;
   std::shared_ptr<AsrModel> Copy() const override;
 
  protected:
@@ -51,7 +53,9 @@ class TorchAsrModel : public AsrModel {
                           std::vector<std::vector<float>>* ctc_prob) override;
 
   float ComputeAttentionScore(const torch::Tensor& prob,
-                              const std::vector<int>& hyp, int eos);
+                              const std::vector<int>& hyp,
+                              int eos,
+                              std::vector<float> *scores);
 
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;

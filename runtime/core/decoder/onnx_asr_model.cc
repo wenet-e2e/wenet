@@ -322,9 +322,11 @@ float OnnxAsrModel::ComputeAttentionScore(const float* prob,
   return score;
 }
 
-void OnnxAsrModel::AttentionRescoring(const std::vector<std::vector<int>>& hyps,
-                                      float reverse_weight,
-                                      std::vector<float>* rescoring_score) {
+void OnnxAsrModel::AttentionRescoring(
+    const std::vector<std::vector<int>>& hyps,
+    float reverse_weight,
+    std::vector<float>* rescoring_score,
+    std::vector<std::vector<float>>* units_score) {
   Ort::MemoryInfo memory_info =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
   CHECK(rescoring_score != nullptr);

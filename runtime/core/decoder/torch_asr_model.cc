@@ -187,22 +187,31 @@ void TorchAsrModel::ForwardEncoderFunc(
 
 float TorchAsrModel::ComputeAttentionScore(const torch::Tensor& prob,
                                            const std::vector<int>& hyp,
-                                           int eos) {
-  float score = 0.0f;
+                                           int eos,
+                                           std::vector<float> *scores) {
+  float total_score = 0.0f;
+  scores->clear();
+  scores->reserve(hyp.size());
   auto accessor = prob.accessor<float, 2>();
   for (size_t j = 0; j < hyp.size(); ++j) {
-    score += accessor[j][hyp[j]];
+    total_score += accessor[j][hyp[j]];
+    scores->push_back(accessor[j][hyp[j]]);
   }
-  score += accessor[hyp.size()][eos];
-  return score;
+  total_score += accessor[hyp.size()][eos];
+  return total_score;
 }
 
 void TorchAsrModel::AttentionRescoring(
-    const std::vector<std::vector<int>>& hyps, float reverse_weight,
-    std::vector<float>* rescoring_score) {
+    const std::vector<std::vector<int>>& hyps,
+    float reverse_weight,
+    std::vector<float>* rescoring_score,
+    std::vector<std::vector<float>>* units_score) {
   CHECK(rescoring_score != nullptr);
   int num_hyps = hyps.size();
   rescoring_score->resize(num_hyps, 0.0f);
+  if (units_score != nullptr) {
+    units_score->resize(num_hyps);
+  }
 
   if (num_hyps == 0) {
     return;
@@ -256,11 +265,11 @@ void TorchAsrModel::AttentionRescoring(
   // Step 3: Compute rescoring score
   for (size_t i = 0; i < num_hyps; ++i) {
     const std::vector<int>& hyp = hyps[i];
-    float score = 0.0f;
+    float score = 0.0f, r_score = 0.0;
+    std::vector<float> u_score, ru_score(hyp.size(), 0.0);
     // left-to-right decoder score
-    score = ComputeAttentionScore(probs[i], hyp, eos_);
+    score = ComputeAttentionScore(probs[i], hyp, eos_, &u_score);
     // Optional: Used for right to left score
-    float r_score = 0.0f;
     if (is_bidirectional_decoder_ && reverse_weight > 0) {
       // right-to-left score
       CHECK_EQ(r_probs.size(0), num_hyps);
@@ -268,12 +277,21 @@ void TorchAsrModel::AttentionRescoring(
       std::vector<int> r_hyp(hyp.size());
       std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
       // right to left decoder score
-      r_score = ComputeAttentionScore(r_probs[i], r_hyp, eos_);
+      r_score = ComputeAttentionScore(r_probs[i], r_hyp, eos_, &ru_score);
+      std::reverse(ru_score.begin(), ru_score.end());
     }
 
     // combined left-to-right and right-to-left score
-    (*rescoring_score)[i] =
-        score * (1 - reverse_weight) + r_score * reverse_weight;
+    (*rescoring_score)[i] =  score * (1 - reverse_weight) +
+                             r_score * reverse_weight;
+    if (units_score != nullptr) {
+      CHECK_EQ(u_score.size(), ru_score.size());
+      (*units_score)[i].resize(u_score.size());
+      for (int j = 0; j < u_score.size(); j++) {
+        (*units_score)[i][j] = u_score[j] * (1 - reverse_weight) +
+                               ru_score[j] * reverse_weight;
+      }
+    }
   }
 }
 

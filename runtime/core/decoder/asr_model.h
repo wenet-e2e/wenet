@@ -39,9 +39,11 @@ class AsrModel {
       const std::vector<std::vector<float>>& chunk_feats,
       std::vector<std::vector<float>>* ctc_prob);
 
-  virtual void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
-                                  float reverse_weight,
-                                  std::vector<float>* rescoring_score) = 0;
+  virtual void AttentionRescoring(
+      const std::vector<std::vector<int>>& hyps,
+      float reverse_weight,
+      std::vector<float>* rescoring_score,
+      std::vector<std::vector<float>>* units_score = nullptr) = 0;
 
   virtual std::shared_ptr<AsrModel> Copy() const = 0;
 

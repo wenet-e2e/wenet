@@ -41,9 +41,11 @@ class OnnxAsrModel : public AsrModel {
   OnnxAsrModel(const OnnxAsrModel& other);
   void Read(const std::string& model_dir);
   void Reset() override;
-  void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
-                          float reverse_weight,
-                          std::vector<float>* rescoring_score) override;
+  void AttentionRescoring(
+      const std::vector<std::vector<int>>& hyps,
+      float reverse_weight,
+      std::vector<float>* rescoring_score,
+      std::vector<std::vector<float>>* units_score = nullptr) override;
   std::shared_ptr<AsrModel> Copy() const override;
   void GetInputOutputInfo(const std::shared_ptr<Ort::Session>& session,
                           std::vector<const char*>* in_names,
