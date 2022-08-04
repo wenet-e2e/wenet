@@ -9,7 +9,8 @@ python wenet/bin/export_onnx_cpu.py \
   --config $exp/train.yaml \
   --checkpoint $exp/final.pt \
   --chunk_size 16 \
-  --output_dir $onnx_dir
+  --output_dir $onnx_dir \
+  --num_decoding_left_chunks -1
 
 # When it finishes, you can find `encoder.onnx`, `ctc.onnx`, and `decoder.onnx` in the $onnx_dir respectively.
 ```
