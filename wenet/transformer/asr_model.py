@@ -726,3 +726,23 @@ class ASRModel(torch.nn.Module):
         # r_dccoder_out will be 0.0, if reverse_weight is 0.0
         r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         return decoder_out, r_decoder_out
+
+    @torch.jit.export
+    def forward_encoder_batch(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Export interface for c++ call, encode a batch of speech
+
+        Args:
+            speech: padded input tensor (B, T, D)
+            speech_lengths: input length (B)
+        Returns:
+            encoder output tensor xs, and subsampled masks
+            encoder_out: padded output tensor (B, T' ~= T/subsample_rate, D)
+            encoder_mask: torch.Tensor batch padding mask after subsample
+                (B, 1, T' ~= T/subsample_rate)
+        """
+        encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
+        return encoder_out, encoder_mask
