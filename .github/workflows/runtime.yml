@@ -1,13 +1,14 @@
 name: Build Runtime
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'runtime/**'
 
 env:
-  RUNTIME_DIR: runtime/server/x86
-  FC_BASE_DIR: runtime/server/x86/fc_base
+  RUNTIME_DIR: runtime/libtorch
+  FC_BASE_DIR: runtime/libtorch/fc_base
 
 jobs:
   build:

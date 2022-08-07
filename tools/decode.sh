@@ -29,7 +29,7 @@ if [ $# != 5 ]; then
 fi
 
 if ! which decoder_main > /dev/null; then
-  echo "decoder_main is not built, please go to runtime/server/x86 to build it."
+  echo "decoder_main is not built, please go to runtime/libtorch to build it."
   exit 1;
 fi
 
