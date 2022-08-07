@@ -25,4 +25,3 @@ For each platform, we will create a subdirectory in runtime. Currently, we have:
   - [ ] binding/go: ongoing.
 
 
-Please note that `server` and `device` are depreated, and they will be removed in the future.
