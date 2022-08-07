@@ -37,7 +37,7 @@ Step 1, connect your Android phone, and use `adb push` command to push your mode
 Step 2, build the binary and the APK with Android Studio directly, or with the commands as follows:
 
 ``` sh
-cd runtime/device/android/wenet
+cd runtime/android
 ./gradlew build
 ```
 
@@ -56,4 +56,4 @@ cd /data/local/tmp
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:.
 ```
 
-Step 5, execute the same command as the [x86 demo](../../../server/x86) to run the binary to decode and compute the RTF.
+Step 5, execute the same command as the [x86 demo](../../../libtorch) to run the binary to decode and compute the RTF.
