@@ -123,12 +123,12 @@
 <ul class="simple">
 <li><p>Server</p>
 <ul>
-<li><p><a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86">x86</a></p></li>
+<li><p><a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch">x86</a></p></li>
 </ul>
 </li>
 <li><p>Device</p>
 <ul>
-<li><p><a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet">android</a></p></li>
+<li><p><a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/android">android</a></p></li>
 </ul>
 </li>
 </ul>
@@ -147,7 +147,7 @@
 <h3>Interface Design<a class="headerlink" href="#interface-design" title="Permalink to this headline"></a></h3>
 <p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code
 by &#64;torch.jit.export (see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/asr_model.py">asr_model.py</a>),
-which are required and used in C++ runtime in <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc">torch_asr_model.cc</a>.
+which are required and used in C++ runtime in <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch/decoder/torch_asr_model.cc">torch_asr_model.cc</a>.
 Here we just list the interface and give a brief introduction.</p>
 <table border="1" class="docutils">
 <thead>
@@ -194,7 +194,7 @@ Here we just list the interface and give a brief introduction.</p>
 <li><p>att_cache: the attention cache of the <em>Shared Encoder</em>(Conformer/Transformer) module.</p></li>
 <li><p>cnn_cache: the cnn cache of the <em>Shared Encoder</em>, which caches the left context for causal CNN computation in Conformer.</p></li>
 </ul>
-<p>Please see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/encoder.py">encoder.py:forward_chunk()</a> and <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86/decoder/torch_asr_model.cc">torch_asr_model.cc</a> for details of the caches.</p>
+<p>Please see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/encoder.py">encoder.py:forward_chunk()</a> and <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch/decoder/torch_asr_model.cc">torch_asr_model.cc</a> for details of the caches.</p>
 <p>In practice, CNN is also used for subsampling, we should handle the CNN cache in subsampling.
 However, there are different CNN layers in subsampling with different left contexts, right contexts and strides, which makes it tircky to directly implement the CNN cache in subsampling.
 In our implementation, we simply overlap the input to avoid subsampling CNN cache.
