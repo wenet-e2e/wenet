@@ -27,7 +27,7 @@ from wenet.utils.mask import (subsequent_mask, make_pad_mask)
 
 
 class TransformerDecoder(torch.nn.Module):
-    """Base class of Transfomer decoder module.
+    """Base class of Transformer decoder module.
     Args:
         vocab_size: output dim
         encoder_output_size: dimension of attention
@@ -186,7 +186,7 @@ class TransformerDecoder(torch.nn.Module):
 
 
 class BiTransformerDecoder(torch.nn.Module):
-    """Base class of Transfomer decoder module.
+    """Base class of Transformer decoder module.
     Args:
         vocab_size: output dim
         encoder_output_size: dimension of attention
