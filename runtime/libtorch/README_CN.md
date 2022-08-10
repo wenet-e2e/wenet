@@ -9,7 +9,7 @@ Wenet 基于 pytorch 框架进行语音识别模型训练，而在使用训练�
 
 下面的命令先下载官方提供的预训练模型，并启动 docker 服务，加载模型，提供 websocket 协议的语音识别服务。
 ``` sh
-cd wenet/runtime/server/x86
+cd wenet/runtime/libtorch
 wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
 tar -xf 20210601_u2++_conformer_libtorch.tar.gz
 model_dir=$PWD/20210601_u2++_conformer_libtorch
@@ -31,7 +31,7 @@ docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenetorg/wene
 运行如下命令，完成编译。
 
 ``` sh
-# 当前目录为 wenet/runtime/server/x86
+# 当前目录为 wenet/runtime/libtorch
 mkdir build && cd build && cmake .. && cmake --build .
 ```
 或者使用命令编译以支持 gRPC。
@@ -44,7 +44,7 @@ mkdir build && cd build && cmake -DGRPC=ON .. && cmake --build .
 mkdir build && cd build && cmake -DGPU=ON .. && cmake --build .
 ```
 
-编译好的可执行程序在 `wenet/runtime/server/x86/build/` 下：
+编译好的可执行程序在 `wenet/runtime/libtorch/build` 下：
 
 * decoder_main 本地文件识别工具
 * websocket_server_main 基于websocket协议的识别服务端
@@ -54,7 +54,7 @@ mkdir build && cd build && cmake -DGPU=ON .. && cmake --build .
 下载预训练模型
 
 ``` sh
-# 当前目录为 wenet/runtime/server/x86
+# 当前目录为 wenet/runtime/libtorch
 wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
 tar -xf 20210602_u2++_conformer_libtorch.tar.gz
 ```
@@ -66,7 +66,7 @@ tar -xf 20210602_u2++_conformer_libtorch.tar.gz
 下载好模型后，执行如下的命令进行本地wav文件识别，将 `wav_path` 设为你想测试的 wav 文件地址，将 `model_dir` 设为你的模型目录地址。
 
 ``` sh
-# 当前目录为 wenet/runtime/server/x86
+# 当前目录为 wenet/runtime/libtorch
 # 已经下载并解压20210602_unified_transformer_server.tar.gz到当前目录
 # 准备好一个16k采样率，单通道，16bits的音频文件test.wav
 
@@ -159,7 +159,7 @@ docker run --rm -it mobvoiwenet/wenet:latest bash
 
 该镜像包含了编译过程中所依赖的所有第三方库、编译好的文件和预训练模型。
 
-预训练模型在 `/home/model` 目录, 可执行程序在 `/home/wenet/runtime/server/x86/build` 目录。
+预训练模型在 `/home/model` 目录, 可执行程序在 `/home/wenet/runtime/libtorch/build` 目录。
 
 ### 构建 Docker 镜像
 

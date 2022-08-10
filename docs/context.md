@@ -120,7 +120,7 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinks(
 2. Specify the `--context_score`, the reward of each word in the context.
 
 ```bash
-cd /home/wenet/runtime/server/x86
+cd /home/wenet/runtime/libtorch
 export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=docker_resource/test.wav

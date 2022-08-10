@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 env:
-  RUNTIME_DIR: runtime/server/x86
+  RUNTIME_DIR: runtime/libtorch
 
 jobs:
   build:
@@ -17,7 +17,7 @@ jobs:
       - name: Build
         run: |
           cd ${{ env.RUNTIME_DIR }}
-          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DFST_HAVE_BIN=ON
           cmake --build build --config Release -j$(nproc)
 
       - name: Prepare Release Binary

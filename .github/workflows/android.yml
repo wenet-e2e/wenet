@@ -9,7 +9,7 @@ on:
         default: https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
 
 env:
-  ANDROID_DIR: runtime/device/android/wenet
+  ANDROID_DIR: runtime/android
   RELEASE_DIR: app/build/outputs/apk/release
 
 jobs:
