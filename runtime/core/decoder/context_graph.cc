@@ -66,7 +66,7 @@ void ContextGraph::BuildContextGraph(
     for (size_t i = 0; i < words.size(); ++i) {
       int word_id = symbol_table_->Find(words[i]);
       float score = config_.context_score * UTF8StringLength(words[i]);
-      score = (static_cast<float>(i) / words.size() + 1.0) * score;
+      score = ((static_cast<float>(i) / words.size()) * config_.incremental_context_score + 1.0) * score;
       next_state = (i < words.size() - 1) ? ofst->AddState() : start_state;
       ofst->AddArc(prev_state,
                    fst::StdArc(word_id, word_id, score, next_state));
