@@ -1,1 +1,1 @@
-../LibTorch/CMakeLists.txt
+../libtorch/CMakeLists.txt
