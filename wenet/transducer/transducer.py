@@ -282,6 +282,7 @@ class Transducer(ASRModel):
             transducer_weight: float = 0.0,
             search_ctc_weight: float = 1.0,
             search_transducer_weight: float = 0.0,
+            rnnt_aligment_weight: float = 0.0,
             beam_search_type: str = 'transducer') -> List[List[int]]:
         """beam search
 
@@ -363,13 +364,15 @@ class Transducer(ASRModel):
                                   dtype=torch.bool,
                                   device=device)
 
-        # 2.1 calculate transducer score
-        td_score = self._cal_transducer_score(
-            encoder_out,
-            encoder_mask,
-            hyps_lens,
-            hyps_pad,
-        )
+        # 2.1 calculate transducer aligment score
+        td_score = None
+        if rnnt_aligment_weight != 0.0:
+            td_score = self._cal_transducer_score(
+                encoder_out,
+                encoder_mask,
+                hyps_lens,
+                hyps_pad,
+            )
         # 2.2 calculate attention score
         decoder_out, r_decoder_out = self._cal_attn_score(
             encoder_out,
@@ -386,7 +389,6 @@ class Transducer(ASRModel):
             for j, w in enumerate(hyp):
                 score += decoder_out[i][j][w]
             score += decoder_out[i][len(hyp)][self.eos]
-            td_s = td_score[i]
             # add right to left decoder score
             if reverse_weight > 0:
                 r_score = 0.0
@@ -394,10 +396,16 @@ class Transducer(ASRModel):
                     r_score += r_decoder_out[i][len(hyp) - j - 1][w]
                 r_score += r_decoder_out[i][len(hyp)][self.eos]
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
-            # add ctc score
-            score = score * attn_weight + \
-                beam_score[i] * ctc_weight + \
-                td_s * transducer_weight
+            # add transducer or ctc score
+            if beam_search_type == 'transducer':
+                score = score * attn_weight + beam_score[i] * transducer_weight
+            else:
+                assert beam_search_type == 'ctc'
+                score = score * attn_weight + beam_score[i] * ctc_weight
+            # add rnnt aligment score
+            if td_score is not None:
+                td_s = td_score[i]
+                score += rnnt_aligment_weight * td_s
             if score > best_score:
                 best_score = score
                 best_index = i
