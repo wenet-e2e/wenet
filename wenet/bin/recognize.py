@@ -83,7 +83,8 @@ def get_args():
                         help='ctc weight for rescoring weight in \
                                   attention rescoring decode mode \
                               ctc weight for rescoring weight in \
-                                  transducer attention rescore decode mode using ctc nbest')
+                                  transducer attention rescore decode mode \
+                                  using ctc nbest')
     parser.add_argument('--transducer_weight',
                         type=float,
                         default=0.0,
@@ -275,7 +276,7 @@ def main():
                     reverse_weight=args.reverse_weight,
                     search_ctc_weight=args.search_ctc_weight,
                     search_transducer_weight=args.search_transducer_weight,
-		    rnnt_aligment_weight=args.transducer_aligment_weight,
+                    rnnt_aligment_weight=args.transducer_aligment_weight,
                     beam_search_type='ctc')
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
