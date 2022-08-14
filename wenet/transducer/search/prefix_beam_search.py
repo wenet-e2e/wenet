@@ -63,7 +63,7 @@ class PrefixBeamSearch():
             num_decoding_left_chunks)  # (B, maxlen, encoder_dim)
         maxlen = encoder_out.size(1)
 
-        if ctc_weight != 0.0
+        if ctc_weight != 0.0:
             ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
         beam_init: List[Sequence] = []
 
