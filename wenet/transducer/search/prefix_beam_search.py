@@ -63,7 +63,8 @@ class PrefixBeamSearch():
             num_decoding_left_chunks)  # (B, maxlen, encoder_dim)
         maxlen = encoder_out.size(1)
 
-        ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
+        if ctc_weight != 0.0
+            ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
         beam_init: List[Sequence] = []
 
         # 2. init beam using Sequence to save beam unit
@@ -96,8 +97,11 @@ class PrefixBeamSearch():
 
             # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
-            logp = torch.log(
-                torch.add(transducer_weight * torch.exp(logp),
+            if ctc_weight != 0.0:
+                logp = torch.log(transducer_weight * torch.exp(logp))
+            else:
+                logp = torch.log(
+                    torch.add(transducer_weight * torch.exp(logp),
                           ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))))
 
             # 3.4 first beam prune
