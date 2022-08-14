@@ -102,7 +102,7 @@ class PrefixBeamSearch():
             else:
                 logp = torch.log(
                     torch.add(transducer_weight * torch.exp(logp),
-                          ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))))
+                              ctc_weight * torch.exp(ctc_probs[i].unsqueeze(0))))
 
             # 3.4 first beam prune
             top_k_logp, top_k_index = logp.topk(beam_size)  # (N, N)
