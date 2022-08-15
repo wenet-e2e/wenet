@@ -97,7 +97,7 @@ class PrefixBeamSearch():
 
             # 3.3 shallow fusion for transducer score
             #     and ctc score where we can also add the LM score
-            if ctc_weight != 0.0:
+            if ctc_weight == 0.0:
                 logp = torch.log(transducer_weight * torch.exp(logp))
             else:
                 logp = torch.log(
