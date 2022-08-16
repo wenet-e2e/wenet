@@ -32,6 +32,7 @@ struct ContextConfig {
   int max_contexts = 5000;
   int max_context_length = 100;
   float context_score = 3.0;
+  float incremental_context_score = 0.0;
 };
 
 class ContextGraph {
