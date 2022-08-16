@@ -13,7 +13,7 @@ from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
-                                reverse_pad_list, th_accuracy)
+                                reverse_pad_list)
 
 
 class Transducer(ASRModel):
@@ -51,7 +51,8 @@ class Transducer(ASRModel):
         self.joint = joint
         self.bs = None
 
-        # Note(Mddct): decoder also means predictor in transducer, but here decoder is attention decoder
+        # Note(Mddct): decoder also means predictor in transducer,
+        # but here decoder is attention decoder
         del self.criterion_att
         if attention_decoder is not None:
             self.criterion_att = LabelSmoothingLoss(
