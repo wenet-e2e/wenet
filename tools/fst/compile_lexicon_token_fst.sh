@@ -54,8 +54,8 @@ cat $srcdir/units.txt | awk '{print $1}' > $tmpdir/units.list
 (echo '<eps>';) | cat - $tmpdir/units.list $tmpdir/disambig.list | awk '{print $1 " " (NR-1)}' > $dir/tokens.txt
 
 # ctc_token_fst_corrected is too big and too slow for character based chinese modeling,
-# so here just use simple ctc_token_fst
-tools/fst/ctc_token_fst.py $dir/tokens.txt | \
+# so here use ctc_token_fst_compact
+tools/fst/ctc_token_fst_compact.py $dir/tokens.txt | \
   fstcompile --isymbols=$dir/tokens.txt --osymbols=$dir/tokens.txt --keep_isymbols=false --keep_osymbols=false | \
   fstarcsort --sort_type=olabel > $dir/T.fst || exit 1;
 
