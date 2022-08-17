@@ -5,7 +5,7 @@
 ``` sh
 exp=exp  # Change it to your experiment dir
 onnx_dir=onnx
-python wenet/bin/export_onnx_cpu.py \
+python -m wenet.bin.export_onnx_cpu \
   --config $exp/train.yaml \
   --checkpoint $exp/final.pt \
   --chunk_size 16 \
