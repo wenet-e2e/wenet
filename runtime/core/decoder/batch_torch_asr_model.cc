@@ -16,6 +16,9 @@
 
 #include "decoder/batch_torch_asr_model.h"
 
+#ifdef USE_GPU
+#include <c10/cuda/CUDACachingAllocator.h>
+#endif
 #include <algorithm>
 #include <memory>
 #include <utility>
@@ -27,6 +30,7 @@
 namespace wenet {
 
 void BatchTorchAsrModel::InitEngineThreads(int num_threads) {
+  VLOG(1) << "Num intra-op default threads: " << at::get_num_threads();
   // For multi-thread performance
   at::set_num_threads(num_threads);
   // Note: Do not call the set_num_interop_threads function more than once.
@@ -44,7 +48,7 @@ void BatchTorchAsrModel::Read(const std::string& model_path) {
     VLOG(1) << "CUDA is not available! Please check your GPU settings";
     throw std::runtime_error("CUDA is not available!");
   } else {
-    VLOG(1) << "CUDA available! Running on GPU";
+    VLOG(1) << "CUDA is available! Running on GPU";
     device = at::kCUDA;
   }
 #endif
@@ -99,12 +103,12 @@ void BatchTorchAsrModel::ForwardEncoderFunc(
     batch_ctc_log_prob_t& out_prob) {
   // 1. Prepare libtorch required data
   int batch_size = batch_feats.size();
-  int num_frames = batch_feats[0].size();
+  num_frames_ = batch_feats[0].size();
   const int feature_dim = batch_feats[0][0].size();
   torch::Tensor feats =
-      torch::zeros({batch_size, num_frames, feature_dim}, torch::kFloat);
+      torch::zeros({batch_size, num_frames_, feature_dim}, torch::kFloat);
   for (size_t i = 0; i < batch_size; ++i) {
-    for (size_t j = 0; j < num_frames; ++j) {
+    for (size_t j = 0; j < num_frames_; ++j) {
       torch::Tensor row =
         torch::from_blob(const_cast<float*>(batch_feats[i][j].data()),
                          {feature_dim}, torch::kFloat).clone();
@@ -125,15 +129,18 @@ void BatchTorchAsrModel::ForwardEncoderFunc(
 
   // Refer interfaces in wenet/transformer/asr_model.py
   auto outputs =
-      model_->get_method("forward_encoder_batch")(inputs).toTuple()->elements();
-  CHECK_EQ(outputs.size(), 2);
+      model_->get_method("batch_forward_encoder")(inputs).toTuple()->elements();
+  CHECK_EQ(outputs.size(), 3);
   encoder_out_ = outputs[0].toTensor();  // (B, Tmax, dim)
+  encoder_lens_ = outputs[1].toTensor(); // (B,)
 
   // The first dimension of returned value is for batchsize
-  torch::Tensor ctc_log_probs =
-      model_->run_method("ctc_activation", encoder_out_).toTensor();
+  torch::Tensor ctc_log_probs = outputs[2].toTensor();
 #ifdef USE_GPU
+  encoder_out_ = encoder_out_.to(at::kCPU);
+  encoder_lens_ = encoder_lens_.to(at::kCPU);
   ctc_log_probs = ctc_log_probs.to(at::kCPU);
+  c10::cuda::CUDACachingAllocator::emptyCache();
 #endif
 
   // Copy to output
@@ -163,81 +170,74 @@ float BatchTorchAsrModel::ComputeAttentionScore(const torch::Tensor& prob,
 }
 
 void BatchTorchAsrModel::AttentionRescoring(
-    const std::vector<std::vector<int>>& hyps,
-    int batch_index,
+    const std::vector<std::vector<std::vector<int>>>& batch_hyps,
     float reverse_weight,
-    std::vector<float>* rescoring_score) {
-  CHECK(rescoring_score != nullptr);
-  int num_hyps = hyps.size();
-  rescoring_score->resize(num_hyps, 0.0f);
+    std::vector<std::vector<float>>* attention_scores) {
+  CHECK(attention_scores != nullptr);
 
-  if (num_hyps == 0) {
-    return;
-  }
-
-  torch::NoGradGuard no_grad;
   // Step 1: Prepare input for libtorch
-  torch::Tensor hyps_length = torch::zeros({num_hyps}, torch::kLong);
+  int batch_size = batch_hyps.size();
+  int beam_size = batch_hyps[0].size();  // should be 10
+  torch::Tensor hyps_lens_sos = torch::zeros({batch_size, beam_size}, torch::kLong);
   int max_hyps_len = 0;
-  for (size_t i = 0; i < num_hyps; ++i) {
-    int length = hyps[i].size() + 1;
-    max_hyps_len = std::max(length, max_hyps_len);
-    hyps_length[i] = static_cast<int64_t>(length);
-  }
-  torch::Tensor hyps_tensor =
-      torch::zeros({num_hyps, max_hyps_len}, torch::kLong);
-  for (size_t i = 0; i < num_hyps; ++i) {
-    const std::vector<int>& hyp = hyps[i];
-    hyps_tensor[i][0] = sos_;
-    for (size_t j = 0; j < hyp.size(); ++j) {
-      hyps_tensor[i][j + 1] = hyp[j];
+  for (size_t i = 0; i < batch_size; i++) {
+    for (size_t j = 0; j < beam_size; j++) {
+      int length = batch_hyps[i][j].size() + 1;
+      max_hyps_len = std::max(length, max_hyps_len);
+      hyps_lens_sos[i][j] = static_cast<int64_t>(length);
     }
   }
 
-  // Step 2: Forward attention decoder by hyps and corresponding encoder_outs_
-  using namespace torch::indexing;
-  torch::Tensor encoder_out = encoder_out_.index({Slice(batch_index, batch_index + 1)});
-#ifdef USE_GPU
-  hyps_tensor = hyps_tensor.to(at::kCUDA);
-  hyps_length = hyps_length.to(at::kCUDA);
-  encoder_out = encoder_out.to(at::kCUDA);
-#endif
-  auto outputs = model_
-                     ->run_method("forward_attention_decoder", hyps_tensor,
-                                  hyps_length, encoder_out, reverse_weight)
-                     .toTuple()
-                     ->elements();
-#ifdef USE_GPU
-  auto probs = outputs[0].toTensor().to(at::kCPU);
-  auto r_probs = outputs[1].toTensor().to(at::kCPU);
-#else
-  auto probs = outputs[0].toTensor();
-  auto r_probs = outputs[1].toTensor();
-#endif
-  CHECK_EQ(probs.size(0), num_hyps);
-  CHECK_EQ(probs.size(1), max_hyps_len);
-
-  // Step 3: Compute rescoring score
-  for (size_t i = 0; i < num_hyps; ++i) {
-    const std::vector<int>& hyp = hyps[i];
-    float score = 0.0f;
-    // left-to-right decoder score
-    score = ComputeAttentionScore(probs[i], hyp, eos_);
-    // Optional: Used for right to left score
-    float r_score = 0.0f;
-    if (is_bidirectional_decoder_ && reverse_weight > 0) {
-      // right-to-left score
-      CHECK_EQ(r_probs.size(0), num_hyps);
-      CHECK_EQ(r_probs.size(1), max_hyps_len);
-      std::vector<int> r_hyp(hyp.size());
-      std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
-      // right to left decoder score
-      r_score = ComputeAttentionScore(r_probs[i], r_hyp, eos_);
+  // 1.2 add sos and eos to hyps, and padded by ignore_id (-1)
+  torch::Tensor hyps_pad_sos_eos =
+    torch::ones({batch_size, beam_size, max_hyps_len + 1}, torch::kLong) * eos_;
+  for (size_t i = 0; i < batch_size; i++) {
+    for (size_t j = 0; j < beam_size; j++) {
+      const std::vector<int>& hyp = batch_hyps[i][j];
+      hyps_pad_sos_eos[i][j][0] = sos_;
+      for (size_t k = 0; k < hyp.size(); k++) {
+        hyps_pad_sos_eos[i][j][k + 1] = hyp[k];
+      }
+      hyps_pad_sos_eos[i][j][hyp.size() + 1] = eos_;
     }
+  }
+  torch::Tensor r_hyps_pad_sos_eos =
+    torch::zeros({batch_size, beam_size, max_hyps_len + 1}, torch::kLong) * eos_;
+  for (size_t i = 0; i < batch_size; i++) {
+    for (size_t j = 0; j < beam_size; j++) {
+      const std::vector<int>& hyp = batch_hyps[i][j];
+      hyps_pad_sos_eos[i][j][0] = sos_;
+      int hyp_size = hyp.size();
+      for (size_t k = 0; k < hyp_size; k++) {
+        hyps_pad_sos_eos[i][j][k + 1] = hyp[hyp_size - 1 - k];  // reverse copy
+      }
+      hyps_pad_sos_eos[i][j][hyp_size + 1] = eos_;
+    }
+  }
 
-    // combined left-to-right and right-to-left score
-    (*rescoring_score)[i] =
-        score * (1 - reverse_weight) + r_score * reverse_weight;
+  // Step 2: Forward attention decoder
+#ifdef USE_GPU
+  hyps_pad_sos_eos = hyps_pad_sos_eos.to(at::kCUDA);
+  hyps_lens_sos = hyps_lens_sos.to(at::kCUDA);
+  r_hyps_pad_sos_eos = r_hyps_pad_sos_eos.to(at::kCUDA);
+  encoder_lens_ = encoder_lens_.to(at::kCUDA);
+  encoder_out_ = encoder_out_.to(at::kCUDA);
+#endif
+  torch::NoGradGuard no_grad;
+  auto outputs = model_->run_method("batch_forward_attention_decoder",
+                                    encoder_out_, encoder_lens_,
+                                    hyps_pad_sos_eos, hyps_lens_sos,
+                                    r_hyps_pad_sos_eos, reverse_weight).toTensor();
+#ifdef USE_GPU
+  outputs = outputs.to(at::kCPU);
+  c10::cuda::CUDACachingAllocator::emptyCache();
+#endif
+  CHECK_EQ(outputs.size(0), batch_size);
+  attention_scores->resize(batch_size);
+  for (size_t i = 0; i < batch_size; i++) {
+    (*attention_scores)[i].resize(beam_size);
+    memcpy((*attention_scores)[i].data(), outputs[i].data_ptr(),
+            sizeof(float) * beam_size);
   }
 }
 
