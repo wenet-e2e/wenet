@@ -39,10 +39,9 @@ public:
   BatchTorchAsrModel(const BatchTorchAsrModel& other);
   void Read(const std::string& model_path);
   std::shared_ptr<TorchModule> torch_model() const { return model_; }
-  void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
-                          int batch_index,
+  void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
                           float reverse_weight,
-                          std::vector<float>* rescoring_score) override;
+                          std::vector<std::vector<float>>* attention_scores) override;
   std::shared_ptr<BatchAsrModel> Copy() const override;
 
  protected:
@@ -57,6 +56,8 @@ public:
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;
   torch::Tensor encoder_out_;
+  torch::Tensor encoder_lens_;
+  torch::DeviceType device_;
 };
 
 }  // namespace wenet

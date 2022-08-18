@@ -16,7 +16,8 @@ namespace wenet {
 
 using feature_t = std::vector<std::vector<float>>;
 using batch_feature_t = std::vector<feature_t>;
-using batch_ctc_log_prob_t = std::vector<feature_t>;
+using ctc_log_prob_t = std::vector<std::vector<float>>;
+using batch_ctc_log_prob_t = std::vector<ctc_log_prob_t>;
 
 class BatchAsrModel {
 
@@ -34,10 +35,9 @@ class BatchAsrModel {
       const std::vector<int>& batch_feats_lens,
       batch_ctc_log_prob_t& batch_ctc_prob);
 
-  virtual void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
-                                  int batch_index,
-                                  float reverse_weight,
-                                  std::vector<float>* rescoring_score) = 0;
+  virtual void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
+                          float reverse_weight,
+                          std::vector<std::vector<float>>* attention_scores) = 0;
 
   virtual std::shared_ptr<BatchAsrModel> Copy() const = 0;
 
