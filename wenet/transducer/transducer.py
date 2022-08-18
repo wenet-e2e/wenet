@@ -106,6 +106,7 @@ class Transducer(ASRModel):
                                                reduction="mean")
         loss_rnnt = loss
 
+        loss = self.transducer_weight * loss
         # optional attention decoder
         loss_att: Optional[torch.Tensor] = None
         if self.attention_decoder_weight != 0.0 and self.decoder is not None:
