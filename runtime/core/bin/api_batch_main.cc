@@ -31,6 +31,7 @@ int main(int argc, char* argv[]) {
   wenet_set_log_level(2);
 
   BatchRecognizer br(FLAGS_model_dir, FLAGS_num_threads);
+  if (FLAGS_enable_timestamp) br.set_enable_timestamp(true);
   wenet::WavReader wav_reader(FLAGS_wav_path);
   std::vector<float> data;
   data.insert(data.end(), wav_reader.data(), wav_reader.data() + wav_reader.num_samples());
