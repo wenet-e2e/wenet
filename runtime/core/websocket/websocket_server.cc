@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include "websocket/websocket_server.h"
+#include "websocket/batch_connection_handler.h"
 
 #include <thread>
 #include <utility>
@@ -244,7 +245,7 @@ void ConnectionHandler::operator()() {
   }
 }
 
-void WebSocketServer::Start() {
+void WebSocketServer::Start(bool run_batch) {
   try {
     auto const address = asio::ip::make_address("0.0.0.0");
     tcp::acceptor acceptor{ioc_, {address, static_cast<uint16_t>(port_)}};
@@ -254,10 +255,17 @@ void WebSocketServer::Start() {
       // Block until we get a connection
       acceptor.accept(socket);
       // Launch the session, transferring ownership of the socket
-      ConnectionHandler handler(std::move(socket), feature_config_,
-                                decode_config_, decode_resource_);
-      std::thread t(std::move(handler));
-      t.detach();
+      if (run_batch) {
+        BatchConnectionHandler handler(std::move(socket), feature_config_,
+            decode_config_, decode_resource_);
+        std::thread t(std::move(handler));
+        t.detach();
+      } else {
+        ConnectionHandler handler(std::move(socket), feature_config_,
+            decode_config_, decode_resource_);
+        std::thread t(std::move(handler));
+        t.detach();
+      }
     }
   } catch (const std::exception& e) {
     LOG(FATAL) << e.what();
