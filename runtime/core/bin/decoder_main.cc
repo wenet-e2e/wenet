@@ -31,6 +31,7 @@ DEFINE_string(wav_scp, "", "input wav scp");
 DEFINE_string(result, "", "result output file");
 DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 DEFINE_int32(thread_num, 1, "num of decode thread");
+DEFINE_int32(warmup, 0, "num of warmup decode, 0 means no warmup");
 
 std::shared_ptr<wenet::DecodeOptions> g_decode_config;
 std::shared_ptr<wenet::FeaturePipelineConfig> g_feature_config;
@@ -41,7 +42,7 @@ std::mutex g_mutex;
 int g_total_waves_dur = 0;
 int g_total_decode_time = 0;
 
-void decode(std::pair<std::string, std::string> wav) {
+void decode(std::pair<std::string, std::string> wav, bool warmup = false) {
   wenet::WavReader wav_reader(wav.second);
   int num_samples = wav_reader.num_samples();
   CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
@@ -104,21 +105,23 @@ void decode(std::pair<std::string, std::string> wav) {
   LOG(INFO) << "Decoded " << wave_dur << "ms audio taken " << decode_time
             << "ms.";
 
-  g_mutex.lock();
-  std::ostream& buffer = FLAGS_result.empty() ? std::cout : g_result;
-  if (!FLAGS_output_nbest) {
-    buffer << wav.first << " " << final_result << std::endl;
-  } else {
-    buffer << "wav " << wav.first << std::endl;
-    auto& results = decoder.result();
-    for (auto& r : results) {
-      if (r.sentence.empty()) continue;
-      buffer << "candidate " << r.score << " " << r.sentence << std::endl;
+  if (!warmup) {
+    g_mutex.lock();
+    std::ostream& buffer = FLAGS_result.empty() ? std::cout : g_result;
+    if (!FLAGS_output_nbest) {
+      buffer << wav.first << " " << final_result << std::endl;
+    } else {
+      buffer << "wav " << wav.first << std::endl;
+      auto& results = decoder.result();
+      for (auto& r : results) {
+        if (r.sentence.empty()) continue;
+        buffer << "candidate " << r.score << " " << r.sentence << std::endl;
+      }
     }
+    g_total_waves_dur += wave_dur;
+    g_total_decode_time += decode_time;
+    g_mutex.unlock();
   }
-  g_total_waves_dur += wave_dur;
-  g_total_decode_time += decode_time;
-  g_mutex.unlock();
 }
 
 int main(int argc, char* argv[]) {
@@ -144,16 +147,33 @@ int main(int argc, char* argv[]) {
       CHECK_GE(strs.size(), 2);
       waves.emplace_back(make_pair(strs[0], strs[1]));
     }
+
+    if (waves.empty()) {
+      LOG(FATAL) << "Please provide non-empty wav scp.";
+    }
   }
 
   if (!FLAGS_result.empty()) {
     g_result.open(FLAGS_result, std::ios::out);
   }
 
+  // Warmup
+  if (FLAGS_warmup > 0) {
+    LOG(INFO) << "Warming up...";
+    {
+      ThreadPool pool(FLAGS_thread_num);
+      auto wav = waves[0];
+      for (int i = 0; i < FLAGS_warmup; i++) {
+        pool.enqueue(decode, wav, true);
+      }
+    }
+    LOG(INFO) << "Warmup done.";
+  }
+
   {
     ThreadPool pool(FLAGS_thread_num);
     for (auto& wav : waves) {
-      pool.enqueue(decode, wav);
+      pool.enqueue(decode, wav, false);
     }
   }
 
