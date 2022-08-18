@@ -105,9 +105,9 @@ class BatchRecognizer {
     }
     decoder_->Reset();
     decoder_->Decode(wavs_float);
-    return UpdateResult();
+    return decoder_->get_batch_result(nbest_, enable_timestamp_);
   }
-  
+
   std::string DecodeData(const std::vector<std::vector<float>>& wavs) {
     // Init decoder when it is called first time
     if (decoder_ == nullptr) {
@@ -115,37 +115,10 @@ class BatchRecognizer {
     }
     decoder_->Reset();
     decoder_->Decode(wavs);
-    return UpdateResult();
+    return decoder_->get_batch_result(nbest_, enable_timestamp_);
   }
 
-  std::string UpdateResult() {
-    const auto& batch_result = decoder_->batch_result();
-    json::JSON obj;
-    obj["batch_size"] = batch_result.size();
-    obj["batch_result"] = json::Array();
-    for (const auto& result : batch_result) {
-      json::JSON batch_one;
-      batch_one["nbest"] = json::Array();
-      for (int i = 0; i < nbest_ && i < result.size(); i++) {
-        json::JSON one;
-        one["sentence"] = result[i].sentence;
-        if (enable_timestamp_) {
-          one["word_pieces"] = json::Array();
-          for (const auto& word_piece : result[i].word_pieces) {
-            json::JSON piece;
-            piece["word"] = word_piece.word;
-            piece["start"] = word_piece.start;
-            piece["end"] = word_piece.end;
-            one["word_pieces"].append(piece);
-          }
-        }
-        one["sentence"] = result[i].sentence;
-        batch_one["nbest"].append(one);
-      }
-      obj["batch_result"].append(batch_one);
-    }
-    return obj.dump();
-  }
+
 
   void set_nbest(int n) { nbest_ = n; }
   void set_enable_timestamp(bool flag) { enable_timestamp_ = flag; }
