@@ -23,11 +23,13 @@
 #include <vector>
 
 #include "decoder/asr_decoder.h"
+#include "decoder/batch_asr_decoder.h"
 #ifdef USE_ONNX
 #include "decoder/onnx_asr_model.h"
 #endif
 #ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
+#include "decoder/batch_torch_asr_model.h"
 #endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
@@ -88,6 +90,7 @@ DEFINE_int32(language_type, 0,
              "0x00 = kMandarinEnglish, "
              "0x01 = kIndoEuropean");
 DEFINE_bool(lowercase, true, "lowercase final result if needed");
+DEFINE_bool(run_batch, false, "run websocket server for batch decoding");
 
 namespace wenet {
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
@@ -132,11 +135,19 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 #endif
   } else {
 #ifdef USE_TORCH
-    LOG(INFO) << "Reading torch model " << FLAGS_model_path;
-    TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
-    auto model = std::make_shared<TorchAsrModel>();
-    model->Read(FLAGS_model_path);
-    resource->model = model;
+    if (FLAGS_run_batch) {
+      LOG(INFO) << "BatchTorchAsrModel Reading torch model " << FLAGS_model_path;
+      BatchTorchAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<BatchTorchAsrModel>();
+      model->Read(FLAGS_model_path);
+      resource->batch_model = model;
+    } else {
+      LOG(INFO) << "Reading torch model " << FLAGS_model_path;
+      TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<TorchAsrModel>();
+      model->Read(FLAGS_model_path);
+      resource->model = model;
+    }
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DTORCH=ON'.";
 #endif
