@@ -35,6 +35,7 @@
 #include "post_processor/post_processor.h"
 #include "utils/utils.h"
 #include "frontend/fbank.h"
+#include "utils/json.h"
 
 namespace wenet {
 
@@ -56,14 +57,22 @@ class BatchAsrDecoder {
     return feature_config_->frame_shift * 1000 /
            feature_config_->sample_rate;
   }
-  const std::vector<DecodeResult>& result() const { return result_; }
   const std::vector<std::vector<DecodeResult>>& batch_result() const { return batch_result_; }
+  const std::string get_batch_result(int nbest, bool enable_timestamp);
 
  private:
   Fbank fbank_;
-  void AttentionRescoring(int batch_index);
+  void FbankWorker(const std::vector<float>& wav, int index);
+  std::vector<std::pair<int, feature_t>> batch_feats_; // for FbankWorker
+  std::vector<std::pair<int, int>> batch_feats_lens_; // for FbankWorker
 
-  void UpdateResult(bool finish = false);
+  void SearchWorker(const ctc_log_prob_t& ctc_log_probs, int index);
+  std::mutex mutex_;
+  std::vector<std::pair<int, std::vector<std::vector<int>>>> batch_hyps_; // for SearchWorker
+  std::vector<std::pair<int, std::vector<DecodeResult>>> batch_pair_result_; // for SearchWorker
+  std::vector<std::vector<DecodeResult>> batch_result_;
+
+  void UpdateResult(SearchInterface* searcher, std::vector<DecodeResult>& result);
 
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
   std::shared_ptr<BatchAsrModel> model_;
@@ -74,14 +83,10 @@ class BatchAsrDecoder {
   std::shared_ptr<fst::SymbolTable> symbol_table_;
   // e2e unit symbol table
   std::shared_ptr<fst::SymbolTable> unit_table_ = nullptr;
+  std::shared_ptr<DecodeResource> resource_ = nullptr;
   const DecodeOptions& opts_;
-  int global_frame_offset_ = 0;
+  int beam_size_;
   const int time_stamp_gap_ = 100;  // timestamp gap between words in a sentence
-
-  std::unique_ptr<SearchInterface> searcher_;
-
-  std::vector<DecodeResult> result_;
-  std::vector<std::vector<DecodeResult>> batch_result_;
 
  public:
   WENET_DISALLOW_COPY_AND_ASSIGN(BatchAsrDecoder);
