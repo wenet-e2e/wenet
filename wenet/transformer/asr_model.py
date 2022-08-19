@@ -728,15 +728,15 @@ class ASRModel(torch.nn.Module):
         return decoder_out, r_decoder_out
 
     @torch.jit.export
-    def forward_encoder_batch(
+    def batch_forward_encoder(
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Export interface for c++ call, encode a batch of speech
 
         Args:
-            speech: padded input tensor (B, T, D)
+            speech: padded input tensor (B, T, F)
             speech_lengths: input length (B)
         Returns:
             encoder output tensor xs, and subsampled masks
@@ -744,5 +744,68 @@ class ASRModel(torch.nn.Module):
             encoder_mask: torch.Tensor batch padding mask after subsample
                 (B, 1, T' ~= T/subsample_rate)
         """
-        encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
-        return encoder_out, encoder_mask
+        encoder_out, encoder_mask = self.encoder(speech, speech_lengths, -1, -1)
+        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
+        encoder_out_lens = encoder_out_lens.int()
+        ctc_log_probs = self.ctc.log_softmax(encoder_out)
+        return encoder_out, encoder_out_lens, ctc_log_probs
+
+    @torch.jit.export
+    def batch_forward_attention_decoder(
+        self,
+        encoder_out: torch.Tensor,
+        encoder_lens: torch.Tensor,
+        hyps_pad_sos: torch.Tensor,
+        hyps_lens_sos: torch.Tensor,
+        reverse_weight: float = 0,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Export interface for c++ call, forward decoder with batch of
+            hypothesis from ctc prefix beam search and encoder output
+        Args:
+            encoder_out: B x T x F
+            encoder_lens: B
+            hyps_pad_sos: B x beam x T2
+                        hyps with sos and padded by 0
+            hyps_lens_sos: B x beam, length for each hyp with sos
+            reverse_weight: used for verfing whether used right to left decoder,
+                    > 0 will use.
+
+        Returns:
+            scores: (B, beam)
+        """
+        assert encoder_out.size(0) == hyps_pad_sos.size(0)
+        B, T, F = encoder_out.shape
+        bz = hyps_pad_sos.shape[1]
+        B2 = B * bz
+        T2 = hyps_pad_sos.shape[2]
+        # 1. prepare inputs for decoder
+        encoder_out = encoder_out.repeat(1, bz, 1).view(B2, T, F)
+        encoder_mask = torch.ones(B2, 1, T,
+                                  dtype=torch.bool,
+                                  device=encoder_out.device)
+        # input for right to left decoder
+        # this hyps_lens has count <sos> token, we need minus it.
+        hyps = hyps_pad_sos.view(B2, T2)
+        hyps_lens = hyps_lens_sos.view(B2,)
+        if reverse_weight > 0:
+            r_hyps_lens = hyps_lens - 1
+            r_hyps = hyps[:, 1:]
+            max_len = torch.max(r_hyps_lens)
+            index_range = torch.arange(0, max_len, 1).to(encoder_out.device)
+            seq_len_expand = r_hyps_lens.unsqueeze(1)
+            seq_mask = seq_len_expand > index_range  # (beam, max_len)
+            index = (seq_len_expand - 1) - index_range  # (beam, max_len)
+            index = index * seq_mask
+            r_hyps = torch.gather(r_hyps, 1, index)
+            r_hyps = torch.where(seq_mask, r_hyps, self.eos)
+            r_hyps = torch.cat([hyps[:, 0:1], r_hyps], dim=1)
+        else:
+            r_hyps = torch.empty(0, device=encoder_out.device)
+
+        # 2. decoding
+        decoder_out, r_decoder_out, _ = self.decoder(
+            encoder_out, encoder_mask, hyps, hyps_lens, r_hyps,
+            reverse_weight)
+        decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
+        r_decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
+        return decoder_out, r_decoder_out
