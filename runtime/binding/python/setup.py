@@ -80,7 +80,7 @@ def read_long_description():
     return readme
 
 
-package_name = "wenet"
+package_name = "wenetruntime"
 
 setuptools.setup(
     name=package_name,
