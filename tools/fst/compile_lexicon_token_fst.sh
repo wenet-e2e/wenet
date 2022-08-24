@@ -23,7 +23,7 @@ if [ $# -ne 3 ]; then
   echo "usage: tools/fst/compile_lexicon_token_fst.sh <dict-src-dir> <tmp-dir> <lang-dir>"
   echo "e.g.: tools/fst/compile_lexicon_token_fst.sh data/local/dict data/local/lang_tmp data/lang"
   echo "<dict-src-dir> should contain the following files:"
-  echo "lexicon.txt lexicon_numbers.txt units.txt"
+  echo "lexicon.txt units.txt"
   echo "options: "
   exit 1;
 fi
