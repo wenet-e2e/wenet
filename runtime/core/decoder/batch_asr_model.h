@@ -52,6 +52,7 @@ class BatchAsrModel {
   int sos_ = 0;
   int eos_ = 0;
   bool is_bidirectional_decoder_ = false;
+  bool is_fp16_ = false;
 };
 
 }  // namespace wenet
