@@ -7,17 +7,16 @@ set(decoder_srcs
   ctc_endpoint.cc
   batch_asr_decoder.cc
   batch_asr_model.cc
-  batch_torch_asr_model.cc
 )
 
 if(NOT TORCH AND NOT ONNX)
   message(FATAL_ERROR "Please build with TORCH or ONNX!!!")
 endif()
 if(TORCH)
-  list(APPEND decoder_srcs torch_asr_model.cc)
+  list(APPEND decoder_srcs torch_asr_model.cc batch_torch_asr_model.cc)
 endif()
 if(ONNX)
-  list(APPEND decoder_srcs onnx_asr_model.cc)
+  list(APPEND decoder_srcs onnx_asr_model.cc batch_onnx_asr_model.cc)
 endif()
 
 add_library(decoder STATIC ${decoder_srcs})
