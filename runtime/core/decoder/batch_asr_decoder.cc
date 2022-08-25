@@ -117,7 +117,6 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
   }
   for (auto& pair : batch_feats_lens_) {
     batch_feats_lens.push_back(pair.second);
-    // VLOG(1) << "\t feats lens: " << pair.second;
   }
   VLOG(1) << "feature Compute takes " << timer.Elapsed() << " ms.";
 
