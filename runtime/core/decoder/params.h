@@ -26,6 +26,7 @@
 #include "decoder/batch_asr_decoder.h"
 #ifdef USE_ONNX
 #include "decoder/onnx_asr_model.h"
+#include "decoder/batch_onnx_asr_model.h"
 #endif
 #ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
@@ -91,6 +92,7 @@ DEFINE_int32(language_type, 0,
              "0x01 = kIndoEuropean");
 DEFINE_bool(lowercase, true, "lowercase final result if needed");
 DEFINE_bool(run_batch, false, "run websocket server for batch decoding");
+DEFINE_bool(is_fp16, false, "the model is of fp16");
 
 namespace wenet {
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
@@ -125,11 +127,19 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 
   if (!FLAGS_onnx_dir.empty()) {
 #ifdef USE_ONNX
-    LOG(INFO) << "Reading onnx model ";
-    OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
-    auto model = std::make_shared<OnnxAsrModel>();
-    model->Read(FLAGS_onnx_dir);
-    resource->model = model;
+    if (FLAGS_run_batch) {
+      LOG(INFO) << "BatchOnnxAsrModel Reading ONNX model dir: " << FLAGS_onnx_dir;
+      BatchOnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<BatchOnnxAsrModel>();
+      model->Read(FLAGS_onnx_dir, FLAGS_is_fp16);
+      resource->batch_model = model;
+    } else {
+      LOG(INFO) << "Reading onnx model ";
+      OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<OnnxAsrModel>();
+      model->Read(FLAGS_onnx_dir);
+      resource->model = model;
+    }
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DONNX=ON'.";
 #endif
@@ -139,7 +149,7 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
       LOG(INFO) << "BatchTorchAsrModel Reading torch model " << FLAGS_model_path;
       BatchTorchAsrModel::InitEngineThreads(FLAGS_num_threads);
       auto model = std::make_shared<BatchTorchAsrModel>();
-      model->Read(FLAGS_model_path);
+      model->Read(FLAGS_model_path, FLAGS_is_fp16);
       resource->batch_model = model;
     } else {
       LOG(INFO) << "Reading torch model " << FLAGS_model_path;
