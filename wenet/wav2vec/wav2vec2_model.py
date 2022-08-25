@@ -122,7 +122,7 @@ class Wav2vec2Model(torch.nn.Module):
                 with torch.no_grad():
                     encoder_out, encoder_mask,ext_res = self.encoder(speech, speech_lengths,features_only=True)
             # 1. Encoder
-            encoder_out, encoder_mask,ext_res = self.encoder(speech, speech_lengths,features_only=True)
+            # encoder_out, encoder_mask,ext_res = self.encoder(speech, speech_lengths,features_only=True)
             encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         
@@ -157,7 +157,7 @@ class Wav2vec2Model(torch.nn.Module):
             
             
 
-        return loss, loss_att, loss_ctc
+        return loss, loss_att, loss_ctc,sample_size
 
     def _calc_att_loss(
         self,

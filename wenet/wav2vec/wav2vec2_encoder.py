@@ -752,7 +752,6 @@ class W2vConformerEncoder(W2vBaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
-        cnn_module_before: bool = False,
         use_feature_norm: bool = False,
     ):
         """Construct ConformerEncoder
