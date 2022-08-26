@@ -12,9 +12,9 @@ The w2v-conformer model uses ISML datasets to pretrain, this is a internal datas
 We use two model configurations to pretrain the conformer encoder architecture:
 
 Base model contains 12 conformer blocks, model dimension 512, FFN dimension 2048 and 8 attention heads. 
-samples are batched together to not exceed 30000 frames per GPU. we train a total of 32 V100 GPUs for 800k steeps.
+samples are batched together to not exceed 30000 frames per GPU. we train a total of 32 A100 GPUs for 800k steeps.
 
-Middle model contains 24 conformer blocks with model dimension 2048, FFN dimension 512 and 8 attention heads. We add a reconstruction loss to slightly improve performance. To speed up training procedure, we change The time stride of convolutional subsampling blocks to 3, so the length of the input feature becomes one sixth. samples are batched together to not exceed 20000 frames per GPU. we train a total of 32 V100 GPUs for 600k steps.
+Middle model contains 24 conformer blocks with model dimension 2048, FFN dimension 512 and 8 attention heads. We add a reconstruction loss to slightly improve performance. To speed up training procedure, we change The time stride of convolutional subsampling blocks to 3, so the length of the input feature becomes one sixth. samples are batched together to not exceed 20000 frames per GPU. we train a total of 32 A100 GPUs for 600k steps.
 
 We are also trying to train the large model with 300m parameters, and this work is ongoing.
 
@@ -39,7 +39,7 @@ pretrained model link:
 ##  Conformer Result
 
 * config: conf/train_conformer_base_100h.yaml
-* Training info: lr 0.0004, batch size 16, 4 gpus on V100, acc_grad 1, 80 epochs
+* Training info: lr 0.0004, batch size 16, 4 gpus on A100, acc_grad 1, 80 epochs
 * Decoding info: ctc_weight 0.5, average_num 35
 
 | decoding mode             | CER   |
@@ -52,7 +52,7 @@ pretrained model link:
 ##  Conformer Result
 
 * config: conf/train_conformer_large_100h.yaml
-* Training info: lr 0.0004, batch size 16, 4 gpus on V100, acc_grad 1, 80 epochs
+* Training info: lr 0.0004, batch size 16, 4 gpus on A100, acc_grad 1, 80 epochs
 * Decoding info: ctc_weight 0.5, average_num 35
 
 | decoding mode             | CER   |
