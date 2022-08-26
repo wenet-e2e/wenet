@@ -120,8 +120,8 @@ class Recognizer {
         break;
       } else if (state == DecodeState::kEndpoint && continuous_decoding_) {
         decoder_->Rescoring();
-        decoder_->ResetContinuousDecoding();
         UpdateResult(true);
+        decoder_->ResetContinuousDecoding();
       } else {  // kEndBatch
         UpdateResult(false);
       }

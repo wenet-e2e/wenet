@@ -9,8 +9,8 @@
 | [**训练模型教程 1**](https://wenet.org.cn/wenet/tutorial_librispeech.html)
 | [**训练模型教程 2**](https://wenet.org.cn/wenet/tutorial_aishell.html)
 | [**WeNet 论文**](https://wenet-e2e.github.io/wenet/papers.html)
-| [**x86 识别服务**](https://github.com/wenet-e2e/wenet/tree/main/runtime/server/x86)
-| [**android 本地识别**](https://github.com/wenet-e2e/wenet/tree/main/runtime/device/android/wenet)
+| [**x86 识别服务**](https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch)
+| [**android 本地识别**](https://github.com/wenet-e2e/wenet/tree/main/runtime/android)
 
 
 
@@ -40,7 +40,7 @@ docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenetorg/wene
 
 **实时识别**
 
-使用浏览器打开文件`wenet/runtime/server/x86/web/templates/index.html`，在 `WebSocket URL` 中填入 `ws://127.0.0.1:10086` (若在windows下通过wsl2运行docker,  则使用`ws://localhost:10086`) , 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
+使用浏览器打开文件`wenet/runtime/libtorch/web/templates/index.html`，在 `WebSocket URL` 中填入 `ws://127.0.0.1:10086` (若在windows下通过wsl2运行docker,  则使用`ws://localhost:10086`) , 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
 
 ![Runtime web](/docs/images/runtime_web.png)
 

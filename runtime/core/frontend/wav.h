@@ -29,19 +29,32 @@
 namespace wenet {
 
 struct WavHeader {
-  char riff[4];  // "riff"
-  unsigned int size;
-  char wav[4];  // "WAVE"
-  char fmt[4];  // "fmt "
-  unsigned int fmt_size;
-  uint16_t format;
-  uint16_t channels;
-  unsigned int sample_rate;
-  unsigned int bytes_per_second;
-  uint16_t block_size;
-  uint16_t bit;
-  char data[4];  // "data"
-  unsigned int data_size;
+  char riff[4] = {'R', 'I', 'F', 'F'};
+  unsigned int size = 0;
+  char wav[4] = {'W', 'A', 'V', 'E'};
+  char fmt[4] = {'f', 'm', 't', ' '};
+  unsigned int fmt_size = 16;
+  uint16_t format = 1;
+  uint16_t channels = 0;
+  unsigned int sample_rate = 0;
+  unsigned int bytes_per_second = 0;
+  uint16_t block_size = 0;
+  uint16_t bit = 0;
+  char data[4] = {'d', 'a', 't', 'a'};
+  unsigned int data_size = 0;
+
+  WavHeader() {}
+
+  WavHeader(int num_samples, int num_channel, int sample_rate,
+            int bits_per_sample) {
+    data_size = num_samples * num_channel * (bits_per_sample / 8);
+    size = sizeof(WavHeader) - 8 + data_size;
+    channels = num_channel;
+    this->sample_rate = sample_rate;
+    bytes_per_second = sample_rate * num_channel * (bits_per_sample / 8);
+    block_size = num_channel * (bits_per_sample / 8);
+    bit = bits_per_sample;
+  }
 };
 
 class WavReader {
@@ -68,7 +81,7 @@ class WavReader {
       fseek(fp, offset, SEEK_SET);
       fread(header.data, 8, sizeof(char), fp);
     }
-    // check "riff" "WAVE" "fmt " "data"
+    // check "RIFF" "WAVE" "fmt " "data"
 
     // Skip any sub-chunks between "fmt" and "data".  Usually there will
     // be a single "fact" sub chunk, but on Windows there can also be a
@@ -147,23 +160,8 @@ class WavWriter {
 
   void Write(const std::string& filename) {
     FILE* fp = fopen(filename.c_str(), "w");
-    // init char 'riff' 'WAVE' 'fmt ' 'data'
-    WavHeader header;
-    char wav_header[44] = {0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57,
-                           0x41, 0x56, 0x45, 0x66, 0x6d, 0x74, 0x20, 0x10, 0x00,
-                           0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                           0x64, 0x61, 0x74, 0x61, 0x00, 0x00, 0x00, 0x00};
-    memcpy(&header, wav_header, sizeof(header));
-    header.channels = num_channel_;
-    header.bit = bits_per_sample_;
-    header.sample_rate = sample_rate_;
-    header.data_size = num_samples_ * num_channel_ * (bits_per_sample_ / 8);
-    header.size = sizeof(header) - 8 + header.data_size;
-    header.bytes_per_second =
-        sample_rate_ * num_channel_ * (bits_per_sample_ / 8);
-    header.block_size = num_channel_ * (bits_per_sample_ / 8);
-
+    WavHeader header(num_samples_, num_channel_, sample_rate_,
+                     bits_per_sample_);
     fwrite(&header, 1, sizeof(header), fp);
 
     for (int i = 0; i < num_samples_; ++i) {
@@ -196,6 +194,46 @@ class WavWriter {
   int num_channel_;
   int sample_rate_;
   int bits_per_sample_;
+};
+
+class StreamWavWriter {
+ public:
+  StreamWavWriter(int num_channel, int sample_rate, int bits_per_sample)
+     : num_channel_(num_channel),
+       sample_rate_(sample_rate),
+       bits_per_sample_(bits_per_sample),
+       total_num_samples_(0) {}
+
+  StreamWavWriter(const std::string& filename, int num_channel,
+                  int sample_rate, int bits_per_sample)
+     : StreamWavWriter(num_channel, sample_rate, bits_per_sample) {
+    Open(filename);
+  }
+
+  void Open(const std::string& filename) {
+    fp_ = fopen(filename.c_str(), "wb");
+    fseek(fp_, sizeof(WavHeader), SEEK_SET);
+  }
+
+  void Write(const int16_t* sample_data, size_t num_samples) {
+    fwrite(sample_data, sizeof(int16_t), num_samples, fp_);
+    total_num_samples_ += num_samples;
+  }
+
+  void Close() {
+    WavHeader header(total_num_samples_, num_channel_, sample_rate_,
+                     bits_per_sample_);
+    fseek(fp_, 0L, SEEK_SET);
+    fwrite(&header, 1, sizeof(header), fp_);
+    fclose(fp_);
+  }
+
+ private:
+  FILE* fp_;
+  int num_channel_;
+  int sample_rate_;
+  int bits_per_sample_;
+  size_t total_num_samples_;
 };
 
 }  // namespace wenet

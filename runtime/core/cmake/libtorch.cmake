@@ -57,7 +57,7 @@ if(TORCH)
       file(COPY ${TORCH_DLLS} DESTINATION ${CMAKE_BINARY_DIR})
     endif()
   else()
-    # Change version in runtime/device/android/wenet/app/build.gradle.
+    # Change version in runtime/android/app/build.gradle.
     file(GLOB PYTORCH_INCLUDE_DIRS "${build_DIR}/pytorch_android*.aar/headers")
     file(GLOB PYTORCH_LINK_DIRS "${build_DIR}/pytorch_android*.aar/jni/${ANDROID_ABI}")
     find_library(PYTORCH_LIBRARY pytorch_jni

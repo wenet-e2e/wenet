@@ -20,9 +20,9 @@ model_dir=$PWD/20210602_u2++_conformer_libtorch  # absolute path
 docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenetorg/wenet-mini:latest bash /home/run.sh
 ```
 
-* Step 3. Test with web browser. Open runtime/server/x86/web/templates/index.html in the browser directly, input your `WebSocket URL`, it will request some permissions, and start to record to test, as the following graph shows.
+* Step 3. Test with web browser. Open runtime/libtorch/web/templates/index.html in the browser directly, input your `WebSocket URL`, it will request some permissions, and start to record to test, as the following graph shows.
 
-![Runtime web](../../../docs/images/runtime_web.png)
+![Runtime web](../../docs/images/runtime_web.png)
 
 ## Run in Docker Build
 
@@ -46,12 +46,12 @@ cp <your_test_wav> docker_resource/test.wav
 
 * Step 3. Start docker container.
 ``` sh
-docker run --rm -v $PWD/docker_resource:/home/wenet/runtime/server/x86/docker_resource -it wenet bash
+docker run --rm -v $PWD/docker_resource:/home/wenet/runtime/libtorch/docker_resource -it wenet bash
 ```
 
 * Step 4. Testing in docker container
 ```
-cd /home/wenet/runtime/server/x86
+cd /home/wenet/runtime/libtorch
 export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=docker_resource/test.wav
@@ -69,7 +69,7 @@ Or you can do the WebSocket server/client testing as described in the `WebSocket
 
 * Step 1. Download or prepare your pretrained model.
 
-* Step 2. Build. The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/server/x86` as your build directory, then type:
+* Step 2. Build. The build requires cmake 3.14 or above. For building, please first change to `wenet/runtime/libtorch` as your build directory, then type:
 
 ``` sh
 mkdir build && cd build && cmake .. && cmake --build .

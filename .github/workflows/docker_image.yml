@@ -16,7 +16,7 @@ jobs:
 
     - name: Build the wenet docker image
       run: |
-        cd runtime/server/x86/docker
+        cd runtime/libtorch/docker
         docker build -t wenet:latest .
         docker image tag wenet:latest ${{ secrets.DOCKERHUB_USERNAME }}/wenet:latest
         docker push ${{ secrets.DOCKERHUB_USERNAME }}/wenet:latest
@@ -25,7 +25,7 @@ jobs:
       run: |
         rm -rf wenet/*
         mkdir wenet/lib
-        root_dir=/home/wenet/runtime/server/x86
+        root_dir=/home/wenet/runtime/libtorch
         torch_lib=$root_dir/fc_base/libtorch-src/lib
         fst_lib=$root_dir/fc_base/openfst-build/src/lib/.libs
         id=$(docker run -d -it ${{ secrets.DOCKERHUB_USERNAME }}/wenet:latest)

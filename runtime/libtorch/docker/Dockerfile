@@ -7,5 +7,5 @@ RUN git clone https://github.com/wenet-e2e/wenet.git /home/wenet
 ARG model=20210618_u2pp_conformer_libtorch.tar.gz
 RUN wget -P /home https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/$model
 RUN tar -xzf /home/$model -C /home
-ARG build=/home/wenet/runtime/server/x86/build
-RUN mkdir $build && cd $build && cmake .. -DCMAKE_BUILD_TYPE=Release && cmake --build . --config Release
+ARG build=/home/wenet/runtime/libtorch/build
+RUN mkdir $build && cd $build && cmake .. -DCMAKE_BUILD_TYPE=Release -DFST_HAVE_BIN=ON && cmake --build . --config Release
