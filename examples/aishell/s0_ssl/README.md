@@ -30,7 +30,7 @@ pretrained model link:
 
 *  After pretraining, we can build encoder-decoder based ASR system.The conformer based encoder takes the pretrained model as initialization and the transformer based decoder will be trained from scratch. Just set --enc_init_mods like 'encoder.embed.,encoder.encoders.0.,encoder.encoders.1. ...' to load customized pretrained parameters.
 
-* In aishell task, we carefully adjusted the learning rate to 0.0004 to get best performence we also find that if too many layers are set for decoder,the migration performance of the pre-training model will be degraded, so we only build a small transformer decoder for joint training. If the downstream task is more than 500 hours, you can increase the learning rate and the parameter amount of the decoder.
+* In aishell task, we carefully adjust the learning rate to 0.0004 to get best performence. we also find that if too many layers are set for decoder,the migration performance of the pre-training model will be degraded, so we only build a small transformer decoder for joint training. If the downstream task is more than 500 hours, you can increase the learning rate and the parameter amount of the decoder.
 
 * Please note that the final layer of the pretraining model do not provide a good initialization for fine-tuning and would benefit from being re-initialized before fine-tuning. 
 
