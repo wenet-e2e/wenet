@@ -225,7 +225,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # 7.3 Build decoding TLG
   tools/fst/compile_lexicon_token_fst.sh \
     data/local/dict data/local/tmp data/local/lang
-  tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test || exit 1;
+  tools/fst/make_tlg.sh data/local/lm data/local/lang data/local/lang_test || exit 1;
   # 7.4 Decoding with runtime
   chunk_size=-1
   ./tools/decode.sh --nj 16 \
