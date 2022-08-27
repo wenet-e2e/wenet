@@ -41,7 +41,7 @@
 
 * Feature info: using fbank feature, dither, cmvn, oneline speed perturb
 * Training info: lr 0.001, batch size 4, 32 gpu, acc_grad 1, 360 epochs
-* Training weight info: transducer_weight 0.75,  ctc_weight 0.1, reverse_weight 0.15  average_num 30
+* Training weight info: transducer_weight 0.75,  ctc_weight 0.1, reverse_weight 0.3  average_num 30
 * Predictor type: lstm
 
 | decoding mode/chunk size  | full  | 16    |
@@ -69,3 +69,15 @@ note:
 | ✔    |     |✔    |   5.03 |      |           |        |
 | ✔    |     |     |        |      |           |        |
 |      | ✔   | ✔   |   4.94 | 4.94 |      4.61 |        |
+
+## Pretrain U2/U2++ to init RNN-T
+* Feature info: using fbank feature, dither, cmvn, oneline speed perturb
+* Training info: lr 0.001, batch size 4, 32 gpu, acc_grad 1, 80 epochs
+* Training weight info: transducer_weight 0.3, attention_weight 0.7 rereverse_weight 0.3 average_num 30
+* Predictor type: EmbedingPredictor
+* Pretrain model: wenet sota
+| decoding mode/chunk size     | full  | 16    |
+|------------------------------|-------|-------|
+| rnnt greedy search           | 5.68  | 6.26  |
+| rnnt prefix beam             | 4.87  | 5.79  |
+| rnnt prefix beam+att rescore | 5.32  |       |
