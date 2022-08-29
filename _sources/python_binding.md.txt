@@ -16,7 +16,7 @@ The best things of the binding are:
 Python 3.6+ is required.
 
 ``` sh
-pip3 install wenet
+pip3 install wenetruntime
 ```
 
 ## Usage
@@ -25,7 +25,7 @@ pip3 install wenet
 
 ``` python
 import sys
-import wenet
+import wenetruntime as wenet
 
 wav_file = sys.argv[1]
 decoder = wenet.Decoder(lang='chs')
@@ -68,7 +68,7 @@ decoder = wenet.Decoder(model_dir,
 ``` python
 import sys
 import wave
-import wenet
+import wenetruntime as wenet
 
 test_wav = sys.argv[1]
 
