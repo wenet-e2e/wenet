@@ -7,10 +7,10 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES="0,1,2,3"
 
 stage=0 # start from 0 if you need to start from data preparation
-stop_stage=6
+stop_stage=5
 # The num of nodes or machines used for multi-machine training
 # Default 1 for single machine/node
 # NFS will be needed if you want run multi-machine training
@@ -23,9 +23,9 @@ node_rank=0
 # modify this to your AISHELL-2 data path
 # Note: the evaluation data (dev & test) is available at AISHELL.
 # Please download it from http://aishell-eval.oss-cn-beijing.aliyuncs.com/TEST%26DEV%20DATA.zip
-trn_set=/mnt/nfs/ptm1/open-data/AISHELL-2/iOS/data
-dev_set=/mnt/nfs/ptm1/open-data/AISHELL-DEV-TEST-SET/iOS/dev
-tst_set=/mnt/nfs/ptm1/open-data/AISHELL-DEV-TEST-SET/iOS/test
+train_set=/cfs/share/corpus/aishell-2/AISHELL-2/iOS/data
+dev_set=/cfs/share/corpus/aishell-2/AISHELL-DEV-TEST-SET/iOS/dev
+test_set=/cfs/share/corpus/aishell-2/AISHELL-DEV-TEST-SET/iOS/test
 
 nj=16
 dict=data/dict/lang_char.txt
@@ -33,7 +33,7 @@ dict=data/dict/lang_char.txt
 train_set=train
 train_config=conf/conformer_u2pp_rnnt.yaml
 cmvn=true
-dir=exp/conformer_rnnt
+dir=exp/`basename ${train_config%.*}`
 checkpoint=
 
 # use average_checkpoint will get better result
@@ -42,13 +42,24 @@ decode_checkpoint=$dir/final.pt
 average_num=30
 decode_modes="rnnt_beam_search"
 
+# Specify decoding_chunk_size if it's a unified dynamic chunk trained model
+# -1 for full chunk
+decoding_chunk_size=-1
+# only used in rescore mode for weighting different scores
+rescore_ctc_weight=0.5
+rescore_transducer_weight=0.5
+rescore_attn_weight=0.5
+# only used in beam search, either pure beam search mode OR beam search inside rescoring
+search_ctc_weight=0.3
+search_transducer_weight=0.7
+
 . tools/parse_options.sh || exit 1;
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # Data preparation
-    local/prepare_data.sh ${trn_set} data/local/${train_set} data/${train_set} || exit 1;
+    local/prepare_data.sh ${train_set} data/local/${train_set} data/${train_set} || exit 1;
     local/prepare_data.sh ${dev_set} data/local/dev data/dev || exit 1;
-    local/prepare_data.sh ${tst_set} data/local/test data/test || exit 1;
+    local/prepare_data.sh ${test_set} data/local/test data/test || exit 1;
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -99,6 +110,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="gloo"
+    #dist_backend="nccl"
     # The total number of processes/gpus, so that the master knows
     # how many workers to wait for.
     # More details about ddp can be found in
@@ -129,8 +141,9 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
             --ddp.world_size $world_size \
             --ddp.rank $rank \
             --ddp.dist_backend $dist_backend \
-            --num_workers 2 \
-            $cmvn_opts
+            --num_workers 4 \
+            $cmvn_opts \
+            2>&1 | tee -a $dir/train.log || exit 1;
     } &
     done
     wait
@@ -145,21 +158,13 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --dst_model $decode_checkpoint \
             --src_path $dir  \
             --num ${average_num} \
-            --val_best
+            --val_best \
+            2>&1 | tee -a $dir/average.log || exit 1;
     fi
-    # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
-    # -1 for full chunk
-    decoding_chunk_size=
-    # only used in rescore mode for weighting different scores
-    rescore_ctc_weight=0.5
-    rescore_transducer_weight=0.5
-    rescore_attn_weight=0.5
-    # only used in beam search, either pure beam search mode OR beam search inside rescoring
-    search_ctc_weight=0.3
-    search_transducer_weight=0.7
+
     for mode in ${decode_modes}; do
     {
-        test_dir=$dir/test_${mode}
+        test_dir=$dir/test_${mode}_chunk_${decoding_chunk_size}
         mkdir -p $test_dir
         python wenet/bin/recognize.py --gpu 0 \
             --mode $mode \

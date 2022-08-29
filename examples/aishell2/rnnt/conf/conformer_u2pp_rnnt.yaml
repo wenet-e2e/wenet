@@ -87,8 +87,8 @@ dataset_conf:
     sort_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
-        batch_type: 'static' # static or dynamic
-        batch_size: 4
+        batch_type: 'dynamic' # static or dynamic
+        max_frames_in_batch: 15000
 
 grad_clip: 4
 accum_grad: 1
