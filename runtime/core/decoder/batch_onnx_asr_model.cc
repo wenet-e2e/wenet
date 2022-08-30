@@ -21,10 +21,11 @@
 #include <algorithm>
 #include <memory>
 #include <utility>
-#include <eigen3/Eigen/Eigen>
+#include <immintrin.h>
 
 #include "utils/string.h"
 #include "utils/Yaml.hpp"
+#include "utils/timer.h"
 
 namespace wenet {
 
@@ -122,7 +123,7 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16) {
     "1"
   };
   // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
-  
+
   const auto& api = Ort::GetApi();
   OrtCUDAProviderOptionsV2* cuda_options = nullptr;
   Ort::ThrowOnError(api.CreateCUDAProviderOptions(&cuda_options));
@@ -150,7 +151,7 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16) {
   sos_ = root["sos"].As<int>();
   eos_ = root["eos"].As<int>();
   is_bidirectional_decoder_ = root["is_bidirectional_decoder"].As<bool>();
-  
+
   LOG(INFO) << "Onnx Model Info:";
   LOG(INFO) << "\tsos " << sos_;
   LOG(INFO) << "\teos " << eos_;
@@ -201,18 +202,20 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
 
   // speech
   const int64_t feats_shape[3] = {batch_size, num_frames, feature_dim};
+  Timer timer;
   if (is_fp16_) {
     std::vector<Ort::Float16_t> feats(batch_size * num_frames * feature_dim);
     for (size_t i = 0; i < batch_size; ++i) {
       for (size_t j = 0; j < num_frames; ++j) {
         for (size_t k = 0; k < feature_dim; ++k) {
-          int p = i * num_frames * feature_dim + j * feature_dim + k; 
-          feats[p] = Ort::Float16_t(Eigen::half(batch_feats[i][j][k]).x);
+          int p = i * num_frames * feature_dim + j * feature_dim + k;
+          feats[p] = Ort::Float16_t(_cvtss_sh(batch_feats[i][j][k], 0));
         }
       }
     }
     feats_ort = std::move(Ort::Value::CreateTensor<Ort::Float16_t>(
         memory_info, feats.data(), feats.size(), feats_shape, 3));
+    VLOG(1) << "feats to fp16 takes " << timer.Elapsed() << " ms.";
   } else {
     std::vector<float> feats;
     for (size_t i = 0; i < batch_size; ++i) {
@@ -223,7 +226,7 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
     feats_ort = std::move(Ort::Value::CreateTensor<float>(
         memory_info, feats.data(), feats.size(), feats_shape, 3));
   }
-  
+
   // speech_lens
   const int64_t feats_lens_shape[1] = {batch_size};
   Ort::Value feats_lens_ort = Ort::Value::CreateTensor<int>(
@@ -237,29 +240,33 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
       inputs.push_back(std::move(feats_ort));
     } else if (!strcmp(name, "speech_lengths")) {
       inputs.push_back(std::move(feats_lens_ort));
-    } 
+    }
   }
 
   Ort::RunOptions run_option;
   run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
+  timer.Reset();
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
       run_option, encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
+  VLOG(1) << "\tencoder ->Run() takes " << timer.Elapsed() << " ms.";
 
   float* ctc_log_probs = nullptr;
   auto type_info = ort_outputs[2].GetTensorTypeAndShapeInfo();
   auto out_shape = type_info.GetShape();
-  int num_outputs = out_shape[1]; 
+  int num_outputs = out_shape[1];
   int output_dim = out_shape[2];
   std::vector<float> ctc_log_probs_data; // for holding ctc_log_probs converted from fp16
   if (is_fp16_) {
-    uint16_t* probs = ort_outputs[2].GetTensorMutableData<uint16_t>();
+    timer.Reset();
+    Ort::Float16_t* probs = ort_outputs[2].GetTensorMutableData<Ort::Float16_t>();
     int length = out_shape[0] * out_shape[1] * out_shape[2];
     ctc_log_probs_data.resize(length);
     for (size_t i = 0; i < length; ++i) {
-      ctc_log_probs_data[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(probs[i]));
+      ctc_log_probs_data[i] = _cvtsh_ss(probs[i].value);
     }
     ctc_log_probs = ctc_log_probs_data.data();
+    VLOG(1) << "ctc_log_probs from GPU-fp16 to float takes " << timer.Elapsed() << " ms. data lenght " << length;
   } else {
     ctc_log_probs = ort_outputs[2].GetTensorMutableData<float>();
   }
@@ -297,7 +304,7 @@ void BatchOnnxAsrModel::AttentionRescoring(
   // 1. prepare input for onnx
   int batch_size = batch_hyps.size();
   int beam_size = batch_hyps[0].size();
-  
+
   // 1.1 generate hyps_lens_sos data for ort
   std::vector<int> hyps_lens_sos(batch_size * beam_size, 0);  // (batch_size, beam_size)
   int max_hyps_len = 0;
@@ -324,12 +331,12 @@ void BatchOnnxAsrModel::AttentionRescoring(
   // 2. forward attetion decoder
   const int64_t hyps_lens_shape[] = {batch_size, beam_size};
   const int64_t hyps_pad_shape[] = {batch_size, beam_size, max_hyps_len};
-  
+
   Ort::Value hyps_lens_tensor = Ort::Value::CreateTensor<int>(
       memory_info, hyps_lens_sos.data(), hyps_lens_sos.size(), hyps_lens_shape, 2);
   Ort::Value hyps_pad_tensor = Ort::Value::CreateTensor<int64_t>(
       memory_info, hyps_pad_sos.data(), hyps_pad_sos.size(), hyps_pad_shape, 3);
-  
+
   std::vector<Ort::Value> rescore_inputs;
   rescore_inputs.emplace_back(std::move(encoder_outs_));
   rescore_inputs.emplace_back(std::move(hyps_pad_tensor));
@@ -337,10 +344,12 @@ void BatchOnnxAsrModel::AttentionRescoring(
 
   Ort::RunOptions run_option;
   run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
+  Timer timer;
   std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
       run_option, rescore_in_names_.data(), rescore_inputs.data(),
       rescore_inputs.size(), rescore_out_names_.data(),
       rescore_out_names_.size());
+  VLOG(1) << "decoder->Run() takes " << timer.Elapsed() << " ms.";
 
   auto type_info = rescore_outputs[0].GetTensorTypeAndShapeInfo();
   std::vector<int64_t> decoder_out_shape = type_info.GetShape(); //(B, beam, T2)
@@ -349,28 +358,30 @@ void BatchOnnxAsrModel::AttentionRescoring(
   std::vector<float> decoder_outs_fp16;  // for holding decoder outs data converted from fp16;
   std::vector<float> r_decoder_outs_fp16;  // for holding decoder outs data converted from fp16;
   if (is_fp16_) {
+    Timer timer;
     int length = decoder_out_shape[0] * decoder_out_shape[1] * decoder_out_shape[2];
     decoder_outs_fp16.resize(length);
-    auto outs = rescore_outputs[0].GetTensorMutableData<uint16_t>();
+    auto outs = rescore_outputs[0].GetTensorMutableData<Ort::Float16_t>();
     for (size_t i = 0; i < length; ++i) {
-      decoder_outs_fp16[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(outs[i]));
+      decoder_outs_fp16[i] = _cvtsh_ss(outs[i].value);
     }
     decoder_outs_data = decoder_outs_fp16.data();
     if (is_bidirectional_decoder_ && reverse_weight > 0) {
       r_decoder_outs_fp16.reserve(length);
-      auto r_outs = rescore_outputs[1].GetTensorMutableData<uint16_t>();
+      auto r_outs = rescore_outputs[1].GetTensorMutableData<Ort::Float16_t>();
       for (size_t i = 0; i < length; ++i) {
-        r_decoder_outs_fp16[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(r_outs[i]));
+        r_decoder_outs_fp16[i] = _cvtsh_ss(r_outs[i].value);
       }
       r_decoder_outs_data = r_decoder_outs_fp16.data();
     }
+    VLOG(1) << "decoder_out from fp16 to float takes " << timer.Elapsed() << " ms. data length " << length;
   } else {
     decoder_outs_data = rescore_outputs[0].GetTensorMutableData<float>();
     if (is_bidirectional_decoder_ && reverse_weight > 0) {
       r_decoder_outs_data = rescore_outputs[1].GetTensorMutableData<float>();
     }
   }
- 
+
   int decode_out_len = decoder_out_shape[2];
   attention_scores->clear();
   for (size_t i = 0; i < batch_size; ++i) {
@@ -384,7 +395,7 @@ void BatchOnnxAsrModel::AttentionRescoring(
       if (is_bidirectional_decoder_ && reverse_weight > 0) {
         std::vector<int> r_hyp(hyp.size());
         std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
-        p = r_decoder_outs_data + (i * beam_size +j) * max_hyps_len * decode_out_len; 
+        p = r_decoder_outs_data + (i * beam_size +j) * max_hyps_len * decode_out_len;
         r_score = ComputeAttentionScore(p, r_hyp, eos_, decode_out_len);
       }
       Y[j] = score * (1 - reverse_weight) + r_score * reverse_weight;
