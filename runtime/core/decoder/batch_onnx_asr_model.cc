@@ -102,9 +102,10 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16) {
   }
 
   // 1. Load sessions
+  // config for CUDA
   std::vector<const char*> keys{
     "device_id",
-    "gpu_mem_limit",
+    // "gpu_mem_limit",
     "arena_extend_strategy",
     "cudnn_conv_algo_search",
     "do_copy_in_default_stream",
@@ -113,33 +114,22 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16) {
   };
   std::vector<const char*> values{
     "0",
-    "2147483648",
+    // "2147483648",
     "kSameAsRequested",
     "DEFAULT",
     "1",
     "1",
     "1"
   };
-  std::cout << "prepare cuda options ...\n";
+  // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
+  
   const auto& api = Ort::GetApi();
   OrtCUDAProviderOptionsV2* cuda_options = nullptr;
-  OrtStatus* error = api.CreateCUDAProviderOptions(&cuda_options);
-  if (error) {
-    api.ReleaseStatus(error);
-    throw std::runtime_error("CreateCUDAProviderOptions error");
-  }
-  error = api.UpdateCUDAProviderOptions(cuda_options, keys.data(), values.data(), keys.size());
-  if (error) {
-    api.ReleaseStatus(error);
-    throw std::runtime_error("UpdateCUDAProviderOptions error");
-  }
-  error = api.SessionOptionsAppendExecutionProvider_CUDA_V2(session_options_, cuda_options);
-  if (error) {
-    api.ReleaseStatus(error);
-    throw std::runtime_error("SessionOptionsAppendExecutionProvider_CUDA_V2 error");
-  }
+  Ort::ThrowOnError(api.CreateCUDAProviderOptions(&cuda_options));
+  Ort::ThrowOnError(api.UpdateCUDAProviderOptions(cuda_options, keys.data(), values.data(), keys.size()));
+  Ort::ThrowOnError(api.SessionOptionsAppendExecutionProvider_CUDA_V2(session_options_, cuda_options));
+
   api.ReleaseCUDAProviderOptions(cuda_options);
-  std::cout << "done cuda options ...\n";
 
   try {
     encoder_session_ = std::make_shared<Ort::Session>(
@@ -250,8 +240,10 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
     } 
   }
 
+  Ort::RunOptions run_option;
+  run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
-      Ort::RunOptions{nullptr}, encoder_in_names_.data(), inputs.data(),
+      run_option, encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
 
   float* ctc_log_probs = nullptr;
@@ -259,13 +251,15 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
   auto out_shape = type_info.GetShape();
   int num_outputs = out_shape[1]; 
   int output_dim = out_shape[2];
+  std::vector<float> ctc_log_probs_data; // for holding ctc_log_probs converted from fp16
   if (is_fp16_) {
     uint16_t* probs = ort_outputs[2].GetTensorMutableData<uint16_t>();
     int length = out_shape[0] * out_shape[1] * out_shape[2];
-    ctc_log_probs = new float[length];
+    ctc_log_probs_data.resize(length);
     for (size_t i = 0; i < length; ++i) {
-      ctc_log_probs[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(probs[i]));
+      ctc_log_probs_data[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(probs[i]));
     }
+    ctc_log_probs = ctc_log_probs_data.data();
   } else {
     ctc_log_probs = ort_outputs[2].GetTensorMutableData<float>();
   }
@@ -278,9 +272,6 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
       float* p = ctc_log_probs + (i * num_outputs + j) * output_dim;
       memcpy(out_prob[i][j].data(), p, sizeof(float) * output_dim);
     }
-  }
-  if (is_fp16_) {
-    delete [] ctc_log_probs;
   }
   // 3. cache encoder outs
   encoder_outs_ = std::move(ort_outputs[0]);
@@ -344,8 +335,10 @@ void BatchOnnxAsrModel::AttentionRescoring(
   rescore_inputs.emplace_back(std::move(hyps_pad_tensor));
   rescore_inputs.emplace_back(std::move(hyps_lens_tensor));
 
+  Ort::RunOptions run_option;
+  run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
   std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
-      Ort::RunOptions{nullptr}, rescore_in_names_.data(), rescore_inputs.data(),
+      run_option, rescore_in_names_.data(), rescore_inputs.data(),
       rescore_inputs.size(), rescore_out_names_.data(),
       rescore_out_names_.size());
 
@@ -353,19 +346,23 @@ void BatchOnnxAsrModel::AttentionRescoring(
   std::vector<int64_t> decoder_out_shape = type_info.GetShape(); //(B, beam, T2)
   float* decoder_outs_data = nullptr;
   float* r_decoder_outs_data = nullptr;
+  std::vector<float> decoder_outs_fp16;  // for holding decoder outs data converted from fp16;
+  std::vector<float> r_decoder_outs_fp16;  // for holding decoder outs data converted from fp16;
   if (is_fp16_) {
     int length = decoder_out_shape[0] * decoder_out_shape[1] * decoder_out_shape[2];
-    decoder_outs_data = new float[length]();
+    decoder_outs_fp16.resize(length);
     auto outs = rescore_outputs[0].GetTensorMutableData<uint16_t>();
     for (size_t i = 0; i < length; ++i) {
-      decoder_outs_data[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(outs[i]));
+      decoder_outs_fp16[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(outs[i]));
     }
+    decoder_outs_data = decoder_outs_fp16.data();
     if (is_bidirectional_decoder_ && reverse_weight > 0) {
-      r_decoder_outs_data = new float[length]();
+      r_decoder_outs_fp16.reserve(length);
       auto r_outs = rescore_outputs[1].GetTensorMutableData<uint16_t>();
       for (size_t i = 0; i < length; ++i) {
-        r_decoder_outs_data[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(r_outs[i]));
+        r_decoder_outs_fp16[i] = Eigen::half_impl::half_to_float(Eigen::half_impl::raw_uint16_to_half(r_outs[i]));
       }
+      r_decoder_outs_data = r_decoder_outs_fp16.data();
     }
   } else {
     decoder_outs_data = rescore_outputs[0].GetTensorMutableData<float>();
@@ -393,12 +390,6 @@ void BatchOnnxAsrModel::AttentionRescoring(
       Y[j] = score * (1 - reverse_weight) + r_score * reverse_weight;
     }
     attention_scores->push_back(std::move(Y));
-  }
-  if (is_fp16_) {
-    delete [] decoder_outs_data;
-    if (is_bidirectional_decoder_ && reverse_weight > 0) {
-      delete [] r_decoder_outs_data;
-    }
   }
 }
 
