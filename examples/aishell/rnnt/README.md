@@ -51,7 +51,7 @@
 ## Pretrain
 * Pretrain model: https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_exp.tar.gz
 * Feature info: using fbank feature, dither, cmvn, oneline speed perturb
-* Training info: lr 0.001, batch size 4, 8 gpu, acc_grad 1, 140 epochs
+* Training info: lr 0.001, batch size 8, 8 gpu, acc_grad 1, 140 epochs
 * Training weight info: transducer_weight 0.4,  ctc_weight 0.2 , attention_weight 0.4, reverse_weight 0.3  average_num 30
 * Predictor type: lstm
 
