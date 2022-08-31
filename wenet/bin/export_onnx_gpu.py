@@ -222,6 +222,7 @@ class Decoder(torch.nn.Module):
             r_decoder_out: B x beam x T2 x V
             best_index: B
         """
+        print('self.reverse_weight ', self.reverse_weight, 'self.ctc_weight ', self.ctc_weight)
         B, T, F = encoder_out.shape
         bz = self.beam_size
         B2 = B * bz
@@ -262,7 +263,7 @@ class Decoder(torch.nn.Module):
         score = torch.sum(score, axis=1)  # B2
         score = torch.reshape(score, (B, bz)) + self.ctc_weight * ctc_score
         best_index = torch.argmax(score, dim=1)
-        return best_index
+        return best_index, score
 
 
 def to_numpy(tensors):
@@ -500,7 +501,7 @@ def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
     ort_outs = ort_session.run(None, ort_inputs)
 
     # check decoder output
-    test(to_numpy([o0]), ort_outs, rtol=1e-03, atol=1e-05)
+    test(to_numpy(o0), ort_outs, rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")
 
 
