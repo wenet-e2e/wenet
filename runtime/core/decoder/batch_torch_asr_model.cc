@@ -163,9 +163,8 @@ float BatchTorchAsrModel::ComputeAttentionScore(const torch::Tensor& prob,
 
 void BatchTorchAsrModel::AttentionRescoring(
     const std::vector<std::vector<std::vector<int>>>& batch_hyps,
-    float reverse_weight,
-    std::vector<std::vector<float>>* attention_scores) {
-  CHECK(attention_scores != nullptr);
+    const std::vector<std::vector<float>>& ctc_scores,
+    std::vector<std::vector<float>>& attention_scores) {
   // Step 1: Prepare input for libtorch
   int batch_size = batch_hyps.size();
   int beam_size = batch_hyps[0].size();
@@ -179,47 +178,49 @@ void BatchTorchAsrModel::AttentionRescoring(
     }
   }
 
-  // 1.2 add sos to hyps
-  torch::Tensor hyps_pad_sos =
-    torch::zeros({batch_size, beam_size, max_hyps_len}, torch::kLong);
+  // 1.2 add sos, eos to hyps, r_hyps
+  torch::Tensor hyps_pad_sos_eos = torch::zeros({batch_size, beam_size, max_hyps_len + 1}, torch::kLong);
+  torch::Tensor r_hyps_pad_sos_eos = torch::zeros({batch_size, beam_size, max_hyps_len + 1}, torch::kLong);
   for (size_t i = 0; i < batch_size; i++) {
     for (size_t j = 0; j < beam_size; j++) {
       const std::vector<int>& hyp = batch_hyps[i][j];
-      hyps_pad_sos[i][j][0] = sos_;
-      for (size_t k = 0; k < hyp.size(); k++) {
-        hyps_pad_sos[i][j][k + 1] = hyp[k];
+      hyps_pad_sos_eos[i][j][0] = sos_;
+      r_hyps_pad_sos_eos[i][j][0] = sos_;
+      size_t hyps_len = hyp.size();
+      for (size_t k = 0; k < hyps_len; k++) {
+        hyps_pad_sos_eos[i][j][k + 1] = hyp[k];
+        r_hyps_pad_sos_eos[i][j][k + 1] = hyp[hyps_len - 1 - k];
       }
     }
   }
 
+  // 1.3 ctc_scores_data
+  torch::Tensor ctc_scores_tensor = torch::zeros({batch_size, beam_size}, torch::kFloat);
+  for (size_t i = 0; i < batch_size; ++i) {
+    auto row = torch::from_blob(const_cast<float*>(ctc_scores[i].data()),
+                                {beam_size}, torch::kFloat).clone();
+    ctc_scores_tensor[i] = std::move(row);
+  }
+
   // Step 2: Forward attention decoder
-  hyps_pad_sos = hyps_pad_sos.to(device_);
+  hyps_pad_sos_eos = hyps_pad_sos_eos.to(device_);
   hyps_lens_sos = hyps_lens_sos.to(device_);
+  r_hyps_pad_sos_eos = r_hyps_pad_sos_eos.to(device_);
+  ctc_scores_tensor = ctc_scores_tensor.to(device_);
   // encoder_lens_ = encoder_lens_.to(device_);
   // encoder_out_ = encoder_out_.to(device_);
   torch::NoGradGuard no_grad;
-  auto outputs = model_->run_method("batch_forward_attention_decoder",
-                                    encoder_out_, encoder_lens_,
-                                    hyps_pad_sos, hyps_lens_sos,
-                                    reverse_weight).toTuple()->elements();
-  auto decoder_out = outputs[0].toTensor().to(at::kCPU);
-  auto r_decoder_out = outputs[1].toTensor().to(at::kCPU);
+  auto outputs = model_->run_method(
+      "batch_forward_attention_decoder",
+      encoder_out_, encoder_lens_,
+      hyps_pad_sos_eos, hyps_lens_sos,
+      r_hyps_pad_sos_eos, ctc_scores_tensor).toTuple()->elements();
+  auto rescores = outputs[1].toTensor().to(at::kCPU);
   c10::cuda::CUDACachingAllocator::emptyCache();
-  attention_scores->resize(batch_size);
+  attention_scores.resize(batch_size);
   for (size_t i = 0; i < batch_size; i++) {
-    (*attention_scores)[i].resize(beam_size);
-    for (size_t j = 0; j < beam_size; ++j) {
-      const std::vector<int>& hyp = batch_hyps[i][j];
-      float score = 0.0f;
-      score = ComputeAttentionScore(decoder_out[i * beam_size + j], hyp, eos_);
-      float r_score = 0.0f;
-      if (is_bidirectional_decoder_ && reverse_weight > 0) {
-        std::vector<int> r_hyp(hyp.size());
-        std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
-        r_score = ComputeAttentionScore(r_decoder_out[i * beam_size + j], r_hyp, eos_);
-      }
-      (*attention_scores)[i][j] = score * (1 - reverse_weight) + r_score * reverse_weight;
-    }
+    attention_scores[i].resize(beam_size);
+    memcpy(attention_scores[i].data(), rescores[i].data_ptr(), sizeof(float) * beam_size);
   }
 }
 

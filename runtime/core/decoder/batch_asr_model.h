@@ -36,8 +36,8 @@ class BatchAsrModel {
       batch_ctc_log_prob_t& batch_ctc_prob);
 
   virtual void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
-                          float reverse_weight,
-                          std::vector<std::vector<float>>* attention_scores) = 0;
+                                  const std::vector<std::vector<float>>& ctc_scores,
+                                  std::vector<std::vector<float>>& attention_scores) = 0;
 
   virtual std::shared_ptr<BatchAsrModel> Copy() const = 0;
 

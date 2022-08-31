@@ -243,11 +243,11 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
     }
   }
 
-  Ort::RunOptions run_option;
-  run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
+  // Ort::RunOptions run_option;
+  // run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
   timer.Reset();
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
-      run_option, encoder_in_names_.data(), inputs.data(),
+      Ort::RunOptions(nullptr), encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
   VLOG(1) << "\tencoder ->Run() takes " << timer.Elapsed() << " ms.";
 
@@ -282,6 +282,7 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
   }
   // 3. cache encoder outs
   encoder_outs_ = std::move(ort_outputs[0]);
+  encoder_outs_lens_ = std::move(ort_outputs[1]);
 }
 
 float BatchOnnxAsrModel::ComputeAttentionScore(const float* prob,
@@ -297,8 +298,8 @@ float BatchOnnxAsrModel::ComputeAttentionScore(const float* prob,
 
 void BatchOnnxAsrModel::AttentionRescoring(
     const std::vector<std::vector<std::vector<int>>>& batch_hyps,
-    float reverse_weight,
-    std::vector<std::vector<float>>* attention_scores) {
+    const std::vector<std::vector<float>>& ctc_scores,
+    std::vector<std::vector<float>>& attention_scores) {
   Ort::MemoryInfo memory_info =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
   // 1. prepare input for onnx
@@ -316,17 +317,45 @@ void BatchOnnxAsrModel::AttentionRescoring(
     }
   }
 
-  // 1.2 generate  hyps_pad_sos
-  std::vector<int64_t> hyps_pad_sos(batch_size * beam_size * max_hyps_len, 0);
+  // 1.2 generate  hyps_pad_sos_eos, r_hyps_pad_sos_eos
+  std::vector<int64_t> hyps_pad_sos_eos(batch_size * beam_size * (max_hyps_len + 1), 0);
+  std::vector<int64_t> r_hyps_pad_sos_eos(batch_size * beam_size * (max_hyps_len + 1), 0);
   for (size_t i = 0; i < batch_size; ++i) {
     for (size_t j = 0; j < beam_size; ++j) {
       const std::vector<int>& hyps = batch_hyps[i][j];
-      hyps_pad_sos[i * beam_size * max_hyps_len] = sos_;
-      for (size_t k = 0; k < hyps.size(); ++k) {
-        hyps_pad_sos[i * beam_size * max_hyps_len + j * max_hyps_len + k + 1] = hyps[k];
+      hyps_pad_sos_eos[i * beam_size * max_hyps_len] = sos_;
+      size_t hyps_len = hyps.size();
+      for (size_t k = 0; k < hyps_len; ++k) {
+        hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + k + 1] = hyps[k];
+        r_hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + k + 1] = hyps[hyps_len - 1 - k];
       }
+      hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + hyps.size() + 1] = eos_;
+      r_hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + hyps.size() + 1] = eos_;
     }
   }
+
+  // 1.3 ctc_scores_data
+  Ort::Value ctc_scores_tensor{nullptr};
+  const int64_t ctc_shape[] = {batch_size, beam_size};
+  if (is_fp16_) {
+    std::vector<Ort::Float16_t> data(batch_size * beam_size);
+    for (size_t i = 0; i < batch_size; ++i) {
+      for (size_t j = 0; j < beam_size; ++j) {
+        int p = i * beam_size + j;
+        data[p] = Ort::Float16_t(_cvtss_sh(ctc_scores[i][j], 0));
+      }
+    }
+    ctc_scores_tensor = std::move(Ort::Value::CreateTensor<Ort::Float16_t>(
+        memory_info, data.data(), data.size(), ctc_shape, 2));
+  } else {
+    std::vector<float> data(batch_size * beam_size);
+    for (size_t i = 0; i < batch_size; ++i) {
+      memcpy(data.data() + i * beam_size, ctc_scores[i].data(), sizeof(float) * beam_size);
+    }
+    ctc_scores_tensor = std::move(Ort::Value::CreateTensor<float>(
+        memory_info, data.data(), data.size(), ctc_shape, 2));
+  }
+
 
   // 2. forward attetion decoder
   const int64_t hyps_lens_shape[] = {batch_size, beam_size};
@@ -335,72 +364,45 @@ void BatchOnnxAsrModel::AttentionRescoring(
   Ort::Value hyps_lens_tensor = Ort::Value::CreateTensor<int>(
       memory_info, hyps_lens_sos.data(), hyps_lens_sos.size(), hyps_lens_shape, 2);
   Ort::Value hyps_pad_tensor = Ort::Value::CreateTensor<int64_t>(
-      memory_info, hyps_pad_sos.data(), hyps_pad_sos.size(), hyps_pad_shape, 3);
+      memory_info, hyps_pad_sos_eos.data(), hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
+  Ort::Value r_hyps_pad_tensor = Ort::Value::CreateTensor<int64_t>(
+      memory_info, r_hyps_pad_sos_eos.data(), r_hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
 
   std::vector<Ort::Value> rescore_inputs;
-  rescore_inputs.emplace_back(std::move(encoder_outs_));
-  rescore_inputs.emplace_back(std::move(hyps_pad_tensor));
-  rescore_inputs.emplace_back(std::move(hyps_lens_tensor));
+  rescore_inputs.push_back(std::move(encoder_outs_));
+  rescore_inputs.push_back(std::move(encoder_outs_lens_));
+  rescore_inputs.push_back(std::move(hyps_pad_tensor));
+  rescore_inputs.push_back(std::move(hyps_lens_tensor));
+  rescore_inputs.push_back(std::move(r_hyps_pad_tensor));
+  rescore_inputs.push_back(std::move(ctc_scores_tensor));
 
-  Ort::RunOptions run_option;
-  run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
   Timer timer;
   std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
-      run_option, rescore_in_names_.data(), rescore_inputs.data(),
+      Ort::RunOptions(nullptr), rescore_in_names_.data(), rescore_inputs.data(),
       rescore_inputs.size(), rescore_out_names_.data(),
       rescore_out_names_.size());
   VLOG(1) << "decoder->Run() takes " << timer.Elapsed() << " ms.";
 
-  auto type_info = rescore_outputs[0].GetTensorTypeAndShapeInfo();
-  std::vector<int64_t> decoder_out_shape = type_info.GetShape(); //(B, beam, T2)
-  float* decoder_outs_data = nullptr;
-  float* r_decoder_outs_data = nullptr;
-  std::vector<float> decoder_outs_fp16;  // for holding decoder outs data converted from fp16;
-  std::vector<float> r_decoder_outs_fp16;  // for holding decoder outs data converted from fp16;
+  auto type_info = rescore_outputs[1].GetTensorTypeAndShapeInfo();
+  std::vector<int64_t> scores_shape = type_info.GetShape(); //(B, beam, T2)
+  attention_scores.resize(scores_shape[0]);
   if (is_fp16_) {
     Timer timer;
-    int length = decoder_out_shape[0] * decoder_out_shape[1] * decoder_out_shape[2];
-    decoder_outs_fp16.resize(length);
-    auto outs = rescore_outputs[0].GetTensorMutableData<Ort::Float16_t>();
-    for (size_t i = 0; i < length; ++i) {
-      decoder_outs_fp16[i] = _cvtsh_ss(outs[i].value);
-    }
-    decoder_outs_data = decoder_outs_fp16.data();
-    if (is_bidirectional_decoder_ && reverse_weight > 0) {
-      r_decoder_outs_fp16.reserve(length);
-      auto r_outs = rescore_outputs[1].GetTensorMutableData<Ort::Float16_t>();
-      for (size_t i = 0; i < length; ++i) {
-        r_decoder_outs_fp16[i] = _cvtsh_ss(r_outs[i].value);
+    int length = scores_shape[0] * scores_shape[1];
+    auto outs = rescore_outputs[1].GetTensorMutableData<Ort::Float16_t>();
+    for (size_t i = 0; i < scores_shape[0]; ++i) {
+      attention_scores[i].resize(scores_shape[1]);
+      for (size_t j = 0; j < scores_shape[1]; ++j) {
+        attention_scores[i][j] = _cvtsh_ss(outs[i * scores_shape[1] + j].value);
       }
-      r_decoder_outs_data = r_decoder_outs_fp16.data();
     }
     VLOG(1) << "decoder_out from fp16 to float takes " << timer.Elapsed() << " ms. data length " << length;
   } else {
-    decoder_outs_data = rescore_outputs[0].GetTensorMutableData<float>();
-    if (is_bidirectional_decoder_ && reverse_weight > 0) {
-      r_decoder_outs_data = rescore_outputs[1].GetTensorMutableData<float>();
+    auto outs = rescore_outputs[0].GetTensorMutableData<float>();
+    for (size_t i = 0; i < scores_shape[0]; ++i) {
+      attention_scores[i].resize(scores_shape[1]);
+      memcpy(attention_scores[i].data(), outs + i * scores_shape[1], sizeof(float) * scores_shape[1]);
     }
-  }
-
-  int decode_out_len = decoder_out_shape[2];
-  attention_scores->clear();
-  for (size_t i = 0; i < batch_size; ++i) {
-    std::vector<float> Y(beam_size);
-    for (size_t j = 0; j < beam_size; ++j) {
-      const std::vector<int>& hyp = batch_hyps[i][j];
-      float score = 0.0f;
-      float* p = decoder_outs_data + (i * beam_size + j) * max_hyps_len * decode_out_len;
-      score = ComputeAttentionScore(p, hyp, eos_, decode_out_len);
-      float r_score = 0.0f;
-      if (is_bidirectional_decoder_ && reverse_weight > 0) {
-        std::vector<int> r_hyp(hyp.size());
-        std::reverse_copy(hyp.begin(), hyp.end(), r_hyp.begin());
-        p = r_decoder_outs_data + (i * beam_size +j) * max_hyps_len * decode_out_len;
-        r_score = ComputeAttentionScore(p, r_hyp, eos_, decode_out_len);
-      }
-      Y[j] = score * (1 - reverse_weight) + r_score * reverse_weight;
-    }
-    attention_scores->push_back(std::move(Y));
   }
 }
 

@@ -87,6 +87,7 @@ class BatchAsrDecoder {
   const DecodeOptions& opts_;
   int beam_size_;
   const int time_stamp_gap_ = 100;  // timestamp gap between words in a sentence
+  std::unique_ptr<SearchInterface> searcher_;
 
  public:
   WENET_DISALLOW_COPY_AND_ASSIGN(BatchAsrDecoder);

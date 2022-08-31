@@ -149,7 +149,7 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
       LOG(INFO) << "BatchTorchAsrModel Reading torch model " << FLAGS_model_path;
       BatchTorchAsrModel::InitEngineThreads(FLAGS_num_threads);
       auto model = std::make_shared<BatchTorchAsrModel>();
-      model->Read(FLAGS_model_path, FLAGS_is_fp16);
+      model->Read(FLAGS_model_path);
       resource->batch_model = model;
     } else {
       LOG(INFO) << "Reading torch model " << FLAGS_model_path;

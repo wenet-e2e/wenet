@@ -44,6 +44,13 @@ BatchAsrDecoder::BatchAsrDecoder(std::shared_ptr<FeaturePipelineConfig> config,
     // Check if model has a right to left decoder
     CHECK(model_->is_bidirectional_decoder());
   }
+  if (nullptr == fst_) {
+    searcher_.reset(new CtcPrefixBeamSearch(opts.ctc_prefix_search_opts,
+                                            resource->context_graph));
+  } else {
+    searcher_.reset(new CtcWfstBeamSearch(*fst_, opts.ctc_wfst_search_opts,
+                                          resource->context_graph));
+  }
 }
 
 void BatchAsrDecoder::Reset() {
@@ -52,13 +59,13 @@ void BatchAsrDecoder::Reset() {
 
 void BatchAsrDecoder::SearchWorker(const ctc_log_prob_t& ctc_log_probs, int index) {
   Timer ctc_timer;
-  SearchInterface* searcher;
+  std::unique_ptr<SearchInterface> searcher;
   if (nullptr == fst_) {
-    searcher = new CtcPrefixBeamSearch(opts_.ctc_prefix_search_opts,
-                                            resource_->context_graph);
+    searcher.reset(new CtcPrefixBeamSearch(opts_.ctc_prefix_search_opts,
+                                            resource_->context_graph));
   } else {
-    searcher = new CtcWfstBeamSearch(*fst_, opts_.ctc_wfst_search_opts,
-                                          resource_->context_graph);
+    searcher.reset(new CtcWfstBeamSearch(*fst_, opts_.ctc_wfst_search_opts,
+                                          resource_->context_graph));
   }
   // 3.1. ctc search
   ctc_timer.Reset();
@@ -67,7 +74,7 @@ void BatchAsrDecoder::SearchWorker(const ctc_log_prob_t& ctc_log_probs, int inde
   VLOG(1) << "\tctc search i==" << index << " takes " << ctc_timer.Elapsed() << " ms";
   ctc_timer.Reset();
   std::vector<DecodeResult> result;
-  UpdateResult(searcher, result);
+  UpdateResult(searcher.get(), result);
   std::lock_guard<std::mutex> lock(mutex_); 
   batch_pair_result_.emplace_back(std::make_pair(index, std::move(result)));
   const auto& hypotheses = searcher->Inputs();
@@ -83,7 +90,6 @@ void BatchAsrDecoder::SearchWorker(const ctc_log_prob_t& ctc_log_probs, int inde
   } else {
     batch_hyps_.emplace_back(std::make_pair(index, std::move(hypotheses)));
   }
-  delete searcher;
 }
 
 void BatchAsrDecoder::FbankWorker(const std::vector<float>& wav, int index) {
@@ -99,39 +105,49 @@ void BatchAsrDecoder::FbankWorker(const std::vector<float>& wav, int index) {
 void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
   // 1. calc fbank feature of the batch of wavs
   Timer timer;
-  std::vector<std::thread> fbank_threads;
-  for (size_t i = 0; i < wavs.size(); i++) {
-    const std::vector<float>& wav = wavs[i];
-    std::thread thd(&BatchAsrDecoder::FbankWorker, this, wav, i);
-    fbank_threads.push_back(std::move(thd));
-  }
-  for(auto& thd : fbank_threads) {
-    thd.join();
-  }
-  std::sort(batch_feats_.begin(), batch_feats_.end());
-  std::sort(batch_feats_lens_.begin(), batch_feats_lens_.end());
   batch_feature_t batch_feats;
   std::vector<int> batch_feats_lens;
-  for (auto& pair : batch_feats_) {
-    batch_feats.push_back(std::move(pair.second));
-  }
-  for (auto& pair : batch_feats_lens_) {
-    batch_feats_lens.push_back(pair.second);
+  if (wavs.size() > 1) {
+    std::vector<std::thread> fbank_threads;
+    for (size_t i = 0; i < wavs.size(); i++) {
+      const std::vector<float>& wav = wavs[i];
+      std::thread thd(&BatchAsrDecoder::FbankWorker, this, wav, i);
+      fbank_threads.push_back(std::move(thd));
+    }
+    for(auto& thd : fbank_threads) {
+      thd.join();
+    }
+    std::sort(batch_feats_.begin(), batch_feats_.end());
+    std::sort(batch_feats_lens_.begin(), batch_feats_lens_.end());
+    for (auto& pair : batch_feats_) {
+      batch_feats.push_back(std::move(pair.second));
+    }
+    for (auto& pair : batch_feats_lens_) {
+      batch_feats_lens.push_back(pair.second);
+    }
+  } else {
+    // only one wave
+    feature_t feats;
+    int num_frames = fbank_.Compute(wavs[0], &feats);
+    batch_feats.push_back(feats);
+    batch_feats_lens.push_back(num_frames);
   }
   VLOG(1) << "feature Compute takes " << timer.Elapsed() << " ms.";
 
   // 1.1 feature padding
   timer.Reset();
-  int max_len = *std::max_element(batch_feats_lens.begin(), batch_feats_lens.end());
-  for (auto& feat : batch_feats) {
-    if (feat.size() == max_len) continue;
-    int pad_len = max_len - feat.size();
-    for (size_t i = 0; i< pad_len; i++) {
-      std::vector<float> one(feature_config_->num_bins, 0.0);
-      feat.push_back(std::move(one));
+  if (wavs.size() > 1) {
+    int max_len = *std::max_element(batch_feats_lens.begin(), batch_feats_lens.end());
+    for (auto& feat : batch_feats) {
+      if (feat.size() == max_len) continue;
+      int pad_len = max_len - feat.size();
+      for (size_t i = 0; i< pad_len; i++) {
+        std::vector<float> one(feature_config_->num_bins, 0.0);
+        feat.push_back(std::move(one));
+      }
     }
+    VLOG(1) << "padding feautre takes " << timer.Elapsed() << " ms.";
   }
-  VLOG(1) << "padding feautre takes " << timer.Elapsed() << " ms.";
 
   // 2. encoder forward
   timer.Reset();
@@ -141,45 +157,74 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
 
   // 3. ctc search one by one of the batch
   // create batch of tct search result for attention decoding
-  int batch_size = wavs.size();
   timer.Reset();
-  batch_pair_result_.clear();
-  batch_hyps_.clear();
-  std::vector<std::thread> search_threads;
-  for (size_t i = 0; i < batch_size; i++) {
-    const auto& ctc_log_probs = batch_ctc_log_probs[i];
-    std::thread thd(&BatchAsrDecoder::SearchWorker, this, ctc_log_probs, i);
-    search_threads.push_back(std::move(thd));
-  }
-  for(auto& thd : search_threads) {
-    thd.join();
+  int batch_size = wavs.size();
+  std::vector<std::vector<std::vector<int>>> batch_hyps;
+  if (batch_size > 1) {
+    batch_pair_result_.clear();
+    batch_hyps_.clear();
+    std::vector<std::thread> search_threads;
+    for (size_t i = 0; i < batch_size; i++) {
+      const auto& ctc_log_probs = batch_ctc_log_probs[i];
+      std::thread thd(&BatchAsrDecoder::SearchWorker, this, ctc_log_probs, i);
+      search_threads.push_back(std::move(thd));
+    }
+    for(auto& thd : search_threads) {
+      thd.join();
+    }
+    std::sort(batch_hyps_.begin(), batch_hyps_.end());
+    std::sort(batch_pair_result_.begin(), batch_pair_result_.end(), [](auto& a, auto& b) {
+        return a.first < b.first; });
+    for (auto& pair : batch_hyps_) {
+      batch_hyps.push_back(std::move(pair.second));
+    }
+    batch_result_.clear();
+    for (auto& pair : batch_pair_result_) {
+      batch_result_.push_back(std::move(pair.second));
+    }
+  } else {
+    // one wav
+    searcher_->Search(batch_ctc_log_probs[0]);
+    searcher_->FinalizeSearch();
+    std::vector<DecodeResult> result;
+    UpdateResult(searcher_.get(), result);
+    std::lock_guard<std::mutex> lock(mutex_); 
+    batch_result_.push_back(std::move(result));
+    const auto& hypotheses = searcher_->Inputs();
+    if (hypotheses.size() < beam_size_) {
+      VLOG(2) << "=== searcher->Inputs() size < beam_size_, padding...";
+      std::vector<std::vector<int>> hyps = hypotheses;
+      int to_pad = beam_size_ - hypotheses.size();
+      for (size_t i = 0; i < to_pad; i++) {
+        std::vector<int> pad = {0};
+        hyps.push_back(std::move(pad));
+      }
+      batch_hyps.push_back(std::move(hyps));
+    } else {
+      batch_hyps.push_back(std::move(hypotheses));
+    }
   }
   VLOG(1) << "ctc search batch(" << batch_size << ") takes " << timer.Elapsed() << " ms.";
-  
+  VLOG(1) << "1";
+  std::vector<std::vector<float>> ctc_scores(batch_size);
+  for (int i = 0; i < batch_result_.size(); ++i) {
+    ctc_scores[i].resize(beam_size_);
+    for (int j = 0; j < beam_size_; ++j) {
+      ctc_scores[i][j] = batch_result_[i][j].score;
+      //std::cout << ctc_scores[i][j] << ", " << batch_result_[i][j].sentence << "\n";
+    }
+    //std::cout << "==============\n";
+  }
   // 4. attention rescoring
-  timer.Reset();
-  std::sort(batch_hyps_.begin(), batch_hyps_.end());
-  std::sort(batch_pair_result_.begin(), batch_pair_result_.end(), [](auto& a, auto& b) {
-      return a.first < b.first;
-      });
-  std::vector<std::vector<std::vector<int>>> batch_hyps;
-  for (auto& pair : batch_hyps_) {
-    batch_hyps.push_back(std::move(pair.second));
-  }
-  
-  batch_result_.clear();
-  for (auto& pair : batch_pair_result_) {
-    batch_result_.push_back(std::move(pair.second));
-  }
+  VLOG(1) << "2";
   timer.Reset();
   std::vector<std::vector<float>> attention_scores;
-  model_->AttentionRescoring(batch_hyps, opts_.reverse_weight, &attention_scores);
+  model_->AttentionRescoring(batch_hyps, ctc_scores, attention_scores);
   VLOG(1) << "attention rescoring takes " << timer.Elapsed() << " ms.";
   for (size_t i = 0; i < batch_size; i++) {
     std::vector<DecodeResult>& result = batch_result_[i];
     for (size_t j = 0; j < beam_size_; j++) {
-      result[j].score = opts_.rescoring_weight * attention_scores[i][j] +
-                        opts_.ctc_weight * result[j].score;
+      result[j].score = attention_scores[i][j];
     }
     std::sort(result.begin(), result.end(), DecodeResult::CompareFunc);
   }

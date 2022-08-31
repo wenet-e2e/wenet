@@ -37,10 +37,11 @@ public:
   using TorchModule = torch::jit::script::Module;
   BatchTorchAsrModel() = default;
   BatchTorchAsrModel(const BatchTorchAsrModel& other);
-  void Read(const std::string& model_path, bool is_fp16=false);
-  void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
-                          float reverse_weight,
-                          std::vector<std::vector<float>>* attention_scores) override;
+  void Read(const std::string& model_path);
+  void AttentionRescoring(
+      const std::vector<std::vector<std::vector<int>>>& batch_hyps,
+      const std::vector<std::vector<float>>& ctc_scores,
+      std::vector<std::vector<float>>& attention_scores) override;
   std::shared_ptr<BatchAsrModel> Copy() const override;
 
  protected:

@@ -41,8 +41,8 @@ class BatchOnnxAsrModel : public BatchAsrModel {
   BatchOnnxAsrModel(const BatchOnnxAsrModel& other);
   void Read(const std::string& model_dir, bool is_fp16=false);
   void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
-                          float reverse_weight,
-                          std::vector<std::vector<float>>* attention_scores) override;
+                          const std::vector<std::vector<float>>& ctc_scores,
+                          std::vector<std::vector<float>>& attention_scores) override;
   std::shared_ptr<BatchAsrModel> Copy() const override;
 
   void GetInputOutputInfo(const std::shared_ptr<Ort::Session>& session,
@@ -76,6 +76,7 @@ class BatchOnnxAsrModel : public BatchAsrModel {
 
   // cache encoder outs: [encoder_outs, encoder_outs_lens]
   Ort::Value encoder_outs_{nullptr};
+  Ort::Value encoder_outs_lens_{nullptr};
 };
 
 }  // namespace wenet
