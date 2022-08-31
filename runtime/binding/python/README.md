@@ -31,7 +31,6 @@ wav_file = sys.argv[1]
 decoder = wenet.Decoder(lang='chs')
 ans = decoder.decode_wav(wav_file)
 print(ans)
-# call decoder.reset() if you want to do the next decoding
 ```
 
 You can also specify the following parameter in `wenet.Decoder`

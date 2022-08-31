@@ -68,8 +68,12 @@ class Recognizer {
   }
 
   void Reset() {
-    feature_pipeline_->Reset();
-    decoder_->Reset();
+    if (feature_pipeline_ != nullptr) {
+      feature_pipeline_->Reset();
+    }
+    if (decoder_ != nullptr) {
+      decoder_->Reset();
+    }
     result_.clear();
   }
 
