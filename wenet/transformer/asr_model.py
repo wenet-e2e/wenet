@@ -752,60 +752,65 @@ class ASRModel(torch.nn.Module):
 
     @torch.jit.export
     def batch_forward_attention_decoder(
-        self,
-        encoder_out: torch.Tensor,
-        encoder_lens: torch.Tensor,
-        hyps_pad_sos: torch.Tensor,
-        hyps_lens_sos: torch.Tensor,
-        reverse_weight: float = 0,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """ Export interface for c++ call, forward decoder with batch of
-            hypothesis from ctc prefix beam search and encoder output
+            self,
+            encoder_out: torch.Tensor,
+            encoder_lens: torch.Tensor,
+            hyps_pad_sos_eos: torch.Tensor,
+            hyps_lens_sos: torch.Tensor,
+            r_hyps_pad_sos_eos: torch.Tensor,
+            ctc_score: torch.Tensor):
+        """Decoder
         Args:
             encoder_out: B x T x F
             encoder_lens: B
-            hyps_pad_sos: B x beam x T2
-                        hyps with sos and padded by 0
+            hyps_pad_sos_eos: B x beam x (T2+1),
+                        hyps with sos & eos and padded by ignore id
             hyps_lens_sos: B x beam, length for each hyp with sos
-            reverse_weight: used for verfing whether used right to left decoder,
-                    > 0 will use.
-
+            r_hyps_pad_sos_eos: B x beam x (T2+1),
+                    reversed hyps with sos & eos and padded by ignore id
+            ctc_score: B x beam, ctc score for each hyp
         Returns:
-            scores: (B, beam)
+            best_index: B
+            score: B x beam
         """
-        assert encoder_out.size(0) == hyps_pad_sos.size(0)
         B, T, F = encoder_out.shape
-        bz = hyps_pad_sos.shape[1]
+        bz = hyps_pad_sos_eos.shape[1]  # beam_size
         B2 = B * bz
-        T2 = hyps_pad_sos.shape[2]
-        # 1. prepare inputs for decoder
         encoder_out = encoder_out.repeat(1, bz, 1).view(B2, T, F)
-        encoder_mask = torch.ones(B2, 1, T,
-                                  dtype=torch.bool,
-                                  device=encoder_out.device)
-        # input for right to left decoder
-        # this hyps_lens has count <sos> token, we need minus it.
-        hyps = hyps_pad_sos.view(B2, T2)
+        encoder_mask = ~make_pad_mask(encoder_lens, T).unsqueeze(1)
+        encoder_mask = encoder_mask.repeat(1, bz, 1).view(B2, 1, T)
+        T2 = hyps_pad_sos_eos.shape[2] - 1
+        hyps_pad = hyps_pad_sos_eos.view(B2, T2 + 1)
         hyps_lens = hyps_lens_sos.view(B2,)
-        if reverse_weight > 0:
-            r_hyps_lens = hyps_lens - 1
-            r_hyps = hyps[:, 1:]
-            max_len = torch.max(r_hyps_lens)
-            index_range = torch.arange(0, max_len, 1).to(encoder_out.device)
-            seq_len_expand = r_hyps_lens.unsqueeze(1)
-            seq_mask = seq_len_expand > index_range  # (beam, max_len)
-            index = (seq_len_expand - 1) - index_range  # (beam, max_len)
-            index = index * seq_mask
-            r_hyps = torch.gather(r_hyps, 1, index)
-            r_hyps = torch.where(seq_mask, r_hyps, self.eos)
-            r_hyps = torch.cat([hyps[:, 0:1], r_hyps], dim=1)
-        else:
-            r_hyps = torch.empty(0, device=encoder_out.device)
+        hyps_pad_sos = hyps_pad[:, :-1].contiguous()
+        hyps_pad_eos = hyps_pad[:, 1:].contiguous()
 
-        # 2. decoding
+        r_hyps_pad = r_hyps_pad_sos_eos.view(B2, T2 + 1)
+        r_hyps_pad_sos = r_hyps_pad[:, :-1].contiguous()
+        r_hyps_pad_eos = r_hyps_pad[:, 1:].contiguous()
+
         decoder_out, r_decoder_out, _ = self.decoder(
-            encoder_out, encoder_mask, hyps, hyps_lens, r_hyps,
-            reverse_weight)
+            encoder_out, encoder_mask, hyps_pad_sos, hyps_lens, r_hyps_pad_sos,
+            self.reverse_weight)
         decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
-        r_decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
-        return decoder_out, r_decoder_out
+        V = decoder_out.shape[-1]
+        decoder_out = decoder_out.view(B2, T2, V)
+        mask = ~make_pad_mask(hyps_lens, T2)  # B2 x T2
+        # mask index, remove ignore id
+        index = torch.unsqueeze(hyps_pad_eos * mask, 2)
+        score = decoder_out.gather(2, index).squeeze(2)  # B2 X T2
+        # mask padded part
+        score = score * mask
+        decoder_out = decoder_out.view(B, bz, T2, V)
+        if self.reverse_weight > 0:
+            r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
+            r_decoder_out = r_decoder_out.view(B2, T2, V)
+            index = torch.unsqueeze(r_hyps_pad_eos * mask, 2)
+            r_score = r_decoder_out.gather(2, index).squeeze(2)
+            r_score = r_score * mask
+            score = score * (1 - self.reverse_weight) + self.reverse_weight * r_score
+            r_decoder_out = r_decoder_out.view(B, bz, T2, V)
+        score = torch.sum(score, dim=1)  # B2
+        score = torch.reshape(score, (B, bz)) + self.ctc_weight * ctc_score
+        best_index = torch.argmax(score, dim=1)
+        return best_index, score
