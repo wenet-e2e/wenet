@@ -47,6 +47,7 @@ DEFINE_int32(sample_rate, 16000, "sample rate for audio");
 
 // TLG fst
 DEFINE_string(fst_path, "", "TLG fst path");
+DEFINE_bool(fst_use_mmap, false, "read TLG fst use mmap or not");
 
 // DecodeOptions flags
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
@@ -150,9 +151,20 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 
   if (!FLAGS_fst_path.empty()) {  // With LM
     CHECK(!FLAGS_dict_path.empty());
+
+    std::ifstream strm(FLAGS_fst_path,
+                       std::ios_base::in | std::ios_base::binary);
+    CHECK(strm);
+    fst::FstReadOptions opts(FLAGS_fst_path);
+    if (FLAGS_fst_use_mmap) {
+      opts.mode = fst::FstReadOptions::MAP;
+    } else {
+      opts.mode = fst::FstReadOptions::READ;
+    }
     LOG(INFO) << "Reading fst " << FLAGS_fst_path;
+    LOG(INFO) << "FST read mode is " << (FLAGS_fst_use_mmap ? "MAP" : "READ");
     auto fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
-        fst::Fst<fst::StdArc>::Read(FLAGS_fst_path));
+        fst::Fst<fst::StdArc>::Read(strm, opts));
     CHECK(fst != nullptr);
     resource->fst = fst;
 
