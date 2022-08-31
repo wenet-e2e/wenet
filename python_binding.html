@@ -136,7 +136,6 @@
 <span class="n">decoder</span> <span class="o">=</span> <span class="n">wenet</span><span class="o">.</span><span class="n">Decoder</span><span class="p">(</span><span class="n">lang</span><span class="o">=</span><span class="s1">&#39;chs&#39;</span><span class="p">)</span>
 <span class="n">ans</span> <span class="o">=</span> <span class="n">decoder</span><span class="o">.</span><span class="n">decode_wav</span><span class="p">(</span><span class="n">wav_file</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="n">ans</span><span class="p">)</span>
-<span class="c1"># call decoder.reset() if you want to do the next decoding</span>
 </pre></div>
 </div>
 <p>You can also specify the following parameter in <code class="docutils literal notranslate"><span class="pre">wenet.Decoder</span></code></p>
