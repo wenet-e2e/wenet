@@ -93,6 +93,7 @@ DEFINE_int32(language_type, 0,
 DEFINE_bool(lowercase, true, "lowercase final result if needed");
 DEFINE_bool(run_batch, false, "run websocket server for batch decoding");
 DEFINE_bool(is_fp16, false, "the model is of fp16");
+DEFINE_int32(gpu_id, 0, "which GPU to use");
 
 namespace wenet {
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
@@ -131,7 +132,7 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
       LOG(INFO) << "BatchOnnxAsrModel Reading ONNX model dir: " << FLAGS_onnx_dir;
       BatchOnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
       auto model = std::make_shared<BatchOnnxAsrModel>();
-      model->Read(FLAGS_onnx_dir, FLAGS_is_fp16);
+      model->Read(FLAGS_onnx_dir, FLAGS_is_fp16, FLAGS_gpu_id);
       resource->batch_model = model;
     } else {
       LOG(INFO) << "Reading onnx model ";
