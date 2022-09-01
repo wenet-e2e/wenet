@@ -55,6 +55,7 @@ BatchAsrDecoder::BatchAsrDecoder(std::shared_ptr<FeaturePipelineConfig> config,
 
 void BatchAsrDecoder::Reset() {
   batch_result_.clear();
+  searcher_->Reset();
 }
 
 void BatchAsrDecoder::SearchWorker(const ctc_log_prob_t& ctc_log_probs, int index) {
@@ -71,11 +72,10 @@ void BatchAsrDecoder::SearchWorker(const ctc_log_prob_t& ctc_log_probs, int inde
   ctc_timer.Reset();
   searcher->Search(ctc_log_probs);
   searcher->FinalizeSearch();
-  VLOG(1) << "\tctc search i==" << index << " takes " << ctc_timer.Elapsed() << " ms";
-  ctc_timer.Reset();
   std::vector<DecodeResult> result;
   UpdateResult(searcher.get(), result);
-  std::lock_guard<std::mutex> lock(mutex_); 
+  VLOG(1) << "\tctc search i==" << index << " takes " << ctc_timer.Elapsed() << " ms";
+  std::lock_guard<std::mutex> lock(mutex_);
   batch_pair_result_.emplace_back(std::make_pair(index, std::move(result)));
   const auto& hypotheses = searcher->Inputs();
   if (hypotheses.size() < beam_size_) {
@@ -135,8 +135,8 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
   VLOG(1) << "feature Compute takes " << timer.Elapsed() << " ms.";
 
   // 1.1 feature padding
-  timer.Reset();
   if (wavs.size() > 1) {
+    timer.Reset();
     int max_len = *std::max_element(batch_feats_lens.begin(), batch_feats_lens.end());
     for (auto& feat : batch_feats) {
       if (feat.size() == max_len) continue;
@@ -184,11 +184,11 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
     }
   } else {
     // one wav
+    VLOG(1) << "=== ctc search for one wav! " << batch_ctc_log_probs[0].size();
     searcher_->Search(batch_ctc_log_probs[0]);
     searcher_->FinalizeSearch();
     std::vector<DecodeResult> result;
     UpdateResult(searcher_.get(), result);
-    std::lock_guard<std::mutex> lock(mutex_); 
     batch_result_.push_back(std::move(result));
     const auto& hypotheses = searcher_->Inputs();
     if (hypotheses.size() < beam_size_) {
@@ -205,18 +205,14 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
     }
   }
   VLOG(1) << "ctc search batch(" << batch_size << ") takes " << timer.Elapsed() << " ms.";
-  VLOG(1) << "1";
   std::vector<std::vector<float>> ctc_scores(batch_size);
   for (int i = 0; i < batch_result_.size(); ++i) {
     ctc_scores[i].resize(beam_size_);
     for (int j = 0; j < beam_size_; ++j) {
       ctc_scores[i][j] = batch_result_[i][j].score;
-      //std::cout << ctc_scores[i][j] << ", " << batch_result_[i][j].sentence << "\n";
     }
-    //std::cout << "==============\n";
   }
   // 4. attention rescoring
-  VLOG(1) << "2";
   timer.Reset();
   std::vector<std::vector<float>> attention_scores;
   model_->AttentionRescoring(batch_hyps, ctc_scores, attention_scores);
