@@ -6,7 +6,6 @@ set(decoder_srcs
   ctc_wfst_beam_search.cc
   ctc_endpoint.cc
   batch_asr_decoder.cc
-  batch_asr_model.cc
 )
 
 if(NOT TORCH AND NOT ONNX)

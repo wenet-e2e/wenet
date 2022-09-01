@@ -33,7 +33,8 @@ class BatchAsrModel {
   virtual void ForwardEncoder(
       const batch_feature_t& batch_feats,
       const std::vector<int>& batch_feats_lens,
-      batch_ctc_log_prob_t& batch_ctc_prob);
+      std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
+      std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) = 0;
 
   virtual void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
                                   const std::vector<std::vector<float>>& ctc_scores,
@@ -42,11 +43,6 @@ class BatchAsrModel {
   virtual std::shared_ptr<BatchAsrModel> Copy() const = 0;
 
  protected:
-  virtual void ForwardEncoderFunc(
-      const batch_feature_t& batch_feats,
-      const std::vector<int>& batch_feats_lens,
-      batch_ctc_log_prob_t& batch_ctc_prob) = 0;
-
   int right_context_ = 1;
   int subsampling_rate_ = 1;
   int sos_ = 0;

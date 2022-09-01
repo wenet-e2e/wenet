@@ -58,7 +58,10 @@ void BatchAsrDecoder::Reset() {
   searcher_->Reset();
 }
 
-void BatchAsrDecoder::SearchWorker(const ctc_log_prob_t& ctc_log_probs, int index) {
+void BatchAsrDecoder::SearchWorker(
+    const std::vector<std::vector<float>>& topk_scores,
+    const std::vector<std::vector<int>>& topk_indexs,
+    int index) {
   Timer ctc_timer;
   std::unique_ptr<SearchInterface> searcher;
   if (nullptr == fst_) {
@@ -70,7 +73,7 @@ void BatchAsrDecoder::SearchWorker(const ctc_log_prob_t& ctc_log_probs, int inde
   }
   // 3.1. ctc search
   ctc_timer.Reset();
-  searcher->Search(ctc_log_probs);
+  searcher->Search(topk_scores, topk_indexs);
   searcher->FinalizeSearch();
   std::vector<DecodeResult> result;
   UpdateResult(searcher.get(), result);
@@ -151,8 +154,9 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
 
   // 2. encoder forward
   timer.Reset();
-  batch_ctc_log_prob_t batch_ctc_log_probs;
-  model_->ForwardEncoder(batch_feats, batch_feats_lens, batch_ctc_log_probs);
+  std::vector<std::vector<std::vector<float>>> batch_topk_scores;
+  std::vector<std::vector<std::vector<int>>> batch_topk_indexs;
+  model_->ForwardEncoder(batch_feats, batch_feats_lens, batch_topk_scores, batch_topk_indexs);
   VLOG(1) << "encoder forward takes " << timer.Elapsed() << " ms.";
 
   // 3. ctc search one by one of the batch
@@ -165,8 +169,9 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
     batch_hyps_.clear();
     std::vector<std::thread> search_threads;
     for (size_t i = 0; i < batch_size; i++) {
-      const auto& ctc_log_probs = batch_ctc_log_probs[i];
-      std::thread thd(&BatchAsrDecoder::SearchWorker, this, ctc_log_probs, i);
+      const auto& topk_scores = batch_topk_scores[i];
+      const auto& topk_indexs = batch_topk_indexs[i];
+      std::thread thd(&BatchAsrDecoder::SearchWorker, this, topk_scores, topk_indexs, i);
       search_threads.push_back(std::move(thd));
     }
     for(auto& thd : search_threads) {
@@ -184,8 +189,7 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
     }
   } else {
     // one wav
-    VLOG(1) << "=== ctc search for one wav! " << batch_ctc_log_probs[0].size();
-    searcher_->Search(batch_ctc_log_probs[0]);
+    searcher_->Search(batch_topk_scores[0], batch_topk_indexs[0]);
     searcher_->FinalizeSearch();
     std::vector<DecodeResult> result;
     UpdateResult(searcher_.get(), result);

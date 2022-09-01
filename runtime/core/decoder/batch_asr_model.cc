@@ -11,12 +11,13 @@ namespace wenet {
 void BatchAsrModel::ForwardEncoder(
     const batch_feature_t& batch_feats,
     const std::vector<int>& batch_feats_lens,
-    batch_ctc_log_prob_t& batch_ctc_prob) {
-  batch_ctc_prob.clear();
+    std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
+    std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) {
   this->ForwardEncoderFunc(
       batch_feats,
       batch_feats_lens,
-      batch_ctc_prob);
+      batch_topk_scores,
+      batch_topk_indexs);
   }
 
 }  // namespace wenet

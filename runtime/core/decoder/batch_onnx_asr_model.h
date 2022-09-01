@@ -48,12 +48,11 @@ class BatchOnnxAsrModel : public BatchAsrModel {
   void GetInputOutputInfo(const std::shared_ptr<Ort::Session>& session,
                           std::vector<const char*>* in_names,
                           std::vector<const char*>* out_names);
-
- protected:
-  void ForwardEncoderFunc(
+  void ForwardEncoder(
       const batch_feature_t& batch_feats,
       const std::vector<int>& batch_feats_lens,
-      batch_ctc_log_prob_t& batch_ctc_log_prob) override;
+      std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
+      std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) override;
 
  private:
   int encoder_output_size_ = 0;

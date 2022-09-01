@@ -190,10 +190,11 @@ std::shared_ptr<BatchAsrModel> BatchOnnxAsrModel::Copy() const {
   return asr_model;
 }
 
-void BatchOnnxAsrModel::ForwardEncoderFunc(
+void BatchOnnxAsrModel::ForwardEncoder(
     const batch_feature_t& batch_feats,
     const std::vector<int>& batch_feats_lens,
-    batch_ctc_log_prob_t& out_prob) {
+    std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
+    std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) {
   Ort::MemoryInfo memory_info =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
   // 1. Prepare onnx required data
@@ -260,33 +261,54 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
   VLOG(1) << "\tencoder ->Run() takes " << timer.Elapsed() << " ms.";
 
-  float* ctc_log_probs = nullptr;
-  auto type_info = ort_outputs[2].GetTensorTypeAndShapeInfo();
-  auto out_shape = type_info.GetShape();
+  // get topk_scores
+  auto out_shape = ort_outputs[3].GetTensorTypeAndShapeInfo().GetShape();
   int num_outputs = out_shape[1];
   int output_dim = out_shape[2];
-  std::vector<float> ctc_log_probs_data; // for holding ctc_log_probs converted from fp16
+  float* topk_scores_ptr = nullptr;
+  std::vector<float> topk_scores_data; // for holding topk_scores converted from fp16
   if (is_fp16_) {
     timer.Reset();
-    auto probs = ort_outputs[2].GetTensorMutableData<uint16_t>();
+    auto probs = ort_outputs[3].GetTensorMutableData<uint16_t>();
     int length = out_shape[0] * out_shape[1] * out_shape[2];
-    ctc_log_probs_data.resize(length);
+    topk_scores_data.resize(length);
     for (size_t i = 0; i < length; ++i) {
-      ctc_log_probs_data[i] = _cvtsh_ss(probs[i]);
+      topk_scores_data[i] = _cvtsh_ss(probs[i]);
     }
-    ctc_log_probs = ctc_log_probs_data.data();
-    VLOG(1) << "ctc_log_probs from GPU-fp16 to float takes " << timer.Elapsed() << " ms. data lenght " << length;
+    topk_scores_ptr = topk_scores_data.data();
+    VLOG(1) << "topk_scores from GPU-fp16 to float takes " << timer.Elapsed() << " ms. data lenght " << length;
   } else {
-    ctc_log_probs = ort_outputs[2].GetTensorMutableData<float>();
+    topk_scores_ptr = ort_outputs[3].GetTensorMutableData<float>();
   }
 
-  out_prob.resize(batch_size);
+  batch_topk_scores.resize(batch_size);
   for (size_t i = 0; i < batch_size; ++i) {
-    out_prob[i].resize(num_outputs);
+    batch_topk_scores[i].resize(num_outputs);
     for (size_t j = 0; j < num_outputs; j++) {
-      out_prob[i][j].resize(output_dim);
-      float* p = ctc_log_probs + (i * num_outputs + j) * output_dim;
-      memcpy(out_prob[i][j].data(), p, sizeof(float) * output_dim);
+      batch_topk_scores[i][j].resize(output_dim);
+      float* p = topk_scores_ptr + (i * num_outputs + j) * output_dim;
+      memcpy(batch_topk_scores[i][j].data(), p, sizeof(float) * output_dim);
+    }
+  }
+  // get batch_topk_indexs
+  std::vector<int32_t> topk_indexs_data; // for holding topk_indexs converted from fp16
+  timer.Reset();
+  auto probs = ort_outputs[4].GetTensorMutableData<int64_t>();
+  int length = out_shape[0] * out_shape[1] * out_shape[2];
+  topk_indexs_data.resize(length);
+  for (size_t i = 0; i < length; ++i) {
+    topk_indexs_data[i] = probs[i];
+  }
+  int32_t* topk_indexs_ptr = topk_indexs_data.data();
+  VLOG(1) << "topk_indexs from GPU-fp16 to float takes " << timer.Elapsed() << " ms. data lenght " << length;
+
+  batch_topk_indexs.resize(batch_size);
+  for (size_t i = 0; i < batch_size; ++i) {
+    batch_topk_indexs[i].resize(num_outputs);
+    for (size_t j = 0; j < num_outputs; j++) {
+      batch_topk_indexs[i][j].resize(output_dim);
+      int32_t* p = topk_indexs_ptr + (i * num_outputs + j) * output_dim;
+      memcpy(batch_topk_indexs[i][j].data(), p, sizeof(int32_t) * output_dim);
     }
   }
   // 3. cache encoder outs

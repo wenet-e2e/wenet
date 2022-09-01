@@ -63,6 +63,8 @@ class CtcWfstBeamSearch : public SearchInterface {
       const fst::Fst<fst::StdArc>& fst, const CtcWfstBeamSearchOptions& opts,
       const std::shared_ptr<ContextGraph>& context_graph);
   void Search(const std::vector<std::vector<float>>& logp) override;
+  void Search(const std::vector<std::vector<float>>& topk_scores,
+              const std::vector<std::vector<int32_t>>& topk_indexs) override {};
   void Reset() override;
   void FinalizeSearch() override;
   SearchType Type() const override { return SearchType::kWfstBeamSearch; }

@@ -66,7 +66,10 @@ class BatchAsrDecoder {
   std::vector<std::pair<int, feature_t>> batch_feats_; // for FbankWorker
   std::vector<std::pair<int, int>> batch_feats_lens_; // for FbankWorker
 
-  void SearchWorker(const ctc_log_prob_t& ctc_log_probs, int index);
+  void SearchWorker(
+      const std::vector<std::vector<float>>& topk_scores,
+      const std::vector<std::vector<int>>& topk_indexs,
+      int index);
   std::mutex mutex_;
   std::vector<std::pair<int, std::vector<std::vector<int>>>> batch_hyps_; // for SearchWorker
   std::vector<std::pair<int, std::vector<DecodeResult>>> batch_pair_result_; // for SearchWorker
