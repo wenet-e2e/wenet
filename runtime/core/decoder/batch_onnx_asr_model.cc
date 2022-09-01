@@ -23,6 +23,7 @@
 #include <utility>
 #include <immintrin.h>
 
+#include "glog/logging.h"
 #include "utils/string.h"
 #include "utils/Yaml.hpp"
 #include "utils/timer.h"
@@ -112,7 +113,7 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
     "cudnn_conv_algo_search",
     "do_copy_in_default_stream",
     "cudnn_conv_use_max_workspace",
-    // "cudnn_conv1d_pad_to_nc1d"  // supported from 1.12.0
+    "cudnn_conv1d_pad_to_nc1d"  // supported from 1.12.0
   };
   std::vector<const char*> values{
     device_id.data(),
@@ -121,7 +122,7 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
     "DEFAULT",
     "1",
     "1",
-    //"1"
+    "1"
   };
   // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
 
@@ -367,6 +368,25 @@ void BatchOnnxAsrModel::AttentionRescoring(
       memory_info, r_hyps_pad_sos_eos.data(), r_hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
 
   std::vector<Ort::Value> rescore_inputs;
+  /*
+  for (auto name : rescore_in_names_) {
+    if (!strcmp(name, "encoder_out")) {
+      rescore_inputs.push_back(std::move(encoder_outs_));
+    } else if (!strcmp(name, "encoder_out_lens")) {
+      rescore_inputs.push_back(std::move(encoder_outs_lens_));
+    } else if (!strcmp(name, "hyps_pad_sos_eos")) {
+      rescore_inputs.push_back(std::move(hyps_pad_tensor));
+    } else if (!strcmp(name, "hyps_lens_sos")) {
+      rescore_inputs.push_back(std::move(hyps_lens_tensor));
+    } else if (!strcmp(name, "r_hyps_pad_sos_eos")) {
+      rescore_inputs.push_back(std::move(r_hyps_pad_tensor));
+    } else if (!strcmp(name, "ctc_score")) {
+      rescore_inputs.push_back(std::move(ctc_scores_tensor));
+    } else {
+      VLOG(1) << "invalid input name " << name;
+    }
+  }
+  */
   rescore_inputs.push_back(std::move(encoder_outs_));
   rescore_inputs.push_back(std::move(encoder_outs_lens_));
   rescore_inputs.push_back(std::move(hyps_pad_tensor));
