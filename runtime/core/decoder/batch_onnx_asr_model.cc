@@ -79,7 +79,7 @@ void BatchOnnxAsrModel::GetInputOutputInfo(
   }
 }
 
-void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16) {
+void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu_id) {
   is_fp16_ = is_fp16;
   VLOG(1) << "is_fp16_ " << is_fp16_;
   std::vector<std::string> providers = Ort::GetAvailableProviders();
@@ -104,6 +104,7 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16) {
 
   // 1. Load sessions
   // config for CUDA
+  std::string device_id = std::to_string(gpu_id);
   std::vector<const char*> keys{
     "device_id",
     // "gpu_mem_limit",
@@ -111,16 +112,16 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16) {
     "cudnn_conv_algo_search",
     "do_copy_in_default_stream",
     "cudnn_conv_use_max_workspace",
-    "cudnn_conv1d_pad_to_nc1d"
+    // "cudnn_conv1d_pad_to_nc1d"  // supported from 1.12.0
   };
   std::vector<const char*> values{
-    "0",
+    device_id.data(),
     // "2147483648",
     "kSameAsRequested",
     "DEFAULT",
     "1",
     "1",
-    "1"
+    //"1"
   };
   // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
 
@@ -198,33 +199,42 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
   int batch_size = batch_feats.size();
   int num_frames = batch_feats[0].size();
   int feature_dim = batch_feats[0][0].size();
+
+  // generate data for CreateTensor
   Ort::Value feats_ort{nullptr};
+  // https://github.com/microsoft/onnxruntime/issues/9629#issuecomment-963828881
+  // Ort::Value::CreateTensor does NOT copy the data
+  std::vector<Ort::Float16_t> feats_fp16; // for holding feats of fp16
+  std::vector<float> feats_fp32;  // for holding feats of float
 
   // speech
   const int64_t feats_shape[3] = {batch_size, num_frames, feature_dim};
   Timer timer;
   if (is_fp16_) {
-    std::vector<Ort::Float16_t> feats(batch_size * num_frames * feature_dim);
+    feats_fp16.resize(batch_size * num_frames * feature_dim);
     for (size_t i = 0; i < batch_size; ++i) {
       for (size_t j = 0; j < num_frames; ++j) {
         for (size_t k = 0; k < feature_dim; ++k) {
           int p = i * num_frames * feature_dim + j * feature_dim + k;
-          feats[p] = Ort::Float16_t(_cvtss_sh(batch_feats[i][j][k], 0));
+          feats_fp16[p] = Ort::Float16_t(_cvtss_sh(batch_feats[i][j][k], 0));
         }
       }
     }
-    feats_ort = std::move(Ort::Value::CreateTensor<Ort::Float16_t>(
-        memory_info, feats.data(), feats.size(), feats_shape, 3));
+    auto tensor = Ort::Value::CreateTensor<Ort::Float16_t>(
+        memory_info,
+        feats_fp16.data(),
+        feats_fp16.size(),
+        feats_shape, 3);
+    feats_ort = std::move(tensor);
     VLOG(1) << "feats to fp16 takes " << timer.Elapsed() << " ms.";
   } else {
-    std::vector<float> feats;
     for (size_t i = 0; i < batch_size; ++i) {
       for (size_t j = 0; j < num_frames; ++j) {
-        feats.insert(feats.end(), batch_feats[i][j].begin(), batch_feats[i][j].end());
+        feats_fp32.insert(feats_fp32.end(), batch_feats[i][j].begin(), batch_feats[i][j].end());
       }
     }
     feats_ort = std::move(Ort::Value::CreateTensor<float>(
-        memory_info, feats.data(), feats.size(), feats_shape, 3));
+        memory_info, feats_fp32.data(), feats_fp32.size(), feats_shape, 3));
   }
 
   // speech_lens
@@ -243,11 +253,9 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
     }
   }
 
-  // Ort::RunOptions run_option;
-  // run_option.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
   timer.Reset();
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
-      Ort::RunOptions(nullptr), encoder_in_names_.data(), inputs.data(),
+      Ort::RunOptions{nullptr}, encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
   VLOG(1) << "\tencoder ->Run() takes " << timer.Elapsed() << " ms.";
 
@@ -259,11 +267,11 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
   std::vector<float> ctc_log_probs_data; // for holding ctc_log_probs converted from fp16
   if (is_fp16_) {
     timer.Reset();
-    Ort::Float16_t* probs = ort_outputs[2].GetTensorMutableData<Ort::Float16_t>();
+    auto probs = ort_outputs[2].GetTensorMutableData<uint16_t>();
     int length = out_shape[0] * out_shape[1] * out_shape[2];
     ctc_log_probs_data.resize(length);
     for (size_t i = 0; i < length; ++i) {
-      ctc_log_probs_data[i] = _cvtsh_ss(probs[i].value);
+      ctc_log_probs_data[i] = _cvtsh_ss(probs[i]);
     }
     ctc_log_probs = ctc_log_probs_data.data();
     VLOG(1) << "ctc_log_probs from GPU-fp16 to float takes " << timer.Elapsed() << " ms. data lenght " << length;
@@ -283,17 +291,6 @@ void BatchOnnxAsrModel::ForwardEncoderFunc(
   // 3. cache encoder outs
   encoder_outs_ = std::move(ort_outputs[0]);
   encoder_outs_lens_ = std::move(ort_outputs[1]);
-}
-
-float BatchOnnxAsrModel::ComputeAttentionScore(const float* prob,
-                                          const std::vector<int>& hyp, int eos,
-                                          int decode_out_len) {
-  float score = 0.0f;
-  for (size_t j = 0; j < hyp.size(); ++j) {
-    score += *(prob + j * decode_out_len + hyp[j]);
-  }
-  score += *(prob + hyp.size() * decode_out_len + eos);
-  return score;
 }
 
 void BatchOnnxAsrModel::AttentionRescoring(
@@ -336,26 +333,27 @@ void BatchOnnxAsrModel::AttentionRescoring(
 
   // 1.3 ctc_scores_data
   Ort::Value ctc_scores_tensor{nullptr};
+  std::vector<Ort::Float16_t> ctc_fp16;
+  std::vector<float> ctc_fp32;
   const int64_t ctc_shape[] = {batch_size, beam_size};
   if (is_fp16_) {
-    std::vector<Ort::Float16_t> data(batch_size * beam_size);
+    ctc_fp16.resize(batch_size * beam_size);
     for (size_t i = 0; i < batch_size; ++i) {
       for (size_t j = 0; j < beam_size; ++j) {
         int p = i * beam_size + j;
-        data[p] = Ort::Float16_t(_cvtss_sh(ctc_scores[i][j], 0));
+        ctc_fp16[p] = Ort::Float16_t(_cvtss_sh(ctc_scores[i][j], 0));
       }
     }
     ctc_scores_tensor = std::move(Ort::Value::CreateTensor<Ort::Float16_t>(
-        memory_info, data.data(), data.size(), ctc_shape, 2));
+        memory_info, ctc_fp16.data(), ctc_fp16.size(), ctc_shape, 2));
   } else {
-    std::vector<float> data(batch_size * beam_size);
+    ctc_fp32.resize(batch_size * beam_size);
     for (size_t i = 0; i < batch_size; ++i) {
-      memcpy(data.data() + i * beam_size, ctc_scores[i].data(), sizeof(float) * beam_size);
+      memcpy(ctc_fp32.data() + i * beam_size, ctc_scores[i].data(), sizeof(float) * beam_size);
     }
     ctc_scores_tensor = std::move(Ort::Value::CreateTensor<float>(
-        memory_info, data.data(), data.size(), ctc_shape, 2));
+        memory_info, ctc_fp32.data(), ctc_fp32.size(), ctc_shape, 2));
   }
-
 
   // 2. forward attetion decoder
   const int64_t hyps_lens_shape[] = {batch_size, beam_size};
@@ -383,8 +381,8 @@ void BatchOnnxAsrModel::AttentionRescoring(
       rescore_out_names_.size());
   VLOG(1) << "decoder->Run() takes " << timer.Elapsed() << " ms.";
 
-  auto type_info = rescore_outputs[1].GetTensorTypeAndShapeInfo();
-  std::vector<int64_t> scores_shape = type_info.GetShape(); //(B, beam, T2)
+  //(B, beam, T2)
+  auto scores_shape = rescore_outputs[1].GetTensorTypeAndShapeInfo().GetShape();
   attention_scores.resize(scores_shape[0]);
   if (is_fp16_) {
     Timer timer;
