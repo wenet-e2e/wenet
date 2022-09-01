@@ -39,7 +39,7 @@ class BatchOnnxAsrModel : public BatchAsrModel {
  public:
   BatchOnnxAsrModel() = default;
   BatchOnnxAsrModel(const BatchOnnxAsrModel& other);
-  void Read(const std::string& model_dir, bool is_fp16=false);
+  void Read(const std::string& model_dir, bool is_fp16=false, int gpu_id=0);
   void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
                           const std::vector<std::vector<float>>& ctc_scores,
                           std::vector<std::vector<float>>& attention_scores) override;
@@ -54,9 +54,6 @@ class BatchOnnxAsrModel : public BatchAsrModel {
       const batch_feature_t& batch_feats,
       const std::vector<int>& batch_feats_lens,
       batch_ctc_log_prob_t& batch_ctc_log_prob) override;
-
-  float ComputeAttentionScore(const float* prob, const std::vector<int>& hyp,
-                              int eos, int decode_out_len);
 
  private:
   int encoder_output_size_ = 0;
