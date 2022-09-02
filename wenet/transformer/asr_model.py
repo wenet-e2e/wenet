@@ -732,23 +732,30 @@ class ASRModel(torch.nn.Module):
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        beam_size: int = 10,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Export interface for c++ call, encode a batch of speech
 
         Args:
             speech: padded input tensor (B, T, F)
             speech_lengths: input length (B)
         Returns:
-            encoder output tensor xs, and subsampled masks
-            encoder_out: padded output tensor (B, T' ~= T/subsample_rate, D)
-            encoder_mask: torch.Tensor batch padding mask after subsample
-                (B, 1, T' ~= T/subsample_rate)
+            encoder_out: B x T x F
+            encoder_out_lens: B
+            ctc_log_probs: B x T x V
+            beam_log_probs: B x T x beam_size
+            beam_log_probs_idx: B x T x beam_size
         """
-        encoder_out, encoder_mask = self.encoder(speech, speech_lengths, -1, -1)
+        encoder_out, encoder_mask = self.encoder(
+                speech,
+                speech_lengths, -1, -1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         encoder_out_lens = encoder_out_lens.int()
         ctc_log_probs = self.ctc.log_softmax(encoder_out)
-        return encoder_out, encoder_out_lens, ctc_log_probs
+        beam_log_probs, beam_log_probs_idx = torch.topk(
+            ctc_log_probs, beam_size, dim=2)
+        return encoder_out, encoder_out_lens, ctc_log_probs, \
+            beam_log_probs, beam_log_probs_idx
 
     @torch.jit.export
     def batch_forward_attention_decoder(
