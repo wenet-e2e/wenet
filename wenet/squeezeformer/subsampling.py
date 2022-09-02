@@ -1,0 +1,98 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from wenet.transformer.subsampling import BaseSubsampling
+from typing import Tuple, Union, Optional, Dict
+from wenet.utils.mask import make_pad_mask
+from wenet.squeezeformer.embedding import RelPositionalEncoding
+from wenet.squeezeformer.conv2d import Conv2dValid
+
+class DepthwiseConv2dSubsampling4(BaseSubsampling):
+    """Depthwise Convolutional 2D subsampling (to 1/4 length).
+
+        Args:
+            idim (int): Input dimension.
+            odim (int): Output dimension.
+            dropout_rate (float): Dropout rate.
+
+        """
+    def __init__(
+            self, idim: int, odim: int, pos_enc_class: torch.nn.Module):
+        super(DepthwiseConv2dSubsampling4, self).__init__()
+        self.pw_conv = nn.Conv2d(in_channels=idim, out_channels=odim, kernel_size=3, stride=2)
+        self.dw_conv = nn.Conv2d(in_channels=odim, out_channels=odim, kernel_size=3, stride=2)
+        self.pos_enc = pos_enc_class
+        self.subsampling_rate = 4
+        # 6 = (3 - 1) * 1 + (3 - 1) * 2
+        self.right_context = 6
+
+    def forward(
+            self,
+            x: torch.Tensor,
+            x_mask: torch.Tensor,
+            offset: Union[int, torch.Tensor] = 0
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        x = x.unsqueeze(1)  # (b, c=1, t, f)
+        x = self.pw_conv(x)
+        x = F.relu_(x)
+        x = self.dw_conv(x)
+        x = F.relu_(x)
+        b, c, t, f = x.size()
+        x = x.permute(0, 2, 1, 3)
+        x = x.contiguous().view(b, t, c * f)
+        x, pos_emb = self.pos_enc(x, offset)
+        return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-2:2]
+
+
+class TimeReductionLayer(nn.Module):
+    def __init__(
+            self, ichannel: int = 1, ochannel: int = 1,
+            kernel_size: int = 5, stride: int = 2, encoder_dim: int = 256):
+        super(TimeReductionLayer, self).__init__()
+        self.dw_conv = Conv2dValid(
+            in_channels=ichannel,
+            out_channels=ochannel,
+            kernel_size=(kernel_size, 1),
+            stride=stride,
+            valid_trigy=True
+        )
+        self.pw_conv = Conv2dValid(
+            in_channels=ichannel,
+            out_channels=1,
+            kernel_size=1,
+            stride=1,
+            valid_trigx=False,
+            valid_trigy=False,
+        )
+
+        self.in_channels = ichannel
+        self.kernel_size = kernel_size
+        self.stride = stride
+
+    def forward(self, xs: torch.Tensor, xs_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        xs = xs.unsqueeze(2)
+        padding = self.kernel_size - self.stride
+        xs = F.pad(xs, (0, 0, 0, 0, 0, padding, 0, 0), mode='constant', value=0.)
+        xs = self.dw_conv(xs.transpose(1, 2))
+        xs = self.pw_conv(xs).squeeze(1)
+
+        xs_lens = xs_lens >> 1
+        return xs, xs_lens
+
+if __name__ == '__main__':
+    # pos = RelPositionalEncoding(d_model=256, dropout_rate=0.1)
+    # module = DepthwiseConv2dSubsampling4(1, 256, pos)
+    module = TimeReductionLayer(encoder_dim=256)
+    T = 37
+    length = torch.tensor([T, T])
+    x = torch.rand(2, T, 256)
+    x = module(x, length)
+    print('x', x[0].size())
+    print('x', x[1])
+    # T = x.size(1)
+    # length = torch.tensor([126, 126])
+    # masks = ~make_pad_mask(length, T).unsqueeze(1)
+    # x = module(x, masks, 0)
+    # print('x', x[0].size())
+    # print('x', x[1].size())
+    # print('x', x[2].size())
