@@ -44,14 +44,11 @@ public:
       std::vector<std::vector<float>>& attention_scores) override;
   std::shared_ptr<BatchAsrModel> Copy() const override;
 
- protected:
-  void ForwardEncoderFunc(
+  void ForwardEncoder(
       const batch_feature_t& batch_feats,
       const std::vector<int>& batch_feats_lens,
-      batch_ctc_log_prob_t& batch_ctc_log_prob) override;
-
-  float ComputeAttentionScore(const torch::Tensor& batch_prob,
-                              const std::vector<int>& hyp, int eos);
+      std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
+      std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) override;
 
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;

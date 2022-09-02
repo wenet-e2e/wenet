@@ -96,10 +96,11 @@ std::shared_ptr<BatchAsrModel> BatchTorchAsrModel::Copy() const {
   return asr_model;
 }
 
-void BatchTorchAsrModel::ForwardEncoderFunc(
+void BatchTorchAsrModel::ForwardEncoder(
     const batch_feature_t& batch_feats,
     const std::vector<int>& batch_feats_lens,
-    batch_ctc_log_prob_t& out_prob) {
+    std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
+    std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) {
   // 1. Prepare libtorch required data
   int batch_size = batch_feats.size();
   int num_frames = batch_feats[0].size();
@@ -126,39 +127,34 @@ void BatchTorchAsrModel::ForwardEncoderFunc(
 
   auto outputs =
       model_->get_method("batch_forward_encoder")(inputs).toTuple()->elements();
-  CHECK_EQ(outputs.size(), 3);
+  CHECK_EQ(outputs.size(), 5);
   encoder_out_ = outputs[0].toTensor();  // (B, Tmax, dim)
   encoder_lens_ = outputs[1].toTensor(); // (B,)
   
-  auto ctc_log_probs = outputs[2].toTensor().to(at::kCPU);
-  // encoder_out_ = encoder_out_.to(at::kCPU); // to CPU to save GPU memory
-  // encoder_lens_ = encoder_lens_.to(at::kCPU);
-  // c10::cuda::CUDACachingAllocator::emptyCache();
-
-  // Copy to output
-  int num_outputs = ctc_log_probs.size(1);
-  int output_dim = ctc_log_probs.size(2);
-  out_prob.resize(batch_size);
+  // Copy topk_scores
+  auto topk_scores = outputs[3].toTensor().to(at::kCPU);
+  int num_outputs = topk_scores.size(1);
+  int output_dim = topk_scores.size(2);
+  batch_topk_scores.resize(batch_size);
   for (size_t i = 0; i < batch_size; i++) {
-    out_prob[i].resize(num_outputs);
+    batch_topk_scores[i].resize(num_outputs);
     for (size_t j = 0; j < num_outputs; j++) {
-      out_prob[i][j].resize(output_dim);
-      memcpy(out_prob[i][j].data(), ctc_log_probs[i][j].data_ptr(),
+      batch_topk_scores[i][j].resize(output_dim);
+      memcpy(batch_topk_scores[i][j].data(), topk_scores[i][j].data_ptr(),
              sizeof(float) * output_dim);
     }
   }
-}
-
-float BatchTorchAsrModel::ComputeAttentionScore(const torch::Tensor& prob,
-                                           const std::vector<int>& hyp,
-                                           int eos) {
-  float score = 0.0f;
-  auto accessor = prob.accessor<float, 2>();
-  for (size_t j = 0; j < hyp.size(); ++j) {
-    score += accessor[j][hyp[j]];
+  // copy topk_indexes
+  auto topk_indexes = outputs[4].toTensor().to(at::kCPU);
+  batch_topk_indexs.resize(batch_size);
+  for (size_t i = 0; i < batch_size; ++i) {
+    batch_topk_indexs[i].resize(num_outputs);
+    for (size_t j = 0; j < num_outputs; ++j) {
+      batch_topk_indexs[i][j].resize(output_dim);
+      memcpy(batch_topk_indexs[i][j].data(), topk_indexes[i][j].data_ptr(),
+             sizeof(int) * output_dim);
+    }
   }
-  score += accessor[hyp.size()][eos];
-  return score;
 }
 
 void BatchTorchAsrModel::AttentionRescoring(
