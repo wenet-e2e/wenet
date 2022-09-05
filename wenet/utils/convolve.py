@@ -13,9 +13,10 @@ def next_fast_len(size):
     Returns the next largest number ``n >= size`` whose prime factors are all
     2, 3, or 5. These sizes are efficient for fast fourier transforms.
     Equivalent to :func:`scipy.fftpack.next_fast_len`.
-    Note: This function was originally copied from the https://github.com/pyro-ppl/pyro
-    repository, where the license was Apache 2.0. Any modifications to the original code can be
-    found at https://github.com/asteroid-team/torch-audiomentations/commits
+    Note: This function was originally copied from the
+    https://github.com/pyro-ppl/pyro repository, where the license was
+    Apache 2.0. Any modifications to the original code can be found at
+    https://github.com/asteroid-team/torch-audiomentations/commits
     :param int size: A positive number.
     :returns: A possibly larger number.
     :rtype int:
@@ -43,8 +44,10 @@ def fft_convolve(signal, kernel, mode="full"):
     Computes the 1-d convolution of signal by kernel using FFTs.
     The two arguments should have the same rightmost dim, but may otherwise be
     arbitrarily broadcastable.
-    Note: This function was originally copied from the https://github.com/pyro-ppl/pyro
-    repository, where the license was Apache 2.0. Any modifications to the original code can be
+    Note: This function was originally copied from the
+    https://github.com/pyro-ppl/pyro repository,
+    where the license was Apache 2.0.
+    Any modifications to the original code can be
     found at https://github.com/asteroid-team/torch-audiomentations/commits
     :param torch.Tensor signal: A signal to convolve.
     :param torch.Tensor kernel: A convolution kernel.

@@ -70,5 +70,5 @@ def read_symbol_table(symbol_table_file):
 def random_line_generator(list_file: str):
     lists = read_lists(list_file)
     while True:
-        index = random.randint(0, len(lists)-1)
+        index = random.randint(0, len(lists) - 1)
         yield lists[index]

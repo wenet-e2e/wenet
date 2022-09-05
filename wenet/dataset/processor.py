@@ -252,7 +252,7 @@ def speed_perturb(data, speeds=None):
         yield sample
 
 
-def rir_perturb(data, rir_generator = None, prob=0.2):
+def rir_perturb(data, rir_generator=None, prob=0.2):
     """ Apply rir perturb to the data.
         Inplace operation.
 
@@ -269,7 +269,7 @@ def rir_perturb(data, rir_generator = None, prob=0.2):
         assert 'wav' in sample
         sample_rate = sample['sample_rate']
         waveform = sample['wav']
-        rir_if = random.choices([0.0,1.0], weights=[1-prob, prob], k=1)[0]
+        rir_if = random.choices([0.0, 1.0], weights=[1 - prob, prob], k=1)[0]
         if rir_if == 1.0:
             rir_wav, rir_sf = torchaudio.load(next(rir_generator))
             assert sample_rate == rir_sf
