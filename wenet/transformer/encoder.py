@@ -97,7 +97,7 @@ class BaseEncoder(torch.nn.Module):
                 dynamic chunk training
             time_reduce_idx: layer indices list where 2x-time-reduction is applied
             time_recover_idx: layer indices list where 2x-time-recover is applied
-            input_layer_depthwise (bool): to make second conv layer 
+            input_layer_depthwise (bool): to make second conv layer
                 depthwise-separable or not.
                 (This reduces the number of floating point operations.)
         """
@@ -134,10 +134,16 @@ class BaseEncoder(torch.nn.Module):
             input_layer_depthwise,
         )
 
-        self.time_reduce_idx = [int(idx) for idx in time_reduce_idx] \
-            if time_reduce_idx is not None else None
-        self.time_recover_idx = [int(idx) for idx in time_recover_idx] \
-            if time_rcover_idx is not None else None
+        self.time_reduce_idx = (
+            [int(idx) for idx in time_reduce_idx]
+            if time_reduce_idx is not None
+            else None
+        )
+        self.time_recover_idx = (
+            [int(idx) for idx in time_recover_idx]
+            if time_rcover_idx is not None
+            else None
+        )
         if len(time_reduce_idx) > 0:
             assert len(time_recover_idx) > 0
             assert len(time_reduce_idx) == len(time_recover_idx)
@@ -312,15 +318,15 @@ class BaseEncoder(torch.nn.Module):
         # NOTE(hslee):
         #  Current version of att_cache does not consider time_reduction for caching.
         #  It leads to mismatch between forward (train) and forward_chunk (stream),
-        #   since the length of past attention key becomes 
+        #   since the length of past attention key becomes
         #   longer than the length used in forward().
-        #  To resolve the mismatch, required_cache_size should be 
+        #  To resolve the mismatch, required_cache_size should be
         #   reduced as time_reduce_level increases.
         #  However, I just left required_cache_size as it was for the following reasons:
         #   - giving longer past context for attention keys may improve WER/CER.
-        #   - (when dynamic_chunk==true) time reduced layers are 
+        #   - (when dynamic_chunk==true) time reduced layers are
         #      already trained for various length of past context.
-        #   - implementation of variable time reduction rate 
+        #   - implementation of variable time reduction rate
         #      for att_cache seems a bit tricky.
         mask_pad_fake = torch.zeros((0, 0, 0), dtype=xs.dtype, device=xs.device)
         time_reduce_residuals = torch.jit.annotate(
