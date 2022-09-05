@@ -141,7 +141,7 @@ class BaseEncoder(torch.nn.Module):
         )
         self.time_recover_idx = (
             [int(idx) for idx in time_recover_idx]
-            if time_rcover_idx is not None
+            if time_recover_idx is not None
             else None
         )
         if len(time_reduce_idx) > 0:
