@@ -25,6 +25,8 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 from torch.nn.utils.rnn import pad_sequence
 
+from wenet.utils.convolve import fft_convolve
+
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
 
@@ -245,6 +247,33 @@ def speed_perturb(data, speeds=None):
             wav, _ = torchaudio.sox_effects.apply_effects_tensor(
                 waveform, sample_rate,
                 [['speed', str(speed)], ['rate', str(sample_rate)]])
+            sample['wav'] = wav
+
+        yield sample
+
+
+def rir_perturb(data, rir_generator = None, prob=0.2):
+    """ Apply rir perturb to the data.
+        Inplace operation.
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+            speeds(List[float]): optional speed
+
+        Returns:
+            Iterable[{key, wav, label, sample_rate}]
+    """
+    assert prob >= 0.0 and prob <= 1.0
+    for sample in data:
+        assert 'sample_rate' in sample
+        assert 'wav' in sample
+        sample_rate = sample['sample_rate']
+        waveform = sample['wav']
+        rir_if = random.choices([0.0,1.0], weights=[1-prob, prob], k=1)[0]
+        if rir_if == 1.0:
+            rir_wav, rir_sf = torchaudio.load(next(rir_generator))
+            assert sample_rate == rir_sf
+            wav = fft_convolve(waveform, rir_wav, mode='same')
             sample['wav'] = wav
 
         yield sample

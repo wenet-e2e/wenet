@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import random
 import re
 
 
@@ -64,3 +65,10 @@ def read_symbol_table(symbol_table_file):
             assert len(arr) == 2
             symbol_table[arr[0]] = int(arr[1])
     return symbol_table
+
+
+def random_line_generator(list_file: str):
+    lists = read_lists(list_file)
+    while True:
+        index = random.randint(0, len(lists)-1)
+        yield lists[index]

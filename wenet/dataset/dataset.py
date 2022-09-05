@@ -19,7 +19,7 @@ import torch.distributed as dist
 from torch.utils.data import IterableDataset
 
 import wenet.dataset.processor as processor
-from wenet.utils.file_utils import read_lists
+from wenet.utils.file_utils import read_lists, random_line_generator
 
 
 class Processor(IterableDataset):
@@ -155,6 +155,14 @@ def Dataset(data_type,
     speed_perturb = conf.get('speed_perturb', False)
     if speed_perturb:
         dataset = Processor(dataset, processor.speed_perturb)
+
+    rir_perturb = conf.get('rir_perturb', False)
+    rir_file = conf.get('rir_file', None)
+    if rir_perturb:
+        assert rir_file is not None
+        rir_g = random_line_generator(rir_file)
+        rir_prob = conf.get('rir_prob', 0.2)
+        dataset = Processor(dataset, processor.rir_perturb, rir_g, rir_prob)
 
     feats_type = conf.get('feats_type', 'fbank')
     assert feats_type in ['fbank', 'mfcc']
