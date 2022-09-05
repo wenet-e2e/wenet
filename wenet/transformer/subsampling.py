@@ -78,6 +78,54 @@ class LinearNoSubsampling(BaseSubsampling):
         return x, pos_emb, x_mask
 
 
+class TimeReduction2(torch.nn.Module):
+    """Convolutional 2D subsampling (to 1/2 length).
+
+    Args:
+        idim (int): Input dimension.
+        odim (int): Output dimension.
+        dropout_rate (float): Dropout rate.
+
+    """
+    def __init__(self, idim: int, odim: int, dropout_rate: float):
+        super().__init__()
+        # NOTE(Hyeonseung Lee): kernel_size is 3 in original paper: https://arxiv.org/pdf/2206.00888.pdf
+        # For exact T -> ceil(T/2) time reduction without caching, kernel_size=2 is used.  
+        self.conv = torch.nn.Sequential(
+             torch.nn.Conv1d(idim, idim, 2, 2, groups=odim), #depthwise conv 
+             torch.nn.Conv1d(idim, odim, 1, 1), #pointwise conv
+            )
+
+    def forward(
+            self,
+            x: torch.Tensor,
+            x_mask: torch.Tensor,
+            chunk_mask: torch.Tensor,
+            pos_emb: torch.Tensor,
+            offset: Union[int, torch.Tensor] = 0,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Subsample x.
+
+        Args:
+            x (torch.Tensor): Input tensor (#batch, time, idim).
+            x_mask (torch.Tensor): Input mask (#batch, 1, time).
+            chunk_mask (torch.Tensor): Chunk mask (#batch, time, time).
+            pos_emb (torch.Tensor): Positional embedding #(#batch, time, pe_dim)
+        Returns:
+            torch.Tensor: Subsampled tensor (#batch, odim, time'),
+                where time' = ceil(time / 2).
+            torch.Tensor: Subsampled mask (#batch, 1, time'),
+                where time' = ceil(time / 2).
+            torch.Tensor: Subsampled mask (#batch, time', time'),
+                where time' = ceil(time / 2).
+
+        """
+        x = x.transpose(1,2) #(batch, idim, time)
+        x = torch.nn.functional.pad(x, (0,1), 'constant', 0.0) #(batch, odim, time+1)
+        x = self.conv(x) #(batch, odim, time')
+        x = x.transpose(1,2)
+        return x, x_mask[:, :, ::2], chunk_mask[:, ::2, ::2], pos_emb[:,::2]
+
 class Conv2dSubsampling4(BaseSubsampling):
     """Convolutional 2D subsampling (to 1/4 length).
 
@@ -88,13 +136,22 @@ class Conv2dSubsampling4(BaseSubsampling):
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module):
+                 pos_enc_class: torch.nn.Module,
+                 depthwise_separable: bool = False,
+                 ):
         """Construct an Conv2dSubsampling4 object."""
         super().__init__()
+        if not depthwise_separable:
+            conv2 = torch.nn.Conv2d(odim, odim, 3, 2) 
+        else:
+            conv2 = torch.nn.Sequential(
+                torch.nn.Conv2d(odim, odim, 3, 2, groups=odim), #depthwise conv
+                torch.nn.Conv2d(odim, odim, 1, 1), #pointwise conv
+            )
         self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(1, odim, 3, 2),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(odim, odim, 3, 2),
+            conv2, 
             torch.nn.ReLU(),
         )
         self.out = torch.nn.Sequential(
@@ -143,13 +200,21 @@ class Conv2dSubsampling6(BaseSubsampling):
         pos_enc (torch.nn.Module): Custom position encoding layer.
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module):
+                 pos_enc_class: torch.nn.Module,
+                 depthwise_separable: bool = False):
         """Construct an Conv2dSubsampling6 object."""
         super().__init__()
+        if not depthwise_separable:
+            conv2 = torch.nn.Conv2d(odim, odim, 5, 3) 
+        else:
+            conv2 = torch.nn.Sequential(
+                torch.nn.Conv2d(odim, odim, 5, 3, groups=odim), #depthwise conv
+                torch.nn.Conv2d(odim, odim, 1, 1), #pointwise conv
+            )
         self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(1, odim, 3, 2),
             torch.nn.ReLU(),
-            torch.nn.Conv2d(odim, odim, 5, 3),
+            conv2,
             torch.nn.ReLU(),
         )
         self.linear = torch.nn.Linear(odim * (((idim - 1) // 2 - 2) // 3),
@@ -195,9 +260,12 @@ class Conv2dSubsampling8(BaseSubsampling):
 
     """
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module):
+                 pos_enc_class: torch.nn.Module,
+                 depthwise_separable: bool = False, 
+                ):
         """Construct an Conv2dSubsampling8 object."""
         super().__init__()
+        assert not depthwise_separable, "depthwise separable conv for subsampling8 is not implemented."
         self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(1, odim, 3, 2),
             torch.nn.ReLU(),

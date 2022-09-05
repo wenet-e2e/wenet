@@ -30,7 +30,9 @@ class ConvolutionModule(nn.Module):
                  activation: nn.Module = nn.ReLU(),
                  norm: str = "batch_norm",
                  causal: bool = False,
-                 bias: bool = True):
+                 bias: bool = True,
+                 use_glu: bool = True,
+                 ):
         """Construct an ConvolutionModule object.
         Args:
             channels (int): The number of channels of conv layers.
@@ -61,8 +63,8 @@ class ConvolutionModule(nn.Module):
             padding = (kernel_size - 1) // 2
             self.lorder = 0
         self.depthwise_conv = nn.Conv1d(
-            channels,
-            channels,
+            channels if use_glu else 2*channels,
+            channels if use_glu else 2*channels,
             kernel_size,
             stride=1,
             padding=padding,
@@ -79,7 +81,7 @@ class ConvolutionModule(nn.Module):
             self.norm = nn.LayerNorm(channels)
 
         self.pointwise_conv2 = nn.Conv1d(
-            channels,
+            channels if use_glu else 2*channels,
             channels,
             kernel_size=1,
             stride=1,
@@ -87,6 +89,7 @@ class ConvolutionModule(nn.Module):
             bias=bias,
         )
         self.activation = activation
+        self.use_glu = use_glu
 
     def forward(
         self,
@@ -127,10 +130,14 @@ class ConvolutionModule(nn.Module):
             # None.
             new_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
 
-        # GLU mechanism
         x = self.pointwise_conv1(x)  # (batch, 2*channel, dim)
-        x = nn.functional.glu(x, dim=1)  # (batch, channel, dim)
-
+        if self.use_glu:
+            # GLU mechanism
+            x = nn.functional.glu(x, dim=1)  # (batch, channel, dim)
+        else:
+            # Just use unified activation 
+            x = self.activation(x)  # (batch, channel, dim)
+            
         # 1D Depthwise Conv
         x = self.depthwise_conv(x)
         if self.use_layer_norm:
