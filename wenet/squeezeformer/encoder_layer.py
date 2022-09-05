@@ -32,13 +32,13 @@ class SqueezeformerEncoderLayer(nn.Module):
     ):
         super(SqueezeformerEncoderLayer, self).__init__()
         self.size = size
-        self.self_attn = ResidualModule(self_attn)
+        self.self_attn = self_attn
         self.layer_norm1 = nn.LayerNorm(size)
-        self.ffn1 = ResidualModule(feed_forward)
+        self.ffn1 = feed_forward
         self.layer_norm2 = nn.LayerNorm(size)
-        self.conv_module = ResidualModule(conv_module)
+        self.conv_module = conv_module
         self.layer_norm3 = nn.LayerNorm(size)
-        self.ffn2 = ResidualModule(feed_forward)
+        self.ffn2 = feed_forward
         self.layer_norm4 = nn.LayerNorm(size)
         self.normalize_before = normalize_before
 
@@ -47,34 +47,42 @@ class SqueezeformerEncoderLayer(nn.Module):
             x: torch.Tensor,
             mask: torch.Tensor,
             pos_emb: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> torch.Tensor:
         # self attention module
+        residual = x
         if self.normalize_before:
             x = self.layer_norm1(x)
         x = self.self_attn(x, x, x, mask, pos_emb)
         if not self.normalize_before:
             x = self.layer_norm1(x)
+        x = residual + x
 
         # ffn module
+        residual = x
         if self.normalize_before:
             x = self.layer_norm2(x)
         x = self.ffn1(x)
         if not self.normalize_before:
             x = self.layer_norm2(x)
+        x = residual + x
 
         # conv module
+        residual = x
         if self.normalize_before:
             x = self.layer_norm3(x)
         x = self.conv_module(x)
         if not self.normalize_before:
             x = self.layer_norm3(x)
+        x = residual + x
 
         # ffn module
+        residual = x
         if self.normalize_before:
             x = self.layer_norm4(x)
         x = self.ffn2(x)
         if not self.normalize_before:
             x = self.layer_norm4(x)
+        x = residual + x
         return x
 
 
@@ -97,3 +105,4 @@ if __name__ == '__main__':
 
     x = block(x, mask, pos)
     print('x', x.size())
+    torch.jit.script(block)

@@ -3,8 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 from wenet.transformer.subsampling import BaseSubsampling
 from typing import Tuple, Union, Optional, Dict
-from wenet.utils.mask import make_pad_mask
-from wenet.squeezeformer.embedding import RelPositionalEncoding
 from wenet.squeezeformer.conv2d import Conv2dValid
 
 class DepthwiseConv2dSubsampling4(BaseSubsampling):
@@ -20,7 +18,9 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
             self, idim: int, odim: int, pos_enc_class: torch.nn.Module):
         super(DepthwiseConv2dSubsampling4, self).__init__()
         self.pw_conv = nn.Conv2d(in_channels=idim, out_channels=odim, kernel_size=3, stride=2)
+        self.act1 = nn.ReLU()
         self.dw_conv = nn.Conv2d(in_channels=odim, out_channels=odim, kernel_size=3, stride=2)
+        self.act2 = nn.ReLU()
         self.pos_enc = pos_enc_class
         self.subsampling_rate = 4
         # 6 = (3 - 1) * 1 + (3 - 1) * 2
@@ -30,13 +30,13 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
             self,
             x: torch.Tensor,
             x_mask: torch.Tensor,
-            offset: Union[int, torch.Tensor] = 0
+            offset: int = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x = x.unsqueeze(1)  # (b, c=1, t, f)
         x = self.pw_conv(x)
-        x = F.relu_(x)
+        x = self.act1(x)
         x = self.dw_conv(x)
-        x = F.relu_(x)
+        x = self.act2(x)
         b, c, t, f = x.size()
         x = x.permute(0, 2, 1, 3)
         x = x.contiguous().view(b, t, c * f)

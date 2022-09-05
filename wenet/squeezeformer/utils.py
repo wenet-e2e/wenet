@@ -3,13 +3,13 @@ import torch.nn as nn
 
 
 class ResidualModule(nn.Module):
-    def __init__(self, module: nn.Module, module_factor: float = 1.0):
+    def __init__(self, layer: nn.Module, coef: float = 1.0):
         super(ResidualModule, self).__init__()
-        self.module = module
-        self.factor = module_factor
+        self.layer = layer
+        self.coef = coef
 
-    def forward(self, x: torch.Tensor, *args) -> torch.Tensor:
-        return (self.module(x, *args) * self.factor) + x
+    def forward(self, x: torch.Tensor, mask: torch.Tensor, pos_emb: torch.Tensor) -> torch.Tensor:
+        return (self.layer(x, mask, pos_emb) * self.coef) + x
 
 
 def recover_resolution(inputs: torch.Tensor) -> torch.Tensor:
