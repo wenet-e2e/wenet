@@ -63,8 +63,8 @@ class ConvolutionModule(nn.Module):
             padding = (kernel_size - 1) // 2
             self.lorder = 0
         self.depthwise_conv = nn.Conv1d(
-            channels if use_glu else 2*channels,
-            channels if use_glu else 2*channels,
+            channels if use_glu else 2 * channels,
+            channels if use_glu else 2 * channels,
             kernel_size,
             stride=1,
             padding=padding,
@@ -81,7 +81,7 @@ class ConvolutionModule(nn.Module):
             self.norm = nn.LayerNorm(channels)
 
         self.pointwise_conv2 = nn.Conv1d(
-            channels if use_glu else 2*channels,
+            channels if use_glu else 2 * channels,
             channels,
             kernel_size=1,
             stride=1,
@@ -135,9 +135,9 @@ class ConvolutionModule(nn.Module):
             # GLU mechanism
             x = nn.functional.glu(x, dim=1)  # (batch, channel, dim)
         else:
-            # Just use unified activation 
+            # Just use unified activation
             x = self.activation(x)  # (batch, channel, dim)
-            
+
         # 1D Depthwise Conv
         x = self.depthwise_conv(x)
         if self.use_layer_norm:

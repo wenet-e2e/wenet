@@ -60,8 +60,8 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
-        time_reduce_idx: List[int] = [],
-        time_recover_idx: List[int] = [],
+        time_reduce_idx: List[int] = None,
+        time_recover_idx: List[int] = None,
         input_layer_depthwise: bool = False,
     ):
         """
@@ -95,9 +95,10 @@ class BaseEncoder(torch.nn.Module):
             global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
-            time_reduce_idx: list of indices of layers where 2x-time-reduction is applied
-            time_recover_idx: list of indices of layers where 2x-time-recover is applied
-            input_layer_depthwise (bool): to make second conv layer depthwise-separable or not. 
+            time_reduce_idx: layer indices list where 2x-time-reduction is applied
+            time_recover_idx: layer indices list where 2x-time-recover is applied
+            input_layer_depthwise (bool): to make second conv layer 
+                depthwise-separable or not.
                 (This reduces the number of floating point operations.)
         """
         assert check_argument_types()
@@ -133,26 +134,32 @@ class BaseEncoder(torch.nn.Module):
             input_layer_depthwise,
         )
 
-        self.time_reduce_idx = [int(idx) for idx in time_reduce_idx]
-        self.time_recover_idx = [int(idx) for idx in time_recover_idx]
-        if len(time_reduce_idx)>0:
-           assert len(time_recover_idx) > 0
-           assert len(time_reduce_idx) == len(time_recover_idx)
-           self.time_reduce_layers = []
-           self.time_recover_layers = [] 
-           for idx in range(len(time_reduce_idx)):
-               self.time_reduce_layers.append(TimeReduction2(
-                                                  output_size,
-                                                  output_size,
-                                                  0.0,
-                                              ))     
-           for idx in range(len(time_recover_idx)):
-               self.time_recover_layers.append(torch.nn.Linear(
-                                               output_size,
-                                               output_size,
-                                              ))     
-           self.time_reduce_layers = torch.nn.ModuleList(self.time_reduce_layers) 
-           self.time_recover_layers = torch.nn.ModuleList(self.time_recover_layers) 
+        self.time_reduce_idx = [int(idx) for idx in time_reduce_idx] \
+            if time_reduce_idx is not None else None
+        self.time_recover_idx = [int(idx) for idx in time_recover_idx] \
+            if time_rcover_idx is not None else None
+        if len(time_reduce_idx) > 0:
+            assert len(time_recover_idx) > 0
+            assert len(time_reduce_idx) == len(time_recover_idx)
+            self.time_reduce_layers = []
+            self.time_recover_layers = []
+            for idx in range(len(time_reduce_idx)):
+                self.time_reduce_layers.append(
+                    TimeReduction2(
+                        output_size,
+                        output_size,
+                        0.0,
+                    )
+                )
+            for idx in range(len(time_recover_idx)):
+                self.time_recover_layers.append(
+                    torch.nn.Linear(
+                        output_size,
+                        output_size,
+                    )
+                )
+            self.time_reduce_layers = torch.nn.ModuleList(self.time_reduce_layers)
+            self.time_recover_layers = torch.nn.ModuleList(self.time_recover_layers)
 
         self.normalize_before = normalize_before
         self.after_norm = torch.nn.LayerNorm(output_size, eps=1e-5)
@@ -195,34 +202,43 @@ class BaseEncoder(torch.nn.Module):
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
         mask_pad = masks  # (B, 1, T/subsample_rate)
-        chunk_masks = add_optional_chunk_mask(xs, masks,
-                                              self.use_dynamic_chunk,
-                                              self.use_dynamic_left_chunk,
-                                              decoding_chunk_size,
-                                              self.static_chunk_size,
-                                              num_decoding_left_chunks)
+        chunk_masks = add_optional_chunk_mask(
+            xs,
+            masks,
+            self.use_dynamic_chunk,
+            self.use_dynamic_left_chunk,
+            decoding_chunk_size,
+            self.static_chunk_size,
+            num_decoding_left_chunks,
+        )
 
-        time_reduce_residuals = torch.jit.annotate(List[Tuple[torch.Tensor,torch.Tensor,torch.Tensor,torch.Tensor]], [])
+        time_reduce_residuals = torch.jit.annotate(
+            List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]], []
+        )
         time_reduce_level: int = 0
         for i, layer in enumerate(self.encoders):
             if len(self.time_reduce_idx) > 0 and i in self.time_reduce_idx:
                 time_reduce_residuals.append((xs, mask_pad, chunk_masks, pos_emb))
                 for i, reduce_layer in enumerate(self.time_reduce_layers):
                     if time_reduce_level == i:
-                        xs, mask_pad, chunk_masks, pos_emb = reduce_layer(xs, mask_pad, chunk_masks, pos_emb)
-                #NOTE (hslee): this implementation is valid for rel_pos embedding, but maybe not for others.
-                #xs, pos_emb, mask_pad = self.embed(xs, mask_pad)
+                        xs, mask_pad, chunk_masks, pos_emb = reduce_layer(
+                            xs, mask_pad, chunk_masks, pos_emb
+                        )
                 time_reduce_level += 1
             if len(self.time_reduce_idx) > 0 and i in self.time_recover_idx:
                 time_reduce_level -= 1
-                residual_xs, mask_pad, chunk_masks, pos_emb = time_reduce_residuals[time_reduce_level]
+                residual_xs, mask_pad, chunk_masks, pos_emb = time_reduce_residuals[
+                    time_reduce_level
+                ]
                 B, T_, D = xs.size()
-                xs = xs.unsqueeze(2).tile((1,1,2,1)) #(B,T',2,D')
-                xs = xs.reshape(B, -1, D)[:,:residual_xs.size(1),:] #(B,T,D'), T=floor(T*2)
+                xs = xs.unsqueeze(2).tile((1, 1, 2, 1))  # (B,T',2,D')
+                xs = xs.reshape(B, -1, D)[
+                    :, : residual_xs.size(1), :
+                ]  # (B,T,D'), T=floor(T*2)
                 for i, recover_layer in enumerate(self.time_recover_layers):
                     if time_reduce_level == i:
                         xs = recover_layer(xs)
-                xs += residual_xs #(B,T,D)
+                xs += residual_xs  # (B,T,D)
             xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:
             xs = self.after_norm(xs)
@@ -272,10 +288,7 @@ class BaseEncoder(torch.nn.Module):
         """
         assert xs.size(0) == 1
         # tmp_masks is just for interface compatibility
-        tmp_masks = torch.ones(1,
-                               xs.size(1),
-                               device=xs.device,
-                               dtype=torch.bool)
+        tmp_masks = torch.ones(1, xs.size(1), device=xs.device, dtype=torch.bool)
         tmp_masks = tmp_masks.unsqueeze(1)
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
@@ -286,7 +299,8 @@ class BaseEncoder(torch.nn.Module):
         chunk_size = xs.size(1)
         attention_key_size = cache_t1 + chunk_size
         pos_emb = self.embed.position_encoding(
-            offset=offset - cache_t1, size=attention_key_size)
+            offset=offset - cache_t1, size=attention_key_size
+        )
         if required_cache_size < 0:
             next_cache_start = 0
         elif required_cache_size == 0:
@@ -295,33 +309,43 @@ class BaseEncoder(torch.nn.Module):
             next_cache_start = max(attention_key_size - required_cache_size, 0)
         r_att_cache = []
         r_cnn_cache = []
-        #NOTE (hslee): 
-        #    Current version of att_cache does not consider time_reduction for caching. 
-        #    It leads to mismatch between forward (training) and forward_chunk (streaming), 
-        #     since the length of past attention key in att_cache becomes longer than the length used in forward().
-        #    To resolve the mismatch, required_cache_size should be reduced as time_reduce_level increases.
-        #    However, I just left required_cache_size as it was for the following reasons:
-        #        - giving longer past context for attention keys may improve WER/CER.
-        #        - (when dynamic_chunk==true) time reduced layers are already trained for various length of past context.
-        #        - implementation of variable time reduction rate for att_cache seems a bit tricky.
-        mask_pad_fake = torch.zeros((0,0,0), dtype=xs.dtype, device=xs.device)
-        time_reduce_residuals = torch.jit.annotate(List[Tuple[torch.Tensor,torch.Tensor,torch.Tensor]], [])
+        # NOTE(hslee):
+        #  Current version of att_cache does not consider time_reduction for caching.
+        #  It leads to mismatch between forward (train) and forward_chunk (stream),
+        #   since the length of past attention key becomes 
+        #   longer than the length used in forward().
+        #  To resolve the mismatch, required_cache_size should be 
+        #   reduced as time_reduce_level increases.
+        #  However, I just left required_cache_size as it was for the following reasons:
+        #   - giving longer past context for attention keys may improve WER/CER.
+        #   - (when dynamic_chunk==true) time reduced layers are 
+        #      already trained for various length of past context.
+        #   - implementation of variable time reduction rate 
+        #      for att_cache seems a bit tricky.
+        mask_pad_fake = torch.zeros((0, 0, 0), dtype=xs.dtype, device=xs.device)
+        time_reduce_residuals = torch.jit.annotate(
+            List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor]], []
+        )
         time_reduce_level: int = 0
         for i, layer in enumerate(self.encoders):
             if len(self.time_reduce_idx) > 0 and i in self.time_reduce_idx:
                 time_reduce_residuals.append((xs, att_mask, pos_emb))
                 for i, reduce_layer in enumerate(self.time_reduce_layers):
                     if time_reduce_level == i:
-                        xs, _, att_mask, pos_emb = reduce_layer(xs, mask_pad_fake, att_mask, pos_emb)
-                #NOTE (hslee): this implementation is valid for rel_pos embedding, but maybe not for others.
-                #xs, pos_emb, mask_pad = self.embed(xs, mask_pad)
+                        xs, _, att_mask, pos_emb = reduce_layer(
+                            xs, mask_pad_fake, att_mask, pos_emb
+                        )
                 time_reduce_level += 1
             if len(self.time_reduce_idx) > 0 and i in self.time_recover_idx:
                 time_reduce_level -= 1
-                residual_xs, chunk_masks, pos_emb = time_reduce_residuals[time_reduce_level]
+                residual_xs, chunk_masks, pos_emb = time_reduce_residuals[
+                    time_reduce_level
+                ]
                 B, T_, D = xs.size()
-                xs = xs.unsqueeze(2).tile((1,1,2,1)) #(B,T',2,D')
-                xs = xs.reshape(B, -1, D)[:,:residual_xs.size(1),:] #(B,T,D'), T=floor(T*2)
+                xs = xs.unsqueeze(2).tile((1, 1, 2, 1))  # (B,T',2,D')
+                xs = xs.reshape(B, -1, D)[
+                    :, : residual_xs.size(1), :
+                ]  # (B,T,D'), T=floor(T*2)
                 for i, recover_layer in enumerate(self.time_recover_layers):
                     if time_reduce_level == i:
                         xs = recover_layer(xs)
@@ -329,9 +353,11 @@ class BaseEncoder(torch.nn.Module):
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
             xs, _, new_att_cache, new_cnn_cache = layer(
-                xs, att_mask, pos_emb,
-                att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
-                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
+                xs,
+                att_mask,
+                pos_emb,
+                att_cache=att_cache[i : i + 1] if elayers > 0 else att_cache,
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache,
             )
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
@@ -355,7 +381,7 @@ class BaseEncoder(torch.nn.Module):
         decoding_chunk_size: int,
         num_decoding_left_chunks: int = -1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """ Forward input chunk by chunk with chunk_size like a streaming
+        """Forward input chunk by chunk with chunk_size like a streaming
             fashion
 
         Here we should pay special attention to computation cache in the
@@ -400,7 +426,8 @@ class BaseEncoder(torch.nn.Module):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
             (y, att_cache, cnn_cache) = self.forward_chunk(
-                chunk_xs, offset, required_cache_size, att_cache, cnn_cache)
+                chunk_xs, offset, required_cache_size, att_cache, cnn_cache
+            )
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)
@@ -410,6 +437,7 @@ class BaseEncoder(torch.nn.Module):
 
 class TransformerEncoder(BaseEncoder):
     """Transformer encoder module."""
+
     def __init__(
         self,
         input_size: int,
@@ -429,30 +457,49 @@ class TransformerEncoder(BaseEncoder):
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
     ):
-        """ Construct TransformerEncoder
+        """Construct TransformerEncoder
 
         See Encoder for the meaning of each parameter.
         """
         assert check_argument_types()
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
-        self.encoders = torch.nn.ModuleList([
-            TransformerEncoderLayer(
-                output_size,
-                MultiHeadedAttention(attention_heads, output_size,
-                                     attention_dropout_rate),
-                PositionwiseFeedForward(output_size, linear_units,
-                                        dropout_rate), dropout_rate,
-                normalize_before, concat_after) for _ in range(num_blocks)
-        ])
+        super().__init__(
+            input_size,
+            output_size,
+            attention_heads,
+            linear_units,
+            num_blocks,
+            dropout_rate,
+            positional_dropout_rate,
+            attention_dropout_rate,
+            input_layer,
+            pos_enc_layer_type,
+            normalize_before,
+            concat_after,
+            static_chunk_size,
+            use_dynamic_chunk,
+            global_cmvn,
+            use_dynamic_left_chunk,
+        )
+        self.encoders = torch.nn.ModuleList(
+            [
+                TransformerEncoderLayer(
+                    output_size,
+                    MultiHeadedAttention(
+                        attention_heads, output_size, attention_dropout_rate
+                    ),
+                    PositionwiseFeedForward(output_size, linear_units, dropout_rate),
+                    dropout_rate,
+                    normalize_before,
+                    concat_after,
+                )
+                for _ in range(num_blocks)
+            ]
+        )
 
 
 class ConformerEncoder(BaseEncoder):
     """Conformer encoder module."""
+
     def __init__(
         self,
         input_size: int,
@@ -497,12 +544,24 @@ class ConformerEncoder(BaseEncoder):
             causal (bool): whether to use causal convolution or not.
         """
         assert check_argument_types()
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+        super().__init__(
+            input_size,
+            output_size,
+            attention_heads,
+            linear_units,
+            num_blocks,
+            dropout_rate,
+            positional_dropout_rate,
+            attention_dropout_rate,
+            input_layer,
+            pos_enc_layer_type,
+            normalize_before,
+            concat_after,
+            static_chunk_size,
+            use_dynamic_chunk,
+            global_cmvn,
+            use_dynamic_left_chunk,
+        )
         activation = get_activation(activation_type)
 
         # self-attention module definition
@@ -525,26 +584,38 @@ class ConformerEncoder(BaseEncoder):
         )
         # convolution module definition
         convolution_layer = ConvolutionModule
-        convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  cnn_module_norm, causal)
+        convolution_layer_args = (
+            output_size,
+            cnn_module_kernel,
+            activation,
+            cnn_module_norm,
+            causal,
+        )
 
-        self.encoders = torch.nn.ModuleList([
-            ConformerEncoderLayer(
-                output_size,
-                encoder_selfattn_layer(*encoder_selfattn_layer_args),
-                positionwise_layer(*positionwise_layer_args),
-                positionwise_layer(
-                    *positionwise_layer_args) if macaron_style else None,
-                convolution_layer(
-                    *convolution_layer_args) if use_cnn_module else None,
-                dropout_rate,
-                normalize_before,
-                concat_after,
-            ) for _ in range(num_blocks)
-        ])
+        self.encoders = torch.nn.ModuleList(
+            [
+                ConformerEncoderLayer(
+                    output_size,
+                    encoder_selfattn_layer(*encoder_selfattn_layer_args),
+                    positionwise_layer(*positionwise_layer_args),
+                    positionwise_layer(*positionwise_layer_args)
+                    if macaron_style
+                    else None,
+                    convolution_layer(*convolution_layer_args)
+                    if use_cnn_module
+                    else None,
+                    dropout_rate,
+                    normalize_before,
+                    concat_after,
+                )
+                for _ in range(num_blocks)
+            ]
+        )
+
 
 class SqueezeformerEncoder(BaseEncoder):
     """Squeezeformer encoder module."""
+
     def __init__(
         self,
         input_size: int,
@@ -569,8 +640,8 @@ class SqueezeformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
-        time_reduce_idx: List[int] = [],
-        time_recover_idx: List[int] = [],
+        time_reduce_idx: List[int] = None,
+        time_recover_idx: List[int] = None,
         input_layer_depthwise: bool = True,
     ):
         """Construct SqueezeformerEncoder
@@ -587,13 +658,27 @@ class SqueezeformerEncoder(BaseEncoder):
             causal (bool): whether to use causal convolution or not.
         """
         assert check_argument_types()
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk, 
-                         time_reduce_idx, time_recover_idx, input_layer_depthwise)
+        super().__init__(
+            input_size,
+            output_size,
+            attention_heads,
+            linear_units,
+            num_blocks,
+            dropout_rate,
+            positional_dropout_rate,
+            attention_dropout_rate,
+            input_layer,
+            pos_enc_layer_type,
+            normalize_before,
+            concat_after,
+            static_chunk_size,
+            use_dynamic_chunk,
+            global_cmvn,
+            use_dynamic_left_chunk,
+            time_reduce_idx,
+            time_recover_idx,
+            input_layer_depthwise,
+        )
         activation = get_activation(activation_type)
 
         # self-attention module definition
@@ -616,16 +701,24 @@ class SqueezeformerEncoder(BaseEncoder):
         )
         # convolution module definition
         convolution_layer = ConvolutionModule
-        convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  cnn_module_norm, causal)
+        convolution_layer_args = (
+            output_size,
+            cnn_module_kernel,
+            activation,
+            cnn_module_norm,
+            causal,
+        )
 
-        self.encoders = torch.nn.ModuleList([
-            SqueezeformerEncoderLayer(
-                output_size,
-                encoder_selfattn_layer(*encoder_selfattn_layer_args),
-                positionwise_layer(*positionwise_layer_args),
-                convolution_layer(*convolution_layer_args),
-                positionwise_layer(*positionwise_layer_args),
-                dropout_rate,
-            ) for _ in range(num_blocks)
-        ])
+        self.encoders = torch.nn.ModuleList(
+            [
+                SqueezeformerEncoderLayer(
+                    output_size,
+                    encoder_selfattn_layer(*encoder_selfattn_layer_args),
+                    positionwise_layer(*positionwise_layer_args),
+                    convolution_layer(*convolution_layer_args),
+                    positionwise_layer(*positionwise_layer_args),
+                    dropout_rate,
+                )
+                for _ in range(num_blocks)
+            ]
+        )

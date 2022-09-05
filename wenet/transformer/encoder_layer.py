@@ -270,10 +270,10 @@ class ConformerEncoderLayer(nn.Module):
 
 
 class ScaleBiasLayer(nn.Module):
-    def __init__(self, size:int):
+    def __init__(self, size: int):
         super().__init__()
-        self.scale = torch.nn.parameter.Parameter(torch.ones([size,]))
-        self.bias = torch.nn.parameter.Parameter(torch.zeros([size,]))
+        self.scale = torch.nn.parameter.Parameter(torch.ones([size, ]))
+        self.bias = torch.nn.parameter.Parameter(torch.zeros([size, ]))
 
     def forward(self, x: torch.Tensor):
         """
@@ -282,7 +282,7 @@ class ScaleBiasLayer(nn.Module):
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
         """
-        return self.scale.reshape([1,1,-1]) * x + self.bias.reshape([1,1,-1])
+        return self.scale.reshape([1, 1, -1]) * x + self.bias.reshape([1, 1, -1])
 
 class SqueezeformerEncoderLayer(nn.Module):
     """Encoder layer module.
@@ -339,7 +339,7 @@ class SqueezeformerEncoderLayer(nn.Module):
         x: torch.Tensor,
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
-        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        mask_pad: torch.Tensor = torch.ones((1, 0, 0), dtype=torch.bool),
         att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -368,7 +368,7 @@ class SqueezeformerEncoderLayer(nn.Module):
 
         # multi-headed self-attention module
         residual = x
-        x = self.scale_mha(x) 
+        x = self.scale_mha(x)
         x_att, new_att_cache = self.self_attn(
             x, x, x, mask, pos_emb, att_cache)
         x = residual + self.dropout(x_att)
@@ -376,7 +376,7 @@ class SqueezeformerEncoderLayer(nn.Module):
 
         # feed forward module 1
         residual = x
-        x = self.scale_ff1(x) 
+        x = self.scale_ff1(x)
         x = residual + self.dropout(self.feed_forward1(x))
         x = self.norm_ff1(x)
 
@@ -384,16 +384,15 @@ class SqueezeformerEncoderLayer(nn.Module):
         # Fake new cnn cache here, and then change it in conv_module
         new_cnn_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
         residual = x
-        x = self.scale_conv(x) 
+        x = self.scale_conv(x)
         x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
         x = residual + self.dropout(x)
         x = self.norm_conv(x)
 
         # feed forward module 2
         residual = x
-        x = self.scale_ff2(x) 
+        x = self.scale_ff2(x)
         x = residual + self.dropout(self.feed_forward2(x))
         x = self.norm_ff2(x)
-
 
         return x, mask, new_att_cache, new_cnn_cache
