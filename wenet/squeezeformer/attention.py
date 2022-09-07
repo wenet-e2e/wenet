@@ -99,6 +99,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         return self.forward_attention(v, scores, mask)
 
+
 class RelPositionMultiHeadedAttention2(MultiHeadedAttention):
     """Multi-Head Attention layer with relative position encoding.
     Paper: https://arxiv.org/abs/1901.02860
@@ -119,10 +120,23 @@ class RelPositionMultiHeadedAttention2(MultiHeadedAttention):
         self.pos_bias_v = nn.Parameter(torch.Tensor(self.h, self.d_k))
         torch.nn.init.xavier_uniform_(self.pos_bias_u)
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
+        self.init_weights()
+
+    def init_weights(self):
+        input_max = (self.h * self.d_k) ** -0.5
+        torch.nn.init.uniform_(self.linear_q.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_q.bias, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_k.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_k.bias, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_v.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_v.bias, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_pos.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_out.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_out.bias, -input_max, input_max)
 
     def forward_attention(
-        self, value: torch.Tensor, scores: torch.Tensor,
-        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
+            self, value: torch.Tensor, scores: torch.Tensor,
+            mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
     ) -> torch.Tensor:
         """Compute attention context vector.
 
@@ -144,13 +158,13 @@ class RelPositionMultiHeadedAttention2(MultiHeadedAttention):
         #   1. onnx(16/4) [WHY? Because we feed real cache & real mask for the
         #           1st chunk to ease the onnx export.]
         #   2. pytorch training
-        if mask.size(2) > 0 :  # time2 > 0
+        if mask.size(2) > 0:  # time2 > 0
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
             # For last chunk, time2 might be larger than scores.size(-1)
             mask = mask[:, :, :, :scores.size(-1)]  # (batch, 1, *, time2)
             # scores = scores.masked_fill(mask, -float('inf'))
             scores = scores.masked_fill(mask, -1e4)
-            attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)  # (batch, head, time1, time2)
+            attn = torch.softmax(scores, dim=-1) #.masked_fill(mask, 0.0)  # (batch, head, time1, time2)
         # NOTE(xcsong): When will `if mask.size(2) > 0` be False?
         #   1. onnx(16/-1, -1/-1, 16/0)
         #   2. jit (16/-1, -1/-1, 16/0, 16/4)
@@ -233,6 +247,7 @@ class RelPositionMultiHeadedAttention2(MultiHeadedAttention):
 
         return self.forward_attention(v, scores, mask)
 
+
 if __name__ == '__main__':
     # from wenet.squeezeformer.embedding import RelPositionalEncoding
     # from wenet.utils.mask import make_pad_mask
@@ -249,6 +264,7 @@ if __name__ == '__main__':
 
     from wenet.transformer.embedding import RelPositionalEncoding
     from wenet.utils.mask import make_pad_mask
+
     pos_emb = RelPositionalEncoding(256, 0.1)
     rel_mha = RelPositionMultiHeadedAttention2(4, 256, 0.1)
     x = torch.rand(2, 128, 256)
@@ -263,7 +279,3 @@ if __name__ == '__main__':
     # print('x', x[1].size())
     # print('x', x[2].size())
     # print('x', x[3].size())
-
-
-
-

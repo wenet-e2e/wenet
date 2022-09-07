@@ -85,6 +85,9 @@ class ConvolutionModule(torch.nn.Module):
         super(ConvolutionModule, self).__init__()
         assert (kernel_size - 1) % 2 == 0
         assert expansion_factor == 2
+        self.ichannel = ichannel
+        self.kernel_size = kernel_size
+        self.expansion_factor = expansion_factor
         self.pw_conv1 = PointwiseConv1d(ichannel=ichannel, ochannel=ichannel * expansion_factor,
                                         stride=1, padding=0, bias=True)
         self.glu = GLU(dim=1)
@@ -94,6 +97,16 @@ class ConvolutionModule(torch.nn.Module):
         self.activation = Swish()
         self.pw_conv2 = PointwiseConv1d(ichannel=ichannel, ochannel=ichannel, stride=1, padding=0, bias=True)
         self.dropout = nn.Dropout(p=dropout_rate)
+        self.init_weights()
+
+    def init_weights(self):
+        pw_max = self.ichannel ** -0.5
+        dw_max = self.kernel_size ** -0.5
+        torch.nn.init.uniform_(self.pw_conv1.pw_conv.weight.data, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.pw_conv1.pw_conv.bias.data, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.dw_conv.dw_conv.weight.data, -dw_max, dw_max)
+        torch.nn.init.uniform_(self.pw_conv2.pw_conv.weight.data, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.pw_conv2.pw_conv.bias.data, -pw_max, pw_max)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.transpose(1, 2)

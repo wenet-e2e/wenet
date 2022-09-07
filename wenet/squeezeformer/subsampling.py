@@ -49,6 +49,8 @@ class TimeReductionLayer(nn.Module):
             self, ichannel: int = 1, ochannel: int = 1,
             kernel_size: int = 5, stride: int = 2, encoder_dim: int = 256):
         super(TimeReductionLayer, self).__init__()
+        self.ichannel = ichannel
+        self.kernel_size = kernel_size
         self.dw_conv = Conv2dValid(
             in_channels=ichannel,
             out_channels=ochannel,
@@ -68,6 +70,15 @@ class TimeReductionLayer(nn.Module):
         self.in_channels = ichannel
         self.kernel_size = kernel_size
         self.stride = stride
+        self.init_weights()
+
+    def init_weights(self):
+        dw_max = self.kernel_size ** -0.5
+        pw_max = self.ichannel ** -0.5
+        torch.nn.init.uniform_(self.dw_conv.weight, -dw_max, dw_max)
+        torch.nn.init.uniform_(self.dw_conv.bias, -dw_max, dw_max)
+        torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
 
     def forward(self, xs: torch.Tensor, xs_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         xs = xs.unsqueeze(2)

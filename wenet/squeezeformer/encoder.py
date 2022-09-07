@@ -101,7 +101,7 @@ class SqueezeformerEncoder(nn.Module):
         # print('masks', masks.size())
         # print('pos_emb', pos_emb.size())
         # mask_pad = masks  # (B, 1, T/subsample_rate)
-        masks = torch.ones_like(masks)
+        # masks = torch.ones_like(masks)
         xs = self.input_proj(xs)
         recover_tensor = torch.tensor(0.)
         recover_mask = torch.tensor(0.)
