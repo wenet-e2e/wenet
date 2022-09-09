@@ -24,15 +24,17 @@ from typeguard import check_argument_types
 
 class ConvolutionModule(nn.Module):
     """ConvolutionModule in Conformer model."""
-    def __init__(self,
-                 channels: int,
-                 kernel_size: int = 15,
-                 activation: nn.Module = nn.ReLU(),
-                 norm: str = "batch_norm",
-                 causal: bool = False,
-                 bias: bool = True,
-                 use_glu: bool = True,
-                 ):
+
+    def __init__(
+        self,
+        channels: int,
+        kernel_size: int = 15,
+        activation: nn.Module = nn.ReLU(),
+        norm: str = "batch_norm",
+        causal: bool = False,
+        bias: bool = True,
+        use_glu: bool = True,
+    ):
         """Construct an ConvolutionModule object.
         Args:
             channels (int): The number of channels of conv layers.
@@ -68,17 +70,17 @@ class ConvolutionModule(nn.Module):
             kernel_size,
             stride=1,
             padding=padding,
-            groups=channels,
+            groups=channels if use_glu else 2 * channels,
             bias=bias,
         )
 
-        assert norm in ['batch_norm', 'layer_norm']
+        assert norm in ["batch_norm", "layer_norm"]
         if norm == "batch_norm":
             self.use_layer_norm = False
-            self.norm = nn.BatchNorm1d(channels)
+            self.norm = nn.BatchNorm1d(channels if use_glu else 2 * channels)
         else:
             self.use_layer_norm = True
-            self.norm = nn.LayerNorm(channels)
+            self.norm = nn.LayerNorm(channels if use_glu else 2 * channels)
 
         self.pointwise_conv2 = nn.Conv1d(
             channels if use_glu else 2 * channels,
@@ -117,13 +119,13 @@ class ConvolutionModule(nn.Module):
 
         if self.lorder > 0:
             if cache.size(2) == 0:  # cache_t == 0
-                x = nn.functional.pad(x, (self.lorder, 0), 'constant', 0.0)
+                x = nn.functional.pad(x, (self.lorder, 0), "constant", 0.0)
             else:
                 assert cache.size(0) == x.size(0)  # equal batch
                 assert cache.size(1) == x.size(1)  # equal channel
                 x = torch.cat((cache, x), dim=2)
-            assert (x.size(2) > self.lorder)
-            new_cache = x[:, :, -self.lorder:]
+            assert x.size(2) > self.lorder
+            new_cache = x[:, :, -self.lorder :]
         else:
             # It's better we just return None if no cache is required,
             # However, for JIT export, here we just fake one tensor instead of

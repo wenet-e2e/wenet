@@ -134,22 +134,31 @@ class BaseEncoder(torch.nn.Module):
             input_layer_depthwise,
         )
 
-        self.time_reduce_idx = (
-            [int(idx) for idx in time_reduce_idx]
-            if time_reduce_idx is not None
-            else None
+        # Codes for 2x time-reduction and time-recovery
+        time_reduce_idx = (
+            [int(idx) for idx in time_reduce_idx] if time_reduce_idx is not None else []
         )
-        self.time_recover_idx = (
+        # NOTE(hslee):
+        #   adding a fake idx -1 is just to avoid error in torch.jit.script(),
+        #   since an list attribute with empty elements found to make an error.
+        #   If there's any better detour, please fix this part.
+        time_reduce_idx = [-1] + time_reduce_idx
+        self.time_reduce_idx = time_reduce_idx
+        time_recover_idx = (
             [int(idx) for idx in time_recover_idx]
             if time_recover_idx is not None
-            else None
+            else []
         )
-        if len(time_reduce_idx) > 0:
+        time_recover_idx = [-1] + time_recover_idx
+        self.time_recover_idx = time_recover_idx
+        self.time_reduce_layers = []
+        self.time_recover_layers = []
+        if time_reduce_idx is not None and len(time_reduce_idx) > 0:
             assert len(time_recover_idx) > 0
             assert len(time_reduce_idx) == len(time_recover_idx)
-            self.time_reduce_layers = []
-            self.time_recover_layers = []
-            for idx in range(len(time_reduce_idx)):
+            for idx in time_reduce_idx:
+                if idx == -1:
+                    continue
                 self.time_reduce_layers.append(
                     TimeReduction2(
                         output_size,
@@ -157,7 +166,9 @@ class BaseEncoder(torch.nn.Module):
                         0.0,
                     )
                 )
-            for idx in range(len(time_recover_idx)):
+            for idx in time_recover_idx:
+                if idx == -1:
+                    continue
                 self.time_recover_layers.append(
                     torch.nn.Linear(
                         output_size,
@@ -713,6 +724,8 @@ class SqueezeformerEncoder(BaseEncoder):
             activation,
             cnn_module_norm,
             causal,
+            True,
+            False,  # use_glu=False
         )
 
         self.encoders = torch.nn.ModuleList(
