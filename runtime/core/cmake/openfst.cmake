@@ -11,6 +11,19 @@ if(NOT ANDROID)
     endif()
   endif()
 
+  if(MSVC)
+    set(HAVE_SCRIPT OFF CACHE BOOL "Build the fstscript" FORCE)
+    set(HAVE_COMPACT OFF CACHE BOOL "Build compact" FORCE)
+    set(HAVE_CONST OFF CACHE BOOL "Build const" FORCE)
+    set(HAVE_GRM OFF CACHE BOOL "Build grm" FORCE)
+    set(HAVE_PDT OFF CACHE BOOL "Build pdt" FORCE)
+    set(HAVE_MPDT OFF CACHE BOOL "Build mpdt" FORCE)
+    set(HAVE_LINEAR OFF CACHE BOOL "Build linear" FORCE)
+    set(HAVE_LOOKAHEAD OFF CACHE BOOL "Build lookahead" FORCE)
+    set(HAVE_NGRAM OFF CACHE BOOL "Build ngram" FORCE)
+    set(HAVE_SPECIAL OFF CACHE BOOL "Build special" FORCE)
+  endif()
+
   # The original openfst uses GNU Build System to run configure and build.
   # So, we use "OpenFST port for Windows" to build openfst with cmake in Windows.
   # Openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch.
