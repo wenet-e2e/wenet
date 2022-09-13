@@ -698,7 +698,9 @@ class SqueezeformerEncoder(BaseEncoder):
         )
         activation = get_activation(activation_type)
 
-        assert normalize_before == False, "Squeezeformer must use PostLN rather than PreLN"
+        assert (
+            normalize_before == False
+        ), "Squeezeformer must use PostLN rather than PreLN"
         # self-attention module definition
         if pos_enc_layer_type != "rel_pos":
             encoder_selfattn_layer = MultiHeadedAttention
