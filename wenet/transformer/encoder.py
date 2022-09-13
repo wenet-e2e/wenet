@@ -645,7 +645,7 @@ class SqueezeformerEncoder(BaseEncoder):
         attention_dropout_rate: float = 0.0,
         input_layer: str = "conv2d",
         pos_enc_layer_type: str = "rel_pos",
-        normalize_before: bool = True,
+        normalize_before: bool = False,
         concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
@@ -698,6 +698,7 @@ class SqueezeformerEncoder(BaseEncoder):
         )
         activation = get_activation(activation_type)
 
+        assert normalize_before == False, "Squeezeformer must use PostLN rather than PreLN"
         # self-attention module definition
         if pos_enc_layer_type != "rel_pos":
             encoder_selfattn_layer = MultiHeadedAttention
