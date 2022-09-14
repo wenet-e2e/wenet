@@ -36,8 +36,6 @@ model_conf:
 
 # dataset related
 dataset_conf:
-    even_sample: false
-    syncbn: false
     filter_conf:
         max_length: 2000
         min_length: 50
