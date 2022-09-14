@@ -23,7 +23,6 @@ class SqueezeformerEncoder(nn.Module):
             reduce_idx: int = 5,
             recover_idx: int = 11,
             feed_forward_expansion_factor: int = 4,
-            conv_expansion_factor: int = 2,
             input_dropout_rate: float = 0.1,
             feed_forward_dropout_rate: float = 0.1,
             do_rel_shift: bool = True,
@@ -49,7 +48,6 @@ class SqueezeformerEncoder(nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
-        assert conv_expansion_factor == 2
 
         self.embed = DepthwiseConv2dSubsampling4(
             1, encoder_dim, RelPositionalEncoding(encoder_dim, dropout_rate=0.1)
@@ -190,21 +188,3 @@ class SqueezeformerEncoder(nn.Module):
         if self.final_proj is not None:
             xs = self.final_proj(xs)
         return xs, masks
-
-
-if __name__ == '__main__':
-    for T in range(64, 240):
-        # T = 128 * 4
-        # T = 65
-        x = torch.rand(2, T, 80)
-        length = torch.tensor([T, T // 2])
-        model = SqueezeformerEncoder(
-            use_dynamic_chunk=True, causal=True,
-            use_dynamic_left_chunk=False, do_rel_shift=True)
-        # model = SqueezeformerEncoder()
-        # print(model)
-        x = model(x, length, 0, -1)
-        # print('x', x.size())
-        print('x', x[0].size())
-    # print('x', x[1].size())
-    torch.jit.script(model)

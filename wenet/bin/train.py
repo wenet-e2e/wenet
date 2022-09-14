@@ -31,9 +31,11 @@ from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
 from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
-from wenet.utils.scheduler import WarmupLR
+from wenet.utils.scheduler import WarmupLR, AVAILABLE_SCHEDULERS
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+import random
+import numpy as np
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
@@ -53,6 +55,10 @@ def get_args():
     parser.add_argument('--tensorboard_dir',
                         default='tensorboard',
                         help='tensorboard log dir')
+    parser.add_argument('--seed',
+                        default=0,
+                        type=int,
+                        help='random seed in training phase')
     parser.add_argument('--ddp.rank',
                         dest='rank',
                         default=0,
@@ -121,6 +127,10 @@ def get_args():
     args = parser.parse_args()
     return args
 
+def set_all_random_seed(seed: int):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.random.manual_seed(seed)
 
 def main():
     args = get_args()
@@ -153,8 +163,9 @@ def main():
     cv_conf['shuffle'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    even_sample = train_conf.get('even_sample', False)
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
-                            train_conf, args.bpe_model, non_lang_syms, True)
+                            train_conf, args.bpe_model, non_lang_syms, True, even_sample)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
@@ -195,14 +206,14 @@ def main():
     model = init_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
-    print('the number of model params: {}'.format(num_params))
+    print('the number of model params: {:,d}'.format(num_params))
 
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements
-    if args.rank == 0:
-        script_model = torch.jit.script(model)
-        script_model.save(os.path.join(args.model_dir, 'init.zip'))
+    # if args.rank == 0:
+        # script_model = torch.jit.script(model)
+        # script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
@@ -227,9 +238,13 @@ def main():
     if distributed:
         assert (torch.cuda.is_available())
         # cuda model is required for nn.parallel.DistributedDataParallel
-        model.cuda()
-        model = torch.nn.parallel.DistributedDataParallel(
-            model, find_unused_parameters=True)
+        if train_conf.get('syncbn', False):
+            assert even_sample == True
+            logging.info('Using SyncBatchNorm')
+            model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).cuda()
+        else:
+            model.cuda()
+        model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
         device = torch.device("cuda")
         if args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (
@@ -243,8 +258,15 @@ def main():
         device = torch.device('cuda' if use_cuda else 'cpu')
         model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
-    scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
+    if configs['optim'] == 'adam':
+        optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
+    elif configs['optim'] == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
+    else:
+        raise Exception('Please choose a correct optimizer.')
+    # scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
+    scheduler = AVAILABLE_SCHEDULERS[configs['scheduler']](optimizer, **configs['scheduler_conf'])
+
     final_epoch = None
     configs['rank'] = args.rank
     configs['is_distributed'] = distributed
@@ -262,6 +284,7 @@ def main():
         scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(start_epoch, num_epochs):
+        # set_all_random_seed(args.seed + epoch)
         train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']
