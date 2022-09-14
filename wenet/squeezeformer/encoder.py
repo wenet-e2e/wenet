@@ -9,7 +9,6 @@ from wenet.transformer.attention import MultiHeadedAttention, RelPositionMultiHe
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.utils.mask import make_pad_mask, add_optional_chunk_mask
-from wenet.transformer.activations import Swish
 from wenet.utils.common import get_activation
 
 
