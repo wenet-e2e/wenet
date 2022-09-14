@@ -4,7 +4,9 @@ from torch.nn.modules.conv import _ConvNd, _size_2_t, Union, _pair, Tensor, Opti
 
 
 class Conv2dValid(_ConvNd):
-
+    """
+    Conv2d operator for VALID mode padding.
+    """
     def __init__(
             self,
             in_channels: int,

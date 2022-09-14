@@ -19,7 +19,6 @@ from typing import Dict, List, Optional, Tuple
 import torch
 
 from torch.nn.utils.rnn import pad_sequence
-
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import TransformerEncoder

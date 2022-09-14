@@ -17,6 +17,8 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
     def __init__(
             self, idim: int, odim: int, pos_enc_class: torch.nn.Module):
         super(DepthwiseConv2dSubsampling4, self).__init__()
+        self.idim = idim
+        self.odim = odim
         self.pw_conv = nn.Conv2d(in_channels=idim, out_channels=odim, kernel_size=3, stride=2)
         self.act1 = nn.ReLU()
         self.dw_conv = nn.Conv2d(in_channels=odim, out_channels=odim, kernel_size=3, stride=2)
@@ -25,6 +27,15 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
         self.subsampling_rate = 4
         # 6 = (3 - 1) * 1 + (3 - 1) * 2
         self.right_context = 6
+        # self.init_weights()
+
+    def init_weights(self):
+        pw_max = self.odim ** -0.5
+        dw_max = (3 ** 2) ** -0.5
+        torch.nn.init.uniform_(self.pw_conv.weight.data, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.pw_conv.bias.data, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.dw_conv.weight.data, -dw_max, dw_max)
+        torch.nn.init.uniform_(self.dw_conv.bias.data, -dw_max, dw_max)
 
     def forward(
             self,
@@ -59,8 +70,8 @@ class TimeReductionLayer(nn.Module):
             valid_trigy=True
         )
         self.pw_conv = Conv2dValid(
-            in_channels=ichannel,
-            out_channels=1,
+            in_channels=encoder_dim,
+            out_channels=encoder_dim,
             kernel_size=1,
             stride=1,
             valid_trigx=False,
@@ -82,24 +93,30 @@ class TimeReductionLayer(nn.Module):
 
     def forward(self, xs: torch.Tensor, xs_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         xs = xs.unsqueeze(2)
-        padding = self.kernel_size - self.stride
-        xs = F.pad(xs, (0, 0, 0, 0, 0, padding, 0, 0), mode='constant', value=0.)
+        padding1 = self.kernel_size - self.stride
+        xs = F.pad(xs, (0, 0, 0, 0, 0, padding1, 0, 0), mode='constant', value=0.)
         xs = self.dw_conv(xs.transpose(1, 2))
-        xs = self.pw_conv(xs).squeeze(1)
-
-        xs_lens = xs_lens >> 1
+        xs = xs.permute(0, 3, 1, 2).contiguous()
+        xs = self.pw_conv(xs).permute(0, 2, 3, 1).squeeze(1).contiguous()
+        tmp_length = xs.size(1)
+        xs_lens = torch.div(xs_lens + 1, 2, rounding_mode='trunc')
+        padding2 = max(0, (xs_lens.max() - tmp_length).data.item())
+        batch_size, hidden = xs.size(0), xs.size(-1)
+        dummy_pad = torch.zeros(batch_size, padding2, hidden).to(xs.device)
+        xs = torch.cat([xs, dummy_pad], dim=1)
         return xs, xs_lens
 
 if __name__ == '__main__':
     # pos = RelPositionalEncoding(d_model=256, dropout_rate=0.1)
     # module = DepthwiseConv2dSubsampling4(1, 256, pos)
     module = TimeReductionLayer(encoder_dim=256)
-    T = 37
-    length = torch.tensor([T, T])
-    x = torch.rand(2, T, 256)
-    x = module(x, length)
-    print('x', x[0].size())
-    print('x', x[1])
+    for T in range(128, 256):
+        # T = 15
+        length = torch.tensor([T, T])
+        x = torch.rand(2, T, 256)
+        x = module(x, length)
+        print('x', x[0].size())
+        print('x', x[1])
     # T = x.size(1)
     # length = torch.tensor([126, 126])
     # masks = ~make_pad_mask(length, T).unsqueeze(1)
