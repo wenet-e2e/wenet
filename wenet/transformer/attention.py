@@ -194,17 +194,36 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         n_feat (int): The number of features.
         dropout_rate (float): Dropout rate.
     """
-    def __init__(self, n_head, n_feat, dropout_rate):
+    def __init__(self, n_head, n_feat, dropout_rate, do_rel_shift=False, adaptive_scale=False, init_weights=False):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate)
         # linear transformation for positional encoding
         self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
+        self.do_rel_shift = do_rel_shift
         self.pos_bias_u = nn.Parameter(torch.Tensor(self.h, self.d_k))
         self.pos_bias_v = nn.Parameter(torch.Tensor(self.h, self.d_k))
         torch.nn.init.xavier_uniform_(self.pos_bias_u)
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
+        self.adaptive_scale = adaptive_scale
+        if self.adaptive_scale:
+            self.scale = nn.Parameter(torch.tensor(1.), requires_grad=True)
+            self.bias = nn.Parameter(torch.tensor(0.), requires_grad=True)
+        if init_weights:
+            self.init_weights()
+
+    def init_weights(self):
+        input_max = (self.h * self.d_k) ** -0.5
+        torch.nn.init.uniform_(self.linear_q.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_q.bias, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_k.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_k.bias, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_v.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_v.bias, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_pos.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_out.weight, -input_max, input_max)
+        torch.nn.init.uniform_(self.linear_out.bias, -input_max, input_max)
 
     def rel_shift(self, x, zero_triu: bool = False):
         """Compute relative positinal encoding.
@@ -232,6 +251,50 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         return x
 
+    def forward_attention(
+        self, value: torch.Tensor, scores: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
+    ) -> torch.Tensor:
+        """Compute attention context vector.
+
+        Args:
+            value (torch.Tensor): Transformed value, size
+                (#batch, n_head, time2, d_k).
+            scores (torch.Tensor): Attention score, size
+                (#batch, n_head, time1, time2).
+            mask (torch.Tensor): Mask, size (#batch, 1, time2) or
+                (#batch, time1, time2), (0, 0, 0) means fake mask.
+
+        Returns:
+            torch.Tensor: Transformed value (#batch, time1, d_model)
+                weighted by the attention score (#batch, time1, time2).
+
+        """
+        n_batch = value.size(0)
+        # NOTE(xcsong): When will `if mask.size(2) > 0` be True?
+        #   1. onnx(16/4) [WHY? Because we feed real cache & real mask for the
+        #           1st chunk to ease the onnx export.]
+        #   2. pytorch training
+        if mask.size(2) > 0 :  # time2 > 0
+            mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
+            # For last chunk, time2 might be larger than scores.size(-1)
+            mask = mask[:, :, :, :scores.size(-1)]  # (batch, 1, *, time2)
+            scores = scores.masked_fill(mask, -float('inf'))
+            attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)  # (batch, head, time1, time2)
+        # NOTE(xcsong): When will `if mask.size(2) > 0` be False?
+        #   1. onnx(16/-1, -1/-1, 16/0)
+        #   2. jit (16/-1, -1/-1, 16/0, 16/4)
+        else:
+            attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
+
+        p_attn = self.dropout(attn)
+        x = torch.matmul(p_attn, value)  # (batch, head, time1, d_k)
+        x = (x.transpose(1, 2).contiguous().view(n_batch, -1,
+                                                 self.h * self.d_k)
+             )  # (batch, time1, d_model)
+
+        return self.linear_out(x)  # (batch, time1, d_model)
+
     def forward(self, query: torch.Tensor,
                 key: torch.Tensor, value: torch.Tensor,
                 mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
@@ -256,6 +319,10 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 where `cache_t == chunk_size * num_decoding_left_chunks`
                 and `head * d_k == size`
         """
+        if self.adaptive_scale:
+            query = self.scale * query + self.bias
+            key = self.scale * key + self.bias
+            value = self.scale * value + self.bias
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
 
@@ -304,7 +371,8 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
         # Remove rel_shift since it is useless in speech recognition,
         # and it requires special attention for streaming.
-        # matrix_bd = self.rel_shift(matrix_bd)
+        if self.do_rel_shift:
+            matrix_bd = self.rel_shift(matrix_bd)
 
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k)  # (batch, head, time1, time2)

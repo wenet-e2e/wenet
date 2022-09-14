@@ -43,7 +43,7 @@ class PositionalEncoding(torch.nn.Module):
         self.dropout = torch.nn.Dropout(p=dropout_rate)
         self.max_len = max_len
 
-        self.pe = torch.zeros(self.max_len, self.d_model)
+        self.pe = torch.zeros(self.max_len, self.d_model, requires_grad=False)
         position = torch.arange(0, self.max_len,
                                 dtype=torch.float32).unsqueeze(1)
         div_term = torch.exp(

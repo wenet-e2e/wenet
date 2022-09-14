@@ -31,9 +31,11 @@ from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
 from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
-from wenet.utils.scheduler import WarmupLR
+from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+import random
+import numpy as np
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
@@ -53,6 +55,10 @@ def get_args():
     parser.add_argument('--tensorboard_dir',
                         default='tensorboard',
                         help='tensorboard log dir')
+    parser.add_argument('--seed',
+                        default=0,
+                        type=int,
+                        help='random seed in training phase')
     parser.add_argument('--ddp.rank',
                         dest='rank',
                         default=0,
@@ -195,7 +201,7 @@ def main():
     model = init_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
-    print('the number of model params: {}'.format(num_params))
+    print('the number of model params: {:,d}'.format(num_params))
 
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
@@ -228,8 +234,7 @@ def main():
         assert (torch.cuda.is_available())
         # cuda model is required for nn.parallel.DistributedDataParallel
         model.cuda()
-        model = torch.nn.parallel.DistributedDataParallel(
-            model, find_unused_parameters=True)
+        model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
         device = torch.device("cuda")
         if args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (
@@ -243,8 +248,17 @@ def main():
         device = torch.device('cuda' if use_cuda else 'cpu')
         model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
-    scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
+    if configs['optim'] == 'adam':
+        optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
+    elif configs['optim'] == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
+    else:
+        raise Exception('Please choose a correct optimizer.')
+    if configs['scheduler'] == 'warmuplr':
+        scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
+    elif configs['scheduler'] == 'NoamHoldAnnealing':
+        scheduler = NoamHoldAnnealing(optimizer, **configs['scheduler_conf'])
+
     final_epoch = None
     configs['rank'] = args.rank
     configs['is_distributed'] = distributed
@@ -262,6 +276,7 @@ def main():
         scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(start_epoch, num_epochs):
+        # set_all_random_seed(args.seed + epoch)
         train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch
         lr = optimizer.param_groups[0]['lr']

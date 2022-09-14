@@ -30,17 +30,37 @@ class PositionwiseFeedForward(torch.nn.Module):
         dropout_rate (float): Dropout rate.
         activation (torch.nn.Module): Activation function
     """
+
     def __init__(self,
                  idim: int,
                  hidden_units: int,
                  dropout_rate: float,
-                 activation: torch.nn.Module = torch.nn.ReLU()):
+                 activation: torch.nn.Module = torch.nn.ReLU(),
+                 adaptive_scale: bool = False,
+                 init_weights: bool = False
+                 ):
         """Construct a PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
+        self.idim = idim
+        self.hidden_units = hidden_units
         self.w_1 = torch.nn.Linear(idim, hidden_units)
         self.activation = activation
         self.dropout = torch.nn.Dropout(dropout_rate)
         self.w_2 = torch.nn.Linear(hidden_units, idim)
+        self.adaptive_scale = adaptive_scale
+        if self.adaptive_scale:
+            self.scale = torch.nn.Parameter(torch.tensor(1.), requires_grad=True)
+            self.bias = torch.nn.Parameter(torch.tensor(0.), requires_grad=True)
+        if init_weights:
+            self.init_weights()
+
+    def init_weights(self):
+        ffn1_max = self.idim ** -0.5
+        ffn2_max = self.hidden_units ** -0.5
+        torch.nn.init.uniform_(self.w_1.weight.data, -ffn1_max, ffn1_max)
+        torch.nn.init.uniform_(self.w_1.bias.data, -ffn1_max, ffn1_max)
+        torch.nn.init.uniform_(self.w_2.weight.data, -ffn2_max, ffn2_max)
+        torch.nn.init.uniform_(self.w_2.bias.data, -ffn2_max, ffn2_max)
 
     def forward(self, xs: torch.Tensor) -> torch.Tensor:
         """Forward function.
@@ -50,4 +70,6 @@ class PositionwiseFeedForward(torch.nn.Module):
         Returns:
             output tensor, (B, L, D)
         """
+        if self.adaptive_scale:
+            xs = self.scale * xs + self.bias
         return self.w_2(self.dropout(self.activation(self.w_1(xs))))

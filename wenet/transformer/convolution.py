@@ -30,7 +30,10 @@ class ConvolutionModule(nn.Module):
                  activation: nn.Module = nn.ReLU(),
                  norm: str = "batch_norm",
                  causal: bool = False,
-                 bias: bool = True):
+                 bias: bool = True,
+                 adaptive_scale: bool = False,
+                 init_weights: bool = False
+                 ):
         """Construct an ConvolutionModule object.
         Args:
             channels (int): The number of channels of conv layers.
@@ -39,6 +42,13 @@ class ConvolutionModule(nn.Module):
         """
         assert check_argument_types()
         super().__init__()
+        self.bias = bias
+        self.channels = channels
+        self.kernel_size = kernel_size
+        self.adaptive_scale = adaptive_scale
+        if self.adaptive_scale:
+            self.scale = torch.nn.Parameter(torch.tensor(1.), requires_grad=True)
+            self.bias = torch.nn.Parameter(torch.tensor(0.), requires_grad=True)
 
         self.pointwise_conv1 = nn.Conv1d(
             channels,
@@ -87,6 +97,21 @@ class ConvolutionModule(nn.Module):
             bias=bias,
         )
         self.activation = activation
+        if init_weights:
+            self.init_weights()
+
+    def init_weights(self):
+        pw_max = self.channels ** -0.5
+        dw_max = self.kernel_size ** -0.5
+        torch.nn.init.uniform_(self.pointwise_conv1.weight.data, -pw_max, pw_max)
+        if self.bias:
+            torch.nn.init.uniform_(self.pointwise_conv1.bias.data, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.depthwise_conv.weight.data, -dw_max, dw_max)
+        if self.bias:
+            torch.nn.init.uniform_(self.depthwise_conv.bias.data, -dw_max, dw_max)
+        torch.nn.init.uniform_(self.pointwise_conv2.weight.data, -pw_max, pw_max)
+        if self.bias:
+            torch.nn.init.uniform_(self.pointwise_conv2.bias.data, -pw_max, pw_max)
 
     def forward(
         self,
@@ -105,9 +130,10 @@ class ConvolutionModule(nn.Module):
         Returns:
             torch.Tensor: Output tensor (#batch, time, channels).
         """
+        if self.adaptive_scale:
+            x = self.scale * x + self.bias
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)  # (#batch, channels, time)
-
         # mask batch padding
         if mask_pad.size(2) > 0:  # time > 0
             x.masked_fill_(~mask_pad, 0.0)
@@ -144,3 +170,12 @@ class ConvolutionModule(nn.Module):
             x.masked_fill_(~mask_pad, 0.0)
 
         return x.transpose(1, 2), new_cache
+
+if __name__ == '__main__':
+    from wenet.utils.mask import make_pad_mask
+    module = ConvolutionModule(256, 31)
+    x = torch.rand(2, 128, 256)
+    length = torch.tensor([128, 64])
+    mask_pad = ~make_pad_mask(length).unsqueeze(1)
+    out = module(x, mask_pad)
+    print('out', out[0].size())
