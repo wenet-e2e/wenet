@@ -47,11 +47,12 @@ class Processor(IterableDataset):
 
 
 class DistributedSampler:
-    def __init__(self, shuffle=True, partition=True):
+    def __init__(self, shuffle=True, partition=True, even_sample=False):
         self.epoch = -1
         self.update()
         self.shuffle = shuffle
         self.partition = partition
+        self.even_sample = even_sample
 
     def update(self):
         assert dist.is_available()
@@ -93,15 +94,24 @@ class DistributedSampler:
         if self.partition:
             if self.shuffle:
                 random.Random(self.epoch).shuffle(data)
+            if self.even_sample:
+                dummy_length = self.world_size - len(data) % self.world_size
+                data += data[:dummy_length]
+                assert len(data) % self.world_size == 0
             data = data[self.rank::self.world_size]
+        else:
+            if self.even_sample:
+                dummy_length = self.world_size - len(data) % self.world_size
+                data += data[:dummy_length]
+                assert len(data) % self.world_size == 0
         data = data[self.worker_id::self.num_workers]
         return data
 
 
 class DataList(IterableDataset):
-    def __init__(self, lists, shuffle=True, partition=True):
+    def __init__(self, lists, shuffle=True, partition=True, even_sample=False):
         self.lists = lists
-        self.sampler = DistributedSampler(shuffle, partition)
+        self.sampler = DistributedSampler(shuffle, partition, even_sample)
 
     def set_epoch(self, epoch):
         self.sampler.set_epoch(epoch)
@@ -122,7 +132,9 @@ def Dataset(data_type,
             conf,
             bpe_model=None,
             non_lang_syms=None,
-            partition=True):
+            partition=True,
+            even_sample=False,
+            ):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -137,7 +149,9 @@ def Dataset(data_type,
     assert data_type in ['raw', 'shard']
     lists = read_lists(data_list_file)
     shuffle = conf.get('shuffle', True)
-    dataset = DataList(lists, shuffle=shuffle, partition=partition)
+    dataset = DataList(lists, shuffle=shuffle, partition=partition, even_sample=even_sample)
+    if even_sample:
+        assert data_type == 'raw'
     if data_type == 'shard':
         dataset = Processor(dataset, processor.url_opener)
         dataset = Processor(dataset, processor.tar_file_and_group)

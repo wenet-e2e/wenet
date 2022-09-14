@@ -7,28 +7,38 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-stage=0 # start from 0 if you need to start from data preparation
+#export CUDA_VISIBLE_DEVICES="0,1,2,3"
+#export CUDA_VISIBLE_DEVICES="4,5,6,7"
+stage=4 # start from 0 if you need to start from data preparation
 stop_stage=5
 # data
 data_url=www.openslr.org/resources/12
 # use your own data path
-datadir=/export/data/en-asr-data/OpenSLR
+#datadir=/export/data/en-asr-data/OpenSLR
+datadir=./OpenSLR
 # wav data dir
-wave_data=data
+#wave_data=data
+wave_data=OpenSLR/LibriSpeech
 # Optional train_config
 # 1. conf/train_transformer_large.yaml: Standard transformer
-train_config=conf/train_conformer.yaml
+#train_config=conf/train_conformer.yaml
+train_config=conf/train_squeezeformer.yaml
 checkpoint=
 cmvn=true
 do_delta=false
 
-dir=exp/sp_spec_aug
+#dir=exp/sp_spec_aug
+#dir=exp/conformer_baseline
+#dir=exp/squeezeformer_sm12
+#dir=exp/squeezeformer_sm12_conv_module_adaptive_scale
+dir=exp/squeezeformer_sm12_public
+#dir=exp/squeezeformer_sm12_fix_seed
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
-average_num=10
+average_num=30
 decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
 
 . tools/parse_options.sh || exit 1;
@@ -69,6 +79,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   mkdir -p $wave_data/train_960
   # merge total training data
   for set in train_clean_100 train_clean_360 train_other_500; do
+    # shellcheck disable=SC2045
     for f in `ls $wave_data/$set`; do
       cat $wave_data/$set/$f >> $wave_data/train_960/$f
     done
@@ -76,6 +87,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   mkdir -p $wave_data/dev
   # merge total dev data
   for set in dev_clean dev_other; do
+    # shellcheck disable=SC2045
     for f in `ls $wave_data/$set`; do
       cat $wave_data/$set/$f >> $wave_data/$dev_set/$f
     done
@@ -142,17 +154,18 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --data_type raw \
       --symbol_table $dict \
       --bpe_model ${bpemodel}.model \
-      --train_data $wave_data/$train_set/data.list \
-      --cv_data $wave_data/$dev_set/data.list \
+      --train_data $wave_data/$train_set/data.list2 \
+      --cv_data $wave_data/$dev_set/data.list2 \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.init_method $init_method \
       --ddp.world_size $num_gpus \
       --ddp.rank $i \
       --ddp.dist_backend $dist_backend \
-      --num_workers 1 \
+      --num_workers 3 \
       $cmvn_opts \
       --pin_memory
+#      --checkpoint "/data/sdb/yangyuguang/public/wenet_ximalaya/examples/librispeech/s0/exp/squeezeformer_sm12/0.pt" \
   } &
   done
   wait

@@ -11,7 +11,7 @@ encoder_conf:
     attention_dropout_rate: 0.0
     input_layer: conv2d # encoder input type, you can chose conv2d, conv2d6 and conv2d8
     normalize_before: true
-    cnn_module_kernel: 15
+    cnn_module_kernel: 31
     use_cnn_module: True
     activation_type: 'swish'
     pos_enc_layer_type: 'rel_pos'
@@ -50,7 +50,7 @@ dataset_conf:
         num_mel_bins: 80
         frame_shift: 10
         frame_length: 25
-        dither: 0.0
+        dither: 0.1
     spec_aug: true
     spec_aug_conf:
         num_t_mask: 2
@@ -68,8 +68,8 @@ dataset_conf:
         batch_size: 12
 
 grad_clip: 5
-accum_grad: 1
-max_epoch: 70
+accum_grad: 4
+max_epoch: 120
 log_interval: 100
 
 optim: adam

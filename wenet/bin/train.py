@@ -31,7 +31,7 @@ from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
 from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
-from wenet.utils.scheduler import WarmupLR, AVAILABLE_SCHEDULERS
+from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 import random
@@ -264,8 +264,10 @@ def main():
         optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
     else:
         raise Exception('Please choose a correct optimizer.')
-    # scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
-    scheduler = AVAILABLE_SCHEDULERS[configs['scheduler']](optimizer, **configs['scheduler_conf'])
+    if configs['scheduler'] == 'warmuplr':
+        scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
+    elif configs['scheduler'] == 'NoamHoldAnnealing':
+        scheduler = NoamHoldAnnealing(optimizer, **configs['scheduler_conf'])
 
     final_epoch = None
     configs['rank'] = args.rank

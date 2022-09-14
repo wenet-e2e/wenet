@@ -13,7 +13,7 @@ encoder_conf:
     feed_forward_dropout_rate: 0.1
     attention_dropout_rate: 0.1
     cnn_module_kernel: 31
-    cnn_norm_type: batch_norm
+    cnn_norm_type: layer_norm
     adaptive_scale: true
     normalize_before: false
 
@@ -68,7 +68,6 @@ dataset_conf:
     batch_conf:
         batch_type: 'static' # static or dynamic
         batch_size: 12
-        max_frames_in_batch: 48000
 
 grad_clip: 5
 accum_grad: 4

@@ -196,7 +196,7 @@ def get_rnn(rnn_type: str) -> torch.nn.Module:
 def get_activation(act):
     """Return activation function."""
     # Lazy load to avoid unused import
-    from wenet.transformer.swish import Swish
+    from wenet.transformer.activations import Swish
 
     activation_funcs = {
         "hardtanh": torch.nn.Hardtanh,

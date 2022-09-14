@@ -29,6 +29,7 @@ from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+from tqdm import tqdm
 
 def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
@@ -180,7 +181,7 @@ def main():
                            non_lang_syms,
                            partition=False)
 
-    test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
+    test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=1)
 
     # Init asr model from configs
     model = init_model(configs)
@@ -196,7 +197,7 @@ def main():
 
     model.eval()
     with torch.no_grad(), open(args.result_file, 'w') as fout:
-        for batch_idx, batch in enumerate(test_data_loader):
+        for batch_idx, batch in enumerate(tqdm(test_data_loader, desc=args.mode)):
             keys, feats, target, feats_lengths, target_lengths = batch
             feats = feats.to(device)
             target = target.to(device)
@@ -303,7 +304,7 @@ def main():
                     if w == eos:
                         break
                     content.append(char_dict[w])
-                logging.info('{} {}'.format(key, args.connect_symbol.join(content)))
+                # logging.info('{} {}'.format(key, args.connect_symbol.join(content)))
                 fout.write('{} {}\n'.format(key, args.connect_symbol.join(content)))
 
 
