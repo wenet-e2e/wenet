@@ -43,6 +43,28 @@ class SqueezeformerEncoder(nn.Module):
             static_chunk_size: int = 0,
             use_dynamic_left_chunk: bool = False
     ):
+        """Construct SqueezeformerEncoder
+
+                Args:
+                    input_size to use_dynamic_chunk, see in Transformer BaseEncoder.
+                    encoder_dim (int): The hidden dimension of encoder layer.
+                    output_size (int): The output dimension of final projection layer.
+                    attention_heads (int): Num of attention head in attention module.
+                    num_blocks (int): Num of encoder layers.
+                    reduce_idx (int): reduce layer index, from 40ms to 80ms per frame.
+                    recover_idx (int): recover layer index, from 80ms to 40ms per frame.
+                    feed_forward_expansion_factor (int): Enlarge coefficient of FFN layer.
+                    input_dropout_rate (float): Dropout rate of input projection layer.
+                    pos_enc_layer_type (str): Self attention type.
+                    do_rel_shift (bool): Whether to do relative shift operation on rel-attention module.
+                    cnn_module_kernel (int): Kernel size of CNN module.
+                    activation_type (str): Encoder activation function type.
+                    use_cnn_module (bool): Whether to use convolution module.
+                    cnn_module_kernel (int): Kernel size of convolution module.
+                    adaptive_scale (bool): Whether to use adaptive scale.
+                    init_weights (bool): Whether to initialize weights.
+                    causal (bool): whether to use causal convolution or not.
+                """
         super(SqueezeformerEncoder, self).__init__()
         self.global_cmvn = global_cmvn
         self.reduce_idx = reduce_idx
