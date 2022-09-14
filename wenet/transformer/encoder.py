@@ -366,6 +366,7 @@ class BaseEncoder(torch.nn.Module):
                 for i, recover_layer in enumerate(self.time_recover_layers):
                     if time_reduce_level == i:
                         xs = recover_layer(xs)
+                xs = xs + residual_xs  # (B,T,D)
             # NOTE(xcsong): Before layer.forward
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
