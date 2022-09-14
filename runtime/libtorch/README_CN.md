@@ -56,7 +56,7 @@ mkdir build && cd build && cmake -DGPU=ON .. && cmake --build .
 ``` sh
 # 当前目录为 wenet/runtime/libtorch
 wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
-tar -xf 20210602_u2++_conformer_libtorch.tar.gz
+tar -xf 20210601_u2++_conformer_libtorch.tar.gz
 ```
 
 ## 本地wav文件识别

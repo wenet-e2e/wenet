@@ -95,6 +95,8 @@ class Decoder:
         finish = 1 if last else 0
         _wenet.wenet_decode(self.d, pcm, len(pcm), finish)
         result = _wenet.wenet_get_result(self.d)
+        if last:  # Reset status for next decoding automatically
+            self.reset()
         return result
 
     def decode_wav(self, wav_file: str) -> str:

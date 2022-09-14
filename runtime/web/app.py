@@ -12,7 +12,6 @@ def recognition(audio):
     if sr == 48000:  # Optional resample to 16000
         y = (y / max(np.max(y), 1) * 32767)[::3].astype("int16")
     ans = decoder.decode(y.tobytes(), True)
-    decoder.reset()
     return json.loads(ans)
 
 text = "Speech Recognition in WeNet | 基于 WeNet 的语音识别"
