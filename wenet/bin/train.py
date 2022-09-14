@@ -127,10 +127,6 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def set_all_random_seed(seed: int):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.random.manual_seed(seed)
 
 def main():
     args = get_args()
@@ -163,9 +159,8 @@ def main():
     cv_conf['shuffle'] = False
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
-    even_sample = train_conf.get('even_sample', False)
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
-                            train_conf, args.bpe_model, non_lang_syms, True, even_sample)
+                            train_conf, args.bpe_model, non_lang_syms, True)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
@@ -211,9 +206,9 @@ def main():
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements
-    # if args.rank == 0:
-        # script_model = torch.jit.script(model)
-        # script_model.save(os.path.join(args.model_dir, 'init.zip'))
+    if args.rank == 0:
+        script_model = torch.jit.script(model)
+        script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
@@ -238,12 +233,7 @@ def main():
     if distributed:
         assert (torch.cuda.is_available())
         # cuda model is required for nn.parallel.DistributedDataParallel
-        if train_conf.get('syncbn', False):
-            assert even_sample == True
-            logging.info('Using SyncBatchNorm')
-            model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model).cuda()
-        else:
-            model.cuda()
+        model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(model, find_unused_parameters=True)
         device = torch.device("cuda")
         if args.fp16_grad_sync:
