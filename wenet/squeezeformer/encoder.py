@@ -5,11 +5,12 @@ from wenet.squeezeformer.utils import ResidualModule
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4, TimeReductionLayer
 from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
 from wenet.transformer.embedding import RelPositionalEncoding
-from wenet.transformer.attention import RelPositionMultiHeadedAttention
+from wenet.transformer.attention import MultiHeadedAttention, RelPositionMultiHeadedAttention
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.utils.mask import make_pad_mask, add_optional_chunk_mask
 from wenet.transformer.activations import Swish
+from wenet.utils.common import get_activation
 
 
 class SqueezeformerEncoder(nn.Module):
@@ -24,14 +25,16 @@ class SqueezeformerEncoder(nn.Module):
             recover_idx: int = 11,
             feed_forward_expansion_factor: int = 4,
             input_dropout_rate: float = 0.1,
-            feed_forward_dropout_rate: float = 0.1,
+            pos_enc_layer_type: str = "rel_pos",
             do_rel_shift: bool = True,
+            feed_forward_dropout_rate: float = 0.1,
             attention_dropout_rate: float = 0.1,
             cnn_module_kernel: int = 31,
             cnn_norm_type: str = "batch_norm",
             dropout: float = 0.1,
             causal: bool = False,
             adaptive_scale: bool = True,
+            activation_type: str = "swish",
             init_weights: bool = True,
             global_cmvn: torch.nn.Module = None,
             normalize_before: bool = False,
@@ -48,6 +51,42 @@ class SqueezeformerEncoder(nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
+        activation = get_activation(activation_type)
+
+        # self-attention module definition
+        if pos_enc_layer_type != "rel_pos":
+            encoder_selfattn_layer = MultiHeadedAttention
+            encoder_selfattn_layer_args = (
+                attention_heads,
+                output_size,
+                attention_dropout_rate,
+            )
+        else:
+            encoder_selfattn_layer = RelPositionMultiHeadedAttention
+            encoder_selfattn_layer_args = (
+                attention_heads,
+                encoder_dim,
+                attention_dropout_rate,
+                do_rel_shift,
+                adaptive_scale,
+                init_weights
+            )
+
+        # feed-forward module definition
+        positionwise_layer = PositionwiseFeedForward
+        positionwise_layer_args = (
+            encoder_dim,
+            encoder_dim * feed_forward_expansion_factor,
+            feed_forward_dropout_rate,
+            activation,
+            adaptive_scale,
+            init_weights
+        )
+
+        # convolution module definition
+        convolution_layer = ConvolutionModule
+        convolution_layer_args = (encoder_dim, cnn_module_kernel, activation,
+                                  cnn_norm_type, causal, adaptive_scale, init_weights)
 
         self.embed = DepthwiseConv2dSubsampling4(
             1, encoder_dim, RelPositionalEncoding(encoder_dim, dropout_rate=0.1)
@@ -63,20 +102,10 @@ class SqueezeformerEncoder(nn.Module):
                 self.encoders.append(
                     SqueezeformerEncoderLayer(
                         encoder_dim,
-                        RelPositionMultiHeadedAttention(
-                            attention_heads, encoder_dim, attention_dropout_rate,
-                            do_rel_shift=True, adaptive_scale=adaptive_scale, init_weights=init_weights),
-                        PositionwiseFeedForward(
-                            encoder_dim, hidden_units=encoder_dim * feed_forward_expansion_factor,
-                            dropout_rate=feed_forward_dropout_rate, activation=Swish(),
-                            adaptive_scale=adaptive_scale, init_weights=init_weights),
-                        ConvolutionModule(
-                            encoder_dim, cnn_module_kernel, Swish(), cnn_norm_type, causal=causal,
-                            adaptive_scale=adaptive_scale, init_weights=True),
-                        PositionwiseFeedForward(
-                            encoder_dim, hidden_units=encoder_dim * feed_forward_expansion_factor,
-                            dropout_rate=feed_forward_dropout_rate, activation=Swish(),
-                            adaptive_scale=adaptive_scale, init_weights=init_weights),
+                        encoder_selfattn_layer(*encoder_selfattn_layer_args),
+                        positionwise_layer(*positionwise_layer_args),
+                        convolution_layer(*convolution_layer_args),
+                        positionwise_layer(*positionwise_layer_args),
                         normalize_before,
                         dropout,
                         concat_after
@@ -85,20 +114,10 @@ class SqueezeformerEncoder(nn.Module):
                 self.encoders.append(
                     ResidualModule(SqueezeformerEncoderLayer(
                         encoder_dim,
-                        RelPositionMultiHeadedAttention(
-                            attention_heads, encoder_dim, attention_dropout_rate,
-                            do_rel_shift=True, init_weights=True, adaptive_scale=adaptive_scale),
-                        PositionwiseFeedForward(
-                            encoder_dim, hidden_units=encoder_dim * feed_forward_expansion_factor,
-                            dropout_rate=feed_forward_dropout_rate, activation=Swish(),
-                            adaptive_scale=adaptive_scale, init_weights=init_weights),
-                        ConvolutionModule(
-                            encoder_dim, cnn_module_kernel, Swish(), cnn_norm_type, causal=causal,
-                            adaptive_scale=adaptive_scale, init_weights=True),
-                        PositionwiseFeedForward(
-                            encoder_dim, hidden_units=encoder_dim * feed_forward_expansion_factor,
-                            dropout_rate=feed_forward_dropout_rate, activation=Swish(),
-                            adaptive_scale=adaptive_scale, init_weights=init_weights),
+                        encoder_selfattn_layer(*encoder_selfattn_layer_args),
+                        positionwise_layer(*positionwise_layer_args),
+                        convolution_layer(*convolution_layer_args),
+                        positionwise_layer(*positionwise_layer_args),
                         normalize_before,
                         dropout,
                         concat_after
@@ -107,20 +126,10 @@ class SqueezeformerEncoder(nn.Module):
                 self.encoders.append(
                     SqueezeformerEncoderLayer(
                         encoder_dim,
-                        RelPositionMultiHeadedAttention(
-                            attention_heads, encoder_dim, attention_dropout_rate,
-                            do_rel_shift=do_rel_shift, init_weights=True, adaptive_scale=adaptive_scale),
-                        PositionwiseFeedForward(
-                            encoder_dim, hidden_units=encoder_dim * feed_forward_expansion_factor,
-                            dropout_rate=feed_forward_dropout_rate, activation=Swish(),
-                            adaptive_scale=adaptive_scale, init_weights=init_weights),
-                        ConvolutionModule(
-                            encoder_dim, cnn_module_kernel, Swish(), cnn_norm_type, causal=causal,
-                            adaptive_scale=adaptive_scale, init_weights=True),
-                        PositionwiseFeedForward(
-                            encoder_dim, hidden_units=encoder_dim * feed_forward_expansion_factor,
-                            dropout_rate=feed_forward_dropout_rate, activation=Swish(),
-                            adaptive_scale=adaptive_scale, init_weights=init_weights),
+                        encoder_selfattn_layer(*encoder_selfattn_layer_args),
+                        positionwise_layer(*positionwise_layer_args),
+                        convolution_layer(*convolution_layer_args),
+                        positionwise_layer(*positionwise_layer_args),
                         normalize_before,
                         dropout,
                         concat_after

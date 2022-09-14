@@ -5,6 +5,7 @@ from wenet.transformer.subsampling import BaseSubsampling
 from typing import Tuple, Union, Optional, Dict
 from wenet.squeezeformer.conv2d import Conv2dValid
 
+
 class DepthwiseConv2dSubsampling4(BaseSubsampling):
     """Depthwise Convolutional 2D subsampling (to 1/4 length).
 
@@ -14,6 +15,7 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
             dropout_rate (float): Dropout rate.
 
         """
+
     def __init__(
             self, idim: int, odim: int, pos_enc_class: torch.nn.Module):
         super(DepthwiseConv2dSubsampling4, self).__init__()
@@ -27,15 +29,6 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
         self.subsampling_rate = 4
         # 6 = (3 - 1) * 1 + (3 - 1) * 2
         self.right_context = 6
-        # self.init_weights()
-
-    def init_weights(self):
-        pw_max = self.odim ** -0.5
-        dw_max = (3 ** 2) ** -0.5
-        torch.nn.init.uniform_(self.pw_conv.weight.data, -pw_max, pw_max)
-        torch.nn.init.uniform_(self.pw_conv.bias.data, -pw_max, pw_max)
-        torch.nn.init.uniform_(self.dw_conv.weight.data, -dw_max, dw_max)
-        torch.nn.init.uniform_(self.dw_conv.bias.data, -dw_max, dw_max)
 
     def forward(
             self,
@@ -105,22 +98,3 @@ class TimeReductionLayer(nn.Module):
         dummy_pad = torch.zeros(batch_size, padding2, hidden).to(xs.device)
         xs = torch.cat([xs, dummy_pad], dim=1)
         return xs, xs_lens
-
-if __name__ == '__main__':
-    # pos = RelPositionalEncoding(d_model=256, dropout_rate=0.1)
-    # module = DepthwiseConv2dSubsampling4(1, 256, pos)
-    module = TimeReductionLayer(encoder_dim=256)
-    for T in range(128, 256):
-        # T = 15
-        length = torch.tensor([T, T])
-        x = torch.rand(2, T, 256)
-        x = module(x, length)
-        print('x', x[0].size())
-        print('x', x[1])
-    # T = x.size(1)
-    # length = torch.tensor([126, 126])
-    # masks = ~make_pad_mask(length, T).unsqueeze(1)
-    # x = module(x, masks, 0)
-    # print('x', x[0].size())
-    # print('x', x[1].size())
-    # print('x', x[2].size())
