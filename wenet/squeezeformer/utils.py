@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import termcolor
 
 
 class ResidualModule(nn.Module):

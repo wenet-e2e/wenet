@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from wenet.transformer.subsampling import BaseSubsampling
-from typing import Tuple, Union, Optional, Dict
+from typing import Tuple
 from wenet.squeezeformer.conv2d import Conv2dValid
 
 
