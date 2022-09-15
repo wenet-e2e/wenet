@@ -28,17 +28,21 @@ class Conv2dValid(_ConvNd):
         padding_ = padding if isinstance(padding, str) else _pair(padding)
         dilation_ = _pair(dilation)
         super(Conv2dValid, self).__init__(
-            in_channels, out_channels, kernel_size_, stride_, padding_, dilation_,
-            False, _pair(0), groups, bias, padding_mode, **factory_kwargs)
+            in_channels, out_channels, kernel_size_,
+            stride_, padding_, dilation_, False, _pair(0),
+            groups, bias, padding_mode, **factory_kwargs)
         self.valid_trigx = valid_trigx
         self.valid_trigy = valid_trigy
 
-    def _conv_forward(self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
+    def _conv_forward(
+            self, input: Tensor, weight: Tensor, bias: Optional[Tensor]):
         validx, validy = 0, 0
         if self.valid_trigx:
-            validx = (input.size(-2) * (self.stride[-2] - 1) - 1 + self.kernel_size[-2]) // 2
+            validx = (input.size(-2) * (self.stride[-2] - 1) - 1
+                      + self.kernel_size[-2]) // 2
         if self.valid_trigy:
-            validy = (input.size(-1) * (self.stride[-1] - 1) - 1 + self.kernel_size[-1]) // 2
+            validy = (input.size(-1) * (self.stride[-1] - 1) - 1
+                      + self.kernel_size[-1]) // 2
         return F.conv2d(input, weight, bias, self.stride,
                         (validx, validy), self.dilation, self.groups)
 

@@ -2,12 +2,14 @@ import torch
 import torch.nn as nn
 from typing import Tuple
 from wenet.squeezeformer.utils import ResidualModule
-from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4, TimeReductionLayer
+from wenet.squeezeformer.subsampling \
+    import DepthwiseConv2dSubsampling4, TimeReductionLayer
 from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.attention import MultiHeadedAttention
 from wenet.squeezeformer.attention import RelPositionMultiHeadedAttention
-from wenet.squeezeformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.squeezeformer.positionwise_feed_forward \
+    import PositionwiseFeedForward
 from wenet.squeezeformer.convolution import ConvolutionModule
 from wenet.utils.mask import make_pad_mask, add_optional_chunk_mask
 from wenet.utils.common import get_activation
@@ -45,26 +47,27 @@ class SqueezeformerEncoder(nn.Module):
     ):
         """Construct SqueezeformerEncoder
 
-                Args:
-                    input_size to use_dynamic_chunk, see in Transformer BaseEncoder.
-                    encoder_dim (int): The hidden dimension of encoder layer.
-                    output_size (int): The output dimension of final projection layer.
-                    attention_heads (int): Num of attention head in attention module.
-                    num_blocks (int): Num of encoder layers.
-                    reduce_idx (int): reduce layer index, from 40ms to 80ms per frame.
-                    recover_idx (int): recover layer index, from 80ms to 40ms per frame.
-                    feed_forward_expansion_factor (int): Enlarge coefficient of FFN layer.
-                    input_dropout_rate (float): Dropout rate of input projection layer.
-                    pos_enc_layer_type (str): Self attention type.
-                    do_rel_shift (bool): Whether to do relative shift operation on rel-attention module.
-                    cnn_module_kernel (int): Kernel size of CNN module.
-                    activation_type (str): Encoder activation function type.
-                    use_cnn_module (bool): Whether to use convolution module.
-                    cnn_module_kernel (int): Kernel size of convolution module.
-                    adaptive_scale (bool): Whether to use adaptive scale.
-                    init_weights (bool): Whether to initialize weights.
-                    causal (bool): whether to use causal convolution or not.
-                """
+        Args:
+            input_size to use_dynamic_chunk, see in Transformer BaseEncoder.
+            encoder_dim (int): The hidden dimension of encoder layer.
+            output_size (int): The output dimension of final projection layer.
+            attention_heads (int): Num of attention head in attention module.
+            num_blocks (int): Num of encoder layers.
+            reduce_idx (int): reduce layer index, from 40ms to 80ms per frame.
+            recover_idx (int): recover layer index, from 80ms to 40ms per frame.
+            feed_forward_expansion_factor (int): Enlarge coefficient of FFN.
+            input_dropout_rate (float): Dropout rate of input projection layer.
+            pos_enc_layer_type (str): Self attention type.
+            do_rel_shift (bool): Whether to do relative shift
+                                 operation on rel-attention module.
+            cnn_module_kernel (int): Kernel size of CNN module.
+            activation_type (str): Encoder activation function type.
+            use_cnn_module (bool): Whether to use convolution module.
+            cnn_module_kernel (int): Kernel size of convolution module.
+            adaptive_scale (bool): Whether to use adaptive scale.
+            init_weights (bool): Whether to initialize weights.
+            causal (bool): whether to use causal convolution or not.
+        """
         super(SqueezeformerEncoder, self).__init__()
         self.global_cmvn = global_cmvn
         self.reduce_idx = reduce_idx
@@ -107,14 +110,17 @@ class SqueezeformerEncoder(nn.Module):
 
         # convolution module definition
         convolution_layer = ConvolutionModule
-        convolution_layer_args = (encoder_dim, cnn_module_kernel, activation,
-                                  cnn_norm_type, causal, adaptive_scale, init_weights)
+        convolution_layer_args = (
+            encoder_dim, cnn_module_kernel, activation,
+            cnn_norm_type, causal, adaptive_scale, init_weights)
 
         self.embed = DepthwiseConv2dSubsampling4(
-            1, encoder_dim, RelPositionalEncoding(encoder_dim, dropout_rate=0.1)
+            1, encoder_dim,
+            RelPositionalEncoding(encoder_dim, dropout_rate=0.1)
         )
         self.input_proj = nn.Sequential(
-            nn.Linear(encoder_dim * (((input_size - 1) // 2 - 1) // 2), encoder_dim),
+            nn.Linear(
+                encoder_dim * (((input_size - 1) // 2 - 1) // 2), encoder_dim),
             nn.Dropout(p=input_dropout_rate),
         )
         self.preln = nn.LayerNorm(encoder_dim)
@@ -219,3 +225,4 @@ class SqueezeformerEncoder(nn.Module):
         if self.final_proj is not None:
             xs = self.final_proj(xs)
         return xs, masks
+    

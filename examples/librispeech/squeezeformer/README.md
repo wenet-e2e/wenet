@@ -6,7 +6,7 @@ squeezeformer
 ├── conv2d.py                       # self defined conv2d valid padding module
 ├── convolution.py                  # convolution module in squeezeformer block
 ├── encoder_layer.py                # squeezeformer encoder layer
-├── encoder.py                      # squeezeformer encoder class 
+├── encoder.py                      # squeezeformer encoder class
 ├── positionwise_feed_forward.py    # feed forward layer
 ├── subsampling.py                  # sub-sampling layer, time reduction layer
 └── utils.py                        # residual connection module

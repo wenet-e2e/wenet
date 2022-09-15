@@ -21,9 +21,11 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
         super(DepthwiseConv2dSubsampling4, self).__init__()
         self.idim = idim
         self.odim = odim
-        self.pw_conv = nn.Conv2d(in_channels=idim, out_channels=odim, kernel_size=3, stride=2)
+        self.pw_conv = nn.Conv2d(
+            in_channels=idim, out_channels=odim, kernel_size=3, stride=2)
         self.act1 = nn.ReLU()
-        self.dw_conv = nn.Conv2d(in_channels=odim, out_channels=odim, kernel_size=3, stride=2)
+        self.dw_conv = nn.Conv2d(
+            in_channels=odim, out_channels=odim, kernel_size=3, stride=2)
         self.act2 = nn.ReLU()
         self.pos_enc = pos_enc_class
         self.subsampling_rate = 4
@@ -84,10 +86,12 @@ class TimeReductionLayer(nn.Module):
         torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
         torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
 
-    def forward(self, xs: torch.Tensor, xs_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, xs: torch.Tensor, xs_lens: torch.Tensor
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
         xs = xs.unsqueeze(2)
         padding1 = self.kernel_size - self.stride
-        xs = F.pad(xs, (0, 0, 0, 0, 0, padding1, 0, 0), mode='constant', value=0.)
+        xs = F.pad(xs, (0, 0, 0, 0, 0, padding1, 0, 0),
+                   mode='constant', value=0.)
         xs = self.dw_conv(xs.transpose(1, 2))
         xs = xs.permute(0, 3, 1, 2).contiguous()
         xs = self.pw_conv(xs).permute(0, 2, 3, 1).squeeze(1).contiguous()

@@ -14,7 +14,8 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         dropout_rate (float): Dropout rate.
     """
 
-    def __init__(self, n_head, n_feat, dropout_rate, do_rel_shift=False, adaptive_scale=False, init_weights=False):
+    def __init__(self, n_head, n_feat, dropout_rate,
+                 do_rel_shift=False, adaptive_scale=False, init_weights=False):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate)
         # linear transformation for positional encoding
@@ -100,7 +101,8 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             # For last chunk, time2 might be larger than scores.size(-1)
             mask = mask[:, :, :, :scores.size(-1)]  # (batch, 1, *, time2)
             scores = scores.masked_fill(mask, -float('inf'))
-            attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)  # (batch, head, time1, time2)
+            # (batch, head, time1, time2)
+            attn = torch.softmax(scores, dim=-1).masked_fill(mask, 0.0)
         # NOTE(xcsong): When will `if mask.size(2) > 0` be False?
         #   1. onnx(16/-1, -1/-1, 16/0)
         #   2. jit (16/-1, -1/-1, 16/0, 16/4)
