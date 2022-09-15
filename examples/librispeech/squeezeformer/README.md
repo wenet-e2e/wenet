@@ -17,13 +17,12 @@ squeezeformer
      * [x] derive time reduction layer from tensorflow version
      * [x] enable adaptive scale operation 
      * [x] enable init weights for deep model training 
-     * [x] enable training config and  results
+     * [x] enable training config and results
      * [x] enable dynamic chunk and JIT export
   * Training
-    * [x] enable NoamHoldAnnealing schedular
+     * [x] enable NoamHoldAnnealing schedular
 
 # Performance Record
-
 
 ### Conformer
 * encoder flops(30s): 2,797,274,624, params: 34,761,608
@@ -41,5 +40,3 @@ squeezeformer
 | ctc prefix beam search           | 3.44      | 9.23      | 3.51       | 9.25       |
 | attention decoder                | 8.74      | 3.59      | 3.75       | 8.70       |
 | attention rescoring              | 2.97      | 8.48      | 3.07       | 8.44       |
-
-
