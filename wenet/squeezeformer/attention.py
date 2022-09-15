@@ -48,8 +48,10 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
         self.adaptive_scale = adaptive_scale
         if self.adaptive_scale:
-            self.ada_scale = nn.Parameter(torch.ones(n_feat), requires_grad=True).reshape([1, 1, -1])
-            self.ada_bias = nn.Parameter(torch.zeros(n_feat), requires_grad=True).reshape([1, 1, -1])
+            self.ada_scale = nn.Parameter(
+                torch.ones(n_feat), requires_grad=True).reshape([1, 1, -1])
+            self.ada_bias = nn.Parameter(
+                torch.zeros(n_feat), requires_grad=True).reshape([1, 1, -1])
         if init_weights:
             self.init_weights()
 
