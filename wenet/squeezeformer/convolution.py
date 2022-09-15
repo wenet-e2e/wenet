@@ -48,8 +48,8 @@ class ConvolutionModule(nn.Module):
         self.kernel_size = kernel_size
         self.adaptive_scale = adaptive_scale
         if self.adaptive_scale:
-            self.scale = torch.nn.Parameter(torch.tensor(1.), requires_grad=True)
-            self.bias = torch.nn.Parameter(torch.tensor(0.), requires_grad=True)
+            self.ada_scale = torch.nn.Parameter(torch.ones(channels), requires_grad=True).reshape([1, 1, -1])
+            self.ada_bias = torch.nn.Parameter(torch.zeros(channels), requires_grad=True).reshape([1, 1, -1])
 
         self.pointwise_conv1 = nn.Conv1d(
             channels,
@@ -132,7 +132,7 @@ class ConvolutionModule(nn.Module):
             torch.Tensor: Output tensor (#batch, time, channels).
         """
         if self.adaptive_scale:
-            x = self.scale * x + self.bias
+            x = self.ada_scale * x + self.ada_bias
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)  # (#batch, channels, time)
         # mask batch padding

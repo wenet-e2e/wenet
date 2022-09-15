@@ -48,8 +48,8 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
         self.adaptive_scale = adaptive_scale
         if self.adaptive_scale:
-            self.scale = nn.Parameter(torch.tensor(1.), requires_grad=True)
-            self.bias = nn.Parameter(torch.tensor(0.), requires_grad=True)
+            self.ada_scale = nn.Parameter(torch.ones(n_feat), requires_grad=True).reshape([1, 1, -1])
+            self.ada_bias = nn.Parameter(torch.zeros(n_feat), requires_grad=True).reshape([1, 1, -1])
         if init_weights:
             self.init_weights()
 
@@ -161,9 +161,9 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 and `head * d_k == size`
         """
         if self.adaptive_scale:
-            query = self.scale * query + self.bias
-            key = self.scale * key + self.bias
-            value = self.scale * value + self.bias
+            query = self.ada_scale * query + self.ada_bias
+            key = self.ada_scale * key + self.ada_bias
+            value = self.ada_scale * value + self.ada_bias
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
 

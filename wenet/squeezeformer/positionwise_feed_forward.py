@@ -50,8 +50,8 @@ class PositionwiseFeedForward(torch.nn.Module):
         self.w_2 = torch.nn.Linear(hidden_units, idim)
         self.adaptive_scale = adaptive_scale
         if self.adaptive_scale:
-            self.scale = torch.nn.Parameter(torch.tensor(1.), requires_grad=True)
-            self.bias = torch.nn.Parameter(torch.tensor(0.), requires_grad=True)
+            self.ada_scale = torch.nn.Parameter(torch.ones(idim), requires_grad=True).reshape([1, 1, -1])
+            self.ada_bias = torch.nn.Parameter(torch.zeros(idim), requires_grad=True).reshape([1, 1, -1])
         if init_weights:
             self.init_weights()
 
@@ -72,5 +72,5 @@ class PositionwiseFeedForward(torch.nn.Module):
             output tensor, (B, L, D)
         """
         if self.adaptive_scale:
-            xs = self.scale * xs + self.bias
+            xs = self.ada_scale * xs + self.ada_bias
         return self.w_2(self.dropout(self.activation(self.w_1(xs))))
