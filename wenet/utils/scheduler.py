@@ -87,9 +87,8 @@ class WarmupPolicy(_LRScheduler):
 
     def __init__(self, optimizer, *, warmup_steps=None, warmup_ratio=None,
                  max_steps=None, min_lr=0.0, last_epoch=-1):
-        assert not (
-                warmup_steps is not None and warmup_ratio is not None
-        ), "Either use particular number of step or ratio"
+        assert not (warmup_steps is not None and warmup_ratio is not None),\
+            "Either use particular number of step or ratio"
         assert warmup_ratio is None or max_steps is not None, \
             "If there is a ratio, there should be a total steps"
 
@@ -147,9 +146,9 @@ class SquareRootConstantPolicy(_LRScheduler):
             self, optimizer, *, constant_steps=None, constant_ratio=None,
             max_steps=None, min_lr=0.0, last_epoch=-1
     ):
-        assert not (
-                constant_steps is not None and constant_ratio is not None
-        ), "Either use particular number of step or ratio"
+        assert not (constant_steps is not None
+                    and constant_ratio is not None), \
+            "Either use particular number of step or ratio"
         assert constant_ratio is None or max_steps is not None, \
             "If there is a ratio, there should be a total steps"
 
@@ -298,12 +297,12 @@ class WarmupAnnealHoldPolicy(_LRScheduler):
             min_lr=0.0,
             last_epoch=-1,
     ):
-        assert not (
-                warmup_steps is not None and warmup_ratio is not None
-        ), "Either use particular number of step or ratio"
-        assert not (
-                constant_steps is not None and constant_ratio is not None
-        ), "Either use constant_steps or constant_ratio"
+        assert not (warmup_steps is not None
+                    and warmup_ratio is not None), \
+            "Either use particular number of step or ratio"
+        assert not (constant_steps is not None
+                    and constant_ratio is not None), \
+            "Either use constant_steps or constant_ratio"
         assert warmup_ratio is None or max_steps is not None, \
             "If there is a ratio, there should be a total steps"
 
@@ -508,7 +507,8 @@ class CosineAnnealing(WarmupAnnealHoldPolicy):
         return self._get_linear_warmup_with_cosine_annealing_lr(step)
 
     def _get_linear_warmup_with_cosine_annealing_lr(self, step):
-        # Cosine Schedule for Megatron LM, slightly different warmup schedule + constant LR at the end.
+        # Cosine Schedule for Megatron LM,
+        # slightly different warmup schedule + constant LR at the end.
         new_lrs = [
             _linear_warmup_with_cosine_annealing(
                 max_lr=self.base_lrs[0],
@@ -528,9 +528,9 @@ class NoamAnnealing(_LRScheduler):
             max_steps=None, min_lr=0.0, last_epoch=-1
     ):
         self._normalize = d_model ** (-0.5)
-        assert not (
-                warmup_steps is not None and warmup_ratio is not None
-        ), "Either use particular number of step or ratio"
+        assert not (warmup_steps is not None
+                    and warmup_ratio is not None), \
+            "Either use particular number of step or ratio"
         assert warmup_ratio is None or max_steps is not None, \
             "If there is a ratio, there should be a total steps"
 

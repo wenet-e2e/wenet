@@ -225,4 +225,3 @@ class SqueezeformerEncoder(nn.Module):
         if self.final_proj is not None:
             xs = self.final_proj(xs)
         return xs, masks
-    
