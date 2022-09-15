@@ -17,7 +17,6 @@
 import torch
 import torch.nn as nn
 from typing import Tuple
-from wenet.squeezeformer.utils import ResidualModule
 from wenet.squeezeformer.subsampling \
     import DepthwiseConv2dSubsampling4, TimeReductionLayer
 from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
