@@ -1,3 +1,19 @@
+# Copyright (c) 2022 Ximalaya Inc. (authors: Yuguang Yang)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# Modified from Squeezeformer(https://github.com/kssteven418/Squeezeformer)
+#               Squeezeformer(https://github.com/upskyy/Squeezeformer)
+
 import torch
 import torch.nn as nn
 from typing import Tuple
@@ -124,44 +140,16 @@ class SqueezeformerEncoder(nn.Module):
             nn.Dropout(p=input_dropout_rate),
         )
         self.preln = nn.LayerNorm(encoder_dim)
-        self.encoders = torch.nn.ModuleList()
-        for layer_id in range(num_blocks):
-            if layer_id < reduce_idx:
-                self.encoders.append(
-                    SqueezeformerEncoderLayer(
-                        encoder_dim,
-                        encoder_selfattn_layer(*encoder_selfattn_layer_args),
-                        positionwise_layer(*positionwise_layer_args),
-                        convolution_layer(*convolution_layer_args),
-                        positionwise_layer(*positionwise_layer_args),
-                        normalize_before,
-                        dropout,
-                        concat_after
-                    ))
-            elif reduce_idx <= layer_id < recover_idx:
-                self.encoders.append(
-                    ResidualModule(SqueezeformerEncoderLayer(
-                        encoder_dim,
-                        encoder_selfattn_layer(*encoder_selfattn_layer_args),
-                        positionwise_layer(*positionwise_layer_args),
-                        convolution_layer(*convolution_layer_args),
-                        positionwise_layer(*positionwise_layer_args),
-                        normalize_before,
-                        dropout,
-                        concat_after
-                    )))
-            else:
-                self.encoders.append(
-                    SqueezeformerEncoderLayer(
-                        encoder_dim,
-                        encoder_selfattn_layer(*encoder_selfattn_layer_args),
-                        positionwise_layer(*positionwise_layer_args),
-                        convolution_layer(*convolution_layer_args),
-                        positionwise_layer(*positionwise_layer_args),
-                        normalize_before,
-                        dropout,
-                        concat_after
-                    ))
+        self.encoders = torch.nn.ModuleList([SqueezeformerEncoderLayer(
+            encoder_dim,
+            encoder_selfattn_layer(*encoder_selfattn_layer_args),
+            positionwise_layer(*positionwise_layer_args),
+            convolution_layer(*convolution_layer_args),
+            positionwise_layer(*positionwise_layer_args),
+            normalize_before,
+            dropout,
+            concat_after) for _ in range(num_blocks)
+        ])
         self.time_reduction_layer = TimeReductionLayer(encoder_dim=encoder_dim)
         self.time_recover_layer = nn.Linear(encoder_dim, encoder_dim)
         self.final_proj = None
@@ -220,7 +208,12 @@ class SqueezeformerEncoder(nn.Module):
                 pos_emb = recover_pos_emb
                 mask_pad = recover_mask_pad
 
-            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+            if self.reduce_idx <= idx < self.recover_idx:
+                residual = xs
+                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+                xs += residual
+            else:
+                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
 
         if self.final_proj is not None:
             xs = self.final_proj(xs)
