@@ -49,9 +49,9 @@ class ConvolutionModule(nn.Module):
         self.adaptive_scale = adaptive_scale
         if self.adaptive_scale:
             self.ada_scale = torch.nn.Parameter(
-                torch.ones(channels), requires_grad=True).reshape([1, 1, -1])
+                torch.ones([1, 1, channels]), requires_grad=True)
             self.ada_bias = torch.nn.Parameter(
-                torch.zeros(channels), requires_grad=True).reshape([1, 1, -1])
+                torch.zeros([1, 1, channels]), requires_grad=True)
 
         self.pointwise_conv1 = nn.Conv1d(
             channels,
