@@ -98,8 +98,8 @@ def main():
     for t in threads:
         t.join()
 
-    total_dur = sum(map(lambda x: x[0], datas))
-    total_len = sum(map(lambda x: x[1], datas))
+    total_dur = sum([x[0] for x in datas])
+    total_len = sum([x[1] for x in datas])
     num_datas = len(datas)
     logging.info("==================")
     datas.sort(key=lambda x: x[0])  # sort by duration
