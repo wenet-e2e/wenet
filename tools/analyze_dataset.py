@@ -103,7 +103,7 @@ def main():
     num_datas = len(datas)
     logging.info("==================")
     datas.sort(key=lambda x: x[0])  # sort by duration
-    logging.info("max duration: {:.3f} s ({})".format(
+    logging.info("max duration: {:.3f} s (wav_id: {})".format(
         datas[-1][0], datas[-1][3]))
     logging.info("P99 duration: {:.3f} s".format(
         datas[int(num_datas * 0.99)][0]))
@@ -113,13 +113,13 @@ def main():
         datas[int(num_datas * 0.5)][0]))
     logging.info("P25 duration: {:.3f} s".format(
         datas[int(num_datas * 0.25)][0]))
-    logging.info("min duration: {:.3f} s ({})".format(
+    logging.info("min duration: {:.3f} s (wav_id: {})".format(
         datas[0][0], datas[0][-1]))
     logging.info("avg duration: {:.3f} s".format(
         total_dur / len(datas)))
     logging.info("==================")
     datas.sort(key=lambda x: x[1])  # sort by text length
-    logging.info("max text length: {} (wab_id: {})".format(
+    logging.info("max text length: {} (wav_id: {})".format(
         datas[-1][1], datas[-1][3]))
     logging.info("P99 text length: {}".format(
         datas[int(num_datas * 0.99)][1]))
@@ -148,7 +148,7 @@ def main():
     logging.info("min speed: {:.3f} char/s (wav_id: {})".format(
         datas[0][2], datas[0][-1]))
     logging.info("avg speed: {:.3f} char/s".format(
-        total_dur / total_len))
+        total_len / total_dur))
 
 
 if __name__ == '__main__':
