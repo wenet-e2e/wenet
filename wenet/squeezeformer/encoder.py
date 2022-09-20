@@ -127,7 +127,7 @@ class SqueezeformerEncoder(nn.Module):
         convolution_layer = ConvolutionModule
         convolution_layer_args = (
             encoder_dim, cnn_module_kernel, activation,
-            cnn_norm_type, causal, adaptive_scale, init_weights)
+            cnn_norm_type, causal, True, adaptive_scale, init_weights)
 
         self.embed = DepthwiseConv2dSubsampling4(
             1, encoder_dim,

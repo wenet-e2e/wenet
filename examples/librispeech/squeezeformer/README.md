@@ -26,15 +26,25 @@ squeezeformer
 # Performance Record
 
 ### Conformer
+* Encoder FLOPs(30s): 34,085,088,512, params: 34,761,608
+* Feature info: using fbank feature, cmvn, dither, online speed perturb
+* Training info: train_conformer.yaml, kernel size 31, lr 0.004,
+* batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+* Decoding info: ctc_weight 0.5, average_num 30
 
-* encoder flops(30s): 2,797,274,624, params: 34,761,608
+| decoding mode                    | test clean | test other |
+|----------------------------------|------------|------------|
+| ctc greedy search                | 3.51       | 9.57       |
+| ctc prefix beam search           | 3.51       | 9.56       |
+| attention decoder                | 3.05       | 8.36       |
+| attention rescoring              | 3.18       | 8.72       |
 
 ### Squeezeformer Result (SM12, FFN:1024)
-
-* encoder flops(30s): 21,158,877,440, params: 22,219,912
+* Encoder FLOPs(30s): 21,158,877,440, params: 22,219,912
 * Feature info: using fbank feature, cmvn, dither, online speed perturb
-* Training info: train_squeezeformer.yaml, kernel size 31, lr 0.001, batch size
-  12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+* Training info: train_squeezeformer.yaml, kernel size 31,
+* batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+* AdamW, lr=1e-3, NoamHold, warmup=0.2, hold=0.3, lr_decay=1.0
 * Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 30
 
 | decoding mode                    | dev clean | dev other | test clean | test other |
@@ -43,3 +53,18 @@ squeezeformer
 | ctc prefix beam search           | 3.44      | 9.23      | 3.51       | 9.25       |
 | attention decoder                | 8.74      | 3.59      | 3.75       | 8.70       |
 | attention rescoring              | 2.97      | 8.48      | 3.07       | 8.44       |
+
+### Squeezeformer Result (SM12, FFN:2048)
+* Encoder FLOPs(30s): 28,230,473,984, params: 34,827,400
+* Feature info: using fbank feature, cmvn, dither, online speed perturb
+* Training info: train_squeezeformer.yaml, kernel size 31,
+* batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+* AdamW, lr=1e-3, NoamHold, warmup=0.2, hold=0.3, lr_decay=1.0
+* Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 30
+
+| decoding mode                    | dev clean | dev other | test clean | test other |
+|----------------------------------|-----------|-----------|------------|------------|
+| ctc greedy search                | 3.34      | 9.01      | 3.47       | 8.85       |
+| ctc prefix beam search           | 3.33      | 9.02      | 3.46       | 8.81       |
+| attention decoder                | 8.62      | 3.64      | 3.91       | 8.33       |
+| attention rescoring              | 2.89      | 8.34      | 3.10       | 8.03       |
