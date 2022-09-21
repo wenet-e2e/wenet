@@ -138,6 +138,10 @@ class SqueezeformerEncoder(nn.Module):
                 encoder_dim * (((input_size - 1) // 2 - 1) // 2), encoder_dim),
             nn.Dropout(p=input_dropout_rate),
         )
+        if init_weights:
+            linear_max = (encoder_dim * input_size / 4) ** -0.5
+            torch.nn.init.uniform_(self.input_proj.state_dict()['0.weight'], -linear_max, linear_max)
+            torch.nn.init.uniform_(self.input_proj.state_dict()['0.bias'], -linear_max, linear_max)
         self.preln = nn.LayerNorm(encoder_dim)
         self.encoders = torch.nn.ModuleList([SqueezeformerEncoderLayer(
             encoder_dim,
