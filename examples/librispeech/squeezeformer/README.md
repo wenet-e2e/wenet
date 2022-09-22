@@ -51,7 +51,7 @@ squeezeformer
 |----------------------------------|-----------|-----------|------------|------------|
 | ctc greedy search                | 3.49      | 9.24      | 3.51       | 9.28       |
 | ctc prefix beam search           | 3.44      | 9.23      | 3.51       | 9.25       |
-| attention decoder                | 8.74      | 3.59      | 3.75       | 8.70       |
+| attention decoder                | 3.59      | 8.74      | 3.75       | 8.70       |
 | attention rescoring              | 2.97      | 8.48      | 3.07       | 8.44       |
 
 ### Squeezeformer Result (SM12, FFN:2048)
@@ -66,5 +66,5 @@ squeezeformer
 |----------------------------------|-----------|-----------|------------|------------|
 | ctc greedy search                | 3.34      | 9.01      | 3.47       | 8.85       |
 | ctc prefix beam search           | 3.33      | 9.02      | 3.46       | 8.81       |
-| attention decoder                | 8.62      | 3.64      | 3.91       | 8.33       |
+| attention decoder                | 3.64      | 8.62      | 3.91       | 8.33       |
 | attention rescoring              | 2.89      | 8.34      | 3.10       | 8.03       |
