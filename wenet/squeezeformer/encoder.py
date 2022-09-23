@@ -215,10 +215,9 @@ class SqueezeformerEncoder(nn.Module):
 
             if idx == self.recover_idx:
                 # recover output length for ctc decode
-                xs = xs.unsqueeze(2)
-                xs = xs.repeat(1, 1, 2, 1).flatten(1, 2)
+                xs = torch.repeat_interleave(xs, repeats=2, dim=1)
                 xs = self.time_recover_layer(xs)
-                xs = recover_tensor + xs[:, :recover_tensor.size(1), :].contiguous()
+                xs = recover_tensor + xs[:, :recover_tensor.size(1), :]
                 chunk_masks = recover_chunk_masks
                 pos_emb = recover_pos_emb
                 mask_pad = recover_mask_pad
