@@ -72,15 +72,19 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
 class TimeReductionLayer1D(nn.Module):
     """
     Modified NeMo,
-    Squeezeformer Time Reduction procedure. Downsamples the audio by `stride` in the time dimension.
+    Squeezeformer Time Reduction procedure.
+    Downsamples the audio by `stride` in the time dimension.
     Args:
-        channel (int): input dimension of MultiheadAttentionMechanism and PositionwiseFeedForward
+        channel (int): input dimension of
+            MultiheadAttention and PositionwiseFeedForward
         out_dim (int): Output dimension of the module.
-        kernel_size (int): Conv kernel size for depthwise convolution in convolution module
+        kernel_size (int): Conv kernel size
+            for depthwise convolution in convolution module
         stride (int): Downsampling factor in time dimension.
     """
 
-    def __init__(self, channel: int, out_dim: int, kernel_size: int = 5, stride: int = 2):
+    def __init__(self, channel: int, out_dim: int,
+                 kernel_size: int = 5, stride: int = 2):
         super(TimeReductionLayer1D, self).__init__()
 
         self.channel = channel
@@ -99,7 +103,12 @@ class TimeReductionLayer1D(nn.Module):
         )
 
         self.pw_conv = nn.Conv1d(
-            in_channels=channel, out_channels=out_dim, kernel_size=1, stride=1, padding=0, groups=1,
+            in_channels=channel,
+            out_channels=out_dim,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            groups=1,
         )
 
         self.init_weights()
