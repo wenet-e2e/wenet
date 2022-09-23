@@ -8,6 +8,8 @@ encoder_conf:
     num_blocks: 12      # the number of encoder blocks
     reduce_idx: 5
     recover_idx: 11
+    pos_enc_layer_type: 'rel_pos'
+    time_reduction_layer_type: 'conv1d'
     feed_forward_expansion_factor: 4
     input_dropout_rate: 0.1
     feed_forward_dropout_rate: 0.1
@@ -36,8 +38,6 @@ model_conf:
 
 # dataset related
 dataset_conf:
-    even_sample: false
-    syncbn: false
     filter_conf:
         max_length: 2000
         min_length: 50

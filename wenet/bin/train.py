@@ -195,7 +195,7 @@ def main():
     model = init_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
-    print('the number of model params: {}'.format(num_params))
+    print('the number of model params: {:,d}'.format(num_params))
 
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
@@ -248,13 +248,13 @@ def main():
     elif configs['optim'] == 'adamw':
         optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
     else:
-        raise Exception('Please choose a correct optimizer.')
+        raise ValueError("unknown optimizer: " + configs['optim'])
     if configs['scheduler'] == 'warmuplr':
         scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
     elif configs['scheduler'] == 'NoamHoldAnnealing':
         scheduler = NoamHoldAnnealing(optimizer, **configs['scheduler_conf'])
     else:
-        raise Exception('Please choose a correct scheduler.')
+        raise ValueError("unknown scheduler: " + configs['scheduler'])
 
     final_epoch = None
     configs['rank'] = args.rank

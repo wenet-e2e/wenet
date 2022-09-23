@@ -13,12 +13,13 @@
 # limitations under the License.
 # Modified from Squeezeformer(https://github.com/kssteven418/Squeezeformer)
 #               Squeezeformer(https://github.com/upskyy/Squeezeformer)
+#               NeMo(https://github.com/NVIDIA/NeMo)
 
 import torch
 import torch.nn as nn
 from typing import Tuple
 from wenet.squeezeformer.subsampling \
-    import DepthwiseConv2dSubsampling4, TimeReductionLayer
+    import DepthwiseConv2dSubsampling4, TimeReductionLayer1D, TimeReductionLayer2D
 from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.attention import MultiHeadedAttention
@@ -43,6 +44,7 @@ class SqueezeformerEncoder(nn.Module):
             feed_forward_expansion_factor: int = 4,
             input_dropout_rate: float = 0.1,
             pos_enc_layer_type: str = "rel_pos",
+            time_reduction_layer_type: str = "conv2d",
             do_rel_shift: bool = True,
             feed_forward_dropout_rate: float = 0.1,
             attention_dropout_rate: float = 0.1,
@@ -73,6 +75,7 @@ class SqueezeformerEncoder(nn.Module):
             feed_forward_expansion_factor (int): Enlarge coefficient of FFN.
             input_dropout_rate (float): Dropout rate of input projection layer.
             pos_enc_layer_type (str): Self attention type.
+            time_reduction_layer_type (str): Conv1d or Conv2d reduction layer.
             do_rel_shift (bool): Whether to do relative shift
                                  operation on rel-attention module.
             cnn_module_kernel (int): Kernel size of CNN module.
@@ -155,7 +158,17 @@ class SqueezeformerEncoder(nn.Module):
             dropout,
             concat_after) for _ in range(num_blocks)
         ])
-        self.time_reduction_layer = TimeReductionLayer(encoder_dim=encoder_dim)
+        if time_reduction_layer_type == 'conv1d':
+            time_reduction_layer = TimeReductionLayer1D
+            time_reduction_layer_args = {
+                'channel': encoder_dim,
+                'out_dim': encoder_dim,
+            }
+        else:
+            time_reduction_layer = TimeReductionLayer2D
+            time_reduction_layer_args = {'encoder_dim': encoder_dim}
+
+        self.time_reduction_layer = time_reduction_layer(**time_reduction_layer_args)
         self.time_recover_layer = nn.Linear(encoder_dim, encoder_dim)
         self.final_proj = None
         if output_size != encoder_dim:
@@ -196,19 +209,16 @@ class SqueezeformerEncoder(nn.Module):
                 recover_chunk_masks = chunk_masks
                 recover_pos_emb = pos_emb
                 recover_mask_pad = mask_pad
-                xs, xs_lens = self.time_reduction_layer(xs, xs_lens)
-                reduce_t = xs.size(1)
-                pos_emb = pos_emb[:, :reduce_t, :]
-                chunk_masks = chunk_masks[:, ::2, ::2]
-                mask_pad = mask_pad[:, :, ::2]
+                xs, xs_lens, chunk_masks, mask_pad = \
+                    self.time_reduction_layer(xs, xs_lens, chunk_masks, mask_pad)
+                pos_emb = pos_emb[:, :xs.size(1), :]
 
             if idx == self.recover_idx:
                 # recover output length for ctc decode
                 xs = xs.unsqueeze(2)
                 xs = xs.repeat(1, 1, 2, 1).flatten(1, 2)
                 xs = self.time_recover_layer(xs)
-                recover_t = recover_tensor.size(1)
-                xs = recover_tensor + xs[:, :recover_t, :].contiguous()
+                xs = recover_tensor + xs[:, :recover_tensor.size(1), :].contiguous()
                 chunk_masks = recover_chunk_masks
                 pos_emb = recover_pos_emb
                 mask_pad = recover_mask_pad
