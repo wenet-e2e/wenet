@@ -40,11 +40,17 @@ squeezeformer
 | attention rescoring              | 3.18       | 8.72       |
 
 ### Squeezeformer Result (SM12, FFN:1024)
-* Encoder FLOPs(30s): 21,158,877,440, params: 22,219,912
-* Feature info: using fbank feature, cmvn, dither, online speed perturb
-* Training info: train_squeezeformer.yaml, kernel size 31,
-* batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
-* AdamW, lr=1e-3, NoamHold, warmup=0.2, hold=0.3, lr_decay=1.0
+
+* Encoder info:
+    * SM12, reduce_idx 5, recover_idx 11, conv2d
+    * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
+    * Encoder FLOPs(30s): 21,158,877,440, params: 22,219,912
+* Feature info:
+    * using fbank feature, cmvn, dither, online speed perturb
+* Training info:
+    * train_squeezeformer.yaml, kernel size 31,
+    * batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+    * adamw, lr=1e-3, noamhold, warmup=0.2, hold=0.3, lr_decay=1.0
 * Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 30
 
 | decoding mode                    | dev clean | dev other | test clean | test other |
@@ -55,12 +61,18 @@ squeezeformer
 | attention rescoring              | 2.97      | 8.48      | 3.07       | 8.44       |
 
 ### Squeezeformer Result (SM12, FFN:2048)
-* Encoder FLOPs(30s): 28,230,473,984, params: 34,827,400
+
+* Encoder info:
+    * SM12, reduce_idx 5, recover_idx 11, conv2d
+    * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
+    * encoder FLOPs(30s): 28,230,473,984, params: 34,827,400
 * Feature info: using fbank feature, cmvn, dither, online speed perturb
-* Training info: train_squeezeformer.yaml, kernel size 31,
-* batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
-* AdamW, lr=1e-3, NoamHold, warmup=0.2, hold=0.3, lr_decay=1.0
-* Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 30
+* Training info:
+    * train_squeezeformer.yaml, kernel size 31
+    * batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+    * adamw, lr 1e-3, noamhold, warmup 0.2, hold 0.3, lr_decay 1.0
+* Decoding info:
+    * ctc_weight 0.3, reverse weight 0.5, average_num 30
 
 | decoding mode                    | dev clean | dev other | test clean | test other |
 |----------------------------------|-----------|-----------|------------|------------|
@@ -68,3 +80,26 @@ squeezeformer
 | ctc prefix beam search           | 3.33      | 9.02      | 3.46       | 8.81       |
 | attention decoder                | 3.64      | 8.62      | 3.91       | 8.33       |
 | attention rescoring              | 2.89      | 8.34      | 3.10       | 8.03       |
+
+### Squeezeformer Result (ML12, FFN:1312)
+
+* Encoder info:
+    * SM12, reduce_idx 5, recover_idx 11, conv1d
+    * encoder_dim 328, output_size 256, head 4, ffn_dim 328*4=1312
+    * encoder FLOPs(30s): 34,103,960,008, params: 35,678,352
+* Feature info:
+    * using fbank feature, cmvn, dither, online speed perturb
+* Training info:
+    * train_squeezeformer.yaml, kernel size 31,
+    * batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 1.0
+    * adamw, lr 5e-4, noamhold, warmup 0.2, hold 0.3, lr_decay 1.0
+* Decoding info:
+    * ctc_weight 0.3, reverse weight 0.5, average_num 30
+
+
+| decoding mode                    | dev clean | dev other | test clean | test other |
+|----------------------------------|-----------|-----------|------------|------------|
+| ctc greedy search                | 3.20      | 8.46      | 3.30       | 8.58       |
+| ctc prefix beam search           | 3.18      | 8.44      | 3.30       | 8.55       |
+| attention decoder                | 3.38      | 8.31      | 3.89       | 8.32       |
+| attention rescoring              | 2.81      | 7.86      | 2.96       | 7.91       |

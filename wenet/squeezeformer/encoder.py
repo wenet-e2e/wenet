@@ -44,7 +44,7 @@ class SqueezeformerEncoder(nn.Module):
             feed_forward_expansion_factor: int = 4,
             input_dropout_rate: float = 0.1,
             pos_enc_layer_type: str = "rel_pos",
-            time_reduction_layer_type: str = "conv2d",
+            time_reduction_layer_type: str = "conv1d",
             do_rel_shift: bool = True,
             feed_forward_dropout_rate: float = 0.1,
             attention_dropout_rate: float = 0.1,
@@ -144,9 +144,11 @@ class SqueezeformerEncoder(nn.Module):
         if init_weights:
             linear_max = (encoder_dim * input_size / 4) ** -0.5
             torch.nn.init.uniform_(
-                self.input_proj.state_dict()['0.weight'], -linear_max, linear_max)
+                self.input_proj.state_dict()['0.weight'],
+                -linear_max, linear_max)
             torch.nn.init.uniform_(
-                self.input_proj.state_dict()['0.bias'], -linear_max, linear_max)
+                self.input_proj.state_dict()['0.bias'],
+                -linear_max, linear_max)
         self.preln = nn.LayerNorm(encoder_dim)
         self.encoders = torch.nn.ModuleList([SqueezeformerEncoderLayer(
             encoder_dim,
@@ -161,14 +163,15 @@ class SqueezeformerEncoder(nn.Module):
         if time_reduction_layer_type == 'conv1d':
             time_reduction_layer = TimeReductionLayer1D
             time_reduction_layer_args = {
-                'channel': encoder_dim,
-                'out_dim': encoder_dim,
+                'ichannel': encoder_dim,
+                'ochannel': encoder_dim,
             }
         else:
             time_reduction_layer = TimeReductionLayer2D
             time_reduction_layer_args = {'encoder_dim': encoder_dim}
 
-        self.time_reduction_layer = time_reduction_layer(**time_reduction_layer_args)
+        self.time_reduction_layer = \
+            time_reduction_layer(**time_reduction_layer_args)
         self.time_recover_layer = nn.Linear(encoder_dim, encoder_dim)
         self.final_proj = None
         if output_size != encoder_dim:
