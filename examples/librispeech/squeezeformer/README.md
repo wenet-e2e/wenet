@@ -39,8 +39,22 @@ squeezeformer
 | attention decoder                | 3.05       | 8.36       |
 | attention rescoring              | 3.18       | 8.72       |
 
-### Squeezeformer Result (SM12, FFN:1024)
+### Conformer Result (12 layers, FFN:2048)
+* Encoder FLOPs(30s): 34,085,088,512, params: 34,761,608
+* Feature info: using fbank feature, cmvn, dither, online speed perturb
+* Training info: train_squeezeformer.yaml, kernel size 31,
+* batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+* AdamW, lr 1e-3, NoamHold, warmup 0.2, hold 0.3, lr_decay 1.0
+* Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 30
 
+| decoding mode                    | dev clean | dev other | test clean | test other |
+|----------------------------------|-----------|-----------|------------|------------|
+| ctc greedy search                | 3.49      | 9.59      | 3.66       | 9.59       |
+| ctc prefix beam search           | 3.49      | 9.61      | 3.66       | 9.55       |
+| attention decoder                | 3.52      | 9.04      | 3.85       | 8.97       |
+| attention rescoring              | 3.10      | 8.91      | 3.29       | 8.81       |
+
+### Squeezeformer Result (SM12, FFN:1024)
 * Encoder info:
     * SM12, reduce_idx 5, recover_idx 11, conv2d
     * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
@@ -61,7 +75,6 @@ squeezeformer
 | attention rescoring              | 2.97      | 8.48      | 3.07       | 8.44       |
 
 ### Squeezeformer Result (SM12, FFN:2048)
-
 * Encoder info:
     * SM12, reduce_idx 5, recover_idx 11, conv2d
     * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
@@ -81,8 +94,7 @@ squeezeformer
 | attention decoder                | 3.64      | 8.62      | 3.91       | 8.33       |
 | attention rescoring              | 2.89      | 8.34      | 3.10       | 8.03       |
 
-### Squeezeformer Result (ML12, FFN:1312)
-
+### Squeezeformer Result (SM12, FFN:1312)
 * Encoder info:
     * SM12, reduce_idx 5, recover_idx 11, conv1d
     * encoder_dim 328, output_size 256, head 4, ffn_dim 328*4=1312
@@ -95,7 +107,6 @@ squeezeformer
     * adamw, lr 5e-4, noamhold, warmup 0.2, hold 0.3, lr_decay 1.0
 * Decoding info:
     * ctc_weight 0.3, reverse weight 0.5, average_num 30
-
 
 | decoding mode                    | dev clean | dev other | test clean | test other |
 |----------------------------------|-----------|-----------|------------|------------|
