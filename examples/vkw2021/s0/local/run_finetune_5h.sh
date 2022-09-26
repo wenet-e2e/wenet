@@ -77,7 +77,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  echo "Prepare data, prepare requried format"
+  echo "Prepare data, prepare required format"
   tools/make_raw_list.py --segments $data/$finetune2_set/segments \
     $data/$finetune2_set/wav.scp $data/$finetune2_set/text $data/$finetune2_set/data.list
 fi

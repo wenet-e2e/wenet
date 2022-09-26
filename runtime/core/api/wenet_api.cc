@@ -68,8 +68,12 @@ class Recognizer {
   }
 
   void Reset() {
-    feature_pipeline_->Reset();
-    decoder_->Reset();
+    if (feature_pipeline_ != nullptr) {
+      feature_pipeline_->Reset();
+    }
+    if (decoder_ != nullptr) {
+      decoder_->Reset();
+    }
     result_.clear();
   }
 
@@ -120,8 +124,8 @@ class Recognizer {
         break;
       } else if (state == DecodeState::kEndpoint && continuous_decoding_) {
         decoder_->Rescoring();
-        decoder_->ResetContinuousDecoding();
         UpdateResult(true);
+        decoder_->ResetContinuousDecoding();
       } else {  // kEndBatch
         UpdateResult(false);
       }

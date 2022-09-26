@@ -98,7 +98,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  echo "Prepare data, prepare requried format"
+  echo "Prepare data, prepare required format"
   for x in dev test ${train_set}; do
     if [ $data_type == "shard" ]; then
       tools/make_shard_list.py --num_utts_per_shard $num_utts_per_shard \
@@ -233,7 +233,7 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
     --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
     --chunk_size $chunk_size \
     --fst_path data/lang_test/TLG.fst \
-    --dict_path data/lang_test/words.fst \
+    --dict_path data/lang_test/words.txt \
     data/test/wav.scp data/test/text $dir/final.zip \
     data/lang_test/units.txt $dir/lm_with_runtime
   # Please see $dir/lm_with_runtime for wer

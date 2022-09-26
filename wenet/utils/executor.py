@@ -146,7 +146,7 @@ class Executor:
                 if batch_idx % log_interval == 0:
                     log_str = 'CV Batch {}/{} loss {:.6f} '.format(
                         epoch, batch_idx, loss.item())
-                    for name, value in loss_dict:
+                    for name, value in loss_dict.items():
                         if name != 'loss' and value is not None:
                             log_str += '{} {:.6f} '.format(name, value.item())
                     log_str += 'history loss {:.6f}'.format(total_loss /

@@ -11,6 +11,7 @@ Feel free to volunteer yourself if you are interested in trying out some items(t
 ## WeNet 3.0 (2023.06)
 
 - [x] ONNX support
+- [x] RNN-T support
 - [ ] [Vosk](https://github.com/alphacep/vosk-api/) like models and API for developers.
   - [ ] Models(Chinese/English/Japanese/Korean/French/German/Spanish/Portuguese)
   - [ ] API(python/c/c++/go/java)

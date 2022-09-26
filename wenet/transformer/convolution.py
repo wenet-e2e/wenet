@@ -122,7 +122,7 @@ class ConvolutionModule(nn.Module):
             assert (x.size(2) > self.lorder)
             new_cache = x[:, :, -self.lorder:]
         else:
-            # It's better we just return None if no cache is requried,
+            # It's better we just return None if no cache is required,
             # However, for JIT export, here we just fake one tensor instead of
             # None.
             new_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
