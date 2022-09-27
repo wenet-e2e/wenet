@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# NOTE(hslee): this code is borrowed from ESPnet (https://github.com/espnet/espnet)
 set -euo pipefail
 
 if [ -z "${PS1:-}" ]; then
