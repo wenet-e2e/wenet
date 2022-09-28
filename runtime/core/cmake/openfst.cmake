@@ -1,5 +1,8 @@
 if(NOT ANDROID)
   include(gflags)
+  # We can't build glog with gflags, unless gflags is pre-installed.
+  # If build glog with pre-installed gflags, there will be conflict.
+  set(WITH_GFLAGS OFF CACHE BOOL "whether build glog with gflags" FORCE)
   include(glog)
 
   set(CONFIG_FLAGS "")
