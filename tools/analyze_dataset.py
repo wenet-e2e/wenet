@@ -124,10 +124,13 @@ def main():
         if name == 'key':
             continue
         logging.info("==================")
-        datas.sort(key=lambda x: x[i])
+        # Avoid late binding, see:
+        # https://stackoverflow.com/questions/3431676/creating-functions-or-lambdas-in-a-loop-or-comprehension
+        idx = i
+        datas.sort(key=lambda x: x[idx])
         for p, j in zip(parts, index):
             logging.info("{} {}: {:.3f} {} (wav_id: {})".format(
-                p, name, datas[j][i], unit, datas[j][0]))
+                p, name, datas[j][idx], unit, datas[j][0]))
         logging.info("avg {}: {:.3f} {}".format(
             name, avg, unit))
 
