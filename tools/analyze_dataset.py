@@ -20,8 +20,7 @@ import argparse
 import logging
 import queue
 import threading
-
-import torchaudio
+import librosa
 
 from wenet.utils.file_utils import read_lists
 
@@ -49,11 +48,18 @@ def query_dict(wavs_queue, datas, wavs, texts):
     while not wavs_queue.empty():
         key = wavs_queue.get()
         if key in texts.keys():
-            waveform, sample_rate = torchaudio.load(wavs[key])
-            dur = len(waveform[0]) / sample_rate
+            y, sample_rate = librosa.load(wavs[key], sr=16000)
+            dur = len(y) / sample_rate
             text_length = len(texts[key])
             speed = text_length / dur
-            datas.append([dur, text_length, speed, key])
+            # Trim the beginning and ending silence
+            _, index = librosa.effects.trim(y, top_db=30)
+            leading_sil = librosa.get_duration(
+                y=y[:index[0]], sr=16000) * 1000 if index[0] > 0 else 0
+            trailing_sil = librosa.get_duration(
+                y=y[index[1]:], sr=16000) * 1000 if index[1] < len(y) else 0
+            datas.append([key, dur, text_length, speed,
+                          leading_sil, trailing_sil])
         else:
             logging.warning("{} not in text, pass".format(key))
 
@@ -62,7 +68,8 @@ def main():
     args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
-    datas = []  # List of [duration, textlenghth, speed, id]
+    # List of [id, duration, textlenghth, speed, leading_sil, trailing_sil]
+    datas = []
     threads = []
     if args.data_type == "shard":
         assert args.data_list is not None
@@ -98,57 +105,31 @@ def main():
     for t in threads:
         t.join()
 
-    total_dur = sum([x[0] for x in datas])
-    total_len = sum([x[1] for x in datas])
+    total_dur = sum([x[1] for x in datas])
+    total_len = sum([x[2] for x in datas])
+    total_leading_sil = sum([x[4] for x in datas])
+    total_trailing_sil = sum([x[5] for x in datas])
     num_datas = len(datas)
-    logging.info("==================")
-    datas.sort(key=lambda x: x[0])  # sort by duration
-    logging.info("max duration: {:.3f} s (wav_id: {})".format(
-        datas[-1][0], datas[-1][3]))
-    logging.info("P99 duration: {:.3f} s".format(
-        datas[int(num_datas * 0.99)][0]))
-    logging.info("P75 duration: {:.3f} s".format(
-        datas[int(num_datas * 0.75)][0]))
-    logging.info("P50 duration: {:.3f} s".format(
-        datas[int(num_datas * 0.5)][0]))
-    logging.info("P25 duration: {:.3f} s".format(
-        datas[int(num_datas * 0.25)][0]))
-    logging.info("min duration: {:.3f} s (wav_id: {})".format(
-        datas[0][0], datas[0][-1]))
-    logging.info("avg duration: {:.3f} s".format(
-        total_dur / len(datas)))
-    logging.info("==================")
-    datas.sort(key=lambda x: x[1])  # sort by text length
-    logging.info("max text length: {} (wav_id: {})".format(
-        datas[-1][1], datas[-1][3]))
-    logging.info("P99 text length: {}".format(
-        datas[int(num_datas * 0.99)][1]))
-    logging.info("P75 text length: {}".format(
-        datas[int(num_datas * 0.75)][1]))
-    logging.info("P50 text length: {}".format(
-        datas[int(num_datas * 0.5)][1]))
-    logging.info("P25 text length: {}".format(
-        datas[int(num_datas * 0.25)][1]))
-    logging.info("min text length: {} (wav_id: {})".format(
-        datas[0][1], datas[0][-1]))
-    logging.info("avg text length: {:.3f}".format(
-        total_len / len(datas)))
-    logging.info("==================")
-    datas.sort(key=lambda x: x[2])  # sort by speed
-    logging.info("max speed: {:.3f} char/s (wav_id: {})".format(
-        datas[-1][2], datas[-1][3]))
-    logging.info("P99 speed: {:.3f} char/s".format(
-        datas[int(num_datas * 0.99)][2]))
-    logging.info("P75 speed: {:.3f} char/s".format(
-        datas[int(num_datas * 0.75)][2]))
-    logging.info("P50 speed: {:.3f} char/s".format(
-        datas[int(num_datas * 0.5)][2]))
-    logging.info("P25 speed: {:.3f} char/s".format(
-        datas[int(num_datas * 0.25)][2]))
-    logging.info("min speed: {:.3f} char/s (wav_id: {})".format(
-        datas[0][2], datas[0][-1]))
-    logging.info("avg speed: {:.3f} char/s".format(
-        total_len / total_dur))
+    names = ['key', 'duration', 'text_length', 'speed',
+             'leading_sil', 'trailing_sil']
+    units = ['', 's', '', 'char/s', 'ms', 'ms']
+    avgs = [0, total_dur / num_datas, total_len / num_datas,
+            total_len / total_dur, total_leading_sil / num_datas,
+            total_trailing_sil / num_datas]
+    parts = ['max', 'P99', 'P75', 'P50', 'P25', 'min']
+    index = [num_datas - 1, int(num_datas * 0.99), int(num_datas * 0.75),
+             int(num_datas * 0.50), int(num_datas * 0.25), 0]
+
+    for i, (name, unit, avg) in enumerate(zip(names, units, avgs)):
+        if name == 'key':
+            continue
+        logging.info("==================")
+        datas.sort(key=lambda x: x[i])
+        for p, j in zip(parts, index):
+            logging.info("{} {}: {:.3f} {} (wav_id: {})".format(
+                p, name, datas[j][i], unit, datas[j][0]))
+        logging.info("avg {}: {:.3f} {}".format(
+            name, avg, unit))
 
 
 if __name__ == '__main__':
