@@ -173,8 +173,7 @@ def export_encoder(asr_model, args):
     # Dynamic quantization
     model_fp32 = encoder_outpath
     model_quant = os.path.join(args['output_dir'], 'encoder.quant.onnx')
-    quantized_model = quantize_dynamic(
-        model_fp32, model_quant, weight_type=QuantType.QUInt8)
+    quantize_dynamic(model_fp32, model_quant, weight_type=QuantType.QUInt8)
     print('\t\tExport onnx_encoder, done! see {}'.format(encoder_outpath))
 
     print("\tStage-1.3: check onnx_encoder and torch_encoder")
@@ -275,8 +274,7 @@ def export_ctc(asr_model, args):
     # Dynamic quantization
     model_fp32 = ctc_outpath
     model_quant = os.path.join(args['output_dir'], 'ctc.quant.onnx')
-    quantized_model = quantize_dynamic(
-        model_fp32, model_quant, weight_type=QuantType.QUInt8)
+    quantize_dynamic(model_fp32, model_quant, weight_type=QuantType.QUInt8)
     print('\t\tExport onnx_ctc, done! see {}'.format(ctc_outpath))
 
     print("\tStage-2.3: check onnx_ctc and torch_ctc")
@@ -328,8 +326,7 @@ def export_decoder(asr_model, args):
     print_input_output_info(onnx_decoder, "onnx_decoder")
     model_fp32 = decoder_outpath
     model_quant = os.path.join(args['output_dir'], 'decoder.quant.onnx')
-    quantized_model = quantize_dynamic(
-        model_fp32, model_quant, weight_type=QuantType.QUInt8)
+    quantize_dynamic(model_fp32, model_quant, weight_type=QuantType.QUInt8)
     print('\t\tExport onnx_decoder, done! see {}'.format(
         decoder_outpath))
 
