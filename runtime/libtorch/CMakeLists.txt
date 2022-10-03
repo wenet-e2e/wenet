@@ -5,6 +5,8 @@ project(wenet VERSION 0.1)
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
 option(FST_HAVE_BIN "whether to build fst binaries" OFF)
 option(BUILD_TESTING "whether to build unit test" ON)
+option(GRAPH_TOOLS "whether to build TLG graph tools" ON)
+
 option(GRPC "whether to build with gRPC" OFF)
 # TODO(Binbin Zhang): Change websocket to OFF since it depends on boost
 #                     which is a very big library
@@ -32,7 +34,9 @@ else()
 endif()
 
 # Include all dependency
-include(libtorch)
+if(TORCH)
+  include(libtorch)
+endif()
 if(ONNX)
   include(onnx)
 endif()
