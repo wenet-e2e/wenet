@@ -70,7 +70,7 @@ you have to build the runtime as follows. Otherwise, you can just ignore this st
 ``` sh
 # runtime build requires cmake 3.14 or above
 cd runtime/libtorch
-mkdir build && cd build && cmake -DFST_HAVE_BIN=ON .. && cmake --build .
+mkdir build && cd build && cmake -DGRAPH_TOOLS=ON .. && cmake --build .
 ```
 
 ## Discussion & Communication
