@@ -21,7 +21,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from wenet.transformer.subsampling import BaseSubsampling
-from typing import Tuple
+from typing import Tuple, Optional
 from wenet.squeezeformer.conv2d import Conv2dValid
 
 
@@ -36,7 +36,10 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
         """
 
     def __init__(
-            self, idim: int, odim: int, pos_enc_class: torch.nn.Module):
+            self, idim: int, odim: int,
+            pos_enc_class: torch.nn.Module,
+            dw_stride: bool = False
+    ):
         super(DepthwiseConv2dSubsampling4, self).__init__()
         self.idim = idim
         self.odim = odim
@@ -44,7 +47,9 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
             in_channels=idim, out_channels=odim, kernel_size=3, stride=2)
         self.act1 = nn.ReLU()
         self.dw_conv = nn.Conv2d(
-            in_channels=odim, out_channels=odim, kernel_size=3, stride=2)
+            in_channels=odim, out_channels=odim, kernel_size=3, stride=2,
+            groups=odim if dw_stride else 1
+        )
         self.act2 = nn.ReLU()
         self.pos_enc = pos_enc_class
         self.subsampling_rate = 4
@@ -76,56 +81,51 @@ class TimeReductionLayer1D(nn.Module):
     Downsamples the audio by `stride` in the time dimension.
     Args:
         channel (int): input dimension of
-            MultiheadAttention and PositionwiseFeedForward
+                       MultiheadAttentionMechanism and PositionwiseFeedForward
         out_dim (int): Output dimension of the module.
-        kernel_size (int): Conv kernel size
-            for depthwise convolution in convolution module
+        kernel_size (int): Conv kernel size for
+                           depthwise convolution in convolution module
         stride (int): Downsampling factor in time dimension.
     """
 
-    def __init__(self, ichannel: int, ochannel: int,
+    def __init__(self, channel: int, out_dim: int,
                  kernel_size: int = 5, stride: int = 2):
         super(TimeReductionLayer1D, self).__init__()
 
-        self.ichannel = ichannel
-        self.ochannel = ochannel
+        self.channel = channel
+        self.out_dim = out_dim
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = max(0, self.kernel_size - self.stride)
 
         self.dw_conv = nn.Conv1d(
-            in_channels=ichannel,
-            out_channels=ichannel,
+            in_channels=channel,
+            out_channels=channel,
             kernel_size=kernel_size,
             stride=stride,
             padding=self.padding,
-            groups=ichannel,
+            groups=channel,
         )
 
         self.pw_conv = nn.Conv1d(
-            in_channels=ichannel,
-            out_channels=ochannel,
-            kernel_size=1,
-            stride=1,
-            padding=0,
-            groups=1,
+            in_channels=channel, out_channels=out_dim,
+            kernel_size=1, stride=1, padding=0, groups=1,
         )
 
         self.init_weights()
 
     def init_weights(self):
         dw_max = self.kernel_size ** -0.5
-        pw_max = self.ichannel ** -0.5
+        pw_max = self.channel ** -0.5
         torch.nn.init.uniform_(self.dw_conv.weight, -dw_max, dw_max)
         torch.nn.init.uniform_(self.dw_conv.bias, -dw_max, dw_max)
         torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
         torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
 
-    def forward(
-            self, xs, xs_lens: torch.Tensor,
-            mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-            mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-    ):
+    def forward(self, xs, xs_lens: torch.Tensor,
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                ):
         xs = xs.transpose(1, 2)  # [B, C, T]
         xs = xs.masked_fill(mask_pad.eq(0), 0.0)
 
@@ -185,11 +185,10 @@ class TimeReductionLayer2D(nn.Module):
         torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
         torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
 
-    def forward(
-            self, xs: torch.Tensor, xs_lens: torch.Tensor,
-            mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-            mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, xs: torch.Tensor, xs_lens: torch.Tensor,
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         xs = xs.masked_fill(mask_pad.transpose(1, 2).eq(0), 0.0)
         xs = xs.unsqueeze(2)
         padding1 = self.kernel_size - self.stride

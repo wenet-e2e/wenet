@@ -56,8 +56,8 @@ squeezeformer
 
 ### Squeezeformer Result (SM12, FFN:1024)
 * Encoder info:
-    * SM12, reduce_idx 5, recover_idx 11, conv2d
-    * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
+    * SM12, reduce_idx 5, recover_idx 11, conv2d, w/o syncbn
+    * encoder_dim 256, output_size 256, head 4, ffn_dim 256*4=1024
     * Encoder FLOPs(30s): 21,158,877,440, params: 22,219,912
 * Feature info:
     * using fbank feature, cmvn, dither, online speed perturb
@@ -76,7 +76,7 @@ squeezeformer
 
 ### Squeezeformer Result (SM12, FFN:2048)
 * Encoder info:
-    * SM12, reduce_idx 5, recover_idx 11, conv2d
+    * SM12, reduce_idx 5, recover_idx 11, conv2d, w/o syncbn
     * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
     * encoder FLOPs(30s): 28,230,473,984, params: 34,827,400
 * Feature info: using fbank feature, cmvn, dither, online speed perturb
@@ -96,7 +96,7 @@ squeezeformer
 
 ### Squeezeformer Result (SM12, FFN:1312)
 * Encoder info:
-    * SM12, reduce_idx 5, recover_idx 11, conv1d
+    * SM12, reduce_idx 5, recover_idx 11, conv1d, w/o syncbn
     * encoder_dim 328, output_size 256, head 4, ffn_dim 328*4=1312
     * encoder FLOPs(30s): 34,103,960,008, params: 35,678,352
 * Feature info:
@@ -104,7 +104,7 @@ squeezeformer
 * Training info:
     * train_squeezeformer.yaml, kernel size 31,
     * batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 1.0
-    * adamw, lr 5e-4, noamhold, warmup 0.2, hold 0.3, lr_decay 1.0
+    * adamw, lr 1e-3, noamhold, warmup 0.2, hold 0.3, lr_decay 1.0
 * Decoding info:
     * ctc_weight 0.3, reverse weight 0.5, average_num 30
 
@@ -114,3 +114,66 @@ squeezeformer
 | ctc prefix beam search           | 3.18      | 8.44      | 3.30       | 8.55       |
 | attention decoder                | 3.38      | 8.31      | 3.89       | 8.32       |
 | attention rescoring              | 2.81      | 7.86      | 2.96       | 7.91       |
+
+### Conformer U2++ Result
+
+* Encoder FLOPs(30s): 34,085,088,512, params: 34,761,608
+* Feature info: using fbank feature, cmvn, no speed perturb, dither
+* Training info: train_u2++_conformer.yaml lr 0.001, batch size 24, 8 gpu, acc_grad 1, 120 epochs, dither 1.0
+* Decoding info: ctc_weight 0.3,  reverse weight 0.5, average_num 30
+* Git hash: 65270043fc8c2476d1ab95e7c39f730017a670e0
+
+test clean
+
+| decoding mode                  | full | 16   |
+|--------------------------------|------|------|
+| ctc prefix beam search         | 3.76 | 4.54 |
+| attention rescoring            | 3.32 | 3.80 |
+
+test other
+
+| decoding mode                  | full  | 16    |
+|--------------------------------|-------|-------|
+| ctc prefix beam search         | 9.50  | 11.52 |
+| attention rescoring            | 8.67  | 10.38 |
+
+### Squeezeformer Result (U2++, FFN:2048)
+
+* Encoder info:
+    * SM12, reduce_idx 5, recover_idx 11, conv1d, layer_norm, do_rel_shift false
+    * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
+    * Encoder FLOPs(30s): 28,230,473,984, params: 34,827,400
+* Feature info:
+    * using fbank feature, cmvn, dither, online speed perturb
+* Training info:
+    * train_squeezeformer.yaml, kernel size 31
+    * batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
+    * adamw, lr 1e-3, NoamHold, warmup 0.1, hold 0.4, lr_decay 1.0
+* Decoding info:
+    * ctc_weight 0.3, reverse weight 0.5, average_num 30
+
+test clean
+
+| decoding mode                  | full | 16   |
+|--------------------------------|------|------|
+| ctc prefix beam search         | 3.81 | 4.59 |
+| attention rescoring            | 3.36 | 3.93 |
+
+test other
+
+| decoding mode                  | full  | 16    |
+|--------------------------------|-------|-------|
+| ctc prefix beam search         | 9.12  | 11.17 |
+| attention rescoring            | 8.43  | 10.21 |
+
+### Conformer Result Bidecoder (large)
+
+* Encoder FLOPs(30s): 96,238,430,720, params: 85,709,704
+* Feature info: using fbank feature, cmvn, dither, online speed perturb
+* Training info: train_conformer_bidecoder_large.yaml, kernel size 31, lr 0.002, batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 1.0
+* Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 30
+
+| decoding mode                    | test clean | test other |
+|----------------------------------|------------|------------|
+| ctc prefix beam search           | 2.96       | 7.14       |
+| attention rescoring              | 2.66       | 6.53       |
