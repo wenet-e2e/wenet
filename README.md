@@ -9,6 +9,7 @@
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch)
 | [**Runtime (android)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/android)
 | [**Pretrained Models**](docs/pretrained_models.md)
+| [**HuggingFace**](https://huggingface.co/spaces/wenet/wenet_demo)
 
 **We** share neural **Net** together.
 
