@@ -42,6 +42,7 @@ class SqueezeformerEncoder(nn.Module):
             reduce_idx: int = 5,
             recover_idx: int = 11,
             feed_forward_expansion_factor: int = 4,
+            dw_stride: bool = False,
             input_dropout_rate: float = 0.1,
             pos_enc_layer_type: str = "rel_pos",
             time_reduction_layer_type: str = "conv1d",
@@ -73,6 +74,8 @@ class SqueezeformerEncoder(nn.Module):
             reduce_idx (int): reduce layer index, from 40ms to 80ms per frame.
             recover_idx (int): recover layer index, from 80ms to 40ms per frame.
             feed_forward_expansion_factor (int): Enlarge coefficient of FFN.
+            dw_stride (bool): Whether do depthwise convolution
+                              on subsampling module.
             input_dropout_rate (float): Dropout rate of input projection layer.
             pos_enc_layer_type (str): Self attention type.
             time_reduction_layer_type (str): Conv1d or Conv2d reduction layer.
@@ -134,7 +137,8 @@ class SqueezeformerEncoder(nn.Module):
 
         self.embed = DepthwiseConv2dSubsampling4(
             1, encoder_dim,
-            RelPositionalEncoding(encoder_dim, dropout_rate=0.1)
+            RelPositionalEncoding(encoder_dim, dropout_rate=0.1),
+            dw_stride
         )
         self.input_proj = nn.Sequential(
             nn.Linear(
