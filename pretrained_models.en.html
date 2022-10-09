@@ -16,9 +16,7 @@
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="LM for WeNet" href="lm.html" />
-    <link rel="prev" title="Tutorial on AIShell" href="tutorial_aishell.html" /> 
+    <link rel="search" title="Search" href="search.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -37,17 +35,12 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption"><span class="caption-text">Tutorial:</span></p>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="python_binding.html">WeNet Python Binding</a></li>
 <li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
 <li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Pretrained Models in WeNet</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#model-types">Model Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#model-license">Model License</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#model-list">Model List</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained Models in WeNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="lm.html">LM for WeNet</a></li>
 <li class="toctree-l1"><a class="reference internal" href="context.html">Context Biasing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
@@ -71,7 +64,7 @@
       <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
       <li>Pretrained Models in WeNet</li>
       <li class="wy-breadcrumbs-aside">
-            <a href="_sources/pretrained_models.md.txt" rel="nofollow"> View page source</a>
+            <a href="_sources/pretrained_models.en.md.txt" rel="nofollow"> View page source</a>
       </li>
   </ul>
   <hr/>
@@ -120,8 +113,7 @@ For example, the pretrained model on LibriSpeech follows <code class="docutils l
 </div>
 <div class="section" id="model-list">
 <h2>Model List<a class="headerlink" href="#model-list" title="Permalink to this headline"></a></h2>
-<p>Here is a list of the pretrained models on different datasets.</p>
-<p>For non-Chinese users, please visit <a class="reference internal" href="pretrained_models.en.html"><span class="doc">Pretrained Models(En)</span></a> to download.</p>
+<p>Here is a list of the pretrained models on different datasets. The model structure, model size, and download link are given.</p>
 <table border="1" class="docutils">
 <thead>
 <tr>
@@ -136,43 +128,43 @@ For example, the pretrained model on LibriSpeech follows <code class="docutils l
 <tr>
 <td><a href="../examples/aishell/s0/README.md">aishell</a></td>
 <td>CN</td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz">Conformer</a></td>
 <td><a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="100px"></a></td>
 </tr>
 <tr>
 <td><a href="../examples/aishell2/s0/README.md">aishell2</a></td>
 <td>CN</td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/20210618_u2pp_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/20210618_u2pp_conformer_libtorch.tar.gz">Conformer</a></td>
 <td><a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="100px"></a></td>
 </tr>
 <tr>
 <td><a href="../examples/gigaspeech/s0/README.md">gigaspeech</a></td>
 <td>EN</td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/gigaspeech/20210728_u2pp_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/gigaspeech/20210728_u2pp_conformer_libtorch.tar.gz">Conformer</a></td>
 <td><a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="100px"></a></td>
 </tr>
 <tr>
 <td><a href="../examples/librispeech/s0/README.md">librispeech</a></td>
 <td>EN</td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/librispeech/20210610_u2pp_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/librispeech/20210610_u2pp_conformer_libtorch.tar.gz">Conformer</a></td>
 <td><a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="100px"></a></td>
 </tr>
 <tr>
 <td><a href="../examples/multi_cn/s0/README.md">multi_cn</a></td>
 <td>CN</td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/multi_cn/20210815_unified_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/multi_cn/20210815_unified_conformer_libtorch.tar.gz">Conformer</a></td>
 <td><a href="https://www.jd.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/jd.jpeg" width="100px"></a></td>
 </tr>
 <tr>
 <td><a href="../examples/wenetspeech/s0/README.md">wenetspeech</a></td>
 <td>CN</td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
-<td><a href="https://docs.qq.com/form/page/DZnRkVHlnUk5QaFdC">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20220506_u2pp_conformer_exp.tar.gz">Conformer</a></td>
+<td><a href="https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20220506_u2pp_conformer_libtorch.tar.gz">Conformer</a></td>
 <td><a href="https://horizon.ai" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/hobot.png" width="100px"></a></td>
 </tr>
 </tbody>
@@ -182,10 +174,7 @@ For example, the pretrained model on LibriSpeech follows <code class="docutils l
 
            </div>
           </div>
-          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="tutorial_aishell.html" class="btn btn-neutral float-left" title="Tutorial on AIShell" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="lm.html" class="btn btn-neutral float-right" title="LM for WeNet" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-    </div>
+          <footer>
 
   <hr/>
 
