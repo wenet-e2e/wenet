@@ -235,3 +235,150 @@ class SqueezeformerEncoder(nn.Module):
         if self.final_proj is not None:
             xs = self.final_proj(xs)
         return xs, masks
+
+    def forward_chunk(
+        self,
+        xs: torch.Tensor,
+        offset: int,
+        required_cache_size: int,
+        att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+        cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+        att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """ Forward just one chunk
+
+        Args:
+            xs (torch.Tensor): chunk input, with shape (b=1, time, mel-dim),
+                where `time == (chunk_size - 1) * subsample_rate + \
+                        subsample.right_context + 1`
+            offset (int): current offset in encoder output time stamp
+            required_cache_size (int): cache size required for next chunk
+                compuation
+                >=0: actual cache size
+                <0: means all history cache is required
+            att_cache (torch.Tensor): cache tensor for KEY & VALUE in
+                transformer/conformer attention, with shape
+                (elayers, head, cache_t1, d_k * 2), where
+                `head * d_k == hidden-dim` and
+                `cache_t1 == chunk_size * num_decoding_left_chunks`.
+            cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,
+                (elayers, b=1, hidden-dim, cache_t2), where
+                `cache_t2 == cnn.lorder - 1`
+
+        Returns:
+            torch.Tensor: output of current input xs,
+                with shape (b=1, chunk_size, hidden-dim).
+            torch.Tensor: new attention cache required for next chunk, with
+                dynamic shape (elayers, head, ?, d_k * 2)
+                depending on required_cache_size.
+            torch.Tensor: new conformer cnn cache required for next chunk, with
+                same shape as the original cnn_cache.
+
+        """
+        assert xs.size(0) == 1
+        # tmp_masks is just for interface compatibility
+        tmp_masks = torch.ones(1,
+                               xs.size(1),
+                               device=xs.device,
+                               dtype=torch.bool)
+        tmp_masks = tmp_masks.unsqueeze(1)
+        if self.global_cmvn is not None:
+            xs = self.global_cmvn(xs)
+        # NOTE(xcsong): Before embed, shape(xs) is (b=1, time, mel-dim)
+        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
+        # NOTE(xcsong): After  embed, shape(xs) is (b=1, chunk_size, hidden-dim)
+        elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
+        chunk_size = xs.size(1)
+        attention_key_size = cache_t1 + chunk_size
+        pos_emb = self.embed.position_encoding(
+            offset=offset - cache_t1, size=attention_key_size)
+        if required_cache_size < 0:
+            next_cache_start = 0
+        elif required_cache_size == 0:
+            next_cache_start = attention_key_size
+        else:
+            next_cache_start = max(attention_key_size - required_cache_size, 0)
+        r_att_cache = []
+        r_cnn_cache = []
+        for i, layer in enumerate(self.encoders):
+            # NOTE(xcsong): Before layer.forward
+            #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
+            #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
+            xs, _, new_att_cache, new_cnn_cache = layer(
+                xs, att_mask, pos_emb,
+                att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
+            )
+            # NOTE(xcsong): After layer.forward
+            #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
+            #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
+            r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
+            r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+
+        # NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),
+        #   ? may be larger than cache_t1, it depends on required_cache_size
+        r_att_cache = torch.cat(r_att_cache, dim=0)
+        # NOTE(xcsong): shape(r_cnn_cache) is (e, b=1, hidden-dim, cache_t2)
+        r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
+
+        return (xs, r_att_cache, r_cnn_cache)
+
+    def forward_chunk_by_chunk(
+        self,
+        xs: torch.Tensor,
+        decoding_chunk_size: int,
+        num_decoding_left_chunks: int = -1,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """ Forward input chunk by chunk with chunk_size like a streaming
+            fashion
+
+        Here we should pay special attention to computation cache in the
+        streaming style forward chunk by chunk. Three things should be taken
+        into account for computation in the current network:
+            1. transformer/conformer encoder layers output cache
+            2. convolution in conformer
+            3. convolution in subsampling
+
+        However, we don't implement subsampling cache for:
+            1. We can control subsampling module to output the right result by
+               overlapping input instead of cache left context, even though it
+               wastes some computation, but subsampling only takes a very
+               small fraction of computation in the whole model.
+            2. Typically, there are several covolution layers with subsampling
+               in subsampling module, it is tricky and complicated to do cache
+               with different convolution layers with different subsampling
+               rate.
+            3. Currently, nn.Sequential is used to stack all the convolution
+               layers in subsampling, we need to rewrite it to make it work
+               with cache, which is not prefered.
+        Args:
+            xs (torch.Tensor): (1, max_len, dim)
+            chunk_size (int): decoding chunk size
+        """
+        assert decoding_chunk_size > 0
+        # The model is trained by static or dynamic chunk
+        assert self.static_chunk_size > 0 or self.use_dynamic_chunk
+        subsampling = self.embed.subsampling_rate
+        context = self.embed.right_context + 1  # Add current frame
+        stride = subsampling * decoding_chunk_size
+        decoding_window = (decoding_chunk_size - 1) * subsampling + context
+        num_frames = xs.size(1)
+        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0), device=xs.device)
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0), device=xs.device)
+        outputs = []
+        offset = 0
+        required_cache_size = decoding_chunk_size * num_decoding_left_chunks
+
+        # Feed forward overlap input step by step
+        for cur in range(0, num_frames - context + 1, stride):
+            end = min(cur + decoding_window, num_frames)
+            chunk_xs = xs[:, cur:end, :]
+            (y, att_cache, cnn_cache) = self.forward_chunk(
+                chunk_xs, offset, required_cache_size, att_cache, cnn_cache)
+            outputs.append(y)
+            offset += y.size(1)
+        ys = torch.cat(outputs, 1)
+        masks = torch.ones((1, 1, ys.size(1)), device=ys.device, dtype=torch.bool)
+        return ys, masks
