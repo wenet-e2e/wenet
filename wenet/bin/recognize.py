@@ -162,6 +162,7 @@ def main():
     test_conf['speed_perturb'] = False
     test_conf['spec_aug'] = False
     test_conf['spec_sub'] = False
+    test_conf['spec_trim'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
     if 'fbank_conf' in test_conf:
