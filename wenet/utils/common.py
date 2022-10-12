@@ -233,6 +233,19 @@ def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
     return new_hyp
 
 
+def replace_duplicates_with_blank(hyp: List[int]) -> List[int]:
+    new_hyp: List[int] = []
+    cur = 0
+    while cur < len(hyp):
+        new_hyp.append(hyp[cur])
+        prev = cur
+        cur += 1
+        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != 0:
+            new_hyp.append(0)
+            cur += 1
+    return new_hyp
+
+
 def log_add(args: List[int]) -> float:
     """
     Stable log add
