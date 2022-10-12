@@ -25,11 +25,14 @@ IGNORE_ID = -1
 
 def pad_list(xs: List[torch.Tensor], pad_value: int):
     """Perform padding for the list of tensors.
+
     Args:
         xs (List): List of Tensors [(T_1, `*`), (T_2, `*`), ..., (T_B, `*`)].
         pad_value (float): Value for padding.
+
     Returns:
         Tensor: Padded tensor (B, Tmax, `*`).
+
     Examples:
         >>> x = [torch.ones(4), torch.ones(2), torch.ones(1)]
         >>> x
@@ -38,6 +41,7 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
         tensor([[1., 1., 1., 1.],
                 [1., 1., 0., 0.],
                 [1., 0., 0., 0.]])
+
     """
     n_batch = len(xs)
     max_len = max([x.size(0) for x in xs])
@@ -52,11 +56,14 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
 def add_blank(ys_pad: torch.Tensor, blank: int,
               ignore_id: int) -> torch.Tensor:
     """ Prepad blank for transducer predictor
+
     Args:
         ys_pad (torch.Tensor): batch of padded target sequences (B, Lmax)
         blank (int): index of <blank>
+
     Returns:
         ys_in (torch.Tensor) : (B, Lmax + 1)
+
     Examples:
         >>> blank = 0
         >>> ignore_id = -1
@@ -83,14 +90,17 @@ def add_blank(ys_pad: torch.Tensor, blank: int,
 def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
                 ignore_id: int) -> Tuple[torch.Tensor, torch.Tensor]:
     """Add <sos> and <eos> labels.
+
     Args:
         ys_pad (torch.Tensor): batch of padded target sequences (B, Lmax)
         sos (int): index of <sos>
         eos (int): index of <eeos>
         ignore_id (int): index of padding
+
     Returns:
         ys_in (torch.Tensor) : (B, Lmax + 1)
         ys_out (torch.Tensor) : (B, Lmax + 1)
+
     Examples:
         >>> sos_id = 10
         >>> eos_id = 11
@@ -127,12 +137,15 @@ def reverse_pad_list(ys_pad: torch.Tensor,
                      ys_lens: torch.Tensor,
                      pad_value: float = -1.0) -> torch.Tensor:
     """Reverse padding for the list of tensors.
+
     Args:
         ys_pad (tensor): The padded tensor (B, Tokenmax).
         ys_lens (tensor): The lens of token seqs (B)
         pad_value (int): Value for padding.
+
     Returns:
         Tensor: Padded tensor (B, Tokenmax).
+
     Examples:
         >>> x
         tensor([[1, 2, 3, 4], [5, 6, 7, 0], [8, 9, 0, 0]])
@@ -140,6 +153,7 @@ def reverse_pad_list(ys_pad: torch.Tensor,
         tensor([[4, 3, 2, 1],
                 [7, 6, 5, 0],
                 [9, 8, 0, 0]])
+
     """
     r_ys_pad = pad_sequence([(torch.flip(y.int()[:i], [0]))
                              for y, i in zip(ys_pad, ys_lens)], True,
@@ -150,12 +164,15 @@ def reverse_pad_list(ys_pad: torch.Tensor,
 def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
                 ignore_label: int) -> float:
     """Calculate accuracy.
+
     Args:
         pad_outputs (Tensor): Prediction tensors (B * Lmax, D).
         pad_targets (LongTensor): Target label tensors (B, Lmax, D).
         ignore_label (int): Ignore label id.
+
     Returns:
         float: Accuracy value (0.0 - 1.0).
+
     """
     pad_pred = pad_outputs.view(pad_targets.size(0), pad_targets.size(1),
                                 pad_outputs.size(1)).argmax(2)
