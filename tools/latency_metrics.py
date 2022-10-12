@@ -175,7 +175,7 @@ def main():
                     # state_m, state_c =  clstate_out_m, state_out_c
                     cache = new_cache
 
-                if joint_out_max == model.blank or
+                if joint_out_max == model.blank or \
                    per_frame_noblk >= per_frame_max_noblk:
                     if joint_out_max == model.blank:
                         prev_out_nblk = False
