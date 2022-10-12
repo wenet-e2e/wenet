@@ -94,7 +94,6 @@ class SqueezeformerEncoderLayer(nn.Module):
         if self.normalize_before:
             x = self.layer_norm2(x)
         x = self.ffn1(x)
-        # we do not use dropout here since it is inside feed forward function
         x = residual + self.dropout(x)
         if not self.normalize_before:
             x = self.layer_norm2(x)
