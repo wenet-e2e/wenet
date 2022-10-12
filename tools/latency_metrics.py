@@ -146,7 +146,8 @@ def main():
             padding = torch.zeros(1, 1).to(encoder_out.device)
             # sos
             pred_input_step = torch.tensor([model.blank]).reshape(1, 1)
-            cache = model.predictor.init_state(1, method="zero", device=encoder_out.device)
+            cache = model.predictor.init_state(1, method="zero",
+                                               device=encoder_out.device)
             new_cache: List[torch.Tensor] = []
             t = 0
             hyps = []
@@ -157,7 +158,8 @@ def main():
             while t < encoder_out_lens:
                 encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
                 if prev_out_nblk:
-                    step_outs = model.predictor.forward_step(pred_input_step, padding, cache)
+                    step_outs = model.predictor.forward_step(pred_input_step,
+                                                             padding, cache)
                     pred_out_step, new_cache = step_outs[0], step_outs[1]
 
                 joint_out_step = model.joint(encoder_out_step, pred_out_step)  # [1,1,v]
@@ -173,7 +175,8 @@ def main():
                     # state_m, state_c =  clstate_out_m, state_out_c
                     cache = new_cache
 
-                if joint_out_max == model.blank or per_frame_noblk >= per_frame_max_noblk:
+                if joint_out_max == model.blank or 
+                   per_frame_noblk >= per_frame_max_noblk:
                     if joint_out_max == model.blank:
                         prev_out_nblk = False
                         hyps.append(model.blank)
