@@ -293,7 +293,7 @@ def main():
             time = np.arange(0, len(samples)) * (1.0 / sr)
             axes[-1].plot(time, samples)
 
-            # i.e., RESULT_DIR/BAC009S0768W0342_LTD_P90_120ms.pdf
+            # i.e., RESULT_DIR/LTD_P90_120ms_BAC009S0768W0342.pdf
             plt.savefig(args.result_dir + "/" + name + "_" +
                         p + "_" + str(data[f()]) + "ms" + "_" + data[0] + ".pdf")
 
