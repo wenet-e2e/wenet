@@ -23,7 +23,7 @@
 
 * Encoder info:
     * SM12, reduce_idx 5, recover_idx 11, conv1d, batch_norm, syncbn
-    * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
+    * encoder_dim 512, output_size 512, head 8, ffn_dim 512*4=2048
     * Encoder FLOPs(30s): 82,283,704,832, params: 85,984,648
 * Feature info:
     * using fbank feature, cmvn, dither, online speed perturb, spec_aug
