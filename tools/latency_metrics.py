@@ -194,7 +194,6 @@ def main():
         aligns = fin.readlines()
     not_found, len_unequal, ignored = 0, 0, 0
     datas = []
-
     for align in aligns:
         key, align = align.strip().split(' ', 1)
         if key not in timestamps:
@@ -210,8 +209,6 @@ def main():
         # ignore alignment_errors >= 70ms
         frames_fa = len(align.split())
         frames_st = len(timestamps[key][0]) * subsampling
-
-       
         if abs(frames_st - frames_fa) >= 7:
             ignored += 1
             continue
@@ -237,7 +234,6 @@ def main():
 
     # 4. Plot and print
     num_datas = len(datas)
-   
     names = ['FirstTokenDelay', 'LastTokenDelay', 'AvgTokenDelay']
     names_index = [4, 5, 6]
     parts = ['max', 'P90', 'P75', 'P50', 'P25', 'min']
