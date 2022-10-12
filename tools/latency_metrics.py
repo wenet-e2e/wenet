@@ -58,8 +58,7 @@ def get_args():
                         type=str, help='dict file')
     parser.add_argument('--result_dir', required=True,
                         type=str, help='saving pdf')
-    parser.add_argument('--model_type',
-                        default='ctc',
+    parser.add_argument('--model_type',default='ctc',
                         choices=['ctc', 'transducer'],
                         help='show latency metrics from ctc models or rnn-t models')  
     args = parser.parse_args()
@@ -172,7 +171,6 @@ def main():
                 joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
                 if joint_out_max != model.blank:
                     hyps.append(joint_out_max.item())
-                
                     prev_out_nblk = True
                     per_frame_noblk = per_frame_noblk + 1
                     pred_input_step = joint_out_max.reshape(1, 1)
@@ -297,8 +295,8 @@ def main():
             axes[-1].plot(time, samples)
 
             # i.e., RESULT_DIR/BAC009S0768W0342_LTD_P90_120ms.pdf
-            plt.savefig(args.result_dir + "/" name + "_" + p + 
-                        "_" + str(data[f()]) + "ms" + "_" + data[0] + ".pdf")
+            plt.savefig(args.result_dir + "/" name + "_" + 
+                        p + "_" + str(data[f()]) + "ms" + "_" + data[0] + ".pdf")
 
 
 if __name__ == '__main__':
