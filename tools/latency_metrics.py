@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 import argparse
 import logging
 import librosa
@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import torchaudio.compliance.kaldi as kaldi
 
-from wenet.transformer.asr_model import init_asr_model
+from wenet.utils.init_model import init_model
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.mask import make_pad_mask
@@ -36,6 +36,10 @@ def get_args():
         description='Analyze latency and plot CTC-Spike.')
     parser.add_argument('--config', required=True,
                         type=str, help='configration')
+    parser.add_argument('--gpu',
+                        type=int,
+                        default=0,
+                        help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--ckpt', required=True,
                         type=str, help='model checkpoint')
     parser.add_argument('--tag', required=True,
@@ -54,6 +58,10 @@ def get_args():
                         type=str, help='dict file')
     parser.add_argument('--result_dir', required=True,
                         type=str, help='saving pdf')
+    parser.add_argument('--model_type',
+                        default='ctc',
+                        choices=['ctc', 'transducer'],
+                        help='show latency metrics from ctc models or rnn-t models')  
     args = parser.parse_args()
     return args
 
@@ -64,15 +72,21 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     torch.manual_seed(777)
 
+    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+
     symbol_table = read_symbol_table(args.dict)
     char_dict = {v: k for k, v in symbol_table.items()}
 
     # 1. Load model
     with open(args.config, 'r') as fin:
         conf = yaml.load(fin, Loader=yaml.FullLoader)
-    model = init_asr_model(conf)
+
+    use_cuda = args.gpu >= 0 and torch.cuda.is_available()
+    device = torch.device('cuda' if use_cuda else 'cpu')
+    
+    model = init_model(conf)
     load_checkpoint(model, args.ckpt)
-    model.eval().cuda()
+    model = model.eval().to(device)
 
     subsampling = model.encoder.embed.subsampling_rate
     eos = model.eos_symbol()
@@ -101,33 +115,86 @@ def main():
             sample_frequency=resample_rate,
         )
 
-        # CTC greedy search
-        speech = mat.unsqueeze(0).cuda()
-        speech_lengths = torch.tensor([mat.size(0)]).cuda()
+        speech = mat.unsqueeze(0).to(device)
+        speech_lengths = torch.tensor([mat.size(0)]).to(device)
+
         # Let's assume batch_size = 1
-        encoder_out, encoder_mask = model._forward_encoder(
-            speech, speech_lengths, args.chunk_size, args.left_chunks,
-            simulate_streaming=False)
+        encoder_out, encoder_mask = model.encoder(
+            speech, speech_lengths, args.chunk_size, args.left_chunks)
+
         maxlen = encoder_out.size(1)  # (B, maxlen, encoder_dim)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-        ctc_probs = model.ctc.log_softmax(
-            encoder_out)  # (B, maxlen, vocab_size)
-        topk_prob, topk_index = ctc_probs.topk(1, dim=2)  # (B, maxlen, 1)
-        topk_index = topk_index.view(1, maxlen)  # (B, maxlen)
-        topk_prob = topk_prob.view(1, maxlen)  # (B, maxlen)
-        mask = make_pad_mask(encoder_out_lens, maxlen)  # (B, maxlen)
-        topk_index = topk_index.masked_fill_(mask, eos)  # (B, maxlen)
-        topk_prob = topk_prob.masked_fill_(mask, 0.0)  # (B, maxlen)
-        hyps = [hyp.tolist() for hyp in topk_index]
-        hyps = [replace_duplicates_with_blank(hyp) for hyp in hyps]
-        scores = [prob.tolist() for prob in topk_prob]
-        timestamps[key] = [hyps[0], scores[0], wav]
+        
+        # CTC greedy search
+        if args.model_type == 'ctc':
+            ctc_probs = model.ctc.log_softmax(
+                encoder_out)  # (B, maxlen, vocab_size)
+            topk_prob, topk_index = ctc_probs.topk(1, dim=2)  # (B, maxlen, 1)
+            topk_index = topk_index.view(1, maxlen)  # (B, maxlen)
+            topk_prob = topk_prob.view(1, maxlen)  # (B, maxlen)
+            mask = make_pad_mask(encoder_out_lens, maxlen)  # (B, maxlen)
+            topk_index = topk_index.masked_fill_(mask, eos)  # (B, maxlen)
+            topk_prob = topk_prob.masked_fill_(mask, 0.0)  # (B, maxlen)
+            hyps = [hyp.tolist() for hyp in topk_index]
+            hyps = [replace_duplicates_with_blank(hyp) for hyp in hyps]
+            scores = [prob.tolist() for prob in topk_prob]
+            timestamps[key] = [hyps[0], scores[0], wav]
+
+        if args.model_type == 'transducer':
+            hyps = []
+            scores = []
+            # fake padding
+            padding = torch.zeros(1, 1).to(encoder_out.device)
+            # sos
+            pred_input_step = torch.tensor([model.blank]).reshape(1, 1)
+            cache = model.predictor.init_state(1,
+                                            method="zero",
+                                            device=encoder_out.device)
+            new_cache: List[torch.Tensor] = []
+            t = 0
+            hyps = []
+            prev_out_nblk = True
+            pred_out_step = None
+            per_frame_max_noblk = 1
+            per_frame_noblk = 0
+            while t < encoder_out_lens:
+                encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
+                if prev_out_nblk:
+                    step_outs = model.predictor.forward_step(pred_input_step, padding,
+                                                            cache)  # [1, 1, P]
+                    pred_out_step, new_cache = step_outs[0], step_outs[1]
+
+                joint_out_step = model.joint(encoder_out_step,
+                                            pred_out_step)  # [1,1,v]
+                joint_out_probs = joint_out_step.log_softmax(dim=-1)
+                scores.append(torch.max(joint_out_probs).item())
+
+                joint_out_max = joint_out_probs.argmax(dim=-1).squeeze()  # []
+                if joint_out_max != model.blank:
+                    hyps.append(joint_out_max.item())
+                
+                    prev_out_nblk = True
+                    per_frame_noblk = per_frame_noblk + 1
+                    pred_input_step = joint_out_max.reshape(1, 1)
+                    # state_m, state_c =  clstate_out_m, state_out_c
+                    cache = new_cache
+
+                if joint_out_max == model.blank or per_frame_noblk >= per_frame_max_noblk:        
+                    if joint_out_max == model.blank:
+                        prev_out_nblk = False
+                        hyps.append(model.blank)
+                    # TODO(Mddct): make t in chunk for streamming
+                    # or t should't be too lang to predict none blank
+                    t = t + 1
+                    per_frame_noblk = 0
+            timestamps[key] = [hyps, scores, wav]
 
     # 3. Analyze latency
     with open(args.alignment, 'r') as fin:
         aligns = fin.readlines()
     not_found, len_unequal, ignored = 0, 0, 0
     datas = []
+
     for align in aligns:
         key, align = align.strip().split(' ', 1)
         if key not in timestamps:
@@ -143,6 +210,8 @@ def main():
         # ignore alignment_errors >= 70ms
         frames_fa = len(align.split())
         frames_st = len(timestamps[key][0]) * subsampling
+
+       
         if abs(frames_st - frames_fa) >= 7:
             ignored += 1
             continue
@@ -168,6 +237,7 @@ def main():
 
     # 4. Plot and print
     num_datas = len(datas)
+   
     names = ['FirstTokenDelay', 'LastTokenDelay', 'AvgTokenDelay']
     names_index = [4, 5, 6]
     parts = ['max', 'P90', 'P75', 'P50', 'P25', 'min']
@@ -231,9 +301,8 @@ def main():
             axes[-1].plot(time, samples)
 
             # i.e., RESULT_DIR/BAC009S0768W0342_LTD_P90_120ms.pdf
-            plt.savefig(args.result_dir + "/" +
-                        data[0] + "_" + name +
-                        "_" + p + "_" + str(data[f()]) + "ms.pdf")
+            plt.savefig(args.result_dir + "/" name + "_" + p + 
+                        "_" + str(data[f()]) + "ms" + "_" + data[0] + ".pdf")
 
 
 if __name__ == '__main__':
