@@ -58,7 +58,7 @@ def get_args():
                         type=str, help='dict file')
     parser.add_argument('--result_dir', required=True,
                         type=str, help='saving pdf')
-    parser.add_argument('--model_type',default='ctc',
+    parser.add_argument('--model_type', default='ctc',
                         choices=['ctc', 'transducer'],
                         help='show latency metrics from ctc models or rnn-t models')  
     args = parser.parse_args()
@@ -82,7 +82,7 @@ def main():
 
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
-    
+
     model = init_model(conf)
     load_checkpoint(model, args.ckpt)
     model = model.eval().to(device)
@@ -123,7 +123,7 @@ def main():
 
         maxlen = encoder_out.size(1)  # (B, maxlen, encoder_dim)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-        
+
         # CTC greedy search
         if args.model_type == 'ctc':
             ctc_probs = model.ctc.log_softmax(
@@ -146,9 +146,7 @@ def main():
             padding = torch.zeros(1, 1).to(encoder_out.device)
             # sos
             pred_input_step = torch.tensor([model.blank]).reshape(1, 1)
-            cache = model.predictor.init_state(1,
-                                            method="zero",
-                                            device=encoder_out.device)
+            cache = model.predictor.init_state(1, method="zero", device=encoder_out.device)
             new_cache: List[torch.Tensor] = []
             t = 0
             hyps = []
@@ -159,12 +157,10 @@ def main():
             while t < encoder_out_lens:
                 encoder_out_step = encoder_out[:, t:t + 1, :]  # [1, 1, E]
                 if prev_out_nblk:
-                    step_outs = model.predictor.forward_step(pred_input_step, padding,
-                                                            cache)  # [1, 1, P]
+                    step_outs = model.predictor.forward_step(pred_input_step, padding, cache)
                     pred_out_step, new_cache = step_outs[0], step_outs[1]
 
-                joint_out_step = model.joint(encoder_out_step,
-                                            pred_out_step)  # [1,1,v]
+                joint_out_step = model.joint(encoder_out_step, pred_out_step)  # [1,1,v]
                 joint_out_probs = joint_out_step.log_softmax(dim=-1)
                 scores.append(torch.max(joint_out_probs).item())
 
@@ -295,7 +291,7 @@ def main():
             axes[-1].plot(time, samples)
 
             # i.e., RESULT_DIR/BAC009S0768W0342_LTD_P90_120ms.pdf
-            plt.savefig(args.result_dir + "/" name + "_" + 
+            plt.savefig(args.result_dir + "/" + name + "_" + 
                         p + "_" + str(data[f()]) + "ms" + "_" + data[0] + ".pdf")
 
 
