@@ -1,21 +1,7 @@
-# Copyright (c) 2020 Mobvoi Inc (Binbin Zhang)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#   http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# Modified from ESPnet(https://github.com/espnet/espnet)
 """Unility functions for Transformer."""
 
 import math
-from typing import List, Tuple
+from typing import Tuple, List
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -51,40 +37,6 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
         pad[i, :xs[i].size(0)] = xs[i]
 
     return pad
-
-
-def add_blank(ys_pad: torch.Tensor, blank: int,
-              ignore_id: int) -> torch.Tensor:
-    """ Prepad blank for transducer predictor
-
-    Args:
-        ys_pad (torch.Tensor): batch of padded target sequences (B, Lmax)
-        blank (int): index of <blank>
-
-    Returns:
-        ys_in (torch.Tensor) : (B, Lmax + 1)
-
-    Examples:
-        >>> blank = 0
-        >>> ignore_id = -1
-        >>> ys_pad
-        tensor([[ 1,  2,  3,   4,   5],
-                [ 4,  5,  6,  -1,  -1],
-                [ 7,  8,  9,  -1,  -1]], dtype=torch.int32)
-        >>> ys_in = add_blank(ys_pad, 0, -1)
-        >>> ys_in
-        tensor([[0,  1,  2,  3,  4,  5],
-                [0,  4,  5,  6,  0,  0],
-                [0,  7,  8,  9,  0,  0]])
-    """
-    bs = ys_pad.size(0)
-    _blank = torch.tensor([blank],
-                          dtype=torch.long,
-                          requires_grad=False,
-                          device=ys_pad.device)
-    _blank = _blank.repeat(bs).unsqueeze(1)  # [bs,1]
-    out = torch.cat([_blank, ys_pad], dim=1)  # [bs, Lmax+1]
-    return torch.where(out == ignore_id, blank, out)
 
 
 def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
@@ -183,16 +135,6 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
     return float(numerator) / float(denominator)
 
 
-def get_rnn(rnn_type: str) -> torch.nn.Module:
-    assert rnn_type in ["rnn", "lstm", "gru"]
-    if rnn_type == "rnn":
-        return torch.nn.RNN
-    elif rnn_type == "lstm":
-        return torch.nn.LSTM
-    else:
-        return torch.nn.GRU
-
-
 def get_activation(act):
     """Return activation function."""
     # Lazy load to avoid unused import
@@ -229,6 +171,19 @@ def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
             new_hyp.append(hyp[cur])
         prev = cur
         while cur < len(hyp) and hyp[cur] == hyp[prev]:
+            cur += 1
+    return new_hyp
+
+
+def replace_duplicates_with_blank(hyp: List[int]) -> List[int]:
+    new_hyp: List[int] = []
+    cur = 0
+    while cur < len(hyp):
+        new_hyp.append(hyp[cur])
+        prev = cur
+        cur += 1
+        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != 0:
+            new_hyp.append(0)
             cur += 1
     return new_hyp
 
