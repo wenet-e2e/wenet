@@ -60,7 +60,7 @@ def get_args():
                         type=str, help='saving pdf')
     parser.add_argument('--model_type', default='ctc',
                         choices=['ctc', 'transducer'],
-                        help='show latency metrics from ctc models or rnn-t models')  
+                        help='show latency metrics from ctc models or rnn-t models')
     args = parser.parse_args()
     return args
 
@@ -173,7 +173,7 @@ def main():
                     # state_m, state_c =  clstate_out_m, state_out_c
                     cache = new_cache
 
-                if joint_out_max == model.blank or per_frame_noblk >= per_frame_max_noblk:        
+                if joint_out_max == model.blank or per_frame_noblk >= per_frame_max_noblk:
                     if joint_out_max == model.blank:
                         prev_out_nblk = False
                         hyps.append(model.blank)
@@ -291,7 +291,7 @@ def main():
             axes[-1].plot(time, samples)
 
             # i.e., RESULT_DIR/BAC009S0768W0342_LTD_P90_120ms.pdf
-            plt.savefig(args.result_dir + "/" + name + "_" + 
+            plt.savefig(args.result_dir + "/" + name + "_" +
                         p + "_" + str(data[f()]) + "ms" + "_" + data[0] + ".pdf")
 
 
