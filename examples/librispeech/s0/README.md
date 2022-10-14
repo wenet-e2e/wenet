@@ -178,6 +178,13 @@ test clean
 | ctc prefix beam search         | 3.81 | 4.59 |
 | attention rescoring            | 3.36 | 3.93 |
 
+test other
+
+| decoding mode                  | full  | 16    |
+|--------------------------------|-------|-------|
+| ctc prefix beam search         | 9.12  | 11.17 |
+| attention rescoring            | 8.43  | 10.21 |
+
 ## Conformer U2 Result
 
 * Feature info: using fbank feature, cmvn, speed perturb, dither
