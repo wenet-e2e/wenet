@@ -9,7 +9,6 @@ set(FST_HAVE_BIN OFF)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
-include(ExternalProject)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(FETCHCONTENT_QUIET OFF)
