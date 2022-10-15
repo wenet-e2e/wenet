@@ -17,7 +17,6 @@ option(GPU "whether to build with GPU" OFF)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
-include(ExternalProject)
 set(FETCHCONTENT_QUIET OFF)
 get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})

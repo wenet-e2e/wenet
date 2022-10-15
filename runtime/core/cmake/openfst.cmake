@@ -20,8 +20,11 @@ if(NOT ANDROID)
   set(HAVE_NGRAM OFF CACHE BOOL "Build ngram" FORCE)
   set(HAVE_SPECIAL OFF CACHE BOOL "Build special" FORCE)
 
-  # The original openfst uses GNU Build System to run configure and build.
-  # So, we use "OpenFST port for Windows" to build openfst with cmake in Windows.
+  if(MSVC)
+    add_compile_options(/W0 /wd4244 /wd4267)
+  endif()
+
+  # "OpenFST port for Windows" builds openfst with cmake for multiple platforms.
   # Openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch.
   # To build openfst with gflags and glog, we comment out some vars of {flags, log}.h and flags.cc.
   set(openfst_SOURCE_DIR ${fc_base}/openfst-src CACHE PATH "OpenFST source directory")

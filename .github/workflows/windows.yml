@@ -17,7 +17,7 @@ jobs:
       - name: Build
         run: |
           cd ${{ env.RUNTIME_DIR }}
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+          cmake -B build -DGRAPH_TOOLS=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
           cmake --build build --config Release -j$(nproc)
 
       - name: Prepare Release Binary
