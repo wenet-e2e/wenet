@@ -20,9 +20,12 @@ import torch
 from typeguard import check_argument_types
 
 from wenet.transformer.attention import MultiHeadedAttention
+from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.embedding import PositionalEncoding
+from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.transformer.se_layer import SELayer
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
 
 
@@ -61,6 +64,8 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
+        use_se_module: bool = False,
+        se_module_channel: int = 0
     ):
         assert check_argument_types()
         super().__init__()
@@ -71,10 +76,16 @@ class TransformerDecoder(torch.nn.Module):
                 torch.nn.Embedding(vocab_size, attention_dim),
                 PositionalEncoding(attention_dim, positional_dropout_rate),
             )
+        elif input_layer == "rel_embed":
+            self.embed = torch.nn.Sequential(
+                torch.nn.Embedding(vocab_size, attention_dim),
+                RelPositionalEncoding(attention_dim, positional_dropout_rate),
+            )
         else:
             raise ValueError(f"only 'embed' is supported: {input_layer}")
 
         self.normalize_before = normalize_before
+        self.input_layer = input_layer
         self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
         self.use_output_layer = use_output_layer
         self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
@@ -82,8 +93,11 @@ class TransformerDecoder(torch.nn.Module):
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
-                MultiHeadedAttention(attention_heads, attention_dim,
-                                     self_attention_dropout_rate),
+                RelPositionMultiHeadedAttention(attention_heads, attention_dim,
+                                                self_attention_dropout_rate) \
+                    if input_layer == "rel_embed" else \
+                    MultiHeadedAttention(attention_heads, attention_dim,
+                                         self_attention_dropout_rate),
                 MultiHeadedAttention(attention_heads, attention_dim,
                                      src_attention_dropout_rate),
                 PositionwiseFeedForward(attention_dim, linear_units,
@@ -93,6 +107,8 @@ class TransformerDecoder(torch.nn.Module):
                 concat_after,
             ) for _ in range(self.num_blocks)
         ])
+        self.use_se_module = use_se_module
+        self.se_class = SELayer(se_module_channel)
 
     def forward(
         self,
@@ -130,10 +146,40 @@ class TransformerDecoder(torch.nn.Module):
                             device=tgt_mask.device).unsqueeze(0)
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
-        x, _ = self.embed(tgt)
-        for layer in self.decoders:
-            x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
-                                                     memory_mask)
+        x, pos_emb = self.embed(tgt)
+        if self.use_se_module:
+            x_list = []
+            for layer in self.decoders:
+                if self.input_layer == "rel_embed":
+                    x, tgt_mask, memory, memory_mask = layer(x,
+                                                             tgt_mask,
+                                                             memory,
+                                                             memory_mask,
+                                                             pos_emb)
+                else:
+                    x, tgt_mask, memory, memory_mask = layer(x,
+                                                             tgt_mask,
+                                                             memory,
+                                                             memory_mask,
+                                                             torch.empty(0))
+                x_list.append(x)
+            x_list = torch.stack(x_list).transpose(0, 1)
+            x_se_output = self.se_class(x_list)
+            x = torch.sum(x_se_output, dim=1)
+        else:
+            for layer in self.decoders:
+                if self.input_layer == "rel_embed":
+                    x, tgt_mask, memory, memory_mask = layer(x,
+                                                             tgt_mask,
+                                                             memory,
+                                                             memory_mask,
+                                                             pos_emb)
+                else:
+                    x, tgt_mask, memory, memory_mask = layer(x,
+                                                             tgt_mask,
+                                                             memory,
+                                                             memory_mask,
+                                                             torch.empty(0))
         if self.normalize_before:
             x = self.after_norm(x)
         if self.use_output_layer:
@@ -163,18 +209,27 @@ class TransformerDecoder(torch.nn.Module):
             y, cache: NN output value and cache per `self.decoders`.
             y.shape` is (batch, maxlen_out, token)
         """
-        x, _ = self.embed(tgt)
+        x, pos_emb = self.embed(tgt)
         new_cache = []
         for i, decoder in enumerate(self.decoders):
             if cache is None:
                 c = None
             else:
                 c = cache[i]
-            x, tgt_mask, memory, memory_mask = decoder(x,
-                                                       tgt_mask,
-                                                       memory,
-                                                       memory_mask,
-                                                       cache=c)
+            if self.input_layer == "rel_embed":
+                x, tgt_mask, memory, memory_mask = decoder(x,
+                                                           tgt_mask,
+                                                           memory,
+                                                           memory_mask,
+                                                           pos_emb,
+                                                           cache=c)
+            else:
+                x, tgt_mask, memory, memory_mask = decoder(x,
+                                                           tgt_mask,
+                                                           memory,
+                                                           memory_mask,
+                                                           torch.empty(0),
+                                                           cache=c)
             new_cache.append(x)
         if self.normalize_before:
             y = self.after_norm(x[:, -1])
@@ -222,6 +277,8 @@ class BiTransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         concat_after: bool = False,
+        use_se_module: bool = False,
+        se_module_channel: int = 0
     ):
 
         assert check_argument_types()

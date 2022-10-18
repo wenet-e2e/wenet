@@ -33,6 +33,7 @@ from wenet.transformer.subsampling import Conv2dSubsampling4
 from wenet.transformer.subsampling import Conv2dSubsampling6
 from wenet.transformer.subsampling import Conv2dSubsampling8
 from wenet.transformer.subsampling import LinearNoSubsampling
+from wenet.transformer.se_layer import SELayer
 from wenet.utils.common import get_activation
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
@@ -57,6 +58,8 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        use_se_module: bool = False,
+        se_module_channel: int = 0
     ):
         """
         Args:
@@ -127,6 +130,8 @@ class BaseEncoder(torch.nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
+        self.use_se_module = use_se_module
+        self.se_class = SELayer(se_module_channel)
 
     def output_size(self) -> int:
         return self._output_size
@@ -169,8 +174,18 @@ class BaseEncoder(torch.nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
-        for layer in self.encoders:
-            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+        if self.use_se_module:
+            xs_list = []
+            for layer in self.encoders:
+                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+                xs_list.append(xs)
+            xs_list = torch.stack(xs_list).transpose(0, 1)
+            xs_se_output = self.se_class(xs_list)
+            xs = torch.sum(xs_se_output, dim=1)
+        else:
+            for layer in self.encoders:
+                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
@@ -397,6 +412,8 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        use_se_module: bool = False,
+        se_module_channel: int = 0
     ):
         """Construct ConformerEncoder
 
@@ -420,7 +437,8 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          concat_after, static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk, use_se_module,
+                         se_module_channel)
         activation = get_activation(activation_type)
 
         # self-attention module definition
