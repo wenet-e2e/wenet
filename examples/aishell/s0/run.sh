@@ -44,6 +44,7 @@ train_set=train
 # 4. conf/train_unified_transformer.yaml: Unified dynamic chunk transformer
 # 5. conf/train_u2++_conformer.yaml: U2++ conformer
 # 6. conf/train_u2++_transformer.yaml: U2++ transformer
+# 7. conf/train_blockformer.yaml: conformer with se_layer
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer

@@ -131,3 +131,16 @@
 | ctc prefix beam search | 4.94    | 4.97       |
 | attention rescoring    | 4.61    | 4.69       |
 
+## blockformer Result
+
+* Feature info: using fbank feature, dither, cmvn, online speed perturb
+* Training info: lr 0.002, batch size 16, 8 gpu, acc_grad 4, 360 epochs, dither 0.1, warm up steps 50000
+* Decoding info: ctc_weight 0.5, average_num 30
+
+| decoding mode             | CER   |
+|---------------------------|-------|
+| attention decoder         | 4.78  |
+| ctc greedy search         | 4.74  |
+| ctc prefix beam search    | 4.75  |
+| attention rescoring       | 4.41  |
+
