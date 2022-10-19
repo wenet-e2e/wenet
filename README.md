@@ -18,6 +18,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 ## :fire: News
 
+* 2022.10.18: Squeezeformer is supported, see https://github.com/wenet-e2e/wenet/pull/1447.
 * 2022.07.21: RNN-T is supported now, see [rnnt](https://github.com/wenet-e2e/wenet/tree/main/examples/aishell/rnnt) for benchmark.
 * 2022.07.03: Python binding is stable, see [python binding](https://github.com/wenet-e2e/wenet/tree/main/runtime/binding/python) for usage.
 
