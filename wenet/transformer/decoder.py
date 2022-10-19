@@ -94,8 +94,8 @@ class TransformerDecoder(torch.nn.Module):
             DecoderLayer(
                 attention_dim,
                 RelPositionMultiHeadedAttention(attention_heads, attention_dim,
-                                                self_attention_dropout_rate) \
-                    if input_layer == "rel_embed" else \
+                                                self_attention_dropout_rate)
+                if input_layer == "rel_embed" else
                     MultiHeadedAttention(attention_heads, attention_dim,
                                          self_attention_dropout_rate),
                 MultiHeadedAttention(attention_heads, attention_dim,
