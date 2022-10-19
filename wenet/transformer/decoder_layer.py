@@ -118,9 +118,9 @@ class DecoderLayer(nn.Module):
 
         if self.concat_after:
             tgt_concat = torch.cat(
-                (tgt_q,
-                 self.self_attn(tgt_q, tgt, tgt, tgt_q_mask, pos_emb)[0]),
-                 dim=-1)
+                (tgt_q, self.self_attn(
+                    tgt_q, tgt, tgt, tgt_q_mask, pos_emb)[0]),
+                dim=-1)
             x = residual + self.concat_linear1(tgt_concat)
         else:
             x = residual + self.dropout(
