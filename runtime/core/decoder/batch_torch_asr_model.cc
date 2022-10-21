@@ -130,7 +130,7 @@ void BatchTorchAsrModel::ForwardEncoder(
   CHECK_EQ(outputs.size(), 5);
   encoder_out_ = outputs[0].toTensor();  // (B, Tmax, dim)
   encoder_lens_ = outputs[1].toTensor(); // (B,)
-  
+
   // Copy topk_scores
   auto topk_scores = outputs[3].toTensor().to(at::kCPU);
   int num_outputs = topk_scores.size(1);
@@ -212,7 +212,9 @@ void BatchTorchAsrModel::AttentionRescoring(
       hyps_pad_sos_eos, hyps_lens_sos,
       r_hyps_pad_sos_eos, ctc_scores_tensor).toTuple()->elements();
   auto rescores = outputs[1].toTensor().to(at::kCPU);
+#ifdef USE_GPU
   c10::cuda::CUDACachingAllocator::emptyCache();
+#endif
   attention_scores.resize(batch_size);
   for (size_t i = 0; i < batch_size; i++) {
     attention_scores[i].resize(beam_size);
