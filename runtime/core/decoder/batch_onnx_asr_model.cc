@@ -390,7 +390,6 @@ void BatchOnnxAsrModel::AttentionRescoring(
       memory_info, r_hyps_pad_sos_eos.data(), r_hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
 
   std::vector<Ort::Value> rescore_inputs;
-  /*
   for (auto name : rescore_in_names_) {
     if (!strcmp(name, "encoder_out")) {
       rescore_inputs.push_back(std::move(encoder_outs_));
@@ -408,13 +407,6 @@ void BatchOnnxAsrModel::AttentionRescoring(
       VLOG(1) << "invalid input name " << name;
     }
   }
-  */
-  rescore_inputs.push_back(std::move(encoder_outs_));
-  rescore_inputs.push_back(std::move(encoder_outs_lens_));
-  rescore_inputs.push_back(std::move(hyps_pad_tensor));
-  rescore_inputs.push_back(std::move(hyps_lens_tensor));
-  rescore_inputs.push_back(std::move(r_hyps_pad_tensor));
-  rescore_inputs.push_back(std::move(ctc_scores_tensor));
 
   Timer timer;
   std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
