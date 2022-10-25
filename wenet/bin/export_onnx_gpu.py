@@ -333,10 +333,14 @@ def export_offline_encoder(model, configs, args, logger, encoder_onnx_path):
 
     # check encoder output
     test(to_numpy([o0, o1, o2, o3, o4]), ort_outs)
+    is_bidirectional_decoder = 1 if configs['decoder'] == 'bitransformer' else 0
     logger.info("export offline onnx encoder succeed!")
     onnx_config = {"beam_size": args.beam_size,
-                   "reverse_weight": args.reverse_weight,
-                   "ctc_weight": args.ctc_weight,
+                   "reverse_weight": configs['model_conf']['reverse_weight'],
+                   "ctc_weight": configs['model_conf']['ctc_weight'],
+                   "sos": configs["output_dim"] - 1,
+                   "eos": configs["output_dim"] - 1,
+                   "is_bidirectional_decoder": is_bidirectional_decoder,
                    "fp16": args.fp16}
     return onnx_config
 
