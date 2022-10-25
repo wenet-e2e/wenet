@@ -81,6 +81,7 @@ class SqueezeformerEncoder(nn.Module):
                               on subsampling module.
             input_dropout_rate (float): Dropout rate of input projection layer.
             pos_enc_layer_type (str): Self attention type.
+            time_reduction_layer_type (str): Conv1d or Conv2d reduction layer.
             do_rel_shift (bool): Whether to do relative shift
                                  operation on rel-attention module.
             cnn_module_kernel (int): Kernel size of CNN module.
