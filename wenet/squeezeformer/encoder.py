@@ -382,7 +382,7 @@ class SqueezeformerEncoder(nn.Module):
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
             cached_att \
-                = new_att_cache[:, :, int(math.ceil(next_cache_start / factor)):, :]
+                = new_att_cache[:, :, math.ceil(next_cache_start / factor):, :]
             cached_cnn = new_cnn_cache.unsqueeze(0)
             cached_att = cached_att.repeat_interleave(repeats=factor, dim=2)
             if i == 0:
