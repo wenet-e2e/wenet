@@ -30,8 +30,9 @@
 
 namespace wenet {
 
-Ort::Env BatchOnnxAsrModel::env_ = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "");
+Ort::Env BatchOnnxAsrModel::env_ = Ort::Env(ORT_LOGGING_LEVEL_VERBOSE, "");
 Ort::SessionOptions BatchOnnxAsrModel::session_options_ = Ort::SessionOptions();
+Ort::RunOptions BatchOnnxAsrModel::run_option_ = Ort::RunOptions();
 
 void BatchOnnxAsrModel::InitEngineThreads(int num_threads) {
   session_options_.SetIntraOpNumThreads(num_threads);
@@ -103,6 +104,47 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
     rescore_onnx_path = model_dir + "/decoder_fp16.onnx";
   }
 
+  // Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(session_options_, 0));
+  // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
+  // 1. Not allocate weights memory through the arena 
+  session_options_.AddConfigEntry("kOrtSessionOptionsUseDeviceAllocatorForInitializers", "1");
+  // 2. Configure the arena to have high enough initial chunk to support most Run() calls. See "initial_chunk_size_bytes"
+  const char* keys[] = {"max_mem", "arena_extend_strategy", "initial_chunk_size_bytes", "max_dead_bytes_per_chunk", "initial_growth_chunk_size_bytes"};
+  const size_t values[] = {0 /*let ort pick default max memory*/, 0, 1024, 0, 256};
+
+  OrtArenaCfg* arena_cfg = nullptr;
+  const auto& api = Ort::GetApi();
+  auto zz = api.CreateArenaCfgV2(keys, values, 5, &arena_cfg);
+  //auto zz = api.CreateArenaCfg(0, 0, 1024, 0, &arena_cfg);
+  VLOG(1) << "CreateArenaCfgV2: " << zz << ", arena_cfg: " << arena_cfg;
+  std::unique_ptr<OrtArenaCfg, decltype(api.ReleaseArenaCfg)> rel_arena_cfg(arena_cfg, api.ReleaseArenaCfg);
+
+  OrtCUDAProviderOptions cuda_options{};
+  
+  cuda_options.device_id = 0;
+  cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
+  cuda_options.gpu_mem_limit = std::numeric_limits<size_t>::max();
+  cuda_options.arena_extend_strategy = 0;
+  cuda_options.do_copy_in_default_stream = true;
+  cuda_options.has_user_compute_stream = 0;
+  cuda_options.user_compute_stream = nullptr;
+  cuda_options.default_memory_arena_cfg = arena_cfg;
+
+  session_options_.AppendExecutionProvider_CUDA(cuda_options);
+  run_option_.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
+
+  /* share memory between sessions
+  //Ort::MemoryInfo* info_cuda = new Ort::MemoryInfo("Cuda", OrtAllocatorType::OrtArenaAllocator, 0, OrtMemTypeDefault);
+  OrtMemoryInfo* info_cuda = nullptr;
+  auto error = api.CreateMemoryInfo("Cpu", OrtAllocatorType::OrtArenaAllocator, 0, OrtMemTypeDefault, &info_cuda);
+  VLOG(1) << "CreateMemoryInfo() error " << error;
+  OrtEnv* env_ptr = (OrtEnv*)(env_);
+  auto err = api.CreateAndRegisterAllocator(env_ptr, info_cuda, arena_cfg);
+  VLOG(1) << "CreateAndRegisterAllocator() error " << err;
+  */
+
+
+  /*
   // 1. Load sessions
   // config for CUDA
   std::string device_id = std::to_string(gpu_id);
@@ -133,10 +175,12 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
   Ort::ThrowOnError(api.SessionOptionsAppendExecutionProvider_CUDA_V2(session_options_, cuda_options));
 
   api.ReleaseCUDAProviderOptions(cuda_options);
+  */
 
   try {
     encoder_session_ = std::make_shared<Ort::Session>(
         env_, encoder_onnx_path.c_str(), session_options_);
+    VLOG(1) << "========================= encoder_session_ done";
     rescore_session_ = std::make_shared<Ort::Session>(
         env_, rescore_onnx_path.c_str(), session_options_);
   } catch (std::exception const& e) {
@@ -257,7 +301,7 @@ void BatchOnnxAsrModel::ForwardEncoder(
 
   timer.Reset();
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
-      Ort::RunOptions{nullptr}, encoder_in_names_.data(), inputs.data(),
+      run_option_, encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
   VLOG(1) << "\tencoder ->Run() takes " << timer.Elapsed() << " ms.";
 
@@ -410,7 +454,7 @@ void BatchOnnxAsrModel::AttentionRescoring(
 
   Timer timer;
   std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
-      Ort::RunOptions(nullptr), rescore_in_names_.data(), rescore_inputs.data(),
+      run_option_, rescore_in_names_.data(), rescore_inputs.data(),
       rescore_inputs.size(), rescore_out_names_.data(),
       rescore_out_names_.size());
   VLOG(1) << "decoder->Run() takes " << timer.Elapsed() << " ms.";

@@ -63,6 +63,7 @@ class BatchOnnxAsrModel : public BatchAsrModel {
   //  One Env must be created before using any other Onnxruntime functionality.
   static Ort::Env env_;  // shared environment across threads.
   static Ort::SessionOptions session_options_;
+  static Ort::RunOptions run_option_;
   std::shared_ptr<Ort::Session> encoder_session_ = nullptr;
   std::shared_ptr<Ort::Session> rescore_session_ = nullptr;
 
