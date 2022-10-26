@@ -232,8 +232,8 @@ class SqueezeformerEncoder(nn.Module):
                     # recover output length for ctc decode
                     xs = torch.repeat_interleave(xs, repeats=2, dim=1)
                     xs = self.time_recover_layer(xs)
-                    xs = recover_tensor \
-                         + xs[:, :recover_tensor.size(1), :].contiguous()
+                    xs = recover_tensor + \
+                         xs[:, :recover_tensor.size(1), :].contiguous()
                     chunk_masks = recover_chunk_masks
                     pos_emb = recover_pos_emb
                     mask_pad = recover_mask_pad
@@ -373,11 +373,12 @@ class SqueezeformerEncoder(nn.Module):
 
             xs, _, new_att_cache, new_cnn_cache = layer(
                 xs, att_mask, pos_emb,
-                att_cache=att_cache[i:i + 1][:, :, ::factor, :]
-                if elayers > 0 and att_cache.size(2) != 0 \
-                    else att_cache[:, :, ::factor, :],
-                cnn_cache=cnn_cache[i] \
-                    if cnn_cache.size(0) > 0 else cnn_cache
+                att_cache=
+                att_cache[i:i + 1][:, :, ::factor, :]
+                if elayers > 0 and att_cache.size(2) != 0
+                else att_cache[:, :, ::factor, :],
+                cnn_cache=
+                cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
             )
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
