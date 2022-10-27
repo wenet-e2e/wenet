@@ -19,7 +19,7 @@
 
 * Feature info: using fbank feature, dither=1.0, cmvn, oneline speed perturb
 * Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 360 epochs
-* Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30
+* Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30, lm_scale 0.7, decoder_scale 0.1, r_decoder_scale 0.7
 * Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
 
 | decoding mode/chunk size  | full  | 16    |
@@ -28,6 +28,8 @@
 | ctc prefix beam search    | 5.17  | 5.81  |
 | attention rescoring       | 4.63  | 5.05  |
 | LM + attention rescoring  | 4.40  | 4.75  |
+| HLG(k2 LM)                | 4.81  | 5.27  |
+| HLG(k2 LM)  + attention rescoring | 4.32  | 4.70  |
 
 ## Unified Conformer Result
 
