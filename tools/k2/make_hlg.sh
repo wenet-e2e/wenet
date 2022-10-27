@@ -7,6 +7,9 @@ lexion_dir=$1
 lm_dir=$2
 tgt_dir=$3
 
+# k2 and icefall updates very fast. Below commits are veryfied in this script.
+# k2 3dc222f981b9fdbc8061b3782c3b385514a2d444, icefall 499ac24ecba64f687ff244c7d66baa5c222ecf0f
+
 # For k2 installation, please refer to https://github.com/k2-fsa/k2/
 python -c "import k2; print(k2.__file__)"
 python -c "import torch; import _k2; print(_k2.__file__)"
