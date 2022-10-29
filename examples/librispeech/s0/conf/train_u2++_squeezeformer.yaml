@@ -16,7 +16,7 @@ encoder_conf:
     cnn_module_kernel: 31
     do_rel_shift: false
     cnn_norm_type: layer_norm
-    adaptive_scale: false
+    adaptive_scale: true
     normalize_before: false
     causal: true
     use_dynamic_chunk: true
