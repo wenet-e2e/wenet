@@ -159,7 +159,7 @@ test other
 ## SqueezeFormer Result (U2++, FFN:2048)
 
 * Encoder info:
-    * SM12, reduce_idx 5, recover_idx 11, conv1d, layer_norm 
+    * SM12, reduce_idx 5, recover_idx 11, conv1d, layer_norm
     * do_rel_shift false, warp_for_time, syncbn
     * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
     * Encoder FLOPs(30s): 28,255,337,984, params: 34,893,704
