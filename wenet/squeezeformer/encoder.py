@@ -19,7 +19,8 @@ import torch
 import torch.nn as nn
 from typing import Tuple, Union, Optional, List
 from wenet.squeezeformer.subsampling \
-    import DepthwiseConv2dSubsampling4, TimeReductionLayer1D, TimeReductionLayer2D
+    import DepthwiseConv2dSubsampling4, TimeReductionLayer1D, \
+    TimeReductionLayer2D, TimeReductionLayerStream
 from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.attention import MultiHeadedAttention
@@ -173,6 +174,12 @@ class SqueezeformerEncoder(nn.Module):
         ])
         if time_reduction_layer_type == 'conv1d':
             time_reduction_layer = TimeReductionLayer1D
+            time_reduction_layer_args = {
+                'channel': encoder_dim,
+                'out_dim': encoder_dim,
+            }
+        elif time_reduction_layer_type == 'stream':
+            time_reduction_layer = TimeReductionLayerStream
             time_reduction_layer_args = {
                 'channel': encoder_dim,
                 'out_dim': encoder_dim,
@@ -342,6 +349,7 @@ class SqueezeformerEncoder(nn.Module):
             List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]] = []
         index = 0
         xs_lens = torch.tensor([xs.size(1)], device=xs.device, dtype=torch.int)
+        xs = self.preln(xs)
         for i, layer in enumerate(self.encoders):
             # NOTE(xcsong): Before layer.forward
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
@@ -387,7 +395,7 @@ class SqueezeformerEncoder(nn.Module):
             cached_att = cached_att.repeat_interleave(repeats=factor, dim=2)
             if i == 0:
                 # record length for the first block as max length
-                max_att_len = cached_att.size(1)
+                max_att_len = cached_att.size(2)
             r_att_cache.append(cached_att[:, :, :max_att_len, :])
             r_cnn_cache.append(cached_cnn)
         # NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),

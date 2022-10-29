@@ -221,3 +221,71 @@ class TimeReductionLayer2D(nn.Module):
         mask = mask[:, ::2, ::2]
         mask_pad = mask_pad[:, :, ::2]
         return xs, xs_lens, mask, mask_pad
+
+class TimeReductionLayerStream(nn.Module):
+    """
+    Squeezeformer Time Reduction procedure. Downsamples the audio by `stride` in the time dimension.
+    Args:
+        channel (int): input dimension of MultiheadAttentionMechanism and PositionwiseFeedForward
+        out_dim (int): Output dimension of the module.
+        kernel_size (int): Conv kernel size for depthwise convolution in convolution module
+        stride (int): Downsampling factor in time dimension.
+    """
+
+    def __init__(self, channel: int, out_dim: int, kernel_size: int = 1, stride: int = 2):
+        super(TimeReductionLayerStream, self).__init__()
+
+        self.channel = channel
+        self.out_dim = out_dim
+        self.kernel_size = kernel_size
+        self.stride = stride
+
+        self.dw_conv = nn.Conv1d(
+            in_channels=channel,
+            out_channels=channel,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=0,
+            groups=channel,
+        )
+
+        self.pw_conv = nn.Conv1d(
+            in_channels=channel, out_channels=out_dim,
+            kernel_size=1, stride=1, padding=0, groups=1,
+        )
+
+        self.init_weights()
+
+    def init_weights(self):
+        dw_max = self.kernel_size ** -0.5
+        pw_max = self.channel ** -0.5
+        torch.nn.init.uniform_(self.dw_conv.weight, -dw_max, dw_max)
+        torch.nn.init.uniform_(self.dw_conv.bias, -dw_max, dw_max)
+        torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
+        torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
+
+    def forward(self, xs, xs_lens: torch.Tensor,
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                ):
+        xs = xs.transpose(1, 2)  # [B, C, T]
+        xs = xs.masked_fill(mask_pad.eq(0), 0.0)
+
+        xs = self.dw_conv(xs)
+        xs = self.pw_conv(xs)
+
+        xs = xs.transpose(1, 2)  # [B, T, C]
+
+        B, T, D = xs.size()
+        mask = mask[:, ::self.stride, ::self.stride]
+        mask_pad = mask_pad[:, :, ::self.stride]
+        L = mask_pad.size(-1)
+        # For JIT exporting, we remove F.pad operator.
+        if L - T < 0:
+            xs = xs[:, :L - T, :].contiguous()
+        else:
+            dummy_pad = torch.zeros(B, L - T, D, device=xs.device)
+            xs = torch.cat([xs, dummy_pad], dim=1)
+
+        xs_lens = torch.div(xs_lens + 1, 2, rounding_mode='trunc')
+        return xs, xs_lens, mask, mask_pad

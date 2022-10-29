@@ -36,10 +36,10 @@
 
 | decoding mode                    | dev clean | dev other | test clean | test other |
 |----------------------------------|-----------|-----------|------------|------------|
-| ctc greedy search                | 2.62      | 6.80      | 2.92       | 6.77       |
-| ctc prefix beam search           | 2.60      | 6.79      | 2.90       | 6.79       |
-| attention decoder                | 3.06      | 6.90      | 3.38       | 6.82       |
-| attention rescoring              | 2.33      | 6.29      | 2.57       | 6.22       |
+| ctc greedy search                | 2.55      | 6.62      | 2.73       | 6.59       |
+| ctc prefix beam search           | 2.53      | 6.60      | 2.72       | 6.52       |
+| attention decoder                | 2.93      | 6.56      | 3.31       | 6.47       |
+| attention rescoring              | 2.19      | 6.06      | 2.45       | 5.85       |
 
 ## Conformer Result
 
@@ -175,15 +175,15 @@ test clean
 
 | decoding mode                  | full | 16   |
 |--------------------------------|------|------|
-| ctc prefix beam search         | 3.81 | 4.59 |
-| attention rescoring            | 3.36 | 3.93 |
+| ctc prefix beam search         | 3.45 | 4.34 |
+| attention rescoring            | 3.07 | 3.71 |
 
 test other
 
 | decoding mode                  | full  | 16    |
 |--------------------------------|-------|-------|
-| ctc prefix beam search         | 9.12  | 11.17 |
-| attention rescoring            | 8.43  | 10.21 |
+| ctc prefix beam search         | 8.29  | 10.60 |
+| attention rescoring            | 7.58  | 9.60  |
 
 ## Conformer U2 Result
 
