@@ -159,15 +159,16 @@ test other
 ## SqueezeFormer Result (U2++, FFN:2048)
 
 * Encoder info:
-    * SM12, reduce_idx 5, recover_idx 11, conv1d, layer_norm, do_rel_shift false
+    * SM12, reduce_idx 5, recover_idx 11, conv1d, layer_norm 
+    * do_rel_shift false, warp_for_time, syncbn
     * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
-    * Encoder FLOPs(30s): 28,230,473,984, params: 34,827,400
+    * Encoder FLOPs(30s): 28,255,337,984, params: 34,893,704
 * Feature info:
     * using fbank feature, cmvn, dither, online speed perturb
 * Training info:
     * train_squeezeformer.yaml, kernel size 31
-    * batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
-    * adamw, lr 1e-3, NoamHold, warmup 0.1, hold 0.4, lr_decay 1.0
+    * batch size 12, 8 gpu, acc_grad 2, 120 epochs, dither 1.0
+    * adamw, lr 8e-4, NoamHold, warmup 0.2, hold 0.3, lr_decay 1.0
 * Decoding info:
     * ctc_weight 0.3, reverse weight 0.5, average_num 30
 
