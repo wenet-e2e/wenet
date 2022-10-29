@@ -222,17 +222,22 @@ class TimeReductionLayer2D(nn.Module):
         mask_pad = mask_pad[:, :, ::2]
         return xs, xs_lens, mask, mask_pad
 
+
 class TimeReductionLayerStream(nn.Module):
     """
-    Squeezeformer Time Reduction procedure. Downsamples the audio by `stride` in the time dimension.
+    Squeezeformer Time Reduction procedure.
+    Downsamples the audio by `stride` in the time dimension.
     Args:
-        channel (int): input dimension of MultiheadAttentionMechanism and PositionwiseFeedForward
+        channel (int): input dimension of
+            MultiheadAttentionMechanism and PositionwiseFeedForward
         out_dim (int): Output dimension of the module.
-        kernel_size (int): Conv kernel size for depthwise convolution in convolution module
+        kernel_size (int): Conv kernel size for
+            depthwise convolution in convolution module
         stride (int): Downsampling factor in time dimension.
     """
 
-    def __init__(self, channel: int, out_dim: int, kernel_size: int = 1, stride: int = 2):
+    def __init__(self, channel: int, out_dim: int,
+                 kernel_size: int = 1, stride: int = 2):
         super(TimeReductionLayerStream, self).__init__()
 
         self.channel = channel
