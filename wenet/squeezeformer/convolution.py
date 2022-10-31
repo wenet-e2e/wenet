@@ -46,14 +46,11 @@ class ConvolutionModule(nn.Module):
         self.bias = bias
         self.channels = channels
         self.kernel_size = kernel_size
-        self.ada_scale = None
-        self.ada_bias = None
         self.adaptive_scale = adaptive_scale
-        if self.adaptive_scale:
-            self.ada_scale = torch.nn.Parameter(
-                torch.ones([1, 1, channels]), requires_grad=True)
-            self.ada_bias = torch.nn.Parameter(
-                torch.zeros([1, 1, channels]), requires_grad=True)
+        self.ada_scale = torch.nn.Parameter(
+            torch.ones([1, 1, channels]), requires_grad=adaptive_scale)
+        self.ada_bias = torch.nn.Parameter(
+            torch.zeros([1, 1, channels]), requires_grad=adaptive_scale)
 
         self.pointwise_conv1 = nn.Conv1d(
             channels,

@@ -51,11 +51,10 @@ class PositionwiseFeedForward(torch.nn.Module):
         self.ada_scale = None
         self.ada_bias = None
         self.adaptive_scale = adaptive_scale
-        if self.adaptive_scale:
-            self.ada_scale = torch.nn.Parameter(
-                torch.ones([1, 1, idim]), requires_grad=True)
-            self.ada_bias = torch.nn.Parameter(
-                torch.zeros([1, 1, idim]), requires_grad=True)
+        self.ada_scale = torch.nn.Parameter(
+            torch.ones([1, 1, idim]), requires_grad=adaptive_scale)
+        self.ada_bias = torch.nn.Parameter(
+            torch.zeros([1, 1, idim]), requires_grad=adaptive_scale)
         if init_weights:
             self.init_weights()
 
