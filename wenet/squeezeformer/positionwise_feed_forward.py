@@ -49,11 +49,10 @@ class PositionwiseFeedForward(torch.nn.Module):
         self.dropout = torch.nn.Dropout(dropout_rate)
         self.w_2 = torch.nn.Linear(hidden_units, idim)
         self.adaptive_scale = adaptive_scale
-        if self.adaptive_scale:
-            self.ada_scale = torch.nn.Parameter(
-                torch.ones([1, 1, idim]), requires_grad=True)
-            self.ada_bias = torch.nn.Parameter(
-                torch.zeros([1, 1, idim]), requires_grad=True)
+        self.ada_scale = torch.nn.Parameter(
+            torch.ones([1, 1, idim]), requires_grad=adaptive_scale)
+        self.ada_bias = torch.nn.Parameter(
+            torch.zeros([1, 1, idim]), requires_grad=adaptive_scale)
         if init_weights:
             self.init_weights()
 
