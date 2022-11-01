@@ -923,127 +923,6 @@ class X3CTC(torch.nn.Module):
         return out
 
 
-class X3Convolution3D(torch.nn.Module):
-    """Refactor wenet/transformer/convolution.py::ConvolutionModule
-
-    NOTE(xcsong): Only suport use_layer_norm == False
-    """
-    def __init__(self, module):
-        super().__init__()
-        # Unchanged submodules and attributes
-        original = copy.deepcopy(module)
-        self.lorder = module.lorder
-        self.use_layer_norm = False
-        self.activation = module.activation
-        channels = module.pointwise_conv1.weight.size(1)
-        self.channels = channels
-        kernel_size = module.depthwise_conv.weight.size(2)
-        assert module.use_layer_norm is False
-
-        # 1. Modify self.pointwise_conv1
-        self.pointwise_conv1 = X3Linear(module.pointwise_conv1, True)
-
-        # 2. Modify self.depthwise_conv
-        self.depthwise_conv = torch.nn.Conv2d(
-            channels, channels, (1, kernel_size),
-            stride=1, groups=channels)
-        self.depthwise_conv.weight = torch.nn.Parameter(
-            module.depthwise_conv.weight.unsqueeze(-2))
-        self.depthwise_conv.bias = torch.nn.Parameter(
-            module.depthwise_conv.bias)
-
-        # 3. Modify self.norm
-        self.norm = torch.nn.BatchNorm2d(channels)
-        self.norm.training = False
-        self.norm.num_features = module.norm.num_features
-        self.norm.eps = module.norm.eps
-        self.norm.momentum = module.norm.momentum
-        self.norm.weight = torch.nn.Parameter(module.norm.weight)
-        self.norm.bias = torch.nn.Parameter(module.norm.bias)
-        self.norm.running_mean = module.norm.running_mean
-        self.norm.running_var = module.norm.running_var
-
-        # 4. Modify self.pointwise_conv2
-        self.pointwise_conv2 = X3Linear(module.pointwise_conv2, True)
-
-        # NOTE(xcsong): delete me.
-        self.identity_conv = X3Identity(channels)
-
-    def forward(
-        self, x: torch.Tensor, mask: torch.Tensor, cache: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Concat cache
-        x = x.transpose(1, 2).unsqueeze(2)
-        # NOTE(xcsong): delete me
-        x = torch.cat((self.identity_conv(cache), self.identity_conv(x)), dim=3)
-        new_cache = x[:, :, :, -self.lorder:]
-
-        # GLU mechanism
-        x = self.pointwise_conv1(x)  # (batch, 2*channel, 1, dim)
-        x = torch.nn.functional.glu(x, dim=1)  # (b, channel, 1, dim)
-
-        # Depthwise Conv
-        x = self.depthwise_conv(x)
-        x = self.activation(self.norm(x))
-        x = self.pointwise_conv2(x)
-        x = x.squeeze(2).transpose(1, 2)
-        return x, new_cache
-
-
-class X3ConformerEncoder3D(torch.nn.Module):
-    """Refactor wenet/transformer/encoder.py::ConformerEncoder
-    """
-    def __init__(self, module, chunk_size, left_chunks):
-        super().__init__()
-        self.embed = module.embed
-        self.global_cmvn = module.global_cmvn
-        self.d_model = module.output_size()
-        self._output_size = module.output_size()
-        self.encoders = module.encoders
-        self.after_norm = module.after_norm
-        self.h = module.encoders[0].self_attn.h
-        self.chunk_size = chunk_size
-        self.left_chunks = left_chunks
-
-        for i in range(len(self.encoders)):
-            self.encoders[i].conv_module = \
-                X3Convolution3D(module.encoders[i].conv_module)
-
-    def forward(
-        self, xs: torch.Tensor, att_cache: torch.Tensor,
-        cnn_cache: torch.Tensor, att_mask: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        xs = xs.squeeze(1)  # (B, 1, T, D)  => (B, T, D)
-        # tmp_masks is just for interface compatibility
-        tmp_masks = torch.ones(1, 1,
-                               self.chunk_size,
-                               device=xs.device,
-                               dtype=torch.bool)
-        xs = self.global_cmvn(xs)
-        # NOTE(xcsong): Before embed, shape(xs) is (b=1, time, mel-dim)
-        xs, _, _ = self.embed(xs, tmp_masks, 0)
-        # NOTE(xcsong): After  embed, shape(xs) is (b=1, chunk_size, hidden-dim)
-        pos_emb = torch.zeros(1, self.chunk_size, self.d_model).to(xs.device)
-        att_caches = torch.split(att_cache, self.h, dim=1)
-        cnn_caches = torch.split(cnn_cache, 1, dim=2)
-        r_att_cache = []
-        r_cnn_cache = []
-        for i, layer in enumerate(self.encoders):
-            xs, _, new_att_cache, new_cnn_cache = layer(
-                xs, att_mask, pos_emb,
-                att_cache=att_caches[i],
-                cnn_cache=cnn_caches[i]
-            )
-            r_att_cache.append(new_att_cache[:, :, self.chunk_size:, :])
-            r_cnn_cache.append(new_cnn_cache)
-        xs = self.after_norm(xs)
-
-        r_att_cache = torch.cat(r_att_cache, dim=1)
-        r_cnn_cache = torch.cat(r_cnn_cache, dim=2)
-
-        return (xs, r_att_cache, r_cnn_cache)
-
-
 def export_encoder(asr_model, args):
     logger.info("Stage-1: export encoder")
     decode_window, mel_dim = args.decoding_window, args.feature_size
@@ -1084,7 +963,7 @@ def export_encoder(asr_model, args):
     attributes = {}
     attributes['input_name'] = "chunk;att_cache;cnn_cache;att_mask"
     attributes['output_name'] = "output;r_att_cache;r_cnn_cache"
-    attributes['input_type'] = "feature_map;feature_map;feature_map;feature_map"
+    attributes['input_type'] = "featuremap;featuremap;featuremap;featuremap"
     attributes['norm_type'] = \
         "no_preprocess;no_preprocess;no_preprocess;no_preprocess"
     attributes['input_layout_train'] = "NCHW;NCHW;NCHW;NCHW"
@@ -1181,7 +1060,7 @@ def export_ctc(asr_model, args):
     # NOTE(xcsong): Below attributes will be used in
     #   onnx2horizonbin.py::generate_config()
     attributes = {}
-    attributes['input_name'], attributes['input_type'] = "hidden", "feature_map"
+    attributes['input_name'], attributes['input_type'] = "hidden", "featuremap"
     attributes['norm_type'] = "no_preprocess"
     attributes['input_layout_train'] = "NCHW"
     attributes['input_layout_rt'] = "NCHW"

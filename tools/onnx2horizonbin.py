@@ -12,21 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
+import copy
 import logging
 import os
 import sys
+import random
+import torch
 import yaml
+import numpy as np
 
-from wenet.bin.export_onnx_cpu import get_args
-from wenet.bin.export_onnx_bpu import export_encoder, export_ctc
+from torch.utils.data import DataLoader
+
+from wenet.utils.common import remove_duplicates_and_blank
+from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.init_model import init_model
+from wenet.bin.export_onnx_cpu import to_numpy
+from wenet.bin.export_onnx_bpu import export_encoder, export_ctc
 
 
 try:
     import hbdk  # noqa: F401
     import horizon_nn  # noqa: F401
-    import horizon_tc_ui  # noqa: F401
+    from horizon_tc_ui import HB_ONNXRuntime
 except ImportError:
     print('Please install hbdk,horizon_nn,horizon_tc_ui !')
     sys.exit(1)
@@ -36,8 +46,211 @@ logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
 
 
-def make_calibration_data(enc, args):
-    pass
+def save_data(tensor, dirs, prefix):
+    if tensor.requires_grad:
+        data = tensor.detach().numpy().astype(np.float32)
+    else:
+        data = tensor.numpy().astype(np.float32)
+    os.makedirs(dirs, exist_ok=True)
+    data.tofile(dirs + "/" + prefix + ".bin")
+
+
+def make_calibration_data(enc, args, conf):
+    conf['shuffle'] = True
+    logger.info(conf)
+    dataset = Dataset(
+        "shard", args.cali_datalist, args.symbol_table, conf,
+        bpe_model=args.bpe_model, non_lang_syms=None, partition=False)
+    dataloader = DataLoader(dataset, batch_size=None, num_workers=0)
+
+    subsampling = enc.embed.subsampling_rate
+    context = enc.embed.right_context + 1  # Add current frame
+    stride = subsampling * args.chunk_size
+    decoding_window = (args.chunk_size - 1) * subsampling + context
+    required_cache_size = args.chunk_size * args.num_decoding_left_chunks
+    num_layers = len(enc.encoders)
+    head, d_k = enc.encoders[0].self_attn.h, enc.encoders[0].self_attn.d_k
+    dim, lorder = enc._output_size, enc.encoders[0].conv_module.lorder
+    chunk_size, left_chunks = args.chunk_size, args.num_decoding_left_chunks
+    cal_data_dir = os.path.join(args.output_dir, 'cal_data_dir')
+    for batch_idx, batch in enumerate(dataloader):
+        if batch_idx >= args.max_samples:
+            break
+        if batch_idx % 100 == 0:
+            logger.info("processed {} samples.".format(batch_idx))
+        keys, feats, target, feats_lengths, target_lengths = batch
+        num_frames, prefix = feats.size(1), keys[0]
+        if args.attn_run_on_bpu:
+            att_cache = torch.zeros(
+                [1, head * d_k * 2, num_layers, required_cache_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask = torch.ones(
+                [1, head, required_cache_size + chunk_size, chunk_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask[:, :, :required_cache_size, :] = 0
+        else:
+            att_cache = torch.zeros(
+                [1, head * num_layers, d_k * 2, required_cache_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask = torch.ones(
+                [1, head, chunk_size, required_cache_size + chunk_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask[:, :, :, :required_cache_size] = 0
+        cnn_cache = torch.zeros(
+            [1, dim, num_layers, lorder],
+            dtype=feats.dtype, device=feats.device)
+
+        # Feed forward overlap input step by step
+        random_high = (num_frames - context) // stride
+        num_rand = random.randint(0, random_high)
+        for i, cur in enumerate(range(0, num_frames - context + 1, stride)):
+            if args.attn_run_on_bpu:
+                att_mask[:, :, -(chunk_size * (i + 1)):, :] = 1
+            else:
+                att_mask[:, :, :, -(chunk_size * (i + 1)):] = 1
+            end = min(cur + decoding_window, num_frames)
+            chunk = feats[:, cur:end, :].unsqueeze(0)  # (1, 1, window, mel)
+            if end == num_frames and end - cur < decoding_window:  # last chunk
+                pad_len = decoding_window - (end - cur)  # 67 - (35)
+                pad_chunk = torch.zeros((1, 1, pad_len, chunk.size(-1)),
+                                        device=feats.device)
+                chunk = torch.cat((chunk, pad_chunk),
+                                  dim=2)  # (1, 1, win, mel)
+                if pad_len >= subsampling:
+                    if args.attn_run_on_bpu:
+                        att_mask[:, :, -(pad_len // subsampling):, :] = 0
+                    else:
+                        att_mask[:, :, :, -(pad_len // subsampling):] = 0
+            if i == num_rand:
+                save_data(chunk, "{}/chunk".format(cal_data_dir),
+                          prefix + "." + str(i))
+                save_data(att_cache, "{}/att_cache".format(cal_data_dir),
+                          prefix + "." + str(i))
+                save_data(cnn_cache, "{}/cnn_cache".format(cal_data_dir),
+                          prefix + "." + str(i))
+                save_data(att_mask, "{}/att_mask".format(cal_data_dir),
+                          prefix + "." + str(i))
+            (y, att_cache, cnn_cache) = enc.forward(
+                xs=chunk, att_cache=att_cache,
+                cnn_cache=cnn_cache, att_mask=att_mask)
+            # NOTE(xcsong): It's fast to calibrate ctc.onnx,
+            #   so it's okay to save all chunks
+            save_data(y, "{}/hidden".format(cal_data_dir),
+                      prefix + "." + str(i))
+
+
+def check_wer(enc, ctc, args, conf):
+    conf['shuffle'] = False
+    dataset = Dataset(
+        "shard", args.wer_datalist, args.symbol_table, conf,
+        bpe_model=args.bpe_model, non_lang_syms=None, partition=False)
+    dataloader = DataLoader(dataset, batch_size=None, num_workers=0)
+    char_dict = {v: k for k, v in args.symbol_table.items()}
+    eos = len(char_dict) - 1
+
+    enc_session = HB_ONNXRuntime(
+        model_file=args.output_dir +
+        "/hb_makertbin_output_encoder/encoder_quantized_model.onnx")
+    ctc_session = HB_ONNXRuntime(
+        model_file=args.output_dir +
+        "/hb_makertbin_output_ctc/ctc_quantized_model.onnx")
+    torch_file = open(args.output_dir + "/torch_text", 'w', encoding="utf-8")
+    onnx_file = open(args.output_dir + "/onnx_text", 'w', encoding="utf-8")
+    subsampling = enc.embed.subsampling_rate
+    context = enc.embed.right_context + 1  # Add current frame
+    stride = subsampling * args.chunk_size
+    decoding_window = (args.chunk_size - 1) * subsampling + context
+    required_cache_size = args.chunk_size * args.num_decoding_left_chunks
+    num_layers = len(enc.encoders)
+    head, d_k = enc.encoders[0].self_attn.h, enc.encoders[0].self_attn.d_k
+    dim, lorder = enc._output_size, enc.encoders[0].conv_module.lorder
+    chunk_size, left_chunks = args.chunk_size, args.num_decoding_left_chunks
+    for batch_idx, batch in enumerate(dataloader):
+        keys, feats, target, feats_lengths, target_lengths = batch
+        num_frames, prefix = feats.size(1), keys[0]
+        if args.attn_run_on_bpu:
+            att_cache = torch.zeros(
+                [1, head * d_k * 2, num_layers, required_cache_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask = torch.ones(
+                [1, head, required_cache_size + chunk_size, chunk_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask[:, :, :required_cache_size, :] = 0
+        else:
+            att_cache = torch.zeros(
+                [1, head * num_layers, d_k * 2, required_cache_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask = torch.ones(
+                [1, head, chunk_size, required_cache_size + chunk_size],
+                dtype=feats.dtype, device=feats.device)
+            att_mask[:, :, :, :required_cache_size] = 0
+        cnn_cache = torch.zeros(
+            [1, dim, num_layers, lorder],
+            dtype=feats.dtype, device=feats.device)
+        onnx_att_cache = to_numpy(att_cache)
+        onnx_cnn_cache = to_numpy(cnn_cache)
+
+        # Feed forward overlap input step by step
+        torch_out, onnx_out = [], []
+        for i, cur in enumerate(range(0, num_frames - context + 1, stride)):
+            if args.attn_run_on_bpu:
+                att_mask[:, :, -(chunk_size * (i + 1)):, :] = 1
+            else:
+                att_mask[:, :, :, -(chunk_size * (i + 1)):] = 1
+            end = min(cur + decoding_window, num_frames)
+            chunk = feats[:, cur:end, :].unsqueeze(0)  # (1, 1, window, mel)
+            if end == num_frames and end - cur < decoding_window:  # last chunk
+                pad_len = decoding_window - (end - cur)  # 67 - (35)
+                pad_chunk = torch.zeros((1, 1, pad_len, chunk.size(-1)),
+                                        device=feats.device)
+                chunk = torch.cat((chunk, pad_chunk),
+                                  dim=2)  # (1, 1, win, mel)
+                if pad_len >= subsampling:
+                    if args.attn_run_on_bpu:
+                        att_mask[:, :, -(pad_len // subsampling):, :] = 0
+                    else:
+                        att_mask[:, :, :, -(pad_len // subsampling):] = 0
+            # Torch model
+            (y, att_cache, cnn_cache) = enc.forward(
+                xs=chunk, att_cache=att_cache,
+                cnn_cache=cnn_cache, att_mask=att_mask)
+            torch_out.append(ctc.forward(y).transpose(1, 3).squeeze(2))
+            # Quantized onnx model
+            ort_inputs = {
+                'chunk': to_numpy(chunk), 'att_cache': onnx_att_cache,
+                'cnn_cache': onnx_cnn_cache, 'att_mask': to_numpy(att_mask)}
+            ort_outs = enc_session.run_feature(
+                enc_session.output_names, ort_inputs, input_offset=0)
+            onnx_att_cache, onnx_cnn_cache = ort_outs[1], ort_outs[2]
+            onnx_y = ctc_session.run_feature(
+                ctc_session.output_names, {'hidden': ort_outs[0]}, input_offset=0)
+            onnx_out.append(torch.from_numpy(
+                np.squeeze(onnx_y[0].transpose(0, 3, 2, 1), axis=2)))
+
+        def post_process(list_out, file_obj, keys):
+            probs = torch.cat(list_out, dim=1)
+            maxlen = probs.size(1)
+            topk_prob, topk_index = probs.topk(1, dim=2)  # (B, maxlen, 1)
+            topk_index = topk_index.view(1, maxlen)  # (B, maxlen)
+            hyps = [hyp.tolist() for hyp in topk_index]
+            scores = topk_prob.max(1)
+            hyps = [remove_duplicates_and_blank(hyp) for hyp in hyps]
+            for i, key in enumerate(keys):
+                content = ''
+                for w in hyps[i]:
+                    if w == eos:
+                        break
+                    content += char_dict[w]
+                file_obj.write('{} {}\n'.format(key, content))
+            return key, content
+
+        if len(torch_out) > 0 and len(onnx_out) > 0:
+            key, content = post_process(torch_out, torch_file, keys)
+            logger.info('torch: {} {}'.format(key, content))
+            key, content = post_process(onnx_out, onnx_file, keys)
+            logger.info('onnx : {} {}'.format(key, content))
+    torch_file.close()
+    onnx_file.close()
 
 
 def generate_config(enc_session, ctc_session, args):
@@ -67,7 +280,7 @@ input_parameters:
   # 原始浮点模型的输入数据尺寸
   input_shape: '{}'
   # 网络实际执行时，输入给网络的batch_size  默认值为1
-  input_batch: 1
+  # input_batch: 1
   # 在模型中添加的输入数据预处理方法
   norm_type: '{}'
   # 预处理方法的图像减去的均值; 如果是通道均值，value之间必须用空格分隔
@@ -87,7 +300,7 @@ calibration_parameters:
   # 开启图片校准样本自动处理（skimage read resize到输入节点尺寸）
   preprocess_on: False
   # 校准使用的算法类型
-  calibration_type: 'default'
+  calibration_type: '{}'
   # max 校准方式的参数
   max_percentile: 1.0
   # 强制指定OP在CPU上运行
@@ -123,23 +336,52 @@ compiler_parameters:
         enc_dic['input_name'], enc_dic['input_type'],
         enc_dic['input_layout_train'], enc_dic['input_shape'],
         enc_dic['norm_type'], enc_dic['input_type'], enc_dic['input_layout_rt'],
-        enc_cal_data, "", "")
+        enc_cal_data, "max", "", "")
     ctc_config = template.format(
         ctc_onnx_path, "ctc", ctc_log_path,
         ctc_dic['input_name'], ctc_dic['input_type'],
         ctc_dic['input_layout_train'], ctc_dic['input_shape'],
         ctc_dic['norm_type'], ctc_dic['input_type'], ctc_dic['input_layout_rt'],
-        ctc_cal_data, "", "")
+        ctc_cal_data, "default", "", "")
     with open(output_dir + "/config_encoder.yaml", "w") as enc_yaml:
         enc_yaml.write(enc_config)
     with open(output_dir + "/config_ctc.yaml", "w") as ctc_yaml:
         ctc_yaml.write(ctc_config)
 
 
+def get_args():
+    parser = argparse.ArgumentParser(description='convert onnx to horizon .bin')
+    parser.add_argument('--config', required=True, help='config file')
+    parser.add_argument('--checkpoint', required=True, help='checkpoint model')
+    parser.add_argument('--output_dir', required=True, help='output directory')
+    parser.add_argument('--chunk_size', required=True,
+                        type=int, help='decoding chunk size')
+    parser.add_argument('--num_decoding_left_chunks', required=True,
+                        type=int, help='cache chunks')
+    parser.add_argument('--reverse_weight', default=0.5,
+                        type=float, help='reverse_weight in attention_rescoing')
+    parser.add_argument('--dict', type=str, required=True, help='dict file')
+    parser.add_argument('--max_samples', type=int, required=True,
+                        help='maximum samples')
+    parser.add_argument('--cali_datalist', type=str, default=None,
+                        help='make calibration data')
+    parser.add_argument('--wer_datalist', type=str, default=None,
+                        help='check wer')
+    parser.add_argument('--wer_text', type=str, default=None,
+                        help='check wer')
+    parser.add_argument('--bpe_model', default=None, type=str,
+                        help='bpe model for english part')
+    parser.add_argument('--ln_run_on_bpu', action='store_true',
+                        help='layernorm running on bpu')
+    parser.add_argument('--attn_run_on_bpu', action='store_true',
+                        help='attention(exclude softmax) running on bpu')
+    return parser
+
+
 if __name__ == '__main__':
-    args = get_args()
-    args.ln_run_on_bpu = True
-    args.attn_run_on_bpu = True
+    random.seed(777)
+    parser = get_args()
+    args = parser.parse_args()
     # NOTE(xcsong): X3 BPU only support static shapes
     assert args.chunk_size > 0
     assert args.num_decoding_left_chunks > 0
@@ -147,20 +389,74 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     with open(args.config, 'r') as fin:
-        configs = yaml.load(fin, Loader=yaml.FullLoader)
+        conf = yaml.load(fin, Loader=yaml.FullLoader)
 
-    model = init_model(configs)
+    model = init_model(conf)
     load_checkpoint(model, args.checkpoint)
     model.eval()
 
-    args.feature_size = configs['input_dim']
+    args.feature_size = conf['input_dim']
     args.output_size = model.encoder.output_size()
     args.decoding_window = (args.chunk_size - 1) * \
         model.encoder.embed.subsampling_rate + \
         model.encoder.embed.right_context + 1
 
+    logger.info("Export onnx")
     enc, enc_session = export_encoder(model, args)
     ctc, ctc_session = export_ctc(model, args)
 
+    logger.info("Generate config")
+    symbol_table = read_symbol_table(args.dict)
+    args.symbol_table = symbol_table
     generate_config(enc_session, ctc_session, args)
-    make_calibration_data(enc, args)
+    conf = copy.deepcopy(conf['dataset_conf'])
+    conf['filter_conf']['max_length'] = 102400
+    conf['filter_conf']['min_length'] = 0
+    conf['filter_conf']['token_max_length'] = 102400
+    conf['filter_conf']['token_min_length'] = 0
+    conf['filter_conf']['max_output_input_ratio'] = 102400
+    conf['filter_conf']['min_output_input_ratio'] = 0
+    conf['speed_perturb'] = False
+    conf['spec_aug'] = False
+    conf['spec_sub'] = False
+    conf['spec_trim'] = False
+    conf['shuffle'] = False
+    conf['sort'] = False
+    if 'fbank_conf' in conf:
+        conf['fbank_conf']['dither'] = 0.0
+    elif 'mfcc_conf' in conf:
+        conf['mfcc_conf']['dither'] = 0.0
+    conf['batch_conf']['batch_type'] = "static"
+    conf['batch_conf']['batch_size'] = 1
+
+    if args.cali_datalist is not None:
+        logger.info("Make calibration data")
+        make_calibration_data(enc, args, conf)
+
+        logger.info("Make encoder.bin")
+        os.system(
+            "hb_mapper makertbin --model-type \"onnx\" --config \"{}\"".format(
+                args.output_dir + "/config_encoder.yaml")
+        )
+        logger.info("Make ctc.bin")
+        os.system(
+            "hb_mapper makertbin --model-type \"onnx\" --config \"{}\"".format(
+                args.output_dir + "/config_ctc.yaml")
+        )
+
+    if args.wer_datalist is not None:
+        logger.info("Check wer between torch model and quantized onnx")
+        assert args.wer_text is not None
+        check_wer(enc, ctc, args, conf)
+        os.system(
+            "python3 tools/compute-wer.py --char=1 --v=1 {} {} > {}".format(
+                args.wer_text, args.output_dir + "/torch_text",
+                args.output_dir + "/torch_wer")
+        )
+        os.system(
+            "python3 tools/compute-wer.py --char=1 --v=1 {} {} > {}".format(
+                args.wer_text, args.output_dir + "/onnx_text",
+                args.output_dir + "/onnx_wer")
+        )
+        os.system("tail {} {}".format(
+            args.output_dir + "/torch_wer", args.output_dir + "/onnx_wer"))
