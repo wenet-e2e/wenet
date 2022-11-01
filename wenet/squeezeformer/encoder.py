@@ -17,9 +17,10 @@
 
 import torch
 import torch.nn as nn
-from typing import Tuple
+from typing import Tuple, Union, Optional, List
 from wenet.squeezeformer.subsampling \
-    import DepthwiseConv2dSubsampling4, TimeReductionLayer1D, TimeReductionLayer2D
+    import DepthwiseConv2dSubsampling4, TimeReductionLayer1D, \
+    TimeReductionLayer2D, TimeReductionLayerStream
 from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.attention import MultiHeadedAttention
@@ -29,6 +30,7 @@ from wenet.squeezeformer.positionwise_feed_forward \
 from wenet.squeezeformer.convolution import ConvolutionModule
 from wenet.utils.mask import make_pad_mask, add_optional_chunk_mask
 from wenet.utils.common import get_activation
+import math
 
 
 class SqueezeformerEncoder(nn.Module):
@@ -39,8 +41,8 @@ class SqueezeformerEncoder(nn.Module):
             output_size: int = 256,
             attention_heads: int = 4,
             num_blocks: int = 12,
-            reduce_idx: int = 5,
-            recover_idx: int = 11,
+            reduce_idx: Optional[Union[int, List[int]]] = 5,
+            recover_idx: Optional[Union[int, List[int]]] = 11,
             feed_forward_expansion_factor: int = 4,
             dw_stride: bool = False,
             input_dropout_rate: float = 0.1,
@@ -71,8 +73,10 @@ class SqueezeformerEncoder(nn.Module):
             output_size (int): The output dimension of final projection layer.
             attention_heads (int): Num of attention head in attention module.
             num_blocks (int): Num of encoder layers.
-            reduce_idx (int): reduce layer index, from 40ms to 80ms per frame.
-            recover_idx (int): recover layer index, from 80ms to 40ms per frame.
+            reduce_idx Optional[Union[int, List[int]]]:
+                reduce layer index, from 40ms to 80ms per frame.
+            recover_idx Optional[Union[int, List[int]]]:
+                recover layer index, from 80ms to 40ms per frame.
             feed_forward_expansion_factor (int): Enlarge coefficient of FFN.
             dw_stride (bool): Whether do depthwise convolution
                               on subsampling module.
@@ -91,9 +95,22 @@ class SqueezeformerEncoder(nn.Module):
         """
         super(SqueezeformerEncoder, self).__init__()
         self.global_cmvn = global_cmvn
-        self.reduce_idx = reduce_idx
-        self.recover_idx = recover_idx
+        self.reduce_idx: Optional[Union[int, List[int]]] = [reduce_idx] \
+            if type(reduce_idx) == int else reduce_idx
+        self.recover_idx: Optional[Union[int, List[int]]] = [recover_idx] \
+            if type(recover_idx) == int else recover_idx
+        self.check_ascending_list()
+        if reduce_idx is None:
+            self.time_reduce = None
+        else:
+            if recover_idx is None:
+                self.time_reduce = 'normal'  # no recovery at the end
+            else:
+                self.time_reduce = 'recover'  # recovery at the end
+                assert len(self.reduce_idx) == len(self.recover_idx)
+            self.reduce_stride = 2
         self._output_size = output_size
+        self.normalize_before = normalize_before
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
@@ -138,21 +155,12 @@ class SqueezeformerEncoder(nn.Module):
         self.embed = DepthwiseConv2dSubsampling4(
             1, encoder_dim,
             RelPositionalEncoding(encoder_dim, dropout_rate=0.1),
-            dw_stride
+            dw_stride,
+            input_size,
+            input_dropout_rate,
+            init_weights
         )
-        self.input_proj = nn.Sequential(
-            nn.Linear(
-                encoder_dim * (((input_size - 1) // 2 - 1) // 2), encoder_dim),
-            nn.Dropout(p=input_dropout_rate),
-        )
-        if init_weights:
-            linear_max = (encoder_dim * input_size / 4) ** -0.5
-            torch.nn.init.uniform_(
-                self.input_proj.state_dict()['0.weight'],
-                -linear_max, linear_max)
-            torch.nn.init.uniform_(
-                self.input_proj.state_dict()['0.bias'],
-                -linear_max, linear_max)
+
         self.preln = nn.LayerNorm(encoder_dim)
         self.encoders = torch.nn.ModuleList([SqueezeformerEncoderLayer(
             encoder_dim,
@@ -167,15 +175,20 @@ class SqueezeformerEncoder(nn.Module):
         if time_reduction_layer_type == 'conv1d':
             time_reduction_layer = TimeReductionLayer1D
             time_reduction_layer_args = {
-                'ichannel': encoder_dim,
-                'ochannel': encoder_dim,
+                'channel': encoder_dim,
+                'out_dim': encoder_dim,
+            }
+        elif time_reduction_layer_type == 'stream':
+            time_reduction_layer = TimeReductionLayerStream
+            time_reduction_layer_args = {
+                'channel': encoder_dim,
+                'out_dim': encoder_dim,
             }
         else:
             time_reduction_layer = TimeReductionLayer2D
             time_reduction_layer_args = {'encoder_dim': encoder_dim}
 
-        self.time_reduction_layer = \
-            time_reduction_layer(**time_reduction_layer_args)
+        self.time_reduction_layer = time_reduction_layer(**time_reduction_layer_args)
         self.time_recover_layer = nn.Linear(encoder_dim, encoder_dim)
         self.final_proj = None
         if output_size != encoder_dim:
@@ -204,50 +217,70 @@ class SqueezeformerEncoder(nn.Module):
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
         xs_lens = chunk_masks.squeeze(1).sum(1)
-        xs = self.input_proj(xs)
         xs = self.preln(xs)
-        recover_tensor = torch.tensor(0.)
-        recover_chunk_masks = torch.tensor(0.)
-        recover_pos_emb = torch.tensor(0.)
-        recover_mask_pad = torch.tensor(0.)
-        for idx, layer in enumerate(self.encoders):
-            if idx == self.reduce_idx:
-                recover_tensor = xs
-                recover_chunk_masks = chunk_masks
-                recover_pos_emb = pos_emb
-                recover_mask_pad = mask_pad
-                xs, xs_lens, chunk_masks, mask_pad = \
-                    self.time_reduction_layer(xs, xs_lens, chunk_masks, mask_pad)
-                pos_emb = pos_emb[:, :xs.size(1), :]
+        recover_activations: \
+            List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]] = []
+        index = 0
+        for i, layer in enumerate(self.encoders):
+            if self.reduce_idx is not None:
+                if self.time_reduce is not None and i in self.reduce_idx:
+                    recover_activations.append((xs, chunk_masks, pos_emb, mask_pad))
+                    xs, xs_lens, chunk_masks, mask_pad = \
+                        self.time_reduction_layer(xs, xs_lens, chunk_masks, mask_pad)
+                    pos_emb = pos_emb[:, ::2, :]
+                    index += 1
 
-            if idx == self.recover_idx:
-                # recover output length for ctc decode
-                xs = torch.repeat_interleave(xs, repeats=2, dim=1)
-                xs = self.time_recover_layer(xs)
-                xs = recover_tensor + xs[:, :recover_tensor.size(1), :]
-                chunk_masks = recover_chunk_masks
-                pos_emb = recover_pos_emb
-                mask_pad = recover_mask_pad
+            if self.recover_idx is not None:
+                if self.time_reduce == 'recover' and i in self.recover_idx:
+                    index -= 1
+                    (recover_tensor, recover_chunk_masks,
+                     recover_pos_emb, recover_mask_pad) \
+                        = recover_activations[index]
+                    # recover output length for ctc decode
+                    xs = torch.repeat_interleave(xs, repeats=2, dim=1)
+                    xs = self.time_recover_layer(xs)
+                    recoverd_t = recover_tensor.size(1)
+                    xs = recover_tensor + xs[:, :recoverd_t, :].contiguous()
+                    chunk_masks = recover_chunk_masks
+                    pos_emb = recover_pos_emb
+                    mask_pad = recover_mask_pad
 
-            if self.reduce_idx <= idx < self.recover_idx:
-                residual = xs
-                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
-                xs += residual
-            else:
-                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
 
         if self.final_proj is not None:
             xs = self.final_proj(xs)
         return xs, masks
 
+    def check_ascending_list(self):
+        if self.reduce_idx is not None:
+            assert self.reduce_idx == sorted(self.reduce_idx), \
+                "reduce_idx should be int or ascending list"
+        if self.recover_idx is not None:
+            assert self.recover_idx == sorted(self.recover_idx), \
+                "recover_idx should be int or ascending list"
+
+    def calculate_downsampling_factor(self, i: int) -> int:
+        if self.reduce_idx is None:
+            return 1
+        else:
+            reduce_exp, recover_exp = 0, 0
+            for exp, rd_idx in enumerate(self.reduce_idx):
+                if i >= rd_idx:
+                    reduce_exp = exp + 1
+            if self.recover_idx is not None:
+                for exp, rc_idx in enumerate(self.recover_idx):
+                    if i >= rc_idx:
+                        recover_exp = exp + 1
+            return int(2 ** (reduce_exp - recover_exp))
+
     def forward_chunk(
-        self,
-        xs: torch.Tensor,
-        offset: int,
-        required_cache_size: int,
-        att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-        cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-        att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+            self,
+            xs: torch.Tensor,
+            offset: int,
+            required_cache_size: int,
+            att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+            cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+            att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Forward just one chunk
 
@@ -302,38 +335,84 @@ class SqueezeformerEncoder(nn.Module):
             next_cache_start = attention_key_size
         else:
             next_cache_start = max(attention_key_size - required_cache_size, 0)
+
         r_att_cache = []
         r_cnn_cache = []
+
+        mask_pad = torch.ones(1,
+                              xs.size(1),
+                              device=xs.device,
+                              dtype=torch.bool)
+        mask_pad = mask_pad.unsqueeze(1)
+        max_att_len: int = 0
+        recover_activations: \
+            List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]] = []
+        index = 0
+        xs_lens = torch.tensor([xs.size(1)], device=xs.device, dtype=torch.int)
+        xs = self.preln(xs)
         for i, layer in enumerate(self.encoders):
             # NOTE(xcsong): Before layer.forward
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
+            if self.reduce_idx is not None:
+                if self.time_reduce is not None and i in self.reduce_idx:
+                    recover_activations.append((xs, att_mask, pos_emb, mask_pad))
+                    xs, xs_lens, att_mask, mask_pad = \
+                        self.time_reduction_layer(xs, xs_lens, att_mask, mask_pad)
+                    pos_emb = pos_emb[:, ::2, :]
+                    index += 1
+
+            if self.recover_idx is not None:
+                if self.time_reduce == 'recover' and i in self.recover_idx:
+                    index -= 1
+                    (recover_tensor, recover_att_mask,
+                     recover_pos_emb, recover_mask_pad) \
+                        = recover_activations[index]
+                    # recover output length for ctc decode
+                    xs = torch.repeat_interleave(xs, repeats=2, dim=1)
+                    xs = self.time_recover_layer(xs)
+                    recoverd_t = recover_tensor.size(1)
+                    xs = recover_tensor + xs[:, :recoverd_t, :].contiguous()
+                    att_mask = recover_att_mask
+                    pos_emb = recover_pos_emb
+                    mask_pad = recover_mask_pad
+
+            factor = self.calculate_downsampling_factor(i)
+
             xs, _, new_att_cache, new_cnn_cache = layer(
                 xs, att_mask, pos_emb,
-                att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
+                att_cache=att_cache[i:i + 1][:, :, ::factor, :] if
+                elayers > 0 and att_cache.size(2) != 0 else
+                att_cache[:, :, ::factor, :],
                 cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
             )
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
-            r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
-            r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
-        if self.normalize_before:
-            xs = self.after_norm(xs)
-
+            cached_att \
+                = new_att_cache[:, :, math.ceil(next_cache_start / factor):, :]
+            cached_cnn = new_cnn_cache.unsqueeze(0)
+            cached_att = cached_att.repeat_interleave(repeats=factor, dim=2)
+            if i == 0:
+                # record length for the first block as max length
+                max_att_len = cached_att.size(2)
+            r_att_cache.append(cached_att[:, :, :max_att_len, :])
+            r_cnn_cache.append(cached_cnn)
         # NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),
         #   ? may be larger than cache_t1, it depends on required_cache_size
         r_att_cache = torch.cat(r_att_cache, dim=0)
         # NOTE(xcsong): shape(r_cnn_cache) is (e, b=1, hidden-dim, cache_t2)
         r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
 
+        if self.final_proj is not None:
+            xs = self.final_proj(xs)
         return (xs, r_att_cache, r_cnn_cache)
 
     def forward_chunk_by_chunk(
-        self,
-        xs: torch.Tensor,
-        decoding_chunk_size: int,
-        num_decoding_left_chunks: int = -1,
+            self,
+            xs: torch.Tensor,
+            decoding_chunk_size: int,
+            num_decoding_left_chunks: int = -1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """ Forward input chunk by chunk with chunk_size like a streaming
             fashion
@@ -379,8 +458,10 @@ class SqueezeformerEncoder(nn.Module):
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            (y, att_cache, cnn_cache) = self.forward_chunk(
-                chunk_xs, offset, required_cache_size, att_cache, cnn_cache)
+            (y, att_cache, cnn_cache) = \
+                self.forward_chunk(
+                    chunk_xs, offset, required_cache_size,
+                    att_cache, cnn_cache)
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)

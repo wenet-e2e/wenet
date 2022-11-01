@@ -36,10 +36,10 @@
 
 | decoding mode                    | dev clean | dev other | test clean | test other |
 |----------------------------------|-----------|-----------|------------|------------|
-| ctc greedy search                | 2.62      | 6.80      | 2.92       | 6.77       |
-| ctc prefix beam search           | 2.60      | 6.79      | 2.90       | 6.79       |
-| attention decoder                | 3.06      | 6.90      | 3.38       | 6.82       |
-| attention rescoring              | 2.33      | 6.29      | 2.57       | 6.22       |
+| ctc greedy search                | 2.55      | 6.62      | 2.73       | 6.59       |
+| ctc prefix beam search           | 2.53      | 6.60      | 2.72       | 6.52       |
+| attention decoder                | 2.93      | 6.56      | 3.31       | 6.47       |
+| attention rescoring              | 2.19      | 6.06      | 2.45       | 5.85       |
 
 ## Conformer Result
 
@@ -159,15 +159,16 @@ test other
 ## SqueezeFormer Result (U2++, FFN:2048)
 
 * Encoder info:
-    * SM12, reduce_idx 5, recover_idx 11, conv1d, layer_norm, do_rel_shift false
+    * SM12, reduce_idx 5, recover_idx 11, conv1d, layer_norm
+    * do_rel_shift false, warp_for_time, syncbn
     * encoder_dim 256, output_size 256, head 4, ffn_dim 256*8=2048
-    * Encoder FLOPs(30s): 28,230,473,984, params: 34,827,400
+    * Encoder FLOPs(30s): 28,255,337,984, params: 34,893,704
 * Feature info:
     * using fbank feature, cmvn, dither, online speed perturb
 * Training info:
     * train_squeezeformer.yaml, kernel size 31
-    * batch size 12, 8 gpu, acc_grad 4, 120 epochs, dither 0.1
-    * adamw, lr 1e-3, NoamHold, warmup 0.1, hold 0.4, lr_decay 1.0
+    * batch size 12, 8 gpu, acc_grad 2, 120 epochs, dither 1.0
+    * adamw, lr 8e-4, NoamHold, warmup 0.2, hold 0.3, lr_decay 1.0
 * Decoding info:
     * ctc_weight 0.3, reverse weight 0.5, average_num 30
 
@@ -175,15 +176,15 @@ test clean
 
 | decoding mode                  | full | 16   |
 |--------------------------------|------|------|
-| ctc prefix beam search         | 3.81 | 4.59 |
-| attention rescoring            | 3.36 | 3.93 |
+| ctc prefix beam search         | 3.45 | 4.34 |
+| attention rescoring            | 3.07 | 3.71 |
 
 test other
 
 | decoding mode                  | full  | 16    |
 |--------------------------------|-------|-------|
-| ctc prefix beam search         | 9.12  | 11.17 |
-| attention rescoring            | 8.43  | 10.21 |
+| ctc prefix beam search         | 8.29  | 10.60 |
+| attention rescoring            | 7.58  | 9.60  |
 
 ## Conformer U2 Result
 
