@@ -1,4 +1,5 @@
 // Copyright (c) 2022  Binbin Zhang(binbzha@qq.com)
+//               2022 SoundDataConverge Co.LTD (Weiliang Chong)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +14,10 @@
 // limitations under the License.
 
 #include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 #include "api/wenet_api.h"
+#include "api/batch_recognizer.h"
 
 namespace py = pybind11;
 
@@ -37,4 +40,12 @@ PYBIND11_MODULE(_wenet, m) {
   m.def("wenet_set_language", &wenet_set_language, "set language");
   m.def("wenet_set_continuous_decoding", &wenet_set_continuous_decoding,
         "enable continuous decoding or not");
+  py::class_<BatchRecognizer>(m, "BatchRecognizer")
+    .def(py::init<const char*>())
+    .def("set_enable_timestamp", &BatchRecognizer::set_enable_timestamp)
+    .def("AddContext", &BatchRecognizer::AddContext)
+    .def("set_context_score", &BatchRecognizer::set_context_score)
+    .def("set_language", &BatchRecognizer::set_language)
+    .def("DecodeData", &BatchRecognizer::DecodeData)
+    .def("Decode", &BatchRecognizer::Decode);
 }
