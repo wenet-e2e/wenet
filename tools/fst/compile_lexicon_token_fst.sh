@@ -60,7 +60,7 @@ tools/fst/ctc_token_fst_compact.py $dir/tokens.txt | \
   fstarcsort --sort_type=olabel > $dir/T.fst || exit 1;
 
 # Encode the words with indices. Will be used in lexicon and language model FST compiling.
-cat $tmpdir/lexiconp.txt | awk '{print $1}' | sort | awk '
+cat $tmpdir/lexiconp.txt | awk '{print $1}' | sort | uniq | awk '
   BEGIN {
     print "<eps> 0";
   }

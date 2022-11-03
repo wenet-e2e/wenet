@@ -7,8 +7,8 @@ set(decoder_srcs
   ctc_endpoint.cc
 )
 
-if(NOT TORCH AND NOT ONNX)
-  message(FATAL_ERROR "Please build with TORCH or ONNX!!!")
+if(NOT TORCH AND NOT ONNX AND NOT XPU)
+  message(FATAL_ERROR "Please build with TORCH or ONNX or XPU!!!")
 endif()
 if(TORCH)
   list(APPEND decoder_srcs torch_asr_model.cc)
@@ -18,7 +18,8 @@ if(ONNX)
 endif()
 
 add_library(decoder STATIC ${decoder_srcs})
-target_link_libraries(decoder PUBLIC kaldi-decoder frontend post_processor utils)
+target_link_libraries(decoder PUBLIC kaldi-decoder frontend
+                      post_processor utils)
 
 if(ANDROID)
   target_link_libraries(decoder PUBLIC ${PYTORCH_LIBRARY} ${FBJNI_LIBRARY})
@@ -28,5 +29,8 @@ else()
   endif()
   if(ONNX)
     target_link_libraries(decoder PUBLIC onnxruntime)
+  endif()
+  if(XPU)
+    target_link_libraries(decoder PUBLIC xpu_conformer)
   endif()
 endif()

@@ -1,0 +1,98 @@
+# network architecture
+# encoder related
+encoder: squeezeformer
+encoder_conf:
+    encoder_dim: 256
+    output_size: 256    # dimension of attention
+    attention_heads: 4
+    num_blocks: 12      # the number of encoder blocks
+    reduce_idx: 5
+    recover_idx: 11
+    time_reduction_layer_type: "stream"
+    feed_forward_expansion_factor: 8
+    input_dropout_rate: 0.1
+    feed_forward_dropout_rate: 0.1
+    attention_dropout_rate: 0.1
+    cnn_module_kernel: 31
+    do_rel_shift: false
+    cnn_norm_type: layer_norm
+    adaptive_scale: true
+    normalize_before: false
+    causal: true
+    use_dynamic_chunk: true
+    use_dynamic_left_chunk: false
+
+# decoder related
+decoder: bitransformer
+decoder_conf:
+    attention_heads: 4
+    linear_units: 2048
+    num_blocks: 3
+    r_num_blocks: 3
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.1
+    src_attention_dropout_rate: 0.1
+
+# hybrid CTC/attention
+model_conf:
+    ctc_weight: 0.3
+    lsm_weight: 0.1     # label smoothing option
+    length_normalized_loss: false
+    reverse_weight: 0.3
+
+# dataset related
+dataset_conf:
+    filter_conf:
+        max_length: 40960
+        min_length: 0
+        token_max_length: 400
+        token_min_length: 1
+        # min_output_input_ratio: 0.0005
+        # max_output_input_ratio: 0.1
+    resample_conf:
+        resample_rate: 16000
+    speed_perturb: true
+    fbank_conf:
+        num_mel_bins: 80
+        frame_shift: 10
+        frame_length: 25
+        dither: 1.0
+    spec_aug: true
+    spec_aug_conf:
+        num_t_mask: 2
+        num_f_mask: 2
+        max_t: 50
+        max_f: 10
+#        warp_for_time: true
+    spec_sub: true
+    spec_sub_conf:
+        num_t_sub: 3
+        max_t: 30
+    shuffle: true
+    shuffle_conf:
+        shuffle_size: 10000
+    sort: true
+    sort_conf:
+        sort_size: 2000  # sort_size should be less than shuffle_size
+    batch_conf:
+        batch_type: 'static' # static or dynamic
+        batch_size: 12
+
+grad_clip: 5
+accum_grad: 2
+max_epoch: 120
+log_interval: 100
+
+optim: adamw
+optim_conf:
+    lr: 8.e-4
+    weight_decay: 4.e-5
+
+scheduler: NoamHoldAnnealing
+scheduler_conf:
+    warmup_ratio: 0.2
+    hold_ratio: 0.3
+    max_steps: 175680
+    decay_rate: 1.0
+    min_lr: 1.e-5

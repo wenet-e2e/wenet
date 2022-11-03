@@ -17,26 +17,17 @@ jobs:
       - name: Build
         run: |
           cd ${{ env.RUNTIME_DIR }}
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DFST_HAVE_BIN=ON
+          cmake -B build -DGRAPH_TOOLS=ON -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
           cmake --build build --config Release -j$(nproc)
 
       - name: Prepare Release Binary
         run: |
           cd ${{ env.RUNTIME_DIR }}
-          mkdir openfst
-          cp -r fc_base/openfst-build/src/bin/Release/*.exe openfst
-
           mkdir -p wenet/kaldi
           cp build/*.dll wenet
+          cp build/api/Release/*.dll wenet
           cp build/bin/Release/*.exe wenet
-          cp build/bin/Release/*.dll wenet
           cp build/kaldi/Release/*.exe wenet/kaldi
-
-      - name: Upload OpenFST Binary
-        uses: actions/upload-artifact@v3
-        with:
-          name: release-openfst-binary
-          path: ${{ env.RUNTIME_DIR }}/openfst
 
       - name: Upload WeNet Binary
         uses: actions/upload-artifact@v3

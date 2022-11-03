@@ -8,4 +8,4 @@ ARG model=20210618_u2pp_conformer_libtorch.tar.gz
 RUN wget -P /home https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell2/$model
 RUN tar -xzf /home/$model -C /home
 ARG build=/home/wenet/runtime/libtorch/build
-RUN mkdir $build && cd $build && cmake .. -DCMAKE_BUILD_TYPE=Release -DFST_HAVE_BIN=ON && cmake --build . --config Release
+RUN cmake -B $build -DCMAKE_BUILD_TYPE=Release -DGRAPH_TOOLS=ON && cmake --build $build

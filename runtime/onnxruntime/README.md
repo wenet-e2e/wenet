@@ -19,7 +19,7 @@ python -m wenet.bin.export_onnx_cpu \
 
 ``` sh
 mkdir build && cd build
-cmake -DONNX=ON -DTORCH=OFF -DWEBSOCET=OFF -DGRPC=OFF ..
+cmake -DONNX=ON -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF ..
 cmake --build .
 ```
 

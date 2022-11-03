@@ -34,4 +34,4 @@ jobs:
           export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
           cd ${{ env.RUNTIME_DIR }}
           cmake -B build -DCMAKE_BUILD_TYPE=Release
-          cmake --build build --config Release -j$(nproc)
+          cmake --build build -j$(nproc)

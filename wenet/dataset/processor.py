@@ -472,6 +472,29 @@ def spec_sub(data, max_t=20, num_t_sub=3):
         yield sample
 
 
+def spec_trim(data, max_t=20):
+    """ Trim tailing frames. Inplace operation.
+        ref: Rapid-U2++ [arxiv link]
+
+        Args:
+            data: Iterable[{key, feat, label}]
+            max_t: max width of length trimming
+
+        Returns
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'feat' in sample
+        x = sample['feat']
+        assert isinstance(x, torch.Tensor)
+        max_frames = x.size(0)
+        length = random.randint(1, max_t)
+        if length < max_frames / 2:
+            y = x.clone().detach()[:max_frames - length]
+            sample['feat'] = y
+        yield sample
+
+
 def shuffle(data, shuffle_size=10000):
     """ Local shuffle the data
 
