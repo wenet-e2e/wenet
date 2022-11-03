@@ -896,3 +896,98 @@ class ASRModel(torch.nn.Module):
         # r_dccoder_out will be 0.0, if reverse_weight is 0.0
         r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         return decoder_out, r_decoder_out
+
+    @torch.jit.export
+    def batch_forward_encoder(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        beam_size: int = 10,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """ Export interface for c++ call, encode a batch of speech
+
+        Args:
+            speech: padded input tensor (B, T, F)
+            speech_lengths: input length (B)
+        Returns:
+            encoder_out: B x T x F
+            encoder_out_lens: B
+            ctc_log_probs: B x T x V
+            beam_log_probs: B x T x beam_size
+            beam_log_probs_idx: B x T x beam_size
+        """
+        encoder_out, encoder_mask = self.encoder(
+                speech,
+                speech_lengths, -1, -1)
+        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
+        encoder_out_lens = encoder_out_lens.int()
+        ctc_log_probs = self.ctc.log_softmax(encoder_out)
+        beam_log_probs, beam_log_probs_idx = torch.topk(
+            ctc_log_probs, beam_size, dim=2)
+        return encoder_out, encoder_out_lens, ctc_log_probs, \
+            beam_log_probs, beam_log_probs_idx
+
+    @torch.jit.export
+    def batch_forward_attention_decoder(
+            self,
+            encoder_out: torch.Tensor,
+            encoder_lens: torch.Tensor,
+            hyps_pad_sos_eos: torch.Tensor,
+            hyps_lens_sos: torch.Tensor,
+            r_hyps_pad_sos_eos: torch.Tensor,
+            ctc_score: torch.Tensor):
+        """Decoder
+        Args:
+            encoder_out: B x T x F
+            encoder_lens: B
+            hyps_pad_sos_eos: B x beam x (T2+1),
+                        hyps with sos & eos and padded by ignore id
+            hyps_lens_sos: B x beam, length for each hyp with sos
+            r_hyps_pad_sos_eos: B x beam x (T2+1),
+                    reversed hyps with sos & eos and padded by ignore id
+            ctc_score: B x beam, ctc score for each hyp
+        Returns:
+            best_index: B
+            score: B x beam
+        """
+        B, T, F = encoder_out.shape
+        bz = hyps_pad_sos_eos.shape[1]  # beam_size
+        B2 = B * bz
+        encoder_out = encoder_out.repeat(1, bz, 1).view(B2, T, F)
+        encoder_mask = ~make_pad_mask(encoder_lens, T).unsqueeze(1)
+        encoder_mask = encoder_mask.repeat(1, bz, 1).view(B2, 1, T)
+        T2 = hyps_pad_sos_eos.shape[2] - 1
+        hyps_pad = hyps_pad_sos_eos.view(B2, T2 + 1)
+        hyps_lens = hyps_lens_sos.view(B2,)
+        hyps_pad_sos = hyps_pad[:, :-1].contiguous()
+        hyps_pad_eos = hyps_pad[:, 1:].contiguous()
+
+        r_hyps_pad = r_hyps_pad_sos_eos.view(B2, T2 + 1)
+        r_hyps_pad_sos = r_hyps_pad[:, :-1].contiguous()
+        r_hyps_pad_eos = r_hyps_pad[:, 1:].contiguous()
+
+        decoder_out, r_decoder_out, _ = self.decoder(
+            encoder_out, encoder_mask, hyps_pad_sos, hyps_lens, r_hyps_pad_sos,
+            self.reverse_weight)
+        decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
+        V = decoder_out.shape[-1]
+        decoder_out = decoder_out.view(B2, T2, V)
+        mask = ~make_pad_mask(hyps_lens, T2)  # B2 x T2
+        # mask index, remove ignore id
+        index = torch.unsqueeze(hyps_pad_eos * mask, 2)
+        score = decoder_out.gather(2, index).squeeze(2)  # B2 X T2
+        # mask padded part
+        score = score * mask
+        decoder_out = decoder_out.view(B, bz, T2, V)
+        if self.reverse_weight > 0:
+            r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
+            r_decoder_out = r_decoder_out.view(B2, T2, V)
+            index = torch.unsqueeze(r_hyps_pad_eos * mask, 2)
+            r_score = r_decoder_out.gather(2, index).squeeze(2)
+            r_score = r_score * mask
+            score = score * (1 - self.reverse_weight) + self.reverse_weight * r_score
+            r_decoder_out = r_decoder_out.view(B, bz, T2, V)
+        score = torch.sum(score, dim=1)  # B2
+        score = torch.reshape(score, (B, bz)) + self.ctc_weight * ctc_score
+        best_index = torch.argmax(score, dim=1)
+        return best_index, score

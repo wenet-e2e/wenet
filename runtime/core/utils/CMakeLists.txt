@@ -1,6 +1,7 @@
 add_library(utils STATIC
   string.cc
   utils.cc
+  Yaml.cpp
 )
 
 if(NOT ANDROID)

@@ -29,6 +29,7 @@ int main(int argc, char* argv[]) {
   wenet::WebSocketServer server(FLAGS_port, feature_config, decode_config,
                                 decode_resource);
   LOG(INFO) << "Listening at port " << FLAGS_port;
-  server.Start();
+  LOG(INFO) << "run for batch decoding: " << FLAGS_run_batch;
+  server.Start(FLAGS_run_batch);
   return 0;
 }

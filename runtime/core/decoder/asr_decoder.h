@@ -26,6 +26,7 @@
 #include "fst/symbol-table.h"
 
 #include "decoder/asr_model.h"
+#include "decoder/batch_asr_model.h"
 #include "decoder/context_graph.h"
 #include "decoder/ctc_endpoint.h"
 #include "decoder/ctc_prefix_beam_search.h"
@@ -90,6 +91,7 @@ enum DecodeState {
 // decoding threads
 struct DecodeResource {
   std::shared_ptr<AsrModel> model = nullptr;
+  std::shared_ptr<BatchAsrModel> batch_model = nullptr;
   std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
   std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::SymbolTable> unit_table = nullptr;

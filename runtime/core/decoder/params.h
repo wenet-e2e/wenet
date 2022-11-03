@@ -22,11 +22,14 @@
 #include <vector>
 
 #include "decoder/asr_decoder.h"
+#include "decoder/batch_asr_decoder.h"
 #ifdef USE_ONNX
 #include "decoder/onnx_asr_model.h"
+#include "decoder/batch_onnx_asr_model.h"
 #endif
 #ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
+#include "decoder/batch_torch_asr_model.h"
 #endif
 #ifdef USE_XPU
 #include "xpu/xpu_asr_model.h"
@@ -95,6 +98,9 @@ DEFINE_int32(language_type, 0,
              "0x00 = kMandarinEnglish, "
              "0x01 = kIndoEuropean");
 DEFINE_bool(lowercase, true, "lowercase final result if needed");
+DEFINE_bool(run_batch, false, "run websocket server for batch decoding");
+DEFINE_bool(is_fp16, false, "the model is of fp16");
+DEFINE_int32(gpu_id, 0, "which GPU to use");
 
 namespace wenet {
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
@@ -129,21 +135,37 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 
   if (!FLAGS_onnx_dir.empty()) {
 #ifdef USE_ONNX
-    LOG(INFO) << "Reading onnx model ";
-    OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
-    auto model = std::make_shared<OnnxAsrModel>();
-    model->Read(FLAGS_onnx_dir);
-    resource->model = model;
+    if (FLAGS_run_batch) {
+      LOG(INFO) << "BatchOnnxAsrModel Reading ONNX model dir: " << FLAGS_onnx_dir;
+      BatchOnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<BatchOnnxAsrModel>();
+      model->Read(FLAGS_onnx_dir, FLAGS_is_fp16, FLAGS_gpu_id);
+      resource->batch_model = model;
+    } else {
+      LOG(INFO) << "Reading onnx model ";
+      OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<OnnxAsrModel>();
+      model->Read(FLAGS_onnx_dir);
+      resource->model = model;
+    }
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DONNX=ON'.";
 #endif
   } else if (!FLAGS_model_path.empty()) {
 #ifdef USE_TORCH
-    LOG(INFO) << "Reading torch model " << FLAGS_model_path;
-    TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
-    auto model = std::make_shared<TorchAsrModel>();
-    model->Read(FLAGS_model_path);
-    resource->model = model;
+    if (FLAGS_run_batch) {
+      LOG(INFO) << "BatchTorchAsrModel Reading torch model " << FLAGS_model_path;
+      BatchTorchAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<BatchTorchAsrModel>();
+      model->Read(FLAGS_model_path);
+      resource->batch_model = model;
+    } else {
+      LOG(INFO) << "Reading torch model " << FLAGS_model_path;
+      TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
+      auto model = std::make_shared<TorchAsrModel>();
+      model->Read(FLAGS_model_path);
+      resource->model = model;
+    }
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DTORCH=ON'.";
 #endif
