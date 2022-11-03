@@ -72,6 +72,7 @@ class OnnxAsrModel : public AsrModel {
   std::shared_ptr<Ort::Session> ctc_session_ = nullptr;
 
   // node names
+  std::vector<Ort::AllocatedStringPtr> node_names_;
   std::vector<const char*> encoder_in_names_, encoder_out_names_;
   std::vector<const char*> ctc_in_names_, ctc_out_names_;
   std::vector<const char*> rescore_in_names_, rescore_out_names_;

@@ -68,6 +68,7 @@ class BatchOnnxAsrModel : public BatchAsrModel {
   std::shared_ptr<Ort::Session> rescore_session_ = nullptr;
 
   // node names
+  static std::vector<Ort::AllocatedStringPtr> node_names_;
   std::vector<const char*> encoder_in_names_, encoder_out_names_;
   std::vector<const char*> rescore_in_names_, rescore_out_names_;
 

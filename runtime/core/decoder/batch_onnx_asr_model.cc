@@ -27,12 +27,15 @@
 #include "utils/string.h"
 #include "utils/Yaml.hpp"
 #include "utils/timer.h"
+#include "onnxruntime_run_options_config_keys.h"
+#include "onnxruntime_session_options_config_keys.h"
 
 namespace wenet {
 
 Ort::Env BatchOnnxAsrModel::env_ = Ort::Env(ORT_LOGGING_LEVEL_VERBOSE, "");
 Ort::SessionOptions BatchOnnxAsrModel::session_options_ = Ort::SessionOptions();
 Ort::RunOptions BatchOnnxAsrModel::run_option_ = Ort::RunOptions();
+std::vector<Ort::AllocatedStringPtr> BatchOnnxAsrModel::node_names_;
 
 void BatchOnnxAsrModel::InitEngineThreads(int num_threads) {
   session_options_.SetIntraOpNumThreads(num_threads);
@@ -47,7 +50,7 @@ void BatchOnnxAsrModel::GetInputOutputInfo(
   int num_nodes = session->GetInputCount();
   in_names->resize(num_nodes);
   for (int i = 0; i < num_nodes; ++i) {
-    char* name = session->GetInputName(i, allocator);
+    auto name = session->GetInputNameAllocated(i, allocator);
     Ort::TypeInfo type_info = session->GetInputTypeInfo(i);
     auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
     ONNXTensorElementDataType type = tensor_info.GetElementType();
@@ -57,15 +60,16 @@ void BatchOnnxAsrModel::GetInputOutputInfo(
       shape << j;
       shape << " ";
     }
-    LOG(INFO) << "\tInput " << i << " : name=" << name << " type=" << type
+    LOG(INFO) << "\tInput " << i << " : name=" << name.get() << " type=" << type
               << " dims=" << shape.str();
-    (*in_names)[i] = name;
+    node_names_.push_back(std::move(name));
+    (*in_names)[i] = node_names_.back().get();
   }
   // Output info
   num_nodes = session->GetOutputCount();
   out_names->resize(num_nodes);
   for (int i = 0; i < num_nodes; ++i) {
-    char* name = session->GetOutputName(i, allocator);
+    auto name = session->GetOutputNameAllocated(i, allocator);
     Ort::TypeInfo type_info = session->GetOutputTypeInfo(i);
     auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
     ONNXTensorElementDataType type = tensor_info.GetElementType();
@@ -75,9 +79,10 @@ void BatchOnnxAsrModel::GetInputOutputInfo(
       shape << j;
       shape << " ";
     }
-    LOG(INFO) << "\tOutput " << i << " : name=" << name << " type=" << type
+    LOG(INFO) << "\tOutput " << i << " : name=" << name.get() << " type=" << type
               << " dims=" << shape.str();
-    (*out_names)[i] = name;
+    node_names_.push_back(std::move(name));
+    (*out_names)[i] = node_names_.back().get();
   }
 }
 
@@ -106,8 +111,8 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
 
   // Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(session_options_, 0));
   // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
-  // 1. Not allocate weights memory through the arena 
-  session_options_.AddConfigEntry("kOrtSessionOptionsUseDeviceAllocatorForInitializers", "1");
+  // 1. Not allocate weights memory through the arena
+  session_options_.AddConfigEntry(kOrtSessionOptionsUseDeviceAllocatorForInitializers, "1");
   // 2. Configure the arena to have high enough initial chunk to support most Run() calls. See "initial_chunk_size_bytes"
   const char* keys[] = {"max_mem", "arena_extend_strategy", "initial_chunk_size_bytes", "max_dead_bytes_per_chunk", "initial_growth_chunk_size_bytes"};
   const size_t values[] = {0 /*let ort pick default max memory*/, 0, 1024, 0, 256};
@@ -115,72 +120,57 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
   OrtArenaCfg* arena_cfg = nullptr;
   const auto& api = Ort::GetApi();
   auto zz = api.CreateArenaCfgV2(keys, values, 5, &arena_cfg);
-  //auto zz = api.CreateArenaCfg(0, 0, 1024, 0, &arena_cfg);
-  VLOG(1) << "CreateArenaCfgV2: " << zz << ", arena_cfg: " << arena_cfg;
   std::unique_ptr<OrtArenaCfg, decltype(api.ReleaseArenaCfg)> rel_arena_cfg(arena_cfg, api.ReleaseArenaCfg);
 
   OrtCUDAProviderOptions cuda_options{};
-  
+
   cuda_options.device_id = 0;
   cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
-  cuda_options.gpu_mem_limit = std::numeric_limits<size_t>::max();
-  cuda_options.arena_extend_strategy = 0;
+  //cuda_options.gpu_mem_limit = 16 * 1024 * 1024 * 1024ul;
+  cuda_options.arena_extend_strategy = 1;
   cuda_options.do_copy_in_default_stream = true;
   cuda_options.has_user_compute_stream = 0;
   cuda_options.user_compute_stream = nullptr;
-  cuda_options.default_memory_arena_cfg = arena_cfg;
-
+  // TODO: arena_cfg didn't work, it blocked when session.Run()
+  // Just comment this out until find a work way.
+  // cuda_options.default_memory_arena_cfg = arena_cfg;
   session_options_.AppendExecutionProvider_CUDA(cuda_options);
-  run_option_.AddConfigEntry("kOrtRunOptionsConfigEnableMemoryArenaShrinkage", "gpu:0");
 
-  /* share memory between sessions
-  //Ort::MemoryInfo* info_cuda = new Ort::MemoryInfo("Cuda", OrtAllocatorType::OrtArenaAllocator, 0, OrtMemTypeDefault);
-  OrtMemoryInfo* info_cuda = nullptr;
-  auto error = api.CreateMemoryInfo("Cpu", OrtAllocatorType::OrtArenaAllocator, 0, OrtMemTypeDefault, &info_cuda);
-  VLOG(1) << "CreateMemoryInfo() error " << error;
-  OrtEnv* env_ptr = (OrtEnv*)(env_);
-  auto err = api.CreateAndRegisterAllocator(env_ptr, info_cuda, arena_cfg);
-  VLOG(1) << "CreateAndRegisterAllocator() error " << err;
-  */
-
-
-  /*
+  /* TODO: In the future use OrtCUDAProviderOptionsV2 until it support ArenaCfg
   // 1. Load sessions
   // config for CUDA
   std::string device_id = std::to_string(gpu_id);
-  std::vector<const char*> keys{
+  std::vector<const char*> keys2{
     "device_id",
-    // "gpu_mem_limit",
+    "gpu_mem_limit",
     "arena_extend_strategy",
     "cudnn_conv_algo_search",
     "do_copy_in_default_stream",
     "cudnn_conv_use_max_workspace",
     "cudnn_conv1d_pad_to_nc1d"  // supported from 1.12.0
   };
-  std::vector<const char*> values{
+  std::vector<const char*> values2{
     device_id.data(),
-    // "2147483648",
+    //"2147483648",
+    "8589934592",
     "kSameAsRequested",
     "DEFAULT",
     "1",
     "1",
     "1"
   };
-  // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
 
   const auto& api = Ort::GetApi();
   OrtCUDAProviderOptionsV2* cuda_options = nullptr;
   Ort::ThrowOnError(api.CreateCUDAProviderOptions(&cuda_options));
-  Ort::ThrowOnError(api.UpdateCUDAProviderOptions(cuda_options, keys.data(), values.data(), keys.size()));
+  Ort::ThrowOnError(api.UpdateCUDAProviderOptions(cuda_options, keys2.data(), values2.data(), keys2.size()));
   Ort::ThrowOnError(api.SessionOptionsAppendExecutionProvider_CUDA_V2(session_options_, cuda_options));
-
   api.ReleaseCUDAProviderOptions(cuda_options);
   */
 
   try {
     encoder_session_ = std::make_shared<Ort::Session>(
         env_, encoder_onnx_path.c_str(), session_options_);
-    VLOG(1) << "========================= encoder_session_ done";
     rescore_session_ = std::make_shared<Ort::Session>(
         env_, rescore_onnx_path.c_str(), session_options_);
   } catch (std::exception const& e) {
@@ -300,8 +290,10 @@ void BatchOnnxAsrModel::ForwardEncoder(
   }
 
   timer.Reset();
+  //Ort::RunOptions ro;
+  //ro.AddConfigEntry(kOrtRunOptionsConfigEnableMemoryArenaShrinkage, "gpu:0");
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
-      run_option_, encoder_in_names_.data(), inputs.data(),
+      Ort::RunOptions{nullptr}, encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
   VLOG(1) << "\tencoder ->Run() takes " << timer.Elapsed() << " ms.";
 
@@ -453,8 +445,10 @@ void BatchOnnxAsrModel::AttentionRescoring(
   }
 
   Timer timer;
+  Ort::RunOptions ro;
+  ro.AddConfigEntry(kOrtRunOptionsConfigEnableMemoryArenaShrinkage, "gpu:0");
   std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
-      run_option_, rescore_in_names_.data(), rescore_inputs.data(),
+      ro, rescore_in_names_.data(), rescore_inputs.data(),
       rescore_inputs.size(), rescore_out_names_.data(),
       rescore_out_names_.size());
   VLOG(1) << "decoder->Run() takes " << timer.Elapsed() << " ms.";
