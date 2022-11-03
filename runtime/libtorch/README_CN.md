@@ -136,7 +136,7 @@ model_dir=./20210602_unified_transformer_server
 | hardware-2 | libtorch(GPU) | 48 | 1 | 0.00234 | 8.90 |
 | hardware-2 | libtorch(GPU+batch) | 48 | 8 | 0.00110 | 9.61 |
 
-可以看出，同样的CPU下，GPU(batch_size == 1) 是 CPU 速度的 2-3 倍， 而 run_batch 速度又是 GPU(batch_size==1) 的 2.x 倍。
+可以看出，同样的CPU下，GPU(batch_size == 1) 是 CPU 速度的 2-3 倍， 而 run_batch 速度又是 GPU(batch_size==1) 的 2.x 倍，但是CER有所提高。
 
 
 ### websocket 识别客户端

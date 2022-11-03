@@ -157,7 +157,7 @@ Test result:
 | hardware-2 | libtorch(GPU) | 48 | 1 | 0.00234 | 8.90 |
 | hardware-2 | libtorch(GPU+batch) | 48 | 8 | 0.00110 | 9.61 |
 
-With same CPU, GPU is 2~3 times faster than CPU, run_batch is 2.x times faster than non run_batch mode.
+With same CPU, GPU is 2~3 times faster than CPU, run_batch is 2.x times faster than non run_batch mode, but the CER has a little bigger.
 
 
 
