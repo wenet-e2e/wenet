@@ -150,11 +150,11 @@ Test result:
 
 | hardware | websocket_server | concurrency | batch_size | RTF | CER |
 | --- | --- | --- | --- | --- | --- | 
-| hardware-1 | libtorch(CPU) | 30 | - | 0.01666 | 8.90 |
-| hardware-1 | libtorch(GPU) | 10 | - | 0.00831 | 8.90 |
+| hardware-1 | libtorch(CPU) | 30 | 1 | 0.01666 | 8.90 |
+| hardware-1 | libtorch(GPU) | 10 | 1 | 0.00831 | 8.90 |
 | hardware-1 | libtorch(GPU+batch) | 20 | 8 | 0.00339 | 9.61 |
-| hardware-2 | libtorch(CPU) | 48 | - | 0.00753 | 8.90 |
-| hardware-2 | libtorch(GPU) | 48 | - | 0.00234 | 8.90 |
+| hardware-2 | libtorch(CPU) | 48 | 1 | 0.00753 | 8.90 |
+| hardware-2 | libtorch(GPU) | 48 | 1 | 0.00234 | 8.90 |
 | hardware-2 | libtorch(GPU+batch) | 48 | 8 | 0.00110 | 9.61 |
 
 With same CPU, GPU is 2~3 times faster than CPU, run_batch is 2.x times faster than non run_batch mode.
