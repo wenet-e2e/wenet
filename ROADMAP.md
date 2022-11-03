@@ -19,7 +19,7 @@ Feel free to volunteer yourself if you are interested in trying out some items(t
 - [ ] Light weight, low latency, on-device model exploration
 - [ ] Audio-Visual speech recognition
 - [ ] Platforms
-  - [ ] Rasphberry Pi
+  - [x] Raspberry Pi
   - [ ] Harmony OS
 - [ ] ASIC XPU
   - [ ] Horizon Journey

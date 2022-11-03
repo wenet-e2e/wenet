@@ -31,7 +31,7 @@ from wenet.utils.checkpoint import (load_checkpoint, save_checkpoint,
                                     load_trained_modules)
 from wenet.utils.executor import Executor
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
-from wenet.utils.scheduler import WarmupLR
+from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 
@@ -195,7 +195,7 @@ def main():
     model = init_model(configs)
     print(model)
     num_params = sum(p.numel() for p in model.parameters())
-    print('the number of model params: {}'.format(num_params))
+    print('the number of model params: {:,d}'.format(num_params))
 
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
@@ -243,8 +243,19 @@ def main():
         device = torch.device('cuda' if use_cuda else 'cpu')
         model = model.to(device)
 
-    optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
-    scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
+    if configs['optim'] == 'adam':
+        optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
+    elif configs['optim'] == 'adamw':
+        optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
+    else:
+        raise ValueError("unknown optimizer: " + configs['optim'])
+    if configs['scheduler'] == 'warmuplr':
+        scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
+    elif configs['scheduler'] == 'NoamHoldAnnealing':
+        scheduler = NoamHoldAnnealing(optimizer, **configs['scheduler_conf'])
+    else:
+        raise ValueError("unknown scheduler: " + configs['scheduler'])
+
     final_epoch = None
     configs['rank'] = args.rank
     configs['is_distributed'] = distributed
@@ -288,6 +299,7 @@ def main():
 
     if final_epoch is not None and args.rank == 0:
         final_model_path = os.path.join(model_dir, 'final.pt')
+        os.remove(final_model_path) if os.path.exists(final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
 

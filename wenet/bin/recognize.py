@@ -64,7 +64,8 @@ def get_args():
                             'attention', 'ctc_greedy_search',
                             'ctc_prefix_beam_search', 'attention_rescoring',
                             'rnnt_greedy_search', 'rnnt_beam_search',
-                            'rnnt_beam_attn_rescoring', 'ctc_beam_td_attn_rescoring'
+                            'rnnt_beam_attn_rescoring', 'ctc_beam_td_attn_rescoring',
+                            'hlg_onebest', 'hlg_rescore'
                         ],
                         default='attention',
                         help='decoding mode')
@@ -127,6 +128,27 @@ def get_args():
                         type=str,
                         help='used to connect the output characters')
 
+    parser.add_argument('--word',
+                        default='',
+                        type=str,
+                        help='word file, only used for hlg decode')
+    parser.add_argument('--hlg',
+                        default='',
+                        type=str,
+                        help='hlg file, only used for hlg decode')
+    parser.add_argument('--lm_scale',
+                        type=float,
+                        default=0.0,
+                        help='lm scale for hlg attention rescore decode')
+    parser.add_argument('--decoder_scale',
+                        type=float,
+                        default=0.0,
+                        help='lm scale for hlg attention rescore decode')
+    parser.add_argument('--r_decoder_scale',
+                        type=float,
+                        default=0.0,
+                        help='lm scale for hlg attention rescore decode')
+
     args = parser.parse_args()
     print(args)
     return args
@@ -162,6 +184,7 @@ def main():
     test_conf['speed_perturb'] = False
     test_conf['spec_aug'] = False
     test_conf['spec_sub'] = False
+    test_conf['spec_trim'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
     if 'fbank_conf' in test_conf:
@@ -297,6 +320,29 @@ def main():
                     simulate_streaming=args.simulate_streaming,
                     reverse_weight=args.reverse_weight)
                 hyps = [hyp]
+            elif args.mode == 'hlg_onebest':
+                hyps = model.hlg_onebest(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    hlg=args.hlg,
+                    word=args.word,
+                    symbol_table=symbol_table)
+            elif args.mode == 'hlg_rescore':
+                hyps = model.hlg_rescore(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    lm_scale=args.lm_scale,
+                    decoder_scale=args.decoder_scale,
+                    r_decoder_scale=args.r_decoder_scale,
+                    hlg=args.hlg,
+                    word=args.word,
+                    symbol_table=symbol_table)
             for i, key in enumerate(keys):
                 content = []
                 for w in hyps[i]:

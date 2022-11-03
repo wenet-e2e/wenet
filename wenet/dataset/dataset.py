@@ -167,12 +167,16 @@ def Dataset(data_type,
 
     spec_aug = conf.get('spec_aug', True)
     spec_sub = conf.get('spec_sub', False)
+    spec_trim = conf.get('spec_trim', False)
     if spec_aug:
         spec_aug_conf = conf.get('spec_aug_conf', {})
         dataset = Processor(dataset, processor.spec_aug, **spec_aug_conf)
     if spec_sub:
         spec_sub_conf = conf.get('spec_sub_conf', {})
         dataset = Processor(dataset, processor.spec_sub, **spec_sub_conf)
+    if spec_trim:
+        spec_trim_conf = conf.get('spec_trim_conf', {})
+        dataset = Processor(dataset, processor.spec_trim, **spec_trim_conf)
 
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})
