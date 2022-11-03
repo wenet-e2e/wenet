@@ -128,7 +128,7 @@ model_dir=./20210602_unified_transformer_server
     3000 wavs with different durations in range [0.6, 15] seconds.
 
 | hardware | websocket_server | concurrency | batch_size | RTF | CER |
-| --- | --- | --- | --- | --- | --- | 
+| --- | --- | --- | --- | --- | --- |
 | hardware-1 | libtorch(CPU) | 30 | 1 | 0.01666 | 8.90 |
 | hardware-1 | libtorch(GPU) | 10 | 1 | 0.00831 | 8.90 |
 | hardware-1 | libtorch(GPU+batch) | 20 | 8 | 0.00339 | 9.61 |
