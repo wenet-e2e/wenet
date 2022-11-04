@@ -47,25 +47,25 @@ namespace Yaml {
 class ReaderLine;
 
 // Exception message definitions.
-static const char* g_ErrorInvalidCharacter = "Invalid character found.";
-static const char* g_ErrorKeyMissing = "Missing key.";
-static const char* g_ErrorKeyIncorrect = "Incorrect key.";
-static const char* g_ErrorValueIncorrect = "Incorrect value.";
-static const char* g_ErrorTabInOffset = "Tab found in offset.";
-static const char* g_ErrorBlockSequenceNotAllowed =
-    "Sequence entries are not allowed in this context.";
-static const char* g_ErrorUnexpectedDocumentEnd =
-    "Unexpected document end.";
-static const char* g_ErrorDiffEntryNotAllowed =
-    "Different entry is not allowed in this context.";
-static const char* g_ErrorIncorrectOffset = "Incorrect offset.";
-static const char* g_ErrorSequenceError = "Error in sequence node.";
-static const char* g_ErrorCannotOpenFile = "Cannot open file.";
-static const char* g_ErrorIndentation =
-    "Space indentation is less than 2.";
-static const char* g_ErrorInvalidBlockScalar = "Invalid block scalar.";
-static const char* g_ErrorInvalidQuote = "Invalid quote.";
-static const char* g_EmptyString = "";
+static const std::string g_ErrorInvalidCharacter = "Invalid character found.";  // NOLINT
+static const std::string g_ErrorKeyMissing = "Missing key.";  // NOLINT
+static const std::string g_ErrorKeyIncorrect = "Incorrect key.";  // NOLINT
+static const std::string g_ErrorValueIncorrect = "Incorrect value.";  // NOLINT
+static const std::string g_ErrorTabInOffset = "Tab found in offset.";  // NOLINT
+static const std::string g_ErrorBlockSequenceNotAllowed =  // NOLINT
+    "Sequence entries are not allowed in this context.";  // NOLINT
+static const std::string g_ErrorUnexpectedDocumentEnd =  // NOLINT
+    "Unexpected document end.";  // NOLINT
+static const std::string g_ErrorDiffEntryNotAllowed =  // NOLINT
+    "Different entry is not allowed in this context.";  // NOLINT
+static const std::string g_ErrorIncorrectOffset = "Incorrect offset.";  // NOLINT
+static const std::string g_ErrorSequenceError = "Error in sequence node.";  // NOLINT
+static const std::string g_ErrorCannotOpenFile = "Cannot open file.";  // NOLINT
+static const std::string g_ErrorIndentation =  // NOLINT
+    "Space indentation is less than 2.";  // NOLINT
+static const std::string g_ErrorInvalidBlockScalar = "Invalid block scalar.";  // NOLINT
+static const std::string g_ErrorInvalidQuote = "Invalid quote.";  // NOLINT
+static const std::string g_EmptyString = "";  // NOLINT
 static Yaml::Node g_NoneNode;
 
 // Global function definitions. Implemented at end of this source file.
