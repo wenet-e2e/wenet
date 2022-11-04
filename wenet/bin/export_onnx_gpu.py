@@ -222,7 +222,6 @@ class Decoder(torch.nn.Module):
             r_decoder_out: B x beam x T2 x V
             best_index: B
         """
-        print('self.reverse_weight ', self.reverse_weight, 'self.ctc_weight ', self.ctc_weight)
         B, T, F = encoder_out.shape
         bz = self.beam_size
         B2 = B * bz

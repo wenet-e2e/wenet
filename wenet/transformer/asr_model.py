@@ -917,8 +917,7 @@ class ASRModel(torch.nn.Module):
             beam_log_probs_idx: B x T x beam_size
         """
         encoder_out, encoder_mask = self.encoder(
-                speech,
-                speech_lengths, -1, -1)
+            speech, speech_lengths, -1, -1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         encoder_out_lens = encoder_out_lens.int()
         ctc_log_probs = self.ctc.log_softmax(encoder_out)
