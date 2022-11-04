@@ -43,14 +43,14 @@ class BatchTorchAsrModel : public BatchAsrModel {
   void AttentionRescoring(
       const std::vector<std::vector<std::vector<int>>>& batch_hyps,
       const std::vector<std::vector<float>>& ctc_scores,
-      std::vector<std::vector<float>>& attention_scores) override;
+      std::vector<std::vector<float>>* attention_scores) override;
   std::shared_ptr<BatchAsrModel> Copy() const override;
 
   void ForwardEncoder(
       const batch_feature_t& batch_feats,
       const std::vector<int>& batch_feats_lens,
-      std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
-      std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) override;  // NOLINT
+      std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
+      std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) override;  // NOLINT
 
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;

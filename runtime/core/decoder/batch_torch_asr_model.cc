@@ -100,8 +100,8 @@ std::shared_ptr<BatchAsrModel> BatchTorchAsrModel::Copy() const {
 void BatchTorchAsrModel::ForwardEncoder(
     const batch_feature_t& batch_feats,
     const std::vector<int>& batch_feats_lens,
-    std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
-    std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) {
+    std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
+    std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) {
   // 1. Prepare libtorch required data
   int batch_size = batch_feats.size();
   int num_frames = batch_feats[0].size();
@@ -136,23 +136,23 @@ void BatchTorchAsrModel::ForwardEncoder(
   auto topk_scores = outputs[3].toTensor().to(at::kCPU);
   int num_outputs = topk_scores.size(1);
   int output_dim = topk_scores.size(2);
-  batch_topk_scores.resize(batch_size);
+  batch_topk_scores->resize(batch_size);
   for (size_t i = 0; i < batch_size; i++) {
-    batch_topk_scores[i].resize(num_outputs);
+    (*batch_topk_scores)[i].resize(num_outputs);
     for (size_t j = 0; j < num_outputs; j++) {
-      batch_topk_scores[i][j].resize(output_dim);
-      memcpy(batch_topk_scores[i][j].data(), topk_scores[i][j].data_ptr(),
+      (*batch_topk_scores)[i][j].resize(output_dim);
+      memcpy((*batch_topk_scores)[i][j].data(), topk_scores[i][j].data_ptr(),
              sizeof(float) * output_dim);
     }
   }
   // copy topk_indexes
   auto topk_indexes = outputs[4].toTensor().to(at::kCPU);
-  batch_topk_indexs.resize(batch_size);
+  batch_topk_indexs->resize(batch_size);
   for (size_t i = 0; i < batch_size; ++i) {
-    batch_topk_indexs[i].resize(num_outputs);
+    (*batch_topk_indexs)[i].resize(num_outputs);
     for (size_t j = 0; j < num_outputs; ++j) {
-      batch_topk_indexs[i][j].resize(output_dim);
-      memcpy(batch_topk_indexs[i][j].data(), topk_indexes[i][j].data_ptr(),
+      (*batch_topk_indexs)[i][j].resize(output_dim);
+      memcpy((*batch_topk_indexs)[i][j].data(), topk_indexes[i][j].data_ptr(),
              sizeof(int) * output_dim);
     }
   }
@@ -161,7 +161,7 @@ void BatchTorchAsrModel::ForwardEncoder(
 void BatchTorchAsrModel::AttentionRescoring(
     const std::vector<std::vector<std::vector<int>>>& batch_hyps,
     const std::vector<std::vector<float>>& ctc_scores,
-    std::vector<std::vector<float>>& attention_scores) {
+    std::vector<std::vector<float>>* attention_scores) {
   // Step 1: Prepare input for libtorch
   int batch_size = batch_hyps.size();
   int beam_size = batch_hyps[0].size();
@@ -220,10 +220,10 @@ void BatchTorchAsrModel::AttentionRescoring(
 #ifdef USE_GPU
   c10::cuda::CUDACachingAllocator::emptyCache();
 #endif
-  attention_scores.resize(batch_size);
+  attention_scores->resize(batch_size);
   for (size_t i = 0; i < batch_size; i++) {
-    attention_scores[i].resize(beam_size);
-    memcpy(attention_scores[i].data(), rescores[i].data_ptr(),
+    (*attention_scores)[i].resize(beam_size);
+    memcpy((*attention_scores)[i].data(), rescores[i].data_ptr(),
         sizeof(float) * beam_size);
   }
 }
