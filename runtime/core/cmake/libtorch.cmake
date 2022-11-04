@@ -1,6 +1,6 @@
 if(TORCH)
   if(NOT ANDROID)
-    set(PYTORCH_VERSION "1.12.0")
+    set(PYTORCH_VERSION "1.10.0")
     if(GPU)
       add_definitions(-DUSE_GPU)
       set(CUDA_NAME "cu113")
