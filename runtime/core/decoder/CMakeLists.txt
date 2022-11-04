@@ -7,14 +7,17 @@ set(decoder_srcs
   ctc_endpoint.cc
 )
 
-if(NOT TORCH AND NOT ONNX AND NOT XPU)
-  message(FATAL_ERROR "Please build with TORCH or ONNX or XPU!!!")
+if(NOT TORCH AND NOT ONNX AND NOT XPU AND NOT IOS)
+  message(FATAL_ERROR "Please build with TORCH or ONNX or XPU or IOS!!!")
 endif()
 if(TORCH)
   list(APPEND decoder_srcs torch_asr_model.cc)
 endif()
 if(ONNX)
   list(APPEND decoder_srcs onnx_asr_model.cc)
+endif()
+if(IOS)
+  list(APPEND decoder_srcs ios_asr_model.cc)
 endif()
 
 add_library(decoder STATIC ${decoder_srcs})

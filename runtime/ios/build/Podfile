@@ -1,0 +1,4 @@
+platform :ios, '14.3'
+target 'decoder_main' do
+  pod 'LibTorch', '~>1.9.0'
+end
