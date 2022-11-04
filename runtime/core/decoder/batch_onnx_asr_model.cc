@@ -19,17 +19,15 @@
 
 #include "decoder/batch_onnx_asr_model.h"
 
+#include <immintrin.h>
 #include <algorithm>
 #include <memory>
 #include <utility>
-#include <immintrin.h>
 
 #include "glog/logging.h"
 #include "utils/string.h"
 #include "utils/Yaml.hpp"
 #include "utils/timer.h"
-#include "onnxruntime_run_options_config_keys.h"
-#include "onnxruntime_session_options_config_keys.h"
 
 namespace wenet {
 
@@ -61,8 +59,8 @@ void BatchOnnxAsrModel::GetInputOutputInfo(
       shape << j;
       shape << " ";
     }
-    LOG(INFO) << "\tInput " << i << " : name=" << name.get() << " type=" << type
-              << " dims=" << shape.str();
+    LOG(INFO) << "\tInput " << i << " : name=" << name.get()
+              << " type=" << type << " dims=" << shape.str();
     node_names_.push_back(std::move(name));
     (*in_names)[i] = node_names_.back().get();
   }
@@ -80,14 +78,15 @@ void BatchOnnxAsrModel::GetInputOutputInfo(
       shape << j;
       shape << " ";
     }
-    LOG(INFO) << "\tOutput " << i << " : name=" << name.get() << " type=" << type
-              << " dims=" << shape.str();
+    LOG(INFO) << "\tOutput " << i << " : name=" << name.get()
+              << " type=" << type << " dims=" << shape.str();
     node_names_.push_back(std::move(name));
     (*out_names)[i] = node_names_.back().get();
   }
 }
 
-void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu_id) {
+void BatchOnnxAsrModel::Read(const std::string& model_dir,
+    bool is_fp16, int gpu_id) {
   is_fp16_ = is_fp16;
   VLOG(1) << "is_fp16_ " << is_fp16_;
   std::vector<std::string> providers = Ort::GetAvailableProviders();
@@ -110,34 +109,40 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
     rescore_onnx_path = model_dir + "/decoder_fp16.onnx";
   }
 
-  // Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CUDA(session_options_, 0));
-  // release GPU memory: https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
+  // release GPU memory:
+  // https://github.com/microsoft/onnxruntime/issues/9509#issuecomment-951546580
   // 1. Not allocate weights memory through the arena
-  session_options_.AddConfigEntry(kOrtSessionOptionsUseDeviceAllocatorForInitializers, "1");
-  // 2. Configure the arena to have high enough initial chunk to support most Run() calls. See "initial_chunk_size_bytes"
-  const char* keys[] = {"max_mem", "arena_extend_strategy", "initial_chunk_size_bytes", "max_dead_bytes_per_chunk", "initial_growth_chunk_size_bytes"};
-  const size_t values[] = {0 /*let ort pick default max memory*/, 0, 1024, 0, 256};
+  session_options_.AddConfigEntry(
+      kOrtSessionOptionsUseDeviceAllocatorForInitializers, "1");
+  // 2. Configure the arena to have high enough initial chunk
+  // to support most Run() calls. See "initial_chunk_size_bytes"
+  const char* keys[] = {
+    "max_mem", "arena_extend_strategy", "initial_chunk_size_bytes",
+    "max_dead_bytes_per_chunk", "initial_growth_chunk_size_bytes"};
+  const size_t values[] = {0, 0, 1024, 0, 256};
 
   OrtArenaCfg* arena_cfg = nullptr;
   const auto& api = Ort::GetApi();
   auto zz = api.CreateArenaCfgV2(keys, values, 5, &arena_cfg);
-  std::unique_ptr<OrtArenaCfg, decltype(api.ReleaseArenaCfg)> rel_arena_cfg(arena_cfg, api.ReleaseArenaCfg);
+  std::unique_ptr<OrtArenaCfg, decltype(api.ReleaseArenaCfg)> rel_arena_cfg(
+      arena_cfg, api.ReleaseArenaCfg);
 
   OrtCUDAProviderOptions cuda_options{};
 
   cuda_options.device_id = 0;
-  cuda_options.cudnn_conv_algo_search = OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
-  //cuda_options.gpu_mem_limit = 16 * 1024 * 1024 * 1024ul;
+  cuda_options.cudnn_conv_algo_search =
+    OrtCudnnConvAlgoSearch::OrtCudnnConvAlgoSearchExhaustive;
+  // cuda_options.gpu_mem_limit = 16 * 1024 * 1024 * 1024ul;
   cuda_options.arena_extend_strategy = 1;
   cuda_options.do_copy_in_default_stream = true;
   cuda_options.has_user_compute_stream = 0;
   cuda_options.user_compute_stream = nullptr;
-  // TODO: arena_cfg didn't work, it blocked when session.Run()
+  // TODO(veelion): arena_cfg didn't work, it blocked when session.Run()
   // Just comment this out until find a work way.
   // cuda_options.default_memory_arena_cfg = arena_cfg;
   session_options_.AppendExecutionProvider_CUDA(cuda_options);
 
-  /* TODO: In the future use OrtCUDAProviderOptionsV2 until it support ArenaCfg
+  /* TODO(veelion): use OrtCUDAProviderOptionsV2 until it support ArenaCfg
   // 1. Load sessions
   // config for CUDA
   std::string device_id = std::to_string(gpu_id);
@@ -164,8 +169,10 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir, bool is_fp16, int gpu
   const auto& api = Ort::GetApi();
   OrtCUDAProviderOptionsV2* cuda_options = nullptr;
   Ort::ThrowOnError(api.CreateCUDAProviderOptions(&cuda_options));
-  Ort::ThrowOnError(api.UpdateCUDAProviderOptions(cuda_options, keys2.data(), values2.data(), keys2.size()));
-  Ort::ThrowOnError(api.SessionOptionsAppendExecutionProvider_CUDA_V2(session_options_, cuda_options));
+  Ort::ThrowOnError(api.UpdateCUDAProviderOptions(
+    cuda_options, keys2.data(), values2.data(), keys2.size()));
+  Ort::ThrowOnError(api.SessionOptionsAppendExecutionProvider_CUDA_V2(
+    session_options_, cuda_options));
   api.ReleaseCUDAProviderOptions(cuda_options);
   */
 
@@ -228,8 +235,8 @@ std::shared_ptr<BatchAsrModel> BatchOnnxAsrModel::Copy() const {
 void BatchOnnxAsrModel::ForwardEncoder(
     const batch_feature_t& batch_feats,
     const std::vector<int>& batch_feats_lens,
-    std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
-    std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) {
+    std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
+    std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) {
   Ort::MemoryInfo memory_info =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
   // 1. Prepare onnx required data
@@ -241,7 +248,7 @@ void BatchOnnxAsrModel::ForwardEncoder(
   Ort::Value feats_ort{nullptr};
   // https://github.com/microsoft/onnxruntime/issues/9629#issuecomment-963828881
   // Ort::Value::CreateTensor does NOT copy the data
-  std::vector<Ort::Float16_t> feats_fp16; // for holding feats of fp16
+  std::vector<Ort::Float16_t> feats_fp16;  // for holding feats of fp16
   std::vector<float> feats_fp32;  // for holding feats of float
 
   // speech
@@ -267,7 +274,8 @@ void BatchOnnxAsrModel::ForwardEncoder(
   } else {
     for (size_t i = 0; i < batch_size; ++i) {
       for (size_t j = 0; j < num_frames; ++j) {
-        feats_fp32.insert(feats_fp32.end(), batch_feats[i][j].begin(), batch_feats[i][j].end());
+        feats_fp32.insert(feats_fp32.end(), batch_feats[i][j].begin(),
+            batch_feats[i][j].end());
       }
     }
     feats_ort = std::move(Ort::Value::CreateTensor<float>(
@@ -291,8 +299,8 @@ void BatchOnnxAsrModel::ForwardEncoder(
   }
 
   timer.Reset();
-  //Ort::RunOptions ro;
-  //ro.AddConfigEntry(kOrtRunOptionsConfigEnableMemoryArenaShrinkage, "gpu:0");
+  // Ort::RunOptions ro;
+  // ro.AddConfigEntry(kOrtRunOptionsConfigEnableMemoryArenaShrinkage, "gpu:0");
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
       Ort::RunOptions{nullptr}, encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
@@ -303,7 +311,7 @@ void BatchOnnxAsrModel::ForwardEncoder(
   int num_outputs = out_shape[1];
   int output_dim = out_shape[2];
   float* topk_scores_ptr = nullptr;
-  std::vector<float> topk_scores_data; // for holding topk_scores converted from fp16
+  std::vector<float> topk_scores_data;  // for holding topk_scores in fp16
   if (is_fp16_) {
     timer.Reset();
     auto probs = ort_outputs[3].GetTensorMutableData<uint16_t>();
@@ -313,22 +321,23 @@ void BatchOnnxAsrModel::ForwardEncoder(
       topk_scores_data[i] = _cvtsh_ss(probs[i]);
     }
     topk_scores_ptr = topk_scores_data.data();
-    VLOG(1) << "topk_scores from GPU-fp16 to float takes " << timer.Elapsed() << " ms. data lenght " << length;
+    VLOG(1) << "topk_scores from GPU-fp16 to float takes " << timer.Elapsed()
+      << " ms. data lenght " << length;
   } else {
     topk_scores_ptr = ort_outputs[3].GetTensorMutableData<float>();
   }
 
-  batch_topk_scores.resize(batch_size);
+  batch_topk_scores->resize(batch_size);
   for (size_t i = 0; i < batch_size; ++i) {
-    batch_topk_scores[i].resize(num_outputs);
+    (*batch_topk_scores)[i].resize(num_outputs);
     for (size_t j = 0; j < num_outputs; j++) {
-      batch_topk_scores[i][j].resize(output_dim);
+      (*batch_topk_scores)[i][j].resize(output_dim);
       float* p = topk_scores_ptr + (i * num_outputs + j) * output_dim;
-      memcpy(batch_topk_scores[i][j].data(), p, sizeof(float) * output_dim);
+      memcpy((*batch_topk_scores)[i][j].data(), p, sizeof(float) * output_dim);
     }
   }
   // get batch_topk_indexs
-  std::vector<int32_t> topk_indexs_data; // for holding topk_indexs converted from fp16
+  std::vector<int32_t> topk_indexs_data;  // for holding topk_indexs from fp16
   timer.Reset();
   auto probs = ort_outputs[4].GetTensorMutableData<int64_t>();
   int length = out_shape[0] * out_shape[1] * out_shape[2];
@@ -337,15 +346,17 @@ void BatchOnnxAsrModel::ForwardEncoder(
     topk_indexs_data[i] = probs[i];
   }
   int32_t* topk_indexs_ptr = topk_indexs_data.data();
-  VLOG(1) << "topk_indexs from GPU-fp16 to float takes " << timer.Elapsed() << " ms. data lenght " << length;
+  VLOG(1) << "topk_indexs from GPU-fp16 to float takes "
+          << timer.Elapsed() << " ms. data lenght " << length;
 
-  batch_topk_indexs.resize(batch_size);
+  batch_topk_indexs->resize(batch_size);
   for (size_t i = 0; i < batch_size; ++i) {
-    batch_topk_indexs[i].resize(num_outputs);
+    (*batch_topk_indexs)[i].resize(num_outputs);
     for (size_t j = 0; j < num_outputs; j++) {
-      batch_topk_indexs[i][j].resize(output_dim);
+      (*batch_topk_indexs)[i][j].resize(output_dim);
       int32_t* p = topk_indexs_ptr + (i * num_outputs + j) * output_dim;
-      memcpy(batch_topk_indexs[i][j].data(), p, sizeof(int32_t) * output_dim);
+      memcpy((*batch_topk_indexs)[i][j].data(), p,
+          sizeof(int32_t) * output_dim);
     }
   }
   // 3. cache encoder outs
@@ -356,15 +367,15 @@ void BatchOnnxAsrModel::ForwardEncoder(
 void BatchOnnxAsrModel::AttentionRescoring(
     const std::vector<std::vector<std::vector<int>>>& batch_hyps,
     const std::vector<std::vector<float>>& ctc_scores,
-    std::vector<std::vector<float>>& attention_scores) {
+    std::vector<std::vector<float>>* attention_scores) {
   Ort::MemoryInfo memory_info =
       Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
   // 1. prepare input for onnx
   int batch_size = batch_hyps.size();
   int beam_size = batch_hyps[0].size();
 
-  // 1.1 generate hyps_lens_sos data for ort
-  std::vector<int> hyps_lens_sos(batch_size * beam_size, 0);  // (batch_size, beam_size)
+  // 1.1 generate hyps_lens_sos data for ort  (batch_size, beam_size)
+  std::vector<int> hyps_lens_sos(batch_size * beam_size, 0);
   int max_hyps_len = 0;
   for (size_t i = 0; i < batch_size; ++i) {
     for (size_t j = 0; j < beam_size; ++j) {
@@ -375,19 +386,24 @@ void BatchOnnxAsrModel::AttentionRescoring(
   }
 
   // 1.2 generate  hyps_pad_sos_eos, r_hyps_pad_sos_eos
-  std::vector<int64_t> hyps_pad_sos_eos(batch_size * beam_size * (max_hyps_len + 1), 0);
-  std::vector<int64_t> r_hyps_pad_sos_eos(batch_size * beam_size * (max_hyps_len + 1), 0);
+  std::vector<int64_t> hyps_pad_sos_eos(
+      batch_size * beam_size * (max_hyps_len + 1), 0);
+  std::vector<int64_t> r_hyps_pad_sos_eos(
+      batch_size * beam_size * (max_hyps_len + 1), 0);
   for (size_t i = 0; i < batch_size; ++i) {
     for (size_t j = 0; j < beam_size; ++j) {
       const std::vector<int>& hyps = batch_hyps[i][j];
       hyps_pad_sos_eos[i * beam_size * max_hyps_len] = sos_;
       size_t hyps_len = hyps.size();
       for (size_t k = 0; k < hyps_len; ++k) {
-        hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + k + 1] = hyps[k];
-        r_hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + k + 1] = hyps[hyps_len - 1 - k];
+        size_t p = i * beam_size * max_hyps_len + j * max_hyps_len + k + 1;
+        hyps_pad_sos_eos[p] = hyps[k];
+        r_hyps_pad_sos_eos[p] = hyps[hyps_len - 1 - k];
       }
-      hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + hyps.size() + 1] = eos_;
-      r_hyps_pad_sos_eos[i * beam_size * max_hyps_len + j * max_hyps_len + hyps.size() + 1] = eos_;
+      size_t p = i * beam_size * max_hyps_len +
+        j * max_hyps_len + hyps.size() + 1;
+      hyps_pad_sos_eos[p] = eos_;
+      r_hyps_pad_sos_eos[p] = eos_;
     }
   }
 
@@ -409,7 +425,8 @@ void BatchOnnxAsrModel::AttentionRescoring(
   } else {
     ctc_fp32.resize(batch_size * beam_size);
     for (size_t i = 0; i < batch_size; ++i) {
-      memcpy(ctc_fp32.data() + i * beam_size, ctc_scores[i].data(), sizeof(float) * beam_size);
+      memcpy(ctc_fp32.data() + i * beam_size,
+          ctc_scores[i].data(), sizeof(float) * beam_size);
     }
     ctc_scores_tensor = std::move(Ort::Value::CreateTensor<float>(
         memory_info, ctc_fp32.data(), ctc_fp32.size(), ctc_shape, 2));
@@ -420,11 +437,14 @@ void BatchOnnxAsrModel::AttentionRescoring(
   const int64_t hyps_pad_shape[] = {batch_size, beam_size, max_hyps_len};
 
   Ort::Value hyps_lens_tensor = Ort::Value::CreateTensor<int>(
-      memory_info, hyps_lens_sos.data(), hyps_lens_sos.size(), hyps_lens_shape, 2);
+      memory_info, hyps_lens_sos.data(),
+      hyps_lens_sos.size(), hyps_lens_shape, 2);
   Ort::Value hyps_pad_tensor = Ort::Value::CreateTensor<int64_t>(
-      memory_info, hyps_pad_sos_eos.data(), hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
+      memory_info, hyps_pad_sos_eos.data(),
+      hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
   Ort::Value r_hyps_pad_tensor = Ort::Value::CreateTensor<int64_t>(
-      memory_info, r_hyps_pad_sos_eos.data(), r_hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
+      memory_info, r_hyps_pad_sos_eos.data(),
+      r_hyps_pad_sos_eos.size(), hyps_pad_shape, 3);
 
   std::vector<Ort::Value> rescore_inputs;
   for (auto name : rescore_in_names_) {
@@ -454,25 +474,28 @@ void BatchOnnxAsrModel::AttentionRescoring(
       rescore_out_names_.size());
   VLOG(1) << "decoder->Run() takes " << timer.Elapsed() << " ms.";
 
-  //(B, beam, T2)
+  // (B, beam, T2)
   auto scores_shape = rescore_outputs[1].GetTensorTypeAndShapeInfo().GetShape();
-  attention_scores.resize(scores_shape[0]);
+  attention_scores->resize(scores_shape[0]);
   if (is_fp16_) {
     Timer timer;
     int length = scores_shape[0] * scores_shape[1];
     auto outs = rescore_outputs[1].GetTensorMutableData<Ort::Float16_t>();
     for (size_t i = 0; i < scores_shape[0]; ++i) {
-      attention_scores[i].resize(scores_shape[1]);
+      (*attention_scores)[i].resize(scores_shape[1]);
       for (size_t j = 0; j < scores_shape[1]; ++j) {
-        attention_scores[i][j] = _cvtsh_ss(outs[i * scores_shape[1] + j].value);
+        (*attention_scores)[i][j] = _cvtsh_ss(
+            outs[i * scores_shape[1] + j].value);
       }
     }
-    VLOG(1) << "decoder_out from fp16 to float takes " << timer.Elapsed() << " ms. data length " << length;
+    VLOG(1) << "decoder_out from fp16 to float takes "
+            << timer.Elapsed() << " ms. data length " << length;
   } else {
     auto outs = rescore_outputs[0].GetTensorMutableData<float>();
     for (size_t i = 0; i < scores_shape[0]; ++i) {
-      attention_scores[i].resize(scores_shape[1]);
-      memcpy(attention_scores[i].data(), outs + i * scores_shape[1], sizeof(float) * scores_shape[1]);
+      (*attention_scores)[i].resize(scores_shape[1]);
+      memcpy((*attention_scores)[i].data(), outs + i * scores_shape[1],
+          sizeof(float) * scores_shape[1]);
     }
   }
 }

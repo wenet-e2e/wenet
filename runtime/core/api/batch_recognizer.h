@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef API_BATCH_RECOGNIZER_H_
+#define API_BATCH_RECOGNIZER_H_
 
 #include <memory>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "decoder/asr_decoder.h"
 #include "decoder/batch_asr_decoder.h"
@@ -27,7 +30,7 @@
 
 class BatchRecognizer {
  public:
-  explicit BatchRecognizer(const std::string& model_dir, int num_threads=1) {
+  explicit BatchRecognizer(const std::string& model_dir, int num_threads = 1) {
     // FeaturePipeline init
     feature_config_ = std::make_shared<wenet::FeaturePipelineConfig>(80, 16000);
     // Resource init
@@ -84,8 +87,9 @@ class BatchRecognizer {
     resource_->post_processor =
         std::make_shared<wenet::PostProcessor>(*post_process_opts_);
     // Init decoder
-    decoder_ = std::make_shared<wenet::BatchAsrDecoder>(feature_config_, resource_,
-                                                   *decode_options_);
+    decoder_ = std::make_shared<wenet::BatchAsrDecoder>(
+        feature_config_, resource_,
+        *decode_options_);
   }
 
   std::string Decode(const std::vector<std::string>& wavs) {
@@ -141,3 +145,4 @@ class BatchRecognizer {
   std::string language_ = "chs";
 };
 
+#endif  // API_BATCH_RECOGNIZER_H_

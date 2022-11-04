@@ -58,25 +58,28 @@ class BatchAsrDecoder {
     return feature_config_->frame_shift * 1000 /
            feature_config_->sample_rate;
   }
-  const std::vector<std::vector<DecodeResult>>& batch_result() const { return batch_result_; }
+  const std::vector<std::vector<DecodeResult>>& batch_result() const {
+    return batch_result_; }
   const std::string get_batch_result(int nbest, bool enable_timestamp);
 
  private:
   Fbank fbank_;
   void FbankWorker(const std::vector<float>& wav, int index);
-  std::vector<std::pair<int, feature_t>> batch_feats_; // for FbankWorker
-  std::vector<std::pair<int, int>> batch_feats_lens_; // for FbankWorker
+  std::vector<std::pair<int, feature_t>> batch_feats_;  // for FbankWorker
+  std::vector<std::pair<int, int>> batch_feats_lens_;  // for FbankWorker
 
   void SearchWorker(
       const std::vector<std::vector<float>>& topk_scores,
       const std::vector<std::vector<int>>& topk_indexs,
       int index);
   std::mutex mutex_;
-  std::vector<std::pair<int, std::vector<std::vector<int>>>> batch_hyps_; // for SearchWorker
-  std::vector<std::pair<int, std::vector<DecodeResult>>> batch_pair_result_; // for SearchWorker
+  // for SearchWorker
+  std::vector<std::pair<int, std::vector<std::vector<int>>>> batch_hyps_;
+  std::vector<std::pair<int, std::vector<DecodeResult>>> batch_pair_result_;
   std::vector<std::vector<DecodeResult>> batch_result_;
 
-  void UpdateResult(SearchInterface* searcher, std::vector<DecodeResult>& result);
+  void UpdateResult(SearchInterface* searcher,
+      std::vector<DecodeResult>* result);
 
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
   std::shared_ptr<BatchAsrModel> model_;

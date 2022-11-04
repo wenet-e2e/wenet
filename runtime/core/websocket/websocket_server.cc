@@ -14,12 +14,12 @@
 // limitations under the License.
 
 #include "websocket/websocket_server.h"
-#include "websocket/batch_connection_handler.h"
 
 #include <thread>
 #include <utility>
 #include <vector>
 
+#include "websocket/batch_connection_handler.h"
 #include "boost/json/src.hpp"
 #include "utils/log.h"
 

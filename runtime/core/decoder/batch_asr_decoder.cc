@@ -33,7 +33,8 @@ BatchAsrDecoder::BatchAsrDecoder(std::shared_ptr<FeaturePipelineConfig> config,
                        const DecodeOptions& opts)
     : feature_config_(config),
       beam_size_(opts.ctc_prefix_search_opts.first_beam_size),
-      fbank_(config->num_bins, config->sample_rate, config->frame_length, config->frame_shift),
+      fbank_(config->num_bins, config->sample_rate,
+          config->frame_length, config->frame_shift),
       model_(resource->batch_model->Copy()),
       post_processor_(resource->post_processor),
       symbol_table_(resource->symbol_table),
@@ -77,8 +78,9 @@ void BatchAsrDecoder::SearchWorker(
   searcher->Search(topk_scores, topk_indexs);
   searcher->FinalizeSearch();
   std::vector<DecodeResult> result;
-  UpdateResult(searcher.get(), result);
-  VLOG(1) << "\tctc search i==" << index << " takes " << ctc_timer.Elapsed() << " ms";
+  UpdateResult(searcher.get(), &result);
+  VLOG(1) << "\tctc search i==" << index
+          << " takes " << ctc_timer.Elapsed() << " ms";
   std::lock_guard<std::mutex> lock(mutex_);
   batch_pair_result_.emplace_back(std::make_pair(index, std::move(result)));
   const auto& hypotheses = searcher->Inputs();
@@ -103,7 +105,8 @@ void BatchAsrDecoder::FbankWorker(const std::vector<float>& wav, int index) {
   std::lock_guard<std::mutex> lock(mutex_);
   batch_feats_.push_back(std::make_pair(index, std::move(feats)));
   batch_feats_lens_.push_back(std::make_pair(index, num_frames));
-  VLOG(1) << "\tfeature comput i==" << index << ", takes " << timer.Elapsed() << " ms.";
+  VLOG(1) << "\tfeature comput i==" << index
+          << ", takes " << timer.Elapsed() << " ms.";
 }
 
 void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
@@ -118,7 +121,7 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
       std::thread thd(&BatchAsrDecoder::FbankWorker, this, wav, i);
       fbank_threads.push_back(std::move(thd));
     }
-    for(auto& thd : fbank_threads) {
+    for (auto& thd : fbank_threads) {
       thd.join();
     }
     std::sort(batch_feats_.begin(), batch_feats_.end());
@@ -141,7 +144,8 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
   // 1.1 feature padding
   if (wavs.size() > 1) {
     timer.Reset();
-    int max_len = *std::max_element(batch_feats_lens.begin(), batch_feats_lens.end());
+    int max_len = *std::max_element(
+        batch_feats_lens.begin(), batch_feats_lens.end());
     for (auto& feat : batch_feats) {
       if (feat.size() == max_len) continue;
       int pad_len = max_len - feat.size();
@@ -157,7 +161,8 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
   timer.Reset();
   std::vector<std::vector<std::vector<float>>> batch_topk_scores;
   std::vector<std::vector<std::vector<int>>> batch_topk_indexs;
-  model_->ForwardEncoder(batch_feats, batch_feats_lens, batch_topk_scores, batch_topk_indexs);
+  model_->ForwardEncoder(
+      batch_feats, batch_feats_lens, &batch_topk_scores, &batch_topk_indexs);
   VLOG(1) << "encoder forward takes " << timer.Elapsed() << " ms.";
 
   // 3. ctc search one by one of the batch
@@ -172,15 +177,17 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
     for (size_t i = 0; i < batch_size; i++) {
       const auto& topk_scores = batch_topk_scores[i];
       const auto& topk_indexs = batch_topk_indexs[i];
-      std::thread thd(&BatchAsrDecoder::SearchWorker, this, topk_scores, topk_indexs, i);
+      std::thread thd(
+          &BatchAsrDecoder::SearchWorker, this, topk_scores, topk_indexs, i);
       search_threads.push_back(std::move(thd));
     }
-    for(auto& thd : search_threads) {
+    for (auto& thd : search_threads) {
       thd.join();
     }
     std::sort(batch_hyps_.begin(), batch_hyps_.end());
-    std::sort(batch_pair_result_.begin(), batch_pair_result_.end(), [](auto& a, auto& b) {
-        return a.first < b.first; });
+    std::sort(batch_pair_result_.begin(), batch_pair_result_.end(),
+        [](auto& a, auto& b) {
+          return a.first < b.first; });
     for (auto& pair : batch_hyps_) {
       batch_hyps.push_back(std::move(pair.second));
     }
@@ -193,7 +200,7 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
     searcher_->Search(batch_topk_scores[0], batch_topk_indexs[0]);
     searcher_->FinalizeSearch();
     std::vector<DecodeResult> result;
-    UpdateResult(searcher_.get(), result);
+    UpdateResult(searcher_.get(), &result);
     batch_result_.push_back(std::move(result));
     const auto& hypotheses = searcher_->Inputs();
     if (hypotheses.size() < beam_size_) {
@@ -209,7 +216,8 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
       batch_hyps.push_back(std::move(hypotheses));
     }
   }
-  VLOG(1) << "ctc search batch(" << batch_size << ") takes " << timer.Elapsed() << " ms.";
+  VLOG(1) << "ctc search batch(" << batch_size << ") takes "
+          << timer.Elapsed() << " ms.";
   std::vector<std::vector<float>> ctc_scores(batch_size);
   for (int i = 0; i < batch_result_.size(); ++i) {
     ctc_scores[i].resize(beam_size_);
@@ -220,7 +228,7 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
   // 4. attention rescoring
   timer.Reset();
   std::vector<std::vector<float>> attention_scores;
-  model_->AttentionRescoring(batch_hyps, ctc_scores, attention_scores);
+  model_->AttentionRescoring(batch_hyps, ctc_scores, &attention_scores);
   VLOG(1) << "attention rescoring takes " << timer.Elapsed() << " ms.";
   for (size_t i = 0; i < batch_size; i++) {
     std::vector<DecodeResult>& result = batch_result_[i];
@@ -231,13 +239,14 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
   }
 }
 
-void BatchAsrDecoder::UpdateResult(SearchInterface* searcher, std::vector<DecodeResult>& result) {
+void BatchAsrDecoder::UpdateResult(SearchInterface* searcher,
+    std::vector<DecodeResult>* result) {
   bool finish = true;
   const auto& hypotheses = searcher->Outputs();
   const auto& inputs = searcher->Inputs();
   const auto& likelihood = searcher->Likelihood();
   const auto& times = searcher->Times();
-  result.clear();
+  result->clear();
 
   CHECK_EQ(hypotheses.size(), likelihood.size());
   for (size_t i = 0; i < hypotheses.size(); i++) {
@@ -293,39 +302,40 @@ void BatchAsrDecoder::UpdateResult(SearchInterface* searcher, std::vector<Decode
     if (post_processor_ != nullptr) {
       path.sentence = post_processor_->Process(path.sentence, finish);
     }
-    result.emplace_back(path);
+    result->emplace_back(path);
   }
 }
 
-const std::string BatchAsrDecoder::get_batch_result(int nbest, bool enable_timestamp) {
-    json::JSON obj;
-    obj["status"] = "ok";
-    obj["type"] = "final_result";
-    obj["batch_size"] = batch_result_.size();
-    obj["batch_result"] = json::Array();
-    for (const auto& result : batch_result_) {
-      json::JSON batch_one;
-      batch_one["nbest"] = json::Array();
-      for (int i = 0; i < nbest && i < result.size(); i++) {
-        json::JSON one;
-        one["sentence"] = result[i].sentence;
-        // one["score"] = result[i].score;
-        if (enable_timestamp) {
-          one["word_pieces"] = json::Array();
-          for (const auto& word_piece : result[i].word_pieces) {
-            json::JSON piece;
-            piece["word"] = word_piece.word;
-            piece["start"] = word_piece.start;
-            piece["end"] = word_piece.end;
-            one["word_pieces"].append(piece);
-          }
+const std::string BatchAsrDecoder::get_batch_result(int nbest,
+    bool enable_timestamp) {
+  json::JSON obj;
+  obj["status"] = "ok";
+  obj["type"] = "final_result";
+  obj["batch_size"] = batch_result_.size();
+  obj["batch_result"] = json::Array();
+  for (const auto& result : batch_result_) {
+    json::JSON batch_one;
+    batch_one["nbest"] = json::Array();
+    for (int i = 0; i < nbest && i < result.size(); i++) {
+      json::JSON one;
+      one["sentence"] = result[i].sentence;
+      // one["score"] = result[i].score;
+      if (enable_timestamp) {
+        one["word_pieces"] = json::Array();
+        for (const auto& word_piece : result[i].word_pieces) {
+          json::JSON piece;
+          piece["word"] = word_piece.word;
+          piece["start"] = word_piece.start;
+          piece["end"] = word_piece.end;
+          one["word_pieces"].append(piece);
         }
-        one["sentence"] = result[i].sentence;
-        batch_one["nbest"].append(one);
       }
-      obj["batch_result"].append(batch_one);
+      one["sentence"] = result[i].sentence;
+      batch_one["nbest"].append(one);
     }
-    return obj.dump();
+    obj["batch_result"].append(batch_one);
+  }
+  return obj.dump();
   }
 
 }  // namespace wenet

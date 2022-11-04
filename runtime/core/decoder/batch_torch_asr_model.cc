@@ -130,7 +130,7 @@ void BatchTorchAsrModel::ForwardEncoder(
       model_->get_method("batch_forward_encoder")(inputs).toTuple()->elements();
   CHECK_EQ(outputs.size(), 5);
   encoder_out_ = outputs[0].toTensor();  // (B, Tmax, dim)
-  encoder_lens_ = outputs[1].toTensor(); // (B,)
+  encoder_lens_ = outputs[1].toTensor();  // (B,)
 
   // Copy topk_scores
   auto topk_scores = outputs[3].toTensor().to(at::kCPU);
@@ -165,7 +165,8 @@ void BatchTorchAsrModel::AttentionRescoring(
   // Step 1: Prepare input for libtorch
   int batch_size = batch_hyps.size();
   int beam_size = batch_hyps[0].size();
-  torch::Tensor hyps_lens_sos = torch::zeros({batch_size, beam_size}, torch::kLong);
+  torch::Tensor hyps_lens_sos = torch::zeros(
+      {batch_size, beam_size}, torch::kLong);
   int max_hyps_len = 0;
   for (size_t i = 0; i < batch_size; i++) {
     for (size_t j = 0; j < beam_size; j++) {
@@ -176,8 +177,10 @@ void BatchTorchAsrModel::AttentionRescoring(
   }
 
   // 1.2 add sos, eos to hyps, r_hyps
-  torch::Tensor hyps_pad_sos_eos = torch::zeros({batch_size, beam_size, max_hyps_len + 1}, torch::kLong);
-  torch::Tensor r_hyps_pad_sos_eos = torch::zeros({batch_size, beam_size, max_hyps_len + 1}, torch::kLong);
+  torch::Tensor hyps_pad_sos_eos = torch::zeros(
+      {batch_size, beam_size, max_hyps_len + 1}, torch::kLong);
+  torch::Tensor r_hyps_pad_sos_eos = torch::zeros(
+      {batch_size, beam_size, max_hyps_len + 1}, torch::kLong);
   for (size_t i = 0; i < batch_size; i++) {
     for (size_t j = 0; j < beam_size; j++) {
       const std::vector<int>& hyp = batch_hyps[i][j];
@@ -192,7 +195,8 @@ void BatchTorchAsrModel::AttentionRescoring(
   }
 
   // 1.3 ctc_scores_data
-  torch::Tensor ctc_scores_tensor = torch::zeros({batch_size, beam_size}, torch::kFloat);
+  torch::Tensor ctc_scores_tensor = torch::zeros(
+      {batch_size, beam_size}, torch::kFloat);
   for (size_t i = 0; i < batch_size; ++i) {
     auto row = torch::from_blob(const_cast<float*>(ctc_scores[i].data()),
                                 {beam_size}, torch::kFloat).clone();
@@ -219,7 +223,8 @@ void BatchTorchAsrModel::AttentionRescoring(
   attention_scores.resize(batch_size);
   for (size_t i = 0; i < batch_size; i++) {
     attention_scores[i].resize(beam_size);
-    memcpy(attention_scores[i].data(), rescores[i].data_ptr(), sizeof(float) * beam_size);
+    memcpy(attention_scores[i].data(), rescores[i].data_ptr(),
+        sizeof(float) * beam_size);
   }
 }
 

@@ -71,8 +71,8 @@ void OnnxAsrModel::GetInputOutputInfo(
       shape << j;
       shape << " ";
     }
-    LOG(INFO) << "\tOutput " << i << " : name=" << name.get() << " type=" << type
-              << " dims=" << shape.str();
+    LOG(INFO) << "\tOutput " << i << " : name=" << name.get()
+              << " type=" << type << " dims=" << shape.str();
     node_names_.push_back(std::move(name));
     (*out_names)[i] = node_names_.back().get();
   }
@@ -109,25 +109,39 @@ void OnnxAsrModel::Read(const std::string& model_dir) {
   auto model_metadata = encoder_session_->GetModelMetadata();
 
   Ort::AllocatorWithDefaultOptions allocator;
-  encoder_output_size_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("output_size", allocator).get());
-  num_blocks_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("num_blocks", allocator).get());
-  head_ = atoi(model_metadata.LookupCustomMetadataMapAllocated("head", allocator).get());
+  encoder_output_size_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "output_size", allocator).get());
+  num_blocks_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "num_blocks", allocator).get());
+  head_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "head", allocator).get());
   cnn_module_kernel_ = atoi(
-      model_metadata.LookupCustomMetadataMapAllocated("cnn_module_kernel", allocator).get());
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "cnn_module_kernel", allocator).get());
   subsampling_rate_ = atoi(
-      model_metadata.LookupCustomMetadataMapAllocated("subsampling_rate", allocator).get());
-  right_context_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("right_context", allocator).get());
-  sos_ = atoi(model_metadata.LookupCustomMetadataMapAllocated("sos_symbol", allocator).get());
-  eos_ = atoi(model_metadata.LookupCustomMetadataMapAllocated("eos_symbol", allocator).get());
-  is_bidirectional_decoder_ = atoi(model_metadata.LookupCustomMetadataMapAllocated(
-      "is_bidirectional_decoder", allocator).get());
-  chunk_size_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("chunk_size", allocator).get());
-  num_left_chunks_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("left_chunks", allocator).get());
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "subsampling_rate", allocator).get());
+  right_context_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "right_context", allocator).get());
+  sos_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "sos_symbol", allocator).get());
+  eos_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "eos_symbol", allocator).get());
+  is_bidirectional_decoder_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "is_bidirectional_decoder", allocator).get());
+  chunk_size_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "chunk_size", allocator).get());
+  num_left_chunks_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated(
+        "left_chunks", allocator).get());
 
   LOG(INFO) << "Onnx Model Info:";
   LOG(INFO) << "\tencoder_output_size " << encoder_output_size_;

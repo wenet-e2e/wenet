@@ -136,7 +136,8 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   if (!FLAGS_onnx_dir.empty()) {
 #ifdef USE_ONNX
     if (FLAGS_run_batch) {
-      LOG(INFO) << "BatchOnnxAsrModel Reading ONNX model dir: " << FLAGS_onnx_dir;
+      LOG(INFO) << "BatchOnnxAsrModel Reading ONNX model dir: "
+                << FLAGS_onnx_dir;
       BatchOnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
       auto model = std::make_shared<BatchOnnxAsrModel>();
       model->Read(FLAGS_onnx_dir, FLAGS_is_fp16, FLAGS_gpu_id);
@@ -154,7 +155,8 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   } else if (!FLAGS_model_path.empty()) {
 #ifdef USE_TORCH
     if (FLAGS_run_batch) {
-      LOG(INFO) << "BatchTorchAsrModel Reading torch model " << FLAGS_model_path;
+      LOG(INFO) << "BatchTorchAsrModel Reading torch model "
+                << FLAGS_model_path;
       BatchTorchAsrModel::InitEngineThreads(FLAGS_num_threads);
       auto model = std::make_shared<BatchTorchAsrModel>();
       model->Read(FLAGS_model_path);

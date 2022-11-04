@@ -31,7 +31,7 @@
 namespace wenet {
 
 class BatchTorchAsrModel : public BatchAsrModel {
-public:
+ public:
   // Note: Do not call the InitEngineThreads function more than once.
   static void InitEngineThreads(int num_threads = 1);
 
@@ -50,7 +50,7 @@ public:
       const batch_feature_t& batch_feats,
       const std::vector<int>& batch_feats_lens,
       std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
-      std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) override;
+      std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) override;  // NOLINT
 
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;

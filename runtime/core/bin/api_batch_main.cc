@@ -34,7 +34,9 @@ int main(int argc, char* argv[]) {
   if (FLAGS_enable_timestamp) br.set_enable_timestamp(true);
   wenet::WavReader wav_reader(FLAGS_wav_path);
   std::vector<float> data;
-  data.insert(data.end(), wav_reader.data(), wav_reader.data() + wav_reader.num_samples());
+  data.insert(
+      data.end(), wav_reader.data(),
+      wav_reader.data() + wav_reader.num_samples());
   std::vector<std::vector<float>> wavs;
   for (size_t i = 0; i < FLAGS_batch_size - 1; i++) {
     wavs.push_back(data);

@@ -29,6 +29,8 @@
 #include "decoder/batch_asr_model.h"
 #include "utils/log.h"
 #include "utils/utils.h"
+#include "onnxruntime_run_options_config_keys.h"  // NOLINT
+#include "onnxruntime_session_options_config_keys.h"  // NOLINT
 
 namespace wenet {
 
@@ -40,10 +42,11 @@ class BatchOnnxAsrModel : public BatchAsrModel {
  public:
   BatchOnnxAsrModel() = default;
   BatchOnnxAsrModel(const BatchOnnxAsrModel& other);
-  void Read(const std::string& model_dir, bool is_fp16=false, int gpu_id=0);
-  void AttentionRescoring(const std::vector<std::vector<std::vector<int>>>& batch_hyps,
-                          const std::vector<std::vector<float>>& ctc_scores,
-                          std::vector<std::vector<float>>& attention_scores) override;
+  void Read(const std::string& model_dir, bool is_fp16 = false, int gpu_id = 0);
+  void AttentionRescoring(
+      const std::vector<std::vector<std::vector<int>>>& batch_hyps,
+      const std::vector<std::vector<float>>& ctc_scores,
+      std::vector<std::vector<float>>* attention_scores) override;
   std::shared_ptr<BatchAsrModel> Copy() const override;
 
   void GetInputOutputInfo(const std::shared_ptr<Ort::Session>& session,
@@ -52,8 +55,8 @@ class BatchOnnxAsrModel : public BatchAsrModel {
   void ForwardEncoder(
       const batch_feature_t& batch_feats,
       const std::vector<int>& batch_feats_lens,
-      std::vector<std::vector<std::vector<float>>>& batch_topk_scores,
-      std::vector<std::vector<std::vector<int32_t>>>& batch_topk_indexs) override;
+      std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
+      std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) override;  // NOLINT
 
  private:
   int encoder_output_size_ = 0;

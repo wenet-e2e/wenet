@@ -40,16 +40,18 @@ void decode(const std::string& wav) {
   wenet::WavReader wav_reader(wav);
   std::vector<float> wav_data;
   int num_samples = wav_reader.num_samples();
-  wav_data.insert(wav_data.end(), wav_reader.data(), wav_reader.data() + num_samples);
+  wav_data.insert(
+      wav_data.end(), wav_reader.data(), wav_reader.data() + num_samples);
   std::vector<std::vector<float>> batch_wav_data;
-  int wav_dur = static_cast<int>(static_cast<float>(num_samples) / wav_reader.sample_rate() * 1000);
+  int wav_dur = static_cast<int>(
+      static_cast<float>(num_samples) / wav_reader.sample_rate() * 1000);
   for (int i = 0; i < FLAGS_batch_size; ++i) {
     batch_wav_data.push_back(wav_data);
     g_total_waves_dur += wav_dur;
   }
 
-  std::unique_ptr<wenet::BatchAsrDecoder> decoder =
-    std::make_unique<wenet::BatchAsrDecoder>(g_feature_config, g_decode_resource, *g_decode_config);
+  auto decoder = std::make_unique<wenet::BatchAsrDecoder>(
+      g_feature_config, g_decode_resource, *g_decode_config);
   wenet::Timer timer;
   decoder->Decode(batch_wav_data);
   int decode_time = timer.Elapsed();
