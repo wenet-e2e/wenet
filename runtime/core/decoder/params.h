@@ -36,7 +36,6 @@
 #include "utils/flags.h"
 #include "utils/string.h"
 
-DEFINE_int32(num_threads, 1, "num threads for ASR model");
 DEFINE_int32(device_id, 0, "set XPU DeviceID for ASR model");
 
 // TorchAsrModel flags
@@ -126,11 +125,11 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
-
+  const int kNumGemmThreads = 1;
   if (!FLAGS_onnx_dir.empty()) {
 #ifdef USE_ONNX
     LOG(INFO) << "Reading onnx model ";
-    OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
+    OnnxAsrModel::InitEngineThreads(kNumGemmThreads);
     auto model = std::make_shared<OnnxAsrModel>();
     model->Read(FLAGS_onnx_dir);
     resource->model = model;
@@ -140,7 +139,7 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   } else if (!FLAGS_model_path.empty()) {
 #ifdef USE_TORCH
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
-    TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
+    TorchAsrModel::InitEngineThreads(kNumGemmThreads);
     auto model = std::make_shared<TorchAsrModel>();
     model->Read(FLAGS_model_path);
     resource->model = model;
@@ -151,7 +150,7 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 #ifdef USE_XPU
     LOG(INFO) << "Reading XPU WeNet model weight from " << FLAGS_xpu_model_dir;
     auto model = std::make_shared<XPUAsrModel>();
-    model->SetEngineThreads(FLAGS_num_threads);
+    model->SetEngineThreads(kNumGemmThreads);
     model->SetDeviceId(FLAGS_device_id);
     model->Read(FLAGS_xpu_model_dir);
     resource->model = model;
