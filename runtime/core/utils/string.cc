@@ -147,7 +147,7 @@ bool SplitUTF8StringToWords(
       }
       // Add '▁' at the beginning of English word.
       if (IsAlpha(word)) {
-        word = "▁" + word;
+        word = kSpaceSymbol + word;
       }
 
       if (symbol_table->Find(word) != -1) {
