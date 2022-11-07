@@ -381,7 +381,8 @@ class SqueezeformerEncoder(nn.Module):
 
             xs, _, new_att_cache, new_cnn_cache = layer(
                 xs, att_mask, pos_emb,
-                att_cache=att_cache[i:i + 1][:, :, ::factor, :] if
+                att_cache=att_cache[i:i + 1][:, :, ::factor, :]
+                [:, :, :pos_emb.size(1) - xs.size(1), :] if
                 elayers > 0 and att_cache.size(2) != 0 else
                 att_cache[:, :, ::factor, :],
                 cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
