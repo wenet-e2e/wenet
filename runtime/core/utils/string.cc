@@ -117,6 +117,15 @@ std::string JoinString(const std::string& c,
   return result;
 }
 
+bool IsAlpha(const std::string& str) {
+  for (size_t i = 0; i < str.size(); i++) {
+    if (!isalpha(str[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool SplitUTF8StringToWords(
     const std::string& str,
     const std::shared_ptr<fst::SymbolTable>& symbol_table,
@@ -131,6 +140,16 @@ bool SplitUTF8StringToWords(
       for (size_t i = start; i < end; i++) {
         word += chars[i];
       }
+      // Skip space.
+      if (word == " ") {
+        start = end;
+        continue;
+      }
+      // Add '▁' at the beginning of English word.
+      if (IsAlpha(word)) {
+        word = kSpaceSymbol + word;
+      }
+
       if (symbol_table->Find(word) != -1) {
         words->emplace_back(word);
         start = end;
