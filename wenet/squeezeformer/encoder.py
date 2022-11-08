@@ -30,7 +30,6 @@ from wenet.squeezeformer.positionwise_feed_forward \
 from wenet.squeezeformer.convolution import ConvolutionModule
 from wenet.utils.mask import make_pad_mask, add_optional_chunk_mask
 from wenet.utils.common import get_activation
-import math
 
 
 class SqueezeformerEncoder(nn.Module):
