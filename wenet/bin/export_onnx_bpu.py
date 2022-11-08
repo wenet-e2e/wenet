@@ -609,11 +609,14 @@ class X3ConformerEncoderLayer(torch.nn.Module):
         self.feed_forward = X3FFN(module.feed_forward)
 
         # 2. Modify norms
-        self.norm_ff = X3LayerNorm(module.norm_ff, ln_run_on_bpu)
-        self.norm_mha = X3LayerNorm(module.norm_mha, ln_run_on_bpu)
-        self.norm_ff_macron = X3LayerNorm(module.norm_ff_macaron, ln_run_on_bpu)
-        self.norm_conv = X3LayerNorm(module.norm_conv, ln_run_on_bpu)
-        self.norm_final = X3LayerNorm(module.norm_final, ln_run_on_bpu)
+        self.norm_ff = X3LayerNorm(module.norm_ff, chunk_size, ln_run_on_bpu)
+        self.norm_mha = X3LayerNorm(module.norm_mha, chunk_size, ln_run_on_bpu)
+        self.norm_ff_macron = X3LayerNorm(module.norm_ff_macaron,
+                                          chunk_size, ln_run_on_bpu)
+        self.norm_conv = X3LayerNorm(module.norm_conv,
+                                     chunk_size, ln_run_on_bpu)
+        self.norm_final = X3LayerNorm(module.norm_final,
+                                      chunk_size, ln_run_on_bpu)
 
         # 3. 4-D ff_scale
         self.register_buffer(
@@ -625,7 +628,7 @@ class X3ConformerEncoderLayer(torch.nn.Module):
         time1 = self.self_attn.chunk_size
         time2 = self.self_attn.time
         h, d_k = self.self_attn.h, self.self_attn.d_k
-        random_x = torch.randn(1, 8, self.size)
+        random_x = torch.randn(1, time1, self.size)
         att_mask = torch.ones(1, h, time1, time2)
         att_cache = torch.zeros(1, h, time2 - time1, d_k * 2)
         cnn_cache = torch.zeros(1, self.size, self.conv_module.lorder)

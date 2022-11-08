@@ -336,7 +336,7 @@ compiler_parameters:
         enc_dic['input_name'], enc_dic['input_type'],
         enc_dic['input_layout_train'], enc_dic['input_shape'],
         enc_dic['norm_type'], enc_dic['input_type'], enc_dic['input_layout_rt'],
-        enc_cal_data, "max", "", "")
+        enc_cal_data, "default", "", "")
     ctc_config = template.format(
         ctc_onnx_path, "ctc", ctc_log_path,
         ctc_dic['input_name'], ctc_dic['input_type'],
@@ -433,15 +433,18 @@ if __name__ == '__main__':
         logger.info("Make calibration data")
         make_calibration_data(enc, args, conf)
 
-        logger.info("Make encoder.bin")
-        os.system(
-            "hb_mapper makertbin --model-type \"onnx\" --config \"{}\"".format(
-                args.output_dir + "/config_encoder.yaml")
-        )
+        output_dir = os.path.realpath(args.output_dir)
         logger.info("Make ctc.bin")
         os.system(
-            "hb_mapper makertbin --model-type \"onnx\" --config \"{}\"".format(
-                args.output_dir + "/config_ctc.yaml")
+            "cd {} && hb_mapper makertbin ".format(output_dir) +
+            "--model-type \"onnx\" --config \"{}\"".format(
+                output_dir + "/config_ctc.yaml")
+        )
+        logger.info("Make encoder.bin")
+        os.system(
+            "cd {} && hb_mapper makertbin ".format(output_dir) +
+            "--model-type \"onnx\" --config \"{}\"".format(
+                output_dir + "/config_encoder.yaml")
         )
 
     if args.wer_datalist is not None:
