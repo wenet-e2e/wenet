@@ -1,6 +1,7 @@
 // Copyright (c) 2022 Dan Ma (1067837450@qq.com)
 //
-//  Use this file to import your target's public headers that you would like to expose to Swift.
+//  Use this file to import your target's public headers
+//  that you would like to expose to Swift.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,4 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#ifndef RUNTIME_IOS_WENETDEMO_WENETDEMO_WENET_WENETDEMO_BRIDGING_HEADER_H_
+#define RUNTIME_IOS_WENETDEMO_WENETDEMO_WENET_WENETDEMO_BRIDGING_HEADER_H_
 #import "wenet.h"
+
+#endif //RUNTIME_IOS_WENETDEMO_WENETDEMO_WENET_WENETDEMO_BRIDGING_HEADER_H_

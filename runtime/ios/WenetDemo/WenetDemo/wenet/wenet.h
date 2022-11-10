@@ -15,8 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef wenet_h
-#define wenet_h
+#ifndef RUNTIME_IOS_WENETDEMO_WENETDEMO_WENET_WENET_H_
+#define RUNTIME_IOS_WENETDEMO_WENETDEMO_WENET_WENET_H_
 
 #include <stdio.h>
 
@@ -36,4 +36,4 @@
 
 @end
 
-#endif /* wenet_h */
+#endif // RUNTIME_IOS_WENETDEMO_WENETDEMO_WENET_WENET_H_

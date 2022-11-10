@@ -2,21 +2,13 @@
 
 ## Build application from source code
 
-### 1) Generate cmake project and install LibTorch pod
+### 1) Generate cmake project, install LibTorch pod and build static libraries
 
 ```
 cd runtime/ios/build
-cmake .. -G Xcode -DTORCH=OFF -DONNX=OFF -DIOS=ON -DGRAPH_TOOLS=ON -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE=../toolchains/ios.toolchain.cmake -DPLATFORM=OS64 -DENABLE_BITCODE=FALSE
+cmake .. -G Xcode -DTORCH=OFF -DONNX=OFF -DIOS=ON -DGRAPH_TOOLS=OFF -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE=../toolchains/ios.toolchain.cmake -DPLATFORM=OS64 -DENABLE_BITCODE=FALSE
 pod install
-```
 
-### 2) Remove executable targets in wenet project
-
-Open wenet.xcodeproj in runtime/ios/build folder with Xcode, remove all 6 executable targets, leave static library targets only, close Xcode to save workspace.
-
-### 3) Build static libraries
-
-```
 # Build debug version
 cmake --build . --config Debug
 
@@ -24,7 +16,7 @@ cmake --build . --config Debug
 cmake --build . --config Release
 ```
 
-### 4) Build and run iOS application
+### 2) Build and run iOS application
 
 You can use our pretrained model (click the following link to download):
 

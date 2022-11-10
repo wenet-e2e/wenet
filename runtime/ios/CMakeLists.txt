@@ -52,12 +52,6 @@ add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
 
-# Optionally, you can build with gRPC
-if(GRPC)
-  include(grpc)
-  add_subdirectory(grpc)
-endif()
-
 # Unit Test
 if(BUILD_TESTING)
   include(gtest)
