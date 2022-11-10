@@ -1,5 +1,6 @@
 // Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
 //               2022 Binbin Zhang (binbzha@qq.com)
+//               2022 Dan Ma (1067837450@qq.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,7 +23,6 @@
 #include <vector>
 
 #include "torch/script.h"
-//#include "torch/torch.h"
 
 #include "decoder/asr_model.h"
 #include "utils/utils.h"
@@ -30,10 +30,6 @@
 namespace wenet {
 
 class IosAsrModel : public AsrModel {
- public:
-  // Note: Do not call the InitEngineThreads function more than once.
-  static void InitEngineThreads(int num_threads = 1);
-
  public:
   using TorchModule = torch::jit::script::Module;
   IosAsrModel() = default;

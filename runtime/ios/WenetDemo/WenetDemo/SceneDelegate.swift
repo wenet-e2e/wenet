@@ -1,3 +1,4 @@
+// Copyright (c) 2022 Dan Ma (1067837450@qq.com)
 //
 //  SceneDelegate.swift
 //  WenetDemo

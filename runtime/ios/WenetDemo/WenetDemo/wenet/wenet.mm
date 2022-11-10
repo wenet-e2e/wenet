@@ -1,6 +1,19 @@
+// Copyright (c) 2022 Dan Ma (1067837450@qq.com)
 //
-//  wenet.cmm
+//  wenet.mm
 //  WenetDemo
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "wenet.h"
 
@@ -39,24 +52,24 @@ using namespace wenet;
             resource->model = model;
             resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
                                                                        fst::SymbolTable::ReadText(dictPath.UTF8String));
-            
+
             PostProcessOptions post_process_opts;
             resource->post_processor = std::make_shared<PostProcessor>(post_process_opts);
-            
+
             feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
             feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
-            
+
             decode_config = std::make_shared<DecodeOptions>();
             decode_config->chunk_size = 16;
             decoder = std::make_shared<AsrDecoder>(feature_pipeline, resource, *decode_config);
-            
+
             state = kEndBatch;
         } catch (const std::exception& exception) {
             NSLog(@"%s", exception.what());
             return nil;
         }
     }
-    
+
     return self;
 }
 
@@ -79,12 +92,12 @@ using namespace wenet;
     if (state == kEndFeats || state == kEndpoint) {
         decoder->Rescoring();
     }
-    
+
     std::string result;
     if (decoder->DecodedSomething()) {
         result = decoder->result()[0].sentence;
     }
-    
+
     if (state == kEndFeats) {
         LOG(INFO) << "wenet endfeats final result: " << result;
         NSLog(@"wenet endfeats final result: %s", result.c_str());

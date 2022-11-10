@@ -51,22 +51,12 @@ add_subdirectory(frontend)
 add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
-add_subdirectory(api)
-
-# Optionally, you can build with websocket
-if(WEBSOCKET)
-  include(boost)
-  add_subdirectory(websocket)
-endif()
 
 # Optionally, you can build with gRPC
 if(GRPC)
   include(grpc)
   add_subdirectory(grpc)
 endif()
-
-# Build all bins
-add_subdirectory(bin)
 
 # Unit Test
 if(BUILD_TESTING)

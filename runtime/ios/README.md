@@ -12,7 +12,7 @@ pod install
 
 ### 2) Remove executable targets in wenet project
 
-Open wenet.xcworkspace in runtime/ios/build folder with Xcode, remove all 47 executable targets in wenet project and Pods-decoder_main target in Pods project, leave static library targets only, close Xcode to save workspace.
+Open wenet.xcodeproj in runtime/ios/build folder with Xcode, remove all 6 executable targets, leave static library targets only, close Xcode to save workspace.
 
 ### 3) Build static libraries
 
