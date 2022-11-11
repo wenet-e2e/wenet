@@ -24,15 +24,15 @@
 
 @interface Wenet : NSObject
 
-- (nullable instancetype)initWithModelPath:(NSString*)modelPath DictPath:(NSString*)dictPath;
+- (nullable instancetype)initWithModelPath:(NSString*)modelPath DictPath:(NSString*)dictPath;  // NOLINT
 
 - (void)reset;
 
-- (void)acceptWaveForm: (float*)pcm: (int)size;
+- (void)acceptWaveForm: (float*)pcm: (int)size;  // NOLINT
 
 - (void)decode;
 
-- (NSString*)get_result;
+- (NSString*)get_result;  // NOLINT
 
 @end
 
