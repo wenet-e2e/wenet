@@ -395,20 +395,18 @@ if __name__ == '__main__':
     load_checkpoint(model, args.checkpoint)
     model.eval()
 
+    symbol_table = read_symbol_table(args.dict)
+    args.symbol_table = symbol_table
     args.feature_size = conf['input_dim']
     args.output_size = model.encoder.output_size()
     args.decoding_window = (args.chunk_size - 1) * \
         model.encoder.embed.subsampling_rate + \
         model.encoder.embed.right_context + 1
 
-    logger.info("Export onnx")
+    logger.info("Stage-1: Export onnx")
     enc, enc_session = export_encoder(model, args)
     ctc, ctc_session = export_ctc(model, args)
 
-    logger.info("Generate config")
-    symbol_table = read_symbol_table(args.dict)
-    args.symbol_table = symbol_table
-    generate_config(enc_session, ctc_session, args)
     conf = copy.deepcopy(conf['dataset_conf'])
     conf['filter_conf']['max_length'] = 102400
     conf['filter_conf']['min_length'] = 0
@@ -430,25 +428,30 @@ if __name__ == '__main__':
     conf['batch_conf']['batch_size'] = 1
 
     if args.cali_datalist is not None:
-        logger.info("Make calibration data")
+        logger.info("Stage-2: Generate config")
+        generate_config(enc_session, ctc_session, args)
+
+        logger.info("Stage-3: Make calibration data")
         make_calibration_data(enc, args, conf)
 
         output_dir = os.path.realpath(args.output_dir)
-        logger.info("Make ctc.bin")
+        logger.info("Stage-4: Make ctc.bin")
         os.system(
-            "cd {} && hb_mapper makertbin ".format(output_dir) +
-            "--model-type \"onnx\" --config \"{}\"".format(
+            "cd {} && mkdir -p hb_makertbin_log_ctc".format(output_dir) +
+            " && cd hb_makertbin_log_ctc &&" +
+            " hb_mapper makertbin --model-type \"onnx\" --config \"{}\"".format(
                 output_dir + "/config_ctc.yaml")
         )
-        logger.info("Make encoder.bin")
+        logger.info("Stage-5: Make encoder.bin")
         os.system(
-            "cd {} && hb_mapper makertbin ".format(output_dir) +
-            "--model-type \"onnx\" --config \"{}\"".format(
+            "cd {} && mkdir -p hb_makertbin_log_encoder ".format(output_dir) +
+            " && cd hb_makertbin_log_encoder &&" +
+            " hb_mapper makertbin --model-type \"onnx\" --config \"{}\"".format(
                 output_dir + "/config_encoder.yaml")
         )
 
     if args.wer_datalist is not None:
-        logger.info("Check wer between torch model and quantized onnx")
+        logger.info("Stage-6: Check wer between torch model and quantized onnx")
         assert args.wer_text is not None
         check_wer(enc, ctc, args, conf)
         os.system(

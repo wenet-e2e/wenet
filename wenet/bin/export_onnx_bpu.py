@@ -970,7 +970,7 @@ def export_encoder(asr_model, args):
     attributes['norm_type'] = \
         "no_preprocess;no_preprocess;no_preprocess;no_preprocess"
     attributes['input_layout_train'] = "NCHW;NCHW;NCHW;NCHW"
-    attributes['input_layout_rt'] = "NCHW;NCHW;NCHW;NCHW"
+    attributes['input_layout_rt'] = "NHWC;NHWC;NHWC;NHWC"
     attributes['input_shape'] = \
         "{}x{}x{}x{};{}x{}x{}x{};{}x{}x{}x{};{}x{}x{}x{}".format(
         chunk.size(0), chunk.size(1), chunk.size(2), chunk.size(3),
@@ -1066,7 +1066,7 @@ def export_ctc(asr_model, args):
     attributes['input_name'], attributes['input_type'] = "hidden", "featuremap"
     attributes['norm_type'] = "no_preprocess"
     attributes['input_layout_train'] = "NCHW"
-    attributes['input_layout_rt'] = "NCHW"
+    attributes['input_layout_rt'] = "NHWC"
     attributes['input_shape'] = "{}x{}x{}x{}".format(
         hidden.size(0), hidden.size(1), hidden.size(2), hidden.size(3),
     )

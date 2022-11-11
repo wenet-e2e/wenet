@@ -1,4 +1,4 @@
-# WeNet & Horizon X3PI (Cross Compile)
+# WeNet & Horizon BPU (Cross Compile)
 
 * Step 1. Install cross compile tools in the PC.
 
@@ -27,13 +27,13 @@ python -m wenet.bin.export_onnx_bpu \
 * Step 3. Build. The build requires cmake 3.14 or above. and Send the binary and libraries to Horizon X3PI.
 
 ``` sh
-cmake -B build -DHORIZONEASYDNN=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64-linux-gnu.toolchain.cmake
+cmake -B build -DHORIZONBPU=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64-linux-gnu.toolchain.cmake
 cmake --build build
 scp build/bin/decoder_main sunrise@xxx.xxx.xxx:/path/to/wenet
 scp fc_base/easydnn-src/lib/libeasydnn.so* sunrise@xxx.xxx.xxx:/path/to/wenet
 ```
 
-* Step 4. Testing, the RTF(real time factor) is shown in Horizon X3PI's console.
+* Step 4. Testing, the RTF(real time factor) is shown in Horizon X?PI's console.
 
 ``` sh
 cd /path/to/wenet
