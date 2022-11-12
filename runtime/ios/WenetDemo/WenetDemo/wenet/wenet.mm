@@ -31,99 +31,105 @@ using namespace wenet;
 
 @implementation Wenet {
 @protected
-    std::shared_ptr<DecodeOptions> decode_config;
-    std::shared_ptr<FeaturePipelineConfig> feature_config;
-    std::shared_ptr<FeaturePipeline> feature_pipeline;
-    std::shared_ptr<AsrDecoder> decoder;
-    std::shared_ptr<DecodeResource> resource;
-    DecodeState state;
-    std::string total_result;
+  std::shared_ptr<DecodeOptions> decode_config;
+  std::shared_ptr<FeaturePipelineConfig> feature_config;
+  std::shared_ptr<FeaturePipeline> feature_pipeline;
+  std::shared_ptr<AsrDecoder> decoder;
+  std::shared_ptr<DecodeResource> resource;
+  DecodeState state;
+  std::string total_result;
 }
 
-- (nullable instancetype)initWithModelPath:(NSString*)modelPath DictPath:(NSString*)dictPath {
-    self = [super init];
-    if (self) {
-        try {
-            auto qengines = at::globalContext().supportedQEngines();
-            if (std::find(qengines.begin(), qengines.end(), at::QEngine::QNNPACK) != qengines.end()) {
-                at::globalContext().setQEngine(at::QEngine::QNNPACK);
-            }
-            auto model = std::make_shared<TorchAsrModel>();
-            model->Read(modelPath.UTF8String);
-            resource = std::make_shared<DecodeResource>();
-            resource->model = model;
-            resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
-                                                                       fst::SymbolTable::ReadText(dictPath.UTF8String));
+- (nullable instancetype)initWithModelPath:
+(NSString*)modelPath DictPath:(NSString*)dictPath {
+  self = [super init];
+  if (self) {
+    try {
+      auto qengines = at::globalContext().supportedQEngines();
+      if (std::find(qengines.begin(), qengines.end(), at::QEngine::QNNPACK)
+          != qengines.end()) {
+        at::globalContext().setQEngine(at::QEngine::QNNPACK);
+      }
+      auto model = std::make_shared<TorchAsrModel>();
+      model->Read(modelPath.UTF8String);
+      resource = std::make_shared<DecodeResource>();
+      resource->model = model;
+      resource->symbol_table = std::shared_ptr<fst::SymbolTable>
+      (fst::SymbolTable::ReadText(dictPath.UTF8String));
 
-            PostProcessOptions post_process_opts;
-            resource->post_processor = std::make_shared<PostProcessor>(post_process_opts);
+      PostProcessOptions post_process_opts;
+      resource->post_processor =
+      std::make_shared<PostProcessor>(post_process_opts);
 
-            feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
-            feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
+      feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
+      feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
 
-            decode_config = std::make_shared<DecodeOptions>();
-            decode_config->chunk_size = 16;
-            decoder = std::make_shared<AsrDecoder>(feature_pipeline, resource, *decode_config);
+      decode_config = std::make_shared<DecodeOptions>();
+      decode_config->chunk_size = 16;
+      decoder = std::make_shared<AsrDecoder>(feature_pipeline,
+                                             resource,
+                                             *decode_config);
 
-            state = kEndBatch;
-        } catch (const std::exception& exception) {
-            NSLog(@"%s", exception.what());
-            return nil;
-        }
+      state = kEndBatch;
+    } catch (const std::exception& exception) {
+      NSLog(@"%s", exception.what());
+      return nil;
     }
+  }
 
-    return self;
+  return self;
 }
 
 - (void)reset {
-    decoder->Reset();
-    state = kEndBatch;
-    total_result = "";
+  decoder->Reset();
+  state = kEndBatch;
+  total_result = "";
 }
 
 - (void)acceptWaveForm: (float*)pcm: (int)size {
-    auto* float_pcm = new float[size];
-    for (size_t i = 0; i < size; i++) {
-        float_pcm[i] = pcm[i] * 65535;
-    }
-    feature_pipeline->AcceptWaveform(float_pcm, size);
+  auto* float_pcm = new float[size];
+  for (size_t i = 0; i < size; i++) {
+    float_pcm[i] = pcm[i] * 65535;
+  }
+  feature_pipeline->AcceptWaveform(float_pcm, size);
 }
 
 - (void)decode {
-    state = decoder->Decode();
-    if (state == kEndFeats || state == kEndpoint) {
-        decoder->Rescoring();
-    }
+  state = decoder->Decode();
+  if (state == kEndFeats || state == kEndpoint) {
+    decoder->Rescoring();
+  }
 
-    std::string result;
+  std::string result;
+  if (decoder->DecodedSomething()) {
+    result = decoder->result()[0].sentence;
+  }
+
+  if (state == kEndFeats) {
+    LOG(INFO) << "wenet endfeats final result: " << result;
+    NSLog(@"wenet endfeats final result: %s", result.c_str());
+    total_result += result;
+  } else if (state == kEndpoint) {
+    LOG(INFO) << "wenet endpoint final result: " << result;
+    NSLog(@"wenet endpoint final result: %s", result.c_str());
+    total_result += result + "，";
+    decoder->ResetContinuousDecoding();
+  } else {
     if (decoder->DecodedSomething()) {
-        result = decoder->result()[0].sentence;
+      LOG(INFO) << "wenet partial result: " << result;
+      NSLog(@"wenet partial result: %s", result.c_str());
     }
-
-    if (state == kEndFeats) {
-        LOG(INFO) << "wenet endfeats final result: " << result;
-        NSLog(@"wenet endfeats final result: %s", result.c_str());
-        total_result += result;
-    } else if (state == kEndpoint) {
-        LOG(INFO) << "wenet endpoint final result: " << result;
-        NSLog(@"wenet endpoint final result: %s", result.c_str());
-        total_result += result + "，";
-        decoder->ResetContinuousDecoding();
-    } else {
-        if (decoder->DecodedSomething()) {
-            LOG(INFO) << "wenet partial result: " << result;
-        }
-    }
+  }
 }
 
 - (NSString*)get_result {
-    std::string result;
-    if (decoder->DecodedSomething()) {
-        result = decoder->result()[0].sentence;
-    }
-    LOG(INFO) << "wenet ui result: " << total_result + result;
-    NSLog(@"wenet ui result: %s", (total_result + result).c_str());
-    return [NSString stringWithUTF8String:(total_result + result).c_str()];
+  std::string result;
+  if (decoder->DecodedSomething()) {
+    result = decoder->result()[0].sentence;
+  }
+  LOG(INFO) << "wenet ui result: " << total_result + result;
+  NSLog(@"wenet ui result: %s", (total_result + result).c_str());
+  return [NSString stringWithUTF8String:(total_result + result).c_str()];
 }
 
 @end
