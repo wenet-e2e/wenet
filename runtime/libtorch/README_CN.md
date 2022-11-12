@@ -110,6 +110,35 @@ model_dir=./20210602_unified_transformer_server
 
 上述服务启动后，会监听 10086 端口。若想使用其他端口，请修改 `--port` 对应的参数.
 
+#### run_batch (非流式) 模式运行在GPU上
+
+启动 Websocket server 时添加 `--run_batch`，既可以开启 `run_batch` 模式，它的输入是一批wav数据(batch_size >= 1)，模型在编码和解码阶段都可以利用GPU的批处理能力，从而提高推理速度。
+
+该模式在 libtorch 和 onnxruntime 库上都已经实现，但是libtoch的表现更好（更大的并发性能），因为 onnxruntime 目前没有办法清除显存缓存而导致并发较大时显存不足。
+
+测试结果：
+
+* hardware-1:
+    Platinum 8358P CPU @ 2.60GHz 15 cores + 80G memory, A5000 * 1 + 24G memory
+
+* hardware-2:
+    Platinum 8369B CPU @ 2.90GHz 32 cores + 120GB memory, A100-SXM4-80GB * 1 + 80GB memory
+
+* data:
+    3000 wavs with different durations in range [0.6, 15] seconds.
+
+| hardware | websocket_server | concurrency | batch_size | RTF | CER |
+| --- | --- | --- | --- | --- | --- |
+| hardware-1 | libtorch(CPU) | 30 | 1 | 0.01666 | 8.90 |
+| hardware-1 | libtorch(GPU) | 10 | 1 | 0.00831 | 8.90 |
+| hardware-1 | libtorch(GPU+batch) | 20 | 8 | 0.00339 | 9.61 |
+| hardware-2 | libtorch(CPU) | 48 | 1 | 0.00753 | 8.90 |
+| hardware-2 | libtorch(GPU) | 48 | 1 | 0.00234 | 8.90 |
+| hardware-2 | libtorch(GPU+batch) | 48 | 8 | 0.00110 | 9.61 |
+
+可以看出，同样的CPU下，GPU(batch_size == 1) 是 CPU 速度的 2-3 倍， 而 run_batch 速度又是 GPU(batch_size==1) 的 2.x 倍，但是CER有所提高。
+
+
 ### websocket 识别客户端
 
 客户端按 websocket 协议去请求服务，可以用不同语言来实现客户端。我们提供了两种客户端，一种是基于 C++ 的命令行工具。一种是基于网页形式的可视化客户端。

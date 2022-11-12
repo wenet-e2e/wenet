@@ -85,7 +85,7 @@ class WebSocketServer {
         decode_config_(std::move(decode_config)),
         decode_resource_(std::move(decode_resource)) {}
 
-  void Start();
+  void Start(bool run_batch = false);
 
  private:
   int port_;

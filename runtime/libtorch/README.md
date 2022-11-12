@@ -131,6 +131,36 @@ Here is a demo for command line based websocket server/client interaction.
 
 ![Runtime server demo](../../../docs/images/runtime_server.gif)
 
+#### run_batch (offline) mode on GPU
+
+When start Websocket server with the option `--run_batch`, it will work on `run_batch` mode which accept a batch of wav data (batch_size >= 1). The encoding and decoding use the advantage of GPU batch processing to improve speed.
+
+This mode support both of libtorch and onnxruntime, but libtorch performs better due to some GPU memory issue of onnxruntime.
+
+Test result:
+
+* hardware-1:
+    Platinum 8358P CPU @ 2.60GHz 15 cores + 80G memory, A5000 * 1 + 24G memory
+
+* hardware-2:
+    Platinum 8369B CPU @ 2.90GHz 32 cores + 120GB memory, A100-SXM4-80GB * 1 + 80GB memory
+
+* data:
+    3000 wavs with different durations in range [0.6, 15] seconds.
+
+| hardware | websocket_server | concurrency | batch_size | RTF | CER |
+| --- | --- | --- | --- | --- | --- |
+| hardware-1 | libtorch(CPU) | 30 | 1 | 0.01666 | 8.90 |
+| hardware-1 | libtorch(GPU) | 10 | 1 | 0.00831 | 8.90 |
+| hardware-1 | libtorch(GPU+batch) | 20 | 8 | 0.00339 | 9.61 |
+| hardware-2 | libtorch(CPU) | 48 | 1 | 0.00753 | 8.90 |
+| hardware-2 | libtorch(GPU) | 48 | 1 | 0.00234 | 8.90 |
+| hardware-2 | libtorch(GPU+batch) | 48 | 8 | 0.00110 | 9.61 |
+
+With same CPU, GPU is 2~3 times faster than CPU, run_batch is 2.x times faster than non run_batch mode, but the CER has a little bigger.
+
+
+
 ### gRPC
 
 Why grpc? You may find your answer in https://grpc.io/.

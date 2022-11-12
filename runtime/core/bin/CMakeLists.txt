@@ -1,6 +1,9 @@
 add_executable(decoder_main decoder_main.cc)
 target_link_libraries(decoder_main PUBLIC decoder)
 
+add_executable(decoder_main_batch decoder_main_batch.cc)
+target_link_libraries(decoder_main_batch PUBLIC decoder)
+
 add_executable(label_checker_main label_checker_main.cc)
 target_link_libraries(label_checker_main PUBLIC decoder)
 

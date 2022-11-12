@@ -29,6 +29,8 @@ class SearchInterface {
  public:
   virtual ~SearchInterface() {}
   virtual void Search(const std::vector<std::vector<float>>& logp) = 0;
+  virtual void Search(const std::vector<std::vector<float>>& topk_scores,
+                      const std::vector<std::vector<int32_t>>& topk_indexs) = 0;
   virtual void Reset() = 0;
   virtual void FinalizeSearch() = 0;
 

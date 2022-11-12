@@ -1,4 +1,5 @@
 // Copyright (c) 2020 Mobvoi Inc (Binbin Zhang)
+//               2022 SoundDataConverge Co.LTD (Weiliang Chong)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +19,7 @@
 #include <utility>
 #include <vector>
 
+#include "websocket/batch_connection_handler.h"
 #include "boost/json/src.hpp"
 #include "utils/log.h"
 
@@ -244,7 +246,7 @@ void ConnectionHandler::operator()() {
   }
 }
 
-void WebSocketServer::Start() {
+void WebSocketServer::Start(bool run_batch) {
   try {
     auto const address = asio::ip::make_address("0.0.0.0");
     tcp::acceptor acceptor{ioc_, {address, static_cast<uint16_t>(port_)}};
@@ -254,10 +256,17 @@ void WebSocketServer::Start() {
       // Block until we get a connection
       acceptor.accept(socket);
       // Launch the session, transferring ownership of the socket
-      ConnectionHandler handler(std::move(socket), feature_config_,
-                                decode_config_, decode_resource_);
-      std::thread t(std::move(handler));
-      t.detach();
+      if (run_batch) {
+        BatchConnectionHandler handler(std::move(socket), feature_config_,
+            decode_config_, decode_resource_);
+        std::thread t(std::move(handler));
+        t.detach();
+      } else {
+        ConnectionHandler handler(std::move(socket), feature_config_,
+            decode_config_, decode_resource_);
+        std::thread t(std::move(handler));
+        t.detach();
+      }
     }
   } catch (const std::exception& e) {
     LOG(FATAL) << e.what();
