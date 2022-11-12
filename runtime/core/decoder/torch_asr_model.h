@@ -32,8 +32,9 @@
 namespace wenet {
 
 class TorchAsrModel : public AsrModel {
-#ifndef IOS
+
  public:
+#ifndef IOS
   // Note: Do not call the InitEngineThreads function more than once.
   static void InitEngineThreads(int num_threads = 1);
 #endif
