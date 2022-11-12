@@ -32,7 +32,6 @@
 namespace wenet {
 
 class TorchAsrModel : public AsrModel {
-
  public:
 #ifndef IOS
   // Note: Do not call the InitEngineThreads function more than once.
