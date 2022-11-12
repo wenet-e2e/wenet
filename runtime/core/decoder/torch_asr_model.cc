@@ -22,10 +22,13 @@
 #include <stdexcept>
 
 #include "torch/script.h"
+#ifndef IOS
 #include "torch/torch.h"
+#endif
 
 namespace wenet {
 
+#ifndef IOS
 void TorchAsrModel::InitEngineThreads(int num_threads) {
   // For multi-thread performance
   at::set_num_threads(num_threads);
@@ -36,6 +39,7 @@ void TorchAsrModel::InitEngineThreads(int num_threads) {
   VLOG(1) << "Num intra-op threads: " << at::get_num_threads();
   VLOG(1) << "Num inter-op threads: " << at::get_num_interop_threads();
 }
+#endif
 
 void TorchAsrModel::Read(const std::string& model_path) {
   torch::DeviceType device = at::kCPU;

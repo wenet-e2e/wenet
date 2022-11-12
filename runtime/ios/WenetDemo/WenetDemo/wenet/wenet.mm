@@ -17,8 +17,10 @@
 
 #include "wenet.h"
 
+#define IOS
+
 #include "decoder/asr_decoder.h"
-#include "decoder/ios_asr_model.h"
+#include "decoder/torch_asr_model.h"
 #include "frontend/feature_pipeline.h"
 #include "frontend/wav.h"
 #include "post_processor/post_processor.h"
@@ -46,7 +48,7 @@ using namespace wenet;
             if (std::find(qengines.begin(), qengines.end(), at::QEngine::QNNPACK) != qengines.end()) {
                 at::globalContext().setQEngine(at::QEngine::QNNPACK);
             }
-            auto model = std::make_shared<IosAsrModel>();
+            auto model = std::make_shared<TorchAsrModel>();
             model->Read(modelPath.UTF8String);
             resource = std::make_shared<DecodeResource>();
             resource->model = model;
