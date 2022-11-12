@@ -80,22 +80,13 @@ def make_calibration_data(enc, args, conf):
             logger.info("processed {} samples.".format(batch_idx))
         keys, feats, target, feats_lengths, target_lengths = batch
         num_frames, prefix = feats.size(1), keys[0]
-        if args.attn_run_on_bpu:
-            att_cache = torch.zeros(
-                [1, head * d_k * 2, num_layers, required_cache_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask = torch.ones(
-                [1, head, required_cache_size + chunk_size, chunk_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask[:, :, :required_cache_size, :] = 0
-        else:
-            att_cache = torch.zeros(
-                [1, head * num_layers, d_k * 2, required_cache_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask = torch.ones(
-                [1, head, chunk_size, required_cache_size + chunk_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask[:, :, :, :required_cache_size] = 0
+        att_cache = torch.zeros(
+            [1, head * num_layers, d_k * 2, required_cache_size],
+            dtype=feats.dtype, device=feats.device)
+        att_mask = torch.ones(
+            [1, head, chunk_size, required_cache_size + chunk_size],
+            dtype=feats.dtype, device=feats.device)
+        att_mask[:, :, :, :required_cache_size] = 0
         cnn_cache = torch.zeros(
             [1, dim, num_layers, lorder],
             dtype=feats.dtype, device=feats.device)
@@ -104,10 +95,7 @@ def make_calibration_data(enc, args, conf):
         random_high = (num_frames - context) // stride
         num_rand = random.randint(0, random_high)
         for i, cur in enumerate(range(0, num_frames - context + 1, stride)):
-            if args.attn_run_on_bpu:
-                att_mask[:, :, -(chunk_size * (i + 1)):, :] = 1
-            else:
-                att_mask[:, :, :, -(chunk_size * (i + 1)):] = 1
+            att_mask[:, :, :, -(chunk_size * (i + 1)):] = 1
             end = min(cur + decoding_window, num_frames)
             chunk = feats[:, cur:end, :].unsqueeze(0)  # (1, 1, window, mel)
             if end == num_frames and end - cur < decoding_window:  # last chunk
@@ -117,10 +105,7 @@ def make_calibration_data(enc, args, conf):
                 chunk = torch.cat((chunk, pad_chunk),
                                   dim=2)  # (1, 1, win, mel)
                 if pad_len >= subsampling:
-                    if args.attn_run_on_bpu:
-                        att_mask[:, :, -(pad_len // subsampling):, :] = 0
-                    else:
-                        att_mask[:, :, :, -(pad_len // subsampling):] = 0
+                    att_mask[:, :, :, -(pad_len // subsampling):] = 0
             if i == num_rand:
                 save_data(chunk, "{}/chunk".format(cal_data_dir),
                           prefix + "." + str(i))
@@ -168,22 +153,13 @@ def check_wer(enc, ctc, args, conf):
     for batch_idx, batch in enumerate(dataloader):
         keys, feats, target, feats_lengths, target_lengths = batch
         num_frames, prefix = feats.size(1), keys[0]
-        if args.attn_run_on_bpu:
-            att_cache = torch.zeros(
-                [1, head * d_k * 2, num_layers, required_cache_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask = torch.ones(
-                [1, head, required_cache_size + chunk_size, chunk_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask[:, :, :required_cache_size, :] = 0
-        else:
-            att_cache = torch.zeros(
-                [1, head * num_layers, d_k * 2, required_cache_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask = torch.ones(
-                [1, head, chunk_size, required_cache_size + chunk_size],
-                dtype=feats.dtype, device=feats.device)
-            att_mask[:, :, :, :required_cache_size] = 0
+        att_cache = torch.zeros(
+            [1, head * num_layers, d_k * 2, required_cache_size],
+            dtype=feats.dtype, device=feats.device)
+        att_mask = torch.ones(
+            [1, head, chunk_size, required_cache_size + chunk_size],
+            dtype=feats.dtype, device=feats.device)
+        att_mask[:, :, :, :required_cache_size] = 0
         cnn_cache = torch.zeros(
             [1, dim, num_layers, lorder],
             dtype=feats.dtype, device=feats.device)
@@ -193,10 +169,7 @@ def check_wer(enc, ctc, args, conf):
         # Feed forward overlap input step by step
         torch_out, onnx_out = [], []
         for i, cur in enumerate(range(0, num_frames - context + 1, stride)):
-            if args.attn_run_on_bpu:
-                att_mask[:, :, -(chunk_size * (i + 1)):, :] = 1
-            else:
-                att_mask[:, :, :, -(chunk_size * (i + 1)):] = 1
+            att_mask[:, :, :, -(chunk_size * (i + 1)):] = 1
             end = min(cur + decoding_window, num_frames)
             chunk = feats[:, cur:end, :].unsqueeze(0)  # (1, 1, window, mel)
             if end == num_frames and end - cur < decoding_window:  # last chunk
@@ -206,10 +179,7 @@ def check_wer(enc, ctc, args, conf):
                 chunk = torch.cat((chunk, pad_chunk),
                                   dim=2)  # (1, 1, win, mel)
                 if pad_len >= subsampling:
-                    if args.attn_run_on_bpu:
-                        att_mask[:, :, -(pad_len // subsampling):, :] = 0
-                    else:
-                        att_mask[:, :, :, -(pad_len // subsampling):] = 0
+                    att_mask[:, :, :, -(pad_len // subsampling):] = 0
             # Torch model
             (y, att_cache, cnn_cache) = enc.forward(
                 xs=chunk, att_cache=att_cache,
@@ -331,12 +301,25 @@ compiler_parameters:
     ctc_log_path = os.path.join(output_dir, 'hb_makertbin_output_ctc')
     ctc_cal_data = ";".join(
         [cal_data_dir + "/" + x for x in ctc_dic['input_name'].split(';')])
+    run_on_cpu = "/Split;/encoders.0/self_attn/Split;" + \
+        "/encoders.1/self_attn/Split;/encoders.2/self_attn/Split;" + \
+        "/encoders.3/self_attn/Split;/encoders.4/self_attn/Split;" + \
+        "/encoders.5/self_attn/Split;/encoders.6/self_attn/Split;" + \
+        "/encoders.7/self_attn/Split;/encoders.8/self_attn/Split;" + \
+        "/encoders.9/self_attn/Split;/encoders.10/self_attn/Split;" + \
+        "/encoders.11/self_attn/Split;" + \
+        "/encoders.0/self_attn/Mul;/encoders.1/self_attn/Mul;" + \
+        "/encoders.2/self_attn/Mul;/encoders.3/self_attn/Mul;" + \
+        "/encoders.4/self_attn/Mul;/encoders.5/self_attn/Mul;" + \
+        "/encoders.6/self_attn/Mul;/encoders.7/self_attn/Mul;" + \
+        "/encoders.8/self_attn/Mul;/encoders.9/self_attn/Mul;" + \
+        "/encoders.10/self_attn/Mul;/encoders.11/self_attn/Mul;"
     enc_config = template.format(
         enc_onnx_path, "encoder", enc_log_path,
         enc_dic['input_name'], enc_dic['input_type'],
         enc_dic['input_layout_train'], enc_dic['input_shape'],
         enc_dic['norm_type'], enc_dic['input_type'], enc_dic['input_layout_rt'],
-        enc_cal_data, "default", "", "")
+        enc_cal_data, "default", run_on_cpu, "")
     ctc_config = template.format(
         ctc_onnx_path, "ctc", ctc_log_path,
         ctc_dic['input_name'], ctc_dic['input_type'],
@@ -373,8 +356,6 @@ def get_args():
                         help='bpe model for english part')
     parser.add_argument('--ln_run_on_bpu', action='store_true',
                         help='layernorm running on bpu')
-    parser.add_argument('--attn_run_on_bpu', action='store_true',
-                        help='attention(exclude softmax) running on bpu')
     return parser
 
 

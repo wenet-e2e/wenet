@@ -1,5 +1,4 @@
 # Copyright (c) 2022, Horizon Inc. Xingchen Song (sxc19@tsinghua.org.cn)
-#                                  Pengshen Zhang (pengshen.zhang@horizon.ai)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -43,11 +42,6 @@ except ImportError:
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
-
-
-def X3Transpose(x: torch.Tensor) -> torch.Tensor:
-    """Refactor torch.transpose(x, 2, 3)"""
-    return torch.cat(torch.split(x, 1, dim=3), dim=2)
 
 
 class X3LayerNorm(torch.nn.Module):
@@ -292,7 +286,7 @@ class X3Conv2dSubsampling8(torch.nn.Module):
 class X3MultiHeadedAttention(torch.nn.Module):
     """Refactor wenet/transformer/attention.py::MultiHeadedAttention
     """
-    def __init__(self, module, chunk_size, left_chunks, run_on_bpu=False):
+    def __init__(self, module, chunk_size, left_chunks):
         super().__init__()
         # Unchanged submodules and attributes
         original = copy.deepcopy(module)
@@ -302,7 +296,6 @@ class X3MultiHeadedAttention(torch.nn.Module):
         self.chunk_size = chunk_size
         self.left_chunks = left_chunks
         self.time = chunk_size * (left_chunks + 1)
-        self.run_on_bpu = run_on_bpu
         self.activation = torch.nn.Softmax(dim=-1)
 
         # 1. Modify self.linear_x
@@ -313,36 +306,6 @@ class X3MultiHeadedAttention(torch.nn.Module):
         # 2. denom
         self.register_buffer(
             "denom", torch.full((1, self.h, 1, 1), 1.0 / math.sqrt(self.d_k)))
-
-        if self.run_on_bpu:
-            self.activation = torch.nn.Softmax(dim=-2)
-            # 3. Auxiliary conv
-            self.identity_conv = X3Identity(n_feat)
-            self.channel_merge_conv = torch.nn.Conv2d(
-                self.h * self.d_k, self.h, 1, 1, groups=self.h, bias=False
-            )
-            self.channel_merge_conv.weight = torch.nn.Parameter(
-                torch.ones((self.h, self.d_k, 1, 1)) * (1.0 / math.sqrt(self.d_k))
-            )  # absorb the square root of d_k
-            self.channel_expand_conv = torch.nn.Conv2d(
-                self.h, n_feat, 1, 1, groups=self.h, bias=False
-            )
-            self.channel_expand_conv.weight = torch.nn.Parameter(
-                torch.ones_like(self.channel_expand_conv.weight)
-            )
-            self.height_merge_conv = torch.nn.ModuleList()
-            self.height_merge_size = []
-            num_split = (self.time - 1) // 7 + 1
-            for idx in range(num_split):
-                kernel_size = min(self.time, (idx + 1) * 7) - idx * 7
-                conv_ele = torch.nn.Conv2d(
-                    n_feat, n_feat, (kernel_size, 1), (kernel_size, 1),
-                    groups=n_feat, bias=False,
-                )
-                conv_ele.weight = torch.nn.Parameter(
-                    torch.ones_like(conv_ele.weight))
-                self.height_merge_conv.append(conv_ele)
-                self.height_merge_size.append(kernel_size)
 
         self.check_equal(original)
 
@@ -356,32 +319,18 @@ class X3MultiHeadedAttention(torch.nn.Module):
             random_data, random_data, random_data,
             mask[:, 0, :, :], torch.empty(0), cache)
         random_data = random_data.transpose(1, 2).unsqueeze(2)
-        if self.run_on_bpu:
-            mask = mask.reshape(1, self.h, self.time, self.chunk_size)
-            cache = cache.reshape(1, self.d_k * self.h * 2, 1,
-                                  self.chunk_size * self.left_chunks)
-        else:
-            cache = cache.reshape(1, self.h, self.d_k * 2,
-                                  self.chunk_size * self.left_chunks)
+        cache = cache.reshape(1, self.h, self.d_k * 2,
+                              self.chunk_size * self.left_chunks)
         new_out, new_cache = self.forward(
             random_data, random_data, random_data, mask, cache)
         np.testing.assert_allclose(
             to_numpy(original_out),
             to_numpy(new_out.squeeze(2).transpose(1, 2)),
             rtol=1e-02, atol=1e-03)
-        if self.run_on_bpu:
-            caches = torch.split(new_cache, new_cache.size(1) // 2, dim=1)
-            caches = [c.reshape(1, self.h, self.d_k, self.time) for c in caches]
-            caches = [c.transpose(2, 3) for c in caches]
-            np.testing.assert_allclose(
-                to_numpy(original_cache),
-                to_numpy(torch.cat(caches, dim=-1)),
-                rtol=1e-02, atol=1e-03)
-        else:
-            np.testing.assert_allclose(
-                to_numpy(original_cache),
-                to_numpy(new_cache.transpose(2, 3)),
-                rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(
+            to_numpy(original_cache),
+            to_numpy(new_cache.transpose(2, 3)),
+            rtol=1e-02, atol=1e-03)
 
     def forward(
         self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
@@ -394,70 +343,40 @@ class X3MultiHeadedAttention(torch.nn.Module):
             k (torch.Tensor): Key tensor (#batch, size, 1, chunk_size).
             v (torch.Tensor): Value tensor (#batch, size, 1, chunk_size).
             mask (torch.Tensor): Mask tensor,
-                (#batch, head, cache_t + chunk_size, chunk_size) if run_on_bpu
-                else (#batch, head, chunk_size, cache_t + chunk_size).
+                (#batch, head, chunk_size, cache_t + chunk_size).
             cache (torch.Tensor): Cache tensor
-                (1, head * d_k * 2, 1, cache_t) if run_on_bpu
-                else (1, head, d_k * 2, cache_t),
+                (1, head, d_k * 2, cache_t),
                 where `cache_t == chunk_size * left_chunks`.
 
 
         Returns:
             torch.Tensor: Output tensor (#batch, size, 1, chunk_size).
             torch.Tensor: Cache tensor
-                (1, head * d_k * 2, 1, cache_t + chunk_size) if run_on_bpu
-                else (1, head, d_k * 2, cache_t + chunk_size)
+                (1, head, d_k * 2, cache_t + chunk_size)
                 where `cache_t == chunk_size * left_chunks`
         """
         # 1. Forward QKV
         q = self.linear_q(q)  # (1, d, 1, c) d == size, c == chunk_size
         k = self.linear_k(k)  # (1, d, 1, c)
         v = self.linear_v(v)  # (1, d, 1, c)
-
-        if self.run_on_bpu:
-            k_cache, v_cache = torch.split(cache, self.d_k * self.h, dim=1)
-            k = torch.cat(
-                (self.identity_conv(k_cache), self.identity_conv(k)), dim=3
-            )  # (1, d, 1, t)  t == cache_t + chunk_size
-            v = torch.cat((v_cache, v), dim=3)  # (1, d, 1, t)
-            new_cache = torch.cat((k, v), dim=1)  # (1, 2 * d, 1, t)
-            chunk_size, cache_size = q.size(3), k.size(3)
-            # 2. QK^T
-            k = X3Transpose(k)  # (1, d, 1, t) -> (1, d, t, 1)
-            q = torch.cat([q for _ in range(cache_size)], dim=2)  # (1, d, t, c)
-            k = torch.cat([k for _ in range(chunk_size)], dim=3)  # (1, d, t, c)
-            scores = self.channel_merge_conv(q * k)  # (1, h, t, c) h == head
-            # 3. Forward attention
-            mask = mask.eq(0)  # (1, h, t, c)
-            scores = scores.masked_fill(mask, -float("inf"))
-            attn = self.activation(scores).masked_fill(mask, 0.0)
-            v = X3Transpose(v)  # (1, d, 1, t) -> (1, d, t, 1)
-            v = torch.cat([v for _ in range(chunk_size)], dim=3)  # (1, d, t, c)
-            attn = self.channel_expand_conv(attn)  # (1, h, t, c) -> (1, d, t, c)
-            x = torch.split(attn * v, self.height_merge_size, dim=2)
-            x_out = torch.zeros(1, self.d_k * self.h, 1, chunk_size)  # (1, d, 1, c)
-            for i, (layer, x_part) in enumerate(zip(self.height_merge_conv, x)):
-                x_out += layer(x_part)
-            x_out = self.linear_out(x_out)
-        else:
-            q = q.view(1, self.h, self.d_k, self.chunk_size)
-            k = k.view(1, self.h, self.d_k, self.chunk_size)
-            v = v.view(1, self.h, self.d_k, self.chunk_size)
-            q = q.transpose(2, 3)  # (batch, head, time1, d_k)
-            k_cache, v_cache = torch.split(cache, cache.size(2) // 2, dim=2)
-            k = torch.cat((k_cache, k), dim=3)
-            v = torch.cat((v_cache, v), dim=3)
-            new_cache = torch.cat((k, v), dim=2)
-            # 2. (Q^T)K
-            scores = torch.matmul(q, k) * self.denom  # (#b, n_head, time1, time2)
-            # 3. Forward attention
-            mask = mask.eq(0)
-            scores = scores.masked_fill(mask, -float('inf'))
-            attn = self.activation(scores).masked_fill(mask, 0.0)
-            attn = attn.transpose(2, 3)
-            x = torch.matmul(v, attn)
-            x = x.view(1, self.d_k * self.h, 1, self.chunk_size)
-            x_out = self.linear_out(x)
+        q = q.view(1, self.h, self.d_k, self.chunk_size)
+        k = k.view(1, self.h, self.d_k, self.chunk_size)
+        v = v.view(1, self.h, self.d_k, self.chunk_size)
+        q = q.transpose(2, 3)  # (batch, head, time1, d_k)
+        k_cache, v_cache = torch.split(cache, cache.size(2) // 2, dim=2)
+        k = torch.cat((k_cache, k), dim=3)
+        v = torch.cat((v_cache, v), dim=3)
+        new_cache = torch.cat((k, v), dim=2)
+        # 2. (Q^T)K
+        scores = torch.matmul(q, k) * self.denom  # (#b, n_head, time1, time2)
+        # 3. Forward attention
+        mask = mask.eq(0)
+        scores = scores.masked_fill(mask, -float('inf'))
+        attn = self.activation(scores).masked_fill(mask, 0.0)
+        attn = attn.transpose(2, 3)
+        x = torch.matmul(v, attn)
+        x = x.view(1, self.d_k * self.h, 1, self.chunk_size)
+        x_out = self.linear_out(x)
         return x_out, new_cache
 
 
@@ -591,20 +510,18 @@ class X3FFN(torch.nn.Module):
 class X3ConformerEncoderLayer(torch.nn.Module):
     """Refactor wenet/transformer/encoder_layer.py::ConformerEncoderLayer
     """
-    def __init__(self, module, chunk_size, left_chunks,
-                 ln_run_on_bpu=False, attn_run_on_bpu=False):
+    def __init__(self, module, chunk_size, left_chunks, ln_run_on_bpu=False):
         super().__init__()
         # Unchanged submodules and attributes
         original = copy.deepcopy(module)
         self.size = module.size
-        self.attn_run_on_bpu = attn_run_on_bpu
         assert module.normalize_before is True
         assert module.concat_after is False
 
         # 1. Modify submodules
         self.feed_forward_macaron = X3FFN(module.feed_forward_macaron)
         self.self_attn = X3MultiHeadedAttention(
-            module.self_attn, chunk_size, left_chunks, attn_run_on_bpu)
+            module.self_attn, chunk_size, left_chunks)
         self.conv_module = X3Convolution(module.conv_module)
         self.feed_forward = X3FFN(module.feed_forward)
 
@@ -637,29 +554,15 @@ class X3ConformerEncoderLayer(torch.nn.Module):
             att_cache=att_cache, cnn_cache=cnn_cache
         )
         random_x = random_x.transpose(1, 2).unsqueeze(2)
-        if self.attn_run_on_bpu:
-            att_mask = att_mask.reshape(1, h, time2, time1)
-            att_cache = att_cache.reshape(1, h * d_k * 2, 1, time2 - time1)
-        else:
-            att_cache = att_cache.reshape(1, h, d_k * 2, time2 - time1)
+        att_cache = att_cache.reshape(1, h, d_k * 2, time2 - time1)
         cnn_cache = cnn_cache.unsqueeze(2)
         new_x, new_att_cache, new_cnn_cache = self.forward(
             random_x, att_mask, att_cache, cnn_cache
         )
-        if self.attn_run_on_bpu:
-            caches = torch.split(
-                new_att_cache, new_att_cache.size(1) // 2, dim=1)
-            caches = [c.reshape(1, h, d_k, time2) for c in caches]
-            caches = [c.transpose(2, 3) for c in caches]
-            np.testing.assert_allclose(
-                to_numpy(original_att_cache),
-                to_numpy(torch.cat(caches, dim=3)),
-                rtol=1e-02, atol=1e-03)
-        else:
-            np.testing.assert_allclose(
-                to_numpy(original_att_cache),
-                to_numpy(new_att_cache.transpose(2, 3)),
-                rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(
+            to_numpy(original_att_cache),
+            to_numpy(new_att_cache.transpose(2, 3)),
+            rtol=1e-02, atol=1e-03)
         np.testing.assert_allclose(
             to_numpy(original_x),
             to_numpy(new_x.squeeze(2).transpose(1, 2)),
@@ -680,15 +583,13 @@ class X3ConformerEncoderLayer(torch.nn.Module):
             att_mask (torch.Tensor): Mask tensor for the input
                 (#batch, head, cache_t1 + chunk_size, chunk_size),
             att_cache (torch.Tensor): Cache tensor of the KEY & VALUE
-                (#batch=1, head * d_k * 2, 1, cache_t1) if attn_run_on_bpu
-                else (#batch=1, head, d_k * 2, cache_t1), head * d_k == size.
+                (#batch=1, head, d_k * 2, cache_t1), head * d_k == size.
             cnn_cache (torch.Tensor): Convolution cache in conformer layer
                 (#batch=1, size, 1, cache_t2)
         Returns:
             torch.Tensor: Output tensor (#batch, size, 1, chunk_size).
             torch.Tensor: att_cache tensor,
-                (1, head * d_k * 2, 1, cache_t1 + chunk_size) if attn_run_on_bpu
-                else (1, head, d_k * 2, cache_t1 + chunk_size).
+                (1, head, d_k * 2, cache_t1 + chunk_size).
             torch.Tensor: cnn_cahce tensor (#batch, size, 1, cache_t2).
         """
         # 1. ffn_macaron
@@ -723,8 +624,7 @@ class X3ConformerEncoderLayer(torch.nn.Module):
 class X3ConformerEncoder(torch.nn.Module):
     """Refactor wenet/transformer/encoder.py::ConformerEncoder
     """
-    def __init__(self, module, chunk_size, left_chunks,
-                 ln_run_on_bpu=False, attn_run_on_bpu=False):
+    def __init__(self, module, chunk_size, left_chunks, ln_run_on_bpu=False):
         super().__init__()
         # Unchanged submodules and attributes
         original = copy.deepcopy(module)
@@ -733,7 +633,6 @@ class X3ConformerEncoder(torch.nn.Module):
         self.after_norm = module.after_norm
         self.chunk_size = chunk_size
         self.left_chunks = left_chunks
-        self.attn_run_on_bpu = attn_run_on_bpu
         self.head = module.encoders[0].self_attn.h
         self.layers = len(module.encoders)
 
@@ -743,13 +642,9 @@ class X3ConformerEncoder(torch.nn.Module):
         self.encoders = torch.nn.ModuleList()
         for layer in module.encoders:
             self.encoders.append(X3ConformerEncoderLayer(
-                layer, chunk_size, left_chunks, ln_run_on_bpu, attn_run_on_bpu))
+                layer, chunk_size, left_chunks, ln_run_on_bpu))
 
         # 2. Auxiliary conv
-        if attn_run_on_bpu:
-            self.identity_attcache = X3Identity(output_size * 2)
-        else:
-            self.identity_attcache = X3Identity(self.layers * self.head)
         self.identity_cnncache = X3Identity(output_size)
 
         self.check_equal(original)
@@ -772,32 +667,17 @@ class X3ConformerEncoder(torch.nn.Module):
             att_cache=att_cache, cnn_cache=cnn_cache
         )
         random_x = random_x.unsqueeze(0)
-        if self.attn_run_on_bpu:
-            att_mask = att_mask.reshape(1, h, time2, time1)
-            att_cache = att_cache.reshape(1, h * d_k * 2, layers, time2 - time1)
-        else:
-            att_cache = att_cache.reshape(1, h * layers, d_k * 2, time2 - time1)
+        att_cache = att_cache.reshape(1, h * layers, d_k * 2, time2 - time1)
         cnn_cache = cnn_cache.reshape(1, self._output_size, layers, lorder)
         new_x, new_att_cache, new_cnn_cache = self.forward(
             random_x, att_cache, cnn_cache, att_mask
         )
-        if self.attn_run_on_bpu:
-            caches = torch.split(new_att_cache, 1, dim=2)
-            caches = torch.cat(caches, dim=0)
-            caches = torch.split(caches, h * d_k, dim=1)
-            caches = [c.reshape(layers, h, d_k, time2 - time1) for c in caches]
-            caches = [c.transpose(2, 3) for c in caches]
-            np.testing.assert_allclose(
-                to_numpy(orig_att_cache),
-                to_numpy(torch.cat(caches, dim=3)),
-                rtol=1e-02, atol=1e-03)
-        else:
-            caches = torch.split(new_att_cache, h, dim=1)
-            caches = [c.transpose(2, 3) for c in caches]
-            np.testing.assert_allclose(
-                to_numpy(orig_att_cache),
-                to_numpy(torch.cat(caches, dim=0)),
-                rtol=1e-02, atol=1e-03)
+        caches = torch.split(new_att_cache, h, dim=1)
+        caches = [c.transpose(2, 3) for c in caches]
+        np.testing.assert_allclose(
+            to_numpy(orig_att_cache),
+            to_numpy(torch.cat(caches, dim=0)),
+            rtol=1e-02, atol=1e-03)
         np.testing.assert_allclose(
             to_numpy(orig_x),
             to_numpy(new_x.squeeze(2).transpose(1, 2)),
@@ -821,8 +701,7 @@ class X3ConformerEncoder(torch.nn.Module):
                 (#batch, head, cache_t1 + chunk_size, chunk_size),
             att_cache (torch.Tensor): cache tensor for KEY & VALUE in
                 transformer/conformer attention, with shape
-                (1, head * d_k * 2, layers, cache_t1) if attn_run_on_bpu
-                else (1, head * elayers, d_k * 2, cache_t1), where
+                (1, head * elayers, d_k * 2, cache_t1), where
                 `head * d_k == hidden-dim` and
                 `cache_t1 == chunk_size * left_chunks`.
             cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,
@@ -843,11 +722,7 @@ class X3ConformerEncoder(torch.nn.Module):
         # xs: (B, 1, mel_dim, time) -> (B, hidden_dim, 1, chunk_size)
         xs = self.embed(xs)
 
-        if self.attn_run_on_bpu:
-            att_cache = self.identity_attcache(att_cache)
-            att_cache = torch.split(att_cache, 1, dim=2)
-        else:
-            att_cache = torch.split(att_cache, self.head, dim=1)
+        att_cache = torch.split(att_cache, self.head, dim=1)
         cnn_cache = self.identity_cnncache(cnn_cache)
         cnn_cache = torch.split(cnn_cache, 1, dim=2)
         r_att_cache = []
@@ -857,10 +732,7 @@ class X3ConformerEncoder(torch.nn.Module):
                 xs, att_mask, att_cache=att_cache[i], cnn_cache=cnn_cache[i])
             r_att_cache.append(new_att_cache[:, :, :, self.chunk_size:])
             r_cnn_cache.append(new_cnn_cache)
-        if self.attn_run_on_bpu:
-            r_att_cache = self.identity_attcache(torch.cat(r_att_cache, dim=2))
-        else:
-            r_att_cache = self.identity_attcache(torch.cat(r_att_cache, dim=1))
+        r_att_cache = torch.cat(r_att_cache, dim=1)
         r_cnn_cache = self.identity_cnncache(
             torch.cat(r_cnn_cache, dim=2))
 
@@ -931,7 +803,7 @@ def export_encoder(asr_model, args):
     decode_window, mel_dim = args.decoding_window, args.feature_size
     encoder = X3ConformerEncoder(
         asr_model.encoder, args.chunk_size, args.num_decoding_left_chunks,
-        args.ln_run_on_bpu, args.attn_run_on_bpu)
+        args.ln_run_on_bpu)
     encoder.eval()
     encoder_outpath = os.path.join(args.output_dir, 'encoder.onnx')
 
@@ -943,16 +815,9 @@ def export_encoder(asr_model, args):
     head = encoder.encoders[0].self_attn.h
     d_k = hidden // head
     lorder = encoder.encoders[0].conv_module.lorder
-    if args.attn_run_on_bpu:
-        att_cache = torch.zeros((1, hidden * 2, layers, required_cache_size))
-        att_mask = torch.ones((1, head, kv_time, encoder.chunk_size))
-        att_mask[:, :, :required_cache_size, :] = 0
-    else:
-        att_cache = torch.zeros(1, layers * head, d_k * 2, required_cache_size)
-        # FIXME(xcsong): delete me. for 3d-data-flow
-        # att_cache = torch.zeros((1, layers * head, required_cache_size, d_k * 2))
-        att_mask = torch.ones((1, head, encoder.chunk_size, kv_time))
-        att_mask[:, :, :, :required_cache_size] = 0
+    att_cache = torch.zeros(1, layers * head, d_k * 2, required_cache_size)
+    att_mask = torch.ones((1, head, encoder.chunk_size, kv_time))
+    att_mask[:, :, :, :required_cache_size] = 0
     cnn_cache = torch.zeros((1, hidden, layers, lorder))
     inputs = (chunk, att_cache, cnn_cache, att_mask)
     logger.info("chunk.size(): {} att_cache.size(): {} "
@@ -1010,10 +875,7 @@ def export_encoder(asr_model, args):
                         list(torch_att_cache.size()),
                         list(torch_cnn_cache.size()),
                         list(torch_att_mask.size())))
-        if args.attn_run_on_bpu:
-            torch_att_mask[:, :, -(encoder.chunk_size * (i + 1)):, :] = 1
-        else:
-            torch_att_mask[:, :, :, -(encoder.chunk_size * (i + 1)):] = 1
+        torch_att_mask[:, :, :, -(encoder.chunk_size * (i + 1)):] = 1
         out, torch_att_cache, torch_cnn_cache = encoder(
             torch_chunk, torch_att_cache, torch_cnn_cache, torch_att_mask)
         torch_output.append(out)
@@ -1030,10 +892,7 @@ def export_encoder(asr_model, args):
                     " att_mask: {}".format(
                         i, onnx_chunk.shape, onnx_att_cache.shape,
                         onnx_cnn_cache.shape, onnx_att_mask.shape))
-        if args.attn_run_on_bpu:
-            onnx_att_mask[:, :, -(encoder.chunk_size * (i + 1)):, :] = 1
-        else:
-            onnx_att_mask[:, :, :, -(encoder.chunk_size * (i + 1)):] = 1
+        onnx_att_mask[:, :, :, -(encoder.chunk_size * (i + 1)):] = 1
         ort_inputs = {
             'chunk': onnx_chunk, 'att_cache': onnx_att_cache,
             'cnn_cache': onnx_cnn_cache, 'att_mask': onnx_att_mask,
@@ -1109,7 +968,6 @@ if __name__ == '__main__':
     torch.manual_seed(777)
     args = get_args()
     args.ln_run_on_bpu = False
-    args.attn_run_on_bpu = False
     # NOTE(xcsong): X3 BPU only support static shapes
     assert args.chunk_size > 0
     assert args.num_decoding_left_chunks > 0
