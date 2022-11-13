@@ -581,7 +581,7 @@ class X3ConformerEncoderLayer(torch.nn.Module):
         Args:
             x (torch.Tensor): (#batch, size, 1, chunk_size)
             att_mask (torch.Tensor): Mask tensor for the input
-                (#batch, head, cache_t1 + chunk_size, chunk_size),
+                (#batch, head, chunk_size, cache_t1 + chunk_size),
             att_cache (torch.Tensor): Cache tensor of the KEY & VALUE
                 (#batch=1, head, d_k * 2, cache_t1), head * d_k == size.
             cnn_cache (torch.Tensor): Convolution cache in conformer layer
@@ -697,8 +697,6 @@ class X3ConformerEncoder(torch.nn.Module):
             xs (torch.Tensor): chunk input, with shape (b=1, 1, time, mel-dim),
                 where `time == (chunk_size - 1) * subsample_rate + \
                         subsample.right_context + 1`
-            att_mask (torch.Tensor): Mask tensor for the input
-                (#batch, head, cache_t1 + chunk_size, chunk_size),
             att_cache (torch.Tensor): cache tensor for KEY & VALUE in
                 transformer/conformer attention, with shape
                 (1, head * elayers, d_k * 2, cache_t1), where
@@ -707,6 +705,8 @@ class X3ConformerEncoder(torch.nn.Module):
             cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,
                 (1, hidden-dim, elayers, cache_t2), where
                 `cache_t2 == cnn.lorder - 1`
+            att_mask (torch.Tensor): Mask tensor for the input
+                (#batch, head, chunk_size, cache_t1 + chunk_size),
 
         Returns:
             torch.Tensor: output of current input xs,
