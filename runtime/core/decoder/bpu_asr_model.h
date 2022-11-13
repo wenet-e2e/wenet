@@ -1,7 +1,4 @@
-// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
-//               2022 ZeXuan Li (lizexuan@huya.com)
-//                    Xingchen Song(sxc19@mails.tsinghua.edu.cn)
-//                    hamddct@gmail.com (Mddct)
+// Copyright (c) 2022 Horizon Inc, Xingchen Song(sxc19@mails.tsinghua.edu.cn)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -39,24 +36,24 @@ using hobot::easy_dnn::ModelManager;
 
 namespace wenet {
 
-class BpuAsrModel : public AsrModel {
+class BPUAsrModel : public AsrModel {
  public:
-  BpuAsrModel() = default;
-  ~BpuAsrModel() override;
-  BpuAsrModel(const BpuAsrModel& other);
+  BPUAsrModel() = default;
+  ~BPUAsrModel();
+  BPUAsrModel(const BPUAsrModel& other);
   void Read(const std::string& model_dir);
   void Reset() override;
   void AttentionRescoring(const std::vector<std::vector<int>>& hyps,
                           float reverse_weight,
                           std::vector<float>* rescoring_score) override;
   std::shared_ptr<AsrModel> Copy() const override;
+  static void AllocMemory(
+      const std::shared_ptr<Model>& model,
+      std::vector<std::shared_ptr<DNNTensor>>* input,
+      std::vector<std::shared_ptr<DNNTensor>>* output);
   void GetInputOutputInfo(
       const std::vector<std::shared_ptr<DNNTensor>>& input_tensors,
       const std::vector<std::shared_ptr<DNNTensor>>& output_tensors);
-  static void AllocMemory(
-      std::vector<std::shared_ptr<DNNTensor>>* input,
-      std::vector<std::shared_ptr<DNNTensor>>* output,
-      Model* model);
   void PrepareEncoderInput(const std::vector<std::vector<float>>& chunk_feats);
   void PrepareCtcInput();
 
@@ -68,16 +65,17 @@ class BpuAsrModel : public AsrModel {
                               int eos, int decode_out_len);
 
  private:
-  // metadatas (ChildClass)
+  // metadatas
   int hidden_dim_ = 512;
   int chunk_id_ = 0;
+
+  // managers, FIXME(xcsong): Is XxxManager thread-safe ?
+  std::shared_ptr<ModelManager> model_manager_ = nullptr;
+  std::shared_ptr<TaskManager> task_manager_ = nullptr;
 
   // models
   std::shared_ptr<Model> encoder_model_ = nullptr;
   std::shared_ptr<Model> ctc_model_ = nullptr;
-
-  // managers, FIXME(xcsong): Is TaskManager thread-safe ?
-  TaskManager* task_manager_ = TaskManager::GetInstance();
 
   // input/output tensors
   std::vector<std::shared_ptr<DNNTensor>> encoder_input_, encoder_output_;

@@ -1,7 +1,4 @@
-// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
-//               2022 ZeXuan Li (lizexuan@huya.com)
-//                    Xingchen Song(sxc19@mails.tsinghua.edu.cn)
-//                    hamddct@gmail.com (Mddct)
+// Copyright (c) 2022 Horizon Inc, Xingchen Song(sxc19@mails.tsinghua.edu.cn)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,7 +23,7 @@
 
 namespace wenet {
 
-void BpuAsrModel::GetInputOutputInfo(
+void BPUAsrModel::GetInputOutputInfo(
     const std::vector<std::shared_ptr<DNNTensor>>& input,
     const std::vector<std::shared_ptr<DNNTensor>>& output) {
   // Input info
@@ -49,25 +46,30 @@ void BpuAsrModel::GetInputOutputInfo(
   }
 }
 
-void BpuAsrModel::Read(const std::string& model_dir) {
+void BPUAsrModel::Read(const std::string& model_dir) {
   std::string encoder_model_path = model_dir + "/encoder.bin";
   std::string ctc_model_path = model_dir + "/ctc.bin";
 
+  // 0. Init managers
+  model_manager_.reset(ModelManager::GetInstance());
+  task_manager_.reset(TaskManager::GetInstance());
+
   // 1. Load models
-  ModelManager* model_manager = ModelManager::GetInstance();
   std::vector<Model*> models;
-  model_manager->Load(models, encoder_model_path);
-  encoder_model_ = model_manager_->GetModel([](Model* model) {
+  int ret_code = model_manager_->Load(models, encoder_model_path);
+  CHECK_EQ(ret_code, 0) << "Load encoder.bin failed.";
+  encoder_model_.reset(model_manager_->GetModel([](Model* model) {
     return model->GetName().find("encoder") != std::string::npos;
-  });
-  model_manager->Load(models, ctc_model_path);
-  ctc_model_ = model_manager_->GetModel([](Model* model) {
+  }));
+  ret_code = model_manager_->Load(models, ctc_model_path);
+  CHECK_EQ(ret_code, 0) << "Load ctc.bin failed.";
+  ctc_model_.reset(model_manager_->GetModel([](Model* model) {
     return model->GetName().find("ctc") != std::string::npos;
-  });
+  }));
 
   // 2. Init input/output tensors
-  AllocMemory(&encoder_input_, &encoder_output_, encoder_model_);
-  AllocMemory(&ctc_input_, &ctc_output_, ctc_model_);
+  AllocMemory(encoder_model_, &encoder_input_, &encoder_output_);
+  AllocMemory(ctc_model_, &ctc_input_, &ctc_output_);
   Reset();
 
   // 3. Read model input/output nodes
@@ -82,8 +84,8 @@ void BpuAsrModel::Read(const std::string& model_dir) {
   sos_ = ctc_output_[0]->properties.validShape.dimensionSize[1] - 1;
   eos_ = sos_;
   chunk_size_ = ctc_input_[0]->properties.validShape.dimensionSize[3];
-  num_left_chunks_ = encoder_input_[2]->properties.validShape.dimensionSize[3];
-      / chunk_size_;
+  num_left_chunks_ = encoder_input_[3]->properties.validShape.dimensionSize[3]
+      / chunk_size_ - 1;
   hidden_dim_ = ctc_input_[0]->properties.validShape.dimensionSize[1];
   int frames = (chunk_size_ - 1) * subsampling_rate_ + right_context_ + 1;
   CHECK_EQ(frames, encoder_input_[0]->properties.validShape.dimensionSize[2]) <<
@@ -100,7 +102,7 @@ void BpuAsrModel::Read(const std::string& model_dir) {
   LOG(INFO) << "\thidden_dim " << hidden_dim_;
 }
 
-BpuAsrModel::BpuAsrModel(const BpuAsrModel& other) {
+BPUAsrModel::BPUAsrModel(const BPUAsrModel& other) {
   // metadatas (BaseClass)
   right_context_ = other.right_context_;
   subsampling_rate_ = other.subsampling_rate_;
@@ -110,42 +112,43 @@ BpuAsrModel::BpuAsrModel(const BpuAsrModel& other) {
   chunk_size_ = other.chunk_size_;
   num_left_chunks_ = other.num_left_chunks_;
   offset_ = other.offset_;
-
   // metadatas (ChileClass)
   hidden_dim_ = other.hidden_dim_;
   chunk_id_ = other.chunk_id_;
-
-  // models, NOTE(xcsong): in/out tensors & managers are not copied here.
+  // managers
+  model_manager_ = other.model_manager_;
+  task_manager_ = other.task_manager_;
+  // models, NOTE(xcsong): in/out tensors are not copied here.
   encoder_model_ = other.encoder_model_;
   ctc_model_ = other.ctc_model_;
 }
 
-std::shared_ptr<AsrModel> BpuAsrModel::Copy() const {
-  auto asr_model = std::make_shared<BpuAsrModel>(*this);
+std::shared_ptr<AsrModel> BPUAsrModel::Copy() const {
+  auto asr_model = std::make_shared<BPUAsrModel>(*this);
   // Reset the inner states for new decoding
-  asr_model->AllocMemory(&(asr_model->encoder_input_),
-      &(asr_model->encoder_output_), encoder_model_);
-  asr_model->AllocMemory(&(asr_model->ctc_input_),
-      &(asr_model->ctc_output_), ctc_model_);
+  asr_model->AllocMemory(encoder_model_, &(asr_model->encoder_input_),
+      &(asr_model->encoder_output_));
+  asr_model->AllocMemory(ctc_model_, &(asr_model->ctc_input_),
+      &(asr_model->ctc_output_));
   asr_model->Reset();
   return asr_model;
 }
 
-void BpuAsrModel::AllocMemory(
+void BPUAsrModel::AllocMemory(
+    const std::shared_ptr<Model>& model,
     std::vector<std::shared_ptr<DNNTensor>>* inputs,
-    std::vector<std::shared_ptr<DNNTensor>>* outputs,
-    Model* model) {
-  size_t input_counts = model->GetInputCount();
+    std::vector<std::shared_ptr<DNNTensor>>* outputs) {
+  int input_counts = model->GetInputCount();
   inputs->resize(input_counts);
-  for (size_t i = 0; i < input_counts; i++) {
+  for (size_t i = 0; i < input_counts; ++i) {
     inputs->at(i).reset(new DNNTensor);
     auto& item = inputs->at(i);
     model->GetInputTensorProperties(item->properties, i);
     hbSysAllocCachedMem(&(item->sysMem[0]), item->properties.alignedByteSize);
   }
-  size_t output_counts = model->GetOutputCount();
+  int output_counts = model->GetOutputCount();
   outputs->resize(output_counts);
-  for (size_t i = 0; i < output_counts; i++) {
+  for (size_t i = 0; i < output_counts; ++i) {
     outputs->at(i).reset(new DNNTensor);
     auto& item = outputs->at(i);
     model->GetOutputTensorProperties(item->properties, i);
@@ -153,13 +156,13 @@ void BpuAsrModel::AllocMemory(
   }
 }
 
-void BpuAsrModel::Reset() {
+void BPUAsrModel::Reset() {
   offset_ = 0;
   chunk_id_ = 0;
   cached_feature_.clear();
   encoder_outs_.clear();
   encoder_outs_.resize(hidden_dim_);  // [512][0~MaxFrames]
-  // Reset with zero
+  // Reset input/output tensors with zero
   for (auto& tensor : encoder_input_) {
     memset(tensor->sysMem[0].virAddr, 0, tensor->properties.alignedByteSize);
   }
@@ -174,39 +177,39 @@ void BpuAsrModel::Reset() {
   }
 }
 
-void BpuAsrModel::ForwardEncoderFunc(
+void BPUAsrModel::ForwardEncoderFunc(
     const std::vector<std::vector<float>>& chunk_feats,
     std::vector<std::vector<float>>* out_prob) {
   // 1. Forward Encoder
   PrepareEncoderInput(chunk_feats);
   for (auto& tensor : encoder_input_) {
-    TensorUtils::FlushTensor(tensor, HB_SYS_MEM_CACHE_CLEAN);
+    hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_CLEAN);
   }
   auto infer_task = task_manager_->GetModelInferTask(1000);
-  infer_task->SetModel(encoder_model_);
+  infer_task->SetModel(encoder_model_.get());
   infer_task->SetInputTensors(encoder_input_);
   infer_task->SetOutputTensors(encoder_output_);
   infer_task->RunInfer();
   infer_task->WaitInferDone(1000);
   infer_task.reset();
   for (auto& tensor : encoder_output_) {
-    TensorUtils::FlushTensor(tensor, HB_SYS_MEM_CACHE_INVALIDATE);
+    hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   }
 
   // 2. Forward CTC
   PrepareCtcInput();
   for (auto& tensor : ctc_input_) {
-    TensorUtils::FlushTensor(tensor, HB_SYS_MEM_CACHE_CLEAN);
+    hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_CLEAN);
   }
   infer_task = task_manager_->GetModelInferTask(1000);
-  infer_task->SetModel(ctc_model_);
+  infer_task->SetModel(ctc_model_.get());
   infer_task->SetInputTensors(ctc_input_);
   infer_task->SetOutputTensors(ctc_output_);
   infer_task->RunInfer();
   infer_task->WaitInferDone(1000);
   infer_task.reset();
   for (auto& tensor : ctc_output_) {
-    TensorUtils::FlushTensor(tensor, HB_SYS_MEM_CACHE_INVALIDATE);
+    hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_INVALIDATE);
   }
 
   // 3. Extract final outout_prob
@@ -215,25 +218,25 @@ void BpuAsrModel::ForwardEncoderFunc(
   out_prob->resize(chunk_size_);  // v[16][4233]
   for (auto& val : *out_prob) {
     val.clear();
-    val.reserve(output_dim);
+    val.reserve(eos_ + 1);
   }
-  for (size_t idx = 0, i = 0; i < sos_ + 1; ++i) {
+  for (size_t idx = 0, i = 0; i < eos_ + 1; ++i) {
     for (size_t j = 0; j < chunk_size_; ++j) {
       (*out_prob)[j].emplace_back(raw_data[idx++]);
     }
   }
 
-  // TODO(xcsong): Suport decoder.
+  // TODO(xcsong): 4. Forward Decoder.
   //  update encoder_outs_ here.
 }
 
-void BpuAsrModel::PrepareEncoderInput(
+void BPUAsrModel::PrepareEncoderInput(
     const std::vector<std::vector<float>>& chunk_feats) {
   chunk_id_ += 1;
   // 1. input-0: chunk
   auto& chunk = encoder_input_[0];
   auto feat_ptr = reinterpret_cast<float*>(chunk->sysMem[0].virAddr);
-  memset(feat_ptr, 0, chunk->properties.alignedByteSize)
+  memset(chunk->sysMem[0].virAddr, 0, chunk->properties.alignedByteSize);
   int64_t addr_shift = 0;
   for (size_t i = 0; i < cached_feature_.size(); ++i) {  // copy cached_feature_
     memcpy(feat_ptr + addr_shift, cached_feature_[i].data(),
@@ -247,24 +250,40 @@ void BpuAsrModel::PrepareEncoderInput(
   }
 
   // 2. att_cache & cnn_cache
-  memcpy(encoder_input_[2]->sysMem[0].virAddr,
+  memcpy(encoder_input_[1]->sysMem[0].virAddr,
          encoder_output_[1]->sysMem[0].virAddr,
          encoder_output_[1]->properties.alignedByteSize);
-  memcpy(encoder_input_[3]->sysMem[0].virAddr,
+  memcpy(encoder_input_[2]->sysMem[0].virAddr,
          encoder_output_[2]->sysMem[0].virAddr,
          encoder_output_[2]->properties.alignedByteSize);
 
   // 3. att_mask
+  // NOTE(xcsong): For last chunk_feats whose size < chunk_size * subsampling,
+  //  we will do nothing since it hardly affects wer even if we
+  //  use `wrong` att_mask where trailing zeros are not masked.
+  auto& att_mask = encoder_input_[3];
+  int valid_len = chunk_id_ * chunk_size_;
+  int total_len = (num_left_chunks_ + 1) * chunk_size_;
+  int head = encoder_input_[3]->properties.validShape.dimensionSize[1];
+  if (valid_len <= total_len) {
+    std::vector<float> padding(total_len, 1.0f);
+    for (size_t i = 0; i < total_len - valid_len; ++i) { padding[i] = 0.0f;}
+    for (size_t i = 0; i < head * chunk_size_; ++i) {
+      float* start_ptr =
+          reinterpret_cast<float*>(att_mask->sysMem[0].virAddr) + total_len * i;
+      memcpy(start_ptr, padding.data(), total_len * sizeof(float));
+    }
+  }
 }
 
-void BpuAsrModel::PrepareCtcInput() {
+void BPUAsrModel::PrepareCtcInput() {
   // 1. chunk_out
   memcpy(ctc_input_[0]->sysMem[0].virAddr,
          encoder_output_[0]->sysMem[0].virAddr,
          encoder_output_[0]->properties.alignedByteSize);
 }
 
-float BpuAsrModel::ComputeAttentionScore(const float* prob,
+float BPUAsrModel::ComputeAttentionScore(const float* prob,
                                          const std::vector<int>& hyp, int eos,
                                          int decode_out_len) {
   // TODO(xcsong): Support decoder.
@@ -274,7 +293,7 @@ float BpuAsrModel::ComputeAttentionScore(const float* prob,
   return 0.0;
 }
 
-void BpuAsrModel::AttentionRescoring(const std::vector<std::vector<int>>& hyps,
+void BPUAsrModel::AttentionRescoring(const std::vector<std::vector<int>>& hyps,
                                      float reverse_weight,
                                      std::vector<float>* rescoring_score) {
   // TODO(xcsong): Support decoder.
@@ -284,7 +303,7 @@ void BpuAsrModel::AttentionRescoring(const std::vector<std::vector<int>>& hyps,
   LOG(INFO) << "Skip rescore.";
 }
 
-BpuAsrModel::~BpuAsrModel() {
+BPUAsrModel::~BPUAsrModel() {
   for (auto& tensor : encoder_input_) { hbSysFreeMem(tensor->sysMem); }
   for (auto& tensor : encoder_output_) { hbSysFreeMem(tensor->sysMem); }
   for (auto& tensor : ctc_input_) { hbSysFreeMem(tensor->sysMem); }
