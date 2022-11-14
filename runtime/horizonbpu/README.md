@@ -47,7 +47,7 @@ scp fc_base/easy_dnn-src/easy_dnn/0.4.11_linux_aarch64-j3_hobot_gcc6.5.0/files/e
 scp fc_base/easy_dnn-src/hlog/0.4.7_linux_aarch64-j3_hobot_gcc6.5.0/files/hlog/lib/libhlog.so sunrise@$BPUIP:$WENET_PATH_BOARD
 ```
 
-* Step 3. Testing, the RTF(real time factor) is shown in Horizon X3PI's console.
+* Step 4. Testing, the RTF(real time factor) is shown in Horizon X3PI's console.
 
 ``` sh
 cd /path/to/wenet
