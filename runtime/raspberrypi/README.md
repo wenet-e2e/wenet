@@ -28,7 +28,7 @@ python -m wenet.bin.export_onnx_cpu \
 * Step 3. Build. The build requires cmake 3.14 or above. and Send the binary and libraries to Raspberry PI.
 
 ``` sh
-cmake -B build -DONNX=ON -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64-linux-gnu.toolchain.cmake
+export HORIZON_GCC_ROOT= && cmake -B build -DONNX=ON -DBPU=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64-linux-gnu.toolchain.cmake
 cmake --build build
 scp build/bin/decoder_main pi@xxx.xxx.xxx:/path/to/wenet
 scp fc_base/onnxruntime-src/lib/libonnxruntime.so* pi@xxx.xxx.xxx:/path/to/wenet

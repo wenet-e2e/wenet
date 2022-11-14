@@ -2,38 +2,52 @@
 
 * Step 1. Install cross compile tools in the PC.
 
-``` sh
-sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+```sh
+wget https://github.com/xingchensong/toolchain_pkg/releases/download/aarch64-gcc/gcc-linaro-6.5.0-2018.12-x86_64_aarch64-linux-gnu.tar.gz
+tar -xzf gcc-linaro-6.5.0-2018.12-x86_64_aarch64-linux-gnu.tar.gz
+export HORIZON_GCC_ROOT=$PWD/gcc-linaro-6.5.0-2018.12-x86_64_aarch64-linux-gnu/bin/
 ```
 
-Or download, and install the binaries from: https://releases.linaro.org/components/toolchain/binaries/latest-7
-
-
-* Step 2. Export your experiment model to ONNX by https://github.com/wenet-e2e/wenet/blob/main/wenet/bin/export_onnx_bpu.py
+* Step 2. Export model to ONNX and convert ONNX to Horizon .bin
 
 ``` sh
-exp=exp  # Change it to your experiment dir
-onnx_dir=onnx
-python -m wenet.bin.export_onnx_bpu \
-  --config $exp/train.yaml \
-  --checkpoint $exp/final.pt \
-  --chunk_size 8 \
-  --output_dir $onnx_dir \
-  --num_decoding_left_chunks 4
+maxsample=500
+chunksize=4
+leftchunk=32
+exp=exp/u2pp_conformer  # Change it to your experiment dir
+dict=data/dict/lang_char.txt
+output_dir=bpu_sample${maxsample}_chunk${chunksize}_leftchunk${leftchunk}
+cali_datalist=data/dev/data.list
 
-# When it finishes, you can find `encoder.onnx`, and `ctc.onnx` in the $onnx_dir respectively.
+. ./path.sh
+
+python3 tools/onnx2horizonbin.py \
+  --config ${exp}/train.yaml \
+  --checkpoint ${exp}/final.pt \
+  --output_dir ${exp}/${output_dir} \
+  --chunk_size ${chunksize} \
+  --num_decoding_left_chunks ${leftchunk} \
+  --max_samples ${maxsample} \
+  --dict ${dict} \
+  ${cali_datalist:+--cali_datalist $cali_datalist} \
+  ${wer_datalist:+--wer_datalist $wer_datalist} \
+  ${wer_text:+--wer_text $wer_text}
 ```
 
 * Step 3. Build. The build requires cmake 3.14 or above. and Send the binary and libraries to Horizon X3PI.
 
 ``` sh
-cmake -B build -DHORIZONBPU=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64-linux-gnu.toolchain.cmake
+cmake -B build -DBPU=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64-linux-gnu.toolchain.cmake
 cmake --build build
-scp build/bin/decoder_main sunrise@xxx.xxx.xxx:/path/to/wenet
-scp fc_base/easydnn-src/lib/libeasydnn.so* sunrise@xxx.xxx.xxx:/path/to/wenet
+export BPUIP=xxx.xxx.xxx
+export WENET_PATH_ON_BOARD=/path/to/wenet
+scp build/bin/decoder_main sunrise@$BPUIP:$WENET_PATH_BOARD
+scp fc_base/easy_dnn-src/dnn/1.7.0_linux_aarch64-j3_hobot_gcc6.5.0/files/dnn/lib/libdnn.so sunrise@$BPUIP:$WENET_PATH_BOARD
+scp fc_base/easy_dnn-src/easy_dnn/0.4.11_linux_aarch64-j3_hobot_gcc6.5.0/files/easy_dnn/lib/libeasy_dnn.so sunrise@$BPUIP:$WENET_PATH_BOARD
+scp fc_base/easy_dnn-src/hlog/0.4.7_linux_aarch64-j3_hobot_gcc6.5.0/files/hlog/lib/libhlog.so sunrise@$BPUIP:$WENET_PATH_BOARD
 ```
 
-* Step 4. Testing, the RTF(real time factor) is shown in Horizon X?PI's console.
+* Step 3. Testing, the RTF(real time factor) is shown in Horizon X3PI's console.
 
 ``` sh
 cd /path/to/wenet
@@ -41,11 +55,13 @@ export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
 export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=your_test_wav_path
-onnx_dir=your_model_dir
-units=units.txt  # Change it to your model units path
-./build/bin/decoder_main \
-    --chunk_size 16 \
+bpu_model_dir=your_model_dir
+units=your_dict_path
+./decoder_main \
+    --chunk_size 4 \
+    --num_left_chunks 32 \
+    --rescoring_weight 0.0 \
     --wav_path $wav_path \
-    --onnx_dir $onnx_dir \
+    --bpu_model_dir $bpu_model_dir \
     --unit_path $units 2>&1 | tee log.txt
 ```
