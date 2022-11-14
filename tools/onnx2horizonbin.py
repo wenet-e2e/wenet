@@ -301,25 +301,12 @@ compiler_parameters:
     ctc_log_path = os.path.join(output_dir, 'hb_makertbin_output_ctc')
     ctc_cal_data = ";".join(
         [cal_data_dir + "/" + x for x in ctc_dic['input_name'].split(';')])
-    run_on_cpu = "/Split;/encoders.0/self_attn/Split;" + \
-        "/encoders.1/self_attn/Split;/encoders.2/self_attn/Split;" + \
-        "/encoders.3/self_attn/Split;/encoders.4/self_attn/Split;" + \
-        "/encoders.5/self_attn/Split;/encoders.6/self_attn/Split;" + \
-        "/encoders.7/self_attn/Split;/encoders.8/self_attn/Split;" + \
-        "/encoders.9/self_attn/Split;/encoders.10/self_attn/Split;" + \
-        "/encoders.11/self_attn/Split;" + \
-        "/encoders.0/self_attn/Mul;/encoders.1/self_attn/Mul;" + \
-        "/encoders.2/self_attn/Mul;/encoders.3/self_attn/Mul;" + \
-        "/encoders.4/self_attn/Mul;/encoders.5/self_attn/Mul;" + \
-        "/encoders.6/self_attn/Mul;/encoders.7/self_attn/Mul;" + \
-        "/encoders.8/self_attn/Mul;/encoders.9/self_attn/Mul;" + \
-        "/encoders.10/self_attn/Mul;/encoders.11/self_attn/Mul;"
     enc_config = template.format(
         enc_onnx_path, "encoder", enc_log_path,
         enc_dic['input_name'], enc_dic['input_type'],
         enc_dic['input_layout_train'], enc_dic['input_shape'],
         enc_dic['norm_type'], enc_dic['input_type'], enc_dic['input_layout_rt'],
-        enc_cal_data, "default", run_on_cpu, "")
+        enc_cal_data, "default", args.extra_ops_run_on_cpu, "")
     ctc_config = template.format(
         ctc_onnx_path, "ctc", ctc_log_path,
         ctc_dic['input_name'], ctc_dic['input_type'],
@@ -356,6 +343,8 @@ def get_args():
                         help='bpe model for english part')
     parser.add_argument('--ln_run_on_bpu', action='store_true',
                         help='layernorm running on bpu')
+    parser.add_argument('--extra_ops_run_on_cpu', type=str, default=None,
+                        help='extra operations running on cpu.')
     return parser
 
 
@@ -410,6 +399,20 @@ if __name__ == '__main__':
 
     if args.cali_datalist is not None:
         logger.info("Stage-2: Generate config")
+        # FIXME(xcsong): Remove hard code
+        args.extra_ops_run_on_cpu = "/Split;/encoders.0/self_attn/Split;" + \
+            "/encoders.1/self_attn/Split;/encoders.2/self_attn/Split;" + \
+            "/encoders.3/self_attn/Split;/encoders.4/self_attn/Split;" + \
+            "/encoders.5/self_attn/Split;/encoders.6/self_attn/Split;" + \
+            "/encoders.7/self_attn/Split;/encoders.8/self_attn/Split;" + \
+            "/encoders.9/self_attn/Split;/encoders.10/self_attn/Split;" + \
+            "/encoders.11/self_attn/Split;" + \
+            "/encoders.0/self_attn/Mul;/encoders.1/self_attn/Mul;" + \
+            "/encoders.2/self_attn/Mul;/encoders.3/self_attn/Mul;" + \
+            "/encoders.4/self_attn/Mul;/encoders.5/self_attn/Mul;" + \
+            "/encoders.6/self_attn/Mul;/encoders.7/self_attn/Mul;" + \
+            "/encoders.8/self_attn/Mul;/encoders.9/self_attn/Mul;" + \
+            "/encoders.10/self_attn/Mul;/encoders.11/self_attn/Mul;"
         generate_config(enc_session, ctc_session, args)
 
         logger.info("Stage-3: Make calibration data")
