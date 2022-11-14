@@ -44,7 +44,7 @@ logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
 
 
-class X3LayerNorm(torch.nn.Module):
+class BPULayerNorm(torch.nn.Module):
     """Refactor torch.nn.LayerNorm to meet 4-D dataflow."""
     def __init__(self, module, chunk_size=8, run_on_bpu=False):
         super().__init__()
@@ -99,7 +99,7 @@ class X3LayerNorm(torch.nn.Module):
         return x
 
 
-class X3Identity(torch.nn.Module):
+class BPUIdentity(torch.nn.Module):
     """Refactor torch.nn.Identity().
        For inserting BPU node whose input == output.
     """
@@ -131,7 +131,7 @@ class X3Identity(torch.nn.Module):
         return self.identity_conv(x)
 
 
-class X3Linear(torch.nn.Module):
+class BPULinear(torch.nn.Module):
     """Refactor torch.nn.Linear or pointwise_conv"""
     def __init__(self, module, is_pointwise_conv=False):
         super().__init__()
@@ -180,7 +180,7 @@ class X3Linear(torch.nn.Module):
         return self.linear(x)
 
 
-class X3GlobalCMVN(torch.nn.Module):
+class BPUGlobalCMVN(torch.nn.Module):
     """Refactor wenet/transformer/cmvn.py::GlobalCMVN"""
     def __init__(self, module):
         super().__init__()
@@ -204,7 +204,7 @@ class X3GlobalCMVN(torch.nn.Module):
         return x
 
 
-class X3Conv2dSubsampling8(torch.nn.Module):
+class BPUConv2dSubsampling8(torch.nn.Module):
     """Refactor wenet/transformer/subsampling.py::Conv2dSubsampling8
 
     NOTE(xcsong): Only support pos_enc_class == NoPositionalEncoding
@@ -228,7 +228,7 @@ class X3Conv2dSubsampling8(torch.nn.Module):
 
         # 2. Modify self.linear
         # NOTE(xcsong): Split final projection to meet the requirment of
-        #   maximum kernel_size (7 for X3)
+        #   maximum kernel_size (7 for XJ3)
         self.linear = torch.nn.ModuleList()
         odim = module.linear.weight.size(0)  # 512, in this case
         freq = module.linear.weight.size(1) // odim  # 4608 // 512 == 9
@@ -236,7 +236,7 @@ class X3Conv2dSubsampling8(torch.nn.Module):
         weight = module.linear.weight.reshape(
             odim, odim, freq, 1)  # (odim, odim * freq) -> (odim, odim, freq, 1)
         self.split_size = []
-        num_split = (freq - 1) // 7 + 1  # X3 requires kernel_size <= 7
+        num_split = (freq - 1) // 7 + 1  # XJ3 requires kernel_size <= 7
         slice_begin = 0
         for idx in range(num_split):
             kernel_size = min(freq, (idx + 1) * 7) - idx * 7
@@ -283,7 +283,7 @@ class X3Conv2dSubsampling8(torch.nn.Module):
         return x_out
 
 
-class X3MultiHeadedAttention(torch.nn.Module):
+class BPUMultiHeadedAttention(torch.nn.Module):
     """Refactor wenet/transformer/attention.py::MultiHeadedAttention
     """
     def __init__(self, module, chunk_size, left_chunks):
@@ -299,10 +299,10 @@ class X3MultiHeadedAttention(torch.nn.Module):
         self.activation = torch.nn.Softmax(dim=-1)
 
         # 1. Modify self.linear_x
-        self.linear_q = X3Linear(module.linear_q)
-        self.linear_k = X3Linear(module.linear_k)
-        self.linear_v = X3Linear(module.linear_v)
-        self.linear_out = X3Linear(module.linear_out)
+        self.linear_q = BPULinear(module.linear_q)
+        self.linear_k = BPULinear(module.linear_k)
+        self.linear_v = BPULinear(module.linear_v)
+        self.linear_out = BPULinear(module.linear_out)
         # 2. denom
         self.register_buffer(
             "denom", torch.full((1, self.h, 1, 1), 1.0 / math.sqrt(self.d_k)))
@@ -380,7 +380,7 @@ class X3MultiHeadedAttention(torch.nn.Module):
         return x_out, new_cache
 
 
-class X3Convolution(torch.nn.Module):
+class BPUConvolution(torch.nn.Module):
     """Refactor wenet/transformer/convolution.py::ConvolutionModule
 
     NOTE(xcsong): Only suport use_layer_norm == False
@@ -398,7 +398,7 @@ class X3Convolution(torch.nn.Module):
         assert module.use_layer_norm is False
 
         # 1. Modify self.pointwise_conv1
-        self.pointwise_conv1 = X3Linear(module.pointwise_conv1, True)
+        self.pointwise_conv1 = BPULinear(module.pointwise_conv1, True)
 
         # 2. Modify self.depthwise_conv
         self.depthwise_conv = torch.nn.Conv2d(
@@ -421,10 +421,10 @@ class X3Convolution(torch.nn.Module):
         self.norm.running_var = module.norm.running_var
 
         # 4. Modify self.pointwise_conv2
-        self.pointwise_conv2 = X3Linear(module.pointwise_conv2, True)
+        self.pointwise_conv2 = BPULinear(module.pointwise_conv2, True)
 
         # 5. Identity conv, for running `concat` on BPU
-        self.identity = X3Identity(channels)
+        self.identity = BPUIdentity(channels)
 
         self.check_equal(original)
 
@@ -471,7 +471,7 @@ class X3Convolution(torch.nn.Module):
         return x, new_cache
 
 
-class X3FFN(torch.nn.Module):
+class BPUFFN(torch.nn.Module):
     """Refactor wenet/transformer/positionwise_feed_forward.py::PositionwiseFeedForward
     """
     def __init__(self, module):
@@ -481,8 +481,8 @@ class X3FFN(torch.nn.Module):
         self.activation = module.activation
 
         # 1. Modify self.w_x
-        self.w_1 = X3Linear(module.w_1)
-        self.w_2 = X3Linear(module.w_2)
+        self.w_1 = BPULinear(module.w_1)
+        self.w_2 = BPULinear(module.w_2)
 
         self.check_equal(original)
 
@@ -507,7 +507,7 @@ class X3FFN(torch.nn.Module):
         return self.w_2(self.activation(self.w_1(x)))
 
 
-class X3ConformerEncoderLayer(torch.nn.Module):
+class BPUConformerEncoderLayer(torch.nn.Module):
     """Refactor wenet/transformer/encoder_layer.py::ConformerEncoderLayer
     """
     def __init__(self, module, chunk_size, left_chunks, ln_run_on_bpu=False):
@@ -519,21 +519,21 @@ class X3ConformerEncoderLayer(torch.nn.Module):
         assert module.concat_after is False
 
         # 1. Modify submodules
-        self.feed_forward_macaron = X3FFN(module.feed_forward_macaron)
-        self.self_attn = X3MultiHeadedAttention(
+        self.feed_forward_macaron = BPUFFN(module.feed_forward_macaron)
+        self.self_attn = BPUMultiHeadedAttention(
             module.self_attn, chunk_size, left_chunks)
-        self.conv_module = X3Convolution(module.conv_module)
-        self.feed_forward = X3FFN(module.feed_forward)
+        self.conv_module = BPUConvolution(module.conv_module)
+        self.feed_forward = BPUFFN(module.feed_forward)
 
         # 2. Modify norms
-        self.norm_ff = X3LayerNorm(module.norm_ff, chunk_size, ln_run_on_bpu)
-        self.norm_mha = X3LayerNorm(module.norm_mha, chunk_size, ln_run_on_bpu)
-        self.norm_ff_macron = X3LayerNorm(module.norm_ff_macaron,
-                                          chunk_size, ln_run_on_bpu)
-        self.norm_conv = X3LayerNorm(module.norm_conv,
-                                     chunk_size, ln_run_on_bpu)
-        self.norm_final = X3LayerNorm(module.norm_final,
+        self.norm_ff = BPULayerNorm(module.norm_ff, chunk_size, ln_run_on_bpu)
+        self.norm_mha = BPULayerNorm(module.norm_mha, chunk_size, ln_run_on_bpu)
+        self.norm_ff_macron = BPULayerNorm(module.norm_ff_macaron,
+                                           chunk_size, ln_run_on_bpu)
+        self.norm_conv = BPULayerNorm(module.norm_conv,
                                       chunk_size, ln_run_on_bpu)
+        self.norm_final = BPULayerNorm(module.norm_final,
+                                       chunk_size, ln_run_on_bpu)
 
         # 3. 4-D ff_scale
         self.register_buffer(
@@ -621,7 +621,7 @@ class X3ConformerEncoderLayer(torch.nn.Module):
         return x, new_att_cache, new_cnn_cache
 
 
-class X3ConformerEncoder(torch.nn.Module):
+class BPUConformerEncoder(torch.nn.Module):
     """Refactor wenet/transformer/encoder.py::ConformerEncoder
     """
     def __init__(self, module, chunk_size, left_chunks, ln_run_on_bpu=False):
@@ -637,15 +637,15 @@ class X3ConformerEncoder(torch.nn.Module):
         self.layers = len(module.encoders)
 
         # 1. Modify submodules
-        self.global_cmvn = X3GlobalCMVN(module.global_cmvn)
-        self.embed = X3Conv2dSubsampling8(module.embed)
+        self.global_cmvn = BPUGlobalCMVN(module.global_cmvn)
+        self.embed = BPUConv2dSubsampling8(module.embed)
         self.encoders = torch.nn.ModuleList()
         for layer in module.encoders:
-            self.encoders.append(X3ConformerEncoderLayer(
+            self.encoders.append(BPUConformerEncoderLayer(
                 layer, chunk_size, left_chunks, ln_run_on_bpu))
 
         # 2. Auxiliary conv
-        self.identity_cnncache = X3Identity(output_size)
+        self.identity_cnncache = BPUIdentity(output_size)
 
         self.check_equal(original)
 
@@ -744,7 +744,7 @@ class X3ConformerEncoder(torch.nn.Module):
         return (xs, r_att_cache, r_cnn_cache)
 
 
-class X3CTC(torch.nn.Module):
+class BPUCTC(torch.nn.Module):
     """Refactor wenet/transformer/ctc.py::CTC
     """
     def __init__(self, module):
@@ -755,7 +755,7 @@ class X3CTC(torch.nn.Module):
         num_class = module.ctc_lo.weight.size(0)
 
         # 1. Modify self.ctc_lo, Split final projection to meet the
-        #   requirment of maximum in/out channels (2048 for X3)
+        #   requirment of maximum in/out channels (2048 for XJ3)
         self.ctc_lo = torch.nn.ModuleList()
         self.split_size = []
         num_split = (num_class - 1) // 2048 + 1
@@ -801,7 +801,7 @@ class X3CTC(torch.nn.Module):
 def export_encoder(asr_model, args):
     logger.info("Stage-1: export encoder")
     decode_window, mel_dim = args.decoding_window, args.feature_size
-    encoder = X3ConformerEncoder(
+    encoder = BPUConformerEncoder(
         asr_model.encoder, args.chunk_size, args.num_decoding_left_chunks,
         args.ln_run_on_bpu)
     encoder.eval()
@@ -912,7 +912,7 @@ def export_encoder(asr_model, args):
 
 def export_ctc(asr_model, args):
     logger.info("Stage-2: export ctc")
-    ctc = X3CTC(asr_model.ctc).eval()
+    ctc = BPUCTC(asr_model.ctc).eval()
     ctc_outpath = os.path.join(args.output_dir, 'ctc.onnx')
 
     logger.info("Stage-2.1: prepare inputs for ctc")
@@ -968,7 +968,7 @@ if __name__ == '__main__':
     torch.manual_seed(777)
     args = get_args()
     args.ln_run_on_bpu = False
-    # NOTE(xcsong): X3 BPU only support static shapes
+    # NOTE(xcsong): XJ3 BPU only support static shapes
     assert args.chunk_size > 0
     assert args.num_decoding_left_chunks > 0
     os.system("mkdir -p " + args.output_dir)
