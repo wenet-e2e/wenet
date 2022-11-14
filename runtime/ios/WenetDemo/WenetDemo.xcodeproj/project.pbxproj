@@ -1,0 +1,563 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {
+    };
+    objectVersion = 56;
+    objects = {
+
+/* Begin PBXBuildFile section */
+        374FEB34291019EE00513F88 /* libeigen_blas.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E1E2910198A00853C23 /* libeigen_blas.a */; };
+        37C64C892912A94B00BFCE0B /* final.zip in Resources */ = {isa = PBXBuildFile; fileRef = 37C64C882912A94A00BFCE0B /* final.zip */; };
+        37C64C8B2912ABE900BFCE0B /* units.txt in Resources */ = {isa = PBXBuildFile; fileRef = 37C64C8A2912ABE900BFCE0B /* units.txt */; };
+        37C64C8F2912ADDD00BFCE0B /* libfst.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37C64C8E2912ADDD00BFCE0B /* libfst.a */; };
+        37C64C942912AF7F00BFCE0B /* libkaldi-decoder.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37C64C8C2912AD3300BFCE0B /* libkaldi-decoder.a */; };
+        37C64C962912AFC900BFCE0B /* libpost_processor.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37C64C952912AFC900BFCE0B /* libpost_processor.a */; };
+        37C64C982912B06800BFCE0B /* libutils.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37C64C972912B06800BFCE0B /* libutils.a */; };
+        37C64C9A2912B0A000BFCE0B /* libfrontend.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37C64C992912B0A000BFCE0B /* libfrontend.a */; };
+        37FD7E032910094300853C23 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37FD7E022910094300853C23 /* AppDelegate.swift */; };
+        37FD7E052910094300853C23 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37FD7E042910094300853C23 /* SceneDelegate.swift */; };
+        37FD7E072910094300853C23 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37FD7E062910094300853C23 /* ViewController.swift */; };
+        37FD7E0A2910094300853C23 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 37FD7E082910094300853C23 /* Main.storyboard */; };
+        37FD7E0C2910094500853C23 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37FD7E0B2910094500853C23 /* Assets.xcassets */; };
+        37FD7E0F2910094500853C23 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 37FD7E0D2910094500853C23 /* LaunchScreen.storyboard */; };
+        37FD7E1A291009EC00853C23 /* wenet.mm in Sources */ = {isa = PBXBuildFile; fileRef = 37FD7E18291009EC00853C23 /* wenet.mm */; };
+        37FD7E1D2910195900853C23 /* libdecoder.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E1C2910195900853C23 /* libdecoder.a */; };
+        37FD7E282910198B00853C23 /* libpthreadpool.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E1F2910198B00853C23 /* libpthreadpool.a */; };
+        37FD7E292910198B00853C23 /* libc10.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E202910198B00853C23 /* libc10.a */; };
+        37FD7E2A2910198B00853C23 /* libtorch_cpu.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E212910198B00853C23 /* libtorch_cpu.a */; };
+        37FD7E2B2910198B00853C23 /* libtorch.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E222910198B00853C23 /* libtorch.a */; };
+        37FD7E2C2910198B00853C23 /* libclog.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E232910198B00853C23 /* libclog.a */; };
+        37FD7E2D2910198B00853C23 /* libcpuinfo.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E242910198B00853C23 /* libcpuinfo.a */; };
+        37FD7E2E2910198C00853C23 /* libXNNPACK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E252910198B00853C23 /* libXNNPACK.a */; };
+        37FD7E2F2910198C00853C23 /* libpytorch_qnnpack.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E262910198B00853C23 /* libpytorch_qnnpack.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+        373FDD93291BE53D00DF4BEA /* libglog.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglog.a; path = "../fc_base/glog-build/Release-iphoneos/libglog.a"; sourceTree = "<group>"; };
+        373FDD95291BE5A800DF4BEA /* libgflags_nothreads.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgflags_nothreads.a; path = "../fc_base/gflags-build/Release-iphoneos/libgflags_nothreads.a"; sourceTree = "<group>"; };
+        37C64C882912A94A00BFCE0B /* final.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; path = final.zip; sourceTree = "<group>"; };
+        37C64C8A2912ABE900BFCE0B /* units.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = units.txt; sourceTree = "<group>"; };
+        37C64C8C2912AD3300BFCE0B /* libkaldi-decoder.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libkaldi-decoder.a"; path = "../build/kaldi/Debug-iphoneos/libkaldi-decoder.a"; sourceTree = "<group>"; };
+        37C64C8E2912ADDD00BFCE0B /* libfst.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfst.a; path = "../fc_base/openfst-build/src/lib/Debug-iphoneos/libfst.a"; sourceTree = "<group>"; };
+        37C64C902912AE2B00BFCE0B /* libgflags_nothreads_debug.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgflags_nothreads_debug.a; path = "../fc_base/gflags-build/Debug-iphoneos/libgflags_nothreads_debug.a"; sourceTree = "<group>"; };
+        37C64C922912AE7E00BFCE0B /* libglogd.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglogd.a; path = "../fc_base/glog-build/Debug-iphoneos/libglogd.a"; sourceTree = "<group>"; };
+        37C64C952912AFC900BFCE0B /* libpost_processor.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpost_processor.a; path = "../build/post_processor/Debug-iphoneos/libpost_processor.a"; sourceTree = "<group>"; };
+        37C64C972912B06800BFCE0B /* libutils.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libutils.a; path = "../build/utils/Debug-iphoneos/libutils.a"; sourceTree = "<group>"; };
+        37C64C992912B0A000BFCE0B /* libfrontend.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfrontend.a; path = "../build/frontend/Debug-iphoneos/libfrontend.a"; sourceTree = "<group>"; };
+        37FD7DFF2910094300853C23 /* WenetDemo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WenetDemo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        37FD7E022910094300853C23 /* AppDelegate.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; tabWidth = 2; };
+        37FD7E042910094300853C23 /* SceneDelegate.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; tabWidth = 2; };
+        37FD7E062910094300853C23 /* ViewController.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; tabWidth = 2; };
+        37FD7E092910094300853C23 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+        37FD7E0B2910094500853C23 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+        37FD7E0E2910094500853C23 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+        37FD7E102910094500853C23 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+        37FD7E17291009EC00853C23 /* WenetDemo-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "WenetDemo-Bridging-Header.h"; sourceTree = "<group>"; };
+        37FD7E18291009EC00853C23 /* wenet.mm */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.cpp.objcpp; path = wenet.mm; sourceTree = "<group>"; tabWidth = 2; };
+        37FD7E19291009EC00853C23 /* wenet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wenet.h; sourceTree = "<group>"; };
+        37FD7E1C2910195900853C23 /* libdecoder.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libdecoder.a; path = "../wenet/runtime/ios/build/decoder/Debug-iphoneos/libdecoder.a"; sourceTree = "<group>"; };
+        37FD7E1E2910198A00853C23 /* libeigen_blas.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libeigen_blas.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libeigen_blas.a; sourceTree = "<group>"; };
+        37FD7E1F2910198B00853C23 /* libpthreadpool.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpthreadpool.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libpthreadpool.a; sourceTree = "<group>"; };
+        37FD7E202910198B00853C23 /* libc10.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libc10.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libc10.a; sourceTree = "<group>"; };
+        37FD7E212910198B00853C23 /* libtorch_cpu.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtorch_cpu.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libtorch_cpu.a; sourceTree = "<group>"; };
+        37FD7E222910198B00853C23 /* libtorch.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libtorch.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libtorch.a; sourceTree = "<group>"; };
+        37FD7E232910198B00853C23 /* libclog.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libclog.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libclog.a; sourceTree = "<group>"; };
+        37FD7E242910198B00853C23 /* libcpuinfo.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libcpuinfo.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libcpuinfo.a; sourceTree = "<group>"; };
+        37FD7E252910198B00853C23 /* libXNNPACK.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libXNNPACK.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libXNNPACK.a; sourceTree = "<group>"; };
+        37FD7E262910198B00853C23 /* libpytorch_qnnpack.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpytorch_qnnpack.a; path = ../wenet/runtime/ios/build/Pods/LibTorch/install/lib/libpytorch_qnnpack.a; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+        37FD7DFC2910094300853C23 /* Frameworks */ = {
+            isa = PBXFrameworksBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                37C64C9A2912B0A000BFCE0B /* libfrontend.a in Frameworks */,
+                37C64C982912B06800BFCE0B /* libutils.a in Frameworks */,
+                37C64C962912AFC900BFCE0B /* libpost_processor.a in Frameworks */,
+                37C64C942912AF7F00BFCE0B /* libkaldi-decoder.a in Frameworks */,
+                37C64C8F2912ADDD00BFCE0B /* libfst.a in Frameworks */,
+                374FEB34291019EE00513F88 /* libeigen_blas.a in Frameworks */,
+                37FD7E282910198B00853C23 /* libpthreadpool.a in Frameworks */,
+                37FD7E292910198B00853C23 /* libc10.a in Frameworks */,
+                37FD7E2A2910198B00853C23 /* libtorch_cpu.a in Frameworks */,
+                37FD7E2B2910198B00853C23 /* libtorch.a in Frameworks */,
+                37FD7E2C2910198B00853C23 /* libclog.a in Frameworks */,
+                37FD7E2D2910198B00853C23 /* libcpuinfo.a in Frameworks */,
+                37FD7E2E2910198C00853C23 /* libXNNPACK.a in Frameworks */,
+                37FD7E2F2910198C00853C23 /* libpytorch_qnnpack.a in Frameworks */,
+                37FD7E1D2910195900853C23 /* libdecoder.a in Frameworks */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+        37C64C812912A21300BFCE0B /* model */ = {
+            isa = PBXGroup;
+            children = (
+                37C64C8A2912ABE900BFCE0B /* units.txt */,
+                37C64C882912A94A00BFCE0B /* final.zip */,
+            );
+            path = model;
+            sourceTree = "<group>";
+        };
+        37FD7DF62910094300853C23 = {
+            isa = PBXGroup;
+            children = (
+                37FD7E012910094300853C23 /* WenetDemo */,
+                37FD7E002910094300853C23 /* Products */,
+                37FD7E1B2910195900853C23 /* Frameworks */,
+            );
+            sourceTree = "<group>";
+        };
+        37FD7E002910094300853C23 /* Products */ = {
+            isa = PBXGroup;
+            children = (
+                37FD7DFF2910094300853C23 /* WenetDemo.app */,
+            );
+            name = Products;
+            sourceTree = "<group>";
+        };
+        37FD7E012910094300853C23 /* WenetDemo */ = {
+            isa = PBXGroup;
+            children = (
+                37C64C812912A21300BFCE0B /* model */,
+                37FD7E16291009B900853C23 /* wenet */,
+                37FD7E022910094300853C23 /* AppDelegate.swift */,
+                37FD7E042910094300853C23 /* SceneDelegate.swift */,
+                37FD7E062910094300853C23 /* ViewController.swift */,
+                37FD7E082910094300853C23 /* Main.storyboard */,
+                37FD7E0B2910094500853C23 /* Assets.xcassets */,
+                37FD7E0D2910094500853C23 /* LaunchScreen.storyboard */,
+                37FD7E102910094500853C23 /* Info.plist */,
+            );
+            path = WenetDemo;
+            sourceTree = "<group>";
+        };
+        37FD7E16291009B900853C23 /* wenet */ = {
+            isa = PBXGroup;
+            children = (
+                37FD7E18291009EC00853C23 /* wenet.mm */,
+                37FD7E19291009EC00853C23 /* wenet.h */,
+                37FD7E17291009EC00853C23 /* WenetDemo-Bridging-Header.h */,
+            );
+            path = wenet;
+            sourceTree = "<group>";
+        };
+        37FD7E1B2910195900853C23 /* Frameworks */ = {
+            isa = PBXGroup;
+            children = (
+                373FDD95291BE5A800DF4BEA /* libgflags_nothreads.a */,
+                373FDD93291BE53D00DF4BEA /* libglog.a */,
+                37C64C992912B0A000BFCE0B /* libfrontend.a */,
+                37C64C972912B06800BFCE0B /* libutils.a */,
+                37C64C952912AFC900BFCE0B /* libpost_processor.a */,
+                37C64C922912AE7E00BFCE0B /* libglogd.a */,
+                37C64C902912AE2B00BFCE0B /* libgflags_nothreads_debug.a */,
+                37C64C8E2912ADDD00BFCE0B /* libfst.a */,
+                37C64C8C2912AD3300BFCE0B /* libkaldi-decoder.a */,
+                37FD7E202910198B00853C23 /* libc10.a */,
+                37FD7E232910198B00853C23 /* libclog.a */,
+                37FD7E242910198B00853C23 /* libcpuinfo.a */,
+                37FD7E1E2910198A00853C23 /* libeigen_blas.a */,
+                37FD7E1F2910198B00853C23 /* libpthreadpool.a */,
+                37FD7E262910198B00853C23 /* libpytorch_qnnpack.a */,
+                37FD7E212910198B00853C23 /* libtorch_cpu.a */,
+                37FD7E222910198B00853C23 /* libtorch.a */,
+                37FD7E252910198B00853C23 /* libXNNPACK.a */,
+                37FD7E1C2910195900853C23 /* libdecoder.a */,
+            );
+            name = Frameworks;
+            sourceTree = "<group>";
+        };
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+        37FD7DFE2910094300853C23 /* WenetDemo */ = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = 37FD7E132910094500853C23 /* Build configuration list for PBXNativeTarget "WenetDemo" */;
+            buildPhases = (
+                37FD7DFB2910094300853C23 /* Sources */,
+                37FD7DFC2910094300853C23 /* Frameworks */,
+                37FD7DFD2910094300853C23 /* Resources */,
+            );
+            buildRules = (
+            );
+            dependencies = (
+            );
+            name = WenetDemo;
+            productName = WenetDemo;
+            productReference = 37FD7DFF2910094300853C23 /* WenetDemo.app */;
+            productType = "com.apple.product-type.application";
+        };
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+        37FD7DF72910094300853C23 /* Project object */ = {
+            isa = PBXProject;
+            attributes = {
+                BuildIndependentTargetsInParallel = 1;
+                LastSwiftUpdateCheck = 1400;
+                LastUpgradeCheck = 1400;
+                TargetAttributes = {
+                    37FD7DFE2910094300853C23 = {
+                        CreatedOnToolsVersion = 14.0.1;
+                        LastSwiftMigration = 1400;
+                    };
+                };
+            };
+            buildConfigurationList = 37FD7DFA2910094300853C23 /* Build configuration list for PBXProject "WenetDemo" */;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = en;
+            hasScannedForEncodings = 0;
+            knownRegions = (
+                en,
+                Base,
+            );
+            mainGroup = 37FD7DF62910094300853C23;
+            productRefGroup = 37FD7E002910094300853C23 /* Products */;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (
+                37FD7DFE2910094300853C23 /* WenetDemo */,
+            );
+        };
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+        37FD7DFD2910094300853C23 /* Resources */ = {
+            isa = PBXResourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                37C64C8B2912ABE900BFCE0B /* units.txt in Resources */,
+                37FD7E0F2910094500853C23 /* LaunchScreen.storyboard in Resources */,
+                37FD7E0C2910094500853C23 /* Assets.xcassets in Resources */,
+                37C64C892912A94B00BFCE0B /* final.zip in Resources */,
+                37FD7E0A2910094300853C23 /* Main.storyboard in Resources */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+        37FD7DFB2910094300853C23 /* Sources */ = {
+            isa = PBXSourcesBuildPhase;
+            buildActionMask = 2147483647;
+            files = (
+                37FD7E072910094300853C23 /* ViewController.swift in Sources */,
+                37FD7E1A291009EC00853C23 /* wenet.mm in Sources */,
+                37FD7E032910094300853C23 /* AppDelegate.swift in Sources */,
+                37FD7E052910094300853C23 /* SceneDelegate.swift in Sources */,
+            );
+            runOnlyForDeploymentPostprocessing = 0;
+        };
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+        37FD7E082910094300853C23 /* Main.storyboard */ = {
+            isa = PBXVariantGroup;
+            children = (
+                37FD7E092910094300853C23 /* Base */,
+            );
+            name = Main.storyboard;
+            sourceTree = "<group>";
+        };
+        37FD7E0D2910094500853C23 /* LaunchScreen.storyboard */ = {
+            isa = PBXVariantGroup;
+            children = (
+                37FD7E0E2910094500853C23 /* Base */,
+            );
+            name = LaunchScreen.storyboard;
+            sourceTree = "<group>";
+        };
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+        37FD7E112910094500853C23 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ALWAYS_SEARCH_USER_PATHS = NO;
+                CLANG_ANALYZER_NONNULL = YES;
+                CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+                CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+                CLANG_ENABLE_MODULES = YES;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                CLANG_ENABLE_OBJC_WEAK = YES;
+                CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+                CLANG_WARN_BOOL_CONVERSION = YES;
+                CLANG_WARN_COMMA = YES;
+                CLANG_WARN_CONSTANT_CONVERSION = YES;
+                CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+                CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+                CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+                CLANG_WARN_EMPTY_BODY = YES;
+                CLANG_WARN_ENUM_CONVERSION = YES;
+                CLANG_WARN_INFINITE_RECURSION = YES;
+                CLANG_WARN_INT_CONVERSION = YES;
+                CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+                CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+                CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+                CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+                CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+                CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+                CLANG_WARN_STRICT_PROTOTYPES = YES;
+                CLANG_WARN_SUSPICIOUS_MOVE = YES;
+                CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+                CLANG_WARN_UNREACHABLE_CODE = YES;
+                CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+                COPY_PHASE_STRIP = NO;
+                DEBUG_INFORMATION_FORMAT = dwarf;
+                ENABLE_STRICT_OBJC_MSGSEND = YES;
+                ENABLE_TESTABILITY = YES;
+                GCC_C_LANGUAGE_STANDARD = gnu11;
+                GCC_DYNAMIC_NO_PIC = NO;
+                GCC_NO_COMMON_BLOCKS = YES;
+                GCC_OPTIMIZATION_LEVEL = 0;
+                GCC_PREPROCESSOR_DEFINITIONS = (
+                    "DEBUG=1",
+                    "$(inherited)",
+                );
+                GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+                GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+                GCC_WARN_UNDECLARED_SELECTOR = YES;
+                GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+                GCC_WARN_UNUSED_FUNCTION = YES;
+                GCC_WARN_UNUSED_VARIABLE = YES;
+                IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+                MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+                MTL_FAST_MATH = YES;
+                ONLY_ACTIVE_ARCH = YES;
+                SDKROOT = iphoneos;
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+                SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+            };
+            name = Debug;
+        };
+        37FD7E122910094500853C23 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ALWAYS_SEARCH_USER_PATHS = NO;
+                CLANG_ANALYZER_NONNULL = YES;
+                CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+                CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+                CLANG_ENABLE_MODULES = YES;
+                CLANG_ENABLE_OBJC_ARC = YES;
+                CLANG_ENABLE_OBJC_WEAK = YES;
+                CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+                CLANG_WARN_BOOL_CONVERSION = YES;
+                CLANG_WARN_COMMA = YES;
+                CLANG_WARN_CONSTANT_CONVERSION = YES;
+                CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+                CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+                CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+                CLANG_WARN_EMPTY_BODY = YES;
+                CLANG_WARN_ENUM_CONVERSION = YES;
+                CLANG_WARN_INFINITE_RECURSION = YES;
+                CLANG_WARN_INT_CONVERSION = YES;
+                CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+                CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+                CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+                CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+                CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+                CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+                CLANG_WARN_STRICT_PROTOTYPES = YES;
+                CLANG_WARN_SUSPICIOUS_MOVE = YES;
+                CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+                CLANG_WARN_UNREACHABLE_CODE = YES;
+                CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+                COPY_PHASE_STRIP = NO;
+                DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+                ENABLE_NS_ASSERTIONS = NO;
+                ENABLE_STRICT_OBJC_MSGSEND = YES;
+                GCC_C_LANGUAGE_STANDARD = gnu11;
+                GCC_NO_COMMON_BLOCKS = YES;
+                GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+                GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+                GCC_WARN_UNDECLARED_SELECTOR = YES;
+                GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+                GCC_WARN_UNUSED_FUNCTION = YES;
+                GCC_WARN_UNUSED_VARIABLE = YES;
+                IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+                MTL_ENABLE_DEBUG_INFO = NO;
+                MTL_FAST_MATH = YES;
+                SDKROOT = iphoneos;
+                SWIFT_COMPILATION_MODE = wholemodule;
+                SWIFT_OPTIMIZATION_LEVEL = "-O";
+                VALIDATE_PRODUCT = YES;
+            };
+            name = Release;
+        };
+        37FD7E142910094500853C23 /* Debug */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+                CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+                CLANG_ENABLE_MODULES = YES;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                DEVELOPMENT_TEAM = LXGRKDMEQU;
+                GCC_C_LANGUAGE_STANDARD = gnu11;
+                GENERATE_INFOPLIST_FILE = YES;
+                HEADER_SEARCH_PATHS = (
+                    ../,
+                    "../fc_base/openfst-src/src/include",
+                    "../fc_base/gflags-build/include",
+                    "../fc_base/glog-build",
+                    "../fc_base/glog-src/src",
+                    ../kaldi,
+                    ../build/Pods/LibTorch/install/include,
+                );
+                INFOPLIST_FILE = WenetDemo/Info.plist;
+                INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+                INFOPLIST_KEY_UIMainStoryboardFile = Main;
+                INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                IPHONEOS_DEPLOYMENT_TARGET = 14.6;
+                LD_RUNPATH_SEARCH_PATHS = (
+                    "$(inherited)",
+                    "@executable_path/Frameworks",
+                );
+                LIBRARY_SEARCH_PATHS = (
+                    "../build/decoder/Debug-iphoneos",
+                    ../build/Pods/LibTorch/install/lib,
+                    "../fc_base/openfst-build/src/lib/Debug-iphoneos",
+                    "../fc_base/gflags-build/Debug-iphoneos",
+                    "../fc_base/glog-build/Debug-iphoneos",
+                    "../build/kaldi/Debug-iphoneos",
+                    "../build/post_processor/Debug-iphoneos",
+                    "../build/utils/Debug-iphoneos",
+                    "../build/frontend/Debug-iphoneos",
+                );
+                MARKETING_VERSION = 1.0;
+                OTHER_LDFLAGS = (
+                    "-ObjC",
+                    "-l\"XNNPACK\"",
+                    "-l\"c++\"",
+                    "-l\"c10\"",
+                    "-l\"clog\"",
+                    "-l\"cpuinfo\"",
+                    "-l\"eigen_blas\"",
+                    "-l\"pthreadpool\"",
+                    "-l\"pytorch_qnnpack\"",
+                    "-l\"stdc++\"",
+                    "-l\"torch\"",
+                    "-l\"torch_cpu\"",
+                    "-force_load",
+                    ../build/Pods/LibTorch/install/lib/libtorch.a,
+                    "-force_load",
+                    ../build/Pods/LibTorch/install/lib/libtorch_cpu.a,
+                    "-l\"gflags_nothreads_debug\"",
+                    "-l\"glogd\"",
+                );
+                PRODUCT_BUNDLE_IDENTIFIER = com.wenet.WenetDemo;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SWIFT_EMIT_LOC_STRINGS = YES;
+                SWIFT_OBJC_BRIDGING_HEADER = "WenetDemo/wenet/WenetDemo-Bridging-Header.h";
+                SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+            };
+            name = Debug;
+        };
+        37FD7E152910094500853C23 /* Release */ = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+                CLANG_CXX_LANGUAGE_STANDARD = "c++14";
+                CLANG_ENABLE_MODULES = YES;
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                DEVELOPMENT_TEAM = LXGRKDMEQU;
+                GCC_C_LANGUAGE_STANDARD = gnu11;
+                GENERATE_INFOPLIST_FILE = YES;
+                HEADER_SEARCH_PATHS = (
+                    ../,
+                    "../fc_base/openfst-src/src/include",
+                    "../fc_base/gflags-build/include",
+                    "../fc_base/glog-build",
+                    "../fc_base/glog-src/src",
+                    ../kaldi,
+                    ../build/Pods/LibTorch/install/include,
+                );
+                INFOPLIST_FILE = WenetDemo/Info.plist;
+                INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                INFOPLIST_KEY_UILaunchStoryboardName = LaunchScreen;
+                INFOPLIST_KEY_UIMainStoryboardFile = Main;
+                INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                IPHONEOS_DEPLOYMENT_TARGET = 14.6;
+                LD_RUNPATH_SEARCH_PATHS = (
+                    "$(inherited)",
+                    "@executable_path/Frameworks",
+                );
+                LIBRARY_SEARCH_PATHS = (
+                    "../build/decoder/Release-iphoneos",
+                    ../build/Pods/LibTorch/install/lib,
+                    "../fc_base/openfst-build/src/lib/Release-iphoneos",
+                    "../fc_base/gflags-build/Release-iphoneos",
+                    "../fc_base/glog-build/Release-iphoneos",
+                    "../build/kaldi/Release-iphoneos",
+                    "../build/post_processor/Release-iphoneos",
+                    "../build/utils/Release-iphoneos",
+                    "../build/frontend/Release-iphoneos",
+                );
+                MARKETING_VERSION = 1.0;
+                OTHER_LDFLAGS = (
+                    "-ObjC",
+                    "-l\"XNNPACK\"",
+                    "-l\"c++\"",
+                    "-l\"c10\"",
+                    "-l\"clog\"",
+                    "-l\"cpuinfo\"",
+                    "-l\"eigen_blas\"",
+                    "-l\"pthreadpool\"",
+                    "-l\"pytorch_qnnpack\"",
+                    "-l\"stdc++\"",
+                    "-l\"torch\"",
+                    "-l\"torch_cpu\"",
+                    "-force_load",
+                    ../build/Pods/LibTorch/install/lib/libtorch.a,
+                    "-force_load",
+                    ../build/Pods/LibTorch/install/lib/libtorch_cpu.a,
+                    "-l\"gflags_nothreads\"",
+                    "-l\"glog\"",
+                );
+                PRODUCT_BUNDLE_IDENTIFIER = com.wenet.WenetDemo;
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SWIFT_EMIT_LOC_STRINGS = YES;
+                SWIFT_OBJC_BRIDGING_HEADER = "WenetDemo/wenet/WenetDemo-Bridging-Header.h";
+                SWIFT_VERSION = 5.0;
+                TARGETED_DEVICE_FAMILY = "1,2";
+            };
+            name = Release;
+        };
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+        37FD7DFA2910094300853C23 /* Build configuration list for PBXProject "WenetDemo" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                37FD7E112910094500853C23 /* Debug */,
+                37FD7E122910094500853C23 /* Release */,
+            );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        37FD7E132910094500853C23 /* Build configuration list for PBXNativeTarget "WenetDemo" */ = {
+            isa = XCConfigurationList;
+            buildConfigurations = (
+                37FD7E142910094500853C23 /* Debug */,
+                37FD7E152910094500853C23 /* Release */,
+            );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+/* End XCConfigurationList section */
+    };
+    rootObject = 37FD7DF72910094300853C23 /* Project object */;
+}

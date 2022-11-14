@@ -5,6 +5,9 @@ if(TORCH)
       add_definitions(-DUSE_GPU)
       set(CUDA_NAME "cu113")
     endif()
+    if(IOS)
+      add_definitions(-DIOS)
+    endif()
     if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
       if(GPU)
         message(FATAL_ERROR "GPU on Windows is unsupported, you can use CPU version")
@@ -40,17 +43,24 @@ if(TORCH)
       endif()
       set(LIBTORCH_URL "https://download.pytorch.org/libtorch/cpu/libtorch-macos-${PYTORCH_VERSION}.zip")
       set(URL_HASH "SHA256=07cac2c36c34f13065cb9559ad5270109ecbb468252fb0aeccfd89322322a2b5")
+    elseif(${CMAKE_SYSTEM_NAME} STREQUAL "iOS")
+      if(GPU)
+        message(FATAL_ERROR "GPU on iOS is unsupported, you can use CPU version")
+      endif()
     else()
       message(FATAL_ERROR "Unsupported CMake System Name '${CMAKE_SYSTEM_NAME}' (expected 'Windows', 'Linux' or 'Darwin')")
     endif()
 
-    FetchContent_Declare(libtorch
-      URL      ${LIBTORCH_URL}
-      URL_HASH ${URL_HASH}
-    )
-    FetchContent_MakeAvailable(libtorch)
-    find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
+    # iOS use LibTorch from pod install
+    if(NOT IOS)
+      FetchContent_Declare(libtorch
+        URL      ${LIBTORCH_URL}
+        URL_HASH ${URL_HASH}
+      )
+      FetchContent_MakeAvailable(libtorch)
+      find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
+    endif()
 
     if(MSVC)
       file(GLOB TORCH_DLLS "${TORCH_INSTALL_PREFIX}/lib/*.dll")
