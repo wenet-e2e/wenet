@@ -51,19 +51,21 @@ void BPUAsrModel::Read(const std::string& model_dir) {
   std::string ctc_model_path = model_dir + "/ctc.bin";
 
   // 0. Init managers
-  model_manager_.reset(ModelManager::GetInstance());
-  task_manager_.reset(TaskManager::GetInstance());
+  // NOTE(xcsong): XxxManager follows `Singleton Pattern`, there is
+  //  no need to maintain managers as class members, we can simply
+  //  get single instance Just-In-Time.
+  ModelManager* model_manager = ModelManager::GetInstance();
 
   // 1. Load models
   std::vector<Model*> models;
-  int ret_code = model_manager_->Load(models, encoder_model_path);
+  int ret_code = model_manager->Load(models, encoder_model_path);
   CHECK_EQ(ret_code, 0) << "Load encoder.bin failed.";
-  encoder_model_.reset(model_manager_->GetModel([](Model* model) {
+  encoder_model_.reset(model_manager->GetModel([](Model* model) {
     return model->GetName().find("encoder") != std::string::npos;
   }));
-  ret_code = model_manager_->Load(models, ctc_model_path);
+  ret_code = model_manager->Load(models, ctc_model_path);
   CHECK_EQ(ret_code, 0) << "Load ctc.bin failed.";
-  ctc_model_.reset(model_manager_->GetModel([](Model* model) {
+  ctc_model_.reset(model_manager->GetModel([](Model* model) {
     return model->GetName().find("ctc") != std::string::npos;
   }));
 
@@ -115,9 +117,6 @@ BPUAsrModel::BPUAsrModel(const BPUAsrModel& other) {
   // metadatas (ChileClass)
   hidden_dim_ = other.hidden_dim_;
   chunk_id_ = other.chunk_id_;
-  // managers
-  model_manager_ = other.model_manager_;
-  task_manager_ = other.task_manager_;
   // models, NOTE(xcsong): in/out tensors are not copied here.
   encoder_model_ = other.encoder_model_;
   ctc_model_ = other.ctc_model_;
@@ -180,12 +179,16 @@ void BPUAsrModel::Reset() {
 void BPUAsrModel::ForwardEncoderFunc(
     const std::vector<std::vector<float>>& chunk_feats,
     std::vector<std::vector<float>>* out_prob) {
+  // NOTE(xcsong): XxxManager follows `Singleton Pattern`, there is
+  //  no need to maintain managers as class members, we can simply
+  //  get single instance Just-In-Time.
+  TaskManager* task_manager = TaskManager::GetInstance();
   // 1. Forward Encoder
   PrepareEncoderInput(chunk_feats);
   for (auto& tensor : encoder_input_) {
     hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_CLEAN);
   }
-  auto infer_task = task_manager_->GetModelInferTask(1000);
+  auto infer_task = task_manager->GetModelInferTask(1000);
   infer_task->SetModel(encoder_model_.get());
   infer_task->SetInputTensors(encoder_input_);
   infer_task->SetOutputTensors(encoder_output_);
@@ -201,7 +204,7 @@ void BPUAsrModel::ForwardEncoderFunc(
   for (auto& tensor : ctc_input_) {
     hbSysFlushMem(&(tensor->sysMem[0]), HB_SYS_MEM_CACHE_CLEAN);
   }
-  infer_task = task_manager_->GetModelInferTask(1000);
+  infer_task = task_manager->GetModelInferTask(1000);
   infer_task->SetModel(ctc_model_.get());
   infer_task->SetInputTensors(ctc_input_);
   infer_task->SetOutputTensors(ctc_output_);
@@ -300,7 +303,7 @@ void BPUAsrModel::AttentionRescoring(const std::vector<std::vector<int>>& hyps,
   //  Currently, running decoder on edge-devices is time-consuming since the
   //  the length of input is much longer than encoder. To achieve a better
   //  accuracy-speed trade-off, we disable rescoring by default.
-  LOG(INFO) << "Skip rescore.";
+  LOG(INFO) << "Skip rescore. Please set rescoring_weight = 0.0";
 }
 
 BPUAsrModel::~BPUAsrModel() {

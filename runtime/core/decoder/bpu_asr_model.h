@@ -69,10 +69,6 @@ class BPUAsrModel : public AsrModel {
   int hidden_dim_ = 512;
   int chunk_id_ = 0;
 
-  // managers, FIXME(xcsong): Is XxxManager thread-safe ?
-  std::shared_ptr<ModelManager> model_manager_ = nullptr;
-  std::shared_ptr<TaskManager> task_manager_ = nullptr;
-
   // models
   std::shared_ptr<Model> encoder_model_ = nullptr;
   std::shared_ptr<Model> ctc_model_ = nullptr;
