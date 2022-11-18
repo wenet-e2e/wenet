@@ -474,7 +474,7 @@ def spec_sub(data, max_t=20, num_t_sub=3):
 
 def spec_trim(data, max_t=20):
     """ Trim tailing frames. Inplace operation.
-        ref: Rapid-U2++ [arxiv link]
+        ref: TrimTail [https://arxiv.org/abs/2211.00522]
 
         Args:
             data: Iterable[{key, feat, label}]
