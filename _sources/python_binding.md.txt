@@ -25,6 +25,7 @@ pip3 install wenetruntime
 
 ``` python
 import sys
+import torch
 import wenetruntime as wenet
 
 wav_file = sys.argv[1]
