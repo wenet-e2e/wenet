@@ -4,16 +4,11 @@
 
 import glob
 import os
-import platform
 import shutil
 import sys
 
 import setuptools
 from setuptools.command.build_ext import build_ext
-
-
-def is_windows():
-    return platform.system() == "Windows"
 
 
 def cmake_extension(name, *args, **kwargs) -> setuptools.Extension:
@@ -70,7 +65,7 @@ package_name = "wenetruntime"
 
 setuptools.setup(
     name=package_name,
-    version='1.0.9',
+    version='1.0.10',
     author="Binbin Zhang",
     author_email="binbzha@qq.com",
     package_dir={
@@ -83,13 +78,13 @@ setuptools.setup(
     ext_modules=[cmake_extension("_wenet")],
     cmdclass={"build_ext": BuildExtension},
     zip_safe=False,
-    setup_requires=["torch", "tqdm"],
+    setup_requires=["tqdm"],
     install_requires=["torch", "tqdm"],
     classifiers=[
         "Programming Language :: C++",
-        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
     ],
     license="Apache licensed, as found in the LICENSE file",
-    python_requires=">=3.6",
 )
