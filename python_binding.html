@@ -130,7 +130,7 @@
 <div class="section" id="non-streaming-usage">
 <h3>Non-streaming Usage<a class="headerlink" href="#non-streaming-usage" title="Permalink to this headline"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">import</span> <span class="nn">torch</span>  <span class="c1"># macOS should comment out this line, and uninstall torch.</span>
 <span class="kn">import</span> <span class="nn">wenetruntime</span> <span class="k">as</span> <span class="nn">wenet</span>
 
 <span class="n">wav_file</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -171,6 +171,7 @@ If not provided, official model for specific <code class="docutils literal notra
 <div class="section" id="streaming-usage">
 <h3>Streaming Usage<a class="headerlink" href="#streaming-usage" title="Permalink to this headline"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">torch</span>  <span class="c1"># macOS should comment out this line, and uninstall torch.</span>
 <span class="kn">import</span> <span class="nn">wave</span>
 <span class="kn">import</span> <span class="nn">wenetruntime</span> <span class="k">as</span> <span class="nn">wenet</span>
 
@@ -195,7 +196,7 @@ If not provided, official model for specific <code class="docutils literal notra
 </div>
 <div class="section" id="build-on-your-local-machine">
 <h2>Build on Your Local Machine<a class="headerlink" href="#build-on-your-local-machine" title="Permalink to this headline"></a></h2>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone git@github.com:wenet-e2e/wenet.git
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/wenet-e2e/wenet.git
 <span class="nb">cd</span> wenet/runtime/binding/python
 python setup.py install
 </pre></div>
