@@ -25,7 +25,7 @@ pip3 install wenetruntime
 
 ``` python
 import sys
-import torch
+import torch  # macOS should comment out this line, and uninstall torch.
 import wenetruntime as wenet
 
 wav_file = sys.argv[1]
@@ -67,6 +67,7 @@ decoder = wenet.Decoder(model_dir,
 
 ``` python
 import sys
+import torch  # macOS should comment out this line, and uninstall torch.
 import wave
 import wenetruntime as wenet
 
@@ -92,7 +93,7 @@ You can use the same parameters as we introduced above to control the behavior o
 ## Build on Your Local Machine
 
 ``` sh
-git clone git@github.com:wenet-e2e/wenet.git
+git clone https://github.com/wenet-e2e/wenet.git
 cd wenet/runtime/binding/python
 python setup.py install
 ```
