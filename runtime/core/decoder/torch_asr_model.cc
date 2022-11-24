@@ -13,13 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "decoder/torch_asr_model.h"
 
 #include <algorithm>
 #include <memory>
-#include <utility>
 #include <stdexcept>
+#include <utility>
 
 #include "torch/script.h"
 #ifndef IOS
@@ -32,12 +31,7 @@ namespace wenet {
 void TorchAsrModel::InitEngineThreads(int num_threads) {
   // For multi-thread performance
   at::set_num_threads(num_threads);
-  // Note: Do not call the set_num_interop_threads function more than once.
-  // Please see https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/
-  // ParallelThreadPoolNative.cpp#L54-L56
-  at::set_num_interop_threads(1);
   VLOG(1) << "Num intra-op threads: " << at::get_num_threads();
-  VLOG(1) << "Num inter-op threads: " << at::get_num_interop_threads();
 }
 #endif
 
