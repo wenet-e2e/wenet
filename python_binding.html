@@ -127,10 +127,15 @@
 </div>
 <div class="section" id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
+<p>Note:</p>
+<ol class="simple">
+<li><p>For macOS, wenetruntime packed <code class="docutils literal notranslate"><span class="pre">libtorch.so</span></code>, so we can’t import torch and wenetruntime at the same time.</p></li>
+<li><p>For Windows and Linux, wenetruntime depends on torch. Please install and import the same version <code class="docutils literal notranslate"><span class="pre">torch</span></code> as wenetruntime.</p></li>
+</ol>
 <div class="section" id="non-streaming-usage">
 <h3>Non-streaming Usage<a class="headerlink" href="#non-streaming-usage" title="Permalink to this headline"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">torch</span>  <span class="c1"># macOS should comment out this line, and uninstall torch.</span>
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">wenetruntime</span> <span class="k">as</span> <span class="nn">wenet</span>
 
 <span class="n">wav_file</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -171,7 +176,7 @@ If not provided, official model for specific <code class="docutils literal notra
 <div class="section" id="streaming-usage">
 <h3>Streaming Usage<a class="headerlink" href="#streaming-usage" title="Permalink to this headline"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
-<span class="kn">import</span> <span class="nn">torch</span>  <span class="c1"># macOS should comment out this line, and uninstall torch.</span>
+<span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">wave</span>
 <span class="kn">import</span> <span class="nn">wenetruntime</span> <span class="k">as</span> <span class="nn">wenet</span>
 
