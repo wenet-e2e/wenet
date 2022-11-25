@@ -21,11 +21,16 @@ pip3 install wenetruntime
 
 ## Usage
 
+Note:
+
+1. For macOS, wenetruntime packed `libtorch.so`, so we can't import torch and wenetruntime at the same time.
+2. For Windows and Linux, wenetruntime depends on torch. Please install and import the same version `torch` as wenetruntime. 
+
 ### Non-streaming Usage
 
 ``` python
 import sys
-import torch  # macOS should comment out this line, and uninstall torch.
+import torch
 import wenetruntime as wenet
 
 wav_file = sys.argv[1]
@@ -67,7 +72,7 @@ decoder = wenet.Decoder(model_dir,
 
 ``` python
 import sys
-import torch  # macOS should comment out this line, and uninstall torch.
+import torch
 import wave
 import wenetruntime as wenet
 
