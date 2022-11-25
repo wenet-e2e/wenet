@@ -24,7 +24,7 @@ pip3 install wenetruntime
 Note:
 
 1. For macOS, wenetruntime packed `libtorch.so`, so we can't import torch and wenetruntime at the same time.
-2. For Windows and Linux, wenetruntime depends on torch. Please install and import the same version `torch` as wenetruntime. 
+2. For Windows and Linux, wenetruntime depends on torch. Please install and import the same version `torch` as wenetruntime.
 
 ### Non-streaming Usage
 
