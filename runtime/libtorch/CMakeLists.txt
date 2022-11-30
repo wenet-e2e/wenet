@@ -33,6 +33,8 @@ endif()
 
 # Include all dependency
 if(TORCH)
+  include(kaldifeat)
+  include(FetchContent)  # use wenet's, disable kaldifeat's custom: cmake/Modules/FetchContent
   include(libtorch)
 endif()
 if(ONNX)

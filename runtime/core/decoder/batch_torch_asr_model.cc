@@ -98,6 +98,59 @@ std::shared_ptr<BatchAsrModel> BatchTorchAsrModel::Copy() const {
 }
 
 void BatchTorchAsrModel::ForwardEncoder(
+    const std::vector<torch::Tensor>& batch_feats,
+    const std::vector<int>& batch_feats_lens,
+    std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
+    std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) {
+  // 1. Prepare libtorch required data
+  int batch_size = batch_feats_lens.size();
+  torch::Tensor feats_lens =
+    torch::from_blob(const_cast<int*>(batch_feats_lens.data()),
+                     {batch_size}, torch::kInt).clone();
+  // Note: math.log(1e-10) is -23.025850929940457
+  auto feats = torch::nn::utils::rnn::pad_sequence(batch_feats, true,
+      -23.025850929940457f);
+
+  // 2. Encoder batch forward
+  feats = feats.to(device_);
+  feats_lens = feats_lens.to(device_);
+  torch::NoGradGuard no_grad;
+  std::vector<torch::jit::IValue> inputs = {feats, feats_lens};
+
+  auto outputs =
+      model_->get_method("batch_forward_encoder")(inputs).toTuple()->elements();
+  VLOG(1) << "batch_forward_encoder done";
+  CHECK_EQ(outputs.size(), 5);
+  encoder_out_ = outputs[0].toTensor();  // (B, Tmax, dim)
+  encoder_lens_ = outputs[1].toTensor();  // (B,)
+
+  // Copy topk_scores
+  auto topk_scores = outputs[3].toTensor().to(at::kCPU);
+  int num_outputs = topk_scores.size(1);
+  int output_dim = topk_scores.size(2);
+  batch_topk_scores->resize(batch_size);
+  for (size_t i = 0; i < batch_size; i++) {
+    (*batch_topk_scores)[i].resize(num_outputs);
+    for (size_t j = 0; j < num_outputs; j++) {
+      (*batch_topk_scores)[i][j].resize(output_dim);
+      memcpy((*batch_topk_scores)[i][j].data(), topk_scores[i][j].data_ptr(),
+             sizeof(float) * output_dim);
+    }
+  }
+  // copy topk_indexes
+  auto topk_indexes = outputs[4].toTensor().to(at::kCPU);
+  batch_topk_indexs->resize(batch_size);
+  for (size_t i = 0; i < batch_size; ++i) {
+    (*batch_topk_indexs)[i].resize(num_outputs);
+    for (size_t j = 0; j < num_outputs; ++j) {
+      (*batch_topk_indexs)[i][j].resize(output_dim);
+      memcpy((*batch_topk_indexs)[i][j].data(), topk_indexes[i][j].data_ptr(),
+             sizeof(int) * output_dim);
+    }
+  }
+}
+
+void BatchTorchAsrModel::ForwardEncoder(
     const batch_feature_t& batch_feats,
     const std::vector<int>& batch_feats_lens,
     std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
@@ -106,6 +159,7 @@ void BatchTorchAsrModel::ForwardEncoder(
   int batch_size = batch_feats.size();
   int num_frames = batch_feats[0].size();
   const int feature_dim = batch_feats[0][0].size();
+  Timer timer;
   torch::Tensor feats =
       torch::zeros({batch_size, num_frames, feature_dim}, torch::kFloat);
   for (size_t i = 0; i < batch_size; ++i) {
@@ -116,6 +170,7 @@ void BatchTorchAsrModel::ForwardEncoder(
       feats[i][j] = std::move(row);
     }
   }
+  VLOG(1) << "feature to Tensor takes " << timer.Elapsed() << " ms.";
   torch::Tensor feats_lens =
     torch::from_blob(const_cast<int*>(batch_feats_lens.data()),
                      {batch_size}, torch::kInt).clone();

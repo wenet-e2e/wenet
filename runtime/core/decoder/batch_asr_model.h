@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "torch/torch.h"
 #include "utils/timer.h"
 #include "utils/utils.h"
 
@@ -35,6 +36,11 @@ class BatchAsrModel {
       const std::vector<int>& batch_feats_lens,
       std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
       std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) = 0;
+  virtual void ForwardEncoder(
+      const std::vector<torch::Tensor>& batch_feats,
+      const std::vector<int>& batch_feats_lens,
+      std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
+      std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) {};
 
   virtual void AttentionRescoring(
       const std::vector<std::vector<std::vector<int>>>& batch_hyps,
