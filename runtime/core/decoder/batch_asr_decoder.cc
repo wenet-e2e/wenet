@@ -35,6 +35,7 @@ BatchAsrDecoder::BatchAsrDecoder(std::shared_ptr<FeaturePipelineConfig> config,
       beam_size_(opts.ctc_prefix_search_opts.first_beam_size),
       fbank_(config->num_bins, config->sample_rate,
           config->frame_length, config->frame_shift),
+      fbank_cuda_(config->num_bins, config->sample_rate),
       model_(resource->batch_model->Copy()),
       post_processor_(resource->post_processor),
       symbol_table_(resource->symbol_table),
@@ -109,11 +110,13 @@ void BatchAsrDecoder::FbankWorker(const std::vector<float>& wav, int index) {
           << ", takes " << timer.Elapsed() << " ms.";
 }
 
-void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
-  // 1. calc fbank feature of the batch of wavs
+void BatchAsrDecoder::ComputeFeatureCpu(
+    const std::vector<std::vector<float>>& wavs,
+    batch_feature_t* feats,
+    std::vector<int>* feats_lens) {
   Timer timer;
-  batch_feature_t batch_feats;
-  std::vector<int> batch_feats_lens;
+  batch_feature_t& batch_feats = *feats;
+  std::vector<int>& batch_feats_lens = *feats_lens;
   if (wavs.size() > 1) {
     std::vector<std::thread> fbank_threads;
     for (size_t i = 0; i < wavs.size(); i++) {
@@ -155,15 +158,35 @@ void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
       }
     }
     VLOG(1) << "padding feautre takes " << timer.Elapsed() << " ms.";
-  }
+  }}
 
-  // 2. encoder forward
-  timer.Reset();
+void BatchAsrDecoder::Decode(const std::vector<std::vector<float>>& wavs) {
+  // 1. calc fbank feature of the batch of wavs
   std::vector<std::vector<std::vector<float>>> batch_topk_scores;
   std::vector<std::vector<std::vector<int>>> batch_topk_indexs;
-  model_->ForwardEncoder(
-      batch_feats, batch_feats_lens, &batch_topk_scores, &batch_topk_indexs);
-  VLOG(1) << "encoder forward takes " << timer.Elapsed() << " ms.";
+  Timer timer;
+  bool gpu_feature = true;
+  if (gpu_feature) {
+    std::vector<int> batch_feats_lens;
+    timer.Reset();
+    auto batch_feats = fbank_cuda_.Compute(wavs, &batch_feats_lens);
+    VLOG(1) << "fbank_cuda_.Comput() takes " << timer.Elapsed() << " ms.";
+    timer.Reset();
+    // 2. encoder forward
+    model_->ForwardEncoder(
+        batch_feats, batch_feats_lens, &batch_topk_scores, &batch_topk_indexs);
+    VLOG(1) << "encoder forward takes " << timer.Elapsed() << " ms.";
+
+  } else {
+    batch_feature_t batch_feats;
+    std::vector<int> batch_feats_lens;
+    ComputeFeatureCpu(wavs, &batch_feats, &batch_feats_lens);
+    timer.Reset();
+    // 2. encoder forward
+    model_->ForwardEncoder(
+        batch_feats, batch_feats_lens, &batch_topk_scores, &batch_topk_indexs);
+    VLOG(1) << "encoder forward takes " << timer.Elapsed() << " ms.";
+  }
 
   // 3. ctc search one by one of the batch
   // create batch of tct search result for attention decoding

@@ -37,6 +37,7 @@
 #include "utils/utils.h"
 #include "frontend/fbank.h"
 #include "utils/json.h"
+#include "frontend/fbank_cuda.h"
 
 namespace wenet {
 
@@ -64,6 +65,12 @@ class BatchAsrDecoder {
 
  private:
   Fbank fbank_;
+  FbankCuda fbank_cuda_;
+
+  void ComputeFeatureCpu(
+      const std::vector<std::vector<float>>& wavs,
+      batch_feature_t* batch_feats,
+      std::vector<int>* batch_feats_lens);
   void FbankWorker(const std::vector<float>& wav, int index);
   std::vector<std::pair<int, feature_t>> batch_feats_;  // for FbankWorker
   std::vector<std::pair<int, int>> batch_feats_lens_;  // for FbankWorker

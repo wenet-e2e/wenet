@@ -51,6 +51,11 @@ class BatchTorchAsrModel : public BatchAsrModel {
       const std::vector<int>& batch_feats_lens,
       std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
       std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) override;  // NOLINT
+  void ForwardEncoder(
+      const std::vector<torch::Tensor>& batch_feats,
+      const std::vector<int>& batch_feats_lens,
+      std::vector<std::vector<std::vector<float>>>* batch_topk_scores,
+      std::vector<std::vector<std::vector<int32_t>>>* batch_topk_indexs) override;  // NOLINT
 
  private:
   std::shared_ptr<TorchModule> model_ = nullptr;

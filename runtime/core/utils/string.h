@@ -53,6 +53,8 @@ bool CheckEnglishWord(const std::string& word);
 std::string JoinString(const std::string& c,
                        const std::vector<std::string>& strs);
 
+bool IsAlpha(const std::string& str);
+
 // Split the UTF-8 string into words by symbol table.
 // Return whether not contains oov.
 bool SplitUTF8StringToWords(

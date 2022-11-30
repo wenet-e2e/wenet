@@ -139,7 +139,7 @@ void BatchOnnxAsrModel::Read(const std::string& model_dir,
   cuda_options.user_compute_stream = nullptr;
   // TODO(veelion): arena_cfg didn't work, it blocked when session.Run()
   // Just comment this out until find a work way.
-  // cuda_options.default_memory_arena_cfg = arena_cfg;
+  cuda_options.default_memory_arena_cfg = arena_cfg;
   session_options_.AppendExecutionProvider_CUDA(cuda_options);
 
   /* TODO(veelion): use OrtCUDAProviderOptionsV2 until it support ArenaCfg
@@ -299,10 +299,11 @@ void BatchOnnxAsrModel::ForwardEncoder(
   }
 
   timer.Reset();
-  // Ort::RunOptions ro;
+  Ort::RunOptions ro;
   // ro.AddConfigEntry(kOrtRunOptionsConfigEnableMemoryArenaShrinkage, "gpu:0");
+  ro.AddConfigEntry("memory.enable_memory_arena_shrinkage", "cpu:0;gpu:0");
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
-      Ort::RunOptions{nullptr}, encoder_in_names_.data(), inputs.data(),
+      ro, encoder_in_names_.data(), inputs.data(),
       inputs.size(), encoder_out_names_.data(), encoder_out_names_.size());
   VLOG(1) << "\tencoder ->Run() takes " << timer.Elapsed() << " ms.";
 
@@ -467,7 +468,8 @@ void BatchOnnxAsrModel::AttentionRescoring(
 
   Timer timer;
   Ort::RunOptions ro;
-  ro.AddConfigEntry(kOrtRunOptionsConfigEnableMemoryArenaShrinkage, "gpu:0");
+  // ro.AddConfigEntry(kOrtRunOptionsConfigEnableMemoryArenaShrinkage, "gpu:0");
+  ro.AddConfigEntry("memory.enable_memory_arena_shrinkage", "cpu:0;gpu:0");
   std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
       ro, rescore_in_names_.data(), rescore_inputs.data(),
       rescore_inputs.size(), rescore_out_names_.data(),
