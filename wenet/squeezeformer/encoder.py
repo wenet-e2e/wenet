@@ -368,7 +368,7 @@ class SqueezeformerEncoder(nn.Module):
                      recover_pos_emb, recover_mask_pad) \
                         = recover_activations[index]
                     # recover output length for ctc decode
-                    xs = torch.repeat_interleave(xs, repeats=2, dim=1)
+                    xs = xs.unsqueeze(2).repeat(1, 1, 2, 1).flatten(1, 2)
                     xs = self.time_recover_layer(xs)
                     recoverd_t = recover_tensor.size(1)
                     xs = recover_tensor + xs[:, :recoverd_t, :].contiguous()
@@ -391,7 +391,8 @@ class SqueezeformerEncoder(nn.Module):
             cached_att \
                 = new_att_cache[:, :, next_cache_start // factor:, :]
             cached_cnn = new_cnn_cache.unsqueeze(0)
-            cached_att = cached_att.repeat_interleave(repeats=factor, dim=2)
+            cached_att = cached_att.unsqueeze(3).\
+                repeat(1, 1, 1, factor, 1).flatten(2, 3)
             if i == 0:
                 # record length for the first block as max length
                 max_att_len = cached_att.size(2)
