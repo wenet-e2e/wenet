@@ -306,7 +306,7 @@ compiler_parameters:
         enc_dic['input_name'], enc_dic['input_type'],
         enc_dic['input_layout_train'], enc_dic['input_shape'],
         enc_dic['norm_type'], enc_dic['input_type'], enc_dic['input_layout_rt'],
-        enc_cal_data, "default", args.extra_ops_run_on_cpu, "")
+        enc_cal_data, args.calibration_type, args.extra_ops_run_on_cpu, "")
     ctc_config = template.format(
         ctc_onnx_path, "ctc", ctc_log_path,
         ctc_dic['input_name'], ctc_dic['input_type'],
@@ -345,6 +345,8 @@ def get_args():
                         help='layernorm running on bpu')
     parser.add_argument('--extra_ops_run_on_cpu', type=str, default=None,
                         help='extra operations running on cpu.')
+    parser.add_argument('--calibration_type', type=str, default='default',
+                        help='kl / max / default.')
     return parser
 
 
@@ -400,19 +402,27 @@ if __name__ == '__main__':
     if args.cali_datalist is not None:
         logger.info("Stage-2: Generate config")
         # FIXME(xcsong): Remove hard code
-        args.extra_ops_run_on_cpu = "/Split;/encoders.0/self_attn/Split;" + \
-            "/encoders.1/self_attn/Split;/encoders.2/self_attn/Split;" + \
-            "/encoders.3/self_attn/Split;/encoders.4/self_attn/Split;" + \
-            "/encoders.5/self_attn/Split;/encoders.6/self_attn/Split;" + \
-            "/encoders.7/self_attn/Split;/encoders.8/self_attn/Split;" + \
-            "/encoders.9/self_attn/Split;/encoders.10/self_attn/Split;" + \
-            "/encoders.11/self_attn/Split;" + \
-            "/encoders.0/self_attn/Mul;/encoders.1/self_attn/Mul;" + \
-            "/encoders.2/self_attn/Mul;/encoders.3/self_attn/Mul;" + \
-            "/encoders.4/self_attn/Mul;/encoders.5/self_attn/Mul;" + \
-            "/encoders.6/self_attn/Mul;/encoders.7/self_attn/Mul;" + \
-            "/encoders.8/self_attn/Mul;/encoders.9/self_attn/Mul;" + \
-            "/encoders.10/self_attn/Mul;/encoders.11/self_attn/Mul;"
+        logger.info("torch version: {}".format(torch.__version__))
+        if int(torch.__version__[:4].split('.')[1]) >= 12:
+            args.extra_ops_run_on_cpu = "/Split;" + \
+                "/encoders.0/self_attn/Split;/encoders.1/self_attn/Split;" + \
+                "/encoders.2/self_attn/Split;/encoders.3/self_attn/Split;" + \
+                "/encoders.4/self_attn/Split;/encoders.5/self_attn/Split;" + \
+                "/encoders.6/self_attn/Split;/encoders.7/self_attn/Split;" + \
+                "/encoders.8/self_attn/Split;/encoders.9/self_attn/Split;" + \
+                "/encoders.10/self_attn/Split;/encoders.11/self_attn/Split;" + \
+                "/encoders.0/self_attn/Mul;/encoders.1/self_attn/Mul;" + \
+                "/encoders.2/self_attn/Mul;/encoders.3/self_attn/Mul;" + \
+                "/encoders.4/self_attn/Mul;/encoders.5/self_attn/Mul;" + \
+                "/encoders.6/self_attn/Mul;/encoders.7/self_attn/Mul;" + \
+                "/encoders.8/self_attn/Mul;/encoders.9/self_attn/Mul;" + \
+                "/encoders.10/self_attn/Mul;/encoders.11/self_attn/Mul;"
+        else:
+            args.extra_ops_run_on_cpu = "Split_17;Split_67;Split_209;" + \
+                "Split_351;Split_493;Split_635;Split_777;Split_919;Split_1061;" + \
+                "Split_1203;Split_1345;Split_1487;Split_1629;" + \
+                "Mul_72;Mul_214;Mul_356;Mul_498;Mul_640;Mul_782;" + \
+                "Mul_924;Mul_1066;Mul_1208;Mul_1350;Mul_1492;Mul_1634;"
         generate_config(enc_session, ctc_session, args)
 
         logger.info("Stage-3: Make calibration data")
