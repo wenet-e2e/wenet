@@ -1,14 +1,20 @@
 # WeNet & Horizon BPU (Cross Compile)
 
-* Step 1. Install cross compile tools in the PC.
+* Step 1. Install horizon packages and cross compile tools in the PC.
+
+NOTE: Make sure you have installed WeNet conda environment, see https://github.com/wenet-e2e/wenet#installationtraining-and-developing
 
 ```sh
-wget https://github.com/xingchensong/toolchain_pkg/releases/download/aarch64-gcc/gcc-linaro-6.5.0-2018.12-x86_64_aarch64-linux-gnu.tar.gz
-tar -xzf gcc-linaro-6.5.0-2018.12-x86_64_aarch64-linux-gnu.tar.gz
-export HORIZON_GCC_ROOT=$PWD/gcc-linaro-6.5.0-2018.12-x86_64_aarch64-linux-gnu/bin/
+sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+wget https://github.com/xingchensong/toolchain_pkg/releases/download/ai_toolchain/wheels.tar.gz
+tar -xzf wheels.tar.gz
+conda activate wenet
+pip install wheels/* -i https://mirrors.aliyun.com/pypi/simple
 ```
 
+
 * Step 2. Export model to ONNX and convert ONNX to Horizon .bin
+
 
 ``` sh
 maxsample=500
@@ -41,10 +47,10 @@ cmake -B build -DBPU=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAK
 cmake --build build
 export BPUIP=xxx.xxx.xxx
 export WENET_PATH_ON_BOARD=/path/to/wenet
-scp build/bin/decoder_main sunrise@$BPUIP:$WENET_PATH_BOARD
-scp fc_base/easy_dnn-src/dnn/1.7.0_linux_aarch64-j3_hobot_gcc6.5.0/files/dnn/lib/libdnn.so sunrise@$BPUIP:$WENET_PATH_BOARD
-scp fc_base/easy_dnn-src/easy_dnn/0.4.11_linux_aarch64-j3_hobot_gcc6.5.0/files/easy_dnn/lib/libeasy_dnn.so sunrise@$BPUIP:$WENET_PATH_BOARD
-scp fc_base/easy_dnn-src/hlog/0.4.7_linux_aarch64-j3_hobot_gcc6.5.0/files/hlog/lib/libhlog.so sunrise@$BPUIP:$WENET_PATH_BOARD
+scp build/bin/decoder_main sunrise@$BPUIP:$WENET_PATH_ON_BOARD
+scp fc_base/easy_dnn-src/dnn/*j3*/*/*/lib/libdnn.so sunrise@$BPUIP:$WENET_PATH_ON_BOARD
+scp fc_base/easy_dnn-src/easy_dnn/*j3*/*/*/lib/libeasy_dnn.so sunrise@$BPUIP:$WENET_PATH_ON_BOARD
+scp fc_base/easy_dnn-src/hlog/*j3*/*/*/lib/libhlog.so sunrise@$BPUIP:$WENET_PATH_ON_BOARD
 ```
 
 * Step 4. Testing, the RTF(real time factor) is shown in Horizon X3PI's console.
