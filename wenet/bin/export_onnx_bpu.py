@@ -11,6 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""NOTE(xcsong): Currently, we only support
+1. specific conformer encoder architecture, see:
+    encoder: conformer
+    encoder_conf:
+      activation_type: **must be** relu
+      attention_heads: 2 or 4 or 8 or any number divisible by output_size
+      causal: **must be** true
+      cnn_module_kernel: 1 ~ 7
+      cnn_module_norm: **must be** batch_norm
+      input_layer: **must be** conv2d8
+      linear_units: 1 ~ 2048
+      normalize_before: **must be** true
+      num_blocks: 1 ~ 12
+      output_size: 1 ~ 512
+      pos_enc_layer_type: **must be** no_pos
+      selfattention_layer_type: **must be** selfattn
+      use_cnn_module: **must be** true
+      use_dynamic_chunk: **must be** true
+      use_dynamic_left_chunk: **must be** true
+
+2. specific decoding method: ctc_greedy_search
+"""
+
 
 from __future__ import print_function
 
@@ -285,6 +308,9 @@ class BPUConv2dSubsampling8(torch.nn.Module):
 
 class BPUMultiHeadedAttention(torch.nn.Module):
     """Refactor wenet/transformer/attention.py::MultiHeadedAttention
+
+    NOTE(xcsong): Only support attention_class == MultiHeadedAttention,
+        we do not consider RelPositionMultiHeadedAttention currently.
     """
     def __init__(self, module, chunk_size, left_chunks):
         super().__init__()
@@ -409,7 +435,7 @@ class BPUConvolution(torch.nn.Module):
         self.depthwise_conv.bias = torch.nn.Parameter(
             module.depthwise_conv.bias)
 
-        # 3. Modify self.norm
+        # 3. Modify self.norm, Only support batchnorm2d
         self.norm = torch.nn.BatchNorm2d(channels)
         self.norm.training = False
         self.norm.num_features = module.norm.num_features

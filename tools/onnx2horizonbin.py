@@ -11,6 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""NOTE(xcsong): Currently, we only support
+1. specific conformer encoder architecture, see:
+    encoder: conformer
+    encoder_conf:
+      activation_type: **must be** relu
+      attention_heads: 2 or 4 or 8 or any number divisible by output_size
+      causal: **must be** true
+      cnn_module_kernel: 1 ~ 7
+      cnn_module_norm: **must be** batch_norm
+      input_layer: **must be** conv2d8
+      linear_units: 1 ~ 2048
+      normalize_before: **must be** true
+      num_blocks: 1 ~ 12
+      output_size: 1 ~ 512
+      pos_enc_layer_type: **must be** no_pos
+      selfattention_layer_type: **must be** selfattn
+      use_cnn_module: **must be** true
+      use_dynamic_chunk: **must be** true
+      use_dynamic_left_chunk: **must be** true
+
+2. specific decoding method: ctc_greedy_search
+"""
 
 import argparse
 import copy
