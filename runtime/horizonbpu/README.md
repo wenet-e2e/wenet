@@ -3,7 +3,7 @@
 * Step 1. Setup environment (install horizon packages and cross compile tools) in the PC. (~10min)
 
 ```sh
-# Conda env (This conv env is only used for converting bpu models, not for training models,
+# Conda env (This conda env is only used for converting bpu models, not for training torch models,
 #   It's OK to install cpu-version pytorch)
 conda create -n horizonbpu python=3.8
 conda activate horizonbpu
@@ -22,7 +22,7 @@ sudo apt-get install gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 ```
 
 
-* Step 2. Build decoder_main. It requires cmake 3.14 or above. and Send the binary and libraries to Horizon X3PI. (~20min)
+* Step 2. Build decoder_main. It requires cmake 3.14 or above. and Send the binary/libraries to Horizon X3PI. (~20min)
 
 ``` sh
 # Assume current dir is `wenet/runtime/horizonbpu`
@@ -30,7 +30,7 @@ cmake -B build -DBPU=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF -DCMAK
 cmake --build build
 
 # Send binary and libraries
-export BPUIP=xxx.xxx.xxx
+export BPUIP=xxx.xxx.xxx.xxx
 export DEMO_PATH_ON_BOARD=/path/to/demo
 scp build/bin/decoder_main sunrise@$BPUIP:$DEMO_PATH_ON_BOARD
 scp fc_base/easy_dnn-src/dnn/*j3*/*/*/lib/libdnn.so sunrise@$BPUIP:$DEMO_PATH_ON_BOARD
