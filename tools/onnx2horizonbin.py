@@ -425,7 +425,7 @@ if __name__ == '__main__':
         logger.info("Stage-2: Generate config")
         # FIXME(xcsong): Remove hard code
         logger.info("torch version: {}".format(torch.__version__))
-        if int(torch.__version__[:4].split('.')[1]) >= 12:
+        if int(torch.__version__[:4].split('.')[1]) >= 13:
             args.extra_ops_run_on_cpu = "/Split;" + \
                 "/encoders.0/self_attn/Split;/encoders.1/self_attn/Split;" + \
                 "/encoders.2/self_attn/Split;/encoders.3/self_attn/Split;" + \

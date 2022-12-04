@@ -10,7 +10,7 @@ conda activate horizonbpu
 git clone https://github.com/wenet-e2e/wenet.git
 cd wenet/runtime/horizonbpu
 pip install -r ../../requirements.txt -i https://mirrors.aliyun.com/pypi/simple
-pip install torch==1.12.0 torchaudio==0.12.0 torchvision==0.13.0 onnx onnxruntime -i https://mirrors.aliyun.com/pypi/simple
+pip install torch==1.13.0 torchaudio==0.13.0 torchvision==0.14.0 onnx onnxruntime -i https://mirrors.aliyun.com/pypi/simple
 
 # Horizon packages
 wget https://gitee.com/xcsong-thu/toolchain_pkg/releases/download/resource/wheels.tar.gz
