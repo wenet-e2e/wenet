@@ -47,6 +47,11 @@ class ContextGraph {
   int end_tag_id() { return end_tag_id_; }
 
  private:
+  bool SplitUTF8StringToWords(
+      const std::string& str,
+      const std::shared_ptr<fst::SymbolTable>& symbol_table,
+      std::vector<std::string>* words);
+
   int start_tag_id_ = -1;
   int end_tag_id_ = -1;
   ContextConfig config_;
