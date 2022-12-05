@@ -63,7 +63,7 @@ bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_test_fully_supervis
 
 After finishing the initial fully supervised baseline, we now have the pseudo-label data list which is `wenet_1khr_nst0.list` if you follow the guideline. We will use it as the `pseudo_data` in the training step and the `pseudo-label` for next NST iteration will be generated.
 
-Here is an example code:
+Here is an example command:
 
 ```bash
 bash run_nst.sh --dir exp/conformer_nst1 --supervised_data_list data_aishell.list --pseudo_data_list wenet_1khr_nst0.list  --enable_nst 1 --job_num 0 --hypo_name hypothesis_nst1.txt --untar_dir data/train/wenet_1khr_untar_nst1/ --tar_dir data/train/wenet_1khr_tar_nst1/ --out_data_list data/train/wenet_1khr_nst1.list 
