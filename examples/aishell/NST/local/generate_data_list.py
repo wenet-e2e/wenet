@@ -1,7 +1,5 @@
-
 import argparse
 import os
-
 
 
 def get_args():
@@ -10,6 +8,7 @@ def get_args():
     parser.add_argument('--out_data_list', help='output path for data list')
     args = parser.parse_args()
     return args
+
 
 def main():
     args = get_args()
@@ -21,10 +20,6 @@ def main():
     with open(output_file, "w") as writer:
         for line in data_list:
             writer.write(target_dir + "/" + line + "\n")
-
-
-
-
 
 
 if __name__ == '__main__':

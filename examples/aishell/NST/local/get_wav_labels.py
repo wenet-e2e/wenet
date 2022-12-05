@@ -3,23 +3,31 @@ import random
 import tarfile
 import argparse
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='sum up prediction wer')
-    parser.add_argument('--job_num',type=int, default=8, help='number of total split dir')
-    parser.add_argument('--dir_split',required=True, help='the path to the data_list dir eg data/train/wenet1k_good_split_60/')
-    parser.add_argument('--label', type=int, default= 0, help = 'if ture, label file will also be considered.')
-    parser.add_argument('--hypo_name', type=str, required=True, help='the hypothesis path.  eg. /hypothesis_0.txt ')
-    parser.add_argument('--wav_dir', type=str, required=True, help='the wav dir path.  eg. data/train/wenet_1k_untar/ ')
+    parser.add_argument('--job_num', type=int, default=8,
+                        help='number of total split dir')
+    parser.add_argument('--dir_split', required=True,
+                        help='the path to the data_list dir eg data/train/wenet1k_good_split_60/')
+    parser.add_argument('--label', type=int, default= 0,
+                        help='if ture, label file will also be considered.')
+    parser.add_argument('--hypo_name', type=str, required=True,
+                        help='the hypothesis path.  eg. /hypothesis_0.txt ')
+    parser.add_argument('--wav_dir', type=str, required=True,
+                        help='the wav dir path.  eg. data/train/wenet_1k_untar/ ')
     args = parser.parse_args()
     return args
+
 
 def main():
     args = get_args()
     data_list_dir = args.dir_split
     num_lists = args.job_num
     hypo = args.hypo_name
-    # wav_dir is the directory where your pair of ID.scp (the audio file ) and ID.txt (the optional label file ) file stored. We assumed that you have
-    # generated this dir in data processing steps.
+    # wav_dir is the directory where your pair of ID.scp
+    # (the audio file ) and ID.txt (the optional label file ) file stored.
+    # We assumed that you have generated this dir in data processing steps.
     wav_dir = args.wav_dir
     label = args.label
 
@@ -30,7 +38,6 @@ def main():
 
     i = num_lists
     c = 0
-
     hypo_path = data_list_dir + "data_sublist" + str(i) + hypo
     output_wav = data_list_dir + "data_sublist" + str(i) + "/wav.scp"
     output_label = data_list_dir + "data_sublist" + str(i) + "/label.txt"
@@ -72,6 +79,7 @@ def main():
         with open(output_label, 'w', encoding="utf-8") as writer3:
             for label in labels:
                 writer3.write(label)
+
 
 if __name__ == '__main__':
     main()

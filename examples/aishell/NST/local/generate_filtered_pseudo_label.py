@@ -1,28 +1,30 @@
 import argparse
 import os
-import random
 import tarfile
 import time
-import numpy as np
-# import matplotlib.pyplot as plt
 import json
 
-# /yuch_ws/wenet/examples/aishell/s0/; python output_filtered_cer.py --dir_num=2 --cer_pred_threshold=10 --speak_rate_threshold=3 --utter_time_file=utter_time.json --cer_label_dir=test_data/wenet_1k_cer_label_nst0_redo/wer --cer_hypo_dir=test_data/wenet_1k_cer_hypo_nst0_redo/wer --output_dir=data/train/wenet1k_untar_redo_8_1_nst0/ --tar_dir=data/train/wenet1k_tar_redo_8_1_nst0/ --wav_dir=data/train/wenet_1k_untar/
 
 def get_args():
-    parser = argparse.ArgumentParser(description='generate filter pseudi label')
-    parser.add_argument('--dir_num',required=True,help='split directory number')
+    parser = argparse.ArgumentParser(description='generate filter pseudo label')
+    parser.add_argument('--dir_num', required=True, help='split directory number')
     parser.add_argument('--cer_hypo_dir', required=True, help='prefix for cer_hypo_dir')
-    parser.add_argument('--utter_time_file', required=True, help='the json file that contains audio time infos ')
-    parser.add_argument('--cer_hypo_threshold', required=True,type=float, help='the cer-hypo threshold we use to filter')
-    parser.add_argument('--speak_rate_threshold',type=float, help='the cer threshold we use to filter')
-    parser.add_argument('--dir', required=True,   help='dir for the experiment ')
+    parser.add_argument('--utter_time_file', required=True,
+                        help='the json file that contains audio time infos ')
+    parser.add_argument('--cer_hypo_threshold', required=True, type=float,
+                        help='the cer-hypo threshold used to filter')
+    parser.add_argument('--speak_rate_threshold', type=float,
+                        help='the cer threshold we use to filter')
+    parser.add_argument('--dir', required=True, help='dir for the experiment ')
     # output untar and tar
-    parser.add_argument('--untar_dir',required=True, help='the output path, eg: data/train/wenet_untar_6_5_cer_hypo_leq_10_nst1/')
+    parser.add_argument('--untar_dir', required=True,
+                        help='the output path, eg: data/train/wenet_untar_cer_hypo_nst1/')
     parser.add_argument('--tar_dir', required=True,
-                        help='the tar file path, eg: data/train/wenet_tar_6_5_cer_hypo_leq_10_nst1/')
-    parser.add_argument('--wav_dir', required=True, help='dir to store wav files, eg "data/train/wenet_1k_untar/"')
-    parser.add_argument('--start_tar_id', default=0,type=int, help='the initial tar id (for debugging)')
+                        help='the tar file path, eg: data/train/wenet_tar_cer_hypo_leq_10_nst1/')
+    parser.add_argument('--wav_dir', required=True,
+                        help='dir to store wav files, eg "data/train/wenet_1k_untar/"')
+    parser.add_argument('--start_tar_id', default=0 ,type=int,
+                        help='the initial tar id (for debugging)')
     args = parser.parse_args()
     return args
 
@@ -31,11 +33,11 @@ def make_tarfile(output_filename, source_dir):
     with tarfile.open(output_filename, "w") as tar:
         tar.add(source_dir, arcname=os.path.basename(source_dir))
 
+
 def main():
     args = get_args()
-
     dir_num = args.dir_num
-    dir = args.dir
+    dir_name = args.dir
     output_dir = args.untar_dir
     cer_hypo_threshold = args.cer_hypo_threshold
     speak_rate_threshold = args.speak_rate_threshold
@@ -71,26 +73,19 @@ def main():
                     data_duration = data["duration"]
                     utter_time[t_id] = data_duration
 
-
     print(time.time(), "start time ")
-
-
     cer_dict = {}
-
     print("dir_num = ", dir_num)
-    cer_hypo_path = dir + "/Hypo_LM_diff10/" + cer_hypo_name+ "_" + dir_num + "/wer"
+    cer_hypo_path = dir_name + "/Hypo_LM_diff10/" + cer_hypo_name + "_" + dir_num + "/wer"
     with open(cer_hypo_path, 'r', encoding="utf-8") as reader:
         data = reader.readlines()
 
-    L = len(data)
-    for i in range(L):
-
+    for i in range(len(data)):
         line = data[i]
         if line[:3] == 'utt':
             wer_list = data[i + 1].split()
             wer_pred_lm = float(wer_list[1])
-            N_hypo = int(wer_list[3].split("=")[1])
-            # print(wer)
+            n_hypo = int(wer_list[3].split("=")[1])
 
             utt_list = line.split()
             lab_list = data[i + 2].split()
@@ -105,19 +100,15 @@ def main():
 
                 utt_time = utter_time[utt_id]
 
-                cer_dict[utt_id] = [pred_no_lm, pred_lm, wer_pred_lm, utt_time, N_hypo, prediction]
+                cer_dict[utt_id] = [pred_no_lm, pred_lm, wer_pred_lm, utt_time, n_hypo, prediction]
             else:
                 cer_dict[utt_id] = [pred_no_lm, pred_lm, wer_pred_lm, -1, -1, prediction]
 
-
     c = 0
-
     cer_preds = []
     uttr_len = []
     speak_rates = []
     num_lines = 0
-
-
     data_filtered = []
 
     for key, item in cer_dict.items():
@@ -137,18 +128,17 @@ def main():
             filtered_line = [utt_id,  pred]
             data_filtered.append(filtered_line)
 
-
     num_uttr = 1000
-    L = len(data_filtered)
+    len_data = len(data_filtered)
     print("total sentences after filter ")
     cur_id = start_tar_id * 1000
     end_id = cur_id + num_uttr
-    if cur_id < L and end_id > L:
-        end_id = L
+    if cur_id < len_data < end_id:
+        end_id = len_data
     tar_id = start_tar_id
 
     not_exist = []
-    while end_id <= L:
+    while end_id <= len_data:
 
         tar_s = str(tar_id)
         diff = 6 - len(tar_s)
@@ -159,7 +149,7 @@ def main():
         os.makedirs(out_put_dir, exist_ok=True)
 
         for i in range(cur_id, end_id):
-            print("dir:", dir_num, ", " "tar: ", tar_id, ", ", "progress:", i / L)
+            print("dir:", dir_num, ", " "tar: ", tar_id, ", ", "progress:", i / len_data)
 
             t_id, utter = data_filtered[i]
 
@@ -178,8 +168,6 @@ def main():
                 print(" wav does not exists ! ", wav_path)
                 not_exist.append(wav_path)
 
-
-
         tar_file_name = tar_dir + "dir" + str(dir_num) + "_" + tar_s + ".tar"
         # tar the dir
 
@@ -189,25 +177,17 @@ def main():
         cur_id += num_uttr
         end_id += num_uttr
 
-        if cur_id < L and end_id > L:
-            end_id = L
+        if cur_id < len_data < end_id:
+            end_id = len_data
 
         print("end, now remove untar files")
         print("rm -rf" + " " + out_put_dir[:-1])
         os.system("rm -rf" + " " + out_put_dir[:-1])
         print("remove done")
 
-    print("There are ", len(not_exist) , "wav files not exist")
+    print("There are ", len(not_exist), "wav files not exist")
     print(not_exist)
-
-
-
 
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
