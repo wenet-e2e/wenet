@@ -11,7 +11,7 @@ Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 a
   - [Initial supervised teacher](#initial-supervised-teacher)
   - [Noisy student interations](#noisy-student-interations)
 - [Performance Record](#performance-record)
-  - [Supervised baseline and standard NST](##supervised-baseline-and-standard-nst-without-filter-strategy-first-iteration)
+  - [Supervised baseline and standard NST](##supervised-baseline-and-standard-nst)
   - [Supervised AISHELL-1 and unsupervised 1khr WenetSpeech](#supervised-aishell-1-and-unsupervised-1khr-wenetspeech)
   - [Supervised AISHELL-2 and unsupervised 4khr WenetSpeech](#supervised-aishell-2-and-unsupervised-4khr-wenetspeech)
 - [Citations](#citations)
@@ -74,10 +74,10 @@ Full arguments are listed below, you can check the `run_nst.sh` for more informa
 bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_nst1 --supervised_data_list data_aishell.list --pseudo_data_list wenet_1khr_nst0  --enable_nst 1 --num_split 1 --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst1.txt --label 0 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar_nst1/ --tar_dir data/train/wenet_1khr_tar_nst1/ --out_data_list data/train/wenet_1khr_nst1.list 
 ```
 
-## Performance Record (Conformer)
+## Performance Record
 
-
-### Supervised baseline and standard NST (without filter strategy, first iteration)
+### Supervised baseline and standard NST
+* Without filter strategy, first iteration
 * Feature info: using FBANK feature, dither, cmvn, online speed perturb
 * Training info: lr 0.002, batch size 32, 8 gpu, acc_grad 4, 240 epochs, dither 0.1
 * Decoding info: ctc_weight 0.3, average_num 30
