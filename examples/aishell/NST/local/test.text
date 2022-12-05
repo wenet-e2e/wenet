@@ -1,0 +1,32 @@
+
+#merged_step 1:
+
+
+#bash run_nst.sh  --stage 8 --stop-stage 8 --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --data_list wenet_1khr.list --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr_nst0.list 2>&1 | tee logs/log_12_4_step8
+
+
+#merged_step 2:
+
+#bash run_nst.sh  --stage 6 --stop-stage 6 --dir exp/conformer_nst1 --supervised_data_list data_aishell.list --pseudo_data_list wenet_1khr_nst0.list --enable_nst 1 --hypo_name hypothesis_nst1.txt --untar_dir data/train/wenet_1khr_untar_nst1/ --tar_dir data/train/wenet_1khr_tar_nst1/ --out_data_list data/train/wenet_1khr_nst1.list 2>&1 | tee logs/log_12_4_m2_step6
+
+
+cp mount/wenet/examples/aishell/s0/exp/conformer_wenet1k_nst7_r85_r88/final.zip final_zips/aishell1_wenet1k_nst7.zip
+cp mount/wenet/examples/aishell/s0/exp/conformer_aishell2_nst5_r88/final.zip final_zips/aishell1_aishell2_nst5.zip
+cp mount/wenet/examples/aishell/s0/exp/conformer_aishell2_wenet4k_nst4/final.zip final_zips/aishell2_wenet4k_nst4.zip
+cp mount/wenet/examples/aishell/s0/exp/conformer_4khr_merge_final_r09/final.zip final_zips/aishell2nst4+wenet1k_nst7.zip
+#bash run_nst.sh  --stage 1 --stop-stage 1 --dir exp/conformer_test_fully_supervised
+# --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --data_list wenet_1khr.list
+# --dir_split wenet_split_60_test/ --jobw_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/
+# --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0
+# --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr.list
+
+
+# python split_data_list_nst.py --job_nums=50 --data_list_path=data/train/pseudo_data_iter_1_LM_diff_leq_10.list --output_dir=data/train/LM_diff_10/ --label_dir=data/train/wenet_1k_untar_pred_5_27_LM_diff_leq_10/labels/
+# python generate_wav_labels_without_label_dir.py --job_nums=0 --data_list_dir=data/train/data_wenet_1k_split_100/
+
+# python generate_wav_labels_without_label_dir.py --job_nums=0 --data_list_dir=data/train/wenet1k_good_split_60/
+
+# python generate_wav_labels_without_label_dir.py --job_nums=0 --data_list_dir=data/train/wenet_4khr_split_60/
+
+# python generate_wav_labels_without_label_dir.py --job_nums=0 --data_list_dir=data/train/wenet1k_redo_split_60/
+#bash run_nst.sh --stage 5 --stop-stage 5 --job_num 0 --data_list_dir data/train/wenet_split_60_test/ --hypo_name hypothesis_0.txt --label false --wav_dir data/train/wenet_1k_untar/
