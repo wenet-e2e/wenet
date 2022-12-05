@@ -13,30 +13,25 @@
 # limitations under the License.
 
 from __future__ import print_function
-
 import argparse
 import copy
 import logging
 import os
-
 import torch
 import torch.distributed as dist
 import torch.optim as optim
 import yaml
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
-
 from wenet.dataset.dataset import Dataset
 from wenet.transformer.asr_model import init_asr_model
 from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
 from wenet.utils.executor import Executor
 from wenet.utils.executor_nst import Executor_nst
-# from wenet.utils.executor_nst import Executor
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.scheduler import WarmupLR
 from wenet.utils.config import override_config
 
-import time
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
@@ -45,10 +40,12 @@ def get_args():
                         default='raw',
                         choices=['raw', 'shard'],
                         help='train and cv data type')
-    parser.add_argument('--train_data_supervised', required=True, help='path for data.list for supervised data, '
-                                                                       'eg. data/train_set/data_aishell.list  ')
-    parser.add_argument('--train_data_unsupervised', required=True, help='path for data.list for unsupervised '
-                                                                         'sudo-label, eg. data/train_set/data_wenet',default= None )
+    parser.add_argument('--train_data_supervised', required=True,
+                        help='path for data.list for supervised data,'
+                             'eg. data/train_set/data_aishell.list  ')
+    parser.add_argument('--train_data_unsupervised', required=True,
+                        help='path for data.list for unsupervised sudo-label,'
+                             'eg. data/train_set/data_wenet',default= None)
     parser.add_argument('--cv_data', required=True, help='cv data file')
     parser.add_argument('--gpu',
                         type=int,
@@ -146,24 +143,24 @@ def main():
     train_supervised_conf = configs['supervised_dataset_conf']
     train_unsupervised_conf = configs['unsupervised_dataset_conf']
 
-
     print("*********train setting**************")
     print("supervised data list = ", args.train_data_supervised)
     print("unsupervised data list = ", args.train_data_unsupervised)
-
 
     cv_conf = copy.deepcopy(train_supervised_conf)
     # cv_conf['speed_perturb'] = False
     # cv_conf['spec_aug'] = False
 
-    train_dataset_supervised = Dataset(args.data_type, args.train_data_supervised, symbol_table,
-                            train_supervised_conf, args.bpe_model, partition=True)
+    train_dataset_supervised = Dataset(args.data_type,
+                                       args.train_data_supervised,
+                                       symbol_table, train_supervised_conf,
+                                       args.bpe_model, partition=True)
 
     train_data_loader_supervised = DataLoader(train_dataset_supervised,
-                                   batch_size=None,
-                                   pin_memory=args.pin_memory,
-                                   num_workers=args.num_workers,
-                                   prefetch_factor=args.prefetch)
+                                              batch_size=None,
+                                              pin_memory=args.pin_memory,
+                                              num_workers=args.num_workers,
+                                              prefetch_factor=args.prefetch)
 
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
@@ -179,8 +176,11 @@ def main():
                                 prefetch_factor=args.prefetch)
 
     if args.enable_nst:
-        train_dataset_unsupervised = Dataset(args.data_type, args.train_data_unsupervised, symbol_table,
-                                train_unsupervised_conf, args.bpe_model, partition=True)
+        train_dataset_unsupervised = Dataset(args.data_type,
+                                             args.train_data_unsupervised,
+                                             symbol_table,
+                                             train_unsupervised_conf,
+                                             args.bpe_model, partition=True)
         train_data_loader_unsupervised = DataLoader(train_dataset_unsupervised,
                                                     batch_size=None,
                                                     pin_memory=args.pin_memory,
@@ -281,11 +281,14 @@ def main():
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
         if args.enable_nst:
-            executor.train(model, optimizer, scheduler, train_data_loader_supervised, train_data_loader_unsupervised , device,
+            executor.train(model, optimizer, scheduler,
+                           train_data_loader_supervised,
+                           train_data_loader_unsupervised , device,
                            writer, configs, scaler)
         else:
-            executor.train(model, optimizer, scheduler, train_data_loader_supervised, device, writer,
-                  configs, scaler)
+            executor.train(model, optimizer, scheduler,
+                           train_data_loader_supervised, device, writer,
+                           configs, scaler)
 
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
                                                 configs)

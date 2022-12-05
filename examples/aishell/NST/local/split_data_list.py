@@ -9,7 +9,8 @@ def get_args():
     parser.add_argument('--data_list_path', required=True,
                         help='the path to the data.list file')
     parser.add_argument('--output_dir', required=True,
-                        help='path to output dir, eg --output_dir=data/train/aishell_split_60')
+                        help='path to output dir, '
+                             'eg --output_dir=data/train/aishell_split_60')
     args = parser.parse_args()
     return args
 
@@ -20,7 +21,7 @@ def main():
     num_lists = args.job_nums
     output_dir = args.output_dir
 
-    print( "data_list_path is", data_list_path)
+    print("data_list_path is", data_list_path)
     print("num_lists is", num_lists)
     print("output_dir is", output_dir)
     os.makedirs(output_dir, exist_ok=True)
@@ -43,7 +44,7 @@ def main():
 
         with open(output_list, 'w', encoding="utf-8") as writer:
 
-            new_list = data_list_we[i*len_d:(i+1)*len_d]
+            new_list = data_list_we[i * len_d: (i + 1) * len_d]
             if i < rest_len:
                 new_list.append(rest_lines[i])
             for x in new_list:

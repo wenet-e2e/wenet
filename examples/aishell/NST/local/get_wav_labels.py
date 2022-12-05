@@ -1,6 +1,3 @@
-import os
-import random
-import tarfile
 import argparse
 
 
@@ -9,8 +6,9 @@ def get_args():
     parser.add_argument('--job_num', type=int, default=8,
                         help='number of total split dir')
     parser.add_argument('--dir_split', required=True,
-                        help='the path to the data_list dir eg data/train/wenet1k_good_split_60/')
-    parser.add_argument('--label', type=int, default= 0,
+                        help='the path to the data_list dir '
+                             'eg data/train/wenet1k_good_split_60/')
+    parser.add_argument('--label', type=int, default=0,
                         help='if ture, label file will also be considered.')
     parser.add_argument('--hypo_name', type=str, required=True,
                         help='the hypothesis path.  eg. /hypothesis_0.txt ')

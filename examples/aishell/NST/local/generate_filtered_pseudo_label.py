@@ -8,7 +8,8 @@ import json
 def get_args():
     parser = argparse.ArgumentParser(description='generate filter pseudo label')
     parser.add_argument('--dir_num', required=True, help='split directory number')
-    parser.add_argument('--cer_hypo_dir', required=True, help='prefix for cer_hypo_dir')
+    parser.add_argument('--cer_hypo_dir', required=True,
+                        help='prefix for cer_hypo_dir')
     parser.add_argument('--utter_time_file', required=True,
                         help='the json file that contains audio time infos ')
     parser.add_argument('--cer_hypo_threshold', required=True, type=float,
@@ -18,12 +19,15 @@ def get_args():
     parser.add_argument('--dir', required=True, help='dir for the experiment ')
     # output untar and tar
     parser.add_argument('--untar_dir', required=True,
-                        help='the output path, eg: data/train/wenet_untar_cer_hypo_nst1/')
+                        help='the output path, '
+                             'eg: data/train/wenet_untar_cer_hypo_nst1/')
     parser.add_argument('--tar_dir', required=True,
-                        help='the tar file path, eg: data/train/wenet_tar_cer_hypo_leq_10_nst1/')
+                        help='the tar file path, '
+                             'eg: data/train/wenet_tar_cer_hypo_leq_10_nst1/')
     parser.add_argument('--wav_dir', required=True,
-                        help='dir to store wav files, eg "data/train/wenet_1k_untar/"')
-    parser.add_argument('--start_tar_id', default=0 ,type=int,
+                        help='dir to store wav files, '
+                             'eg "data/train/wenet_1k_untar/"')
+    parser.add_argument('--start_tar_id', default=0 , type=int,
                         help='the initial tar id (for debugging)')
     args = parser.parse_args()
     return args
@@ -41,7 +45,7 @@ def main():
     output_dir = args.untar_dir
     cer_hypo_threshold = args.cer_hypo_threshold
     speak_rate_threshold = args.speak_rate_threshold
-    utter_time_file = args.utter_time_file  # utter_time_file = 'utter_time.json'
+    utter_time_file = args.utter_time_file
     tar_dir = args.tar_dir
     wav_dir = args.wav_dir
     start_tar_id = args.start_tar_id
@@ -76,7 +80,8 @@ def main():
     print(time.time(), "start time ")
     cer_dict = {}
     print("dir_num = ", dir_num)
-    cer_hypo_path = dir_name + "/Hypo_LM_diff10/" + cer_hypo_name + "_" + dir_num + "/wer"
+    cer_hypo_path = dir_name + "/Hypo_LM_diff10/" \
+                    + cer_hypo_name + "_" + dir_num + "/wer"
     with open(cer_hypo_path, 'r', encoding="utf-8") as reader:
         data = reader.readlines()
 
@@ -100,9 +105,11 @@ def main():
 
                 utt_time = utter_time[utt_id]
 
-                cer_dict[utt_id] = [pred_no_lm, pred_lm, wer_pred_lm, utt_time, n_hypo, prediction]
+                cer_dict[utt_id] = [pred_no_lm, pred_lm, wer_pred_lm,
+                                    utt_time, n_hypo, prediction]
             else:
-                cer_dict[utt_id] = [pred_no_lm, pred_lm, wer_pred_lm, -1, -1, prediction]
+                cer_dict[utt_id] = [pred_no_lm, pred_lm,
+                                    wer_pred_lm, -1, -1, prediction]
 
     c = 0
     cer_preds = []
@@ -145,11 +152,13 @@ def main():
         for _ in range(diff):
             tar_s = "0" + tar_s
 
-        out_put_dir = output_dir + "dir" + str(dir_num) + "_" + "tar" + tar_s + "/"
+        out_put_dir = output_dir + "dir" + str(dir_num) \
+                      + "_" + "tar" + tar_s + "/"
         os.makedirs(out_put_dir, exist_ok=True)
 
         for i in range(cur_id, end_id):
-            print("dir:", dir_num, ", " "tar: ", tar_id, ", ", "progress:", i / len_data)
+            print("dir:", dir_num, ", " "tar: ", tar_id,
+                  ", ", "progress:", i / len_data)
 
             t_id, utter = data_filtered[i]
 
@@ -163,7 +172,8 @@ def main():
                 with open(output_path, "w", encoding="utf-8") as writer:
                     writer.write(utter)
                 # update .wav
-                os.system("cp" + " " + wav_path + " " + out_put_dir + t_id + ".wav")
+                os.system("cp" + " " + wav_path + " "
+                          + out_put_dir + t_id + ".wav")
             else:
                 print(" wav does not exists ! ", wav_path)
                 not_exist.append(wav_path)
