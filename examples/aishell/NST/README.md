@@ -1,8 +1,8 @@
 # Recipe to run Noisy Student Training with LM filter in WeNet
 
-Noisy Student Training (NST) has recently demonstrated extremely strong performance in Automatic Speech Recognition (ASR). 
+Noisy Student Training (NST) has recently demonstrated extremely strong performance in Automatic Speech Recognition (ASR).
 
-Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 as supervised data and WenetSpeech as unsupervised data from [this paper](https://arxiv.org/abs/2211.04717), where hypotheses with and without Language Model are generated and CER differences between them are utilized as a filter threshold to improve the ASR performances of non-target domain datas. 
+Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 as supervised data and WenetSpeech as unsupervised data from [this paper](https://arxiv.org/abs/2211.04717), where hypotheses with and without Language Model are generated and CER differences between them are utilized as a filter threshold to improve the ASR performances of non-target domain datas.
 
 ## Table of Contents
 
@@ -18,11 +18,11 @@ Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 a
 
 ## Guideline
 
-First, you have to prepare supervised and unsupervised data for NST, and then train an initial supervised teacher. After that, you can iterate the noisy student interations until the model converge.  
+First, you have to prepare supervised and unsupervised data for NST, and then train an initial supervised teacher. After that, you can iterate the noisy student interations until the model converge.
 
 ### Data preparation
 
-To run this recipe, you should follow the steps from [WeNet examples](https://github.com/wenet-e2e/wenet/tree/main/examples) to prepare [AISHELL1](https://github.com/wenet-e2e/wenet/tree/main/examples/aishell/s0) and [WenetSpeech](https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0) data. 
+To run this recipe, you should follow the steps from [WeNet examples](https://github.com/wenet-e2e/wenet/tree/main/examples) to prepare [AISHELL1](https://github.com/wenet-e2e/wenet/tree/main/examples/aishell/s0) and [WenetSpeech](https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0) data.
 We extract 1khr data from WenetSpeech and data should be prepared and stored in the following format:
 
 ```
@@ -33,7 +33,7 @@ data_dir/
 ├──── wav_dir/
 └── utter_time.json (optional)
 ```
-- `*.list` contains paths for all the data shards for training. 
+- `*.list` contains paths for all the data shards for training.
 - A Json file containing the audio length should be prepared as `utter_time.json` if you want to apply the `speaking rate` filter.
 - A wav_dir contains all the audio data (id.wav) and labels (id.txt which is optional) for unsupervised data.
 > **HINTS** We include a tiny example under `local/example` to make it clearer for reproduction.
@@ -53,10 +53,10 @@ bash run_nst.sh --dir exp/conformer_test_fully_supervised --supervised_data_list
 - `enable_nst` indicates whether we train with pseudo label, for initial teacher we set it to 0.
 - This recipe uses the default `num_split=1` while we strongly recommend use larger number to decrease the inference and shards generation time.
 
-Full arguments are listed below, you can check the `run_nst.sh` for more information about each stage and their arguments. We used `num_split = 60` and generate shards with different cpu for the experiments in our paper which saved us lots of inference time and data shards generation time. 
+Full arguments are listed below, you can check the `run_nst.sh` for more information about each stage and their arguments. We used `num_split = 60` and generate shards with different cpu for the experiments in our paper which saved us lots of inference time and data shards generation time.
 
 ```bash
-bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --data_list wenet_1khr.list --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr.list 
+bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --data_list wenet_1khr.list --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr.list
 ```
 
 ### Noisy student interations
