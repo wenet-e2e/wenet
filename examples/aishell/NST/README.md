@@ -18,7 +18,7 @@ Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 a
 
 ## Guideline
 
-First, you have to prepare supervised and unsupervised data to run a NST iteration, and then train a supervised baseline. After that, you can iterate this pipeline until the model converge.  
+First, you have to prepare supervised and unsupervised data for NST, and then train an initial supervised teacher. After that, you can iterate the noisy student interations until the model converge.  
 
 ### Data preparation
 
