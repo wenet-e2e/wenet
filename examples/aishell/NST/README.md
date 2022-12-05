@@ -27,14 +27,16 @@ We extract 1khr data from WenetSpeech and data should be prepared and stored in 
 
 ```
 data_dir/
-├── data_aishell.list
-├── wenet_1khr.list
+├── train
+├──── data_aishell.list
+├──── wenet_1khr.list
+├──── wav_dir/
 └── utter_time.json (optional)
 ```
-- `*.list` contains paths for all the data for training. 
-- A Json file containing the audio length should be prepared in `utter_time.json` if you want to apply the `speaking rate` filter.
-
-> **HINTS** We include a tiny example under `local/data` to make it clearer for reproduction.
+- `*.list` contains paths for all the data shards for training. 
+- A Json file containing the audio length should be prepared as `utter_time.json` if you want to apply the `speaking rate` filter.
+- A wav_dir contains all the audio data (id.wav) and labels (id.txt which is optional) for unsupervised data.
+> **HINTS** We include a tiny example under `local/example` to make it clearer for reproduction.
 
 ### Initial supervised teacher
 
