@@ -80,8 +80,8 @@ def main():
     print(time.time(), "start time ")
     cer_dict = {}
     print("dir_num = ", dir_num)
-    cer_hypo_path = dir_name + "/Hypo_LM_diff10/" \
-                    + cer_hypo_name + "_" + dir_num + "/wer"
+    cer_hypo_path = dir_name + "/Hypo_LM_diff10/" + cer_hypo_name
+    cer_hypo_path = cer_hypo_path + "_" + dir_num + "/wer"
     with open(cer_hypo_path, 'r', encoding="utf-8") as reader:
         data = reader.readlines()
 
@@ -132,7 +132,7 @@ def main():
             speak_rates.append(speak_rate)
             pred = item[1]
             utt_id = key
-            filtered_line = [utt_id,  pred]
+            filtered_line = [utt_id, pred]
             data_filtered.append(filtered_line)
 
     num_uttr = 1000
@@ -152,8 +152,8 @@ def main():
         for _ in range(diff):
             tar_s = "0" + tar_s
 
-        out_put_dir = output_dir + "dir" + str(dir_num) \
-                      + "_" + "tar" + tar_s + "/"
+        out_put_dir = output_dir + "dir" + str(dir_num)
+        out_put_dir = out_put_dir + "_" + "tar" + tar_s + "/"
         os.makedirs(out_put_dir, exist_ok=True)
 
         for i in range(cur_id, end_id):

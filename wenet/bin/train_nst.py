@@ -45,7 +45,7 @@ def get_args():
                              'eg. data/train_set/data_aishell.list  ')
     parser.add_argument('--train_data_unsupervised', required=True,
                         help='path for data.list for unsupervised sudo-label,'
-                             'eg. data/train_set/data_wenet',default= None)
+                             'eg. data/train_set/data_wenet', default=None)
     parser.add_argument('--cv_data', required=True, help='cv data file')
     parser.add_argument('--gpu',
                         type=int,
@@ -307,7 +307,6 @@ def main():
             writer.add_scalar('epoch/cv_loss', cv_loss, epoch)
             writer.add_scalar('epoch/lr', lr, epoch)
         final_epoch = epoch
-        #torch.cuda.empty_cache()
 
     if final_epoch is not None and args.rank == 0:
         final_model_path = os.path.join(model_dir, 'final.pt')

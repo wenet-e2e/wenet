@@ -31,7 +31,7 @@ def main():
 
     # divide data.list equally
     len_d = int(len(data_list_we) / num_lists)
-    rest_lines = data_list_we[num_lists*len_d:]
+    rest_lines = data_list_we[num_lists * len_d:]
     rest_len = len(rest_lines)
     print("total num of lines", len(data_list_we) , "rest len is", rest_len)
 
