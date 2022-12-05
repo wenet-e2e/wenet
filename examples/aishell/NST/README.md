@@ -1,4 +1,4 @@
-# Introduction
+# Recipe to run Noisy Student Training with LM filter in WeNet
 
 Noisy Student Training (NST) has recently demonstrated extremely strong performance in Automatic Speech Recognition (ASR). 
 
@@ -11,7 +11,7 @@ Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 a
   - [Initial supervised teacher](#initial-supervised-teacher)
   - [Noisy student interations](#noisy-student-interations)
 - [Performance Record](#performance-record)
-  - [Supervised baseline and standard NST](#supervised-baseline-and-standard-nst)
+  - [Supervised baseline and standard NST](##supervised-baseline-and-standard-nst-without-filter-strategy-first-iteration)
   - [Supervised AISHELL-1 and unsupervised 1khr WenetSpeech](#supervised-aishell-1-and-unsupervised-1khr-wenetspeech)
   - [Supervised AISHELL-2 and unsupervised 4khr WenetSpeech](#supervised-aishell-2-and-unsupervised-4khr-wenetspeech)
 - [Citations](#citations)
