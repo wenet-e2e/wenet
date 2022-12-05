@@ -15,7 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef DECODER_ONNX_ASR_MODEL_H_
 #define DECODER_ONNX_ASR_MODEL_H_
 
@@ -33,7 +32,6 @@ namespace wenet {
 
 class OnnxAsrModel : public AsrModel {
  public:
-  // Note: Do not call the InitEngineThreads function more than once.
   static void InitEngineThreads(int num_threads = 1);
 
  public:
