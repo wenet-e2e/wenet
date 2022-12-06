@@ -239,4 +239,50 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ]; then
   # Please see $dir/lm_with_runtime for wer
 fi
 
+# Optionally, you can decode with k2 hlg
+if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
+  if [ ! -f data/local/lm/lm.arpa ]; then
+    echo "Please run prepare dict and train lm in Stage 7" || exit 1;
+  fi
+
+  # 8.1 Build decoding HLG
+  required="data/local/hlg/HLG.pt data/local/hlg/words.txt"
+  for f in $required; do
+    if [ ! -f $f ]; then
+      tools/k2/make_hlg.sh data/local/dict/ data/local/lm/ data/local/hlg
+      break
+    fi
+  done
+
+  # 8.2 Decode using HLG
+  decoding_chunk_size=
+  lm_scale=0.7
+  decoder_scale=0.1
+  r_decoder_scale=0.7
+  for mode in hlg_onebest hlg_rescore; do
+  {
+    test_dir=$dir/test_${mode}
+    mkdir -p $test_dir
+    python wenet/bin/recognize.py --gpu 0 \
+      --mode $mode \
+      --config $dir/train.yaml \
+      --data_type $data_type \
+      --test_data data/test/data.list \
+      --checkpoint $decode_checkpoint \
+      --beam_size 10 \
+      --batch_size 16 \
+      --penalty 0.0 \
+      --dict $dict \
+      --word data/local/hlg/words.txt \
+      --hlg data/local/hlg/HLG.pt \
+      --lm_scale $lm_scale \
+      --decoder_scale $decoder_scale \
+      --r_decoder_scale $r_decoder_scale \
+      --result_file $test_dir/text \
+      ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+    python tools/compute-wer.py --char=1 --v=1 \
+      data/test/text $test_dir/text > $test_dir/wer
+  }
+  done
+fi
 

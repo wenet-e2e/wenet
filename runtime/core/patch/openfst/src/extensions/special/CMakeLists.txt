@@ -10,7 +10,7 @@ if(HAVE_BIN)
     sigma-fst.cc
   )
 
-  set_target_properties(fstspecial-bin PROPERTIE
+  set_target_properties(fstspecial-bin PROPERTIES
     FOLDER special/bin
     OUTPUT_NAME fstspecial
   )

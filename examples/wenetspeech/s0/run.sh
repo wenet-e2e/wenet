@@ -191,7 +191,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         --result_file $result_dir/text \
         ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
       python tools/compute-wer.py --char=1 --v=1 \
-        $feat_dir/$testset/text $result_dir/text > $result_dir/wer
+        data/$testset/text $result_dir/text > $result_dir/wer
     }
     done
     wait

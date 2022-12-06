@@ -53,6 +53,9 @@ dataset_conf:
         num_f_mask: 2
         max_t: 50
         max_f: 10
+    spec_trim: false
+    spec_trim_conf:
+        max_t: 70
     shuffle: true
     shuffle_conf:
         shuffle_size: 1500

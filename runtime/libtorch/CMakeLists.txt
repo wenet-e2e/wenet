@@ -3,8 +3,9 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
-option(FST_HAVE_BIN "whether to build fst binaries" OFF)
+option(GRAPH_TOOLS "whether to build TLG graph tools" OFF)
 option(BUILD_TESTING "whether to build unit test" ON)
+
 option(GRPC "whether to build with gRPC" OFF)
 # TODO(Binbin Zhang): Change websocket to OFF since it depends on boost
 #                     which is a very big library
@@ -16,7 +17,6 @@ option(GPU "whether to build with GPU" OFF)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
-include(ExternalProject)
 set(FETCHCONTENT_QUIET OFF)
 get_filename_component(fc_base "fc_base" REALPATH BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FETCHCONTENT_BASE_DIR ${fc_base})
@@ -32,7 +32,9 @@ else()
 endif()
 
 # Include all dependency
-include(libtorch)
+if(TORCH)
+  include(libtorch)
+endif()
 if(ONNX)
   include(onnx)
 endif()
@@ -44,9 +46,6 @@ include_directories(
 
 # Build all libraries
 add_subdirectory(utils)
-if(NOT MSVC)
-  add_dependencies(utils openfst)
-endif()
 add_subdirectory(frontend)
 add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder

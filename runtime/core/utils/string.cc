@@ -117,33 +117,13 @@ std::string JoinString(const std::string& c,
   return result;
 }
 
-bool SplitUTF8StringToWords(
-    const std::string& str,
-    const std::shared_ptr<fst::SymbolTable>& symbol_table,
-    std::vector<std::string>* words) {
-  std::vector<std::string> chars;
-  SplitUTF8StringToChars(Trim(str), &chars);
-
-  bool no_oov = true;
-  for (size_t start = 0; start < chars.size();) {
-    for (size_t end = chars.size(); end > start; --end) {
-      std::string word;
-      for (size_t i = start; i < end; i++) {
-        word += chars[i];
-      }
-      if (symbol_table->Find(word) != -1) {
-        words->emplace_back(word);
-        start = end;
-        continue;
-      }
-      if (end == start + 1) {
-        ++start;
-        no_oov = false;
-        LOG(WARNING) << word << " is oov.";
-      }
+bool IsAlpha(const std::string& str) {
+  for (size_t i = 0; i < str.size(); i++) {
+    if (!isalpha(str[i])) {
+      return false;
     }
   }
-  return no_oov;
+  return true;
 }
 
 std::string ProcessBlank(const std::string& str, bool lowercase) {

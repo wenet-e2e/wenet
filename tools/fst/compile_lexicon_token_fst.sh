@@ -35,6 +35,8 @@ mkdir -p $dir $tmpdir
 
 [ -f path.sh ] && . ./path.sh
 
+export LC_ALL=C
+
 cp $srcdir/units.txt $dir
 
 # Add probabilities to lexicon entries. There is in fact no point of doing this here since all the entries have 1.0.

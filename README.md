@@ -9,6 +9,7 @@
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch)
 | [**Runtime (android)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/android)
 | [**Pretrained Models**](docs/pretrained_models.md)
+| [**HuggingFace**](https://huggingface.co/spaces/wenet/wenet_demo)
 
 **We** share neural **Net** together.
 
@@ -17,6 +18,7 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 ## :fire: News
 
+* 2022.10.18: Squeezeformer is supported, see https://github.com/wenet-e2e/wenet/pull/1447.
 * 2022.07.21: RNN-T is supported now, see [rnnt](https://github.com/wenet-e2e/wenet/tree/main/examples/aishell/rnnt) for benchmark.
 * 2022.07.03: Python binding is stable, see [python binding](https://github.com/wenet-e2e/wenet/tree/main/runtime/binding/python) for usage.
 
@@ -70,7 +72,7 @@ you have to build the runtime as follows. Otherwise, you can just ignore this st
 ``` sh
 # runtime build requires cmake 3.14 or above
 cd runtime/libtorch
-mkdir build && cd build && cmake -DFST_HAVE_BIN=ON .. && cmake --build .
+mkdir build && cd build && cmake -DGRAPH_TOOLS=ON .. && cmake --build .
 ```
 
 ## Discussion & Communication

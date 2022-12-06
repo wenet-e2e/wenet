@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef DECODER_TORCH_ASR_MODEL_H_
 #define DECODER_TORCH_ASR_MODEL_H_
 
@@ -22,7 +21,9 @@
 #include <vector>
 
 #include "torch/script.h"
+#ifndef IOS
 #include "torch/torch.h"
+#endif
 
 #include "decoder/asr_model.h"
 #include "utils/utils.h"
@@ -31,8 +32,9 @@ namespace wenet {
 
 class TorchAsrModel : public AsrModel {
  public:
-  // Note: Do not call the InitEngineThreads function more than once.
+#ifndef IOS
   static void InitEngineThreads(int num_threads = 1);
+#endif
 
  public:
   using TorchModule = torch::jit::script::Module;
