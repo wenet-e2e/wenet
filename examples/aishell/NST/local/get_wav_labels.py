@@ -49,7 +49,6 @@ def main():
     labels = []
     bad_files = []
     for x in hypo_lines:
-        # print(c)
         c += 1
         file_id = x.split()[0]
 
