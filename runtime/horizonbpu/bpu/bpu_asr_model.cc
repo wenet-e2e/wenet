@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "decoder/bpu_asr_model.h"
+#include "bpu/bpu_asr_model.h"
 
 #include <algorithm>
 #include <memory>

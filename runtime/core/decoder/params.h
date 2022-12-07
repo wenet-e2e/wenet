@@ -32,7 +32,7 @@
 #include "xpu/xpu_asr_model.h"
 #endif
 #ifdef USE_BPU
-#include "decoder/bpu_asr_model.h"
+#include "bpu/bpu_asr_model.h"
 #endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"

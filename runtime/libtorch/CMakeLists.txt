@@ -13,7 +13,6 @@ option(WEBSOCKET "whether to build with websocket" ON)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
-option(BPU "whether to build with BPU" OFF)
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -38,9 +37,6 @@ if(TORCH)
 endif()
 if(ONNX)
   include(onnx)
-endif()
-if(BPU)
-  include(bpu)
 endif()
 include(openfst)
 include_directories(
