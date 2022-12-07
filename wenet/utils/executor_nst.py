@@ -9,13 +9,11 @@ from contextlib import nullcontext
 # from contextlib import suppress as nullcontext
 import torch
 from torch.nn.utils import clip_grad_norm_
-import time
 
 
 class Executor_nst:
     def __init__(self):
         self.step = 0
-    # we modify the train so that we can have two input data_loader for
 
     def train(self, model, optimizer, scheduler, data_loader_aishell,
               data_loader_wenetspeech, device, writer,
@@ -48,18 +46,13 @@ class Executor_nst:
               pseudo_ratio, "********************")
         with model_context():
             # --------------modification start -------------------
-            print(time.time(), "before loop")
             iter_wenet = iter(data_loader_wenetspeech)
             iter_aishell = iter(data_loader_aishell)
             batch_idx = 0
             dl_weight = [pseudo_ratio, 1 - pseudo_ratio]
-            # rng = random.Random
             while True:
-
-                # print("batch id is ",batch_idx , "Time is ", time.time())
                 r = random.choices(population=[0, 1],
                                    weights=dl_weight, k=1)[0]
-                # print(now is random)
                 dl = iter_wenet if r == 0 else iter_aishell
                 try:
                     key, feats, target, feats_lengths, target_lengths = next(dl)
@@ -68,12 +61,8 @@ class Executor_nst:
                     logging.info(f"{name} reaches end of "
                                  f"dataloader for rank {rank}")
                     break
-                # name = "wenet" if r <= pseudo_ratio else "aishell"
-                # print("current dataset : " , name )
 
-                # print("finish random time ", time.time())
                 batch_idx += 1
-
                 feats = feats.to(device)
                 target = target.to(device)
                 feats_lengths = feats_lengths.to(device)
@@ -140,8 +129,6 @@ class Executor_nst:
                         log_str += 'loss_ctc {:.6f} '.format(loss_ctc.item())
                     log_str += 'lr {:.8f} rank {}'.format(lr, rank)
                     logging.debug(log_str)
-
-            # case we are not fusing batch
 
     def cv(self, model, data_loader, device, args):
         ''' Cross validation on
