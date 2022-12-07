@@ -148,8 +148,9 @@ def main():
     print("unsupervised data list = ", args.train_data_unsupervised)
 
     cv_conf = copy.deepcopy(train_supervised_conf)
-    # cv_conf['speed_perturb'] = False
-    # cv_conf['spec_aug'] = False
+    cv_conf['speed_perturb'] = False
+    cv_conf['spec_aug'] = False
+    cv_conf['shuffle'] = False
 
     train_dataset_supervised = Dataset(args.data_type,
                                        args.train_data_supervised,
