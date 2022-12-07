@@ -78,14 +78,13 @@ scp ./model_subsample8_parameter110M/sample50_chunk8_leftchunk16/hb_makertbin_ou
 
 ``` sh
 cd /path/to/demo
-export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH
-export GLOG_logtostderr=1
-export GLOG_v=2
-./decoder_main \
-    --chunk_size 8 \
-    --num_left_chunks 16 \
-    --rescoring_weight 0.0 \
-    --wav_path ./test_wav.wav \
-    --bpu_model_dir ./ \
-    --unit_path ./units.txt 2>&1 | tee log.txt
+sudo LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH \
+  GLOG_logtostderr=1 GLOG_v=2 \
+  ./decoder_main \
+      --chunk_size 8 \
+      --num_left_chunks 16 \
+      --rescoring_weight 0.0 \
+      --wav_path ./test_wav.wav \
+      --bpu_model_dir ./ \
+      --unit_path ./units.txt 2>&1 | tee log.txt
 ```
