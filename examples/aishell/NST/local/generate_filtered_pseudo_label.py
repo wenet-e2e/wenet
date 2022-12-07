@@ -167,7 +167,6 @@ def main():
             print(wav_path)
             wav_exist = os.path.exists(wav_path)
             if wav_exist:
-                # print(t_id, utter, output_path)
                 # update .txt
                 with open(output_path, "w", encoding="utf-8") as writer:
                     writer.write(utter)
@@ -190,7 +189,7 @@ def main():
         if cur_id < len_data < end_id:
             end_id = len_data
 
-        print("end, now remove untar files")
+        print("end, now removing untar files for saving storge space.")
         print("rm -rf" + " " + out_put_dir[:-1])
         os.system("rm -rf" + " " + out_put_dir[:-1])
         print("remove done")
