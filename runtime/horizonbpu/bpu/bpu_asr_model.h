@@ -13,8 +13,8 @@
 // limitations under the License.
 
 
-#ifndef DECODER_BPU_ASR_MODEL_H_
-#define DECODER_BPU_ASR_MODEL_H_
+#ifndef RUNTIME_HORIZONBPU_BPU_BPU_ASR_MODEL_H_
+#define RUNTIME_HORIZONBPU_BPU_BPU_ASR_MODEL_H_
 
 #include <memory>
 #include <string>
@@ -81,4 +81,4 @@ class BPUAsrModel : public AsrModel {
 
 }  // namespace wenet
 
-#endif  // DECODER_BPU_ASR_MODEL_H_
+#endif  // RUNTIME_HORIZONBPU_BPU_BPU_ASR_MODEL_H_

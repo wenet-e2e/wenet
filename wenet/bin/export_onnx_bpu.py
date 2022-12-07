@@ -301,7 +301,7 @@ class BPUConv2dSubsampling8(torch.nn.Module):
         x = self.conv(x)  # (1, odim, freq, time')
         x_out = torch.zeros(x.size(0), self.odim, 1, x.size(3))
         x = torch.split(x, self.split_size, dim=2)
-        for idx, (x_part, layer) in enumerate(zip(x, self.linear)):
+        for idx, (x_part, layer) in enumerate(zip(x, self.linear, strict=True)):
             x_out += layer(x_part)
         return x_out
 
@@ -792,7 +792,7 @@ class BPUCTC(torch.nn.Module):
             self.split_size.append(out_channel)
         orig_weight = torch.split(module.ctc_lo.weight, self.split_size, dim=0)
         orig_bias = torch.split(module.ctc_lo.bias, self.split_size, dim=0)
-        for i, (w, b) in enumerate(zip(orig_weight, orig_bias)):
+        for i, (w, b) in enumerate(zip(orig_weight, orig_bias, strict=True)):
             w = w.unsqueeze(2).unsqueeze(3)
             self.ctc_lo[i].weight = torch.nn.Parameter(w)
             self.ctc_lo[i].bias = torch.nn.Parameter(b)
