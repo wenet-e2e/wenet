@@ -23,7 +23,6 @@
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-#export CUDA_VISIBLE_DEVICES="0"
 # The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
 # communication. More details can be found in
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
@@ -37,7 +36,6 @@ cer_out_dir=""
 dir=""
 pseudo_data_list=""
 supervised_data_list=""
-gcmvn=""
 checkpoint=
 data_list=""
 
@@ -61,6 +59,7 @@ tar_dir="data/train/wenet_1khr_tar/"
 untar_dir="data/train/wenet_1khr_untar/"
 cer_hypo_dir="wenet_cer_hypo"
 cer_label_dir="wenet_cer_label"
+pseudo_data_ratio=0.75
 
 # The num of machines(nodes) for multi-machine training, 1 is for one machine.
 # NFS is required if num_nodes > 1.
@@ -71,8 +70,6 @@ num_nodes=1
 # You should set the node_ranHk=0 on the first machine, set the node_rank=1
 # on the second machine, and so on.
 node_rank=0
-
-
 dict=data/dict/lang_char.txt
 
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
@@ -80,27 +77,15 @@ dict=data/dict/lang_char.txt
 # faster on reading data and training.
 data_type=shard
 num_utts_per_shard=1000
-
 train_set=train
-
 train_config=conf/train_conformer_nst.yaml
-
 cmvn=true
-#dir=exp/conformer_wenet1k_nst5_LM_diff_leq_10
-#checkpoint=exp/conformer_wenet1k_nst0_sr3_v2/avg_30.pt
-
-#avg_30.pt
-
-# use average_checkpoint will get better result
-# ??
 average_checkpoint=true
 target_pt=80
 decode_checkpoint=$dir/$target_pt.pt
 
 # here we only use attention_rescoring for NST
 decode_modes="attention_rescoring"
-#decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
-
 
 . tools/parse_options.sh || exit 1;
 
@@ -114,7 +99,6 @@ echo "cer_out_dir is  ${cer_out_dir}"
 echo "average_num is ${average_num}"
 echo "checkpoint is ${checkpoint} "
 echo "enable_nst is ${enable_nst} "
-
 
 # we assumed that you have finished the data pre-process steps from -1 to 3 in aishell1/s0/run.sh .
 # You can modify the "--train_data_supervised" to match your supervised data list.
@@ -335,7 +319,7 @@ fi
 # For each gpu or cpu, you can run with different job_num to perform data-wise parallel computing.
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ ${enable_nst} -eq 0 ]; then
   echo "********stage 5 start time : $now ********"
-  python get_wav_labels.py \
+  python local/get_wav_labels.py \
     --dir_split data/train/${dir_split} \
     --hypo_name /$hypo_name \
     --wav_dir $wav_dir\
@@ -426,7 +410,9 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
 
   python local/generate_data_list.py  \
     --tar_dir $tar_dir \
-    --out_data_list $out_data_list
+    --out_data_list $out_data_list \
+    --supervised_data_list data/train/$supervised_data_list \
+    --pseudo_data_ratio $pseudo_data_ratio
 
 fi
 
