@@ -14,7 +14,7 @@ Feel free to volunteer yourself if you are interested in trying out some items(t
 - [x] RNN-T support, see https://github.com/wenet-e2e/wenet/pull/1261
 - [ ] Self training, streaming
 - [ ] Light weight, low latency, on-device model exploration
-  - [x] TrimTail, see https://github.com/wenet-e2e/wenet/pull/1487/, [paper link](https://arxiv.org/pdf/2211.00522.pdf) 
+  - [x] TrimTail, see https://github.com/wenet-e2e/wenet/pull/1487/, [paper link](https://arxiv.org/pdf/2211.00522.pdf)
 - [ ] Audio-Visual speech recognition
 - [ ] OS or Hardware Platforms
   - [x] IOS, https://github.com/wenet-e2e/wenet/pull/1549
