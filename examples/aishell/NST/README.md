@@ -43,11 +43,12 @@ data_dir/
 To train an initial supervised teacher model, run the following command:
 
 ```bash
-bash run_nst.sh --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --data_list wenet_1khr.list --dir_split wenet_split_60_test/ --out_data_list data/train/wenet_1khr_nst0.list --enable_nst 0
+bash run_nst.sh --dir exp/conformer_test_fully_supervised --data_list data_aishell.list --supervised_data_list data_aishell.list --unsupervised_data_list wenet_1khr.list --dir_split wenet_split_60_test/ --out_data_list data/train/wenet_1khr_nst0.list --enable_nst 0
 ```
 - `dir` contains the training parameters.
+- `data_list` contains paths for the training data list.
 - `supervised_data_list` contains paths for supervised data shards.
-- `data_list` contains paths for unsupervised data shards which is used for inference.
+- `unsupervised_data_list` contains paths for unsupervised data shards which is used for inference.
 - `dir_split` is the directory stores split unsupervised data for parallel computing.
 - `out_data_list` is the pseudo label data list file path.
 - `enable_nst` indicates whether we train with pseudo label, for initial teacher we set it to 0.
@@ -56,7 +57,7 @@ bash run_nst.sh --dir exp/conformer_test_fully_supervised --supervised_data_list
 Full arguments are listed below, you can check the `run_nst.sh` for more information about each stage and their arguments. We used `num_split = 60` and generate shards with different cpu for the experiments in our paper which saved us lots of inference time and data shards generation time.
 
 ```bash
-bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --data_list wenet_1khr.list --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr.list
+bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --unsupervised_data_list wenet_1khr.list --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr.list
 ```
 
 ### Noisy student interations

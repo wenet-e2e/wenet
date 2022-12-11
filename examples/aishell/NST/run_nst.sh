@@ -37,6 +37,7 @@ dir=""
 pseudo_data_list=""
 supervised_data_list=""
 checkpoint=
+unsupervised_data_list=""
 data_list=""
 
 hypo_name=""
@@ -93,7 +94,7 @@ decode_modes="attention_rescoring"
 echo "setting for this run:"
 echo "dir is ${dir}"
 echo "pseudo data list is ${pseudo_data_list}"
-echo "supervised data list is ${supervised_data_list}"
+echo "data list is ${data_list}"
 echo "job_num is ${job_num}"
 echo "cer_out_dir is  ${cer_out_dir}"
 echo "average_num is ${average_num}"
@@ -251,7 +252,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ] && [ ${enable_nst} -eq 0 ]; the
   echo "********stage 3 start time : $now ********"
   python split_data_list.py \
     --job_nums $num_split \
-    --data_list_path data/train/$data_list \
+    --data_list_path data/train/$unsupervised_data_list \
     --output_dir data/train/$dir_split
 
 fi
