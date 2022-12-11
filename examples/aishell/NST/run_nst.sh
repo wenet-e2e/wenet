@@ -78,7 +78,7 @@ dict=data/dict/lang_char.txt
 data_type=shard
 num_utts_per_shard=1000
 train_set=train
-train_config=conf/train_conformer_nst.yaml
+train_config=conf/train_conformer.yaml
 cmvn=true
 average_checkpoint=true
 target_pt=80
@@ -141,20 +141,11 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     # the master of a worker.
 
     rank=`expr $node_rank \* $num_gpus + $i`
-
-    # "--train_data_supervised" is the name of datalist for supervised data, which refers to aishell-1 in the example.
-    # "--train_data_unsupervised" is the name of datalist for unsupervised data, which refers to wenetSpeech here.
-    # both list should be stored under the train dir.
-    # For supervised training, one could either set "--enable_nst" to 0 ,
-    # or set the config pseudo-ratio to 0 so that none of the pseudo data is used.
-    # For NST training, keep "--enable_nst" = 1,
-
-    python wenet/bin/train_nst.py --gpu $gpu_id \
+    python wenet/bin/train.py --gpu $gpu_id \
       --config $train_config \
       --data_type $data_type \
       --symbol_table $dict \
-      --train_data_supervised data/$train_set/$supervised_data_list \
-      --train_data_unsupervised data/$train_set/$pseudo_data_list \
+      --train_data data/$train_set/$data_list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
@@ -163,7 +154,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --ddp.rank $rank \
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
-      --enable_nst $enable_nst \
       $cmvn_opts \
       --pin_memory
   } &

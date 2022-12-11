@@ -79,7 +79,7 @@ bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_nst1 --supervised_d
 ## Performance Record
 
 ### Supervised baseline and standard NST
-* Non-streaming conformer model with attention restoring decoder.
+* Non-streaming conformer model with attention rescoring decoder.
 * Without filter strategy, first iteration
 * Feature info: using FBANK feature, dither, cmvn, online speed perturb
 * Training info: lr 0.002, batch size 32, 8 gpu, acc_grad 4, 240 epochs, dither 0.1
@@ -96,7 +96,7 @@ bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_nst1 --supervised_d
 
 
 ### Supervised AISHELL-1 and unsupervised 1khr WenetSpeech
-* Non-streaming conformer model with attention restoring decoder.
+* Non-streaming conformer model with attention rescoring decoder.
 * Feature info: using FBANK feature
 * Training info: lr=0.002, batch_size=32, 8 GPUs, acc_grad=4, 120 epochs, dither=0.1
 * Decoding info: ctc_weight=0.3, average_num=30, pseudo_ratio=0.75
@@ -113,7 +113,7 @@ bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_nst1 --supervised_d
 | 7 | 4.31             | 23.79     |   15.75           |     694           |
 
 ### Supervised AISHELL-2 and unsupervised 4khr WenetSpeech
-* Non-streaming conformer model with attention restoring decoder.
+* Non-streaming conformer model with attention rescoring decoder.
 * Feature info: using FBANK feature
 * Training info: lr=0.002, batch_size=32, 8 GPUs, acc_grad=4, 120 epochs, dither=0.1
 * Decoding info: ctc_weight=0.3, average_num=30, pseudo_ratio=0.75
