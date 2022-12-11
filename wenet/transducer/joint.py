@@ -38,7 +38,7 @@ class TransducerJoint(torch.nn.Module):
         # torchscript compatibility
         self.post_ffn: Optional[nn.Linear] = None
         if self.postjoin_linear:
-            self.post_ffn = nn.Linear(enc_output_size, join_dim)
+            self.post_ffn = nn.Linear(join_dim, join_dim)
 
         self.ffn_out = nn.Linear(join_dim, voca_size)
 
