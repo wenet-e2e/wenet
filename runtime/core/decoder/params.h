@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef DECODER_PARAMS_H_
 #define DECODER_PARAMS_H_
 
@@ -29,17 +28,29 @@
 #ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
 #endif
+#ifdef USE_XPU
+#include "xpu/xpu_asr_model.h"
+#endif
+#ifdef USE_BPU
+#include "bpu/bpu_asr_model.h"
+#endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/flags.h"
 #include "utils/string.h"
 
-DEFINE_int32(num_threads, 1, "num threads for ASR model");
+DEFINE_int32(device_id, 0, "set XPU DeviceID for ASR model");
 
 // TorchAsrModel flags
 DEFINE_string(model_path, "", "pytorch exported model path");
 // OnnxAsrModel flags
 DEFINE_string(onnx_dir, "", "directory where the onnx model is saved");
+// XPUAsrModel flags
+DEFINE_string(xpu_model_dir, "",
+              "directory where the XPU model and weights is saved");
+// BPUAsrModel flags
+DEFINE_string(bpu_model_dir, "",
+              "directory where the HORIZON BPU model is saved");
 
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
@@ -66,7 +77,8 @@ DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
 DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
 DEFINE_double(blank_skip_thresh, 1.0,
               "blank skip thresh for ctc wfst search, 1.0 means no skip");
-DEFINE_double(length_penalty, 0.0, "length penalty ctc wfst search, will not"
+DEFINE_double(length_penalty, 0.0,
+              "length penalty ctc wfst search, will not"
               "apply on self-loop arc, for balancing the del/ins ratio, "
               "suggest set to -3.0");
 DEFINE_int32(nbest, 10, "nbest for ctc wfst or prefix search");
@@ -119,27 +131,49 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
 
 std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   auto resource = std::make_shared<DecodeResource>();
-
+  const int kNumGemmThreads = 1;
   if (!FLAGS_onnx_dir.empty()) {
 #ifdef USE_ONNX
     LOG(INFO) << "Reading onnx model ";
-    OnnxAsrModel::InitEngineThreads(FLAGS_num_threads);
+    OnnxAsrModel::InitEngineThreads(kNumGemmThreads);
     auto model = std::make_shared<OnnxAsrModel>();
     model->Read(FLAGS_onnx_dir);
     resource->model = model;
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DONNX=ON'.";
 #endif
-  } else {
+  } else if (!FLAGS_model_path.empty()) {
 #ifdef USE_TORCH
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
-    TorchAsrModel::InitEngineThreads(FLAGS_num_threads);
+    TorchAsrModel::InitEngineThreads(kNumGemmThreads);
     auto model = std::make_shared<TorchAsrModel>();
     model->Read(FLAGS_model_path);
     resource->model = model;
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DTORCH=ON'.";
 #endif
+  } else if (!FLAGS_xpu_model_dir.empty()) {
+#ifdef USE_XPU
+    LOG(INFO) << "Reading XPU WeNet model weight from " << FLAGS_xpu_model_dir;
+    auto model = std::make_shared<XPUAsrModel>();
+    model->SetEngineThreads(kNumGemmThreads);
+    model->SetDeviceId(FLAGS_device_id);
+    model->Read(FLAGS_xpu_model_dir);
+    resource->model = model;
+#else
+    LOG(FATAL) << "Please rebuild with cmake options '-DXPU=ON'.";
+#endif
+  } else if (!FLAGS_bpu_model_dir.empty()) {
+#ifdef USE_BPU
+    LOG(INFO) << "Reading Horizon BPU model from " << FLAGS_bpu_model_dir;
+    auto model = std::make_shared<BPUAsrModel>();
+    model->Read(FLAGS_bpu_model_dir);
+    resource->model = model;
+#else
+    LOG(FATAL) << "Please rebuild with cmake options '-DBPU=ON'.";
+#endif
+  } else {
+    LOG(FATAL) << "Please set ONNX, TORCH, XPU or BPU model path!!!";
   }
 
   LOG(INFO) << "Reading unit table " << FLAGS_unit_path;

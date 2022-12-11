@@ -64,6 +64,9 @@ dataset_conf:
     spec_sub_conf:
         num_t_sub: 3
         max_t: 30
+    spec_trim: false
+    spec_trim_conf:
+        max_t: 50
     shuffle: true
     shuffle_conf:
         shuffle_size: 1500

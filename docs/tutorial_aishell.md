@@ -14,19 +14,19 @@ The recipe is simple and we suggest you run each stage one by one manually and c
 
 ```
 cd example/aishell/s0
-bash run.sh --stage -1 --stop-stage -1
-bash run.sh --stage 0 --stop-stage 0
-bash run.sh --stage 1 --stop-stage 1
-bash run.sh --stage 2 --stop-stage 2
-bash run.sh --stage 3 --stop-stage 3
-bash run.sh --stage 4 --stop-stage 4
-bash run.sh --stage 5 --stop-stage 5
-bash run.sh --stage 6 --stop-stage 6
+bash run.sh --stage -1 --stop_stage -1
+bash run.sh --stage 0 --stop_stage 0
+bash run.sh --stage 1 --stop_stage 1
+bash run.sh --stage 2 --stop_stage 2
+bash run.sh --stage 3 --stop_stage 3
+bash run.sh --stage 4 --stop_stage 4
+bash run.sh --stage 5 --stop_stage 5
+bash run.sh --stage 6 --stop_stage 6
 ```
 
 You could also just run the whole script
 ```
-bash run.sh --stage -1 --stop-stage 6
+bash run.sh --stage -1 --stop_stage 6
 ```
 
 

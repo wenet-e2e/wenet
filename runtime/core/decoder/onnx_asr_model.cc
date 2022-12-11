@@ -15,7 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "decoder/onnx_asr_model.h"
 
 #include <algorithm>
@@ -31,7 +30,6 @@ Ort::SessionOptions OnnxAsrModel::session_options_ = Ort::SessionOptions();
 
 void OnnxAsrModel::InitEngineThreads(int num_threads) {
   session_options_.SetIntraOpNumThreads(num_threads);
-  session_options_.SetInterOpNumThreads(num_threads);
 }
 
 void OnnxAsrModel::GetInputOutputInfo(
