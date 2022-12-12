@@ -18,64 +18,69 @@ Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 a
 
 ## Guideline
 
-First, you have to prepare supervised and unsupervised data for NST, and then train an initial supervised teacher. After that, you can iterate the noisy student interations until the model converge.
 
+First, you have to prepare supervised and unsupervised data for NST, and then in stage 1 of run.sh, you will train an initial supervised teacher and generate pseudo labels for unsupervised data. 
+After that, you can run the noisy student training iteratively in stage 2 .
+![plot](local/NST_plot.png)
 ### Data preparation
 
 To run this recipe, you should follow the steps from [WeNet examples](https://github.com/wenet-e2e/wenet/tree/main/examples) to prepare [AISHELL1](https://github.com/wenet-e2e/wenet/tree/main/examples/aishell/s0) and [WenetSpeech](https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0) data.
 We extract 1khr data from WenetSpeech and data should be prepared and stored in the following format:
 
 ```
-data_dir/
-├── train
+data/
+├── train/
 ├──── data_aishell.list
 ├──── wenet_1khr.list
 ├──── wav_dir/
-└── utter_time.json (optional)
+├──── utter_time.json (optional)
+├── dev/
+└── test/
+
 ```
 - `*.list` contains paths for all the data shards for training.
 - A Json file containing the audio length should be prepared as `utter_time.json` if you want to apply the `speaking rate` filter.
 - A wav_dir contains all the audio data (id.wav) and labels (id.txt which is optional) for unsupervised data.
-> **HINTS** We include a tiny example under `local/example` to make it clearer for reproduction.
+> **HINTS** We include a tiny example under `data_example` to make it clearer for reproduction.
 
 ### Initial supervised teacher
 
 To train an initial supervised teacher model, run the following command:
 
 ```bash
-bash run_nst.sh --dir exp/conformer_test_fully_supervised --data_list data_aishell.list --supervised_data_list data_aishell.list --unsupervised_data_list wenet_1khr.list --dir_split wenet_split_60_test/ --out_data_list data/train/wenet_1khr_nst0.list --enable_nst 0
+bash run.sh --stage 1 --stop-stage 1
+```
+
+Full arguments are listed below, you can check `run.sh` and `run_nst.sh` for more information about steps in each stage and their arguments. We used `num_split = 60` and generate shards with different cpu for the experiments in our paper which saved us lots of inference time and data shards generation time.
+
+```bash
+bash run.sh --stage 1 --stop-stage 1 --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --unsupervised_data_list wenet_1khr.list --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr.list
 ```
 - `dir` contains the training parameters.
 - `data_list` contains paths for the training data list.
 - `supervised_data_list` contains paths for supervised data shards.
-- `unsupervised_data_list` contains paths for unsupervised data shards which is used for inference.
-- `dir_split` is the directory stores split unsupervised data for parallel computing.
+- `unsupervised_data_list`contains paths for unsupervised data shards which is used for inference.
+- `dir_split` is the directory stores split unsupervised data for parallel computing.
 - `out_data_list` is the pseudo label data list file path.
-- `enable_nst` indicates whether we train with pseudo label, for initial teacher we set it to 0.
+- `enable_nst` indicates whether we train with pseudo label and split data, for initial teacher we set it to 0.
 - This recipe uses the default `num_split=1` while we strongly recommend use larger number to decrease the inference and shards generation time.
-
-Full arguments are listed below, you can check the `run_nst.sh` for more information about each stage and their arguments. We used `num_split = 60` and generate shards with different cpu for the experiments in our paper which saved us lots of inference time and data shards generation time.
-
-```bash
-bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_test_fully_supervised --supervised_data_list data_aishell.list --enable_nst 0 --num_split 1 --unsupervised_data_list wenet_1khr.list --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst0.txt --label 1 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar/ --tar_dir data/train/wenet_1khr_tar/ --out_data_list data/train/wenet_1khr.list
-```
+> **HINTS** If num_split is set to N larger than 1, you need to modify the script in step 4-8 in run_nst.sh to submit N tasks into your own clusters (such as slurm,ngc etc..). 
+> We strongly recommend to do so since inference and pseudo-data generation is time-consuming.
 
 ### Noisy student interations
 
-After finishing the initial fully supervised baseline, we now have the pseudo-label data list which is `wenet_1khr_nst0.list` if you follow the guideline. We will use it as the `pseudo_data` in the training step and the `pseudo-label` for next NST iteration will be generated.
+After finishing the initial fully supervised baseline, we now have the mixed list contains both supervised and pseudo data which is `wenet_1khr_nst0.list`. 
+We will use it as the `data_list` in the training step and the `data_list` for next NST iteration will be generated.
 
 Here is an example command:
 
 ```bash
-bash run_nst.sh --dir exp/conformer_nst1 --supervised_data_list data_aishell.list --pseudo_data_list wenet_1khr_nst0.list  --enable_nst 1 --job_num 0 --hypo_name hypothesis_nst1.txt --untar_dir data/train/wenet_1khr_untar_nst1/ --tar_dir data/train/wenet_1khr_tar_nst1/ --out_data_list data/train/wenet_1khr_nst1.list 
+bash run.sh --stage 2 --stop-stage 2 --iter_num 2
 ```
-Most of the arguments are same as the initial teacher training, here we add extra argument `pseudo_data_list` for path of pseudo data list. The `enbale_nst` must be set to 1 if you want to train with pseudo data. The index for `hypo_name` and `tar_dir` need to be changed if you don't want to overlap the previous generated data.
-The `output_data_list` can be used as the input of `pseudo_data_list` for next NST itearion.
-
-Full arguments are listed below, you can check the `run_nst.sh` for more information about each stage and their arguments:
-```bash
-bash run_nst.sh --stage 1 --stop-stage 8 --dir exp/conformer_nst1 --supervised_data_list data_aishell.list --pseudo_data_list wenet_1khr_nst0  --enable_nst 1 --num_split 1 --dir_split wenet_split_60_test/ --job_num 0 --hypo_name hypothesis_nst1.txt --label 0 --wav_dir data/train/wenet_1k_untar/ --cer_hypo_dir wenet_cer_hypo --cer_label_dir wenet_cer_label --label_file label.txt --cer_hypo_threshold 10 --speak_rate_threshold 0 --utter_time_file utter_time.json --untar_dir data/train/wenet_1khr_untar_nst1/ --tar_dir data/train/wenet_1khr_tar_nst1/ --out_data_list data/train/wenet_1khr_nst1.list 
-```
+ 
+Here we add extra argument `iter_num` for number of NST iterations. Intermediate files are named with `iter_num` as a 
+suffix.
+you can check `run.sh` and `run_nst.sh` for more information about each stage and their arguments.
 
 ## Performance Record
 

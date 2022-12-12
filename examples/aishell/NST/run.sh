@@ -18,18 +18,27 @@ iter_num=2
 stage=1
 stop_stage=1
 pseudo_data_ratio=0.75
-# In stage1, we train the initial teacher
+dir=exp/conformer_test_fully_supervised
+data_list=data_aishell.list
+supervised_data_list=data_aishell.list
+unsupervised_data_list=wenet_1khr.list
+dir_split=wenet_split_60_test/
+out_data_list=data/train/wenet_1khr_nst0.list
+num_split=1
+. tools/parse_options.sh || exit 1;
 
+# In stage1, we train the initial teacher
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo "******** stage 1 training the intial teacher ********"
-  bash run_nst.sh --dir exp/conformer_test_fully_supervised \
-  --data_list data_aishell.list \
-  --supervised_data_list data_aishell.list \
-  --unsupervised_data_list wenet_1khr.list \
-  --dir_split wenet_split_60_test/ \
-  --out_data_list data/train/wenet_1khr_nst0.list \
+  bash run_nst.sh --dir $dir \
+  --data_list $data_list \
+  --supervised_data_list $supervised_data_list \
+  --unsupervised_data_list $unsupervised_data_list \
+  --dir_split $dir_split\
+  --out_data_list $out_data_list \
   --enable_nst 0 \
-  --pseudo_data_ratio pseudo_data_ratio
+  --pseudo_data_ratio pseudo_data_ratio \
+  --num_split $num_split
 
 fi
 
@@ -41,19 +50,19 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # Rank of each gpu/process used for knowing whether it is
     # the master of a worker.
 
-    bash run_nst.sh --dir exp/conformer_nst${i} \
+    bash run_nst.sh --dir exp/conformer_nst${i+1} \
       --supervised_data_list data_aishell.list \
       --data_list wenet_1khr_nst${i}.list \
       --enable_nst 1 \
       --job_num 0 \
+      --num_split $num_split \
       --hypo_name hypothesis_nst${i+1}.txt \
       --untar_dir data/train/wenet_1khr_untar_nst${i+1}/ \
       --tar_dir data/train/wenet_1khr_tar_nst${i+1}/ \
       --out_data_list data/train/wenet_1khr_nst${i+1}.list \
       --pseudo_data_ratio $pseudo_data_ratio
 
-  } &
+  }
   done
-  wait
 
 fi
