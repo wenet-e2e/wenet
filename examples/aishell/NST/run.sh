@@ -27,7 +27,7 @@ out_data_list=data/train/wenet_1khr_nst0.list
 num_split=1
 . tools/parse_options.sh || exit 1;
 
-# In stage1, we train the initial teacher
+# Stage 1 trains the initial teacher and generates initial pseudo-labels.
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo "******** stage 1 training the intial teacher ********"
   bash run_nst.sh --dir $dir \
@@ -42,14 +42,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 
 fi
 
+# Stage 2 trains the nst iterations.
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   for ((i = 0; i < $iter_num; ++i)); do
   {
     echo "******** stage 2 training nst iteration number $i ********"
-    # Rank of each gpu/process used for knowing whether it is
-    # the master of a worker.
-
     bash run_nst.sh --dir exp/conformer_nst${i+1} \
       --supervised_data_list data_aishell.list \
       --data_list wenet_1khr_nst${i}.list \
