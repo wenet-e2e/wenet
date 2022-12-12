@@ -401,7 +401,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
 
   python local/generate_data_list.py  \
     --tar_dir data/train/$tar_dir \
-    --out_data_list $out_data_list \
+    --out_data_list data/train/$out_data_list \
     --supervised_data_list data/train/$supervised_data_list \
     --pseudo_data_ratio $pseudo_data_ratio
 

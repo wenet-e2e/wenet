@@ -28,7 +28,8 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   --unsupervised_data_list wenet_1khr.list \
   --dir_split wenet_split_60_test/ \
   --out_data_list data/train/wenet_1khr_nst0.list \
-  --enable_nst 0
+  --enable_nst 0 \
+  --pseudo_data_ratio pseudo_data_ratio
 
 fi
 
@@ -36,13 +37,13 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo "********stage 2 ********"
   for ((i = 0; i < $number_of_iter; ++i)); do
   {
-    echo "nst iteration number $i "
+    echo "******** nst iteration number $i ********"
     # Rank of each gpu/process used for knowing whether it is
     # the master of a worker.
 
     bash run_nst.sh --dir exp/conformer_nst1 \
       --supervised_data_list data_aishell.list \
-      --pseudo_data_list wenet_1khr_nst${i}.list \
+      --data_list wenet_1khr_nst${i}.list \
       --enable_nst 1 \
       --job_num 0 \
       --hypo_name hypothesis_nst${i+1}.txt \
@@ -56,5 +57,3 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   wait
 
 fi
-
-bash run_nst.sh --dir exp/conformer_nst1 --supervised_data_list data_aishell.list --pseudo_data_list wenet_1khr_nst0.list  --enable_nst 1 --job_num 0 --hypo_name hypothesis_nst1.txt --untar_dir data/train/wenet_1khr_untar_nst1/ --tar_dir data/train/wenet_1khr_tar_nst1/ --out_data_list data/train/wenet_1khr_nst1.list

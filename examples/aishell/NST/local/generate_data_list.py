@@ -30,15 +30,11 @@ def get_args():
     return args
 
 
-#python local/generate_data_list.py --tar_dir wenet_1k_tar_10_11_nss7 --out_data_list test_g1.list --supervised_data_list data/train/data_aishell.list --pseudo_data_ratio 0.75
-
 def main():
     args = get_args()
     target_dir = args.tar_dir
-    # target_dir = "data/train/wenet_bad_tar_10_7_nst3_r6"
     pseudo_data_list = os.listdir(target_dir)
     output_file = args.out_data_list
-    # output_file = "data/train/wenet_bad_tar_10_7_nst3_r6.list"
     pseudo_data_ratio = args.pseudo_data_ratio
     supervised_path = args.supervised_data_list
     with open(supervised_path,"r") as reader:
