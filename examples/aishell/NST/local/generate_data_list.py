@@ -57,7 +57,7 @@ def main():
         pseudo_len = int(supervised_len / super_to_pseudo_datio)
 
     for i in range(len(pseudo_data_list)):
-        pseudo_data_list[i] + target_dir + "/" + pseudo_data_list[i] + "\n"
+        pseudo_data_list[i] = target_dir + "/" + pseudo_data_list[i] + "\n"
 
     fused_list = pseudo_data_list[:pseudo_len] + supervised_data_list[:supervised_len]
 
