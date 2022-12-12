@@ -17,7 +17,7 @@
 number_of_iter=2
 stage=1
 stop_stage=1
-
+pseudo_data_ratio=0.75
 # In stage1, we train the initial teacher
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -49,6 +49,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       --untar_dir data/train/wenet_1khr_untar_nst${i+1}/ \
       --tar_dir data/train/wenet_1khr_tar_nst${i+1}/ \
       --out_data_list data/train/wenet_1khr_nst${i+1}.list \
+      --pseudo_data_ratio $pseudo_data_ratio
 
   } &
   done
@@ -56,4 +57,4 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
 fi
 
-
+bash run_nst.sh --dir exp/conformer_nst1 --supervised_data_list data_aishell.list --pseudo_data_list wenet_1khr_nst0.list  --enable_nst 1 --job_num 0 --hypo_name hypothesis_nst1.txt --untar_dir data/train/wenet_1khr_untar_nst1/ --tar_dir data/train/wenet_1khr_tar_nst1/ --out_data_list data/train/wenet_1khr_nst1.list
