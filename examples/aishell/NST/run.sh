@@ -21,7 +21,7 @@ pseudo_data_ratio=0.75
 # In stage1, we train the initial teacher
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-  echo "********stage 1 ********"
+  echo "******** stage 1 training the intial teacher ********"
   bash run_nst.sh --dir exp/conformer_test_fully_supervised \
   --data_list data_aishell.list \
   --supervised_data_list data_aishell.list \
@@ -34,10 +34,10 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-  echo "********stage 2 ********"
+
   for ((i = 0; i < $iter_num; ++i)); do
   {
-    echo "******** nst iteration number $i ********"
+    echo "******** stage 2 training nst iteration number $i ********"
     # Rank of each gpu/process used for knowing whether it is
     # the master of a worker.
 

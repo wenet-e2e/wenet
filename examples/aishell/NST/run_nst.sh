@@ -110,7 +110,7 @@ echo "enable_nst is ${enable_nst} "
 
 # stage 1 is for training
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-  echo "********stage 1 start time : $now ********"
+  echo "********step 1 start time : $now ********"
   mkdir -p $dir
   # You have to rm `INIT_FILE` manually when you resume or restart a
   # multi-machine training.
@@ -167,7 +167,7 @@ fi
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   # Test model, please specify the model you want to test by --checkpoint
   # stage 5 we test with aishell dataset,
-  echo "******** stage 2 start time : $now ********"
+  echo "******** step 2 start time : $now ********"
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
@@ -249,7 +249,7 @@ fi
 # split the (unsupervised) datalist into N sublists, where N depends on the number of available cpu in your cluster.
 # when making inference, we compute N sublist in parallel.
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ] && [ ${enable_nst} -eq 0 ]; then
-  echo "********stage 3 start time : $now ********"
+  echo "********step 3 start time : $now ********"
   python split_data_list.py \
     --job_nums $num_split \
     --data_list_path data/train/$unsupervised_data_list \
@@ -266,7 +266,7 @@ fi
 # "hypo_name" is the path for output hypothesis and "dir" is the path where we train and store the model.
 # For each gpu, you can run with different job_num to perform data-wise parallel computing.
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-  echo "********stage 4 start time : $now ********"
+  echo "********step 4 start time : $now ********"
   # we assume you have run stage 2 so that avg_${average_num}.pt exists
   decode_checkpoint=$dir/avg_${average_num}.pt
   # Please specify decoding_chunk_size for unified streaming and
@@ -309,7 +309,7 @@ fi
 # if you have label for unsupervised dataset, set label = 1 other wise keep it 0
 # For each gpu or cpu, you can run with different job_num to perform data-wise parallel computing.
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ] && [ ${enable_nst} -eq 0 ]; then
-  echo "********stage 5 start time : $now ********"
+  echo "********step 5 start time : $now ********"
   python local/get_wav_labels.py \
     --dir_split data/train/${dir_split} \
     --hypo_name /$hypo_name \
@@ -328,7 +328,7 @@ fi
 # "hypo_name" is the path for output hypothesis and "dir" is the path where we train and store the model.
 # For each gpu, you can run with different job_num to perform data-wise parallel computing.
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-  echo "********stage 6 start time : $now ********"
+  echo "********step 6 start time : $now ********"
   chunk_size=-1
   mode="attention_rescoring"
   test_dir=$dir/test_${mode}_${job_num}
@@ -358,7 +358,7 @@ fi
 # Calculate cer-label between true label and hypothesis with language model.
 # You can use the output cer to evaluate NST's performance.
 if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ] && [ ${label} -eq 1 ]; then
-  echo "********stage 7 start time : $now ********"
+  echo "********step 7 start time : $now ********"
   chunk_size=-1
   mode="attention_rescoring"
   test_dir=$dir/test_${mode}_${job_num}
@@ -387,7 +387,7 @@ fi
 
 
 if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
-  echo "********stage 8 start time : $now ********"
+  echo "********step 8 start time : $now ********"
   python local/generate_filtered_pseudo_label.py  \
     --cer_hypo_dir $cer_hypo_dir \
     --untar_dir $untar_dir \
