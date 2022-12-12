@@ -21,6 +21,7 @@ def get_args():
     parser.add_argument('--supervised_data_list',
                         help='path for supervised data list')
     parser.add_argument('--pseudo_data_ratio',
+                        type=float,
                         help='ratio of pseudo data, '
                              '0 means none pseudo data, '
                              '1 means all using pseudo data.')
@@ -29,7 +30,7 @@ def get_args():
     return args
 
 
-#python generate_data_list.py --tar_dir wenet_1k_tar_10_11_nss7 --supervised_data_list data/train/data_aishell.list --pseudo_data_ratio 0.75 --out_data_list test_g1.list
+#python local/generate_data_list.py --tar_dir wenet_1k_tar_10_11_nss7 --out_data_list test_g1.list --supervised_data_list data/train/data_aishell.list --pseudo_data_ratio 0.75
 
 def main():
     args = get_args()
