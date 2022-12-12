@@ -56,11 +56,14 @@ def main():
         super_to_pseudo_datio = (1 - pseudo_data_ratio) / pseudo_data_ratio
         pseudo_len = int(supervised_len / super_to_pseudo_datio)
 
+    for i in range(len(pseudo_data_list)):
+        pseudo_data_list[i] + target_dir + "/" + pseudo_data_list[i] + "\n"
+
     fused_list = pseudo_data_list[:pseudo_len] + supervised_data_list[:supervised_len]
 
     with open(output_file, "w") as writer:
         for line in fused_list:
-            writer.write(target_dir + "/" + line + "\n")
+            writer.write(line)
 
 
 if __name__ == '__main__':
