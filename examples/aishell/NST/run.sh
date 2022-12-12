@@ -41,7 +41,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     # Rank of each gpu/process used for knowing whether it is
     # the master of a worker.
 
-    bash run_nst.sh --dir exp/conformer_nst1 \
+    bash run_nst.sh --dir exp/conformer_nst${i} \
       --supervised_data_list data_aishell.list \
       --data_list wenet_1khr_nst${i}.list \
       --enable_nst 1 \

@@ -37,7 +37,7 @@ def main():
     output_file = args.out_data_list
     pseudo_data_ratio = args.pseudo_data_ratio
     supervised_path = args.supervised_data_list
-    with open(supervised_path,"r") as reader:
+    with open(supervised_path, "r") as reader:
         supervised_data_list = reader.readlines()
     pseudo_len = len(pseudo_data_list)
     supervised_len = len(supervised_data_list)
