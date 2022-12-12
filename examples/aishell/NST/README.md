@@ -64,12 +64,12 @@ bash run.sh --stage 1 --stop-stage 1 --dir exp/conformer_test_fully_supervised -
 - `out_data_list` is the pseudo label data list file path.
 - `enable_nst` indicates whether we train with pseudo label and split data, for initial teacher we set it to 0.
 - This recipe uses the default `num_split=1` while we strongly recommend use larger number to decrease the inference and shards generation time.
-> **HINTS** If num_split is set to N larger than 1, you need to modify the script in step 4-8 in run_nst.sh to submit N tasks into your own clusters (such as slurm,ngc etc..). 
+> **HINTS** If num_split is set to N larger than 1, you need to modify the script in step 4-8 in run_nst.sh to submit N tasks into your own clusters (such as slurm,ngc etc..).
 > We strongly recommend to do so since inference and pseudo-data generation is time-consuming.
 
 ### Noisy student interations
 
-After finishing the initial fully supervised baseline, we now have the mixed list contains both supervised and pseudo data which is `wenet_1khr_nst0.list`. 
+After finishing the initial fully supervised baseline, we now have the mixed list contains both supervised and pseudo data which is `wenet_1khr_nst0.list`.
 We will use it as the `data_list` in the training step and the `data_list` for next NST iteration will be generated.
 
 Here is an example command:
@@ -77,9 +77,8 @@ Here is an example command:
 ```bash
 bash run.sh --stage 2 --stop-stage 2 --iter_num 2
 ```
- 
-Here we add extra argument `iter_num` for number of NST iterations. Intermediate files are named with `iter_num` as a 
-suffix.
+
+Here we add extra argument `iter_num` for number of NST iterations. Intermediate files are named with `iter_num` as a suffix.
 you can check `run.sh` and `run_nst.sh` for more information about each stage and their arguments.
 
 ## Performance Record
