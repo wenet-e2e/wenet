@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-number_of_iter=2
+iter_num=2
 stage=1
 stop_stage=1
 pseudo_data_ratio=0.75
@@ -35,7 +35,7 @@ fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo "********stage 2 ********"
-  for ((i = 0; i < $number_of_iter; ++i)); do
+  for ((i = 0; i < $iter_num; ++i)); do
   {
     echo "******** nst iteration number $i ********"
     # Rank of each gpu/process used for knowing whether it is
