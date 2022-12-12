@@ -19,7 +19,7 @@ Here, we provide a recipe to run NST with `LM filter` strategy using AISHELL-1 a
 ## Guideline
 
 
-First, you have to prepare supervised and unsupervised data for NST, and then in stage 1 of run.sh, you will train an initial supervised teacher and generate pseudo labels for unsupervised data. 
+First, you have to prepare supervised and unsupervised data for NST, and then in stage 1 of run.sh, you will train an initial supervised teacher and generate pseudo labels for unsupervised data.
 After that, you can run the noisy student training iteratively in stage 2 .
 ![plot](local/NST_plot.png)
 ### Data preparation
