@@ -43,7 +43,6 @@ data/
 - Files `*.list` contain paths for all the data shards for training.
 - A Json file containing the audio length should be prepared as `utter_time.json` if you want to apply the `speaking rate` filter.
 - A wav_dir contains all the audio data (id.wav) and labels (id.txt which is optional) for unsupervised data.
-> **HINTS** We include a tiny example under `data_example` to make it clearer for reproduction.
 
 ### Initial supervised teacher
 
