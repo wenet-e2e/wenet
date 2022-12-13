@@ -34,7 +34,6 @@ stop_stage=8
 # here are extra parameters used in NST
 cer_out_dir=""
 dir=""
-pseudo_data_list=""
 supervised_data_list=""
 checkpoint=
 unsupervised_data_list=""
@@ -93,7 +92,6 @@ decode_modes="attention_rescoring"
 # print the settings
 echo "setting for this run:"
 echo "dir is ${dir}"
-echo "pseudo data list is ${pseudo_data_list}"
 echo "data list is ${data_list}"
 echo "job_num is ${job_num}"
 echo "cer_out_dir is  ${cer_out_dir}"
@@ -250,7 +248,7 @@ fi
 # when making inference, we compute N sublist in parallel.
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ] && [ ${enable_nst} -eq 0 ]; then
   echo "********step 3 start time : $now ********"
-  python split_data_list.py \
+  python local/split_data_list.py \
     --job_nums $num_split \
     --data_list_path data/train/$unsupervised_data_list \
     --output_dir data/train/$dir_split
@@ -390,13 +388,13 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   echo "********step 8 start time : $now ********"
   python local/generate_filtered_pseudo_label.py  \
     --cer_hypo_dir $cer_hypo_dir \
-    --untar_dir $untar_dir \
+    --untar_dir data/train/$untar_dir \
     --wav_dir $wav_dir \
     --dir_num $job_num \
-    --cer_hypo_threshold $cer_hypo_threshold\
+    --cer_hypo_threshold $cer_hypo_threshold \
     --speak_rate_threshold $speak_rate_threshold \
     --dir $dir \
-    --tar_dir $tar_dir \
+    --tar_dir data/train/$tar_dir \
     --utter_time_file $utter_time_file
 
   python local/generate_data_list.py  \

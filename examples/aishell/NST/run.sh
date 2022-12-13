@@ -55,9 +55,9 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       --job_num 0 \
       --num_split $num_split \
       --hypo_name hypothesis_nst${i+1}.txt \
-      --untar_dir data/train/wenet_1khr_untar_nst${i+1}/ \
-      --tar_dir data/train/wenet_1khr_tar_nst${i+1}/ \
-      --out_data_list data/train/wenet_1khr_nst${i+1}.list \
+      --untar_dir wenet_1khr_untar_nst${i+1}/ \
+      --tar_dir wenet_1khr_tar_nst${i+1}/ \
+      --out_data_list wenet_1khr_nst${i+1}.list \
       --pseudo_data_ratio $pseudo_data_ratio
 
   }
