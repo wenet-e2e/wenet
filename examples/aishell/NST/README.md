@@ -66,7 +66,7 @@ bash run.sh --stage 1 --stop-stage 1 --dir exp/conformer_test_fully_supervised -
 - `out_data_list` is the pseudo label data list file path.
 - `enable_nst` indicates whether we train with pseudo label and split data, for initial teacher we set it to 0.
 - This recipe uses the default `num_split=1` while we strongly recommend use larger number to decrease the inference and shards generation time.
-> **HINTS** If num_split is set to N larger than 1, you need to modify the script in step 4-8 in run_nst.sh to submit N tasks into your own clusters (such as slurm,ngc etc..). 
+> **HINTS** If num_split is set to N larger than 1, you need to modify the script in step 4-8 in run_nst.sh to submit N tasks into your own clusters (such as slurm,ngc etc..).
 > We strongly recommend to do so since inference and pseudo-data generation is time-consuming.
 
 ### Noisy student interations
