@@ -243,6 +243,7 @@ class SqueezeformerEncoder(nn.Module):
                     chunk_masks = recover_chunk_masks
                     pos_emb = recover_pos_emb
                     mask_pad = recover_mask_pad
+                    xs = xs.masked_fill(~chunk_masks[:, 0, :].unsqueeze(-1), 0.0)
 
             xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
 
