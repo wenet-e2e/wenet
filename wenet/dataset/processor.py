@@ -49,7 +49,7 @@ def url_opener(data):
                 stream = open(url, 'rb')
             # network file, such as HTTP(HDFS/OSS/S3)/HTTPS/SCP
             else:
-                cmd = f'curl -s -L {url}'
+                cmd = f'wget -q -O - {url}'
                 process = Popen(cmd, shell=True, stdout=PIPE)
                 sample.update(process=process)
                 stream = process.stdout
