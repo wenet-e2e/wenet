@@ -376,7 +376,8 @@ class SqueezeformerEncoder(nn.Module):
                     att_mask = recover_att_mask
                     pos_emb = recover_pos_emb
                     mask_pad = recover_mask_pad
-                    xs = xs.masked_fill(~att_mask[:, 0, :].unsqueeze(-1), 0.0)
+                    if att_mask.size(1) != 0:
+                        xs = xs.masked_fill(~att_mask[:, 0, :].unsqueeze(-1), 0.0)
 
             factor = self.calculate_downsampling_factor(i)
 
