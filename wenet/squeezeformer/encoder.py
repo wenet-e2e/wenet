@@ -113,6 +113,7 @@ class SqueezeformerEncoder(nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
+        self.pos_enc_layer_type = pos_enc_layer_type
         activation = get_activation(activation_type)
 
         # self-attention module definition
@@ -236,7 +237,7 @@ class SqueezeformerEncoder(nn.Module):
                      recover_pos_emb, recover_mask_pad) \
                         = recover_activations[index]
                     # recover output length for ctc decode
-                    xs = torch.repeat_interleave(xs, repeats=2, dim=1)
+                    xs = xs.unsqueeze(2).repeat(1, 1, 2, 1).flatten(1, 2)
                     xs = self.time_recover_layer(xs)
                     recoverd_t = recover_tensor.size(1)
                     xs = recover_tensor + xs[:, :recoverd_t, :].contiguous()
