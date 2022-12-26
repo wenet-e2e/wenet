@@ -188,7 +188,7 @@ class StreamingEncoder(torch.nn.Module):
 
 
         return log_probs, log_probs_idx, chunk_out, chunk_out_lens, \
-               r_offset, r_att_cache, r_cnn_cache, r_cache_mask
+            r_offset, r_att_cache, r_cnn_cache, r_cache_mask
 
 
 class StreamingSqueezeformerEncoder(torch.nn.Module):
@@ -281,7 +281,7 @@ class StreamingSqueezeformerEncoder(torch.nn.Module):
         # chunk mask is important for batch inferencing since
         # different sequence in a batch has different length
         xs, pos_emb, chunk_mask = self.embed(xs, chunk_mask, offset)
-        elayers, cache_size = att_cache.size(0), att_cache.size(3)  # required cache size
+        elayers, cache_size = att_cache.size(0), att_cache.size(3)
         att_mask = torch.cat((cache_mask, chunk_mask), dim=2)
         index = offset - cache_size
 
@@ -309,7 +309,8 @@ class StreamingSqueezeformerEncoder(torch.nn.Module):
                 if self.time_reduce is not None and i in self.reduce_idx:
                     recover_activations.append((xs, att_mask, pos_emb, mask_pad))
                     xs, xs_lens, att_mask, mask_pad = \
-                        self.encoder.time_reduction_layer(xs, xs_lens, att_mask, mask_pad)
+                        self.encoder.time_reduction_layer(
+                            xs, xs_lens, att_mask, mask_pad)
                     pos_emb = pos_emb[:, ::2, :]
                     if self.encoder.pos_enc_layer_type == "rel_pos_repaired":
                         pos_emb = pos_emb[:, :xs.size(1) * 2 - 1, :]
@@ -542,9 +543,11 @@ def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
     num_decoding_left_chunks = args.num_decoding_left_chunks
     required_cache_size = decoding_chunk_size * num_decoding_left_chunks
     if configs['encoder'] == 'squeezeformer':
-        encoder = StreamingSqueezeformerEncoder(model, required_cache_size, args.beam_size)
+        encoder = StreamingSqueezeformerEncoder(
+            model, required_cache_size, args.beam_size)
     else:
-        encoder = StreamingEncoder(model, required_cache_size, args.beam_size, transformer)
+        encoder = StreamingEncoder(
+            model, required_cache_size, args.beam_size, transformer)
     encoder.eval()
 
     # begin to export encoder
