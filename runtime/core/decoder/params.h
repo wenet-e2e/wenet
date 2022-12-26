@@ -141,7 +141,7 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   } else if (!FLAGS_model_path.empty()) {
 #ifdef USE_TORCH
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
-    if (FLAGS_model_type.compare("efficient_model") == 0){
+    if (FLAGS_model_type.compare("efficient_model") == 0) {
         TorchAsrModelEfficient::InitEngineThreads(kNumGemmThreads);
         auto model = std::make_shared<TorchAsrModelEfficient>();
         model->Read(FLAGS_model_path);

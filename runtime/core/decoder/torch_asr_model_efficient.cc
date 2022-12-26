@@ -81,7 +81,8 @@ void TorchAsrModelEfficient::Read(const std::string& model_path) {
   VLOG(1) << "\tis bidirectional decoder " << is_bidirectional_decoder_;
 }
 
-TorchAsrModelEfficient::TorchAsrModelEfficient(const TorchAsrModelEfficient& other) {
+TorchAsrModelEfficient::TorchAsrModelEfficient(
+    const TorchAsrModelEfficient& other) {
   // 1. Init the model info
   right_context_ = other.right_context_;
   subsampling_rate_ = other.subsampling_rate_;
@@ -114,11 +115,10 @@ void TorchAsrModelEfficient::Reset() {
   cnn_cache_ = std::move(torch::zeros({0, 0, 0, 0}));
   att_cache_shape_ = std::move(torch::ones({0, 0}));
   cnn_cache_shape_ = std::move(torch::ones({0, 0}));
-  //auto tmp_shape =  model_ -> run_method("reset_cache");
-  //VLOG(1) << "shape print: "<< tmp_shape;
+  // auto tmp_shape =  model_ -> run_method("reset_cache");
+  // VLOG(1) << "shape print: "<< tmp_shape;
   encoder_outs_.clear();
   cached_feature_.clear();
-
 }
 
 void TorchAsrModelEfficient::ForwardEncoderFunc(
@@ -154,7 +154,8 @@ void TorchAsrModelEfficient::ForwardEncoderFunc(
   int required_cache_size = chunk_size_ * num_left_chunks_;
   torch::NoGradGuard no_grad;
   std::vector<torch::jit::IValue> inputs = {feats, offset_, required_cache_size,
-                                            att_cache_, cnn_cache_, att_cache_shape_, cnn_cache_shape_};
+                                            att_cache_, cnn_cache_,
+                                            att_cache_shape_, cnn_cache_shape_};
 
   // Refer interfaces in wenet/transformer/asr_model.py
   auto outputs =
@@ -173,8 +174,8 @@ void TorchAsrModelEfficient::ForwardEncoderFunc(
   att_cache_shape_ = outputs[3].toTensor();
   cnn_cache_shape_ = outputs[4].toTensor();
 #endif
-  //offset_ += chunk_out.size(1);
-  //modifier offset for efficient conformer
+  // offset_ += chunk_out.size(1);
+  // modifier offset for efficient conformer
   int t_hat = floor((floor((feats.size(1) - 1)/2) - 1)/2);
   offset_ += t_hat;
 

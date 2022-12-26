@@ -119,14 +119,13 @@ class MultiHeadedAttention(nn.Module):
 
         p_attn = self.dropout(attn)
         x = torch.matmul(p_attn, value)  # (batch, head, time1, d_k)
-        # x = (x.transpose(1, 2).contiguous().view(n_batch, -1,
-        #                                          self.h * self.d_k)
-        #      )  # (batch, time1, d_model)
+
+        # n_feat!=h*d_k may be happened in GroupAttention
         x = (x.transpose(1, 2).contiguous().view(n_batch, -1, self.n_feat)
-             )  # (batch, time1, d_model)  n_feat != h * d_k may be happened in GroupAttention
+             )  # (batch, time1, d_model)
         if padding_q is not None:
             # for GroupedAttention in efficent conformer
-            x = x[:, :x.size(1) - padding_q ]
+            x = x[:, :x.size(1) - padding_q]
 
         return self.linear_out(x)  # (batch, time1, d_model)
 
@@ -301,9 +300,9 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         # May be k and p does not match.  eg. time2=18+18/2=27 > mask=36/2=18
         if mask is not None and mask.size(2) > 0:
             time2 = mask.size(2)
-            k = k[:,:,-time2:,:]
-            v = v[:,:,-time2:,:]
-            p = p[:,:,-time2:,:]
+            k = k[:, :, -time2:, :]
+            v = v[:, :, -time2:, :]
+            p = p[:, :, -time2:, :]
 
         # (batch, head, time1, d_k)
         q_with_bias_u = (q + self.pos_bias_u).transpose(1, 2)
@@ -389,8 +388,10 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         overflow_Q = Q.size(2) % group_size
         overflow_KV = K.size(2) % group_size
 
-        padding_Q = (group_size - overflow_Q) * int(overflow_Q // (overflow_Q + 0.00000000000000001))
-        padding_KV = (group_size - overflow_KV) * int(overflow_KV // (overflow_KV + 0.00000000000000001))
+        padding_Q = (group_size - overflow_Q) * int(
+            overflow_Q // (overflow_Q + 0.00000000000000001))
+        padding_KV = (group_size - overflow_KV) * int(
+            overflow_KV // (overflow_KV + 0.00000000000000001))
 
         batch_size, _, seq_len_KV, _ = K.size()
 
@@ -402,9 +403,12 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         if mask is not None and mask.size(2) > 0 :  # time2 > 0:
             mask = mask[:, ::group_size, ::group_size]
 
-        Q = Q.transpose(1,2).contiguous().view(batch_size, -1, self.h, self.d_k * group_size).transpose(1,2)
-        K = K.transpose(1,2).contiguous().view(batch_size, -1, self.h, self.d_k * group_size).transpose(1,2)
-        V = V.transpose(1,2).contiguous().view(batch_size, -1, self.h, self.d_k * group_size).transpose(1,2)
+        Q = Q.transpose(1, 2).contiguous().view(
+            batch_size, -1, self.h, self.d_k * group_size).transpose(1, 2)
+        K = K.transpose(1, 2).contiguous().view(
+            batch_size, -1, self.h, self.d_k * group_size).transpose(1, 2)
+        V = V.transpose(1, 2).contiguous().view(
+            batch_size, -1, self.h, self.d_k * group_size).transpose(1, 2)
 
         # process pos_emb
         P_batch_size = P.size(0)
@@ -440,9 +444,9 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
                 and `head * d_k == size`
         """
         q = self.linear_q(query)
-        k = self.linear_k(key)  # (#batch, time2, size).
+        k = self.linear_k(key)          # (#batch, time2, size)
         v = self.linear_v(value)
-        p = self.linear_pos(pos_emb) # (#batch, time2, size)
+        p = self.linear_pos(pos_emb)    # (#batch, time2, size)
 
         batch_size, seq_len_KV, _ = k.size()  # seq_len_KV = time2
 
@@ -461,15 +465,16 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         # May be k and p does not match.  eg. time2=18+18/2=27 > mask=36/2=18
         if mask is not None and mask.size(2) > 0:
             time2 = mask.size(2)
-            k = k[:,:,-time2:,:]
-            v = v[:,:,-time2:,:]
+            k = k[:, :, -time2:, :]
+            v = v[:, :, -time2:, :]
 
         # q k v p: (batch, head, time1, d_k)
         q, k, v, p, mask, padding_q = self.pad4group(q, k, v, p, mask, self.group_size)
 
+        # q_with_bias_u & q_with_bias_v = (batch, head, time1, d_k)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
-        q_with_bias_u = (q + self.pos_bias_u).transpose(1, 2)  # (batch, head, time1, d_k)
-        q_with_bias_v = (q + self.pos_bias_v).transpose(1, 2)  # (batch, head, time1, d_k)
+        q_with_bias_u = (q + self.pos_bias_u).transpose(1, 2)
+        q_with_bias_v = (q + self.pos_bias_v).transpose(1, 2)
 
         # compute attention score
         # first compute matrix a and matrix c

@@ -148,7 +148,8 @@ class StrideConformerEncoderLayer(nn.Module):
                 x = self.norm_conv(x)
             x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache)
 
-            # add pointwise_conv for efficient conformer (pointwise_conv_layer does not change shape)
+            # add pointwise_conv for efficient conformer
+            #   pointwise_conv_layer does not change shape
             if self.pointwise_conv_layer is not None:
                 residual = residual.transpose(1, 2)
                 residual = self.pointwise_conv_layer(residual)

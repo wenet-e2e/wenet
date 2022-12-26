@@ -66,8 +66,8 @@ class TorchAsrModelEfficient : public AsrModel {
   // conformer-only conv_module cache
   torch::Tensor cnn_cache_ = torch::zeros({0, 0, 0, 0});
   // efficient conformer cache shape
-  torch::Tensor att_cache_shape_ = torch::ones({0,0});
-  torch::Tensor cnn_cache_shape_ = torch::ones({0,0});
+  torch::Tensor att_cache_shape_ = torch::ones({0, 0});
+  torch::Tensor cnn_cache_shape_ = torch::ones({0, 0});
 };
 
 }  // namespace wenet

@@ -122,8 +122,9 @@ class ConvolutionModule(nn.Module):
                 x = nn.functional.pad(x, (self.lorder, 0), 'constant', 0.0)
             else:
                 # When export ONNX，the first cache is not None but all-zero,
-                # cause shape error in residual block, eg. cache14 + x9 = 23, 23-7+1=17 != 9
-                cache = cache[:,:,-self.lorder:]
+                # cause shape error in residual block,
+                #   eg. cache14 + x9 = 23, 23-7+1=17 != 9
+                cache = cache[:, :, -self.lorder:]
                 assert cache.size(0) == x.size(0)  # equal batch
                 assert cache.size(1) == x.size(1)  # equal channel
                 x = torch.cat((cache, x), dim=2)

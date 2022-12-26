@@ -75,4 +75,3 @@ class Conv2dSubsampling2(BaseSubsampling):
         x = self.out(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
         return x, pos_emb, x_mask[:, :, :-2:2]
-

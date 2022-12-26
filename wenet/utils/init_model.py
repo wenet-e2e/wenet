@@ -53,10 +53,11 @@ def init_model(configs):
                                        **configs['encoder_conf'])
     elif encoder_type == 'efficientConformer':
         encoder = EfficientConformerEncoder(input_dim,
-                                       global_cmvn=global_cmvn,
-                                       **configs['encoder_conf'],
-                                       **configs['encoder_conf']['efficient_conf']
-                                         if 'efficient_conf' in configs['encoder_conf'] else {})
+                                            global_cmvn=global_cmvn,
+                                            **configs['encoder_conf'],
+                                            **configs['encoder_conf']['efficient_conf']
+                                            if 'efficient_conf' in
+                                               configs['encoder_conf'] else {})
     else:
         encoder = TransformerEncoder(input_dim,
                                      global_cmvn=global_cmvn,
@@ -103,10 +104,10 @@ def init_model(configs):
                            **configs['model_conf'])
     elif encoder_type == 'efficientConformer':
         model = EfficientASRModel(vocab_size=vocab_size,
-                         encoder=encoder,
-                         decoder=decoder,
-                         ctc=ctc,
-                         **configs['model_conf'])
+                                  encoder=encoder,
+                                  decoder=decoder,
+                                  ctc=ctc,
+                                  **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
                          encoder=encoder,

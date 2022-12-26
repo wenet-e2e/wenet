@@ -14,13 +14,12 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 
-from typing import List, Optional, Tuple
+from typing import Tuple
 
 import torch
 
 from wenet.transformer.ctc import CTC
-from wenet.transformer.decoder import (TransformerDecoder,
-                                       BiTransformerDecoder)
+from wenet.transformer.decoder import TransformerDecoder
 from wenet.utils.common import IGNORE_ID
 from wenet.transformer.asr_model import ASRModel
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
@@ -54,8 +53,8 @@ class EfficientASRModel(ASRModel):
         required_cache_size: int,
         att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
         cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-        att_cache_shape: torch.Tensor =  torch.ones((0, 0), dtype=torch.int64),
-        cnn_cache_shape: torch.Tensor =  torch.ones((0, 0), dtype=torch.int64),
+        att_cache_shape: torch.Tensor = torch.ones((0, 0), dtype=torch.int64),
+        cnn_cache_shape: torch.Tensor = torch.ones((0, 0), dtype=torch.int64),
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Export interface for c++ call, give input chunk xs, and return
             output from time 0 to current chunk.
