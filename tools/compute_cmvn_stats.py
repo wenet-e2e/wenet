@@ -46,12 +46,12 @@ class CollateFunc(object):
             else:
                 waveform, sample_rate = torchaudio.load(item[1])
 
-            waveform = waveform * (1 << 15)
             if self.resample_rate != 0 and self.resample_rate != sample_rate:
                 resample_rate = self.resample_rate
                 waveform = torchaudio.transforms.Resample(
                     orig_freq=sample_rate, new_freq=resample_rate)(waveform)
 
+            waveform = waveform * (1 << 15)
             mat = kaldi.fbank(waveform,
                               num_mel_bins=self.feat_dim,
                               dither=0.0,
