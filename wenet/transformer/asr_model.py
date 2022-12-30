@@ -253,6 +253,12 @@ class ASRModel(torch.nn.Module):
             scores = scores + top_k_logp  # (B*N, N), broadcast add
             scores = scores.view(batch_size, beam_size * beam_size)  # (B, N*N)
             scores, offset_k_index = scores.topk(k=beam_size)  # (B, N)
+            # Update cache to be consistent with new topk scores / hyps
+            cache_index = (offset_k_index // beam_size).view(-1)  # (B*N)
+            base_cache_index = (torch.arange(batch_size, device=device).view(
+                -1, 1).repeat([1, beam_size]) * beam_size).view(-1)  # (B*N)
+            cache_index = base_cache_index + cache_index
+            cache = [torch.index_select(c, dim=0, index=cache_index) for c in cache]
             scores = scores.view(-1, 1)  # (B*N, 1)
             # 2.4. Compute base index in top_k_index,
             # regard top_k_index as (B*N*N),regard offset_k_index as (B*N),

@@ -21,10 +21,16 @@ pip3 install wenetruntime
 
 ## Usage
 
+Note:
+
+1. For macOS, wenetruntime packed `libtorch.so`, so we can't import torch and wenetruntime at the same time.
+2. For Windows and Linux, wenetruntime depends on torch. Please install and import the same version `torch` as wenetruntime.
+
 ### Non-streaming Usage
 
 ``` python
 import sys
+import torch
 import wenetruntime as wenet
 
 wav_file = sys.argv[1]
@@ -66,6 +72,7 @@ decoder = wenet.Decoder(model_dir,
 
 ``` python
 import sys
+import torch
 import wave
 import wenetruntime as wenet
 
@@ -91,7 +98,7 @@ You can use the same parameters as we introduced above to control the behavior o
 ## Build on Your Local Machine
 
 ``` sh
-git clone git@github.com:wenet-e2e/wenet.git
+git clone https://github.com/wenet-e2e/wenet.git
 cd wenet/runtime/binding/python
 python setup.py install
 ```
