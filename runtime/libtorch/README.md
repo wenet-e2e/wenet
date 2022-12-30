@@ -166,29 +166,3 @@ wav_path=your_test_wav_path
     --wav_path $wav_path 2>&1 | tee client.log
 ```
 
-### gRPC for Efficient Conformer
-
-```sh
-export GLOG_logtostderr=1
-export GLOG_v=1
-
-# use conformer, model_type default is asr_model
-model_dir=../../examples/aishell/s0/exp/20210601_u2++_conformer_exp
-./build/bin/grpc_server_main \
-  --port 10080 \
-  --workers 3 \
-  --model_type asr_model \
-  --chunk_size -1 \
-  --model_path $model_dir/final_int8.zip \
-  --unit_path $model_dir/words.txt 2>&1 | tee logs/server.log
-
-# use efficient conformer
-model_dir=../../examples/aishell/s0/exp/efficonformer_normal
-./build/bin/grpc_server_main \
-  --port 10080 \
-  --workers 3 \
-  --model_type efficient_model \
-  --chunk_size -1 \
-  --model_path $model_dir/final_int8.zip \
-  --unit_path $model_dir/words.txt 2>&1 | tee logs/server.log
-```

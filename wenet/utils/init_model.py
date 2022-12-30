@@ -24,7 +24,6 @@ from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
-from wenet.efficient_conformer.asr_model import EfficientASRModel
 from wenet.utils.cmvn import load_cmvn
 
 
@@ -102,12 +101,6 @@ def init_model(configs):
                            joint=joint,
                            ctc=ctc,
                            **configs['model_conf'])
-    elif encoder_type == 'efficientConformer':
-        model = EfficientASRModel(vocab_size=vocab_size,
-                                  encoder=encoder,
-                                  decoder=decoder,
-                                  ctc=ctc,
-                                  **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
                          encoder=encoder,

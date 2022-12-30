@@ -27,7 +27,6 @@
 #endif
 #ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
-#include "decoder/torch_asr_model_efficient.h"
 #endif
 #ifdef USE_XPU
 #include "xpu/xpu_asr_model.h"
@@ -41,7 +40,6 @@ DEFINE_int32(device_id, 0, "set XPU DeviceID for ASR model");
 
 // TorchAsrModel flags
 DEFINE_string(model_path, "", "pytorch exported model path");
-DEFINE_string(model_type, "asr_model", "asr_model or efficient_model");
 // OnnxAsrModel flags
 DEFINE_string(onnx_dir, "", "directory where the onnx model is saved");
 // XPUAsrModel flags
@@ -141,17 +139,10 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   } else if (!FLAGS_model_path.empty()) {
 #ifdef USE_TORCH
     LOG(INFO) << "Reading torch model " << FLAGS_model_path;
-    if (FLAGS_model_type.compare("efficient_model") == 0) {
-        TorchAsrModelEfficient::InitEngineThreads(kNumGemmThreads);
-        auto model = std::make_shared<TorchAsrModelEfficient>();
-        model->Read(FLAGS_model_path);
-        resource->model = model;
-    } else {
-        TorchAsrModel::InitEngineThreads(kNumGemmThreads);
-        auto model = std::make_shared<TorchAsrModel>();
-        model->Read(FLAGS_model_path);
-        resource->model = model;
-    }
+    TorchAsrModel::InitEngineThreads(kNumGemmThreads);
+    auto model = std::make_shared<TorchAsrModel>();
+    model->Read(FLAGS_model_path);
+    resource->model = model;
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DTORCH=ON'.";
 #endif

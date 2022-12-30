@@ -17,7 +17,7 @@
 #               Paper(https://arxiv.org/abs/2109.01163)
 
 """Encoder definition."""
-from typing import Tuple
+from typing import Tuple, Optional, List, Union
 
 import torch
 import logging
@@ -28,22 +28,22 @@ from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.embedding import NoPositionalEncoding
-from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.transformer.subsampling import Conv2dSubsampling4
 from wenet.transformer.subsampling import Conv2dSubsampling6
 from wenet.transformer.subsampling import Conv2dSubsampling8
 from wenet.transformer.subsampling import LinearNoSubsampling
-from wenet.efficient_conformer.attention import MultiHeadedAttention
-from wenet.efficient_conformer.attention import RelPositionMultiHeadedAttention
-from wenet.efficient_conformer.convolution import ConvolutionModule
+from wenet.transformer.attention import MultiHeadedAttention
+from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
+
+from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
+from wenet.efficient_conformer.convolution import ConvolutionModule
+from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
+from wenet.efficient_conformer.encoder_layer import StrideConformerEncoderLayer
 
 from wenet.utils.common import get_activation
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
-
-from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
-from wenet.efficient_conformer.encoder_layer import StrideConformerEncoderLayer
 
 
 class EfficientConformerEncoder(torch.nn.Module):
@@ -66,43 +66,34 @@ class EfficientConformerEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
-        positionwise_conv_kernel_size: int = 1,
         macaron_style: bool = True,
-        selfattention_layer_type: str = "rel_selfattn",
         activation_type: str = "swish",
         use_cnn_module: bool = True,
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
-        stride_layer_idx: list = (3),
-        stride: list = (2),
-        group_layer_idx: list = (0, 1, 2, 3),
+        stride_layer_idx: Optional[Union[int, List[int]]] = 3,
+        stride: Optional[Union[int, List[int]]] = 2,
+        group_layer_idx: Optional[Union[int, List[int], tuple]] = (0, 1, 2, 3),
         group_size: int = 3,
         stride_kernel: bool = True,
-        efficient_conf=None
+        **kwargs
     ):
         """Construct Efficient Conformer Encoder
 
         Args:
             input_size to use_dynamic_chunk, see in BaseEncoder
-            positionwise_conv_kernel_size (int): Kernel size of positionwise
-                conv1d layer.
             macaron_style (bool): Whether to use macaron style for
                 positionwise layer.
-            selfattention_layer_type (str): Encoder attention layer type,
-                the parameter has no effect now, it's just for configure
-                compatibility.
             activation_type (str): Encoder activation function type.
             use_cnn_module (bool): Whether to use convolution module.
             cnn_module_kernel (int): Kernel size of convolution module.
             causal (bool): whether to use causal convolution or not.
-
-            stride_layer_idx (list): layer id with StrideConv
+            stride_layer_idx (list): layer id with StrideConv, start from 0
             stride (list): stride size of each StrideConv in efficient conformer
-            group_layer_idx (list): layer id with GroupedAttention
+            group_layer_idx (list): layer id with GroupedAttention, start from 0
             group_size (int): group size of every GroupedAttention layer
             stride_kernel (bool): default True. True: recompute cnn kernels with stride.
-            efficient_conf (dict):
         """
         assert check_argument_types()
         super().__init__()
@@ -154,20 +145,26 @@ class EfficientConformerEncoder(torch.nn.Module):
         self.global_chunk_size = 0
 
         # efficient conformer configs
-        assert len(stride) == len(stride_layer_idx)
+        self.stride_layer_idx = [stride_layer_idx] \
+            if type(stride_layer_idx) == int else stride_layer_idx
+        self.stride = [stride] \
+            if type(stride) == int else stride
+        self.group_layer_idx = [group_layer_idx] \
+            if type(group_layer_idx) == int else group_layer_idx
+        self.grouped_size = group_size    # group size of every GroupedAttention layer
+
+        assert len(self.stride) == len(self.stride_layer_idx)
         self.cnn_module_kernels = [cnn_module_kernel]  # kernel size of each StridedConv
-        for i in stride:
+        for i in self.stride:
             if stride_kernel:
                 self.cnn_module_kernels.append(self.cnn_module_kernels[-1] // i)
             else:
                 self.cnn_module_kernels.append(self.cnn_module_kernels[-1])
-        logging.info(f"stride_layer_idx= {stride_layer_idx}, stride = {stride}, "
-                     f"cnn_module_kernel = {self.cnn_module_kernels}")
-        self.stride_layer_idx = stride_layer_idx   # layer id with StrideConv
-        self.stride = stride                       # stride size of each StrideConv
-        self.group_layer_idx = group_layer_idx     # layer id with GroupedAttention
-        self.grouped_size = group_size    # group size of every GroupedAttention layer
-        logging.info(f"group_layer_idx = {group_layer_idx}, "
+
+        logging.info(f"stride_layer_idx= {self.stride_layer_idx}, "
+                     f"stride = {self.stride}, "
+                     f"cnn_module_kernel = {self.cnn_module_kernels}, "
+                     f"group_layer_idx = {self.group_layer_idx}, "
                      f"grouped_size = {self.grouped_size}")
 
         # feed-forward module definition
@@ -208,9 +205,7 @@ class EfficientConformerEncoder(torch.nn.Module):
                 # conformer block with downsampling
                 convolution_layer_args_stride = (
                     output_size, self.cnn_module_kernels[index], activation,
-                    cnn_module_norm, causal, True, stride[index])
-                logging.info(f"convolution_layer_args_stride = "
-                             f"{convolution_layer_args_stride}")
+                    cnn_module_norm, causal, True, self.stride[index])
                 layers.append(StrideConformerEncoderLayer(
                     output_size,
                     encoder_selfattn_layer(*encoder_selfattn_layer_args),
@@ -220,8 +215,9 @@ class EfficientConformerEncoder(torch.nn.Module):
                     convolution_layer(
                         *convolution_layer_args_stride) if use_cnn_module else None,
                     torch.nn.AvgPool1d(
-                        kernel_size=stride[index], stride=stride[index],
-                        padding=0, ceil_mode=True, count_include_pad=False),
+                        kernel_size=self.stride[index], stride=self.stride[index],
+                        padding=0, ceil_mode=True,
+                        count_include_pad=False),   # pointwise_conv_layer
                     dropout_rate,
                     normalize_before,
                     concat_after,
@@ -232,8 +228,6 @@ class EfficientConformerEncoder(torch.nn.Module):
                 convolution_layer_args_normal = (
                     output_size, self.cnn_module_kernels[index], activation,
                     cnn_module_norm, causal)
-                logging.info(f"convolution_layer_args_normal = "
-                             f"{convolution_layer_args_normal}")
                 layers.append(ConformerEncoderLayer(
                     output_size,
                     encoder_selfattn_layer(*encoder_selfattn_layer_args),
@@ -257,6 +251,13 @@ class EfficientConformerEncoder(torch.nn.Module):
 
     def output_size(self) -> int:
         return self._output_size
+
+    def calculate_downsampling_factor(self, i: int) -> int:
+        factor = 1
+        for idx, stride_idx in enumerate(self.stride_layer_idx):
+            if i > stride_idx:
+                factor *= self.stride[idx]
+        return factor
 
     def forward(self,
                 xs: torch.Tensor,
@@ -300,12 +301,6 @@ class EfficientConformerEncoder(torch.nn.Module):
             xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
             if i in self.stride_layer_idx:
                 masks = masks[:, :, ::self.stride[index]]
-                # chunk_masks = add_optional_chunk_mask(xs, masks,
-                #                                 self.use_dynamic_chunk,
-                #                                 self.use_dynamic_left_chunk,
-                #                                 decoding_chunk_size,
-                #                                 self.static_chunk_size,
-                #                                num_decoding_left_chunks)
                 chunk_masks = chunk_masks[:, ::self.stride[index],
                                           ::self.stride[index]]
                 mask_pad = masks
@@ -326,10 +321,8 @@ class EfficientConformerEncoder(torch.nn.Module):
         required_cache_size: int,
         att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
         cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-        att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-        att_cache_shape: torch.Tensor = torch.ones((0, 0), dtype=torch.int64),
-        cnn_cache_shape: torch.Tensor = torch.ones((0, 0), dtype=torch.int64),
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Forward just one chunk
 
         Args:
@@ -348,8 +341,6 @@ class EfficientConformerEncoder(torch.nn.Module):
                 (elayers, b=1, hidden-dim, cache_t2), where
                 `cache_t2 == cnn.lorder - 1`
             att_mask : mask matrix of self attention
-            att_cache_shape :
-            cnn_cache_shape :
 
         Returns:
             torch.Tensor: output of current input xs
@@ -360,6 +351,9 @@ class EfficientConformerEncoder(torch.nn.Module):
 
         """
         assert xs.size(0) == 1
+
+        # using downsampling factor to recover offset
+        offset *= self.calculate_downsampling_factor(self.num_blocks + 1)
 
         # tmp_masks is just for interface compatibility
         tmp_masks = torch.ones(1,
@@ -372,25 +366,13 @@ class EfficientConformerEncoder(torch.nn.Module):
 
         # NOTE(xcsong): Before embed, shape(xs) is (b=1, time, mel-dim)
         xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
-        # NOTE(xcsong): After  embed, shape(xs) is (b=1, chunk_size, hidden-dim)
-        elayers = att_cache.size(0)
-        # cache_t1 = att_cache.size(2)
-        cache_t1 = att_cache_shape[0][2].item() \
-            if att_cache_shape.size(0) > 0 \
-            and att_cache.size(2) > 0 else att_cache.size(2)
-
-        # for ONNX export， padding xs to ChunkSize
-        if self.global_chunk_size > 0:
-            real_len = xs.size(1)
-            xs = F.pad(xs, (0, 0, 0, self.global_chunk_size - real_len), value=0.0)
-            tmp_zeros = torch.zeros(att_mask.shape, dtype=torch.bool)
-            att_mask[:, :, required_cache_size + real_len + 1:] = \
-                tmp_zeros[:, :, required_cache_size + real_len + 1:]
-
+        elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
         chunk_size = xs.size(1)
         attention_key_size = cache_t1 + chunk_size
-        att_cache_padding_len = required_cache_size
-        cnn_cache_padding_len = self.cnn_module_kernel - 1
+        pos_emb = self.embed.position_encoding(
+            offset=offset - cache_t1, size=attention_key_size)
+        # NOTE(xcsong): After  embed, shape(xs) is (b=1, chunk_size, hidden-dim)
+        # shape(pos_emb) = (b=1, chunk_size, emb_size=output_size=hidden-dim)
 
         if required_cache_size < 0:
             next_cache_start = 0
@@ -399,80 +381,76 @@ class EfficientConformerEncoder(torch.nn.Module):
         else:
             next_cache_start = max(attention_key_size - required_cache_size, 0)
 
+        # for ONNX export， padding xs to chunk_size
+        if self.global_chunk_size > 0:
+            real_len = xs.size(1)
+            xs = F.pad(xs, (0, 0, 0, self.global_chunk_size - real_len), value=0.0)
+            tmp_zeros = torch.zeros(att_mask.shape, dtype=torch.bool)
+            att_mask[:, :, required_cache_size + real_len + 1:] = \
+                tmp_zeros[:, :, required_cache_size + real_len + 1:]
+
         r_att_cache = []
         r_cnn_cache = []
-        r_att_cache_shape = torch.ones(self.num_blocks, 4, dtype=torch.int64) * 65535
-        r_cnn_cache_shape = torch.ones(self.num_blocks, 4, dtype=torch.int64) * 65535
-        mask_pad = att_mask[:, :, -chunk_size:]
+        mask_pad = torch.ones(1,
+                              xs.size(1),
+                              device=xs.device,
+                              dtype=torch.bool)
+        mask_pad = mask_pad.unsqueeze(1)    # batchPad (b=1, 1, time=chunk_size)
+        max_att_len, max_cnn_len = 0, 0     # for repeat_interleave of new_att_cache
         for i, layer in enumerate(self.encoders):
-            cache_t1 = att_cache_shape[i][2].item() \
-                if att_cache_shape.size(0) > 0 \
-                and att_cache.size(2) > 0 else att_cache.size(2)
-            pos_emb = self.embed.position_encoding(offset=int(offset - cache_t1)
-                                                   if offset > cache_t1 else 0,
-                                                   size=xs.size(1) + cache_t1)
-
-            # use "att_cache_shape" and "cnn_cache_shape"
-            #   record real shape of "att_cache" and "cnn_cache"
-            if att_cache_shape.size(0) > 0:
-                i_att_cache = att_cache[i:i + 1, :att_cache_shape[i][1],
-                                        :att_cache_shape[i][2],
-                                        :att_cache_shape[i][3]] \
-                    if elayers > 0 else att_cache
-                i_cnn_cache = cnn_cache[i, :cnn_cache_shape[i][1],
-                                        :cnn_cache_shape[i][2],
-                                        :cnn_cache_shape[i][3]] \
-                    if cnn_cache.size(0) > 0 else cnn_cache
-            else:
-                i_att_cache = att_cache[i:i + 1, :, :, :] \
-                    if elayers > 0 else att_cache
-                i_cnn_cache = cnn_cache[i, :, :, :] \
-                    if cnn_cache.size(0) > 0 else cnn_cache
-
-            # old new_att_cache: [ batch, head, time2, outdim//head * 2 ]
-            # new new_att_cache: [ batch, time2, outdim*2 ]
+            factor = self.calculate_downsampling_factor(i)
+            # NOTE(xcsong): Before layer.forward
+            #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
+            #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
+            # shape(new_att_cache) = [ batch, head, time2, outdim//head * 2 ]
             xs, _, new_att_cache, new_cnn_cache = layer(
                 xs, att_mask, pos_emb,
                 mask_pad=mask_pad,
-                att_cache=i_att_cache,
-                cnn_cache=i_cnn_cache)
+                att_cache=att_cache[i:i + 1, :, ::factor, :],
+                cnn_cache=cnn_cache[i, :, :, :]
+                if cnn_cache.size(0) > 0 else cnn_cache
+            )
 
             if i in self.stride_layer_idx:
+                # compute time dimension for next block
                 efficient_index = self.stride_layer_idx.index(i)
                 att_mask = att_mask[:, ::self.stride[efficient_index],
                                     ::self.stride[efficient_index]]
                 mask_pad = mask_pad[:, ::self.stride[efficient_index],
                                     ::self.stride[efficient_index]]
+                pos_emb = pos_emb[:, ::self.stride[efficient_index], :]
 
-            # new_att_cache = [batch, head, time2, outdim]
-            new_att_cache = new_att_cache[:, :, next_cache_start:, :]
-            # new_cnn_cache = [1, batch, outdim, cache_t2]
+            # shape(new_att_cache) = [batch, head, time2, outdim]
+            new_att_cache = new_att_cache[:, :, next_cache_start // factor:, :]
+            # shape(new_cnn_cache) = [1, batch, outdim, cache_t2]
             new_cnn_cache = new_cnn_cache.unsqueeze(0)
 
+            # use repeat_interleave to new_att_cache
+            new_att_cache = new_att_cache.repeat_interleave(repeats=factor, dim=2)
+            # padding new_cnn_cache to cnn.lorder for casual convolution
+            new_cnn_cache = F.pad(
+                new_cnn_cache,
+                (self.cnn_module_kernel - 1 - new_cnn_cache.size(3), 0))
+
+            if i == 0:
+                # record length for the first block as max length
+                max_att_len = new_att_cache.size(2)
+                max_cnn_len = new_cnn_cache.size(3)
+
             # update real shape of att_cache and cnn_cache
-            for ishape in range(len(new_att_cache.shape)):
-                r_att_cache_shape[i][ishape] = new_att_cache.shape[ishape]
-                r_cnn_cache_shape[i][ishape] = new_cnn_cache.shape[ishape]
-            r_att_cache.append(new_att_cache)
-            r_cnn_cache.append(new_cnn_cache)
+            r_att_cache.append(new_att_cache[:, :, -max_att_len:, :])
+            r_cnn_cache.append(new_cnn_cache[:, :, :, -max_cnn_len:])
 
         if self.normalize_before:
             xs = self.after_norm(xs)
 
-        for i in range(len(r_att_cache)):
-            r_att_cache[i] = F.pad(
-                r_att_cache[i],
-                (0, 0, 0, att_cache_padding_len - r_att_cache[i].shape[2]))
-            r_cnn_cache[i] = F.pad(
-                r_cnn_cache[i],
-                (0, cnn_cache_padding_len - r_cnn_cache[i].shape[3]))
-
         # NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),
         #   ? may be larger than cache_t1, it depends on required_cache_size
         r_att_cache = torch.cat(r_att_cache, dim=0)
+        # NOTE(xcsong): shape(r_cnn_cache) is (e, b=1, hidden-dim, cache_t2)
         r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
 
-        return xs, r_att_cache, r_cnn_cache, r_att_cache_shape, r_cnn_cache_shape
+        return xs, r_att_cache, r_cnn_cache
 
     def forward_chunk_by_chunk(
         self,
@@ -530,15 +508,11 @@ class EfficientConformerEncoder(torch.nn.Module):
             cnn_cache: torch.Tensor = torch.zeros(
                 (self.num_blocks, 1, self.output_size(), self.cnn_module_kernel - 1),
                 device=xs.device)
-            att_cache_shape = torch.ones(self.num_blocks, 4, dtype=torch.int64) * 65535
-            cnn_cache_shape = torch.ones(self.num_blocks, 4, dtype=torch.int64) * 65535
             self.set_global_chunk_size(chunk_size=18)
         else:
             logging.info("Simulating for JIT runtime ...")
             att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0), device=xs.device)
             cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0), device=xs.device)
-            att_cache_shape: torch.Tensor = torch.ones((0, 0), dtype=torch.int64)
-            cnn_cache_shape: torch.Tensor = torch.ones((0, 0), dtype=torch.int64)
 
         # Feed forward overlap input step by step
         for cur in range(0, num_frames - context + 1, stride):
@@ -557,29 +531,13 @@ class EfficientConformerEncoder(torch.nn.Module):
                     (0, 0, 0), dtype=torch.bool, device=xs.device)
 
             chunk_xs = xs[:, cur:end, :]
-            (
-                y, att_cache, cnn_cache, att_cache_shape, cnn_cache_shape
-            ) = self.forward_chunk(
-                chunk_xs, offset, required_cache_size,
-                att_cache, cnn_cache,
-                att_mask, att_cache_shape, cnn_cache_shape
-            )
+            (y, att_cache, cnn_cache) = \
+                self.forward_chunk(
+                    chunk_xs, offset, required_cache_size,
+                    att_cache, cnn_cache, att_mask)
             outputs.append(y)
-            if self.input_layer == "linear":
-                t_hat = chunk_xs.size(1)
-            elif self.input_layer == "conv2d2":
-                t_hat = (chunk_xs.size(1) - 1) // 2
-            elif self.input_layer == "conv2d":
-                t_hat = ((chunk_xs.size(1) - 1) // 2 - 1) // 2
-            elif self.input_layer == "conv2d6":
-                t_hat = ((chunk_xs.size(1) - 1) // 2 - 2) // 3
-            elif self.input_layer == "conv2d8":
-                t_hat = (((chunk_xs.size(1) - 1) // 2 - 1) // 2 - 1) // 2
-            else:
-                t_hat = y.size(1)
-            offset += t_hat
+            offset += y.size(1)
 
         ys = torch.cat(outputs, 1)
-        masks = torch.ones(1, ys.size(1), device=ys.device, dtype=torch.bool)
-        masks = masks.unsqueeze(1)
+        masks = torch.ones(1, 1, ys.size(1), device=ys.device, dtype=torch.bool)
         return ys, masks

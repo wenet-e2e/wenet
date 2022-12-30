@@ -3,8 +3,7 @@
 encoder: efficientConformer
 encoder_conf:
     activation_type: 'swish'
-    attention_dropout_rate: 0.0
-    attention_heads: 4
+    attention_heads: 8
     causal: false
     cnn_module_kernel: 15
     cnn_module_norm: 'layer_norm'
@@ -15,8 +14,8 @@ encoder_conf:
     num_blocks: 12
     output_size: 256
     pos_enc_layer_type: 'rel_pos'
+    attention_dropout_rate: 0.1
     positional_dropout_rate: 0.1
-    selfattention_layer_type: 'rel_selfattn'
     use_cnn_module: true
     use_dynamic_chunk: true
     use_dynamic_left_chunk: false
@@ -30,14 +29,14 @@ encoder_conf:
 # decoder related
 decoder: bitransformer
 decoder_conf:
-    attention_heads: 4
+    attention_heads: 8
     dropout_rate: 0.1
     linear_units: 2048
     num_blocks: 3
-    positional_dropout_rate: 0.1
     r_num_blocks: 3
-    self_attention_dropout_rate: 0.0
-    src_attention_dropout_rate: 0.0
+    positional_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.1
+    src_attention_dropout_rate: 0.1
 
 # hybrid CTC/attention
 model_conf:
@@ -52,15 +51,13 @@ dataset_conf:
         batch_size: 16
         batch_type: 'static'
     fbank_conf:
-        dither: 1.0
-        frame_length: 25
-        frame_shift: 10
         num_mel_bins: 80
+        frame_shift: 10
+        frame_length: 25
+        dither: 1.0
     filter_conf:
         max_length: 40960
         min_length: 0
-        max_output_input_ratio: 0.1
-        min_output_input_ratio: 0.005
         token_max_length: 200
         token_min_length: 1
     resample_conf:
@@ -77,6 +74,13 @@ dataset_conf:
         num_f_mask: 2
         max_t: 50
         max_f: 10
+    spec_sub: true
+    spec_sub_conf:
+        num_t_sub: 3
+        max_t: 30
+    spec_trim: false
+    spec_trim_conf:
+        max_t: 50
     speed_perturb: true
 
 grad_clip: 5

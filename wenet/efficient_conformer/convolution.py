@@ -15,7 +15,6 @@
 # Modified from ESPnet(https://github.com/espnet/espnet)
 
 """ConvolutionModule definition."""
-
 from typing import Tuple
 
 import torch
@@ -38,7 +37,7 @@ class ConvolutionModule(nn.Module):
             channels (int): The number of channels of conv layers.
             kernel_size (int): Kernel size of conv layers.
             causal (int): Whether use causal convolution or not
-            stride (int): Stride Convolution, 针对efficient Conformer的修改
+            stride (int): Stride Convolution, for efficient Conformer
         """
         assert check_argument_types()
         super().__init__()
