@@ -75,6 +75,7 @@ class DecoderLayer(nn.Module):
         tgt_mask: torch.Tensor,
         memory: torch.Tensor,
         memory_mask: torch.Tensor,
+        pos_emb: torch.Tensor,
         cache: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute decoded features.
@@ -117,11 +118,13 @@ class DecoderLayer(nn.Module):
 
         if self.concat_after:
             tgt_concat = torch.cat(
-                (tgt_q, self.self_attn(tgt_q, tgt, tgt, tgt_q_mask)[0]), dim=-1)
+                (tgt_q, self.self_attn(
+                    tgt_q, tgt, tgt, tgt_q_mask, pos_emb)[0]),
+                dim=-1)
             x = residual + self.concat_linear1(tgt_concat)
         else:
             x = residual + self.dropout(
-                self.self_attn(tgt_q, tgt, tgt, tgt_q_mask)[0])
+                self.self_attn(tgt_q, tgt, tgt, tgt_q_mask, pos_emb)[0])
         if not self.normalize_before:
             x = self.norm1(x)
 
