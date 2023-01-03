@@ -167,7 +167,7 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
 
     Args:
         pad_outputs (Tensor): Prediction tensors (B * Lmax, D).
-        pad_targets (LongTensor): Target label tensors (B, Lmax, D).
+        pad_targets (LongTensor): Target label tensors (B, Lmax).
         ignore_label (int): Ignore label id.
 
     Returns:
