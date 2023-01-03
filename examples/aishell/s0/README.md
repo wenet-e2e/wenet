@@ -133,3 +133,28 @@
 | ctc prefix beam search | 4.94    | 4.97       |
 | attention rescoring    | 4.61    | 4.69       |
 
+
+## Efficient Conformer v1 Result
+
+* Feature info: using fbank feature, dither, cmvn, online speed perturb
+* Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 200 epochs
+* Decoding info: ctc_weight 0.5, reverse_weight 0.3, average_num 20
+
+| decoding mode          | full | 18   | 16   |
+|------------------------|------|------|------|
+| attention decoder      | 4.99 | 5.13 | 5.16 |
+| ctc prefix beam search | 4.98 | 5.23 | 5.23 |
+| attention rescoring    | 4.64 | 4.86 | 4.85 |
+
+
+## Efficient Conformer v2 Result
+
+* Feature info: using fbank feature, dither, cmvn, online speed perturb
+* Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, 200 epochs
+* Decoding info: ctc_weight 0.5, reverse_weight 0.3, average_num 20
+
+| decoding mode          | full | 18   | 16   |
+|------------------------|------|------|------|
+| attention decoder      | 4.87 | 5.03 | 5.07 |
+| ctc prefix beam search | 4.97 | 5.18 | 5.20 |
+| attention rescoring    | 4.56 | 4.75 | 4.77 |
