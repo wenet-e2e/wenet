@@ -23,6 +23,7 @@ from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
+from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.utils.cmvn import load_cmvn
 
 
@@ -49,6 +50,13 @@ def init_model(configs):
         encoder = SqueezeformerEncoder(input_dim,
                                        global_cmvn=global_cmvn,
                                        **configs['encoder_conf'])
+    elif encoder_type == 'efficientConformer':
+        encoder = EfficientConformerEncoder(input_dim,
+                                            global_cmvn=global_cmvn,
+                                            **configs['encoder_conf'],
+                                            **configs['encoder_conf']['efficient_conf']
+                                            if 'efficient_conf' in
+                                               configs['encoder_conf'] else {})
     else:
         encoder = TransformerEncoder(input_dim,
                                      global_cmvn=global_cmvn,

@@ -1,0 +1,96 @@
+# network architecture
+# encoder related
+encoder: efficientConformer
+encoder_conf:
+    activation_type: 'swish'
+    attention_heads: 8
+    causal: false
+    cnn_module_kernel: 15
+    cnn_module_norm: 'layer_norm'
+    dropout_rate: 0.1
+    input_layer: conv2d
+    linear_units: 2048
+    normalize_before: true
+    num_blocks: 12
+    output_size: 256
+    pos_enc_layer_type: 'rel_pos'
+    attention_dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    use_cnn_module: true
+    use_dynamic_chunk: true
+    use_dynamic_left_chunk: false
+    efficient_conf:
+        stride_layer_idx: [3]           # layer id with StrideConv
+        stride: [2]                     # stride size of each StrideConv
+        group_layer_idx: [0, 1, 2, 3]   # layer id with GroupedAttention
+        group_size: 3                   # group size of every GroupedAttention layer
+        stride_kernel: true             # true: recompute cnn kernels with stride
+
+# decoder related
+decoder: bitransformer
+decoder_conf:
+    attention_heads: 8
+    dropout_rate: 0.1
+    linear_units: 2048
+    num_blocks: 3
+    r_num_blocks: 3
+    positional_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.1
+    src_attention_dropout_rate: 0.1
+
+# hybrid CTC/attention
+model_conf:
+    ctc_weight: 0.3
+    lsm_weight: 0.1     # label smoothing option
+    length_normalized_loss: false
+    reverse_weight: 0.3
+
+# dataset related
+dataset_conf:
+    batch_conf:
+        batch_size: 16
+        batch_type: 'static'
+    fbank_conf:
+        num_mel_bins: 80
+        frame_shift: 10
+        frame_length: 25
+        dither: 1.0
+    filter_conf:
+        max_length: 40960
+        min_length: 0
+        token_max_length: 200
+        token_min_length: 1
+    resample_conf:
+        resample_rate: 16000
+    shuffle: true
+    shuffle_conf:
+        shuffle_size: 1500
+    sort: true
+    sort_conf:
+        sort_size: 500
+    spec_aug: true
+    spec_aug_conf:
+        num_t_mask: 2
+        num_f_mask: 2
+        max_t: 50
+        max_f: 10
+    spec_sub: true
+    spec_sub_conf:
+        num_t_sub: 3
+        max_t: 30
+    spec_trim: false
+    spec_trim_conf:
+        max_t: 50
+    speed_perturb: true
+
+grad_clip: 5
+accum_grad: 1
+max_epoch: 200
+log_interval: 100
+
+optim: adam
+optim_conf:
+    lr: 0.001
+scheduler: warmuplr     # pytorch v1.1.0+ required
+scheduler_conf:
+    warmup_steps: 25000
