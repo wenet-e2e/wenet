@@ -110,6 +110,9 @@ DecodeState AsrDecoder::AdvanceDecoding(bool block) {
   timer.Reset();
   searcher_->Search(ctc_log_probs);
   int search_time = timer.Elapsed();
+  for (int i = 0; i < ctc_log_probs.size(); i++) {
+      ctc_log_probs[i][0] = ctc_log_probs[i][0] + std::log(opts_.ctc_wfst_search_opts.blank_scale);
+  }
   VLOG(3) << "forward takes " << forward_time << " ms, search takes "
           << search_time << " ms";
   UpdateResult();
