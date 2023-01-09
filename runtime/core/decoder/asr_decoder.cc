@@ -108,10 +108,10 @@ DecodeState AsrDecoder::AdvanceDecoding(bool block) {
   model_->ForwardEncoder(chunk_feats, &ctc_log_probs);
   int forward_time = timer.Elapsed();
   if (opts_.ctc_wfst_search_opts.blank_scale != 1.0) {
-      for (int i = 0; i < ctc_log_probs.size(); i++) {
-          ctc_log_probs[i][0] = ctc_log_probs[i][0]
+    for (int i = 0; i < ctc_log_probs.size(); i++) {
+      ctc_log_probs[i][0] = ctc_log_probs[i][0]
                   + std::log(opts_.ctc_wfst_search_opts.blank_scale);
-      }
+    }
   }
   timer.Reset();
   searcher_->Search(ctc_log_probs);
