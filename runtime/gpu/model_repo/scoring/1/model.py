@@ -1,6 +1,7 @@
 import triton_python_backend_utils as pb_utils
 import numpy as np
 import multiprocessing
+from torch.utils.dlpack import from_dlpack
 from swig_decoders import ctc_beam_search_decoder_batch, \
     Scorer, PathTrie, TrieVector, map_batch
 import json
@@ -254,7 +255,11 @@ class TritonPythonModel:
             # Extract the output tensors from the inference response.
             best_index = pb_utils.get_output_tensor_by_name(inference_response,
                                                             'best_index')
-            best_index = best_index.as_numpy()
+            if best_index.is_cpu():
+                best_index = best_index.as_numpy()
+            else:
+                best_index = from_dlpack(best_index.to_dlpack())
+                best_index = best_index.cpu().numpy()
             hyps = []
             idx = 0
             for cands, cand_lens in zip(in_hyps_pad_sos_eos, in_hyps_lens_sos):

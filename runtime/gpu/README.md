@@ -12,7 +12,7 @@ model_dir=<absolute path to>/20211025_conformer_exp
 onnx_model_dir=<absolute path>
 mkdir $onnx_model_dir
 python3 wenet/bin/export_onnx_gpu.py --config=$model_dir/train.yaml --checkpoint=$model_dir/final.pt --cmvn_file=$model_dir/global_cmvn --ctc_weight=0.5 --output_onnx_dir=$onnx_model_dir --fp16
-cp $model_dir/units.txt $model_dir/train.yaml $onnx_model_dir/
+cp $model_dir/words.txt $model_dir/train.yaml $onnx_model_dir/
 ```
 
 If you want to export streaming model (u2/u2++) for streaming inference (inference by chunks) instead of offline inference (inference by audio segments/utterance), you should add `--streaming` option:
