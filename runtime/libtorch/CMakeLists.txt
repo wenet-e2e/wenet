@@ -10,6 +10,7 @@ option(GRPC "whether to build with gRPC" OFF)
 # TODO(Binbin Zhang): Change websocket to OFF since it depends on boost
 #                     which is a very big library
 option(WEBSOCKET "whether to build with websocket" ON)
+option(HTTP "whether to build with http" OFF)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
@@ -62,6 +63,12 @@ endif()
 if(GRPC)
   include(grpc)
   add_subdirectory(grpc)
+endif()
+
+# Optionally, you can build with http
+if(HTTP)
+  include(boost)
+  add_subdirectory(http)
 endif()
 
 # Build all bins
