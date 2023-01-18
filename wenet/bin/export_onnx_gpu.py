@@ -379,12 +379,14 @@ class Decoder(torch.nn.Module):
                  decoder: TransformerDecoder,
                  ctc_weight: float = 0.5,
                  reverse_weight: float = 0.0,
-                 beam_size: int = 10):
+                 beam_size: int = 10,
+                 decoder_fastertransformer: bool = False):
         super().__init__()
         self.decoder = decoder
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
         self.beam_size = beam_size
+        self.decoder_fastertransformer = decoder_fastertransformer
 
     def forward(self,
                 encoder_out: torch.Tensor,
@@ -448,7 +450,10 @@ class Decoder(torch.nn.Module):
         score = torch.sum(score, axis=1)  # B2
         score = torch.reshape(score, (B, bz)) + self.ctc_weight * ctc_score
         best_index = torch.argmax(score, dim=1)
-        return best_index
+        if self.decoder_fastertransformer:
+            return decoder_out, best_index
+        else:
+            return best_index
 
 
 def to_numpy(tensors):
@@ -622,13 +627,14 @@ def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
     }
     return onnx_config
 
-def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
+def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path, decoder_fastertransformer):
     bz, seq_len = 32, 100
     beam_size = args.beam_size
     decoder = Decoder(model.decoder,
                       model.ctc_weight,
                       model.reverse_weight,
-                      beam_size)
+                      beam_size,
+                      decoder_fastertransformer)
     decoder.eval()
 
     hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
@@ -644,6 +650,9 @@ def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
     input_names = ['encoder_out', 'encoder_out_lens',
                    'hyps_pad_sos_eos', 'hyps_lens_sos',
                    'r_hyps_pad_sos_eos', 'ctc_score']
+    output_names = ['best_index']
+    if decoder_fastertransformer:
+        output_names.insert(0, 'decoder_out')
 
     torch.onnx.export(decoder,
                       (encoder_out, encoder_out_lens,
@@ -654,7 +663,7 @@ def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
                       opset_version=13,
                       do_constant_folding=True,
                       input_names=input_names,
-                      output_names=['best_index'],
+                      output_names=output_names,
                       dynamic_axes={'encoder_out': {0: 'B', 1: 'T'},
                                     'encoder_out_lens': {0: 'B'},
                                     'hyps_pad_sos_eos': {0: 'B', 2: 'T2'},
@@ -730,6 +739,9 @@ if __name__ == '__main__':
                         type=int,
                         required=False,
                         help="number of left chunks, <= 0 is not supported")
+    parser.add_argument('--decoder_fastertransformer',
+                        action='store_true',
+                        help='return decoder_out and best_index for ft')
     args = parser.parse_args()
 
     torch.manual_seed(0)
@@ -765,7 +777,7 @@ if __name__ == '__main__':
     onnx_config = export_enc_func(model, configs, args, logger, encoder_onnx_path)
 
     decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder.onnx')
-    export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path)
+    export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path, args.decoder_fastertransformer)
 
     if args.fp16:
         try:
