@@ -64,12 +64,12 @@ fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
      echo "extract weights and replace onnx with plugins"
-     
+
      mkdir -p /weight/enc
      mkdir -p /weight/dec
      python3 extract_weights.py --input_onnx $onnx_model_dir/encoder.onnx --output_dir /weight/enc || exit 1
      python3 extract_weights.py --input_onnx $onnx_model_dir/decoder.onnx --output_dir /weight/dec || exit 1
-     
+
      # TODO: support use_layernorm_in_conv_module
      python3 replace_plugin.py --input_onnx $onnx_model_dir/encoder.onnx \
                                --use_layernorm_in_conv_module False \
@@ -107,7 +107,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
           -DBUILD_ORGIN_NET=OFF \
           ..
 
-     make -j$(nproc) 
+     make -j$(nproc)
      popd
      cp ${ft_path}/build/lib/libtrt_wenet.so $outputs_dir
 fi
@@ -161,7 +161,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
      fi
 
      for dir in $dirs
-     do   
+     do
           cp $model_repo_path/$dir/config.pbtxt.template $model_repo_path/$dir/config.pbtxt
 
           sed -i "s|DICT_PATH|${DICT_PATH}|g" $model_repo_path/$dir/config.pbtxt

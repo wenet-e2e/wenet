@@ -13,11 +13,11 @@ pip3 install -r requirements.txt
 # Please modify the model parameters in run.sh. This recipe is for small conformer model.
 bash run.sh
 ```
-With help of FasterTransformer wenet tensorrt plugins, the overall throughput could get ~50% improvement comparing with onnx fp16 inference. 
+With help of FasterTransformer wenet tensorrt plugins, the overall throughput could get ~50% improvement comparing with onnx fp16 inference.
 
 <p float="left">
   <img src="./encoder_plugin.JPG" width="45%" />
-  <img src="./decoder_plugin.JPG" width="50%" /> 
+  <img src="./decoder_plugin.JPG" width="50%" />
 </p>
 
 #### Performance of Small Model for AIShell2
@@ -279,6 +279,6 @@ The following benchmakr shows the performance on T4 of a small Conformer model f
  </tr>
 </table>
 
-Note: Currently, encoder only supports offline conformer model. Decoder only supports transformer decoder. 
+Note: Currently, encoder only supports offline conformer model. Decoder only supports transformer decoder.
 
 For directly using FasterTransformer built wenet, you may refer to https://github.com/NVIDIA/FasterTransformer/tree/main/examples/cpp/wenet

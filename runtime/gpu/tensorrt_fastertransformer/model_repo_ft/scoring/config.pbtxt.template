@@ -40,7 +40,7 @@ input [
   {
     name: "encoder_out"
     data_type: TYPE_FP32
-    dims: [-1, D_MODEL] 
+    dims: [-1, D_MODEL]
   },
   {
     name: "encoder_out_lens"

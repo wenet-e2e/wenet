@@ -71,23 +71,3 @@ instance_group [
       kind: KIND_GPU
     }
 ]
-
-#optimization {
-#    cuda {
-#    graphs: true
-#    busy_wait_events: false
-#    graph_spec [ 
-#        {
-#       batch_size: 16
-#        input {key:'speech' value:{dim:[512,80]}}
-#        input {key:'speech_lengths' value:{dim:[]}}
-#        graph_lower_bound {
-#          batch_size:1 
-#          input {key:'speech' value:{dim:[512,80]}}
-#          input {key:'speech_lengths' value:{dim:[]}}
-#          }
-#        }
-#    ]
-#    output_copy_stream: false
-#    }
-#}
