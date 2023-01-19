@@ -3,13 +3,16 @@
 ```sh
 # using docker image runtime/gpu/Dockerfile/Dockerfile.server
 git submodule update --init
+pip3 install nvidia-pyindex
 pip3 install -r requirements.txt
 bash run.sh
 ```
 With help of FasterTransformer wenet tensorrt plugins, the overall throughput could get ~50% improvement comparing with onnx fp16 inference. 
-![overview](./encoder_plugin.JPG)
 
-![overview](./decoder_plugin.JPG)
+<p float="left">
+  <img src="./encoder_plugin.JPG" width="45%" />
+  <img src="./decoder_plugin.JPG" width="50%" /> 
+</p>
 
 #### Performance of Small Model for AIShell2
 
