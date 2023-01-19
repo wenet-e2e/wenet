@@ -700,7 +700,10 @@ def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path, de
     ort_outs = ort_session.run(None, ort_inputs)
 
     # check decoder output
-    test(to_numpy([o0]), ort_outs, rtol=1e-03, atol=1e-05)
+    if decoder_fastertransformer:
+        test(to_numpy(o0), ort_outs, rtol=1e-03, atol=1e-05)
+    else:
+        test(to_numpy([o0]), ort_outs, rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")
 
 

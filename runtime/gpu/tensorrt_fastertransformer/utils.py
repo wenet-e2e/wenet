@@ -15,6 +15,7 @@
 #
 import numpy as np
 
+
 def get_parent(graph, cur_node, parrent_pos):
     in0 = cur_node.inputs[parrent_pos]
     for node in graph.nodes:
@@ -22,6 +23,7 @@ def get_parent(graph, cur_node, parrent_pos):
             if out == in0:
                 return node
     return None
+
 
 def get_weight_by_bias(graph, bname):
     for node in graph.nodes:
@@ -31,18 +33,21 @@ def get_weight_by_bias(graph, bname):
                 return pnode.inputs[1].name
     return None
 
+
 def onnx_GetAllWeight(model):
     for w in model.graph.initializer:
         print(w.name, w.dims)
     return model.graph.initializer
 
+
 def onnx2np_type(dtype):
     maps = {
-            1: np.float32,
-            6: np.int32,
-            7: np.int64
+        1: np.float32,
+        6: np.int32,
+        7: np.int64
     }
     return maps[dtype]
+
 
 def onnx_GetWeight(model, name):
     for w in model.graph.initializer:

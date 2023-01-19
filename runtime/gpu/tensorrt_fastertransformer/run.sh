@@ -1,8 +1,8 @@
 #!/bin/bash
 trtexec=/usr/src/tensorrt/bin/trtexec
-CUDA_VISIBLE_DEVICES="0"
+export CUDA_VISIBLE_DEVICES="0"
 stage=-1
-stop_stage=4
+stop_stage=5
 
 #<wenet_onnx_gpu_models>
 onnx_model_dir=$(pwd)/aishell_onnx
@@ -49,6 +49,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
    model_dir=$(pwd)/20211025_conformer_exp
    mkdir -p $onnx_model_dir
    cd ../../../
+   export PYTHONPATH=$PYTHONPATH:$(pwd)
    python3 wenet/bin/export_onnx_gpu.py \
            --config=$model_dir/train.yaml \
            --checkpoint=$model_dir/final.pt \
@@ -56,7 +57,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
            --ctc_weight=0.5 \
            --output_onnx_dir=$onnx_model_dir \
            --fp16 \
-           --decoder_fastertransformer
+           --decoder_fastertransformer || exit 1
    cp $model_dir/words.txt $onnx_model_dir
    cd -
 fi
