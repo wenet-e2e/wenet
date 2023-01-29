@@ -38,6 +38,7 @@ except ImportError:
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
 
+
 class Encoder(torch.nn.Module):
     def __init__(self,
                  encoder: BaseEncoder,
@@ -159,7 +160,8 @@ class StreamingEncoder(torch.nn.Module):
                 cnn_cache=cnn_cache[i])
             #   shape(new_att_cache) is (B, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (B, hidden-dim, cache_t2)
-            r_att_cache.append(new_att_cache[:, :, next_cache_start:, :].unsqueeze(1))
+            r_att_cache.append(
+                new_att_cache[:, :, next_cache_start:, :].unsqueeze(1))
             if not self.transformer:
                 r_cnn_cache.append(new_cnn_cache.unsqueeze(1))
         if self.encoder.normalize_before:
@@ -185,7 +187,6 @@ class StreamingEncoder(torch.nn.Module):
         #                   rounding_mode='floor')
         chunk_out_lens = chunk_lens // self.subsampling_rate
         r_offset = r_offset.unsqueeze(1)
-
 
         return log_probs, log_probs_idx, chunk_out, chunk_out_lens, \
             r_offset, r_att_cache, r_cnn_cache, r_cache_mask
@@ -307,7 +308,8 @@ class StreamingSqueezeformerEncoder(torch.nn.Module):
         for i, layer in enumerate(self.encoder.encoders):
             if self.reduce_idx is not None:
                 if self.time_reduce is not None and i in self.reduce_idx:
-                    recover_activations.append((xs, att_mask, pos_emb, mask_pad))
+                    recover_activations.append(
+                        (xs, att_mask, pos_emb, mask_pad))
                     xs, xs_lens, att_mask, mask_pad = \
                         self.encoder.time_reduction_layer(
                             xs, xs_lens, att_mask, mask_pad)
@@ -379,12 +381,14 @@ class Decoder(torch.nn.Module):
                  decoder: TransformerDecoder,
                  ctc_weight: float = 0.5,
                  reverse_weight: float = 0.0,
-                 beam_size: int = 10):
+                 beam_size: int = 10,
+                 decoder_fastertransformer: bool = False):
         super().__init__()
         self.decoder = decoder
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
         self.beam_size = beam_size
+        self.decoder_fastertransformer = decoder_fastertransformer
 
     def forward(self,
                 encoder_out: torch.Tensor,
@@ -438,17 +442,22 @@ class Decoder(torch.nn.Module):
         score = score * mask
         decoder_out = decoder_out.view(B, bz, T2, V)
         if self.reverse_weight > 0:
-            r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
+            r_decoder_out = torch.nn.functional.log_softmax(
+                r_decoder_out, dim=-1)
             r_decoder_out = r_decoder_out.view(B2, T2, V)
             index = torch.unsqueeze(r_hyps_pad_eos * mask, 2)
             r_score = r_decoder_out.gather(2, index).squeeze(2)
             r_score = r_score * mask
-            score = score * (1 - self.reverse_weight) + self.reverse_weight * r_score
+            score = score * (1 - self.reverse_weight) + \
+                self.reverse_weight * r_score
             r_decoder_out = r_decoder_out.view(B, bz, T2, V)
         score = torch.sum(score, axis=1)  # B2
         score = torch.reshape(score, (B, bz)) + self.ctc_weight * ctc_score
         best_index = torch.argmax(score, dim=1)
-        return best_index
+        if self.decoder_fastertransformer:
+            return decoder_out, best_index
+        else:
+            return best_index
 
 
 def to_numpy(tensors):
@@ -463,6 +472,7 @@ def to_numpy(tensors):
         out.append(tensor)
     return out
 
+
 def test(xlist, blist, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=True):
     for a, b in zip(xlist, blist):
         try:
@@ -473,6 +483,7 @@ def test(xlist, blist, rtol=1e-3, atol=1e-5, tolerate_small_mismatch=True):
             else:
                 raise
 
+
 def export_offline_encoder(model, configs, args, logger, encoder_onnx_path):
     bz = 32
     seq_len = 100
@@ -480,7 +491,8 @@ def export_offline_encoder(model, configs, args, logger, encoder_onnx_path):
     feature_size = configs["input_dim"]
 
     speech = torch.randn(bz, seq_len, feature_size, dtype=torch.float32)
-    speech_lens = torch.randint(low=10, high=seq_len, size=(bz,), dtype=torch.int32)
+    speech_lens = torch.randint(
+        low=10, high=seq_len, size=(bz,), dtype=torch.int32)
     encoder = Encoder(model.encoder, model.ctc, beam_size)
     encoder.eval()
 
@@ -525,6 +537,7 @@ def export_offline_encoder(model, configs, args, logger, encoder_onnx_path):
                    "fp16": args.fp16}
     return onnx_config
 
+
 def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
     decoding_chunk_size = args.decoding_chunk_size
     subsampling = model.encoder.embed.subsampling_rate
@@ -551,7 +564,8 @@ def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
     encoder.eval()
 
     # begin to export encoder
-    chunk_xs = torch.randn(batch_size, audio_len, feature_size, dtype=torch.float32)
+    chunk_xs = torch.randn(batch_size, audio_len,
+                           feature_size, dtype=torch.float32)
     chunk_lens = torch.ones(batch_size, dtype=torch.int32) * audio_len
 
     offset = torch.arange(0, batch_size).unsqueeze(1)
@@ -564,13 +578,15 @@ def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
     cnn_cache = torch.randn(batch_size, num_layers, output_size,
                             cnn_module_kernel, dtype=torch.float32)
 
-    cache_mask = torch.ones(batch_size, 1, required_cache_size, dtype=torch.float32)
+    cache_mask = torch.ones(
+        batch_size, 1, required_cache_size, dtype=torch.float32)
     input_names = ['chunk_xs', 'chunk_lens', 'offset',
                    'att_cache', 'cnn_cache', 'cache_mask']
     output_names = ['log_probs', 'log_probs_idx', 'chunk_out',
                     'chunk_out_lens', 'r_offset', 'r_att_cache',
                     'r_cnn_cache', 'r_cache_mask']
-    input_tensors = (chunk_xs, chunk_lens, offset, att_cache, cnn_cache, cache_mask)
+    input_tensors = (chunk_xs, chunk_lens, offset,
+                     att_cache, cnn_cache, cache_mask)
     if transformer:
         output_names.pop(6)
 
@@ -622,28 +638,37 @@ def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
     }
     return onnx_config
 
-def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
+
+def export_rescoring_decoder(model, configs, args,
+                             logger, decoder_onnx_path, decoder_fastertransformer):
     bz, seq_len = 32, 100
     beam_size = args.beam_size
     decoder = Decoder(model.decoder,
                       model.ctc_weight,
                       model.reverse_weight,
-                      beam_size)
+                      beam_size,
+                      decoder_fastertransformer)
     decoder.eval()
 
-    hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
+    hyps_pad_sos_eos = torch.randint(
+        low=3, high=1000, size=(bz, beam_size, seq_len))
     hyps_lens_sos = torch.randint(low=3, high=seq_len, size=(bz, beam_size),
                                   dtype=torch.int32)
-    r_hyps_pad_sos_eos = torch.randint(low=3, high=1000, size=(bz, beam_size, seq_len))
+    r_hyps_pad_sos_eos = torch.randint(
+        low=3, high=1000, size=(bz, beam_size, seq_len))
 
     output_size = configs["encoder_conf"]["output_size"]
     encoder_out = torch.randn(bz, seq_len, output_size, dtype=torch.float32)
-    encoder_out_lens = torch.randint(low=3, high=seq_len, size=(bz,), dtype=torch.int32)
+    encoder_out_lens = torch.randint(
+        low=3, high=seq_len, size=(bz,), dtype=torch.int32)
     ctc_score = torch.randn(bz, beam_size, dtype=torch.float32)
 
     input_names = ['encoder_out', 'encoder_out_lens',
                    'hyps_pad_sos_eos', 'hyps_lens_sos',
                    'r_hyps_pad_sos_eos', 'ctc_score']
+    output_names = ['best_index']
+    if decoder_fastertransformer:
+        output_names.insert(0, 'decoder_out')
 
     torch.onnx.export(decoder,
                       (encoder_out, encoder_out_lens,
@@ -654,7 +679,7 @@ def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
                       opset_version=13,
                       do_constant_folding=True,
                       input_names=input_names,
-                      output_names=['best_index'],
+                      output_names=output_names,
                       dynamic_axes={'encoder_out': {0: 'B', 1: 'T'},
                                     'encoder_out_lens': {0: 'B'},
                                     'hyps_pad_sos_eos': {0: 'B', 2: 'T2'},
@@ -691,7 +716,10 @@ def export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path):
     ort_outs = ort_session.run(None, ort_inputs)
 
     # check decoder output
-    test(to_numpy([o0]), ort_outs, rtol=1e-03, atol=1e-05)
+    if decoder_fastertransformer:
+        test(to_numpy(o0), ort_outs, rtol=1e-03, atol=1e-05)
+    else:
+        test(to_numpy([o0]), ort_outs, rtol=1e-03, atol=1e-05)
     logger.info("export to onnx decoder succeed!")
 
 
@@ -730,6 +758,9 @@ if __name__ == '__main__':
                         type=int,
                         required=False,
                         help="number of left chunks, <= 0 is not supported")
+    parser.add_argument('--decoder_fastertransformer',
+                        action='store_true',
+                        help='return decoder_out and best_index for ft')
     args = parser.parse_args()
 
     torch.manual_seed(0)
@@ -762,10 +793,12 @@ if __name__ == '__main__':
     else:
         export_enc_func = export_offline_encoder
 
-    onnx_config = export_enc_func(model, configs, args, logger, encoder_onnx_path)
+    onnx_config = export_enc_func(
+        model, configs, args, logger, encoder_onnx_path)
 
     decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder.onnx')
-    export_rescoring_decoder(model, configs, args, logger, decoder_onnx_path)
+    export_rescoring_decoder(model, configs, args, logger,
+                             decoder_onnx_path, args.decoder_fastertransformer)
 
     if args.fp16:
         try:
@@ -776,11 +809,13 @@ if __name__ == '__main__':
             sys.exit(1)
         encoder_onnx_model = onnxmltools.utils.load_model(encoder_onnx_path)
         encoder_onnx_model = convert_float_to_float16(encoder_onnx_model)
-        encoder_onnx_path = os.path.join(args.output_onnx_dir, 'encoder_fp16.onnx')
+        encoder_onnx_path = os.path.join(
+            args.output_onnx_dir, 'encoder_fp16.onnx')
         onnxmltools.utils.save_model(encoder_onnx_model, encoder_onnx_path)
         decoder_onnx_model = onnxmltools.utils.load_model(decoder_onnx_path)
         decoder_onnx_model = convert_float_to_float16(decoder_onnx_model)
-        decoder_onnx_path = os.path.join(args.output_onnx_dir, 'decoder_fp16.onnx')
+        decoder_onnx_path = os.path.join(
+            args.output_onnx_dir, 'decoder_fp16.onnx')
         onnxmltools.utils.save_model(decoder_onnx_model, decoder_onnx_path)
     # dump configurations
 
