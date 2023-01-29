@@ -41,6 +41,7 @@ if(ONNX)
 endif()
 if(OPENVINO)
   include(openvino)
+endif()
 include(openfst)
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
