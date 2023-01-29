@@ -29,7 +29,6 @@ namespace json = boost::json;
 HttpClient::HttpClient(const std::string& hostname, int port)
     : hostname_(hostname), port_(port) {
   Connect();
-  t_.reset(new std::thread(&HttpClient::ReadLoopFunc, this));
 }
 
 void HttpClient::Connect() {
@@ -40,69 +39,26 @@ void HttpClient::Connect() {
 }
 
 void HttpClient::SendBinaryData(const void* data, size_t size) {
-  req_.body().data = const_cast<void*>(data);
-  req_.body().size = size;
-  req_.body().more = true;
-  http::write(stream_, sr_, ec_);
-}
-
-void HttpClient::Close() {
-  beast::error_code ec;
-  stream_.socket().shutdown(tcp::socket::shutdown_both, ec);
-}
-
-void HttpClient::ReadLoopFunc() {
-  beast::error_code ec;
-  beast::flat_buffer buffer;
-  http::parser<false, http::buffer_body> p;
-  char arr[1024];
-  std::string message = "";
   try {
-    http::read_header(stream_, buffer, p, ec);
-    while (!p.is_done()) {
-      p.get().body().data = arr;
-      p.get().body().size = sizeof(arr);
-      http::read_some(stream_, buffer, p, ec);
-      if (ec && ec != http::error::need_buffer) {
-        LOG(ERROR) << ec;
-        break;
-      }
-      message += std::string(arr).substr(0, sizeof(arr) - p.get().body().size);
-      try {
-        json::object obj = json::parse(message).as_object();
-        LOG(INFO) << message;
-        message = "";
-        if (obj["type"] == "speech_end") {
-          done_ = true;
-          break;
-        }
-      }
-      catch (json::system_error const& e) {
-        continue;
-      }
-    }
+    json::value start_tag = {{"nbest", nbest_},
+                             {"continuous_decoding", continuous_decoding_}};
+    std::string config = json::serialize(start_tag);
+    req_.set("config", config);
+    std::size_t encode_size = beast::detail::base64::encoded_size(size);
+    char encode_data[encode_size];  // NOLINT
+    beast::detail::base64::encode(encode_data, data, size);
+    req_.body() = encode_data;
+    req_.prepare_payload();
+    http::write(stream_, req_, ec_);
+
+    http::read(stream_, buffer_, res_);
+    std::string message = res_.body();
+    json::object obj = json::parse(message).as_object();
+    LOG(INFO) << message;
   } catch (std::exception const& e) {
     LOG(ERROR) << e.what();
   }
-  stream_.socket().shutdown(tcp::socket::shutdown_both, ec);
-}
-
-void HttpClient::Join() { t_->join(); }
-
-void HttpClient::SendStartSignal() {
-  json::value start_tag = {{"signal", "start"},
-                           {"nbest", nbest_},
-                           {"continuous_decoding", continuous_decoding_}};
-  std::string start_message = json::serialize(start_tag);
-  req_.set(http::field::transfer_encoding, "chunked");
-  req_.set("config", start_message);
-  http::write_header(stream_, sr_, ec_);
-}
-
-void HttpClient::SendEndSignal() {
-  req_.body().data = nullptr;
-  req_.body().more = false;
-  http::write(stream_, sr_, ec_);
+  stream_.socket().shutdown(tcp::socket::shutdown_both, ec_);
 }
 
 }  // namespace wenet

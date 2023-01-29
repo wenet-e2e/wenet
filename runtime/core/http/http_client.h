@@ -20,11 +20,12 @@
 #include <string>
 #include <thread>
 
-#include <boost/beast/core.hpp>
-#include <boost/beast/http.hpp>
-#include <boost/beast/version.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/core/detail/base64.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
 
 #include "utils/utils.h"
 
@@ -40,16 +41,7 @@ class HttpClient {
   HttpClient(const std::string& host, int port);
 
   void SendBinaryData(const void* data, size_t size);
-  void ReadLoopFunc();
-  void Close();
-  void Join();
-  void SendStartSignal();
-  void SendEndSignal();
   void set_nbest(int nbest) { nbest_ = nbest; }
-  void set_continuous_decoding(bool continuous_decoding) {
-    continuous_decoding_ = continuous_decoding;
-  }
-  bool done() const { return done_; }
 
  private:
   void Connect();
@@ -58,14 +50,13 @@ class HttpClient {
   std::string target_ = "/";
   int version_ = 11;
   int nbest_ = 1;
-  bool continuous_decoding_ = false;
-  bool done_ = false;
+  const bool continuous_decoding_ = false;
   net::io_context ioc_;
   beast::tcp_stream stream_{ioc_};
-  http::request<http::buffer_body> req_{http::verb::post, target_, version_};
-  http::request_serializer<http::buffer_body> sr_{req_};
+  beast::flat_buffer buffer_;
+  http::request<http::string_body> req_{http::verb::get, target_, version_};
+  http::response<http::string_body> res_{http::status::ok, version_};
   beast::error_code ec_;
-  std::unique_ptr<std::thread> t_{nullptr};
 
   WENET_DISALLOW_COPY_AND_ASSIGN(HttpClient);
 };

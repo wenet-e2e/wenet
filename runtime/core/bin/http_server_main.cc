@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
   auto decode_resource = wenet::InitDecodeResourceFromFlags();
 
   wenet::HttpServer server(FLAGS_port, feature_config, decode_config,
-                                decode_resource);
+                           decode_resource);
   LOG(INFO) << "Listening at port " << FLAGS_port;
   server.Start();
   return 0;

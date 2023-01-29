@@ -21,10 +21,11 @@
 #include <thread>
 #include <utility>
 
+#include <boost/asio/ip/tcp.hpp>
 #include <boost/beast/core.hpp>
+#include <boost/beast/core/detail/base64.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
-#include <boost/asio/ip/tcp.hpp>
 #include <boost/config.hpp>
 
 #include "decoder/asr_decoder.h"
@@ -50,29 +51,25 @@ class ConnectionHandler {
   void OnSpeechStart();
   void OnSpeechEnd();
   void OnText(const std::string& message);
-  void OnFinish();
-  void OnSpeechData(const int16_t* pcm_data, size_t num_samples);
+  void OnSpeechData(const std::string& message);
   void OnError(const std::string& message);
-  void OnPartialResult(const std::string& result);
   void OnFinalResult(const std::string& result);
   void DecodeThreadFunc();
   std::string SerializeResult(bool finish);
 
+  std::string target_ = "/";
   int version_ = 11;
-  bool continuous_decoding_ = false;
+  const bool continuous_decoding_ = false;
   int nbest_ = 1;
   tcp::socket socket_;
-  std::shared_ptr<http::response<http::buffer_body>> res_;
-  std::shared_ptr<http::response_serializer<http::buffer_body>> sr_;
+  beast::flat_buffer buffer_;
   beast::error_code ec_;
+  std::shared_ptr<http::request<http::string_body>> req_;
+  std::shared_ptr<http::response<http::string_body>> res_;
   std::shared_ptr<FeaturePipelineConfig> feature_config_;
   std::shared_ptr<DecodeOptions> decode_config_;
   std::shared_ptr<DecodeResource> decode_resource_;
 
-  bool got_start_tag_ = false;
-  bool got_end_tag_ = false;
-  // When endpoint is detected, stop recognition, and stop receiving data.
-  bool stop_recognition_ = false;
   std::shared_ptr<FeaturePipeline> feature_pipeline_ = nullptr;
   std::shared_ptr<AsrDecoder> decoder_ = nullptr;
   std::shared_ptr<std::thread> decode_thread_ = nullptr;
@@ -80,8 +77,7 @@ class ConnectionHandler {
 
 class HttpServer {
  public:
-  HttpServer(int port,
-             std::shared_ptr<FeaturePipelineConfig> feature_config,
+  HttpServer(int port, std::shared_ptr<FeaturePipelineConfig> feature_config,
              std::shared_ptr<DecodeOptions> decode_config,
              std::shared_ptr<DecodeResource> decode_resource)
       : port_(port),

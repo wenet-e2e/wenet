@@ -21,44 +21,28 @@ DEFINE_string(hostname, "127.0.0.1", "hostname of http server");
 DEFINE_int32(port, 10086, "port of http server");
 DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
-DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
-  wenet::HttpClient client(FLAGS_hostname, FLAGS_port);
-  client.set_nbest(FLAGS_nbest);
-  client.set_continuous_decoding(FLAGS_continuous_decoding);
-  client.SendStartSignal();
 
   wenet::WavReader wav_reader(FLAGS_wav_path);
   const int sample_rate = 16000;
   // Only support 16K
   CHECK_EQ(wav_reader.sample_rate(), sample_rate);
   const int num_samples = wav_reader.num_samples();
-  // Send data every 0.5 second
-  const float interval = 0.5;
-  const int sample_interval = interval * sample_rate;
-  for (int start = 0; start < num_samples; start += sample_interval) {
-    if (client.done()) {
-      break;
-    }
-    int end = std::min(start + sample_interval, num_samples);
-    // Convert to short
-    std::vector<int16_t> data;
-    data.reserve(end - start);
-    for (int j = start; j < end; j++) {
-      data.push_back(static_cast<int16_t>(wav_reader.data()[j]));
-    }
-    // Send PCM data
-    client.SendBinaryData(data.data(), data.size() * sizeof(int16_t));
-    VLOG(2) << "Send " << data.size() << " samples";
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(static_cast<int>(interval * 1000)));
+  // Convert to short
+  std::vector<int16_t> data;
+  data.reserve(num_samples);
+  for (int j = 0; j < num_samples; j++) {
+    data.push_back(static_cast<int16_t>(wav_reader.data()[j]));
   }
+  // Send data
+  wenet::HttpClient client(FLAGS_hostname, FLAGS_port);
+  client.set_nbest(FLAGS_nbest);
   wenet::Timer timer;
-  client.SendEndSignal();
-  client.Join();
+  VLOG(2) << "Send " << data.size() << " samples";
+  client.SendBinaryData(data.data(), data.size() * sizeof(int16_t));
   VLOG(2) << "Total latency: " << timer.Elapsed() << "ms.";
   return 0;
 }
