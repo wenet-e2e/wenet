@@ -41,6 +41,8 @@ if(ONNX)
 endif()
 if(OPENVINO)
   include(openvino)
+  set(OpenVINO_DIR ${openvino_SOURCE_DIR}/runtime/cmake)
+  find_package(OpenVINO REQUIRED)
 endif()
 include(openfst)
 include_directories(
