@@ -1,0 +1,11 @@
+--- /mnt/samsung-t7/yuekai/fix_issues/CISI/asr/wenet_online/model_repo_stateful/wenet/config_template.pbtxt	2023-01-06 13:42:04.533326675 +0800
++++ wenet_config_template.pbtxt	2023-01-09 14:34:47.365992048 +0800
+@@ -109,7 +109,7 @@
+   },
+   {
+     name: "log_probs_idx"
+-    data_type: TYPE_INT64
++    data_type: TYPE_INT32
+     dims: [-1, #beam_size] # [-1, beam_size]
+   },
+   {
