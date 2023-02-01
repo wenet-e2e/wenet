@@ -1,0 +1,3 @@
+[submodule "runtime/gpu/tensorrt_fastertransformer/FasterTransformer"]
+	path = runtime/gpu/tensorrt_fastertransformer/FasterTransformer
+	url = https://github.com/NVIDIA/FasterTransformer.git

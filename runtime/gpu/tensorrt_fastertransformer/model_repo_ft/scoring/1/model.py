@@ -1,11 +1,27 @@
+# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import triton_python_backend_utils as pb_utils
 import numpy as np
 import multiprocessing
-from torch.utils.dlpack import from_dlpack
 from swig_decoders import ctc_beam_search_decoder_batch, \
     Scorer, PathTrie, TrieVector, map_batch
+from torch.utils.dlpack import from_dlpack
 import json
 import os
+import time
+
 
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
@@ -60,6 +76,7 @@ class TritonPythonModel:
         blank_id = 0
         alpha = 2.0
         beta = 1.0
+        ignore_id = -1
         bidecoder = 0
         lm_path, vocab_path = None, None
         for li in parameters.items():
@@ -79,6 +96,8 @@ class TritonPythonModel:
                 beta = float(value)
             elif key == "vocabulary":
                 vocab_path = value
+            if key == 'ignore_id':
+                ignore_id = int(value)
             elif key == "bidecoder":
                 bidecoder = int(value)
 
@@ -94,6 +113,7 @@ class TritonPythonModel:
         sos = eos = len(vocab) - 1
         self.sos = sos
         self.eos = eos
+        self.ignore_id = ignore_id
 
     def load_vocab(self, vocab_file):
         """
@@ -150,12 +170,16 @@ class TritonPythonModel:
         for request in requests:
             # Perform inference on the request and append it to responses list...
             in_0 = pb_utils.get_input_tensor_by_name(request, "encoder_out")
-            in_1 = pb_utils.get_input_tensor_by_name(request, "encoder_out_lens")
+            in_1 = pb_utils.get_input_tensor_by_name(
+                request, "encoder_out_lens")
             in_2 = pb_utils.get_input_tensor_by_name(request, "batch_log_probs")
-            in_3 = pb_utils.get_input_tensor_by_name(request, "batch_log_probs_idx")
+            in_3 = pb_utils.get_input_tensor_by_name(
+                request, "batch_log_probs_idx")
 
             batch_encoder_out.append(in_0.as_numpy())
-            encoder_max_len = max(encoder_max_len, batch_encoder_out[-1].shape[1])
+
+            encoder_max_len = max(
+                encoder_max_len, batch_encoder_out[-1].shape[1])
 
             cur_b_lens = in_1.as_numpy()
             batch_encoder_lens.append(cur_b_lens)
@@ -166,8 +190,10 @@ class TritonPythonModel:
             cur_b_log_probs_idx = in_3.as_numpy()
             for i in range(cur_batch):
                 cur_len = cur_b_lens[i]
-                cur_probs = cur_b_log_probs[i][0:cur_len, :].tolist()  # T X Beam
-                cur_idx = cur_b_log_probs_idx[i][0:cur_len, :].tolist()  # T x Beam
+                # T X Beam
+                cur_probs = cur_b_log_probs[i][0:cur_len, :].tolist()
+                # T x Beam
+                cur_idx = cur_b_log_probs_idx[i][0:cur_len, :].tolist()
                 batch_log_probs.append(cur_probs)
                 batch_log_probs_idx.append(cur_idx)
                 root_dict[total] = PathTrie()
@@ -185,6 +211,7 @@ class TritonPythonModel:
                                                    space_id=-2,
                                                    cutoff_prob=self.cutoff_prob,
                                                    ext_scorer=self.lm)
+
         all_hyps = []
         all_ctc_score = []
         max_seq_len = 0
@@ -192,7 +219,8 @@ class TritonPythonModel:
             # if candidates less than beam size
             if len(seq_cand) != self.beam_size:
                 seq_cand = list(seq_cand)
-                seq_cand += (self.beam_size - len(seq_cand)) * [(-float("INF"), (0,))]
+                seq_cand += (self.beam_size - len(seq_cand)) * \
+                    [(-float("INF"), (0,))]
 
             for score, hyps in seq_cand:
                 all_hyps.append(list(hyps))
@@ -202,17 +230,21 @@ class TritonPythonModel:
         beam_size = self.beam_size
         feature_size = self.feature_size
         hyps_max_len = max_seq_len + 2
+
         in_ctc_score = np.zeros((total, beam_size), dtype=self.data_type)
+        # TODO fix int64 for onnxruntime Yuekai
         in_hyps_pad_sos_eos = np.ones(
-            (total, beam_size, hyps_max_len), dtype=np.int64) * self.eos
+            (total, beam_size, hyps_max_len), dtype=np.int32) * self.ignore_id
         if self.bidecoder:
             in_r_hyps_pad_sos_eos = np.ones(
-                (total, beam_size, hyps_max_len), dtype=np.int64) * self.eos
+                (total, beam_size, hyps_max_len), dtype=np.int32) * self.ignore_id
 
         in_hyps_lens_sos = np.ones((total, beam_size), dtype=np.int32)
 
         in_encoder_out = np.zeros((total, encoder_max_len, feature_size),
                                   dtype=self.data_type)
+        # print(f"Decoding encoder_out size is {in_encoder_out.shape}")
+        time1 = time.perf_counter()
         in_encoder_out_lens = np.zeros(total, dtype=np.int32)
         st = 0
         for b in batch_count:
@@ -238,7 +270,8 @@ class TritonPythonModel:
         in_tensor_3 = pb_utils.Tensor("hyps_lens_sos", in_hyps_lens_sos)
         input_tensors = [in_tensor_0, in_tensor_1, in_tensor_2, in_tensor_3]
         if self.bidecoder:
-            in_tensor_4 = pb_utils.Tensor("r_hyps_pad_sos_eos", in_r_hyps_pad_sos_eos)
+            in_tensor_4 = pb_utils.Tensor(
+                "r_hyps_pad_sos_eos", in_r_hyps_pad_sos_eos)
             input_tensors.append(in_tensor_4)
         in_tensor_5 = pb_utils.Tensor("ctc_score", in_ctc_score)
         input_tensors.append(in_tensor_5)
@@ -250,16 +283,15 @@ class TritonPythonModel:
 
         inference_response = inference_request.exec()
         if inference_response.has_error():
-            raise pb_utils.TritonModelException(inference_response.error().message())
+            raise pb_utils.TritonModelException(
+                inference_response.error().message())
         else:
             # Extract the output tensors from the inference response.
             best_index = pb_utils.get_output_tensor_by_name(inference_response,
                                                             'best_index')
-            if best_index.is_cpu():
-                best_index = best_index.as_numpy()
-            else:
-                best_index = from_dlpack(best_index.to_dlpack())
-                best_index = best_index.cpu().numpy()
+            best_index = from_dlpack(best_index.to_dlpack())
+            best_index = best_index.cpu().numpy()
+
             hyps = []
             idx = 0
             for cands, cand_lens in zip(in_hyps_pad_sos_eos, in_hyps_lens_sos):
@@ -275,9 +307,12 @@ class TritonPythonModel:
             for b in batch_count:
                 sents = np.array(hyps[st:st + b])
                 out0 = pb_utils.Tensor("OUTPUT0", sents.astype(self.out0_dtype))
-                inference_response = pb_utils.InferenceResponse(output_tensors=[out0])
+                inference_response = pb_utils.InferenceResponse(
+                    output_tensors=[out0])
                 responses.append(inference_response)
                 st += b
+        time2 = time.perf_counter() - time1
+        # print(f"cost {time2} secs")
         return responses
 
     def finalize(self):

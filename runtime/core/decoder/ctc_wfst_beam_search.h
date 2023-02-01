@@ -55,6 +55,7 @@ struct CtcWfstBeamSearchOptions : public kaldi::LatticeFasterDecoderConfig {
   // When blank score is greater than this thresh, skip the frame in viterbi
   // search
   float blank_skip_thresh = 0.98;
+  float blank_scale = 1.0;
 };
 
 class CtcWfstBeamSearch : public SearchInterface {

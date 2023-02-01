@@ -159,7 +159,7 @@ class WavWriter {
         bits_per_sample_(bits_per_sample) {}
 
   void Write(const std::string& filename) {
-    FILE* fp = fopen(filename.c_str(), "w");
+    FILE* fp = fopen(filename.c_str(), "wb");
     WavHeader header(num_samples_, num_channel_, sample_rate_,
                      bits_per_sample_);
     fwrite(&header, 1, sizeof(header), fp);
