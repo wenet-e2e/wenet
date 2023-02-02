@@ -16,12 +16,12 @@
 trtexec=/usr/src/tensorrt/bin/trtexec
 export CUDA_VISIBLE_DEVICES="0"
 stage=-1
-stop_stage=-1
+stop_stage=4
 
 #<wenet_onnx_gpu_models>
 onnx_model_dir=$(pwd)/u2pp_aishell2_onnx
 #<your_output_dir>
-outputs_dir=./exp_streaming_trt
+outputs_dir=$(pwd)/exp_streaming_trt
 model_repo_path=./model_repo_stateful_trt
 mkdir -p $outputs_dir
 
@@ -41,7 +41,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
            --output_onnx_dir=$onnx_model_dir \
            --fp16 \
            --streaming || exit 1
-   cp $model_dir/words.txt $onnx_model_dir
+   cp $model_dir/words.txt $model_dir/train.yaml $onnx_model_dir
    cd -
 fi
 
@@ -65,9 +65,9 @@ fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
      echo "convert conformer encoder with layernorm plugin"
-     MIN_BATCH1=1
-     OPT_BATCH1=16
-     MAX_BATCH1=32
+     MIN_BATCH=1
+     OPT_BATCH=16
+     MAX_BATCH=32
      $trtexec \
           --fp16 \
           --onnx=$outputs_dir/encoderV4.onnx \
@@ -92,7 +92,7 @@ fi
 
 #      python3 export_streaming_conformer_trt.py \
 #           --fp16 \
-#           --onnxFile$outputs_dir/encoderV4.onnx \
+#           --onnxFile $outputs_dir/encoderV4.onnx \
 #           --chunk_xs ${MIN_BATCH1}x67x80,${OPT_BATCH1}x67x80,${MAX_BATCH1}x67x80,${MIN_BATCH2}x67x80,${OPT_BATCH2}x67x80,${MAX_BATCH2}x67x80 \
 #           --chunk_lens ${MIN_BATCH1},${OPT_BATCH1},${MAX_BATCH1},${MIN_BATCH2},${OPT_BATCH2},${MAX_BATCH2} \
 #           --offset ${MIN_BATCH1}x1,${OPT_BATCH1}x1,${MAX_BATCH1}x1,${MIN_BATCH2}x1,${OPT_BATCH2}x1,${MAX_BATCH2}x1 \
@@ -113,6 +113,9 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
    patch $model_repo_path/wenet/config_template.pbtxt model_repo_stateful_trt_files/wenet_config_template.patch
    python3 ../scripts/convert.py --config=$onnx_model_dir/train.yaml --vocab=$onnx_model_dir/words.txt \
         --model_repo=$model_repo_path --onnx_model_dir=$onnx_model_dir
+   # TODO: fix hard-coding path
+   mkdir -p /ws/onnx_model
+   cp $onnx_model_dir/words.txt /ws/onnx_model/units.txt
 
    cp $outputs_dir/encoder_fp16.plan $model_repo_path/encoder/1/
    cp $outputs_dir/LayerNorm.so $model_repo_path/../

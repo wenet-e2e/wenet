@@ -270,7 +270,7 @@ class WenetModel(object):
         response = request.exec()
         best_index = pb_utils.get_output_tensor_by_name(response, 'best_index')
         best_index = from_dlpack(best_index.to_dlpack()).clone()
-        best_index = best_index.numpy()[:, 0]
+        best_index = best_index.cpu().numpy()[:, 0]
         return best_index
 
     def __del__(self):

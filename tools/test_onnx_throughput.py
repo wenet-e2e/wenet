@@ -251,7 +251,6 @@ def create_onnxruntime_session(
 
         if num_threads > 0:
             sess_options.intra_op_num_threads = num_threads
-            logger.debug(f"Session option: intra_op_num_threads={sess_options.intra_op_num_threads}")
 
         if verbose:
             sess_options.log_severity_level = 0
@@ -277,7 +276,7 @@ def create_onnxruntime_session(
 
         session = onnxruntime.InferenceSession(onnx_model_path, sess_options, providers=providers)
     except:
-        logger.error("Exception", exc_info=True)
+        print("Something went wrong")
 
     return session
 
