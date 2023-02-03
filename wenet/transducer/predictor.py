@@ -195,7 +195,6 @@ class RNNPredictor(PredictorBase):
         out, (m, c) = self.rnn(embed, (state_m, state_c))
 
         out = self.projection(out)
-        
         m = ApplyPadding(m, padding.unsqueeze(0), state_m)
         c = ApplyPadding(c, padding.unsqueeze(0), state_c)
 
