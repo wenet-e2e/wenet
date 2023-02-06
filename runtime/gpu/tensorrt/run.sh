@@ -126,3 +126,26 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
    LD_PRELOAD=./LayerNorm.so tritonserver --model-repository $model_repo_path \
    --pinned-memory-pool-byte-size=512000000 --cuda-memory-pool-byte-size=0:1024000000
 fi
+
+if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
+     echo "test conformer encoder with layernorm plugin using multi-profile"
+     trtFile=$outputs_dir/encoder_fp16_multiprofile.plan
+     python3 export_streaming_conformer_trt.py \
+          --plugin $outputs_dir/LayerNorm.so \
+          --trtFile $trtFile \
+          --test
+     
+     echo "test single profile throughput"
+     for B in 1 4 8 16 32 
+     do
+          trtFile=$outputs_dir/encoder_fp16.plan
+          /usr/src/tensorrt/bin/trtexec --fp16 --loadEngine=$trtFile --plugins=$outputs_dir/LayerNorm.so --noDataTransfers \
+          --shapes=chunk_xs:${B}x67x80,chunk_lens:${B},offset:${B}x1,att_cache:${B}x12x4x80x128,cnn_cache:${B}x12x256x7,cache_mask:${B}x1x80 | grep qps
+     done
+
+     echo "test onnx throughput"
+     python3 ../../../tools/test_onnx_throughput.py \
+          --batch_sizes 1,4,8,16,32,64,128,256 \
+          --onnxFile $onnx_model_dir/encoder_fp16.onnx \
+          --log $outputs_dir/log.txt
+fi

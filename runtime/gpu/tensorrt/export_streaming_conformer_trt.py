@@ -41,6 +41,7 @@ import sys
 import torch
 from time import time_ns
 import tensorrt as trt
+import timeit
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -131,6 +132,23 @@ def get_parser():
 
     return parser
 
+def get_latency_result(latency_list, batch_size):
+    latency_ms = sum(latency_list) / float(len(latency_list)) * 1000.0
+    latency_variance = np.var(latency_list, dtype=np.float64) * 1000.0
+    throughput = batch_size * (1000.0 / latency_ms)
+    throughput_trt = (1000.0 / latency_ms)
+
+    return {
+        "test_times": len(latency_list),
+        "latency_variance": "{:.2f}".format(latency_variance),
+        "latency_90_percentile": "{:.2f}".format(np.percentile(latency_list, 90) * 1000.0),
+        "latency_95_percentile": "{:.2f}".format(np.percentile(latency_list, 95) * 1000.0),
+        "latency_99_percentile": "{:.2f}".format(np.percentile(latency_list, 99) * 1000.0),
+        "average_latency_ms": "{:.2f}".format(latency_ms),
+        "QPS": "{:.2f}".format(throughput),
+        f"QPS_trt_batch{batch_size}":"{:.2f}".format(throughput_trt)
+    }
+    
 def test(engine, context, nBatchSize, batch_threshold=8):
     nProfile = engine.num_optimization_profiles
     if nProfile == 1:
@@ -154,16 +172,11 @@ def test(engine, context, nBatchSize, batch_threshold=8):
     
     nInput = np.sum([engine.binding_is_input(i) for i in range(engine.num_bindings)])
     nOutput = engine.num_bindings - nInput
-    for i in range(nInput):
-        print("Bind[%2d]:i[%2d]->" % (i, i), engine.get_binding_dtype(i), engine.get_binding_shape(i), context.get_binding_shape(i), engine.get_binding_name(i))
-    for i in range(nInput, nInput + nOutput):
-        print("Bind[%2d]:o[%2d]->" % (i, i - nInput), engine.get_binding_dtype(i), engine.get_binding_shape(i), context.get_binding_shape(i), engine.get_binding_name(i))
 
     nInput = nInput // nProfile
     nOutput = nOutput // nProfile
 
     chunk_xs = torch.randn(nBatchSize, 67, 80, dtype=torch.float32).numpy()
-    # chunk_xs = np.random.rand(nBatchSize).reshape(nBatchSize, 67, 80).astype(np.float32)
     chunk_lens = 67 * torch.ones(nBatchSize, dtype=torch.int32).numpy()
 
     offset = torch.arange(0, nBatchSize).unsqueeze(1).numpy()
@@ -195,18 +208,11 @@ def test(engine, context, nBatchSize, batch_threshold=8):
 
     for i in range(nInput):
         cudart.cudaMemcpy(bufferD[i], bufferH[i].ctypes.data, bufferH[i].nbytes, cudart.cudaMemcpyKind.cudaMemcpyHostToDevice)
-    # context.execute_v2(bufferD)
-    # for i in range(nInput, nInput + nOutput):
-    #     cudart.cudaMemcpy(bufferH[i].ctypes.data, bufferD[i], bufferH[i].nbytes, cudart.cudaMemcpyKind.cudaMemcpyDeviceToHost)
-    nWarm, nTest = 5, 10
-    for i in range(nWarm):
-        context.execute_v2(bufferD)
 
-    t0 = time_ns()
-    for i in range(nTest):
-        context.execute_v2(bufferD)
-    t1 = time_ns()
-    print("+---- BatchSize=%2d: %.4fms\n" % (nBatchSize, (t1 - t0) / 1e6 / nTest))
+    nWarm, nTest = 5, 10
+    timeit.repeat(lambda: context.execute_v2(bufferD), number=1, repeat=nWarm)  # Dry run
+    latency_list = timeit.repeat(lambda: context.execute_v2(bufferD), number=1, repeat=nTest)
+    print(get_latency_result(latency_list, nBatchSize))
 
     if nProfile == 1 or nBatchSize > batch_threshold:
         bufferD = bufferD[:bindingBias]
@@ -245,7 +251,6 @@ def main():
             cache = config.create_timing_cache(timeCache)
             config.set_timing_cache(cache, False)
 
-        # config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 7 << 30)
         if args.fp16:
             config.flags = 1 << int(trt.BuilderFlag.FP16)
         # config.flags = config.flags & ~(1 << int(trt.BuilderFlag.TF32))
@@ -297,10 +302,9 @@ def main():
     if args.test:
         engine = trt.Runtime(logger).deserialize_cuda_engine(engineString)
         context = engine.create_execution_context()
-        batch_sizes = [1, 4, 8, 16, 32, 64]
+        batch_sizes = [1, 4, 8, 16, 32]
         for batch in batch_sizes:
             test(engine, context, batch)
-
 
 if __name__ == "__main__":
     main()

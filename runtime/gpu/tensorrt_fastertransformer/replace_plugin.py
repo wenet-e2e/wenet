@@ -60,7 +60,7 @@ if __name__ == "__main__":
                         default="/weight/dec/", help="encoder weights path")
     parser.add_argument('--useFP16', type=bool,
                         default=True, help="using fp16 mode")
-    parser.add_argument('--use_layernorm_in_conv_module', type=bool,
+    parser.add_argument('--use_layernorm_in_conv_module', action='store_true',
                         default=False, help="using layernorm in conformer conv module")
 
     args = parser.parse_args()
