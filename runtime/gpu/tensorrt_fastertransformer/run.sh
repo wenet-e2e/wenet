@@ -49,11 +49,6 @@ BEAM_SIZE=10 # Don't modify it
 
 mkdir -p $outputs_dir
 
-# GPU related
-# please modify $SM if your GPU SM code is not 70
-# V100 SM=70; T4 SM=75; A10 SM=86, A30, A100 SM=80
-SM=70
-
 model_repo_path=./model_repo_ft
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
@@ -112,7 +107,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
           -DBUILD_PYT=OFF \
           -DBUILD_MULTI_GPU=OFF \
           -DUSE_NVTX=OFF \
-          -DSM=$SM \
           -DBUILD_EXAMPLE=ON \
           -DBUILD_TEST=OFF \
           -DBUILD_TRT=ON \
