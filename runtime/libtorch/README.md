@@ -163,3 +163,17 @@ wav_path=your_test_wav_path
     --wav_path $wav_path 2>&1 | tee client.log
 ```
 
+### http
+
+* Step 1. Download or prepare your pretrained model.
+* Step 2. Build
+``` sh
+mkdir build && cd build && cmake -DHTTP=ON .. && cmake --build .
+```
+* Step 3. Start http server
+
+simply replace grpc_server_main with http_server_main of Step 3 in gRPC
+
+* Step 4. Start http client.
+
+simply replace grpc_client_main with http_client_main of Step 4 in gRPC
