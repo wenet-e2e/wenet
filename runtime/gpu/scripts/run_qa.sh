@@ -14,7 +14,7 @@
 # limitations under the License.
 
 export CUDA_VISIBLE_DEVICES="0"
-stage=0
+stage=1
 stop_stage=2
 
 pretrained_model_link=https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20211025_conformer_exp.tar.gz
@@ -26,6 +26,7 @@ model_repo_path=$(pwd)/../model_repo
 
 model_dir=$(pwd)/${pretrained_model_name}
 onnx_model_dir=$(pwd)/${pretrained_model_name}_onnx
+onnx_model_dir=/myworkspace/wenet_yuekai/runtime/gpu/tensorrt_fastertransformer/aishell_onnx
 mkdir -p $onnx_model_dir
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then

@@ -55,9 +55,9 @@ if __name__ == "__main__":
                         choices=[15, 31], help="kernel size for conv module")
     # TODO: hard-coding below encoder decoder weight path, pls don't change it for now
     parser.add_argument('--decoder_weight_path', type=str,
-                        default="/weight/enc/", help="decoder weights path")
+                        default="/weight/dec/", help="decoder weights path")
     parser.add_argument('--encoder_weight_path', type=str,
-                        default="/weight/dec/", help="encoder weights path")
+                        default="/weight/enc/", help="encoder weights path")
     parser.add_argument('--useFP16', type=bool,
                         default=True, help="using fp16 mode")
     parser.add_argument('--use_layernorm_in_conv_module', action='store_true',

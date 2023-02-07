@@ -1,5 +1,5 @@
 nvidia-pyindex
-tensorrt==8.5.2.2
+tensorrt==8.5.1.7
 onnx
 onnxruntime-gpu
 onnx_graphsurgeon>=0.3.21 --index-url https://pypi.ngc.nvidia.com

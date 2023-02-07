@@ -15,7 +15,7 @@
 
 trtexec=/usr/src/tensorrt/bin/trtexec
 export CUDA_VISIBLE_DEVICES="0"
-stage=-1
+stage=5
 stop_stage=5
 
 #<wenet_onnx_gpu_models>
@@ -113,7 +113,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
           -DBUILD_ORGIN_NET=OFF \
           ..
 
-     make -j$(nproc)
+     make -j$(nproc) || exit 1
      popd
      cp ${ft_path}/build/lib/libtrt_wenet.so $outputs_dir
 fi

@@ -47,12 +47,12 @@ Usage:
     --num-tasks 300 \
     --manifest-filename /mnt/samsung-t7/yuekai/aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz
 
-(Note: You have to first start the server before starting the client)
-
 # For test container:
 docker run -it --rm --name "wenet_client_test" --net host --gpus all soar97/triton-k2:22.12.1
 
 # For aishell manifests:
+apt-get install git-lfs
+git-lfs install
 git clone https://huggingface.co/csukuangfj/aishell-test-dev-manifests
 sudo mkdir -p /root/fangjun/open-source/icefall-aishell/egs/aishell/ASR/download/aishell
 tar xf ./aishell-test-dev-manifests/data_aishell.tar.gz -C /root/fangjun/open-source/icefall-aishell/egs/aishell/ASR/download/aishell/
