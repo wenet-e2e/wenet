@@ -15,7 +15,7 @@
 
 trtexec=/usr/src/tensorrt/bin/trtexec
 export CUDA_VISIBLE_DEVICES="0"
-stage=2
+stage=-1
 stop_stage=5
 
 #<wenet_onnx_gpu_models>
@@ -30,9 +30,9 @@ vocab_size=5537
 
 # paramters for TRT engines
 MIN_BATCH=1
-OPT_BATCH=32
-MAX_BATCH=128
-MAX_BATCH_FOR_SCORING=128
+OPT_BATCH=16
+MAX_BATCH=16
+MAX_BATCH_FOR_SCORING=16
 
 ENC_MIN_LEN=16
 ENC_OPT_LEN=512
