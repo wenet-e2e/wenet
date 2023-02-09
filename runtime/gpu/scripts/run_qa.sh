@@ -26,7 +26,6 @@ model_repo_path=$(pwd)/../model_repo
 
 model_dir=$(pwd)/${pretrained_model_name}
 onnx_model_dir=$(pwd)/${pretrained_model_name}_onnx
-onnx_model_dir=/myworkspace/wenet_yuekai/runtime/gpu/tensorrt_fastertransformer/aishell_onnx
 mkdir -p $onnx_model_dir
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then

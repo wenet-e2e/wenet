@@ -15,7 +15,7 @@
 
 trtexec=/usr/src/tensorrt/bin/trtexec
 export CUDA_VISIBLE_DEVICES="0"
-stage=5
+stage=-1
 stop_stage=5
 
 #<wenet_onnx_gpu_models>

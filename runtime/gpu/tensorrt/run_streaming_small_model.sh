@@ -139,7 +139,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
      done
 
      echo "test onnx throughput"
-     python3 ../../../tools/test_onnx_throughput.py \
+     python3 ../scripts/test_onnx_throughput.py \
           --batch_sizes 1,4,8,16,32,64,128,256 \
           --onnxFile $onnx_model_dir/encoder_fp16.onnx \
           --log $outputs_dir/log.txt
