@@ -75,19 +75,19 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
           --optShapes=chunk_xs:${OPT_BATCH}x67x80,chunk_lens:${OPT_BATCH},offset:${OPT_BATCH}x1,att_cache:${OPT_BATCH}x12x4x80x128,cnn_cache:${OPT_BATCH}x12x256x7,cache_mask:${OPT_BATCH}x1x80 \
           --maxShapes=chunk_xs:${MAX_BATCH}x67x80,chunk_lens:${MAX_BATCH},offset:${MAX_BATCH}x1,att_cache:${MAX_BATCH}x12x4x80x128,cnn_cache:${MAX_BATCH}x12x256x7,cache_mask:${MAX_BATCH}x1x80 \
           --plugins=$outputs_dir/LayerNorm.so \
-          --saveEngine=$outputs_dir/encoder_fp16.plan
+          --saveEngine=$outputs_dir/encoder_fp16_v2.plan
 fi
 
 
 # if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 #      echo "convert conformer encoder with layernorm plugin using multi-profile"
 #      # profile1
-#      MIN_BATCH1=8
-#      OPT_BATCH1=32
+#      MIN_BATCH1=9
+#      OPT_BATCH1=16
 #      MAX_BATCH1=32
 #      # profile2
 #      MIN_BATCH2=1
-#      OPT_BATCH2=4
+#      OPT_BATCH2=8
 #      MAX_BATCH2=8
 
 #      python3 export_streaming_conformer_trt.py \
@@ -101,16 +101,11 @@ fi
 #           --cache_mask ${MIN_BATCH1}x1x80,${OPT_BATCH1}x1x80,${MAX_BATCH1}x1x80,${MIN_BATCH2}x1x80,${OPT_BATCH2}x1x80,${MAX_BATCH2}x1x80 \
 #           --plugin $outputs_dir/LayerNorm.so \
 #           --trtFile $outputs_dir/encoder_fp16.plan \
-#           --test
+#           --test || exit 1
 # fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
    echo "prepare model repo for triton"
-
-   cp -r ../model_repo_stateful $model_repo_path
-   patch $model_repo_path/encoder/config_template.pbtxt model_repo_stateful_trt_files/encoder_config_template.patch
-   patch $model_repo_path/streaming_wenet/config_template.pbtxt model_repo_stateful_trt_files/streaming_wenet_config_template.patch
-   patch $model_repo_path/wenet/config_template.pbtxt model_repo_stateful_trt_files/wenet_config_template.patch
    python3 ../scripts/convert.py --config=$onnx_model_dir/train.yaml --vocab=$onnx_model_dir/words.txt \
         --model_repo=$model_repo_path --onnx_model_dir=$onnx_model_dir
    # TODO: fix hard-coding path
@@ -124,7 +119,7 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
    echo "launch triton server"
    LD_PRELOAD=./LayerNorm.so tritonserver --model-repository $model_repo_path \
-   --pinned-memory-pool-byte-size=512000000 --cuda-memory-pool-byte-size=0:1024000000
+   --pinned-memory-pool-byte-size=2512000000 --cuda-memory-pool-byte-size=0:2024000000
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then

@@ -67,7 +67,7 @@ import time
 import types
 from functools import partial
 from pathlib import Path
-
+import json
 import numpy as np
 import tritonclient
 import tritonclient.grpc.aio as grpcclient
@@ -174,6 +174,14 @@ def get_args():
                         required=False,
                         default=4,
                         help='subsampling rate')
+
+    parser.add_argument(
+        '--stats_file',
+        type=str,
+        required=False,
+        default="./stats.json",
+        help='output of stats anaylasis'
+    )
 
     return parser.parse_args()
 
@@ -432,7 +440,7 @@ async def main():
                 )
             )
         tasks.append(task)
-
+    
     ans_list = await asyncio.gather(*tasks)
 
     end_time = time.time()
@@ -482,6 +490,11 @@ async def main():
     with open(f"errs-{name}.txt", "r") as f:
         print(f.readline())  # WER
         print(f.readline())  # Detailed errors
+
+    if args.stats_file:
+        stats = await triton_client.get_inference_statistics(model_name='', as_json=True)
+        with open(args.stats_file, 'w') as f:
+            json.dump(stats,f)
 
 
 if __name__ == "__main__":
