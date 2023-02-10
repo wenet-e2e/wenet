@@ -22,7 +22,7 @@ python3 export_trt.py \
     --chunk_xs 1x67x80,32x67x80,64x67x80,1x67x80,4x67x80,8x67x80 \
     --chunk_lens 1,32,64,1,4,8 \
     --offset 1x1,32x1,64x1,1x1,4x1,8x1 \
-    --att_cache 1x12x4x80x128,32x12x4x80x128,64x12x4x80x128,1x12x4x80x128,4x12x4x80x128,8x12x4x80x128 \
+    --att_cache 1x12x4x80x128,32x12x4x80x128,64x12x4x80x128,1x12x4x80x128,4x12x4x80x128,8x12x4x80x128 \ # noqa
     --cnn_cache 1x12x256x7,32x12x256x7,64x12x256x7,1x12x256x7,4x12x256x7,8x12x256x7 \
     --cache_mask 1x1x80,32x1x80,64x1x80,1x1x80,4x1x80,8x1x80 \
     --plugin exp6_fp16/LayerNorm.so \
@@ -116,17 +116,23 @@ def get_parser():
         help="Path to the onnx file",
     )
 
-    parser.add_argument('--useTimeCache',
-                        action='store_true',
-                        help='whether to use time cache, default false')
+    parser.add_argument(
+        "--useTimeCache",
+        action="store_true",
+        help="whether to use time cache, default false",
+    )
 
-    parser.add_argument('--fp16',
-                        action='store_true',
-                        help='whether to export fp16 model, default false')
+    parser.add_argument(
+        "--fp16",
+        action="store_true",
+        help="whether to export fp16 model, default false",
+    )
 
-    parser.add_argument('--test',
-                        action='store_true',
-                        help='whether to test exported engine, default false')
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="whether to test exported engine, default false",
+    )
 
     return parser
 
@@ -135,17 +141,23 @@ def get_latency_result(latency_list, batch_size):
     latency_ms = sum(latency_list) / float(len(latency_list)) * 1000.0
     latency_variance = np.var(latency_list, dtype=np.float64) * 1000.0
     throughput = batch_size * (1000.0 / latency_ms)
-    throughput_trt = (1000.0 / latency_ms)
+    throughput_trt = 1000.0 / latency_ms
 
     return {
         "test_times": len(latency_list),
         "latency_variance": "{:.2f}".format(latency_variance),
-        "latency_90_percentile": "{:.2f}".format(np.percentile(latency_list, 90) * 1000.0),
-        "latency_95_percentile": "{:.2f}".format(np.percentile(latency_list, 95) * 1000.0),
-        "latency_99_percentile": "{:.2f}".format(np.percentile(latency_list, 99) * 1000.0),
+        "latency_90_percentile": "{:.2f}".format(
+            np.percentile(latency_list, 90) * 1000.0
+        ),
+        "latency_95_percentile": "{:.2f}".format(
+            np.percentile(latency_list, 95) * 1000.0
+        ),
+        "latency_99_percentile": "{:.2f}".format(
+            np.percentile(latency_list, 99) * 1000.0
+        ),
         "average_latency_ms": "{:.2f}".format(latency_ms),
         "QPS": "{:.2f}".format(throughput),
-        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt)
+        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt),
     }
 
 
@@ -170,8 +182,9 @@ def test(engine, context, nBatchSize, batch_threshold=8):
     context.set_binding_shape(bindingBias + 4, [nBatchSize, 12, 256, 7])
     context.set_binding_shape(bindingBias + 5, [nBatchSize, 1, 80])
 
-    nInput = np.sum([engine.binding_is_input(i)
-                    for i in range(engine.num_bindings)])
+    nInput = np.sum(
+        [engine.binding_is_input(i) for i in range(engine.num_bindings)]
+    )
     nOutput = engine.num_bindings - nInput
 
     nInput = nInput // nProfile
@@ -184,22 +197,31 @@ def test(engine, context, nBatchSize, batch_threshold=8):
     #  (elayers, b, head, cache_t1, d_k * 2)
     head = 4
     d_k = 64
-    att_cache = torch.randn(nBatchSize, 12, head,
-                            80, d_k * 2,
-                            dtype=torch.float32).numpy()
-    cnn_cache = torch.randn(nBatchSize, 12, 256,
-                            7, dtype=torch.float32)
+    att_cache = torch.randn(
+        nBatchSize, 12, head, 80, d_k * 2, dtype=torch.float32
+    ).numpy()
+    cnn_cache = torch.randn(nBatchSize, 12, 256, 7, dtype=torch.float32)
 
     cache_mask = torch.ones(nBatchSize, 1, 80, dtype=torch.float32)
 
-    input_tensors = [chunk_xs, chunk_lens,
-                     offset, att_cache, cnn_cache, cache_mask]
+    input_tensors = [
+        chunk_xs,
+        chunk_lens,
+        offset,
+        att_cache,
+        cnn_cache,
+        cache_mask,
+    ]
     bufferH = []
     for data in input_tensors:
         bufferH.append(np.ascontiguousarray(data.reshape(-1)))
     for i in range(nInput, nInput + nOutput):
-        bufferH.append(np.empty(context.get_binding_shape(
-            bindingBias + i), dtype=trt.nptype(engine.get_binding_dtype(bindingBias + i))))
+        bufferH.append(
+            np.empty(
+                context.get_binding_shape(bindingBias + i),
+                dtype=trt.nptype(engine.get_binding_dtype(bindingBias + i)),
+            )
+        )
     bufferD = []
     for i in range(nInput + nOutput):
         bufferD.append(cudart.cudaMalloc(bufferH[i].nbytes)[1])
@@ -210,14 +232,20 @@ def test(engine, context, nBatchSize, batch_threshold=8):
         bufferD = [int(0) for _ in range(bindingBias)] + bufferD
 
     for i in range(nInput):
-        cudart.cudaMemcpy(bufferD[i], bufferH[i].ctypes.data,
-                          bufferH[i].nbytes, cudart.cudaMemcpyKind.cudaMemcpyHostToDevice)
+        cudart.cudaMemcpy(
+            bufferD[i],
+            bufferH[i].ctypes.data,
+            bufferH[i].nbytes,
+            cudart.cudaMemcpyKind.cudaMemcpyHostToDevice,
+        )
 
     nWarm, nTest = 5, 10
-    timeit.repeat(lambda: context.execute_v2(bufferD),
-                  number=1, repeat=nWarm)  # Dry run
+    timeit.repeat(
+        lambda: context.execute_v2(bufferD), number=1, repeat=nWarm
+    )  # Dry run
     latency_list = timeit.repeat(
-        lambda: context.execute_v2(bufferD), number=1, repeat=nTest)
+        lambda: context.execute_v2(bufferD), number=1, repeat=nTest
+    )
     print(get_latency_result(latency_list, nBatchSize))
 
     if nProfile == 1 or nBatchSize > batch_threshold:
@@ -233,12 +261,12 @@ def main():
     args = get_parser().parse_args()
 
     logger = trt.Logger(trt.Logger.ERROR)
-    trt.init_libnvinfer_plugins(logger, '')
+    trt.init_libnvinfer_plugins(logger, "")
     ctypes.cdll.LoadLibrary(args.plugin)
 
     timeCache = b""
     if args.useTimeCache and os.path.isfile(args.timeCacheFile):
-        with open(args.timeCacheFile, 'rb') as f:
+        with open(args.timeCacheFile, "rb") as f:
             timeCache = f.read()
         if timeCache is None:
             print("Failed getting serialized timing cache!")
@@ -247,12 +275,13 @@ def main():
 
     if os.path.isfile(args.trtFile):
         print("Engine existed!")
-        with open(args.trtFile, 'rb') as f:
+        with open(args.trtFile, "rb") as f:
             engineString = f.read()
     else:
         builder = trt.Builder(logger)
         network = builder.create_network(
-            1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+            1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
+        )
         config = builder.create_builder_config()
 
         if args.useTimeCache:
@@ -270,7 +299,7 @@ def main():
             print("Failed finding ONNX file!")
             exit()
         print("Succeeded finding ONNX file!")
-        with open(args.onnxFile, 'rb') as model:
+        with open(args.onnxFile, "rb") as model:
             if not parser.parse(model.read()):
                 print("Failed parsing ONNX file!")
                 for error in range(parser.num_errors):
@@ -281,9 +310,11 @@ def main():
         profile0 = builder.create_optimization_profile()
         profile1 = builder.create_optimization_profile()
         for key, value in vars(args).items():
-            if isinstance(value, str) and ',' in value:
-                shapes = [tuple(map(int, item.split('x')))
-                          for item in value.split(",")]
+            if isinstance(value, str) and "," in value:
+                shapes = [
+                    tuple(map(int, item.split("x")))
+                    for item in value.split(",")
+                ]
                 assert len(shapes) == 2 * 3
                 profile0.set_shape(key, shapes[0], shapes[1], shapes[2])
                 profile1.set_shape(key, shapes[3], shapes[4], shapes[5])
@@ -300,12 +331,12 @@ def main():
         if args.useTimeCache and not os.path.isfile(args.timeCacheFile):
             timeCache = config.get_timing_cache()
             timeCacheString = timeCache.serialize()
-            with open(args.timeCacheFile, 'wb') as f:
+            with open(args.timeCacheFile, "wb") as f:
                 f.write(timeCacheString)
                 print("Succeeded saving .cache file!")
 
         print("Succeeded building engine!")
-        with open(args.trtFile, 'wb') as f:
+        with open(args.trtFile, "wb") as f:
             f.write(engineString)
 
     if args.test:

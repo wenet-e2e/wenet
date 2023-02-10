@@ -11,13 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+#ifndef RUNTIME_GPU_TENSORRT_LAYERNORMPLUGIN_LAYERNORMPLUGIN_H_
+#define RUNTIME_GPU_TENSORRT_LAYERNORMPLUGIN_LAYERNORMPLUGIN_H_
 
 #include <vector>
 #include <string>
 #include <cassert>
 #include <NvInfer.h>
-#include <cuda_fp16.h>
-#include <cub/cub.cuh>
+#include <cuda_fp16.h> // NOLINT
+#include <cub/cub.cuh> // NOLINT
 
 #define CEIL_DIVIDE(X, Y)    (((X)+(Y)-1)/(Y))
 #define CEIL_TO(X, Y)        (((X)+(Y)-1)/(Y)*(Y))
@@ -27,7 +29,7 @@ __device__ T epsilon();
 
 template <>
 __device__ float epsilon<float>() {
-    return (float)6.0e-12;
+    return (float)6.0e-12; // NOLINT
 }
 
 template <>
@@ -43,7 +45,7 @@ __device__ half epsilon<half>() {
 #endif  // DEBUG
 
 // +------- Plguin -------------------------------------------
-namespace {
+namespace { // NOLINT
 static const char* PLUGIN_NAME{"LayerNorm"};
 static const char* PLUGIN_VERSION{"1"};
 }  // namespace
@@ -57,7 +59,7 @@ class LayerNormPlugin: public IPluginV2DynamicExt {
     std::string namespace_;
 
  public:
-    LayerNormPlugin(const std::string& name) : name_(name) {
+    LayerNormPlugin(const std::string& name) : name_(name) { // NOLINT
         WHERE_AM_I();
     }
 
@@ -225,4 +227,4 @@ class LayerNormPluginCreator : public IPluginCreator {
 };  // class LayerNormPluginCreator
 
 }  // namespace nvinfer1
-
+#endif  // RUNTIME_GPU_TENSORRT_LAYERNORMPLUGIN_LAYERNORMPLUGIN_H_

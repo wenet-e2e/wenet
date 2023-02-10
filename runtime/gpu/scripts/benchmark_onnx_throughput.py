@@ -68,26 +68,39 @@ def get_parser():
         help="Path to the log file",
     )
 
-    parser.add_argument('--model_type',
-                        type=str,
-                        choices=["streaming_conformer_encoder",
-                                 "conformer_encoder", "decoder", "bidecoder"],
-                        default="streaming_conformer_encoder",
-                        help='onnx model type for wenet')
+    parser.add_argument(
+        "--model_type",
+        type=str,
+        choices=[
+            "streaming_conformer_encoder",
+            "conformer_encoder",
+            "decoder",
+            "bidecoder",
+        ],
+        default="streaming_conformer_encoder",
+        help="onnx model type for wenet",
+    )
 
-    parser.add_argument('--disable_gpu',
-                        action='store_true',
-                        help='whether to disable gpu infer, default false')
+    parser.add_argument(
+        "--disable_gpu",
+        action="store_true",
+        help="whether to disable gpu infer, default false",
+    )
 
-    parser.add_argument('--disable_ort_io_binding',
-                        action='store_true',
-                        help='whether to disable onnxrt io binding')
+    parser.add_argument(
+        "--disable_ort_io_binding",
+        action="store_true",
+        help="whether to disable onnxrt io binding",
+    )
 
     return parser
 
 
-def allocateOutputBuffers(output_buffers, output_buffer_max_sizes, device, data_type=torch.float32):
-    # Allocate output tensors with the largest test size needed. So the allocated memory can be reused
+def allocateOutputBuffers(
+    output_buffers, output_buffer_max_sizes, device, data_type=torch.float32
+):
+    # Allocate output tensors with the largest test size needed.
+    # So the allocated memory can be reused
     # for each test run.
 
     for i in output_buffer_max_sizes:
@@ -98,21 +111,34 @@ def get_latency_result(latency_list, batch_size):
     latency_ms = sum(latency_list) / float(len(latency_list)) * 1000.0
     latency_variance = numpy.var(latency_list, dtype=numpy.float64) * 1000.0
     throughput = batch_size * (1000.0 / latency_ms)
-    throughput_trt = (1000.0 / latency_ms)
+    throughput_trt = 1000.0 / latency_ms
 
     return {
         "test_times": len(latency_list),
         "latency_variance": "{:.2f}".format(latency_variance),
-        "latency_90_percentile": "{:.2f}".format(numpy.percentile(latency_list, 90) * 1000.0),
-        "latency_95_percentile": "{:.2f}".format(numpy.percentile(latency_list, 95) * 1000.0),
-        "latency_99_percentile": "{:.2f}".format(numpy.percentile(latency_list, 99) * 1000.0),
+        "latency_90_percentile": "{:.2f}".format(
+            numpy.percentile(latency_list, 90) * 1000.0
+        ),
+        "latency_95_percentile": "{:.2f}".format(
+            numpy.percentile(latency_list, 95) * 1000.0
+        ),
+        "latency_99_percentile": "{:.2f}".format(
+            numpy.percentile(latency_list, 99) * 1000.0
+        ),
         "average_latency_ms": "{:.2f}".format(latency_ms),
         "QPS": "{:.2f}".format(throughput),
-        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt)
+        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt),
     }
 
 
-def create_onnxruntime_input(batch_size, sequence_length, input_names, config, model_type, data_type=torch.float16):
+def create_onnxruntime_input(
+    batch_size,
+    sequence_length,
+    input_names,
+    config,
+    model_type,
+    data_type=torch.float16,
+):
     inputs = {}
     if model_type == "streaming_conformer_encoder":
         feature_size = 80
@@ -123,24 +149,38 @@ def create_onnxruntime_input(batch_size, sequence_length, input_names, config, m
         d_k = int(output_size / head)
         cnn_module_kernel = 7
 
-        chunk_xs = torch.randn(batch_size, sequence_length,
-                               feature_size, dtype=data_type).numpy()
+        chunk_xs = torch.randn(
+            batch_size, sequence_length, feature_size, dtype=data_type
+        ).numpy()
         inputs["chunk_xs"] = chunk_xs
-        chunk_lens = torch.ones(
-            batch_size, dtype=torch.int32).numpy() * sequence_length
+        chunk_lens = (
+            torch.ones(batch_size, dtype=torch.int32).numpy() * sequence_length
+        )
         inputs["chunk_lens"] = chunk_lens
-        offset = torch.arange(
-            0, batch_size, dtype=torch.int64).unsqueeze(1).numpy()
+        offset = (
+            torch.arange(0, batch_size, dtype=torch.int64).unsqueeze(1).numpy()
+        )
         inputs["offset"] = offset
-        att_cache = torch.randn(batch_size, num_layers, head,
-                                required_cache_size, d_k * 2,
-                                dtype=data_type).numpy()
+        att_cache = torch.randn(
+            batch_size,
+            num_layers,
+            head,
+            required_cache_size,
+            d_k * 2,
+            dtype=data_type,
+        ).numpy()
         inputs["att_cache"] = att_cache
-        cnn_cache = torch.randn(batch_size, num_layers, output_size,
-                                cnn_module_kernel, dtype=data_type).numpy()
+        cnn_cache = torch.randn(
+            batch_size,
+            num_layers,
+            output_size,
+            cnn_module_kernel,
+            dtype=data_type,
+        ).numpy()
         inputs["cnn_cache"] = cnn_cache
         cache_mask = torch.ones(
-            batch_size, 1, required_cache_size, dtype=data_type).numpy()
+            batch_size, 1, required_cache_size, dtype=data_type
+        ).numpy()
         inputs["cache_mask"] = cache_mask
 
     else:
@@ -148,12 +188,23 @@ def create_onnxruntime_input(batch_size, sequence_length, input_names, config, m
     return inputs
 
 
-def inference_ort(ort_session, ort_inputs, result_template, repeat_times, batch_size, warm_up_repeat=0):
+def inference_ort(
+    ort_session,
+    ort_inputs,
+    result_template,
+    repeat_times,
+    batch_size,
+    warm_up_repeat=0,
+):
     result = {}
-    timeit.repeat(lambda: ort_session.run(None, ort_inputs),
-                  number=1, repeat=warm_up_repeat)  # Dry run
-    latency_list = timeit.repeat(lambda: ort_session.run(
-        None, ort_inputs), number=1, repeat=repeat_times)
+    timeit.repeat(
+        lambda: ort_session.run(None, ort_inputs),
+        number=1,
+        repeat=warm_up_repeat,
+    )  # Dry run
+    latency_list = timeit.repeat(
+        lambda: ort_session.run(None, ort_inputs), number=1, repeat=repeat_times
+    )
     result.update(result_template)
     result.update({"io_binding": False})
     result.update(get_latency_result(latency_list, batch_size))
@@ -248,16 +299,20 @@ def create_onnxruntime_session(
     num_threads=-1,
     enable_profiling=False,
     verbose=False,
-    provider_options={},  # map execution provider name to its option
+    provider_options=None,
 ):
     session = None
     sess_options = onnxruntime.SessionOptions()
 
     if enable_all_optimization:
-        sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+        sess_options.graph_optimization_level = (
+            onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+        )
     else:
-        sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
-        # sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+        sess_options.graph_optimization_level = (
+            onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        )
+        # sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL # noqa
 
     if enable_profiling:
         sess_options.enable_profiling = True
@@ -285,16 +340,19 @@ def create_onnxruntime_session(
         providers = ["CPUExecutionProvider"]
 
     if provider_options:
-        providers = [(name, provider_options[name])
-                     if name in provider_options else name for name in providers]
+        providers = [
+            (name, provider_options[name]) if name in provider_options else name
+            for name in providers
+        ]
 
     session = onnxruntime.InferenceSession(
-        onnx_model_path, sess_options, providers=providers)
+        onnx_model_path, sess_options, providers=providers
+    )
 
     return session
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = get_parser().parse_args()
     warm_up_repeat = 20
     repeat_times = 20
@@ -305,33 +363,50 @@ if __name__ == '__main__':
     sequence_lengths = list(map(int, args.sequence_lengths.split(",")))
 
     if args.model_type == "streaming_conformer_encoder":
-        input_names = ['chunk_xs', 'chunk_lens', 'offset',
-                       'att_cache', 'cnn_cache', 'cache_mask']
-        ort_output_names = ['log_probs', 'log_probs_idx', 'chunk_out',
-                            'chunk_out_lens', 'r_offset', 'r_att_cache',
-                            'r_cnn_cache', 'r_cache_mask']
+        input_names = [
+            "chunk_xs",
+            "chunk_lens",
+            "offset",
+            "att_cache",
+            "cnn_cache",
+            "cache_mask",
+        ]
+        ort_output_names = [
+            "log_probs",
+            "log_probs_idx",
+            "chunk_out",
+            "chunk_out_lens",
+            "r_offset",
+            "r_att_cache",
+            "r_cnn_cache",
+            "r_cache_mask",
+        ]
     else:
         raise NotImplementedError
 
     if args.disable_gpu:
-        EP_list = ['CPUExecutionProvider']
+        EP_list = ["CPUExecutionProvider"]
     else:
-        EP_list = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        EP_list = ["CUDAExecutionProvider", "CPUExecutionProvider"]
 
     device = "cpu" if args.disable_gpu else "cuda"
 
-    ort_session = create_onnxruntime_session(args.onnxFile,
-                                             not args.disable_gpu,
-                                             provider='cuda',
-                                             enable_all_optimization=True,
-                                             num_threads=-1,
-                                             verbose=False,
-                                             )
+    ort_session = create_onnxruntime_session(
+        args.onnxFile,
+        not args.disable_gpu,
+        provider="cuda",
+        enable_all_optimization=True,
+        num_threads=-1,
+        verbose=False,
+    )
 
     results = []
     for batch_size in batch_sizes:
         for sequence_length in sequence_lengths:
-            if max_sequence_length is not None and sequence_length > max_sequence_length:
+            if (
+                max_sequence_length is not None
+                and sequence_length > max_sequence_length
+            ):
                 continue
 
             ort_inputs = create_onnxruntime_input(
@@ -339,7 +414,7 @@ if __name__ == '__main__':
                 sequence_length,
                 input_names,
                 input_value_type,
-                args.model_type
+                args.model_type,
             )
 
             result_template = {
@@ -350,7 +425,8 @@ if __name__ == '__main__':
 
             print(
                 "Run onnxruntime on {} with input shape {}".format(
-                    args.onnxFile, [batch_size, sequence_length])
+                    args.onnxFile, [batch_size, sequence_length]
+                )
             )
 
             if args.disable_ort_io_binding:
@@ -368,7 +444,8 @@ if __name__ == '__main__':
                 output_buffer_max_sizes = []
                 for i in range(len(ort_outputs)):
                     output_buffer_max_sizes.append(
-                        numpy.prod(ort_outputs[i].shape))
+                        numpy.prod(ort_outputs[i].shape)
+                    )
 
                 data_type = numpy.intc
                 output_buffers = []
@@ -388,6 +465,6 @@ if __name__ == '__main__':
                 )
             print(result)
             results.append(result)
-    with open(args.log, 'w') as log_f:
+    with open(args.log, "w") as log_f:
         for result in results:
             log_f.write(f"{result}\n")

@@ -25,7 +25,7 @@ Usage:
     --compute-cer \
     --model-name attention_rescoring \
     --num-tasks 300 \
-    --manifest-filename /mnt/samsung-t7/yuekai/aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz
+    --manifest-filename ./aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz # noqa
 
 # For streaming wenet server
 ./decode_manifest_triton.py \
@@ -35,7 +35,7 @@ Usage:
     --context 7 \
     --model-name streaming_wenet \
     --num-tasks 300 \
-    --manifest-filename /mnt/samsung-t7/yuekai/aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz
+    --manifest-filename ./aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz # noqa
 
 # For simulate streaming mode wenet server
 ./decode_manifest_triton.py \
@@ -45,17 +45,17 @@ Usage:
     --context 7 \
     --model-name streaming_wenet \
     --num-tasks 300 \
-    --manifest-filename /mnt/samsung-t7/yuekai/aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz
+    --manifest-filename ./aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz # noqa
 
 # For test container:
-docker run -it --rm --name "wenet_client_test" --net host --gpus all soar97/triton-k2:22.12.1
+docker run -it --rm --name "wenet_client_test" --net host --gpus all soar97/triton-k2:22.12.1 # noqa
 
 # For aishell manifests:
 apt-get install git-lfs
 git-lfs install
 git clone https://huggingface.co/csukuangfj/aishell-test-dev-manifests
 sudo mkdir -p /root/fangjun/open-source/icefall-aishell/egs/aishell/ASR/download/aishell
-tar xf ./aishell-test-dev-manifests/data_aishell.tar.gz -C /root/fangjun/open-source/icefall-aishell/egs/aishell/ASR/download/aishell/
+tar xf ./aishell-test-dev-manifests/data_aishell.tar.gz -C /root/fangjun/open-source/icefall-aishell/egs/aishell/ASR/download/aishell/ # noqa
 
 """
 
@@ -150,36 +150,44 @@ def get_args():
         """,
     )
 
-    parser.add_argument('--chunk_size',
-                        type=int,
-                        required=False,
-                        default=16,
-                        help='chunk size default is 16')
-
-    parser.add_argument('--context',
-                        type=int,
-                        required=False,
-                        default=-1,
-                        help='subsampling context for wenet')
-
-    parser.add_argument('--encoder_right_context',
-                        type=int,
-                        required=False,
-                        default=2,
-                        help='encoder right context')
-
-    parser.add_argument('--subsampling',
-                        type=int,
-                        required=False,
-                        default=4,
-                        help='subsampling rate')
+    parser.add_argument(
+        "--chunk_size",
+        type=int,
+        required=False,
+        default=16,
+        help="chunk size default is 16",
+    )
 
     parser.add_argument(
-        '--stats_file',
+        "--context",
+        type=int,
+        required=False,
+        default=-1,
+        help="subsampling context for wenet",
+    )
+
+    parser.add_argument(
+        "--encoder_right_context",
+        type=int,
+        required=False,
+        default=2,
+        help="encoder right context",
+    )
+
+    parser.add_argument(
+        "--subsampling",
+        type=int,
+        required=False,
+        default=4,
+        help="subsampling rate",
+    )
+
+    parser.add_argument(
+        "--stats_file",
         type=str,
         required=False,
         default="./stats.json",
-        help='output of stats anaylasis'
+        help="output of stats anaylasis",
     )
 
     return parser.parse_args()
@@ -206,33 +214,39 @@ async def send(
 
         # padding to nearset 10 seconds
         samples = np.zeros(
-            (1, 10 * sample_rate * (int(len(waveform) / sample_rate // 10) + 1)), dtype=np.float32)
-        samples[0, :len(waveform)] = waveform
+            (
+                1,
+                10 * sample_rate * (int(len(waveform) / sample_rate // 10) + 1),
+            ),
+            dtype=np.float32,
+        )
+        samples[0, : len(waveform)] = waveform
 
         lengths = np.array([[len(waveform)]], dtype=np.int32)
 
         inputs = [
-            protocol_client.InferInput("WAV", samples.shape,
-                                       np_to_triton_dtype(samples.dtype)),
-            protocol_client.InferInput("WAV_LENS", lengths.shape,
-                                       np_to_triton_dtype(lengths.dtype))
+            protocol_client.InferInput(
+                "WAV", samples.shape, np_to_triton_dtype(samples.dtype)
+            ),
+            protocol_client.InferInput(
+                "WAV_LENS", lengths.shape, np_to_triton_dtype(lengths.dtype)
+            ),
         ]
         inputs[0].set_data_from_numpy(samples)
         inputs[1].set_data_from_numpy(lengths)
         outputs = [protocol_client.InferRequestedOutput("TRANSCRIPTS")]
         sequence_id = 10086 + i
 
-        response = await triton_client.infer(model_name,
-                                             inputs,
-                                             request_id=str(sequence_id),
-                                             outputs=outputs)
+        response = await triton_client.infer(
+            model_name, inputs, request_id=str(sequence_id), outputs=outputs
+        )
 
         decoding_results = response.as_numpy("TRANSCRIPTS")[0]
         if type(decoding_results) == np.ndarray:
-            decoding_results = b' '.join(decoding_results).decode('utf-8')
+            decoding_results = b" ".join(decoding_results).decode("utf-8")
         else:
             # For wenet
-            decoding_results = decoding_results.decode('utf-8')
+            decoding_results = decoding_results.decode("utf-8")
 
         total_duration += c.duration
 
@@ -284,10 +298,10 @@ async def send_streaming(
         while j < len(waveform):
             if j == 0:
                 stride = int(first_chunk_in_secs * sample_rate)
-                wav_segs.append(waveform[j: j + stride])
+                wav_segs.append(waveform[j : j + stride])
             else:
                 stride = int(other_chunk_in_secs * sample_rate)
-                wav_segs.append(waveform[j: j + stride])
+                wav_segs.append(waveform[j : j + stride])
             j += len(wav_segs[-1])
 
         sequence_id = task_index + 10086
@@ -311,10 +325,17 @@ async def send_streaming(
             input1_data = np.array([[chunk_len]], dtype=np.int32)
 
             inputs = [
-                protocol_client.InferInput("WAV", input0_data.shape,
-                                           np_to_triton_dtype(input0_data.dtype)),
-                protocol_client.InferInput("WAV_LENS", input1_data.shape,
-                                           np_to_triton_dtype(input1_data.dtype))]
+                protocol_client.InferInput(
+                    "WAV",
+                    input0_data.shape,
+                    np_to_triton_dtype(input0_data.dtype),
+                ),
+                protocol_client.InferInput(
+                    "WAV_LENS",
+                    input1_data.shape,
+                    np_to_triton_dtype(input1_data.dtype),
+                ),
+            ]
 
             inputs[0].set_data_from_numpy(input0_data)
             inputs[1].set_data_from_numpy(input1_data)
@@ -324,21 +345,24 @@ async def send_streaming(
             if idx == len(wav_segs) - 1:
                 end = True
 
-            response = await triton_client.infer(model_name,
-                                                 inputs,
-                                                 outputs=outputs,
-                                                 sequence_id=sequence_id,
-                                                 sequence_start=idx == 0,
-                                                 sequence_end=end)
+            response = await triton_client.infer(
+                model_name,
+                inputs,
+                outputs=outputs,
+                sequence_id=sequence_id,
+                sequence_start=idx == 0,
+                sequence_end=end,
+            )
             idx += 1
 
             decoding_results = response.as_numpy("TRANSCRIPTS")
             if type(decoding_results) == np.ndarray:
-                decoding_results = b' '.join(decoding_results).decode('utf-8')
+                decoding_results = b" ".join(decoding_results).decode("utf-8")
             else:
                 # For wenet
-                decoding_results = response.as_numpy(
-                    "TRANSCRIPTS")[0].decode("utf-8")
+                decoding_results = response.as_numpy("TRANSCRIPTS")[0].decode(
+                    "utf-8"
+                )
             chunk_end = time.time() - chunk_start
             latency_data.append((chunk_end, chunk_len / sample_rate))
 
@@ -383,16 +407,19 @@ async def main():
         frame_shift_ms = 10
         frame_length_ms = 25
         add_frames = math.ceil(
-            (frame_length_ms - frame_shift_ms) / frame_shift_ms)
+            (frame_length_ms - frame_shift_ms) / frame_shift_ms
+        )
         # decode_window_length: input sequence length of streaming encoder
         if args.context > 0:
             # decode window length calculation for wenet
-            decode_window_length = (args.chunk_size - 1) * \
-                args.subsampling + args.context
+            decode_window_length = (
+                args.chunk_size - 1
+            ) * args.subsampling + args.context
         else:
             # decode window length calculation for icefall
             decode_window_length = (
-                args.chunk_size + 2 + args.encoder_right_context) * args.subsampling + 3
+                args.chunk_size + 2 + args.encoder_right_context
+            ) * args.subsampling + 3
 
         first_chunk_ms = (decode_window_length + add_frames) * frame_shift_ms
 
@@ -410,7 +437,10 @@ async def main():
                     compute_cer=compute_cer,
                     model_name=args.model_name,
                     first_chunk_in_secs=first_chunk_ms / 1000,
-                    other_chunk_in_secs=args.chunk_size * args.subsampling * frame_shift_ms / 1000,
+                    other_chunk_in_secs=args.chunk_size
+                    * args.subsampling
+                    * frame_shift_ms
+                    / 1000,
                     task_index=i,
                 )
             )
@@ -425,7 +455,10 @@ async def main():
                     compute_cer=compute_cer,
                     model_name=args.model_name,
                     first_chunk_in_secs=first_chunk_ms / 1000,
-                    other_chunk_in_secs=args.chunk_size * args.subsampling * frame_shift_ms / 1000,
+                    other_chunk_in_secs=args.chunk_size
+                    * args.subsampling
+                    * frame_shift_ms
+                    / 1000,
                     task_index=i,
                     simulate_mode=True,
                 )
@@ -439,7 +472,7 @@ async def main():
                     protocol_client=protocol_client,
                     log_interval=log_interval,
                     compute_cer=compute_cer,
-                    model_name=args.model_name
+                    model_name=args.model_name,
                 )
             )
         tasks.append(task)
@@ -469,8 +502,9 @@ async def main():
     )
 
     if args.streaming or args.simulate_streaming:
-        latency_list = [chunk_end for (
-            chunk_end, chunk_duration) in latency_data]
+        latency_list = [
+            chunk_end for (chunk_end, chunk_duration) in latency_data
+        ]
         latency_ms = sum(latency_list) / float(len(latency_list)) * 1000.0
         latency_variance = np.var(latency_list, dtype=np.float64) * 1000.0
         s += f"latency_variance: {latency_variance:.2f}\n"
@@ -496,8 +530,10 @@ async def main():
         print(f.readline())  # Detailed errors
 
     if args.stats_file:
-        stats = await triton_client.get_inference_statistics(model_name='', as_json=True)
-        with open(args.stats_file, 'w') as f:
+        stats = await triton_client.get_inference_statistics(
+            model_name="", as_json=True
+        )
+        with open(args.stats_file, "w") as f:
             json.dump(stats, f)
 
 

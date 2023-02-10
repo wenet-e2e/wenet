@@ -20,64 +20,92 @@ import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description='process onnx file for trt engine generation')
-    parser.add_argument('--input_onnx', type=str,
-                        required=True, help="input onnx model path")
-    parser.add_argument('--output_onnx', type=str,
-                        required=True, help="output .npy file path")
+        description="process onnx file for trt engine generation"
+    )
+    parser.add_argument(
+        "--input_onnx", type=str, required=True, help="input onnx model path"
+    )
+    parser.add_argument(
+        "--output_onnx", type=str, required=True, help="output .npy file path"
+    )
     args = parser.parse_args()
 
     sourceOnnx = args.input_onnx
     destinationOnnx = args.output_onnx
 
     graph = gs.import_onnx(
-        onnx.shape_inference.infer_shapes(onnx.load(sourceOnnx)))
+        onnx.shape_inference.infer_shapes(onnx.load(sourceOnnx))
+    )
 
     nLayerNormPlugin = 0
     for node in graph.nodes:
-        if node.op == 'ReduceMean' and \
-                node.o().op == 'Sub' and node.o().inputs[0] == node.inputs[0] and \
-                node.o().o(0).op == 'Pow' and node.o().o(1).op == 'Div' and \
-                node.o().o(0).o().op == 'ReduceMean' and \
-                node.o().o(0).o().o().op == 'Add' and \
-                node.o().o(0).o().o().o().op == 'Sqrt' and \
-                node.o().o(0).o().o().o().o().op == 'Div' and node.o().o(0).o().o().o().o() == node.o().o(1) and \
-                node.o().o(0).o().o().o().o().o().op == 'Mul' and \
-                node.o().o(0).o().o().o().o().o().o().op == 'Add':
-
+        if (
+            node.op == "ReduceMean"
+            and node.o().op == "Sub"
+            and node.o().inputs[0] == node.inputs[0]
+            and node.o().o(0).op == "Pow"
+            and node.o().o(1).op == "Div"
+            and node.o().o(0).o().op == "ReduceMean"
+            and node.o().o(0).o().o().op == "Add"
+            and node.o().o(0).o().o().o().op == "Sqrt"
+            and node.o().o(0).o().o().o().o().op == "Div"
+            and node.o().o(0).o().o().o().o() == node.o().o(1)
+            and node.o().o(0).o().o().o().o().o().op == "Mul"
+            and node.o().o(0).o().o().o().o().o().o().op == "Add"
+        ):
             inputTensor = node.inputs[0]
 
             lastMultipyNode = node.o().o(0).o().o().o().o().o()
-            index = [
-                'weight' in i.name for i in lastMultipyNode.inputs].index(True)
+            index = ["weight" in i.name for i in lastMultipyNode.inputs].index(
+                True
+            )
             b = np.array(
-                deepcopy(lastMultipyNode.inputs[index].values.tolist()), dtype=np.float32)
-            # MUST use np.ascontiguousarray, or TRT will regard the shape of this Constant as (0) !!!
+                deepcopy(lastMultipyNode.inputs[index].values.tolist()),
+                dtype=np.float32,
+            )
+            # MUST use np.ascontiguousarray,
+            # or TRT will regard the shape of this Constant as (0) !!!
             constantB = gs.Constant(
-                "LayerNormB-" + str(nLayerNormPlugin), np.ascontiguousarray(b.reshape(-1)))
+                "LayerNormB-" + str(nLayerNormPlugin),
+                np.ascontiguousarray(b.reshape(-1)),
+            )
 
             lastAddNode = node.o().o(0).o().o().o().o().o().o()
-            index = ['bias' in i.name for i in lastAddNode.inputs].index(True)
+            index = ["bias" in i.name for i in lastAddNode.inputs].index(True)
             a = np.array(
-                deepcopy(lastAddNode.inputs[index].values.tolist()), dtype=np.float32)
+                deepcopy(lastAddNode.inputs[index].values.tolist()),
+                dtype=np.float32,
+            )
             constantA = gs.Constant(
-                "LayerNormA-" + str(nLayerNormPlugin), np.ascontiguousarray(a.reshape(-1)))
+                "LayerNormA-" + str(nLayerNormPlugin),
+                np.ascontiguousarray(a.reshape(-1)),
+            )
 
             inputList = [inputTensor, constantB, constantA]
             layerNormV = gs.Variable(
-                "LayerNormV-" + str(nLayerNormPlugin), np.dtype(np.float32), None)
-            layerNormN = gs.Node("LayerNorm", "LayerNormN-" +
-                                 str(nLayerNormPlugin), inputs=inputList, outputs=[layerNormV])
+                "LayerNormV-" + str(nLayerNormPlugin),
+                np.dtype(np.float32),
+                None,
+            )
+            layerNormN = gs.Node(
+                "LayerNorm",
+                "LayerNormN-" + str(nLayerNormPlugin),
+                inputs=inputList,
+                outputs=[layerNormV],
+            )
             graph.nodes.append(layerNormN)
 
-            # the last LayerNorm provide one of the graph's output, and do not unsqueeze to 4 dimension
+            # the last LayerNorm provide one of the graph's output,
+            # and do not unsqueeze to 4 dimension
             if lastAddNode.outputs[0] in graph.outputs:
-                # oldLastAdd -> graph.outputs[0] ===> LayerNorm -> Squeeze -> graph.outputs[0]
-                layerNormN.outputs[0].name = 'chunk_out'
+                # oldLastAdd -> graph.outputs[0] ===>
+                # LayerNorm -> Squeeze -> graph.outputs[0]
+                layerNormN.outputs[0].name = "chunk_out"
                 index = graph.outputs.index(lastAddNode.outputs[0])
                 # TODO: FIX ME YUEKAI, for offline asr encoder_out dtype
                 graph.outputs[index] = layerNormN.outputs[0].to_variable(
-                    np.float16)
+                    np.float16
+                )
                 # graph.outputs[index] = layerNormN.outputs[0]
             else:  # other LayerNorm contain the subsequent Squeeze operation
                 for n in graph.nodes:

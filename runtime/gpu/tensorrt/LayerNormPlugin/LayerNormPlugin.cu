@@ -11,10 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 #include "LayerNormPlugin.h"
 
-using namespace nvinfer1;
+using namespace nvinfer1; // NOLINT
 
 PluginFieldCollection LayerNormPluginCreator::fc_{};
 std::vector<PluginField> LayerNormPluginCreator::attr_;
@@ -64,12 +63,12 @@ __global__ void layerNormKernel(const T* input, const T* gamma,
     copy<sizeof(T) * VPT>(&input[idx], localX);
     float2 localFloat2 = {0.f, 0.f};
 
-    const float rld = float(1)/ float(256);
+    const float rld = float(1)/ float(256); // NOLINT
 #pragma unroll
     for (int it = 0; it < VPT; it++) {
-        const float tmp = rld * (float)localX[it];
+        const float tmp = rld * (float)localX[it]; // NOLINT
         localFloat2.x += tmp;
-        localFloat2.y += tmp * (float)localX[it];
+        localFloat2.y += tmp * (float)localX[it]; // NOLINT
     }
 
     copy<sizeof(T) * VPT>(&beta[threadIdx.x * VPT], localBeta);
@@ -91,11 +90,11 @@ __global__ void layerNormKernel(const T* input, const T* gamma,
     __syncthreads();
 #pragma unroll
     for (int it = 0; it < VPT; it++) {
-        localX[it] = (float)localGamma[it] * ((float)localX[it] - mu) * rsigma
-        + (float)localBeta[it];
+        localX[it] = (float)localGamma[it] * ((float)localX[it] - mu) * rsigma // NOLINT
+        + (float)localBeta[it]; // NOLINT
     }
 
-    copy<sizeof(T) * VPT>(localX, &output[idx]);
+    copy<sizeof(T) * VPT>(localX, &output[idx]); // NOLINT
 }
 
 template __global__ void layerNormKernel<float, 64, 4>(const float*,
@@ -114,13 +113,13 @@ int LayerNormPlugin::enqueue(const PluginTensorDesc* inputDesc,
         constexpr int TPB = 256 / VPT;
         (layerNormKernel<float, TPB, VPT>)
         <<<gridSize, TPB, 0, stream>>> ((const float*)inputs[0],
-        (const float*)inputs[1], (const float*)inputs[2], (float*)outputs[0]);
+        (const float*)inputs[1], (const float*)inputs[2], (float*)outputs[0]); // NOLINT
     } else {
         constexpr int VPT = 16 / sizeof(half);
         constexpr int TPB = 256 / VPT;
         (layerNormKernel<half, TPB, VPT>) <<<gridSize, TPB, 0, stream>>> ((
         const half*)inputs[0], (const half*)inputs[1],
-        (const half*)inputs[2], (half*)outputs[0]);
+        (const half*)inputs[2], (half*)outputs[0]); // NOLINT
     }
     return 0;
 }
