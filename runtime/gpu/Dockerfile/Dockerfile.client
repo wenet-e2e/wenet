@@ -1,4 +1,4 @@
-FROM  nvcr.io/nvidia/tritonserver:22.12-py3-sdk
+FROM  nvcr.io/nvidia/tritonserver:23.01-py3-sdk
 LABEL maintainer="NVIDIA"
 LABEL repository="tritonserver"
 

@@ -22,82 +22,104 @@ from utils import cal_cer
 from speech_client import *
 import numpy as np
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v',
-                        '--verbose',
-                        action="store_true",
-                        required=False,
-                        default=False,
-                        help='Enable verbose output')
-    parser.add_argument('-u',
-                        '--url',
-                        type=str,
-                        required=False,
-                        default='localhost:8001',
-                        help='Inference server URL. Default is '
-                             'localhost:8001.')
-    parser.add_argument('--model_name',
-                        required=False,
-                        default='attention_rescoring',
-                        choices=['attention_rescoring',
-                                 'streaming_wenet'],
-                        help='the model to send request to')
-    parser.add_argument('--wavscp',
-                        type=str,
-                        required=False,
-                        default=None,
-                        help='audio_id \t wav_path')
-    parser.add_argument('--trans',
-                        type=str,
-                        required=False,
-                        default=None,
-                        help='audio_id \t text')
-    parser.add_argument('--data_dir',
-                        type=str,
-                        required=False,
-                        default=None,
-                        help='path prefix for wav_path in wavscp/audio_file')
-    parser.add_argument('--audio_file',
-                        type=str,
-                        required=False,
-                        default=None,
-                        help='single wav file path')
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Enable verbose output",
+    )
+    parser.add_argument(
+        "-u",
+        "--url",
+        type=str,
+        required=False,
+        default="localhost:8001",
+        help="Inference server URL. Default is " "localhost:8001.",
+    )
+    parser.add_argument(
+        "--model_name",
+        required=False,
+        default="attention_rescoring",
+        choices=["attention_rescoring", "streaming_wenet"],
+        help="the model to send request to",
+    )
+    parser.add_argument(
+        "--wavscp",
+        type=str,
+        required=False,
+        default=None,
+        help="audio_id \t wav_path",
+    )
+    parser.add_argument(
+        "--trans",
+        type=str,
+        required=False,
+        default=None,
+        help="audio_id \t text",
+    )
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        required=False,
+        default=None,
+        help="path prefix for wav_path in wavscp/audio_file",
+    )
+    parser.add_argument(
+        "--audio_file",
+        type=str,
+        required=False,
+        default=None,
+        help="single wav file path",
+    )
     # below arguments are for streaming
     # Please check onnx_config.yaml and train.yaml
-    parser.add_argument('--streaming',
-                        action="store_true",
-                        required=False)
-    parser.add_argument('--sample_rate',
-                        type=int,
-                        required=False,
-                        default=16000,
-                        help='sample rate used in training')
-    parser.add_argument('--frame_length_ms',
-                        type=int,
-                        required=False,
-                        default=25,
-                        help='frame length')
-    parser.add_argument('--frame_shift_ms',
-                        type=int,
-                        required=False,
-                        default=10,
-                        help='frame shift length')
-    parser.add_argument('--chunk_size',
-                        type=int,
-                        required=False,
-                        default=16,
-                        help='chunk size default is 16')
-    parser.add_argument('--context',
-                        type=int,
-                        required=False,
-                        default=7,
-                        help='subsampling context')
-    parser.add_argument('--subsampling',
-                        type=int,
-                        required=False,
-                        default=4,
-                        help='subsampling rate')
+    parser.add_argument("--streaming", action="store_true", required=False)
+    parser.add_argument(
+        "--sample_rate",
+        type=int,
+        required=False,
+        default=16000,
+        help="sample rate used in training",
+    )
+    parser.add_argument(
+        "--frame_length_ms",
+        type=int,
+        required=False,
+        default=25,
+        help="frame length",
+    )
+    parser.add_argument(
+        "--frame_shift_ms",
+        type=int,
+        required=False,
+        default=10,
+        help="frame shift length",
+    )
+    parser.add_argument(
+        "--chunk_size",
+        type=int,
+        required=False,
+        default=16,
+        help="chunk size default is 16",
+    )
+    parser.add_argument(
+        "--context",
+        type=int,
+        required=False,
+        default=7,
+        help="subsampling context",
+    )
+    parser.add_argument(
+        "--subsampling",
+        type=int,
+        required=False,
+        default=4,
+        help="subsampling rate",
+    )
 
     FLAGS = parser.parse_args()
 
@@ -114,17 +136,17 @@ if __name__ == '__main__':
         audio_data = {}
         with open(FLAGS.wavscp, "r", encoding="utf-8") as f:
             for line in f:
-                aid, path = line.strip().split('\t')
+                aid, path = line.strip().split("\t")
                 if FLAGS.data_dir:
                     path = os.path.join(FLAGS.data_dir, path)
-                audio_data[aid] = {'path': path}
+                audio_data[aid] = {"path": path}
         with open(FLAGS.trans, "r", encoding="utf-8") as f:
             for line in f:
-                aid, text = line.strip().split('\t')
-                audio_data[aid]['text'] = text
+                aid, text = line.strip().split("\t")
+                audio_data[aid]["text"] = text
         for key, value in audio_data.items():
-            filenames.append(value['path'])
-            transcripts.append(value['text'])
+            filenames.append(value["path"])
+            transcripts.append(value["text"])
 
     num_workers = multiprocessing.cpu_count() // 2
 
@@ -134,11 +156,13 @@ if __name__ == '__main__':
         speech_client_cls = OfflineSpeechClient
 
     def single_job(client_files):
-        with grpcclient.InferenceServerClient(url=FLAGS.url,
-                                              verbose=FLAGS.verbose) as triton_client:
+        with grpcclient.InferenceServerClient(
+            url=FLAGS.url, verbose=FLAGS.verbose
+        ) as triton_client:
             protocol_client = grpcclient
-            speech_client = speech_client_cls(triton_client, FLAGS.model_name,
-                                              protocol_client, FLAGS)
+            speech_client = speech_client_cls(
+                triton_client, FLAGS.model_name, protocol_client, FLAGS
+            )
             idx, audio_files = client_files
             predictions = []
             for li in audio_files:

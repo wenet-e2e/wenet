@@ -13,16 +13,17 @@
 # limitations under the License.
 
 name: "encoder"
-backend: "onnxruntime"
-default_model_filename: "encoder.onnx"
+backend: "tensorrt"
+default_model_filename: "encoder_fp16.plan"
 
-max_batch_size: 512
+max_batch_size: 32
 
 sequence_batching{
     max_sequence_idle_microseconds: 5000000
     oldest {
       max_candidate_sequences: 1024
-      max_queue_delay_microseconds: 5000
+      preferred_batch_size: [8, 16]
+      max_queue_delay_microseconds: 20000
     }
     control_input [
     ]
@@ -30,10 +31,10 @@ sequence_batching{
     {
       input_name: "offset"
       output_name: "r_offset"
-      data_type: TYPE_INT64
+      data_type: TYPE_INT32
       dims: [ 1 ]
       initial_state: {
-       data_type: TYPE_INT64
+       data_type: TYPE_INT32
        dims: [ 1 ]
        zero_data: true
        name: "initial state"
@@ -98,7 +99,7 @@ output [
   },
   {
     name: "log_probs_idx"
-    data_type: TYPE_INT64
+    data_type: TYPE_INT32
     dims: [-1, #beam_size] # [-1, beam_size]
   },
   {
