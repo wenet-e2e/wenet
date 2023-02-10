@@ -5,6 +5,7 @@ import numpy as np
 import argparse
 import math
 
+
 def generate_offline_input(args):
     wav_file = args.audio_file
     print("Reading {}".format(wav_file))
@@ -16,6 +17,7 @@ def generate_offline_input(args):
                 "WAV": {"shape": [len(waveform)],
                         "content": mat.flatten().tolist()}}]}
     json.dump(out_dict, open("offline_input.json", "w"))
+
 
 def generate_online_input(args):
     wav_file = args.audio_file

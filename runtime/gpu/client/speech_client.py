@@ -17,6 +17,7 @@ import numpy as np
 import math
 import soundfile as sf
 
+
 class OfflineSpeechClient(object):
     def __init__(self, triton_client, model_name, protocol_client, args):
         self.triton_client = triton_client
@@ -66,7 +67,8 @@ class StreamingSpeechClient(object):
         # the exact first chunk length frames
         # since the subsampling will look ahead several frames
         first_chunk_length = (chunk_size - 1) * subsampling + context
-        add_frames = math.ceil((frame_length_ms - frame_shift_ms) / frame_shift_ms)
+        add_frames = math.ceil(
+            (frame_length_ms - frame_shift_ms) / frame_shift_ms)
         first_chunk_ms = (first_chunk_length + add_frames) * frame_shift_ms
         other_chunk_ms = chunk_size * subsampling * frame_shift_ms
         self.first_chunk_in_secs = first_chunk_ms / 1000

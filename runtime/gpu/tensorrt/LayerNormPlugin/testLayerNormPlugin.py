@@ -120,7 +120,7 @@ def run():
     pluginLayer.get_output(0).dtype = [trt.float32,trt.float16][0]
 
     network.mark_output(pluginLayer.get_output(0))
-    
+
     engine = builder.build_engine(network, config)
 
     context = engine.create_execution_context()
@@ -154,23 +154,22 @@ def run():
     for i in range(nOutput):
         cuda.memcpy_dtoh_async(bufferH[nInput+i], bufferD[nInput+i], stream)
     stream.synchronize()
-    
+
     for i in range(nInput):
         temp = bufferH[i]
         print("inputH%d"%i, temp.shape,np.sum(abs(temp)),np.var(temp),np.max(temp),np.min(temp),np.sum(np.abs(np.diff(temp.reshape(-1)))))
         print(temp.reshape(-1)[:10])
         #print(temp)
-    
+
     for i in range(nOutput):
         temp = bufferH[nInput+i]
         print("outputH%d"%i, temp.shape,np.sum(abs(temp)),np.var(temp),np.max(temp),np.min(temp),np.sum(np.abs(np.diff(temp.reshape(-1)))))
         #print(temp)
-    
 
     for i in range(10):
         context.execute_async_v2(bufferD, stream.handle)
     stream.synchronize()
-            
+
     time0 = time_ns()
     for i in range(nTime):
         context.execute_async_v2(bufferD, stream.handle)

@@ -33,15 +33,13 @@ python3 export_trt.py \
 
 import ctypes
 from cuda import cudart
-from datetime import datetime as dt
 import argparse
 import numpy as np
 import os
-import sys
 import torch
-from time import time_ns
 import tensorrt as trt
 import timeit
+
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -132,6 +130,7 @@ def get_parser():
 
     return parser
 
+
 def get_latency_result(latency_list, batch_size):
     latency_ms = sum(latency_list) / float(len(latency_list)) * 1000.0
     latency_variance = np.var(latency_list, dtype=np.float64) * 1000.0
@@ -146,9 +145,10 @@ def get_latency_result(latency_list, batch_size):
         "latency_99_percentile": "{:.2f}".format(np.percentile(latency_list, 99) * 1000.0),
         "average_latency_ms": "{:.2f}".format(latency_ms),
         "QPS": "{:.2f}".format(throughput),
-        f"QPS_trt_batch{batch_size}":"{:.2f}".format(throughput_trt)
+        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt)
     }
-    
+
+
 def test(engine, context, nBatchSize, batch_threshold=8):
     nProfile = engine.num_optimization_profiles
     if nProfile == 1:
@@ -169,8 +169,9 @@ def test(engine, context, nBatchSize, batch_threshold=8):
     context.set_binding_shape(bindingBias + 3, [nBatchSize, 12, 4, 80, 128])
     context.set_binding_shape(bindingBias + 4, [nBatchSize, 12, 256, 7])
     context.set_binding_shape(bindingBias + 5, [nBatchSize, 1, 80])
-    
-    nInput = np.sum([engine.binding_is_input(i) for i in range(engine.num_bindings)])
+
+    nInput = np.sum([engine.binding_is_input(i)
+                    for i in range(engine.num_bindings)])
     nOutput = engine.num_bindings - nInput
 
     nInput = nInput // nProfile
@@ -191,12 +192,14 @@ def test(engine, context, nBatchSize, batch_threshold=8):
 
     cache_mask = torch.ones(nBatchSize, 1, 80, dtype=torch.float32)
 
-    input_tensors = [chunk_xs, chunk_lens, offset, att_cache, cnn_cache, cache_mask]
+    input_tensors = [chunk_xs, chunk_lens,
+                     offset, att_cache, cnn_cache, cache_mask]
     bufferH = []
     for data in input_tensors:
         bufferH.append(np.ascontiguousarray(data.reshape(-1)))
     for i in range(nInput, nInput + nOutput):
-        bufferH.append(np.empty(context.get_binding_shape(bindingBias + i), dtype=trt.nptype(engine.get_binding_dtype(bindingBias + i))))
+        bufferH.append(np.empty(context.get_binding_shape(
+            bindingBias + i), dtype=trt.nptype(engine.get_binding_dtype(bindingBias + i))))
     bufferD = []
     for i in range(nInput + nOutput):
         bufferD.append(cudart.cudaMalloc(bufferH[i].nbytes)[1])
@@ -207,11 +210,14 @@ def test(engine, context, nBatchSize, batch_threshold=8):
         bufferD = [int(0) for _ in range(bindingBias)] + bufferD
 
     for i in range(nInput):
-        cudart.cudaMemcpy(bufferD[i], bufferH[i].ctypes.data, bufferH[i].nbytes, cudart.cudaMemcpyKind.cudaMemcpyHostToDevice)
+        cudart.cudaMemcpy(bufferD[i], bufferH[i].ctypes.data,
+                          bufferH[i].nbytes, cudart.cudaMemcpyKind.cudaMemcpyHostToDevice)
 
     nWarm, nTest = 5, 10
-    timeit.repeat(lambda: context.execute_v2(bufferD), number=1, repeat=nWarm)  # Dry run
-    latency_list = timeit.repeat(lambda: context.execute_v2(bufferD), number=1, repeat=nTest)
+    timeit.repeat(lambda: context.execute_v2(bufferD),
+                  number=1, repeat=nWarm)  # Dry run
+    latency_list = timeit.repeat(
+        lambda: context.execute_v2(bufferD), number=1, repeat=nTest)
     print(get_latency_result(latency_list, nBatchSize))
 
     if nProfile == 1 or nBatchSize > batch_threshold:
@@ -222,9 +228,10 @@ def test(engine, context, nBatchSize, batch_threshold=8):
     for b in bufferD:
         cudart.cudaFree(b)
 
+
 def main():
     args = get_parser().parse_args()
-    
+
     logger = trt.Logger(trt.Logger.ERROR)
     trt.init_libnvinfer_plugins(logger, '')
     ctypes.cdll.LoadLibrary(args.plugin)
@@ -233,7 +240,7 @@ def main():
     if args.useTimeCache and os.path.isfile(args.timeCacheFile):
         with open(args.timeCacheFile, 'rb') as f:
             timeCache = f.read()
-        if timeCache == None:
+        if timeCache is None:
             print("Failed getting serialized timing cache!")
             exit()
         print("Succeeded getting serialized timing cache!")
@@ -244,7 +251,8 @@ def main():
             engineString = f.read()
     else:
         builder = trt.Builder(logger)
-        network = builder.create_network(1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
+        network = builder.create_network(
+            1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
         config = builder.create_builder_config()
 
         if args.useTimeCache:
@@ -274,17 +282,18 @@ def main():
         profile1 = builder.create_optimization_profile()
         for key, value in vars(args).items():
             if isinstance(value, str) and ',' in value:
-                shapes = [tuple(map(int, item.split('x'))) for item in value.split(",")]
+                shapes = [tuple(map(int, item.split('x')))
+                          for item in value.split(",")]
                 assert len(shapes) == 2 * 3
                 profile0.set_shape(key, shapes[0], shapes[1], shapes[2])
                 profile1.set_shape(key, shapes[3], shapes[4], shapes[5])
-   
+
         config.add_optimization_profile(profile0)
         config.add_optimization_profile(profile1)
 
         engineString = builder.build_serialized_network(network, config)
 
-        if engineString == None:
+        if engineString is None:
             print("Failed building engine!")
             exit()
 
@@ -305,6 +314,7 @@ def main():
         batch_sizes = [1, 4, 8, 16, 32]
         for batch in batch_sizes:
             test(engine, context, batch)
+
 
 if __name__ == "__main__":
     main()

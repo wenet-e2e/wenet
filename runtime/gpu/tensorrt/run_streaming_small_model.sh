@@ -50,7 +50,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     make clean
     make
     cp LayerNorm.so $outputs_dir
-    cd .. 
+    cd ..
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -59,7 +59,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
      python3 replace_layernorm.py --input_onnx $outputs_dir/encoderV2.onnx \
                                --output_onnx $outputs_dir/encoderV3.onnx \
                                || exit 1
-     polygraphy surgeon sanitize $outputs_dir/encoderV3.onnx --fold-constant -o $outputs_dir/encoderV4.onnx 
+     polygraphy surgeon sanitize $outputs_dir/encoderV3.onnx --fold-constant -o $outputs_dir/encoderV4.onnx
 
 fi
 
@@ -129,9 +129,9 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
           --plugin $outputs_dir/LayerNorm.so \
           --trtFile $trtFile \
           --test
-     
+
      echo "test single profile throughput"
-     for B in 1 4 8 16 32 
+     for B in 1 4 8 16 32
      do
           trtFile=$outputs_dir/encoder_fp16.plan
           /usr/src/tensorrt/bin/trtexec --fp16 --loadEngine=$trtFile --plugins=$outputs_dir/LayerNorm.so --noDataTransfers \

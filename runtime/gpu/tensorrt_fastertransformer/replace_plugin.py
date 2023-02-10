@@ -62,7 +62,8 @@ if __name__ == "__main__":
                         default=True, help="using fp16 mode")
     parser.add_argument('--use_layernorm_in_conv_module', action='store_true',
                         default=False, help="using layernorm in conformer conv module")
-    parser.add_argument('--q_scaling', type=float, default=1.0, help="please hard-coding it for now")
+    parser.add_argument('--q_scaling', type=float, default=1.0,
+                        help="please hard-coding it for now")
 
     args = parser.parse_args()
 

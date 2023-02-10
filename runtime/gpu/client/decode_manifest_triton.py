@@ -21,7 +21,7 @@ for decoding, in parallel.
 Usage:
 # For offline wenet server
 ./decode_manifest_triton.py \
-    --server-addr localhost \ 
+    --server-addr localhost \
     --compute-cer \
     --model-name attention_rescoring \
     --num-tasks 300 \
@@ -29,7 +29,7 @@ Usage:
 
 # For streaming wenet server
 ./decode_manifest_triton.py \
-    --server-addr localhost \ 
+    --server-addr localhost \
     --streaming \
     --compute-cer \
     --context 7 \
@@ -39,7 +39,7 @@ Usage:
 
 # For simulate streaming mode wenet server
 ./decode_manifest_triton.py \
-    --server-addr localhost \ 
+    --server-addr localhost \
     --simulate-streaming \
     --compute-cer \
     --context 7 \
@@ -62,21 +62,20 @@ tar xf ./aishell-test-dev-manifests/data_aishell.tar.gz -C /root/fangjun/open-so
 import argparse
 import asyncio
 import math
-import sys
 import time
 import types
-from functools import partial
 from pathlib import Path
 import json
 import numpy as np
 import tritonclient
 import tritonclient.grpc.aio as grpcclient
 from lhotse import CutSet, load_manifest
-from tritonclient.utils import InferenceServerException, np_to_triton_dtype
+from tritonclient.utils import np_to_triton_dtype
 
 from icefall.utils import store_transcripts, write_error_stats
 
 DEFAULT_MANIFEST_FILENAME = "/mnt/samsung-t7/yuekai/aishell-test-dev-manifests/data/fbank/aishell_cuts_test.jsonl.gz"  # noqa
+
 
 def get_args():
     parser = argparse.ArgumentParser(
@@ -206,16 +205,17 @@ async def send(
         sample_rate = 16000
 
         # padding to nearset 10 seconds
-        samples = np.zeros((1, 10 * sample_rate*(int(len(waveform)/sample_rate // 10) +1)),dtype=np.float32)
-        samples[0,:len(waveform)] = waveform
+        samples = np.zeros(
+            (1, 10 * sample_rate * (int(len(waveform) / sample_rate // 10) + 1)), dtype=np.float32)
+        samples[0, :len(waveform)] = waveform
 
         lengths = np.array([[len(waveform)]], dtype=np.int32)
 
         inputs = [
             protocol_client.InferInput("WAV", samples.shape,
-                                            np_to_triton_dtype(samples.dtype)),
+                                       np_to_triton_dtype(samples.dtype)),
             protocol_client.InferInput("WAV_LENS", lengths.shape,
-                                            np_to_triton_dtype(lengths.dtype))
+                                       np_to_triton_dtype(lengths.dtype))
         ]
         inputs[0].set_data_from_numpy(samples)
         inputs[1].set_data_from_numpy(lengths)
@@ -223,9 +223,9 @@ async def send(
         sequence_id = 10086 + i
 
         response = await triton_client.infer(model_name,
-                                inputs,
-                                request_id=str(sequence_id),
-                                outputs=outputs)
+                                             inputs,
+                                             request_id=str(sequence_id),
+                                             outputs=outputs)
 
         decoding_results = response.as_numpy("TRANSCRIPTS")[0]
         if type(decoding_results) == np.ndarray:
@@ -244,14 +244,15 @@ async def send(
             results.append((c.id, ref, hyp))
         else:
             results.append(
-                    (
-                        c.id,
-                        c.supervisions[0].text.split(),
-                        decoding_results.split(),
-                    )
-                )  # noqa
+                (
+                    c.id,
+                    c.supervisions[0].text.split(),
+                    decoding_results.split(),
+                )
+            )  # noqa
 
     return total_duration, results
+
 
 async def send_streaming(
     cuts: CutSet,
@@ -290,10 +291,9 @@ async def send_streaming(
             j += len(wav_segs[-1])
 
         sequence_id = task_index + 10086
-    
+
         for idx, seg in enumerate(wav_segs):
             chunk_len = len(seg)
-            time_flag = time.time() + chunk_len / sample_rate
 
             if simulate_mode:
                 await asyncio.sleep(chunk_len / sample_rate)
@@ -312,9 +312,9 @@ async def send_streaming(
 
             inputs = [
                 protocol_client.InferInput("WAV", input0_data.shape,
-                                                np_to_triton_dtype(input0_data.dtype)),
+                                           np_to_triton_dtype(input0_data.dtype)),
                 protocol_client.InferInput("WAV_LENS", input1_data.shape,
-                                                np_to_triton_dtype(input1_data.dtype))]
+                                           np_to_triton_dtype(input1_data.dtype))]
 
             inputs[0].set_data_from_numpy(input0_data)
             inputs[1].set_data_from_numpy(input1_data)
@@ -325,22 +325,22 @@ async def send_streaming(
                 end = True
 
             response = await triton_client.infer(model_name,
-                                                inputs,
-                                                outputs=outputs,
-                                                sequence_id=sequence_id,
-                                                sequence_start=idx == 0,
-                                                sequence_end=end)
+                                                 inputs,
+                                                 outputs=outputs,
+                                                 sequence_id=sequence_id,
+                                                 sequence_start=idx == 0,
+                                                 sequence_end=end)
             idx += 1
-
 
             decoding_results = response.as_numpy("TRANSCRIPTS")
             if type(decoding_results) == np.ndarray:
                 decoding_results = b' '.join(decoding_results).decode('utf-8')
             else:
                 # For wenet
-                decoding_results = response.as_numpy("TRANSCRIPTS")[0].decode("utf-8")
+                decoding_results = response.as_numpy(
+                    "TRANSCRIPTS")[0].decode("utf-8")
             chunk_end = time.time() - chunk_start
-            latency_data.append((chunk_end, chunk_len/sample_rate))
+            latency_data.append((chunk_end, chunk_len / sample_rate))
 
         total_duration += c.duration
 
@@ -352,12 +352,12 @@ async def send_streaming(
             results.append((c.id, ref, hyp))
         else:
             results.append(
-                    (
-                        c.id,
-                        c.supervisions[0].text.split(),
-                        decoding_results.split(),
-                    )
-                )  # noqa
+                (
+                    c.id,
+                    c.supervisions[0].text.split(),
+                    decoding_results.split(),
+                )
+            )  # noqa
 
     return total_duration, results, latency_data
 
@@ -378,19 +378,22 @@ async def main():
 
     triton_client = grpcclient.InferenceServerClient(url=url, verbose=False)
     protocol_client = grpcclient
-    
+
     if args.streaming or args.simulate_streaming:
-        frame_shift_ms=10
-        frame_length_ms=25
-        add_frames = math.ceil((frame_length_ms - frame_shift_ms) / frame_shift_ms)
-        # decode_window_length: input sequence length of streaming encoder 
+        frame_shift_ms = 10
+        frame_length_ms = 25
+        add_frames = math.ceil(
+            (frame_length_ms - frame_shift_ms) / frame_shift_ms)
+        # decode_window_length: input sequence length of streaming encoder
         if args.context > 0:
             # decode window length calculation for wenet
-            decode_window_length = (args.chunk_size - 1) * args.subsampling + args.context
+            decode_window_length = (args.chunk_size - 1) * \
+                args.subsampling + args.context
         else:
             # decode window length calculation for icefall
-            decode_window_length = (args.chunk_size + 2 + args.encoder_right_context) * args.subsampling + 3
-        
+            decode_window_length = (
+                args.chunk_size + 2 + args.encoder_right_context) * args.subsampling + 3
+
         first_chunk_ms = (decode_window_length + add_frames) * frame_shift_ms
 
     start_time = time.time()
@@ -406,8 +409,8 @@ async def main():
                     log_interval=log_interval,
                     compute_cer=compute_cer,
                     model_name=args.model_name,
-                    first_chunk_in_secs=first_chunk_ms/1000,
-                    other_chunk_in_secs=args.chunk_size * args.subsampling * frame_shift_ms/1000,
+                    first_chunk_in_secs=first_chunk_ms / 1000,
+                    other_chunk_in_secs=args.chunk_size * args.subsampling * frame_shift_ms / 1000,
                     task_index=i,
                 )
             )
@@ -421,13 +424,13 @@ async def main():
                     log_interval=log_interval,
                     compute_cer=compute_cer,
                     model_name=args.model_name,
-                    first_chunk_in_secs=first_chunk_ms/1000,
-                    other_chunk_in_secs=args.chunk_size * args.subsampling * frame_shift_ms/1000,
+                    first_chunk_in_secs=first_chunk_ms / 1000,
+                    other_chunk_in_secs=args.chunk_size * args.subsampling * frame_shift_ms / 1000,
                     task_index=i,
                     simulate_mode=True,
                 )
             )
-        else: 
+        else:
             task = asyncio.create_task(
                 send(
                     cuts=cuts_list[i],
@@ -440,7 +443,7 @@ async def main():
                 )
             )
         tasks.append(task)
-    
+
     ans_list = await asyncio.gather(*tasks)
 
     end_time = time.time()
@@ -464,9 +467,10 @@ async def main():
         f"processing time: {elapsed:.3f} seconds "
         f"({elapsed/3600:.2f} hours)\n"
     )
-    
+
     if args.streaming or args.simulate_streaming:
-        latency_list = [chunk_end for (chunk_end, chunk_duration) in latency_data]
+        latency_list = [chunk_end for (
+            chunk_end, chunk_duration) in latency_data]
         latency_ms = sum(latency_list) / float(len(latency_list)) * 1000.0
         latency_variance = np.var(latency_list, dtype=np.float64) * 1000.0
         s += f"latency_variance: {latency_variance:.2f}\n"
@@ -494,7 +498,7 @@ async def main():
     if args.stats_file:
         stats = await triton_client.get_inference_statistics(model_name='', as_json=True)
         with open(args.stats_file, 'w') as f:
-            json.dump(stats,f)
+            json.dump(stats, f)
 
 
 if __name__ == "__main__":

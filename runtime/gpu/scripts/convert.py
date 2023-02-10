@@ -20,10 +20,13 @@ import subprocess
 import onnx
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='generate config.pbtxt for model_repo')
+    parser = argparse.ArgumentParser(
+        description='generate config.pbtxt for model_repo')
     parser.add_argument('--config', required=True, help='config file')
-    parser.add_argument('--vocab', required=True, help='vocabulary file, units.txt')
-    parser.add_argument('--model_repo', required=True, help='model repo directory')
+    parser.add_argument('--vocab', required=True,
+                        help='vocabulary file, units.txt')
+    parser.add_argument('--model_repo', required=True,
+                        help='model repo directory')
     parser.add_argument('--onnx_model_dir', default=True, type=str, required=False,
                         help="onnx model path")
     parser.add_argument('--lm_path', default=None, type=str, required=False,
@@ -98,7 +101,8 @@ if __name__ == "__main__":
                 model_name = model + ".onnx"
             source_model = os.path.join(args.onnx_model_dir, model_name)
             target_model = os.path.join(model_dir, "1", model + ".onnx")
-            res = subprocess.call(["cp", source_model, target_model], shell=False)
+            res = subprocess.call(
+                ["cp", source_model, target_model], shell=False)
             if model == "encoder":
                 # currently, with torch 1.10, the
                 # exported conformer encoder output size is -1

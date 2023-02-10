@@ -30,10 +30,10 @@ python3 test_onnx_throughput.py \
 
 import timeit
 import onnxruntime
-import logging
 import torch
 import argparse
 import numpy
+
 
 def get_parser():
     parser = argparse.ArgumentParser(
@@ -70,7 +70,8 @@ def get_parser():
 
     parser.add_argument('--model_type',
                         type=str,
-                        choices=["streaming_conformer_encoder", "conformer_encoder", "decoder", "bidecoder"],
+                        choices=["streaming_conformer_encoder",
+                                 "conformer_encoder", "decoder", "bidecoder"],
                         default="streaming_conformer_encoder",
                         help='onnx model type for wenet')
 
@@ -84,12 +85,14 @@ def get_parser():
 
     return parser
 
+
 def allocateOutputBuffers(output_buffers, output_buffer_max_sizes, device, data_type=torch.float32):
     # Allocate output tensors with the largest test size needed. So the allocated memory can be reused
     # for each test run.
 
     for i in output_buffer_max_sizes:
         output_buffers.append(torch.empty(i, dtype=data_type, device=device))
+
 
 def get_latency_result(latency_list, batch_size):
     latency_ms = sum(latency_list) / float(len(latency_list)) * 1000.0
@@ -105,8 +108,9 @@ def get_latency_result(latency_list, batch_size):
         "latency_99_percentile": "{:.2f}".format(numpy.percentile(latency_list, 99) * 1000.0),
         "average_latency_ms": "{:.2f}".format(latency_ms),
         "QPS": "{:.2f}".format(throughput),
-        f"QPS_trt_batch{batch_size}":"{:.2f}".format(throughput_trt)
+        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt)
     }
+
 
 def create_onnxruntime_input(batch_size, sequence_length, input_names, config, model_type, data_type=torch.float16):
     inputs = {}
@@ -119,34 +123,42 @@ def create_onnxruntime_input(batch_size, sequence_length, input_names, config, m
         d_k = int(output_size / head)
         cnn_module_kernel = 7
 
-        chunk_xs = torch.randn(batch_size, sequence_length, feature_size, dtype=data_type).numpy()
+        chunk_xs = torch.randn(batch_size, sequence_length,
+                               feature_size, dtype=data_type).numpy()
         inputs["chunk_xs"] = chunk_xs
-        chunk_lens = torch.ones(batch_size, dtype=torch.int32).numpy() * sequence_length
+        chunk_lens = torch.ones(
+            batch_size, dtype=torch.int32).numpy() * sequence_length
         inputs["chunk_lens"] = chunk_lens
-        offset = torch.arange(0, batch_size, dtype=torch.int64).unsqueeze(1).numpy()
+        offset = torch.arange(
+            0, batch_size, dtype=torch.int64).unsqueeze(1).numpy()
         inputs["offset"] = offset
         att_cache = torch.randn(batch_size, num_layers, head,
-                                    required_cache_size, d_k * 2,
-                                    dtype=data_type).numpy()
+                                required_cache_size, d_k * 2,
+                                dtype=data_type).numpy()
         inputs["att_cache"] = att_cache
         cnn_cache = torch.randn(batch_size, num_layers, output_size,
-                                    cnn_module_kernel, dtype=data_type).numpy()
+                                cnn_module_kernel, dtype=data_type).numpy()
         inputs["cnn_cache"] = cnn_cache
-        cache_mask = torch.ones(batch_size, 1, required_cache_size, dtype=data_type).numpy()
+        cache_mask = torch.ones(
+            batch_size, 1, required_cache_size, dtype=data_type).numpy()
         inputs["cache_mask"] = cache_mask
-    
+
     else:
         return NotImplementedError
     return inputs
 
+
 def inference_ort(ort_session, ort_inputs, result_template, repeat_times, batch_size, warm_up_repeat=0):
     result = {}
-    timeit.repeat(lambda: ort_session.run(None, ort_inputs), number=1, repeat=warm_up_repeat)  # Dry run
-    latency_list = timeit.repeat(lambda: ort_session.run(None, ort_inputs), number=1, repeat=repeat_times)
+    timeit.repeat(lambda: ort_session.run(None, ort_inputs),
+                  number=1, repeat=warm_up_repeat)  # Dry run
+    latency_list = timeit.repeat(lambda: ort_session.run(
+        None, ort_inputs), number=1, repeat=repeat_times)
     result.update(result_template)
     result.update({"io_binding": False})
     result.update(get_latency_result(latency_list, batch_size))
     return result
+
 
 IO_BINDING_DATA_TYPE_MAP = {
     "float32": numpy.float32,
@@ -155,6 +167,7 @@ IO_BINDING_DATA_TYPE_MAP = {
     "int64": numpy.int64
     # TODO: Add more.
 }
+
 
 def inference_ort_with_io_binding(
     ort_session,
@@ -226,6 +239,7 @@ def inference_ort_with_io_binding(
     result.update(get_latency_result(latency_list, batch_size))
     return result
 
+
 def create_onnxruntime_session(
     onnx_model_path,
     use_gpu,
@@ -237,65 +251,65 @@ def create_onnxruntime_session(
     provider_options={},  # map execution provider name to its option
 ):
     session = None
-    try:
-        sess_options = onnxruntime.SessionOptions()
+    sess_options = onnxruntime.SessionOptions()
 
-        if enable_all_optimization:
-            sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+    if enable_all_optimization:
+        sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+    else:
+        sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        # sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
+
+    if enable_profiling:
+        sess_options.enable_profiling = True
+
+    if num_threads > 0:
+        sess_options.intra_op_num_threads = num_threads
+
+    if verbose:
+        sess_options.log_severity_level = 0
+    else:
+        sess_options.log_severity_level = 4
+
+    if use_gpu:
+        if provider == "cuda":
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+        elif provider == "tensorrt":
+            providers = [
+                "TensorrtExecutionProvider",
+                "CUDAExecutionProvider",
+                "CPUExecutionProvider",
+            ]
         else:
-            sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
-            # sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL
-            
-        if enable_profiling:
-            sess_options.enable_profiling = True
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+    else:
+        providers = ["CPUExecutionProvider"]
 
-        if num_threads > 0:
-            sess_options.intra_op_num_threads = num_threads
+    if provider_options:
+        providers = [(name, provider_options[name])
+                     if name in provider_options else name for name in providers]
 
-        if verbose:
-            sess_options.log_severity_level = 0
-        else:
-            sess_options.log_severity_level = 4
-
-        if use_gpu:
-            if provider == "cuda":
-                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-            elif provider == "tensorrt":
-                providers = [
-                    "TensorrtExecutionProvider",
-                    "CUDAExecutionProvider",
-                    "CPUExecutionProvider",
-                ]
-            else:
-                providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
-        else:
-            providers = ["CPUExecutionProvider"]
-
-        if provider_options:
-            providers = [(name, provider_options[name]) if name in provider_options else name for name in providers]
-
-        session = onnxruntime.InferenceSession(onnx_model_path, sess_options, providers=providers)
-    except:
-        print("Something went wrong")
+    session = onnxruntime.InferenceSession(
+        onnx_model_path, sess_options, providers=providers)
 
     return session
 
+
 if __name__ == '__main__':
-    args = get_parser().parse_args()     
+    args = get_parser().parse_args()
     warm_up_repeat = 20
     repeat_times = 20
     input_value_type = torch.float16
 
-    batch_sizes = list(map(int,args.batch_sizes.split(",")))
+    batch_sizes = list(map(int, args.batch_sizes.split(",")))
     max_sequence_length = None
-    sequence_lengths = list(map(int,args.sequence_lengths.split(",")))
+    sequence_lengths = list(map(int, args.sequence_lengths.split(",")))
 
     if args.model_type == "streaming_conformer_encoder":
         input_names = ['chunk_xs', 'chunk_lens', 'offset',
-                    'att_cache', 'cnn_cache', 'cache_mask'] 
+                       'att_cache', 'cnn_cache', 'cache_mask']
         ort_output_names = ['log_probs', 'log_probs_idx', 'chunk_out',
-                        'chunk_out_lens', 'r_offset', 'r_att_cache',
-                        'r_cnn_cache', 'r_cache_mask']
+                            'chunk_out_lens', 'r_offset', 'r_att_cache',
+                            'r_cnn_cache', 'r_cache_mask']
     else:
         raise NotImplementedError
 
@@ -306,7 +320,7 @@ if __name__ == '__main__':
 
     device = "cpu" if args.disable_gpu else "cuda"
 
-    ort_session = create_onnxruntime_session(args.onnxFile, 
+    ort_session = create_onnxruntime_session(args.onnxFile,
                                              not args.disable_gpu,
                                              provider='cuda',
                                              enable_all_optimization=True,
@@ -335,7 +349,8 @@ if __name__ == '__main__':
             }
 
             print(
-               "Run onnxruntime on {} with input shape {}".format(args.onnxFile, [batch_size, sequence_length])
+                "Run onnxruntime on {} with input shape {}".format(
+                    args.onnxFile, [batch_size, sequence_length])
             )
 
             if args.disable_ort_io_binding:
@@ -352,7 +367,8 @@ if __name__ == '__main__':
                 ort_outputs = ort_session.run(ort_output_names, ort_inputs)
                 output_buffer_max_sizes = []
                 for i in range(len(ort_outputs)):
-                    output_buffer_max_sizes.append(numpy.prod(ort_outputs[i].shape))
+                    output_buffer_max_sizes.append(
+                        numpy.prod(ort_outputs[i].shape))
 
                 data_type = numpy.intc
                 output_buffers = []
