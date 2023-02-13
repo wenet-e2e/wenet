@@ -41,7 +41,10 @@ with open(sys.argv[2], 'r', encoding='utf8') as fin, \
             if word in lexicon_table:
                 continue
             if bpemode:
-                pieces = sp.EncodeAsPieces(word)
+                if word.encode('utf8').isalpha():
+                    pieces = sp.EncodeAsPieces(word)
+                else:
+                    pieces = word
                 if contain_oov(pieces):
                     print(
                         'Ignoring words {}, which contains oov unit'.format(
