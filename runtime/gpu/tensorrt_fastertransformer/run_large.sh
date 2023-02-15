@@ -19,14 +19,14 @@ stage=-1
 stop_stage=5
 
 #<wenet_onnx_gpu_models>
-onnx_model_dir=$(pwd)/aishell_onnx
+onnx_model_dir=$(pwd)/wenetspeech_onnx
 #<your_output_dir>
-outputs_dir=./exp1
+outputs_dir=./exp_wenetspeech
 
 # modify model parameters according to your own model
-d_model=256
-head_num=4
-vocab_size=4233
+d_model=512
+head_num=8
+vocab_size=5537
 
 # paramters for TRT engines
 MIN_BATCH=1
@@ -49,12 +49,13 @@ BEAM_SIZE=10 # Don't modify it
 
 mkdir -p $outputs_dir
 
-model_repo_path=./model_repo_ft
+model_repo_path=./model_repo_ft_large
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
    echo "export to onnx files"
-   wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20211025_conformer_exp.tar.gz --no-check-certificate
-   tar zxvf 20211025_conformer_exp.tar.gz
+   wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20211025_conformer_exp.tar.gz \
+     --no-check-certificate -O 20211025_conformer_exp_wenetspeech.tar.gz
+   tar zxvf 20211025_conformer_exp_wenetspeech.tar.gz
    model_dir=$(pwd)/20211025_conformer_exp
    mkdir -p $onnx_model_dir
    cd ../../../
@@ -74,16 +75,19 @@ fi
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
      echo "extract weights and replace onnx with plugins"
 
-     mkdir -p /weight/enc
-     mkdir -p /weight/dec
-     python3 extract_weights.py --input_onnx $onnx_model_dir/encoder.onnx --output_dir /weight/enc || exit 1
-     python3 extract_weights.py --input_onnx $onnx_model_dir/decoder.onnx --output_dir /weight/dec || exit 1
+     mkdir -p /weight/enc_large
+     mkdir -p /weight/dec_large
+     python3 extract_weights.py --input_onnx $onnx_model_dir/encoder.onnx --output_dir /weight/enc_large || exit 1
+     python3 extract_weights.py --input_onnx $onnx_model_dir/decoder.onnx --output_dir /weight/dec_large || exit 1
 
      python3 replace_plugin.py --input_onnx $onnx_model_dir/encoder.onnx \
-                               --d_model $d_model --head_num $head_num --vocab_size $vocab_size\
+                               --use_layernorm_in_conv_module \
+                               --encoder_weight_path /weight/enc_large/ \
+                               --d_model $d_model --head_num $head_num --vocab_size $vocab_size \
                                --output_onnx ${outputs_dir}/encoder_plugin.onnx || exit 1
 
      python3 replace_plugin.py --input_onnx $onnx_model_dir/decoder.onnx \
+                               --decoder_weight_path /weight/dec_large/ \
                                --output_onnx ${outputs_dir}/decoder_plugin.onnx \
                                --d_model $d_model --head_num $head_num --vocab_size $vocab_size \
                                --num_layer 6 || exit 1
@@ -113,7 +117,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
           -DBUILD_ORGIN_NET=OFF \
           ..
 
-     make -j$(nproc) || exit 1
+     make -j$(nproc)
      popd
      cp ${ft_path}/build/lib/libtrt_wenet.so $outputs_dir
 fi

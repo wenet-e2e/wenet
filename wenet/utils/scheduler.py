@@ -112,7 +112,7 @@ class WarmupPolicy(_LRScheduler):
             warnings.warn(
                 "To get the last learning rate computed "
                 "by the scheduler, please use `get_last_lr()`.",
-                UserWarning
+                UserWarning, stacklevel=2
             )
 
         step = self.last_epoch
@@ -173,7 +173,7 @@ class SquareRootConstantPolicy(_LRScheduler):
             warnings.warn(
                 "To get the last learning rate computed "
                 "by the scheduler, please use `get_last_lr()`.",
-                UserWarning
+                UserWarning, stacklevel=2
             )
 
         step = self.last_epoch
@@ -255,7 +255,7 @@ class WarmupHoldPolicy(WarmupPolicy):
             warnings.warn(
                 "To get the last learning rate computed by the scheduler,"
                 " " "please use `get_last_lr()`.",
-                UserWarning
+                UserWarning, stacklevel=2
             )
 
         step = self.last_epoch
@@ -336,7 +336,7 @@ class WarmupAnnealHoldPolicy(_LRScheduler):
             warnings.warn(
                 "To get the last learning rate computed "
                 "by the scheduler, please use `get_last_lr()`.",
-                UserWarning
+                UserWarning, stacklevel=2
             )
 
         step = self.last_epoch
@@ -554,7 +554,7 @@ class NoamAnnealing(_LRScheduler):
             warnings.warn(
                 "To get the last learning rate computed "
                 "by the scheduler, please use `get_last_lr()`.",
-                UserWarning
+                UserWarning, stacklevel=2
             )
 
         step = max(1, self.last_epoch)
