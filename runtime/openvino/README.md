@@ -2,9 +2,7 @@
 
 * Step 1. Get ONNX model.
 
-You are required to build WeNet locally with libtorch firstly, follow this [guide](https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch#run-with-local-build).
-
-Then, use `wenet.bin.export_onnx_cpu` to export ONNX model. Follow this [guide](https://github.com/wenet-e2e/wenet/blob/main/runtime/onnxruntime/README.md)
+Use `wenet.bin.export_onnx_cpu` to export ONNX model. Follow this [guide](https://github.com/wenet-e2e/wenet/blob/main/runtime/onnxruntime/README.md)
 
 Please note, 3 ONNX models(`encoder.onnx`, `ctc.onnx`, and `decoder.onnx`) will be generated.
 
