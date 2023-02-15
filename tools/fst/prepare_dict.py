@@ -41,6 +41,9 @@ with open(sys.argv[2], 'r', encoding='utf8') as fin, \
             if word in lexicon_table:
                 continue
             if bpemode:
+                # We assume that the lexicon does not contain code-switch, i.e., the word contains both English and Chinese.
+                # see PR https://github.com/wenet-e2e/wenet/pull/1693
+                # and Issue https://github.com/wenet-e2e/wenet/issues/1653
                 if word.encode('utf8').isalpha():
                     pieces = sp.EncodeAsPieces(word)
                 else:
