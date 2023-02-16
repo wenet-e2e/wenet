@@ -55,13 +55,15 @@ if __name__ == "__main__":
                         choices=[15, 31], help="kernel size for conv module")
     # TODO: hard-coding below encoder decoder weight path, pls don't change it for now
     parser.add_argument('--decoder_weight_path', type=str,
-                        default="/weight/enc/", help="decoder weights path")
+                        default="/weight/dec/", help="decoder weights path")
     parser.add_argument('--encoder_weight_path', type=str,
-                        default="/weight/dec/", help="encoder weights path")
+                        default="/weight/enc/", help="encoder weights path")
     parser.add_argument('--useFP16', type=bool,
                         default=True, help="using fp16 mode")
-    parser.add_argument('--use_layernorm_in_conv_module', type=bool,
+    parser.add_argument('--use_layernorm_in_conv_module', action='store_true',
                         default=False, help="using layernorm in conformer conv module")
+    parser.add_argument('--q_scaling', type=float, default=1.0,
+                        help="please hard-coding it for now")
 
     args = parser.parse_args()
 
@@ -88,6 +90,7 @@ if __name__ == "__main__":
             "vocab_size": args.vocab_size,
             "conv_module_kernel_size": args.conv_module_kernel_size,
             "weightFilePath": args.encoder_weight_path,
+            "q_scaling": args.q_scaling,
         }
 
     elif 'decoder' in args.input_onnx:
@@ -105,6 +108,7 @@ if __name__ == "__main__":
             "useFP16": args.useFP16,
             "vocab_size": args.vocab_size,
             "weightFilePath": args.decoder_weight_path,
+            "q_scaling": args.q_scaling,
         }
 
     else:

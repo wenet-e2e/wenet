@@ -1,4 +1,18 @@
 #!/bin/bash
+# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 trtexec=/usr/src/tensorrt/bin/trtexec
 export CUDA_VISIBLE_DEVICES="0"
 stage=-1
@@ -16,9 +30,9 @@ vocab_size=4233
 
 # paramters for TRT engines
 MIN_BATCH=1
-OPT_BATCH=32
-MAX_BATCH=128
-MAX_BATCH_FOR_SCORING=128
+OPT_BATCH=16
+MAX_BATCH=16
+MAX_BATCH_FOR_SCORING=16
 
 ENC_MIN_LEN=16
 ENC_OPT_LEN=512
@@ -34,11 +48,6 @@ MAX_HYPS_PAD=64
 BEAM_SIZE=10 # Don't modify it
 
 mkdir -p $outputs_dir
-
-# GPU related
-# please modify $SM if your GPU SM code is not 70
-# V100 SM=70; T4 SM=75; A10 SM=86, A30, A100 SM=80
-SM=70
 
 model_repo_path=./model_repo_ft
 
@@ -58,7 +67,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
            --output_onnx_dir=$onnx_model_dir \
            --fp16 \
            --decoder_fastertransformer || exit 1
-   cp $model_dir/words.txt $onnx_model_dir
+   cp $model_dir/words.txt $model_dir/train.yaml $onnx_model_dir
    cd -
 fi
 
@@ -70,9 +79,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
      python3 extract_weights.py --input_onnx $onnx_model_dir/encoder.onnx --output_dir /weight/enc || exit 1
      python3 extract_weights.py --input_onnx $onnx_model_dir/decoder.onnx --output_dir /weight/dec || exit 1
 
-     # TODO: support use_layernorm_in_conv_module
      python3 replace_plugin.py --input_onnx $onnx_model_dir/encoder.onnx \
-                               --use_layernorm_in_conv_module False \
                                --d_model $d_model --head_num $head_num --vocab_size $vocab_size\
                                --output_onnx ${outputs_dir}/encoder_plugin.onnx || exit 1
 
@@ -100,14 +107,13 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
           -DBUILD_PYT=OFF \
           -DBUILD_MULTI_GPU=OFF \
           -DUSE_NVTX=OFF \
-          -DSM=$SM \
           -DBUILD_EXAMPLE=ON \
           -DBUILD_TEST=OFF \
           -DBUILD_TRT=ON \
           -DBUILD_ORGIN_NET=OFF \
           ..
 
-     make -j$(nproc)
+     make -j$(nproc) || exit 1
      popd
      cp ${ft_path}/build/lib/libtrt_wenet.so $outputs_dir
 fi

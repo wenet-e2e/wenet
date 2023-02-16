@@ -3,12 +3,13 @@
 ```sh
 # using docker image runtime/gpu/Dockerfile/Dockerfile.server
 docker pull soar97/triton-wenet:22.12
-docker run -it --rm --name "wenet_trt_test" --gpus all --net host soar97/triton-wenet:22.12
+docker run -it --rm --name "wenet_trt_test" --gpus all --net host --shm-size=1g soar97/triton-wenet:22.12
 # inside the docker container
 git clone https://github.com/wenet-e2e/wenet.git
 cd wenet/runtime/gpu/tensorrt_fastertransformer
 git submodule update --init
 pip3 install nvidia-pyindex
+# Use pip3 install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple if you encounter network issue
 pip3 install -r requirements.txt
 # Please modify the model parameters in run.sh. This recipe is for small conformer model.
 bash run.sh

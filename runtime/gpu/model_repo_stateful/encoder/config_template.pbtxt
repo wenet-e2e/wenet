@@ -22,7 +22,6 @@ sequence_batching{
     max_sequence_idle_microseconds: 5000000
     oldest {
       max_candidate_sequences: 1024
-      preferred_batch_size: [32, 64, 128, 256]
       max_queue_delay_microseconds: 5000
     }
     control_input [
