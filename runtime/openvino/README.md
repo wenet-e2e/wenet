@@ -1,4 +1,4 @@
-# OpenVINO backend on WeNet
+# OpenVINO™ backend on WeNet
 
 * Step 1. Get ONNX model.
 
@@ -6,7 +6,7 @@ Use `wenet.bin.export_onnx_cpu` to export ONNX model. Follow this [guide](https:
 
 Please note, 3 ONNX models(`encoder.onnx`, `ctc.onnx`, and `decoder.onnx`) will be generated.
 
-* Step 2. Convert ONNX model to OpenVINO IR(Intermediate Representation).
+* Step 2. Convert ONNX model to OpenVINO™ IR(Intermediate Representation).
 
 ``` sh
 mo --input_model onnx/encoder.onnx --input chunk,att_cache,cnn_cache --input_shape [1,-1,80],[12,4,-1,128],[12,1,256,7] --output_dir openvino 
@@ -16,7 +16,9 @@ mo --input_model onnx/decoder.onnx --input hyps,hyps_lens,encoder_out --input_sh
 # When it finishes, you can find IR files(.xml and .bin) for encoder, ctc and decoder.
 ```
 
-* Step 3. Build WeNet with OpenVINO. Please refer [system requirement](https://github.com/openvinotoolkit/openvino#system-requirements) to check if the hardware platform available by OpenVINO.
+* Step 3. Build WeNet with OpenVINO™. 
+
+Please refer [system requirement](https://github.com/openvinotoolkit/openvino#system-requirements) to check if the hardware platform available by OpenVINO™. 
 
 ``` sh
 mkdir build && cd build
