@@ -143,6 +143,7 @@ class EfficientConformerEncoder(torch.nn.Module):
         self.attention_heads = attention_heads
         self.cnn_module_kernel = cnn_module_kernel
         self.global_chunk_size = 0
+        self.chunk_feature_map = 0
 
         # efficient conformer configs
         self.stride_layer_idx = [stride_layer_idx] \
@@ -248,6 +249,14 @@ class EfficientConformerEncoder(torch.nn.Module):
         """
         logging.info(f"set global chunk size: {chunk_size}, default is 0.")
         self.global_chunk_size = chunk_size
+        if self.embed.subsampling_rate == 2:
+            self.chunk_feature_map = 2 * self.global_chunk_size + 1
+        elif self.embed.subsampling_rate == 6:
+            self.chunk_feature_map = 6 * self.global_chunk_size + 5
+        elif self.embed.subsampling_rate == 8:
+            self.chunk_feature_map = 8 * self.global_chunk_size + 7
+        else:
+            self.chunk_feature_map = 4 * self.global_chunk_size + 3
 
     def output_size(self) -> int:
         return self._output_size
@@ -355,22 +364,28 @@ class EfficientConformerEncoder(torch.nn.Module):
         # using downsampling factor to recover offset
         offset *= self.calculate_downsampling_factor(self.num_blocks + 1)
 
-        # tmp_masks is just for interface compatibility
-        tmp_masks = torch.ones(1,
-                               xs.size(1),
-                               device=xs.device,
-                               dtype=torch.bool)
-        tmp_masks = tmp_masks.unsqueeze(1)  # (1, 1, xs-time)
+        chunk_masks = torch.ones(1,
+                                 xs.size(1),
+                                 device=xs.device,
+                                 dtype=torch.bool)
+        chunk_masks = chunk_masks.unsqueeze(1)  # (1, 1, xs-time)
+
+        real_len = 0
+        if self.global_chunk_size > 0:
+            # for ONNX decode simulation， padding xs to chunk_size
+            real_len = xs.size(1)
+            pad_len = self.chunk_feature_map - real_len
+            xs = F.pad(xs, (0, 0, 0, pad_len), value=0.0)
+            chunk_masks = F.pad(chunk_masks, (0, pad_len), value=0.0)
+
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
 
         # NOTE(xcsong): Before embed, shape(xs) is (b=1, time, mel-dim)
-        xs, pos_emb, _ = self.embed(xs, tmp_masks, offset)
+        xs, pos_emb, chunk_masks = self.embed(xs, chunk_masks, offset)
         elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
         chunk_size = xs.size(1)
         attention_key_size = cache_t1 + chunk_size
-        pos_emb = self.embed.position_encoding(
-            offset=offset - cache_t1, size=attention_key_size)
         # NOTE(xcsong): After  embed, shape(xs) is (b=1, chunk_size, hidden-dim)
         # shape(pos_emb) = (b=1, chunk_size, emb_size=output_size=hidden-dim)
 
@@ -381,14 +396,6 @@ class EfficientConformerEncoder(torch.nn.Module):
         else:
             next_cache_start = max(attention_key_size - required_cache_size, 0)
 
-        # for ONNX export， padding xs to chunk_size
-        if self.global_chunk_size > 0:
-            real_len = xs.size(1)
-            xs = F.pad(xs, (0, 0, 0, self.global_chunk_size - real_len), value=0.0)
-            tmp_zeros = torch.zeros(att_mask.shape, dtype=torch.bool)
-            att_mask[:, :, required_cache_size + real_len + 1:] = \
-                tmp_zeros[:, :, required_cache_size + real_len + 1:]
-
         r_att_cache = []
         r_cnn_cache = []
         mask_pad = torch.ones(1,
@@ -396,6 +403,18 @@ class EfficientConformerEncoder(torch.nn.Module):
                               device=xs.device,
                               dtype=torch.bool)
         mask_pad = mask_pad.unsqueeze(1)    # batchPad (b=1, 1, time=chunk_size)
+
+        if self.global_chunk_size > 0:
+            # for ONNX decode simulation
+            pos_emb = self.embed.position_encoding(
+                offset=max(offset - cache_t1, 0),
+                size=cache_t1 + self.global_chunk_size)
+            att_mask[:, :, -self.global_chunk_size:] = chunk_masks
+            mask_pad = chunk_masks.to(torch.bool)
+        else:
+            pos_emb = self.embed.position_encoding(
+                offset=offset - cache_t1, size=attention_key_size)
+
         max_att_len, max_cnn_len = 0, 0     # for repeat_interleave of new_att_cache
         for i, layer in enumerate(self.encoders):
             factor = self.calculate_downsampling_factor(i)
@@ -403,10 +422,16 @@ class EfficientConformerEncoder(torch.nn.Module):
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
             # shape(new_att_cache) = [ batch, head, time2, outdim//head * 2 ]
+            att_cache_trunc = 0
+            if xs.size(1) + att_cache.size(2) / factor > pos_emb.size(1):
+                # The time step is not divisible by the downsampling multiple
+                # We propose to double the chunk_size.
+                att_cache_trunc = xs.size(1) + \
+                    att_cache.size(2) // factor - pos_emb.size(1) + 1
             xs, _, new_att_cache, new_cnn_cache = layer(
                 xs, att_mask, pos_emb,
                 mask_pad=mask_pad,
-                att_cache=att_cache[i:i + 1, :, ::factor, :],
+                att_cache=att_cache[i:i + 1, :, ::factor, :][:, :, att_cache_trunc:, :],
                 cnn_cache=cnn_cache[i, :, :, :]
                 if cnn_cache.size(0) > 0 else cnn_cache
             )
@@ -449,6 +474,13 @@ class EfficientConformerEncoder(torch.nn.Module):
         r_att_cache = torch.cat(r_att_cache, dim=0)
         # NOTE(xcsong): shape(r_cnn_cache) is (e, b=1, hidden-dim, cache_t2)
         r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
+
+        if self.global_chunk_size > 0 and real_len:
+            chunk_real_len = real_len // self.embed.subsampling_rate // \
+                self.calculate_downsampling_factor(self.num_blocks + 1)
+            # Keeping 1 more timestep can mitigate information leakage
+            #   from the encoder caused by the padding
+            xs = xs[:, :chunk_real_len + 1, :]
 
         return xs, r_att_cache, r_cnn_cache
 
@@ -508,7 +540,7 @@ class EfficientConformerEncoder(torch.nn.Module):
             cnn_cache: torch.Tensor = torch.zeros(
                 (self.num_blocks, 1, self.output_size(), self.cnn_module_kernel - 1),
                 device=xs.device)
-            self.set_global_chunk_size(chunk_size=18)
+            self.set_global_chunk_size(chunk_size=decoding_chunk_size)
         else:
             logging.info("Simulating for JIT runtime ...")
             att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0), device=xs.device)
