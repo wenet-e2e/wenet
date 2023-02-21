@@ -1,27 +1,14 @@
-// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
-//               2022 ZeXuan Li (lizexuan@huya.com)
-//                    Xingchen Song(sxc19@mails.tsinghua.edu.cn)
-//                    hamddct@gmail.com (Mddct)
+// Copyright (C) 2018-2023 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
-#ifndef DECODER_OPENVINO_ASR_MODEL_H_
-#define DECODER_OPENVINO_ASR_MODEL_H_
+#ifndef DECODER_OV_ASR_MODEL_H_
+#define DECODER_OV_ASR_MODEL_H_
 
 #include <memory>
 #include <string>
 #include <vector>
-
+#include <map>
 #include "openvino/openvino.hpp"
 
 #include "decoder/asr_model.h"
@@ -36,7 +23,7 @@ class OVAsrModel : public AsrModel {
   void InitEngineThreads(int core_number = 1);
 
  public:
-  OVAsrModel()=default;
+  OVAsrModel() = default;
   ~OVAsrModel();
   OVAsrModel(const OVAsrModel& other);
   void Read(const std::string& model_dir);
@@ -77,7 +64,6 @@ class OVAsrModel : public AsrModel {
   ov::Tensor att_cache_ov_;
   ov::Tensor cnn_cache_ov_;
   std::vector<ov::Tensor> encoder_outs_;
-  
   //  our data "alive" during the lifetime of decoder.
   std::vector<float> att_cache_;
   std::vector<float> cnn_cache_;
@@ -88,4 +74,4 @@ class OVAsrModel : public AsrModel {
 
 }  // namespace wenet
 
-#endif  // DECODER_OPENVINO_ASR_MODEL_H_
+#endif  // DECODER_OV_ASR_MODEL_H_

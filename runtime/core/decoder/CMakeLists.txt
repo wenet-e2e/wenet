@@ -8,7 +8,7 @@ set(decoder_srcs
 )
 
 if(NOT TORCH AND NOT ONNX AND NOT XPU AND NOT IOS AND NOT BPU AND NOT OPENVINO)
-	message(FATAL_ERROR "Please build with TORCH or ONNX or OPENVINO or XPU or IOS or BPU!!!")
+  message(FATAL_ERROR "Please build with TORCH or ONNX or OPENVINO or XPU or IOS or BPU!!!")
 endif()
 if(TORCH OR IOS)
   list(APPEND decoder_srcs torch_asr_model.cc)

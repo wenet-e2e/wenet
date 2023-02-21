@@ -1,19 +1,6 @@
-// Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
-//               2022 ZeXuan Li (lizexuan@huya.com)
-//                    Xingchen Song(sxc19@mails.tsinghua.edu.cn)
-//                    hamddct@gmail.com (Mddct)
+// Copyright (C) 2018-2023 Intel Corporation
+// SPDX-License-Identifier: Apache-2.0
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 #include "decoder/ov_asr_model.h"
 #include <algorithm>
@@ -78,9 +65,7 @@ static void printPerformanceCounts(
 }
 
 // std::shared_ptr<ov::Core> OVAsrModel::core_ = std::make_shared<ov::Core>();
-OVAsrModel::~OVAsrModel() {
-
-}
+OVAsrModel::~OVAsrModel() {}
 
 void OVAsrModel::InitEngineThreads(int core_number) {
   core_ = std::make_shared<ov::Core>();
@@ -156,8 +141,9 @@ void OVAsrModel::Read(const std::string& model_dir) {
 
       encoder_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
           core_->compile_model(encoder_model, "CPU")));
-                               //{{"PERF_COUNT", "NO"} /*YES for profile*/
-                              //})));
+                               // {{"PERF_COUNT", "NO"} /* YES for profile */
+                              // })));
+
       auto inputs = encoder_compile_model_->inputs();
       for (auto& input : inputs) {
         auto name = input.get_names().empty() ? "NONE" : input.get_any_name();
@@ -170,8 +156,9 @@ void OVAsrModel::Read(const std::string& model_dir) {
     if (ctc_model) {
       ctc_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
           core_->compile_model(ctc_model, "CPU")));
-                               //{{"PERFORMANCE_HINT", "THROUGHPUT"},
+                               // {{"PERFORMANCE_HINT", "THROUGHPUT"},
                                // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
+
       ctc_infer_ = std::make_shared<ov::InferRequest>(
           std::move(ctc_compile_model_->create_infer_request()));
       auto inputs = ctc_compile_model_->inputs();
@@ -185,8 +172,9 @@ void OVAsrModel::Read(const std::string& model_dir) {
     if (rescore_model) {
       rescore_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
           core_->compile_model(rescore_model, "CPU")));
-                               //{{"PERFORMANCE_HINT", "THROUGHPUT"},
+                               // {{"PERFORMANCE_HINT", "THROUGHPUT"},
                                // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
+
       rescore_infer_ = std::make_shared<ov::InferRequest>(
           std::move(rescore_compile_model_->create_infer_request()));
       auto inputs = rescore_compile_model_->inputs();
@@ -238,13 +226,15 @@ OVAsrModel::OVAsrModel(const OVAsrModel& other) {
   encoder_compile_model_ = other.encoder_compile_model_;
   ctc_compile_model_ = other.ctc_compile_model_;
   rescore_compile_model_ = other.rescore_compile_model_;
-  
   encoder_compile_model_ = other.encoder_compile_model_;
   ctc_compile_model_ = other.ctc_compile_model_;
   rescore_compile_model_ = other.rescore_compile_model_;
-  encoder_infer_ = std::make_shared<ov::InferRequest>(std::move(encoder_compile_model_->create_infer_request()));
-  ctc_infer_ = std::make_shared<ov::InferRequest>(std::move(ctc_compile_model_->create_infer_request()));
-  rescore_infer_ = std::make_shared<ov::InferRequest>(std::move(rescore_compile_model_->create_infer_request()));
+  encoder_infer_ = std::make_shared<ov::InferRequest>(
+                    std::move(encoder_compile_model_->create_infer_request()));
+  ctc_infer_ = std::make_shared<ov::InferRequest>(
+                std::move(ctc_compile_model_->create_infer_request()));
+  rescore_infer_ = std::make_shared<ov::InferRequest>(
+                    std::move(rescore_compile_model_->create_infer_request()));
   encoder_input_names_.clear();
   for (auto name : other.encoder_input_names_)
     encoder_input_names_.push_back(name);
