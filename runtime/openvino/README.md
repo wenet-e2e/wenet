@@ -16,9 +16,9 @@ mo --input_model onnx/decoder.onnx --input hyps,hyps_lens,encoder_out --input_sh
 # When it finishes, you can find IR files(.xml and .bin) for encoder, ctc and decoder.
 ```
 
-* Step 3. Build WeNet with OpenVINO™. 
+* Step 3. Build WeNet with OpenVINO™.
 
-Please refer [system requirement](https://github.com/openvinotoolkit/openvino#system-requirements) to check if the hardware platform available by OpenVINO™. 
+Please refer [system requirement](https://github.com/openvinotoolkit/openvino#system-requirements) to check if the hardware platform available by OpenVINO™.
 
 ``` sh
 mkdir build && cd build
