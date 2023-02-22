@@ -425,7 +425,6 @@ class EfficientConformerEncoder(torch.nn.Module):
             att_cache_trunc = 0
             if xs.size(1) + att_cache.size(2) / factor > pos_emb.size(1):
                 # The time step is not divisible by the downsampling multiple
-                # We propose to double the chunk_size.
                 att_cache_trunc = xs.size(1) + \
                     att_cache.size(2) // factor - pos_emb.size(1) + 1
             xs, _, new_att_cache, new_cnn_cache = layer(
