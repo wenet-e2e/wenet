@@ -22,6 +22,7 @@ import torch
 import yaml
 import logging
 
+import torch.nn.functional as F
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
@@ -376,6 +377,184 @@ class StreamingSqueezeformerEncoder(torch.nn.Module):
             r_offset, r_att_cache, r_cnn_cache, r_cache_mask
 
 
+class StreamingEfficientConformerEncoder(torch.nn.Module):
+    def __init__(self, model, required_cache_size, beam_size):
+        super().__init__()
+        self.ctc = model.ctc
+        self.subsampling_rate = model.encoder.embed.subsampling_rate
+        self.embed = model.encoder.embed
+        self.global_cmvn = model.encoder.global_cmvn
+        self.required_cache_size = required_cache_size
+        self.beam_size = beam_size
+        self.encoder = model.encoder
+
+        # Efficient Conformer
+        self.stride_layer_idx = model.encoder.stride_layer_idx
+        self.stride = model.encoder.stride
+        self.num_blocks = model.encoder.num_blocks
+        self.cnn_module_kernel = model.encoder.cnn_module_kernel
+
+    def calculate_downsampling_factor(self, i: int) -> int:
+        factor = 1
+        for idx, stride_idx in enumerate(self.stride_layer_idx):
+            if i > stride_idx:
+                factor *= self.stride[idx]
+        return factor
+
+    def forward(self, chunk_xs, chunk_lens, offset,
+                att_cache, cnn_cache, cache_mask):
+        """Streaming Encoder
+        Args:
+            chunk_xs (torch.Tensor): chunk input, with shape (b, time, mel-dim),
+                where `time == (chunk_size - 1) * subsample_rate + \
+                        subsample.right_context + 1`
+            chunk_lens (torch.Tensor):
+            offset (torch.Tensor): offset with shape (b, 1)
+                        1 is retained for triton deployment
+            att_cache (torch.Tensor): cache tensor for KEY & VALUE in
+                transformer/conformer attention, with shape
+                (b, elayers, head, cache_t1, d_k * 2), where
+                `head * d_k == hidden-dim` and
+                `cache_t1 == chunk_size * num_decoding_left_chunks`.
+            cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,
+                (b, elayers, hidden-dim, cache_t2), where
+                `cache_t2 == cnn.lorder - 1`
+            cache_mask: (torch.Tensor): cache mask with shape (b, required_cache_size)
+                 in a batch of request, each request may have different
+                 history cache. Cache mask is used to indidate the effective
+                 cache for each request
+        Returns:
+            torch.Tensor: log probabilities of ctc output and cutoff by beam size
+                with shape (b, chunk_size, beam)
+            torch.Tensor: index of top beam size probabilities for each timestep
+                with shape (b, chunk_size, beam)
+            torch.Tensor: output of current input xs,
+                with shape (b, chunk_size, hidden-dim).
+            torch.Tensor: new attention cache required for next chunk, with
+                same shape (b, elayers, head, cache_t1, d_k * 2)
+                as the original att_cache
+            torch.Tensor: new conformer cnn cache required for next chunk, with
+                same shape as the original cnn_cache.
+            torch.Tensor: new cache mask, with same shape as the original
+                cache mask
+        """
+        offset = offset.squeeze(1)  # (b, )
+        offset *= self.calculate_downsampling_factor(self.num_blocks + 1)
+
+        T = chunk_xs.size(1)
+        chunk_mask = ~make_pad_mask(chunk_lens, T).unsqueeze(1)  # (b, 1, T)
+        # B X 1 X T
+        chunk_mask = chunk_mask.to(chunk_xs.dtype)
+        # transpose batch & num_layers dim
+        #   Shape(att_cache): (elayers, b, head, cache_t1, d_k * 2)
+        #   Shape(cnn_cache): (elayers, b, outsize, cnn_kernel)
+        att_cache = torch.transpose(att_cache, 0, 1)
+        cnn_cache = torch.transpose(cnn_cache, 0, 1)
+
+        # rewrite encoder.forward_chunk
+        # <---------forward_chunk START--------->
+        xs = self.global_cmvn(chunk_xs)
+        # chunk mask is important for batch inferencing since
+        # different sequence in a batch has different length
+        xs, pos_emb, chunk_mask = self.embed(xs, chunk_mask, offset)
+        cache_size = att_cache.size(3)  # required cache size
+        masks = torch.cat((cache_mask, chunk_mask), dim=2)
+        att_mask = torch.cat((cache_mask, chunk_mask), dim=2)
+        index = offset - cache_size
+
+        pos_emb = self.embed.position_encoding(index, cache_size + xs.size(1))
+        pos_emb = pos_emb.to(dtype=xs.dtype)
+
+        next_cache_start = -self.required_cache_size
+        r_cache_mask = masks[:, :, next_cache_start:]
+
+        r_att_cache = []
+        r_cnn_cache = []
+        mask_pad = chunk_mask.to(torch.bool)
+        max_att_len, max_cnn_len = 0, 0  # for repeat_interleave of new_att_cache
+        for i, layer in enumerate(self.encoder.encoders):
+            factor = self.calculate_downsampling_factor(i)
+            # NOTE(xcsong): Before layer.forward
+            #   shape(att_cache[i:i + 1]) is (b, head, cache_t1, d_k * 2),
+            #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
+            # shape(new_att_cache) = [ batch, head, time2, outdim//head * 2 ]
+            att_cache_trunc = 0
+            if xs.size(1) + att_cache.size(3) / factor > pos_emb.size(1):
+                # The time step is not divisible by the downsampling multiple
+                # We propose to double the chunk_size.
+                att_cache_trunc = xs.size(1) + \
+                    att_cache.size(3) // factor - pos_emb.size(1) + 1
+            xs, _, new_att_cache, new_cnn_cache = layer(
+                xs, att_mask, pos_emb,
+                mask_pad=mask_pad,
+                att_cache=att_cache[i][:, :, ::factor, :][:, :, att_cache_trunc:, :],
+                cnn_cache=cnn_cache[i, :, :, :]
+                if cnn_cache.size(0) > 0 else cnn_cache
+            )
+
+            if i in self.stride_layer_idx:
+                # compute time dimension for next block
+                efficient_index = self.stride_layer_idx.index(i)
+                att_mask = att_mask[:, ::self.stride[efficient_index],
+                                    ::self.stride[efficient_index]]
+                mask_pad = mask_pad[:, ::self.stride[efficient_index],
+                                    ::self.stride[efficient_index]]
+                pos_emb = pos_emb[:, ::self.stride[efficient_index], :]
+
+            # shape(new_att_cache) = [batch, head, time2, outdim]
+            new_att_cache = new_att_cache[:, :, next_cache_start // factor:, :]
+            # shape(new_cnn_cache) = [batch, 1, outdim, cache_t2]
+            new_cnn_cache = new_cnn_cache.unsqueeze(1)  # shape(1):layerID
+
+            # use repeat_interleave to new_att_cache
+            # new_att_cache = new_att_cache.repeat_interleave(repeats=factor, dim=2)
+            new_att_cache = new_att_cache.unsqueeze(3). \
+                repeat(1, 1, 1, factor, 1).flatten(2, 3)
+            # padding new_cnn_cache to cnn.lorder for casual convolution
+            new_cnn_cache = F.pad(
+                new_cnn_cache,
+                (self.cnn_module_kernel - 1 - new_cnn_cache.size(3), 0))
+
+            if i == 0:
+                # record length for the first block as max length
+                max_att_len = new_att_cache.size(2)
+                max_cnn_len = new_cnn_cache.size(3)
+
+            # update real shape of att_cache and cnn_cache
+            r_att_cache.append(new_att_cache[:, :, -max_att_len:, :].unsqueeze(1))
+            r_cnn_cache.append(new_cnn_cache[:, :, :, -max_cnn_len:])
+
+        if self.encoder.normalize_before:
+            chunk_out = self.encoder.after_norm(xs)
+        else:
+            chunk_out = xs
+
+        # shape of r_att_cache: (b, elayers, head, time2, outdim)
+        r_att_cache = torch.cat(r_att_cache, dim=1)  # concat on layers idx
+        # shape of r_cnn_cache: (b, elayers, outdim, cache_t2)
+        r_cnn_cache = torch.cat(r_cnn_cache, dim=1)  # concat on layers
+
+        # <---------forward_chunk END--------->
+
+        log_ctc_probs = self.ctc.log_softmax(chunk_out)
+        log_probs, log_probs_idx = torch.topk(log_ctc_probs,
+                                              self.beam_size,
+                                              dim=2)
+        log_probs = log_probs.to(chunk_xs.dtype)
+
+        r_offset = offset + chunk_out.shape[1]
+        # the below ops not supported in Tensorrt
+        # chunk_out_lens = torch.div(chunk_lens, subsampling_rate,
+        #                   rounding_mode='floor')
+        chunk_out_lens = chunk_lens // self.subsampling_rate // \
+            self.calculate_downsampling_factor(self.num_blocks + 1)
+        chunk_out_lens += 1
+        r_offset = r_offset.unsqueeze(1)
+
+        return log_probs, log_probs_idx, chunk_out, chunk_out_lens, \
+            r_offset, r_att_cache, r_cnn_cache, r_cache_mask
+
+
 class Decoder(torch.nn.Module):
     def __init__(self,
                  decoder: TransformerDecoder,
@@ -557,6 +736,9 @@ def export_online_encoder(model, configs, args, logger, encoder_onnx_path):
     required_cache_size = decoding_chunk_size * num_decoding_left_chunks
     if configs['encoder'] == 'squeezeformer':
         encoder = StreamingSqueezeformerEncoder(
+            model, required_cache_size, args.beam_size)
+    elif configs['encoder'] == 'efficientConformer':
+        encoder = StreamingEfficientConformerEncoder(
             model, required_cache_size, args.beam_size)
     else:
         encoder = StreamingEncoder(

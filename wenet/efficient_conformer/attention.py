@@ -87,6 +87,9 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         overflow_Q = Q.size(2) % group_size
         overflow_KV = K.size(2) % group_size
 
+        # if-else for ONNX export
+        #   0 // 0.00000000000000001 = 0
+        #   1 // 1.00000000000000001 = 1
         padding_Q = (group_size - overflow_Q) * int(
             overflow_Q // (overflow_Q + 0.00000000000000001))
         padding_KV = (group_size - overflow_KV) * int(
