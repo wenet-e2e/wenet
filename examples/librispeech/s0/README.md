@@ -223,7 +223,7 @@ test other
 
 ## Efficient Conformer V1 Result
 
-* Feature info: 
+* Feature info:
     * using fbank feature, cmvn, speed perturb, dither
 * Training info:
     * train_u2++_efficonformer_v1.yaml
@@ -234,7 +234,7 @@ test other
     * Downsample rate: 1/4 (conv2d) * 1/2 (efficonformer block)
     * encoder_dim 256, output_size 256, head 8, linear_units 2048
     * num_blocks 12, cnn_module_kernel 15, group_size 3
-* Decoding info: 
+* Decoding info:
     * ctc_weight 0.5, reverse_weight 0.3, average_num 20
 
 test clean
@@ -258,7 +258,7 @@ test other
 
 ## Efficient Conformer V2 Result
 
-* Feature info: 
+* Feature info:
     * using fbank feature, cmvn, speed perturb, dither
 * Training info:
     * train_u2++_efficonformer_v2.yaml
@@ -269,7 +269,7 @@ test other
     * Downsample rate: 1/2 (conv2d2) * 1/4 (efficonformer block)
     * encoder_dim 256, output_size 256, head 8, linear_units 2048
     * num_blocks 12, cnn_module_kernel 15, group_size 3
-* Decoding info: 
+* Decoding info:
     * ctc_weight 0.5, reverse_weight 0.3, average_num 20
 
 test clean
