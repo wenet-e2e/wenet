@@ -1,6 +1,7 @@
 import json
 import gradio as gr
 import numpy as np
+import torch
 import wenetruntime as wenet
 
 wenet.set_log_level(2)
