@@ -52,7 +52,7 @@ class Recognizer {
 
     auto model = std::make_shared<wenet::TorchAsrModel>();
 #else
-    LOG(FATAL) << "Please rebuild with cmake options '-DONNX=ON' or '-DTORCH=ON'.";
+    LOG(FATAL) << "Please rebuild with options '-DONNX=ON' or '-DTORCH=ON'.";
 #endif
     model->Read(model_path);
     resource_->model = model;
