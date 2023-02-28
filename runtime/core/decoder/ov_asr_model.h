@@ -47,9 +47,6 @@ class OVAsrModel : public AsrModel {
   int head_ = 0;
 
   std::shared_ptr<ov::Core> core_;
-  // sessions
-  // NOTE(Mddct): The Env holds the logging state used by all other objects.
-  //  One Env must be created before using any other Onnxruntime functionality.
 
   std::shared_ptr<ov::CompiledModel> encoder_compile_model_;
   std::shared_ptr<ov::CompiledModel> ctc_compile_model_;

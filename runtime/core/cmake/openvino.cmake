@@ -80,10 +80,5 @@ if(OPENVINO)
     link_directories(${openvino_SOURCE_DIR}/lib)
   endif()
 
-  if(MSVC)
-    file(GLOB ONNX_DLLS "${openvino_SOURCE_DIR}/lib/*.dll")
-    file(COPY ${VINO_DLLS} DESTINATION ${CMAKE_BINARY_DIR}/bin/${CMAKE_BUILD_TYPE})
-  endif()
-
   add_definitions(-DUSE_OPENVINO)
 endif()

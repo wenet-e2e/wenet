@@ -1,5 +1,3 @@
-openvino==2022.3.0
-openvino-dev==2022.3.0
 Pillow
 pyyaml>=5.1
 sentencepiece

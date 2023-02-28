@@ -14,7 +14,7 @@
 
 namespace wenet {
 
-static void printPerformanceCounts(
+static void PrintPerformanceCounts(
     std::vector<ov::ProfilingInfo> performanceData, std::ostream& stream,
     std::string deviceName, bool bshowHeader = true) {
   std::chrono::microseconds totalTime = std::chrono::microseconds::zero();
@@ -64,7 +64,6 @@ static void printPerformanceCounts(
   std::cout.flags(fmt);
 }
 
-// std::shared_ptr<ov::Core> OVAsrModel::core_ = std::make_shared<ov::Core>();
 OVAsrModel::~OVAsrModel() {}
 
 void OVAsrModel::InitEngineThreads(int core_number) {
@@ -116,6 +115,7 @@ void OVAsrModel::Read(const std::string& model_dir) {
         num_left_chunks_ = metadata["left_chunks"].as<int>();
       } else {
         // in case that the model is exported without meta
+        LOG(INFO) << "Fill-in default values in case no metadata for exported model.";
         encoder_output_size_ = 256;
         num_blocks_ = 12;
         head_ = 4;
@@ -223,9 +223,6 @@ OVAsrModel::OVAsrModel(const OVAsrModel& other) {
   encoder_inputs_map_ = other.encoder_inputs_map_;
   ctc_inputs_map_ = other.ctc_inputs_map_;
   rescore_inputs_map_ = other.rescore_inputs_map_;
-  encoder_compile_model_ = other.encoder_compile_model_;
-  ctc_compile_model_ = other.ctc_compile_model_;
-  rescore_compile_model_ = other.rescore_compile_model_;
   encoder_compile_model_ = other.encoder_compile_model_;
   ctc_compile_model_ = other.ctc_compile_model_;
   rescore_compile_model_ = other.rescore_compile_model_;
