@@ -219,3 +219,73 @@ test other
 | LM-tgmed + attention rescoring   | 8.78  | 10.26 |
 | LM-tglarge + attention rescoring | 8.34  | 9.74  |
 | LM-fglarge + attention rescoring | 8.17  | 9.44  |
+
+
+## Efficient Conformer V1 Result
+
+* Feature info:
+    * using fbank feature, cmvn, speed perturb, dither
+* Training info:
+    * train_u2++_efficonformer_v1.yaml
+    * 8 gpu, batch size 16, acc_grad 1, 120 epochs
+    * lr 0.001, warmup_steps 35000
+* Model info:
+    * Model Params: 49,474,974
+    * Downsample rate: 1/4 (conv2d) * 1/2 (efficonformer block)
+    * encoder_dim 256, output_size 256, head 8, linear_units 2048
+    * num_blocks 12, cnn_module_kernel 15, group_size 3
+* Decoding info:
+    * ctc_weight 0.5, reverse_weight 0.3, average_num 20
+
+test clean
+
+| decoding mode          | full | 18   | 16   |
+|------------------------|------|------|------|
+| attention decoder      | 3.65 | 3.88 | 3.87 |
+| ctc_greedy_search      | 3.46 | 3.79 | 3.77 |
+| ctc prefix beam search | 3.44 | 3.75 | 3.74 |
+| attention rescoring    | 3.17 | 3.44 | 3.41 |
+
+test other
+
+| decoding mode          | full | 18    | 16    |
+|------------------------|------|-------|-------|
+| attention decoder      | 8.51 | 9.24  | 9.25  |
+| ctc_greedy_search      | 8.94 | 10.04 | 10.06 |
+| ctc prefix beam search | 8.91 | 10    | 10.01 |
+| attention rescoring    | 8.21 | 9.25  | 9.25  |
+
+
+## Efficient Conformer V2 Result
+
+* Feature info:
+    * using fbank feature, cmvn, speed perturb, dither
+* Training info:
+    * train_u2++_efficonformer_v2.yaml
+    * 8 gpu, batch size 16, acc_grad 1, 120 epochs
+    * lr 0.001, warmup_steps 35000
+* Model info:
+    * Model Params: 50,341,278
+    * Downsample rate: 1/2 (conv2d2) * 1/4 (efficonformer block)
+    * encoder_dim 256, output_size 256, head 8, linear_units 2048
+    * num_blocks 12, cnn_module_kernel 15, group_size 3
+* Decoding info:
+    * ctc_weight 0.5, reverse_weight 0.3, average_num 20
+
+test clean
+
+| decoding mode          | full | 18   | 16   |
+|------------------------|------|------|------|
+| attention decoder      | 3.49 | 3.71 | 3.72 |
+| ctc_greedy_search      | 3.49 | 3.74 | 3.77 |
+| ctc prefix beam search | 3.47 | 3.72 | 3.74 |
+| attention rescoring    | 3.12 | 3.38 | 3.36 |
+
+test other
+
+| decoding mode          | full | 18   | 16   |
+|------------------------|------|------|------|
+| attention decoder      | 8.15 | 9.05 | 9.03 |
+| ctc_greedy_search      | 8.73 | 9.82 | 9.83 |
+| ctc prefix beam search | 8.70 | 9.81 | 9.79 |
+| attention rescoring    | 8.05 | 9.08 | 9.10 |

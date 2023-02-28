@@ -79,7 +79,8 @@ setuptools.setup(
     cmdclass={"build_ext": BuildExtension},
     zip_safe=False,
     setup_requires=["tqdm"],
-    install_requires=["torch", "tqdm"],
+    install_requires=["torch", "tqdm"] if "ONNX=ON" not in
+        os.environ.get("WENET_CMAKE_ARGS", "") else ["tqdm"],
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
