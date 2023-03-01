@@ -446,6 +446,7 @@ def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
 def spec_sub(data, max_t=20, num_t_sub=3):
     """ Do spec substitute
         Inplace operation
+        ref: U2++, section 3.2.3 [https://arxiv.org/abs/2106.05642]
 
         Args:
             data: Iterable[{key, feat, label}]
