@@ -28,7 +28,13 @@ Please refer [system requirement](https://github.com/openvinotoolkit/openvino#sy
 ``` sh
 mkdir build && cd build
 cmake -DOPENVINO=ON -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF ..
-cmake --build .
+make --jobs=$(nproc --all)
+```
+
+(Optional) Some users may cannot easily download OpenVINO™ binary package from server due to firewall or proxy issue. If you failed to download by CMake script, you can download OpenVINO™ package by your selves and put the package to below path:
+
+``` sh
+${wenet_path}/runtime/openvino/fc_base/openvino-subbuild/openvino-populate-prefix/src/l_openvino_toolkit_ubuntu20_2022.3.0.9052.9752fafe8eb_x86_64.tgz
 ```
 
 * Step 4. Testing.
