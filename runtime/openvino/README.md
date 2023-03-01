@@ -15,7 +15,7 @@ mo --input_model onnx/encoder.onnx --input chunk[1,-1,80],att_cache[12,4,-1,128]
 mo --input_model onnx/ctc.onnx --input_shape [1,-1,256] --output_dir openvino 
 mo --input_model onnx/decoder.onnx --input hyps[-1,-1],hyps_lens[-1],encoder_out[1,-1,256]  --output_dir openvino
 
-By using MO, user can specify shape of multiple inputs by `--input` option, or just directly provide `--input_shape` for single input model. To enable the dynamic shape support for inference, user can use `-1` or provide a range of input shape value, like `1..80`.Please refer the [usage guide of MO](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html). 
+By using MO, user can specify shape of multiple inputs by `--input` option, or just directly provide `--input_shape` for single input model. To enable the dynamic shape support for inference, user can use `-1` or provide a range of input shape value, like `1..80`.Please refer the [usage guide of MO](https://docs.openvino.ai/latest/openvino_docs_MO_DG_Deep_Learning_Model_Optimizer_DevGuide.html).
 
 
 # When it finishes, you can find IR files(.xml and .bin) for encoder, ctc and decoder.

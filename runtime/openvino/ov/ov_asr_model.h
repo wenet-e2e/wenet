@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#ifndef DECODER_OV_ASR_MODEL_H_
-#define DECODER_OV_ASR_MODEL_H_
+#ifndef RUNTIME_OPENVINO_OV_OV_ASR_MODEL_H_
+#define RUNTIME_OPENVINO_OV_OV_ASR_MODEL_H_
 
 #include <memory>
 #include <string>
 #include <vector>
 #include <map>
 #include "openvino/openvino.hpp"
-
 #include "decoder/asr_model.h"
 #include "utils/utils.h"
 #include "utils/log.h"
@@ -55,8 +54,6 @@ class OVAsrModel : public AsrModel {
   std::shared_ptr<ov::InferRequest> encoder_infer_;
   std::shared_ptr<ov::InferRequest> ctc_infer_;
   std::shared_ptr<ov::InferRequest> rescore_infer_;
-
-  std::vector<std::string> encoder_input_names_;
   // caches
   ov::Tensor att_cache_ov_;
   ov::Tensor cnn_cache_ov_;
@@ -71,4 +68,4 @@ class OVAsrModel : public AsrModel {
 
 }  // namespace wenet
 
-#endif  // DECODER_OV_ASR_MODEL_H_
+#endif  // RUNTIME_OPENVINO_OV_OV_ASR_MODEL_H_

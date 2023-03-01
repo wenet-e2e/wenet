@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-#include "decoder/ov_asr_model.h"
+#include "ov/ov_asr_model.h"
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -115,7 +115,7 @@ void OVAsrModel::Read(const std::string& model_dir) {
         num_left_chunks_ = metadata["left_chunks"].as<int>();
       } else {
         // in case that the model is exported without meta
-        LOG(INFO) << "Fill-in default values in case no metadata for exported model.";
+        LOG(INFO) << "no metadata for model, use default value.";
         encoder_output_size_ = 256;
         num_blocks_ = 12;
         head_ = 4;
@@ -127,16 +127,6 @@ void OVAsrModel::Read(const std::string& model_dir) {
         is_bidirectional_decoder_ = 1;
         chunk_size_ = 16;
         num_left_chunks_ = -1;
-      }
-
-      encoder_input_names_.clear();
-      std::vector<ov::Output<ov::Node>> encoder_inputs_ =
-          encoder_model->inputs();
-      for (ov::Output<ov::Node> input : encoder_inputs_) {
-        std::string name =
-            input.get_names().empty() ? "NONE" : input.get_any_name();
-        std::cout << "Get Encoder input " << name << std::endl;
-        encoder_input_names_.push_back(name);
       }
 
       encoder_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
@@ -232,9 +222,6 @@ OVAsrModel::OVAsrModel(const OVAsrModel& other) {
                 std::move(ctc_compile_model_->create_infer_request()));
   rescore_infer_ = std::make_shared<ov::InferRequest>(
                     std::move(rescore_compile_model_->create_infer_request()));
-  encoder_input_names_.clear();
-  for (auto name : other.encoder_input_names_)
-    encoder_input_names_.push_back(name);
 }
 
 std::shared_ptr<AsrModel> OVAsrModel::Copy() const {
@@ -328,22 +315,24 @@ void OVAsrModel::ForwardEncoderFunc(
 
   // set input tensor
   size_t idx = 0;
-
-  for (auto name : encoder_input_names_) {
-    if (name == "chunk") {
-      encoder_infer_->set_tensor(encoder_inputs_map_[name], feats_ov);
-    } else if (name == "offset") {
-      encoder_infer_->set_tensor(encoder_inputs_map_[name], offset_ov);
-    } else if (name == "required_cache_size") {
-      encoder_infer_->set_tensor(encoder_inputs_map_[name],
+  std::map<std::string, ov::Output<const ov::Node>>::iterator it \
+                    = encoder_inputs_map_.begin();
+  while (it != encoder_inputs_map_.end()) {
+    if (it->first == "chunk") {
+      encoder_infer_->set_tensor(it->second, feats_ov);
+    } else if (it->first == "offset") {
+      encoder_infer_->set_tensor(it->second, offset_ov);
+    } else if (it->first == "required_cache_size") {
+      encoder_infer_->set_tensor(it->second,
                                  required_cache_size_ov);
-    } else if (name == "att_cache") {
-      encoder_infer_->set_tensor(encoder_inputs_map_[name], att_cache_ov_);
-    } else if (name == "cnn_cache") {
-      encoder_infer_->set_tensor(encoder_inputs_map_[name], cnn_cache_ov_);
-    } else if (name == "att_mask") {
-      encoder_infer_->set_tensor(encoder_inputs_map_[name], att_mask_ov);
+    } else if (it->first == "att_cache") {
+      encoder_infer_->set_tensor(it->second, att_cache_ov_);
+    } else if (it->first == "cnn_cache") {
+      encoder_infer_->set_tensor(it->second, cnn_cache_ov_);
+    } else if (it->first == "att_mask") {
+      encoder_infer_->set_tensor(it->second, att_mask_ov);
     }
+    ++it;
   }
   try {
     encoder_infer_->infer();

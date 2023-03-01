@@ -35,7 +35,7 @@
 #include "bpu/bpu_asr_model.h"
 #endif
 #ifdef USE_OPENVINO
-#include "decoder/ov_asr_model.h"
+#include "ov/ov_asr_model.h"
 #endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
