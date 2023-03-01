@@ -11,9 +11,10 @@ option(GRPC "whether to build with gRPC" OFF)
 #                     which is a very big library
 option(WEBSOCKET "whether to build with websocket" ON)
 option(HTTP "whether to build with http" OFF)
-option(TORCH "whether to build with Torch" ON)
+option(TORCH "whether to build with Torch" OFF)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
+option(OPENVINO "whether to build with OpenVINO" ON)
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
@@ -32,13 +33,7 @@ else()
   add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 endif()
 
-# Include all dependency
-if(TORCH)
-  include(libtorch)
-endif()
-if(ONNX)
-  include(onnx)
-endif()
+include(openvino)
 
 include(openfst)
 include_directories(
@@ -53,6 +48,7 @@ add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
 add_subdirectory(api)
+add_subdirectory(ov)
 
 # Optionally, you can build with websocket
 if(WEBSOCKET)
