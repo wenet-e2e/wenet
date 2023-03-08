@@ -286,3 +286,15 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
   done
 fi
 
+# Optionally, you can train with LF-MMI using k2
+# Based on 20210601_u2++_conformer_exp/final.pt, we train 50 epocs with 1e-5 lr
+# and average 10 best models, achieve 4.1 cer with hlg decoding
+if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
+  # 9.1 Build token level bigram fst for LF-MMI training
+  tools/k2/prepare_mmi.sh data/train/ data/dev data/local/lfmmi
+
+  # 9.2 Run LF-MMI training from stage 4, with below new args
+  # --lfmmi_dir data/local/lfmmi
+
+  # 9.3 Run HLG decode from stage 8.2
+fi

@@ -106,5 +106,6 @@ def init_model(configs):
                          encoder=encoder,
                          decoder=decoder,
                          ctc=ctc,
+                         lfmmi_dir=configs['lfmmi_dir'],
                          **configs['model_conf'])
     return model
