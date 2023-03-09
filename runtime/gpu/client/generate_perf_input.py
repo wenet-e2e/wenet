@@ -5,6 +5,7 @@ import numpy as np
 import argparse
 import math
 
+
 def generate_offline_input(args):
     wav_file = args.audio_file
     print("Reading {}".format(wav_file))
@@ -12,10 +13,19 @@ def generate_offline_input(args):
     batch_size = 1
     mat = np.array([waveform] * batch_size, dtype=np.float32)
 
-    out_dict = {"data": [{"WAV_LENS": [len(waveform)],
-                "WAV": {"shape": [len(waveform)],
-                        "content": mat.flatten().tolist()}}]}
+    out_dict = {
+        "data": [
+            {
+                "WAV_LENS": [len(waveform)],
+                "WAV": {
+                    "shape": [len(waveform)],
+                    "content": mat.flatten().tolist(),
+                },
+            }
+        ]
+    }
     json.dump(out_dict, open("offline_input.json", "w"))
+
 
 def generate_online_input(args):
     wav_file = args.audio_file
@@ -37,10 +47,10 @@ def generate_online_input(args):
     while i < len(waveform):
         if i == 0:
             stride = int(first_chunk_s * sample_rate)
-            wav_segs.append(waveform[i: i + stride])
+            wav_segs.append(waveform[i : i + stride])
         else:
             stride = int(other_chunk_s * sample_rate)
-            wav_segs.append(waveform[i: i + stride])
+            wav_segs.append(waveform[i : i + stride])
         i += len(wav_segs[-1])
 
     data = {"data": [[]]}
@@ -57,8 +67,10 @@ def generate_online_input(args):
         expect_input[0][0:chunk_len] = seg
 
         flat_chunk = expect_input.flatten().astype(np.float32).tolist()
-        seq = {"WAV": {"content": flat_chunk, "shape": expect_input[0].shape},
-               "WAV_LENS": [chunk_len]}
+        seq = {
+            "WAV": {"content": flat_chunk, "shape": expect_input[0].shape},
+            "WAV_LENS": [chunk_len],
+        }
         data["data"][0].append(seq)
 
     json.dump(data, open("online_input.json", "w"))
@@ -66,30 +78,53 @@ def generate_online_input(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--audio_file',
-                        type=str, default=None,
-                        help='single wav file')
+    parser.add_argument(
+        "--audio_file", type=str, default=None, help="single wav file"
+    )
     # below is only for streaming input
-    parser.add_argument('--streaming',
-                        action="store_true", required=False)
-    parser.add_argument('--sample_rate',
-                        type=int, required=False, default=16000,
-                        help='sample rate used in training')
-    parser.add_argument('--frame_length_ms',
-                        type=int, required=False, default=25,
-                        help='frame length used in training')
-    parser.add_argument('--frame_shift_ms',
-                        type=int, required=False, default=10,
-                        help='frame shift length used in training')
-    parser.add_argument('--chunk_size',
-                        type=int, required=False, default=16,
-                        help='chunk size default is 16')
-    parser.add_argument('--context',
-                        type=int, required=False, default=7,
-                        help='conformer context default is 7')
-    parser.add_argument('--subsampling',
-                        type=int, required=False, default=4,
-                        help='subsampling rate default is 4')
+    parser.add_argument("--streaming", action="store_true", required=False)
+    parser.add_argument(
+        "--sample_rate",
+        type=int,
+        required=False,
+        default=16000,
+        help="sample rate used in training",
+    )
+    parser.add_argument(
+        "--frame_length_ms",
+        type=int,
+        required=False,
+        default=25,
+        help="frame length used in training",
+    )
+    parser.add_argument(
+        "--frame_shift_ms",
+        type=int,
+        required=False,
+        default=10,
+        help="frame shift length used in training",
+    )
+    parser.add_argument(
+        "--chunk_size",
+        type=int,
+        required=False,
+        default=16,
+        help="chunk size default is 16",
+    )
+    parser.add_argument(
+        "--context",
+        type=int,
+        required=False,
+        default=7,
+        help="conformer context default is 7",
+    )
+    parser.add_argument(
+        "--subsampling",
+        type=int,
+        required=False,
+        default=4,
+        help="subsampling rate default is 4",
+    )
 
     args = parser.parse_args()
 

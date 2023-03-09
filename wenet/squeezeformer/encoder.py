@@ -216,7 +216,7 @@ class SqueezeformerEncoder(nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
-        xs_lens = chunk_masks.squeeze(1).sum(1)
+        xs_lens = mask_pad.squeeze(1).sum(1)
         xs = self.preln(xs)
         recover_activations: \
             List[Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]] = []
@@ -244,7 +244,7 @@ class SqueezeformerEncoder(nn.Module):
                     chunk_masks = recover_chunk_masks
                     pos_emb = recover_pos_emb
                     mask_pad = recover_mask_pad
-                    xs = xs.masked_fill(~chunk_masks[:, 0, :].unsqueeze(-1), 0.0)
+                    xs = xs.masked_fill(~mask_pad[:, 0, :].unsqueeze(-1), 0.0)
 
             xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
 

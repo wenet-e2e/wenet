@@ -3,7 +3,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/wenet-e2e/wenet)
 
-[**Roadmap**](ROADMAP.md)
+[**Roadmap**](https://github.com/wenet-e2e/wenet/issues/1683)
 | [**Docs**](https://wenet-e2e.github.io/wenet)
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
 | [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch)
@@ -90,12 +90,6 @@ If you can not access the QR image, please access it on [gitee](https://gitee.co
 | ---- | ---- |
 
 Or you can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
-
-## Contributors
-
-| <a href="https://www.chumenwenwen.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/chumenwenwen.png" width="250px"></a> | <a href="http://lxie.npu-aslp.org" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/colleges/nwpu.png" width="250px"></a> | <a href="http://www.aishelltech.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/aishelltech.png" width="250px"></a> | <a href="http://www.ximalaya.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/ximalaya.png" width="250px"></a> | <a href="https://www.jd.com" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/jd.jpeg" width="250px"></a> |
-| ---- | ---- | ---- | ---- | ---- |
-| <a href="https://horizon.ai" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/hobot.png" width="250px"></a> | <a href="https://thuhcsi.github.io" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/colleges/thu.png" width="250px"></a> | <a href="https://www.nvidia.com/en-us" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/nvidia.png" width="250px"></a> | | | |
 
 ## Acknowledge
 

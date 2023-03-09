@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def _levenshtein_distance(ref, hyp):
     """Levenshtein distance is a string metric for measuring the difference
     between two sequences. Informally, the levenshtein disctance is defined as
