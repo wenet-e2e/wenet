@@ -75,6 +75,7 @@ class WavReader {
       fprintf(stderr,
               "WaveData: expect PCM format data "
               "to have fmt chunk of at least size 16.\n");
+      fclose(fp);
       return false;
     } else if (header.fmt_size > 16) {
       int offset = 44 - 8 + header.fmt_size - 16;
