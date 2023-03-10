@@ -1,4 +1,4 @@
-# WeNet Python Binding
+# Python Binding
 
 This is a python binding of WeNet.
 
