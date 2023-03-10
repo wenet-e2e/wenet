@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>UIO for WeNet &mdash; Wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <title>UIO for WeNet &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
@@ -17,7 +17,8 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="prev" title="JIT in WeNet" href="jit_in_wenet.html" /> 
+    <link rel="next" title="Production Runtime" href="production.html" />
+    <link rel="prev" title="Pretrained Models in WeNet" href="pretrained_models.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -29,7 +30,7 @@
           
           
           <a href="index.html" class="icon icon-home">
-            Wenet
+            wenet
           </a>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
@@ -39,33 +40,33 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Tutorial:</span></p>
+              <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="python_binding.html">WeNet Python Binding</a></li>
-<li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
-<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained Models in WeNet</a></li>
-<li class="toctree-l1"><a class="reference internal" href="lm.html">LM for WeNet</a></li>
-<li class="toctree-l1"><a class="reference internal" href="context.html">Context Biasing</a></li>
-<li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
-<li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#">UIO for WeNet</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#necessity-of-upgrading-io-mothod">Necessity of upgrading IO mothod</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#system-design-of-uio">System design of UIO</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#overall-design">Overall design</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#chain-io">Chain IO</a></li>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="train.html">How to train models?</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pretrained_models.html">Pretrained Models in WeNet</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">UIO for WeNet</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#necessity-of-upgrading-io-mothod">Necessity of upgrading IO mothod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#system-design-of-uio">System design of UIO</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#overall-design">Overall design</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#chain-io">Chain IO</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#validation-experiments">Validation experiments</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#aishell-raw-vs-shard">Aishell(<code class="docutils literal notranslate"><span class="pre">raw</span></code> vs <code class="docutils literal notranslate"><span class="pre">shard</span></code>)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#wenetspeech-shard">WenetSpeech(<code class="docutils literal notranslate"><span class="pre">shard</span></code>)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#validation-experiments">Validation experiments</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#aishell-raw-vs-shard">Aishell(<code class="docutils literal notranslate"><span class="pre">raw</span></code> vs <code class="docutils literal notranslate"><span class="pre">shard</span></code>)</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#wenetspeech-shard">WenetSpeech(<code class="docutils literal notranslate"><span class="pre">shard</span></code>)</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#usage-of-uio">Usage of UIO</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#q-a">Q&amp;A</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#usage-of-uio">Usage of UIO</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#q-a">Q&amp;A</a></li>
 </ul>
 </li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="production.html">Production Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="reference.html">Reference</a></li>
 </ul>
 
         </div>
@@ -74,7 +75,7 @@
 
     <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">Wenet</a>
+          <a href="index.html">wenet</a>
       </nav>
 
       <div class="wy-nav-content">
@@ -82,6 +83,7 @@
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
       <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="train.html">How to train models?</a></li>
       <li class="breadcrumb-item active">UIO for WeNet</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/UIO.md.txt" rel="nofollow"> View page source</a>
@@ -313,7 +315,8 @@ At present, all datasets in WeNet have used UIO as the default data preparation.
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="jit_in_wenet.html" class="btn btn-neutral float-left" title="JIT in WeNet" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="pretrained_models.html" class="btn btn-neutral float-left" title="Pretrained Models in WeNet" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="production.html" class="btn btn-neutral float-right" title="Production Runtime" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
