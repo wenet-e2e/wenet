@@ -23,23 +23,22 @@
 * **Accurate**: WeNet achieves SOTA results on a lot of public speech datasets.
 * **Light weight**: WeNet is easy to install, easy to use, well designed, and well documented.
 
+
 ## Install
 please refer [doc](docs/install.md) for install.
 
+
 ## Discussion & Communication
 
-Please visit [Discussions](https://github.com/wenet-e2e/wenet/discussions) for further discussion.
+You can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
 
 For Chinese users, you can aslo scan the QR code on the left to follow our offical account of WeNet.
 We created a WeChat group for better discussion and quicker response.
 Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 
-If you can not access the QR image, please access it on [gitee](https://gitee.com/robin1001/qr/tree/master).
-
 | <img src="https://github.com/robin1001/qr/blob/master/wenet.jpeg" width="250px"> | <img src="https://github.com/robin1001/qr/blob/master/binbin.jpeg" width="250px"> |
 | ---- | ---- |
 
-Or you can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
 
 ## Acknowledge
 
