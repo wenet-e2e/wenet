@@ -71,6 +71,13 @@ class WavReader {
 
     WavHeader header;
     fread(&header, 1, sizeof(header), fp);
+    if (!(header.riff[0] == 'R' && header.riff[1] == 'I' && header.riff[2] == 'F' && header.riff[3] == 'F' && \
+          header.wav[0] == 'W' && header.wav[1] == 'A' && header.wav[2] == 'V' && header.wav[3] == 'E' && \
+          header.fmt[0] == 'f' && header.fmt[1] == 'm' && header.fmt[2] == 't' )) {
+      fprintf(stderr,
+              "WaveData: expect audio format data.\n");
+      return false;
+    }
     if (header.fmt_size < 16) {
       fprintf(stderr,
               "WaveData: expect PCM format data "
