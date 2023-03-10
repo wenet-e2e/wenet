@@ -10,7 +10,7 @@
 | [**Pretrained Models**](docs/pretrained_models.md)
 | [**HuggingFace**](https://huggingface.co/spaces/wenet/wenet_demo)
 
-**We** share neural **Net** together.
+**We** share **Net** together.
 
 ## News :fire:
 
