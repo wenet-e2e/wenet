@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Install &mdash; Wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Tutorial:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="python_binding.html">WeNet Python Binding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="papers.html">Papers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_librispeech.html">Tutorial on LibriSpeech</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorial_aishell.html">Tutorial on AIShell</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pretrained_models.html">Pretrained Models in WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lm.html">LM for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="context.html">Context Biasing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="runtime.html">Runtime for WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="jit_in_wenet.html">JIT in WeNet</a></li>
+<li class="toctree-l1"><a class="reference internal" href="UIO.html">UIO for WeNet</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Install</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/install.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="install">
+<h1>Install<a class="headerlink" href="#install" title="Permalink to this headline"></a></h1>
+<div class="section" id="install-prebuilt-python-package">
+<h2>Install prebuilt python package<a class="headerlink" href="#install-prebuilt-python-package" title="Permalink to this headline"></a></h2>
+<p>If you just want to use WeNet as a python package for speech recognition application,
+just install it by <code class="docutils literal notranslate"><span class="pre">pip</span></code>, please note python 3.6+ is required.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip3 install wenetruntime
+</pre></div>
+</div>
+<p>And please see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/binding/python">doc</a> for usage.</p>
+</div>
+<div class="section" id="install-for-training">
+<h2>Install for training<a class="headerlink" href="#install-for-training" title="Permalink to this headline"></a></h2>
+<ul class="simple">
+<li><p>Clone the repo</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/wenet-e2e/wenet.git
+</pre></div>
+</div>
+<ul class="simple">
+<li><p>Install Conda: please see https://docs.conda.io/en/latest/miniconda.html</p></li>
+<li><p>Create Conda env:</p></li>
+</ul>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>conda create -n wenet <span class="nv">python</span><span class="o">=</span><span class="m">3</span>.8
+conda activate wenet
+pip install -r requirements.txt
+conda install <span class="nv">pytorch</span><span class="o">=</span><span class="m">1</span>.10.0 torchvision <span class="nv">torchaudio</span><span class="o">=</span><span class="m">0</span>.10.0 <span class="nv">cudatoolkit</span><span class="o">=</span><span class="m">11</span>.1 -c pytorch -c conda-forge
+</pre></div>
+</div>
+</div>
+<div class="section" id="build-for-deployment">
+<h2>Build for deployment<a class="headerlink" href="#build-for-deployment" title="Permalink to this headline"></a></h2>
+<p>Optionally, if you want to use x86 runtime or language model(LM),
+you have to build the runtime as follows. Otherwise, you can just ignore this step.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># runtime build requires cmake 3.14 or above</span>
+<span class="nb">cd</span> runtime/libtorch
+mkdir build <span class="o">&amp;&amp;</span> <span class="nb">cd</span> build <span class="o">&amp;&amp;</span> cmake -DGRAPH_TOOLS<span class="o">=</span>ON .. <span class="o">&amp;&amp;</span> cmake --build .
+</pre></div>
+</div>
+<p>Please see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime">doc</a> for building
+runtime on more platforms and OS.</p>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
