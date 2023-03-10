@@ -27,6 +27,7 @@ Here is a brief summary of all platforms and OSs. please note the corresponding 
 | kunlun          | linux               | xpu runtime          | Kunlun XPU runtime                                                                               |
 | libtorch        | linux, windows, mac | libtorch             | c++ build with libtorch                                                                          |
 | onnxrutnime     | linux, windows, mac | onnxruntime          | c++ build with onnxruntime                                                                       |
+| openvino        | linux, windows, mac | openvino             | c++ build with openvino                                                                          |
 | raspberrypi     | linux               | onnxruntime          | c++ build on raspberrypi with onnxruntime                                                        |
 | web             | linux, windows, mac | libtorch             | web demo with gradio and python binding, [link]()                                                |
 

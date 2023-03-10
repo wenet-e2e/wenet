@@ -1,7 +1,10 @@
 import json
 import gradio as gr
 import numpy as np
+import torch
 import wenetruntime as wenet
+
+torch.manual_seed(777)  # for lint
 
 wenet.set_log_level(2)
 decoder = wenet.Decoder(lang='chs')
