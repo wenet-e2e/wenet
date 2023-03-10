@@ -39,42 +39,9 @@ to reduce the effort of productionizing E2E models, and to explore better E2E mo
 
 Please see `examples/$dataset/s0/README.md` for benchmark on different speech datasets.
 
-## Installation(Python Only)
+## Install
+please refer [doc](docs/install.md) for install.
 
-If you just want to use WeNet as a python package for speech recognition application,
-just install it by `pip`, please note python 3.6+ is required.
-``` sh
-pip3 install wenetruntime
-```
-
-And please see [doc](runtime/binding/python/README.md) for usage.
-
-
-## Installation(Training and Developing)
-
-- Clone the repo
-``` sh
-git clone https://github.com/wenet-e2e/wenet.git
-```
-
-- Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
-- Create Conda env:
-
-``` sh
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch=1.10.0 torchvision torchaudio=0.10.0 cudatoolkit=11.1 -c pytorch -c conda-forge
-```
-
-- Optionally, if you want to use x86 runtime or language model(LM),
-you have to build the runtime as follows. Otherwise, you can just ignore this step.
-
-``` sh
-# runtime build requires cmake 3.14 or above
-cd runtime/libtorch
-mkdir build && cd build && cmake -DGRAPH_TOOLS=ON .. && cmake --build .
-```
 
 ## Discussion & Communication
 
