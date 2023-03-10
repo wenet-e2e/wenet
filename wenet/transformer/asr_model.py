@@ -24,9 +24,12 @@ try:
     import k2
     from icefall.utils import get_texts
     from icefall.decode import get_lattice, Nbest, one_best_decoding
+    from icefall.mmi import LFMMILoss
+    from icefall.mmi_graph_compiler import MmiTrainingGraphCompiler
 except ImportError:
     print('Failed to import k2 and icefall. \
-        Notice that they are necessary for hlg_onebest and hlg_rescore')
+        Notice that they are necessary for \
+        hlg_onebest/hlg_rescore decoding and LF-MMI training')
 
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
@@ -47,6 +50,7 @@ class ASRModel(torch.nn.Module):
         encoder: TransformerEncoder,
         decoder: TransformerDecoder,
         ctc: CTC,
+        lfmmi_dir: str,
         ctc_weight: float = 0.5,
         ignore_id: int = IGNORE_ID,
         reverse_weight: float = 0.0,
@@ -73,6 +77,9 @@ class ASRModel(torch.nn.Module):
             smoothing=lsm_weight,
             normalize_length=length_normalized_loss,
         )
+        self.lfmmi_dir = lfmmi_dir
+        if self.lfmmi_dir != '':
+            self.load_lfmmi_resource()
 
     def forward(
         self,
@@ -89,6 +96,7 @@ class ASRModel(torch.nn.Module):
             text: (Batch, Length)
             text_lengths: (Batch,)
         """
+
         assert text_lengths.dim() == 1, text_lengths.shape
         # Check that batch_size is unified
         assert (speech.shape[0] == speech_lengths.shape[0] == text.shape[0] ==
@@ -105,10 +113,13 @@ class ASRModel(torch.nn.Module):
         else:
             loss_att = None
 
-        # 2b. CTC branch
+        # 2b. CTC branch or LF-MMI loss
         if self.ctc_weight != 0.0:
-            loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
-                                text_lengths)
+            if self.lfmmi_dir != '':
+                loss_ctc = self._calc_lfmmi_loss(encoder_out, encoder_mask, text)
+            else:
+                loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
+                                    text_lengths)
         else:
             loss_ctc = None
 
@@ -551,6 +562,51 @@ class ASRModel(torch.nn.Module):
                 best_score = score
                 best_index = i
         return hyps[best_index][0], best_score
+
+    @torch.jit.ignore(drop=True)
+    def load_lfmmi_resource(self):
+        with open('{}/tokens.txt'.format(self.lfmmi_dir), 'r') as fin:
+            for line in fin:
+                arr = line.strip().split()
+                if arr[0] == '<sos/eos>':
+                    self.sos_eos_id = int(arr[1])
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.graph_compiler = MmiTrainingGraphCompiler(
+            self.lfmmi_dir,
+            device=device,
+            oov="<UNK>",
+            sos_id=self.sos_eos_id,
+            eos_id=self.sos_eos_id,
+        )
+        self.lfmmi = LFMMILoss(
+            graph_compiler=self.graph_compiler,
+            den_scale=1,
+            use_pruned_intersect=False,
+        )
+        self.word_table = {}
+        with open('{}/words.txt'.format(self.lfmmi_dir), 'r') as fin:
+            for line in fin:
+                arr = line.strip().split()
+                assert len(arr) == 2
+                self.word_table[int(arr[1])] = arr[0]
+
+    @torch.jit.ignore(drop=True)
+    def _calc_lfmmi_loss(self, encoder_out, encoder_mask, text):
+        ctc_probs = self.ctc.log_softmax(encoder_out)
+        supervision_segments = torch.stack(
+            (torch.arange(len(encoder_mask)),
+             torch.zeros(len(encoder_mask)),
+             encoder_mask.squeeze(dim=1).sum(dim=1).to('cpu'),), 1
+        ).to(torch.int32)
+        dense_fsa_vec = k2.DenseFsaVec(
+            ctc_probs,
+            supervision_segments,
+            allow_truncate=3,
+        )
+        text = [' '.join([self.word_table[j.item()] for j in i if j != -1])
+                for i in text]
+        loss = self.lfmmi(dense_fsa_vec=dense_fsa_vec, texts=text) / len(text)
+        return loss
 
     def load_hlg_resource_if_necessary(self, hlg, word):
         if not hasattr(self, 'hlg'):
