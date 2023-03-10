@@ -1,29 +1,22 @@
-.. Wenet documentation master file, created by
+.. wenet documentation master file, created by
    sphinx-quickstart on Thu Dec  3 11:43:53 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Wenet's documentation!
+Welcome to wenet's documentation!
 =================================
 
 
-Wenet is an tansformer-based end-to-end ASR toolkit.
+wenet is an tansformer-based end-to-end ASR toolkit.
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Tutorial:
+   :maxdepth: 2
+   :caption: Contents:
 
-   ./python_binding.md
-   ./papers.md
-   ./tutorial_librispeech.md
-   ./tutorial_aishell.md
-   ./pretrained_models.md
-   ./lm.md
-   ./context.md
-   ./runtime.md
-   ./jit_in_wenet.md
-   ./UIO.md
-
+   ./install.md
+   ./train.rst
+   ./production.rst
+   ./reference.rst
 
 Indices and tables
 ==================
