@@ -30,6 +30,7 @@
 | LM + attention rescoring  | 4.40  | 4.75  |
 | HLG(k2 LM)                | 4.81  | 5.27  |
 | HLG(k2 LM)  + attention rescoring | 4.32  | 4.70  |
+| HLG(k2 LM)  + attention rescoring + LFMMI | 4.11  | 4.47  |
 
 ## Unified Conformer Result
 

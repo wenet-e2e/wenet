@@ -116,7 +116,10 @@ def get_args():
                         type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
                         help="List of encoder modules \
                         to initialize ,separated by a comma")
-
+    parser.add_argument('--lfmmi_dir',
+                        default='',
+                        required=False,
+                        help='LF-MMI dir')
 
     args = parser.parse_args()
     return args
@@ -186,6 +189,8 @@ def main():
     configs['output_dim'] = vocab_size
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
+    configs['lfmmi_dir'] = args.lfmmi_dir
+
     if args.rank == 0:
         saved_config_path = os.path.join(args.model_dir, 'train.yaml')
         with open(saved_config_path, 'w') as fout:

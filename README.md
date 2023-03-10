@@ -6,90 +6,39 @@
 [**Roadmap**](https://github.com/wenet-e2e/wenet/issues/1683)
 | [**Docs**](https://wenet-e2e.github.io/wenet)
 | [**Papers**](https://wenet-e2e.github.io/wenet/papers.html)
-| [**Runtime (x86)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch)
-| [**Runtime (android)**](https://github.com/wenet-e2e/wenet/tree/main/runtime/android)
+| [**Runtime**](https://github.com/wenet-e2e/wenet/tree/main/runtime)
 | [**Pretrained Models**](docs/pretrained_models.md)
 | [**HuggingFace**](https://huggingface.co/spaces/wenet/wenet_demo)
 
-**We** share neural **Net** together.
+**We** share **Net** together.
 
-The main motivation of WeNet is to close the gap between research and production end-to-end (E2E) speech recognition models,
-to reduce the effort of productionizing E2E models, and to explore better E2E models for production.
-
-## :fire: News
+## News :fire:
 
 * 2022.12: Horizon X3 pi BPU, see https://github.com/wenet-e2e/wenet/pull/1597, Kunlun Core XPU, see https://github.com/wenet-e2e/wenet/pull/1455, Raspberry Pi, see https://github.com/wenet-e2e/wenet/pull/1477, IOS, see https://github.com/wenet-e2e/wenet/pull/1549.
 * 2022.11: TrimTail paper released, see https://arxiv.org/pdf/2211.00522.pdf
-* 2022.10: Squeezeformer is supported, see https://github.com/wenet-e2e/wenet/pull/1447.
-* 2022.07: RNN-T is supported now, see [rnnt](https://github.com/wenet-e2e/wenet/tree/main/examples/aishell/rnnt) for benchmark.
 
 ## Highlights
 
-* **Production first and production ready**: The core design principle of WeNet. WeNet provides full stack solutions for speech recognition.
-  * *Unified solution for streaming and non-streaming ASR*: [U2++ framework](https://arxiv.org/pdf/2203.15455.pdf)--develop, train, and deploy only once.
-  * *Runtime solution*: built-in server [x86](https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch) and on-device [android](https://github.com/wenet-e2e/wenet/tree/main/runtime/android) runtime solution.
-  * *Model exporting solution*: built-in solution to export model to LibTorch/ONNX for inference.
-  * *LM solution*: built-in production-level [LM solution](docs/lm.md).
-  * *Other production solutions*: built-in contextual biasing, time stamp, endpoint, and n-best solutions.
-
+* **Production first and production ready**: The core design principle, WeNet provides full stack production solutions for speech recognition.
 * **Accurate**: WeNet achieves SOTA results on a lot of public speech datasets.
 * **Light weight**: WeNet is easy to install, easy to use, well designed, and well documented.
 
-## Performance Benchmark
 
-Please see `examples/$dataset/s0/README.md` for benchmark on different speech datasets.
+## Install
+please refer [doc](docs/install.md) for install.
 
-## Installation(Python Only)
-
-If you just want to use WeNet as a python package for speech recognition application,
-just install it by `pip`, please note python 3.6+ is required.
-``` sh
-pip3 install wenetruntime
-```
-
-And please see [doc](runtime/binding/python/README.md) for usage.
-
-
-## Installation(Training and Developing)
-
-- Clone the repo
-``` sh
-git clone https://github.com/wenet-e2e/wenet.git
-```
-
-- Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
-- Create Conda env:
-
-``` sh
-conda create -n wenet python=3.8
-conda activate wenet
-pip install -r requirements.txt
-conda install pytorch=1.10.0 torchvision torchaudio=0.10.0 cudatoolkit=11.1 -c pytorch -c conda-forge
-```
-
-- Optionally, if you want to use x86 runtime or language model(LM),
-you have to build the runtime as follows. Otherwise, you can just ignore this step.
-
-``` sh
-# runtime build requires cmake 3.14 or above
-cd runtime/libtorch
-mkdir build && cd build && cmake -DGRAPH_TOOLS=ON .. && cmake --build .
-```
 
 ## Discussion & Communication
 
-Please visit [Discussions](https://github.com/wenet-e2e/wenet/discussions) for further discussion.
+You can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
 
 For Chinese users, you can aslo scan the QR code on the left to follow our offical account of WeNet.
 We created a WeChat group for better discussion and quicker response.
 Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 
-If you can not access the QR image, please access it on [gitee](https://gitee.com/robin1001/qr/tree/master).
-
 | <img src="https://github.com/robin1001/qr/blob/master/wenet.jpeg" width="250px"> | <img src="https://github.com/robin1001/qr/blob/master/binbin.jpeg" width="250px"> |
 | ---- | ---- |
 
-Or you can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
 
 ## Acknowledge
 
