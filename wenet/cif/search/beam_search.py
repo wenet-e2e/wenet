@@ -452,5 +452,5 @@ def build_beam_search(model, args, device):
         vocab_size=model.vocab_size,
         pre_beam_score_key=None if args.ctc_weight == 1.0 else "full",
     )
-    beam_search.to(device=device, dtype=getattr(torch, "float32")).eval()
+    beam_search.to(device=device, dtype=torch.float32).eval()
     return beam_search

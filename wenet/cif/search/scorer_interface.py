@@ -5,7 +5,6 @@ from typing import List
 from typing import Tuple
 
 import torch
-import warnings
 
 
 class ScorerInterface:
@@ -115,10 +114,6 @@ class BatchScorerInterface(ScorerInterface, ABC):
                 and next state list for ys.
 
         """
-        warnings.warn(
-            "{} batch score is implemented through for loop not parallelized"
-            .format(self.__class__.__name__)
-        )
         scores = list()
         outstates = list()
         for i, (y, state, x) in enumerate(zip(ys, states, xs)):
