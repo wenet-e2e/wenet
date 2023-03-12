@@ -2,7 +2,4 @@ jinja2
 nbsphinx
 recommonmark
 sphinx-markdown-tables
-sphinx_rtd_theme
-torch
-torchaudio
-typeguard
+sphinx-rtd-theme
