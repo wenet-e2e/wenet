@@ -5,7 +5,8 @@ import torch
 import numpy as np
 
 
-def make_pad_mask(lengths: torch.Tensor, length_dim: int = -1, maxlen: Optional[int] = None):
+def make_pad_mask(lengths: torch.Tensor, length_dim: int = -1,
+                  maxlen: Optional[int] = None):
     """Make mask tensor containing indices of padded part.
 
     Args:
@@ -39,7 +40,8 @@ def make_pad_mask(lengths: torch.Tensor, length_dim: int = -1, maxlen: Optional[
     return mask
 
 
-def sequence_mask(lengths, maxlen: Optional[int] = None, dtype: torch.dtype = torch.float32,
+def sequence_mask(lengths, maxlen: Optional[int] = None,
+                  dtype: torch.dtype = torch.float32,
                   device: Optional[torch.device] = None) -> torch.Tensor:
     if maxlen is None:
         maxlen = lengths.max()
@@ -48,7 +50,8 @@ def sequence_mask(lengths, maxlen: Optional[int] = None, dtype: torch.dtype = to
     mask = row_vector < matrix
     mask = mask.detach()
 
-    return mask.type(dtype).to(device) if device is not None else mask.type(dtype)
+    return mask.type(dtype).to(device) if device is not None else \
+        mask.type(dtype)
 
 
 def end_detect(ended_hyps, i, M=3, d_end=np.log(1 * np.exp(-10))):
@@ -70,11 +73,11 @@ def end_detect(ended_hyps, i, M=3, d_end=np.log(1 * np.exp(-10))):
     for m in six.moves.range(M):
         # get ended_hyps with their length is i - m
         hyp_length = i - m
-        hyps_same_length = [x for x in ended_hyps if len(x["yseq"]) == hyp_length]
+        hyps_same_length = [x for x in ended_hyps if
+                            len(x["yseq"]) == hyp_length]
         if len(hyps_same_length) > 0:
             best_hyp_same_length = sorted(
-                hyps_same_length, key=lambda x: x["score"], reverse=True
-            )[0]
+                hyps_same_length, key=lambda x: x["score"], reverse=True)[0]
             if best_hyp_same_length["score"] - best_hyp["score"] < d_end:
                 count += 1
 

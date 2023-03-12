@@ -1,5 +1,5 @@
 """Scorer interface module."""
-
+from abc import ABC
 from typing import Any
 from typing import List
 from typing import Tuple
@@ -17,7 +17,8 @@ class ScorerInterface:
         * Search heuristics
             * :class:`espnet.nets.scorers.length_bonus.LengthBonus`
         * Decoder networks of the sequence-to-sequence models
-            * :class:`espnet.nets.pytorch_backend.nets.transformer.decoder.Decoder`
+            * :class:`espnet.nets.pytorch_backend.nets.transformer.decoder
+                .Decoder`
             * :class:`espnet.nets.pytorch_backend.nets.rnn.decoders.Decoder`
         * Neural language models
             * :class:`espnet.nets.pytorch_backend.lm.transformer.TransformerLM`
@@ -82,7 +83,7 @@ class ScorerInterface:
         return 0.0
 
 
-class BatchScorerInterface(ScorerInterface):
+class BatchScorerInterface(ScorerInterface, ABC):
     """Batch scorer interface."""
 
     def batch_init_state(self, x: torch.Tensor) -> Any:
@@ -109,14 +110,14 @@ class BatchScorerInterface(ScorerInterface):
 
         Returns:
             tuple[torch.Tensor, List[Any]]: Tuple of
-                batchfied scores for next token with shape of `(n_batch, n_vocab)`
+                batchfied scores for next token with shape of `(n_batch,
+                    n_vocab)`
                 and next state list for ys.
 
         """
         warnings.warn(
-            "{} batch score is implemented through for loop not parallelized".format(
-                self.__class__.__name__
-            )
+            "{} batch score is implemented through for loop not parallelized"
+            .format(self.__class__.__name__)
         )
         scores = list()
         outstates = list()
@@ -128,12 +129,12 @@ class BatchScorerInterface(ScorerInterface):
         return scores, outstates
 
 
-class PartialScorerInterface(ScorerInterface):
+class PartialScorerInterface(ScorerInterface, ABC):
     """Partial scorer interface for beam search.
 
-    The partial scorer performs scoring when non-partial scorer finished scoring,
-    and receives pre-pruned next tokens to score because it is too heavy to score
-    all the tokens.
+    The partial scorer performs scoring when non-partial scorer finished scoring
+    and receives pre-pruned next tokens to score because it is too heavy to
+    score all the tokens.
 
     Examples:
          * Prefix search for connectionist-temporal-classification models
@@ -142,7 +143,8 @@ class PartialScorerInterface(ScorerInterface):
     """
 
     def score_partial(
-        self, y: torch.Tensor, next_tokens: torch.Tensor, state: Any, x: torch.Tensor
+        self, y: torch.Tensor, next_tokens: torch.Tensor, state: Any,
+            x: torch.Tensor
     ) -> Tuple[torch.Tensor, Any]:
         """Score new token (required).
 
@@ -154,14 +156,15 @@ class PartialScorerInterface(ScorerInterface):
 
         Returns:
             tuple[torch.Tensor, Any]:
-                Tuple of a score tensor for y that has a shape `(len(next_tokens),)`
-                and next state for ys
+                Tuple of a score tensor for y that has a shape
+                `(len(next_tokens),)` and next state for ys
 
         """
         raise NotImplementedError
 
 
-class BatchPartialScorerInterface(BatchScorerInterface, PartialScorerInterface):
+class BatchPartialScorerInterface(BatchScorerInterface, PartialScorerInterface,
+                                  ABC):
     """Batch partial scorer interface for beam search."""
 
     def batch_score_partial(
@@ -175,14 +178,16 @@ class BatchPartialScorerInterface(BatchScorerInterface, PartialScorerInterface):
 
         Args:
             ys (torch.Tensor): torch.int64 prefix tokens (n_batch, ylen).
-            next_tokens (torch.Tensor): torch.int64 tokens to score (n_batch, n_token).
+            next_tokens (torch.Tensor): torch.int64 tokens to score (n_batch,
+                n_token).
             states (List[Any]): Scorer states for prefix tokens.
             xs (torch.Tensor):
                 The encoder feature that generates ys (n_batch, xlen, n_feat).
 
         Returns:
             tuple[torch.Tensor, Any]:
-                Tuple of a score tensor for ys that has a shape `(n_batch, n_vocab)`
+                Tuple of a score tensor for ys that has a shape `(n_batch,
+                    n_vocab)`
                 and next states for ys
         """
         raise NotImplementedError

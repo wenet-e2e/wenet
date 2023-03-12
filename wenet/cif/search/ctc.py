@@ -32,7 +32,8 @@ class CTCPrefixScorer(BatchPartialScorerInterface):
         Returns: initial state
 
         """
-        logp = self.ctc.log_softmax(x.unsqueeze(0)).detach().squeeze(0).cpu().numpy()
+        logp = self.ctc.log_softmax(x.unsqueeze(0)).detach().squeeze(0).cpu()\
+            .numpy()
         # TODO(karita): use CTCPrefixScoreTH
         self.impl = CTCPrefixScore(logp, 0, self.eos, np)
         return 0, self.impl.initial_state()
@@ -73,8 +74,8 @@ class CTCPrefixScorer(BatchPartialScorerInterface):
 
         Returns:
             tuple[torch.Tensor, Any]:
-                Tuple of a score tensor for y that has a shape `(len(next_tokens),)`
-                and next state for ys
+                Tuple of a score tensor for y that has a shape
+                `(len(next_tokens),)` and next state for ys
 
         """
         prev_score, state = state
@@ -109,8 +110,8 @@ class CTCPrefixScorer(BatchPartialScorerInterface):
 
         Returns:
             tuple[torch.Tensor, Any]:
-                Tuple of a score tensor for y that has a shape `(len(next_tokens),)`
-                and next state for ys
+                Tuple of a score tensor for y that has a shape
+                `(len(next_tokens),)` and next state for ys
 
         """
         batch_state = (

@@ -66,7 +66,8 @@ class CTCPrefixScore(object):
         )  # log(r_t^n(g) + r_t^b(g))
         last = y[-1]
         if output_length > 0 and last in cs:
-            log_phi = self.xp.ndarray((self.input_length, len(cs)), dtype=np.float32)
+            log_phi = self.xp.ndarray((self.input_length, len(cs)),
+                                      dtype=np.float32)
             for i in six.moves.range(len(cs)):
                 log_phi[:, i] = r_sum if cs[i] != last else r_prev[:, 1]
         else:
@@ -78,9 +79,8 @@ class CTCPrefixScore(object):
         log_psi = r[start - 1, 0]
         for t in six.moves.range(start, self.input_length):
             r[t, 0] = self.xp.logaddexp(r[t - 1, 0], log_phi[t - 1]) + xs[t]
-            r[t, 1] = (
-                self.xp.logaddexp(r[t - 1, 0], r[t - 1, 1]) + self.x[t, self.blank]
-            )
+            r[t, 1] = (self.xp.logaddexp(r[t - 1, 0], r[t - 1, 1]) +
+                       self.x[t, self.blank])
             log_psi = self.xp.logaddexp(log_psi, log_phi[t - 1] + xs[t])
 
         # get P(...eos|X) that ends with the prefix itself
@@ -119,7 +119,7 @@ class CTCPrefixScoreTH(object):
         :param int margin: margin parameter for windowing (0 means no windowing)
         """
         # In the comment lines,
-        # we assume T: input_length, B: batch size, W: beam width, O: output dim.
+        # we assume T: input_length, B: batch size, W: beam width, O: output dim
         self.logzero = -10000000000.0
         self.blank = blank
         self.eos = eos
@@ -160,15 +160,17 @@ class CTCPrefixScoreTH(object):
 
         :param list y: prefix label sequences
         :param tuple state: previous CTC state
-        :param torch.Tensor pre_scores: scores for pre-selection of hypotheses (BW, O)
+        :param torch.Tensor pre_scores: scores for pre-selection of hypotheses
+            (BW, O)
         :param torch.Tensor att_w: attention weights to decide CTC window
         :return new_state, ctc_local_scores (BW, O)
         """
         output_length = len(y[0]) - 1  # ignore sos
         last_ids = [yi[-1] for yi in y]  # last output label ids
         n_bh = len(last_ids)  # batch * hyps
-        n_hyps = n_bh // self.batch  # assuming each utterance has the same # of hyps
-        self.scoring_num = scoring_ids.size(-1) if scoring_ids is not None else 0
+        n_hyps = n_bh // self.batch  # assuming each utterance has the same
+        self.scoring_num = scoring_ids.size(
+            -1) if scoring_ids is not None else 0
         # prepare state info
         if state is None:
             r_prev = torch.full(
@@ -177,7 +179,8 @@ class CTCPrefixScoreTH(object):
                 dtype=self.dtype,
                 device=self.device,
             )
-            r_prev[:, 1] = torch.cumsum(self.x[0, :, :, self.blank], 0).unsqueeze(2)
+            r_prev[:, 1] = torch.cumsum(self.x[0, :, :, self.blank],
+                                        0).unsqueeze(2)
             r_prev = r_prev.view(-1, 2, n_bh)
             s_prev = 0.0
             f_min_prev = 0
@@ -206,7 +209,8 @@ class CTCPrefixScoreTH(object):
             scoring_ids = None
             scoring_idmap = None
             snum = self.odim
-            x_ = self.x.unsqueeze(3).repeat(1, 1, 1, n_hyps, 1).view(2, -1, n_bh, snum)
+            x_ = self.x.unsqueeze(3).repeat(1, 1, 1, n_hyps, 1).view(2, -1,
+                                                                     n_bh, snum)
 
         # new CTC forward probs are prepared as a (T x 2 x BW x S) tensor
         # that corresponds to r_t^n(h) and r_t^b(h) in a batch.
@@ -251,22 +255,22 @@ class CTCPrefixScoreTH(object):
             r[t] = torch.logsumexp(rr, 1) + x_[:, t]
 
         # compute log prefix probabilities log(psi)
-        log_phi_x = torch.cat((log_phi[0].unsqueeze(0), log_phi[:-1]), dim=0) + x_[0]
+        log_phi_x = torch.cat((log_phi[0].unsqueeze(0), log_phi[:-1]), dim=0) \
+            + x_[0]
         if scoring_ids is not None:
             log_psi = torch.full(
-                (n_bh, self.odim), self.logzero, dtype=self.dtype, device=self.device
+                (n_bh, self.odim), self.logzero, dtype=self.dtype,
+                device=self.device
             )
             log_psi_ = torch.logsumexp(
-                torch.cat((log_phi_x[start:end], r[start - 1, 0].unsqueeze(0)), dim=0),
-                dim=0,
-            )
+                torch.cat((log_phi_x[start:end], r[start - 1, 0].unsqueeze(0)),
+                          dim=0), dim=0)
             for si in range(n_bh):
                 log_psi[si, scoring_ids[si]] = log_psi_[si]
         else:
             log_psi = torch.logsumexp(
-                torch.cat((log_phi_x[start:end], r[start - 1, 0].unsqueeze(0)), dim=0),
-                dim=0,
-            )
+                torch.cat((log_phi_x[start:end], r[start - 1, 0].unsqueeze(0)),
+                          dim=0), dim=0)
 
         for si in range(n_bh):
             log_psi[si, self.eos] = r_sum[self.end_frames[si // n_hyps], si]
@@ -287,16 +291,16 @@ class CTCPrefixScoreTH(object):
         # convert ids to BHO space
         n_bh = len(s)
         n_hyps = n_bh // self.batch
-        vidx = (best_ids + (self.idx_b * (n_hyps * self.odim)).view(-1, 1)).view(-1)
+        vidx = (best_ids + (self.idx_b * (n_hyps * self.odim)).view(-1, 1)) \
+            .view(-1)
         # select hypothesis scores
         s_new = torch.index_select(s.view(-1), 0, vidx)
         s_new = s_new.view(-1, 1).repeat(1, self.odim).view(n_bh, self.odim)
         # convert ids to BHS space (S: scoring_num)
         if scoring_idmap is not None:
             snum = self.scoring_num
-            hyp_idx = (best_ids // self.odim + (self.idx_b * n_hyps).view(-1, 1)).view(
-                -1
-            )
+            hyp_idx = (best_ids // self.odim + (self.idx_b * n_hyps)
+                       .view(-1, 1)).view(-1)
             label_ids = torch.fmod(best_ids, self.odim).view(-1)
             score_idx = scoring_idmap[hyp_idx, label_ids]
             score_idx[score_idx == -1] = 0
@@ -354,6 +358,7 @@ class CTCPrefixScoreTH(object):
             start = max(r_prev.shape[0], 1)
             r_prev_new[0:start] = r_prev
             for t in six.moves.range(start, self.input_length):
-                r_prev_new[t, 1] = r_prev_new[t - 1, 1] + self.x[0, t, :, self.blank]
+                r_prev_new[t, 1] = r_prev_new[t - 1, 1] + \
+                    self.x[0, t, :, self.blank]
 
-            return (r_prev_new, s_prev, f_min_prev, f_max_prev)
+            return r_prev_new, s_prev, f_min_prev, f_max_prev

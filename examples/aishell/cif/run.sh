@@ -5,8 +5,7 @@
 
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-#export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
-export CUDA_VISIBLE_DEVICES="0,1,2,3"
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4"
 # The NCCL_SOCKET_IFNAME variable specifies which IP interface to use for nccl
 # communication. More details can be found in
 # https://docs.nvidia.com/deeplearning/nccl/user-guide/docs/env.html
@@ -24,9 +23,8 @@ num_nodes=1
 # on the second machine, and so on.
 node_rank=0
 # The aishell dataset location, please change this to your own path
-# make sure of using absolute path. DO-NOT-USE relatvie path!
+# make sure of using absolute path. DO-NOT-USE relative path!
 data=/export/data/asr-data/OpenSLR/33/
-#data=/home/backup_nfs2/nfs1_data
 data_url=www.openslr.org/resources/33
 
 nj=16
@@ -46,13 +44,17 @@ train_set=train
 #4. train_config=conf/train_cif_conformer_sanm_prev2.yaml CIF DecoderSANM + PredictorV2
 train_config=conf/train_cif_conformer_sanm_prev1.yaml
 cmvn=true
-dir=exp/conformer_sanm_prev1
+dir=exp/conformer_sanm_prev2
 checkpoint=
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=20
+#decode_modes="ctc_greedy_search ctc_prefix_beam_search cif_greedy_search cif_beam_search"
+# Since the Predictor Loss also plays an important role in the training of the CIF models,
+# the performance of the predictor cannot be used by using the CTC-related decoding methods,
+# so we strongly recommend that you use the 'cif_greedy_search' and 'cif_beam_search'.
 decode_modes="cif_greedy_search cif_beam_search"
 
 . tools/parse_options.sh || exit 1;
@@ -177,7 +179,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   {
     test_dir=$dir/test_${mode}
     mkdir -p $test_dir
-    python3 wenet/bin/recognize.py --gpu 3 \
+    python3 wenet/bin/recognize.py --gpu 0 \
       --mode $mode \
       --config $dir/train.yaml \
       --data_type $data_type \

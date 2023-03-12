@@ -55,14 +55,15 @@ class MultiHeadedAttention(nn.Module):
         return q, k, v
 
     def forward_attention(
-            self, value: torch.Tensor, scores: torch.Tensor, mask: Optional[torch.Tensor]
+            self, value: torch.Tensor, scores: torch.Tensor,
+            mask: Optional[torch.Tensor]
     ) -> torch.Tensor:
         """Compute attention context vector.
 
         Args:
-            value (torch.Tensor): Transformed value (#batch, n_head, time2, d_k).
-            scores (torch.Tensor): Attention score (#batch, n_head, time1, time2).
-            mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2).
+        value (torch.Tensor): Transformed value (#batch, n_head, time2, d_k)
+        scores (torch.Tensor): Attention score (#batch, n_head, time1, time2)
+        mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2)
 
         Returns:
             torch.Tensor: Transformed value (#batch, time1, d_model)
@@ -87,8 +88,8 @@ class MultiHeadedAttention(nn.Module):
 
         return self.linear_out(x)  # (batch, time1, d_model)
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor,
-                mask: Optional[torch.Tensor],
+    def forward(self, query: torch.Tensor, key: torch.Tensor,
+                value: torch.Tensor, mask: Optional[torch.Tensor],
                 ) -> torch.Tensor:
         """Compute scaled dot product attention.
 
@@ -124,8 +125,8 @@ class MultiHeadedAttentionSANMDecoder(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout_rate)
 
-        self.fsmn_block = nn.Conv1d(n_feat, n_feat,
-                                    kernel_size, stride=1, padding=0, groups=n_feat, bias=False)
+        self.fsmn_block = nn.Conv1d(n_feat, n_feat, kernel_size, stride=1,
+                                    padding=0, groups=n_feat, bias=False)
         # padding
         # padding
         left_padding = (kernel_size - 1) // 2
@@ -135,7 +136,8 @@ class MultiHeadedAttentionSANMDecoder(nn.Module):
         self.pad_fn = nn.ConstantPad1d((left_padding, right_padding), 0.0)
         self.kernel_size = kernel_size
 
-    def forward(self, inputs, mask, cache: Optional[torch.Tensor] = None, mask_shfit_chunk: Optional[float] = None):
+    def forward(self, inputs, mask, cache: Optional[torch.Tensor] = None,
+                mask_shfit_chunk: Optional[float] = None):
         '''
         :param inputs: (#batch, time1, size).
         :param mask: Mask tensor (#batch, 1, time)
@@ -191,7 +193,8 @@ class MultiHeadedAttentionCrossAtt(nn.Module):
         self.d_k = n_feat // n_head
         self.h = n_head
         self.linear_q = nn.Linear(n_feat, n_feat)
-        self.linear_k_v = nn.Linear(n_feat if encoder_output_size is None else encoder_output_size, n_feat * 2)
+        self.linear_k_v = nn.Linear(n_feat if encoder_output_size is None else
+                                    encoder_output_size, n_feat * 2)
         self.linear_out = nn.Linear(n_feat, n_feat)
         self.dropout = nn.Dropout(p=dropout_rate)
 
@@ -210,27 +213,27 @@ class MultiHeadedAttentionCrossAtt(nn.Module):
 
         """
 
-        # print("in forward_qkv, x", x.size())
         b = x.size(0)
         q = self.linear_q(x)
-        q_h = torch.reshape(q, (b, -1, self.h, self.d_k)).transpose(1, 2)  # (batch, head, time1, d_k)
+        q_h = torch.reshape(q, (b, -1, self.h, self.d_k)).transpose(1, 2)
 
         k_v = self.linear_k_v(memory)
         k, v = torch.split(k_v, int(self.h * self.d_k), dim=-1)
-        k_h = torch.reshape(k, (b, -1, self.h, self.d_k)).transpose(1, 2)  # (batch, head, time2, d_k)
-        v_h = torch.reshape(v, (b, -1, self.h, self.d_k)).transpose(1, 2)  # (batch, head, time2, d_k)
+        k_h = torch.reshape(k, (b, -1, self.h, self.d_k)).transpose(1, 2)
+        v_h = torch.reshape(v, (b, -1, self.h, self.d_k)).transpose(1, 2)
 
         return q_h, k_h, v_h
 
     def forward_attention(
-            self, value: torch.Tensor, scores: torch.Tensor, mask: Optional[torch.Tensor]
+            self, value: torch.Tensor, scores: torch.Tensor,
+            mask: Optional[torch.Tensor]
     ) -> torch.Tensor:
         """Compute attention context vector.
 
         Args:
-            value (torch.Tensor): Transformed value (#batch, n_head, time2, d_k).
-            scores (torch.Tensor): Attention score (#batch, n_head, time1, time2).
-            mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2).
+        value (torch.Tensor): Transformed value (#batch, n_head, time2, d_k).
+        scores (torch.Tensor): Attention score (#batch, n_head, time1, time2).
+        mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2).
 
         Returns:
             torch.Tensor: Transformed value (#batch, time1, d_model)

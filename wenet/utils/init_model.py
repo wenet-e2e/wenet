@@ -57,7 +57,8 @@ def init_model(configs):
         encoder = EfficientConformerEncoder(input_dim,
                                             global_cmvn=global_cmvn,
                                             **configs['encoder_conf'],
-                                            **configs['encoder_conf']['efficient_conf']
+                                            **configs['encoder_conf']
+                                            ['efficient_conf']
                                             if 'efficient_conf' in
                                                configs['encoder_conf'] else {})
     else:
@@ -77,7 +78,8 @@ def init_model(configs):
                                      **configs['decoder_conf'])
         else:
             raise NotImplementedError(
-                "for cif predictors, only predictor, predictor_v2 and predictor_v3 support now")
+                "for cif predictors, only predictor, predictor_v2 and "
+                "predictor_v3 support now")
     else:
         assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
         assert configs['decoder_conf']['r_num_blocks'] > 0
@@ -123,13 +125,14 @@ def init_model(configs):
             predictor = PredictorV2(**configs['cif_predictor_conf'])
         else:
             raise NotImplementedError(
-                "for cif decoders, only cif_decoder_san and cif_decoder_sanm support now")
+                "for cif decoders, only cif_decoder_san and cif_decoder_sanm "
+                "support now")
         model = ASRCIFModel(vocab_size=vocab_size,
-                             encoder=encoder,
-                             decoder=decoder,
-                             ctc=ctc,
-                             predictor=predictor,
-                             **configs['model_conf'])
+                            encoder=encoder,
+                            decoder=decoder,
+                            ctc=ctc,
+                            predictor=predictor,
+                            **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
                          encoder=encoder,

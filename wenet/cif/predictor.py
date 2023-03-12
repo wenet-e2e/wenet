@@ -1,19 +1,18 @@
 from typing import Optional
 
 import torch
-import logging
 from torch import nn
-import numpy as np
 from wenet.cif.utils import make_pad_mask
 
 
 class PredictorV1(nn.Module):
-    def __init__(self, idim, l_order, r_order, threshold=1.0, dropout=0.1, smooth_factor=1.0, noise_threshold=0,
-                 tail_threshold=0.45):
+    def __init__(self, idim, l_order, r_order, threshold=1.0, dropout=0.1,
+                 smooth_factor=1.0, noise_threshold=0, tail_threshold=0.45):
         super(PredictorV1, self).__init__()
 
         self.pad = nn.ConstantPad1d((l_order, r_order), 0.0)
-        self.cif_conv1d = nn.Conv1d(idim, idim, l_order + r_order + 1, groups=idim)
+        self.cif_conv1d = nn.Conv1d(idim, idim, l_order + r_order + 1,
+                                    groups=idim)
         self.cif_output = nn.Linear(idim, 1)
         self.dropout = torch.nn.Dropout(p=dropout)
         self.threshold = threshold
@@ -21,8 +20,12 @@ class PredictorV1(nn.Module):
         self.noise_threshold = noise_threshold
         self.tail_threshold = tail_threshold
 
-    def forward(self, hidden, target_label: Optional[torch.Tensor] = None, mask: torch.Tensor = torch.tensor(0),
-                ignore_id: int = -1, mask_chunk_predictor: Optional[torch.Tensor] = None,
+    def forward(self,
+                hidden,
+                target_label: Optional[torch.Tensor] = None,
+                mask: torch.Tensor = torch.tensor(0),
+                ignore_id: int = -1,
+                mask_chunk_predictor: Optional[torch.Tensor] = None,
                 target_label_length: Optional[torch.Tensor] = None):
         h = hidden
         context = h.transpose(1, 2)
@@ -34,7 +37,8 @@ class PredictorV1(nn.Module):
         output = torch.relu(output)
         output = self.cif_output(output)
         alphas = torch.sigmoid(output)
-        alphas = torch.nn.functional.relu(alphas * self.smooth_factor - self.noise_threshold)
+        alphas = torch.nn.functional.relu(alphas * self.smooth_factor -
+                                          self.noise_threshold)
         if mask is not None:
             mask = mask.transpose(-1, -2).float()
             alphas = alphas * mask
@@ -50,9 +54,12 @@ class PredictorV1(nn.Module):
             target_length = None
         token_num = alphas.sum(-1)
         if target_length is not None:
-            alphas *= (target_length / token_num)[:, None].repeat(1, alphas.size(1))
+            alphas *= (target_length / token_num)[:, None] \
+                .repeat(1, alphas.size(1))
         elif self.tail_threshold > 0.0:
-            hidden, alphas, token_num = self.tail_process_fn(hidden, alphas, token_num, mask=mask)
+            hidden, alphas, token_num = self.tail_process_fn(hidden, alphas,
+                                                             token_num,
+                                                             mask=mask)
 
         acoustic_embeds, cif_peak = cif(hidden, alphas, self.threshold)
 
@@ -62,11 +69,14 @@ class PredictorV1(nn.Module):
 
         return acoustic_embeds, token_num, alphas, cif_peak
 
-    def tail_process_fn(self, hidden, alphas, token_num: Optional[torch.Tensor] = None, mask: Optional[torch.Tensor] = None):
+    def tail_process_fn(self, hidden, alphas,
+                        token_num: Optional[torch.Tensor] = None,
+                        mask: Optional[torch.Tensor] = None):
         b, t, d = hidden.size()
         tail_threshold = self.tail_threshold
         if mask is not None:
-            zeros_t = torch.zeros((b, 1), dtype=torch.float32, device=alphas.device)
+            zeros_t = torch.zeros((b, 1), dtype=torch.float32,
+                                  device=alphas.device)
             ones_t = torch.ones_like(zeros_t)
             mask_1 = torch.cat([mask, zeros_t], dim=1)
             mask_2 = torch.cat([ones_t, mask], dim=1)
@@ -75,7 +85,9 @@ class PredictorV1(nn.Module):
             alphas = torch.cat([alphas, zeros_t], dim=1)
             alphas = torch.add(alphas, tail_threshold)
         else:
-            tail_threshold_tensor = torch.tensor([tail_threshold], dtype=alphas.dtype).to(alphas.device)
+            tail_threshold_tensor = torch.tensor([tail_threshold],
+                                                 dtype=alphas.dtype).to(
+                alphas.device)
             tail_threshold_tensor = torch.reshape(tail_threshold_tensor, (1, 1))
             alphas = torch.cat([alphas, tail_threshold_tensor], dim=1)
         zeros = torch.zeros((b, 1, d), dtype=hidden.dtype).to(hidden.device)
@@ -105,37 +117,51 @@ class PredictorV1(nn.Module):
 
         index = torch.ones([batch_size, max_token_num], dtype=int_type)
         index = torch.cumsum(index, dim=1)
-        index = index[:, :, None].repeat(1, 1, maximum_length).to(alphas_cumsum.device)
+        index = index[:, :, None].repeat(1, 1, maximum_length).to(
+            alphas_cumsum.device)
 
-        index_div = torch.floor(torch.true_divide(alphas_cumsum, index)).type(int_type)
+        index_div = torch.floor(torch.true_divide(alphas_cumsum, index)).type(
+            int_type)
         index_div_bool_zeros = index_div.eq(0)
         index_div_bool_zeros_count = torch.sum(index_div_bool_zeros, dim=-1) + 1
-        index_div_bool_zeros_count = torch.clamp(index_div_bool_zeros_count, 0, encoder_sequence_length.max())
-        token_num_mask = (~make_pad_mask(token_num, maxlen=max_token_num)).to(token_num.device)
+        index_div_bool_zeros_count = torch.clamp(index_div_bool_zeros_count, 0,
+                                                 encoder_sequence_length.max())
+        token_num_mask = (~make_pad_mask(token_num, maxlen=max_token_num)).to(
+            token_num.device)
         index_div_bool_zeros_count *= token_num_mask
 
-        index_div_bool_zeros_count_tile = index_div_bool_zeros_count[:, :, None].repeat(1, 1, maximum_length)
+        index_div_bool_zeros_count_tile = \
+            index_div_bool_zeros_count[:, :, None].repeat(1, 1, maximum_length)
         ones = torch.ones_like(index_div_bool_zeros_count_tile)
         zeros = torch.zeros_like(index_div_bool_zeros_count_tile)
         ones = torch.cumsum(ones, dim=2)
         cond = index_div_bool_zeros_count_tile == ones
         index_div_bool_zeros_count_tile = torch.where(cond, zeros, ones)
 
-        index_div_bool_zeros_count_tile_bool = index_div_bool_zeros_count_tile.type(torch.bool)
-        index_div_bool_zeros_count_tile = 1 - index_div_bool_zeros_count_tile_bool.type(int_type)
-        index_div_bool_zeros_count_tile_out = torch.sum(index_div_bool_zeros_count_tile, dim=1)
-        index_div_bool_zeros_count_tile_out = index_div_bool_zeros_count_tile_out.type(int_type)
-        predictor_mask = (~make_pad_mask(encoder_sequence_length, maxlen=encoder_sequence_length.max())).type(
-            int_type).to(encoder_sequence_length.device)
-        index_div_bool_zeros_count_tile_out = index_div_bool_zeros_count_tile_out * predictor_mask
+        index_div_bool_zeros_count_tile_bool = index_div_bool_zeros_count_tile \
+            .type(torch.bool)
+        index_div_bool_zeros_count_tile = \
+            1 - index_div_bool_zeros_count_tile_bool.type(int_type)
+        index_div_bool_zeros_count_tile_out = torch.sum(
+            index_div_bool_zeros_count_tile, dim=1)
+        index_div_bool_zeros_count_tile_out = \
+            index_div_bool_zeros_count_tile_out.type(int_type)
+        predictor_mask = (~make_pad_mask(encoder_sequence_length,
+                                         maxlen=encoder_sequence_length.max())) \
+            .type(int_type).to(encoder_sequence_length.device)
+        index_div_bool_zeros_count_tile_out = \
+            index_div_bool_zeros_count_tile_out * predictor_mask
 
         predictor_alignments = index_div_bool_zeros_count_tile_out
-        predictor_alignments_length = predictor_alignments.sum(-1).type(encoder_sequence_length.dtype)
-        return predictor_alignments.detach(), predictor_alignments_length.detach()
+        predictor_alignments_length = predictor_alignments.sum(-1).type(
+            encoder_sequence_length.dtype)
+        return predictor_alignments.detach(), \
+            predictor_alignments_length.detach()
 
 
 class PredictorV2(nn.Module):
-    def __init__(self, idim, l_order, r_order, threshold=1.0, dropout=0.1, smooth_factor=1.0, noise_threshold=0,
+    def __init__(self, idim, l_order, r_order, threshold=1.0, dropout=0.1,
+                 smooth_factor=1.0, noise_threshold=0,
                  tail_threshold=0.0, tail_mask=True):
         super(PredictorV2, self).__init__()
 
@@ -149,8 +175,10 @@ class PredictorV2(nn.Module):
         self.tail_threshold = tail_threshold
         self.tail_mask = tail_mask
 
-    def forward(self, hidden, target_label: Optional[torch.Tensor] = None, mask: torch.Tensor = torch.tensor(0),
-                ignore_id: int = -1, mask_chunk_predictor: Optional[torch.Tensor] = None,
+    def forward(self, hidden, target_label: Optional[torch.Tensor] = None,
+                mask: torch.Tensor = torch.tensor(0),
+                ignore_id: int = -1,
+                mask_chunk_predictor: Optional[torch.Tensor] = None,
                 target_label_length: Optional[torch.Tensor] = None):
         h = hidden
         context = h.transpose(1, 2)
@@ -160,7 +188,8 @@ class PredictorV2(nn.Module):
 
         output = self.cif_output(output)
         alphas = torch.sigmoid(output)
-        alphas = torch.nn.functional.relu(alphas * self.smooth_factor - self.noise_threshold)
+        alphas = torch.nn.functional.relu(
+            alphas * self.smooth_factor - self.noise_threshold)
         if mask is not None:
             mask = mask.transpose(-1, -2).float()
             alphas = alphas * mask
@@ -176,12 +205,17 @@ class PredictorV2(nn.Module):
             target_length = None
         token_num = alphas.sum(-1)
         if target_length is not None:
-            alphas *= (target_length / token_num)[:, None].repeat(1, alphas.size(1))
+            alphas *= (target_length / token_num)[:, None] \
+                .repeat(1, alphas.size(1))
         elif self.tail_threshold > 0.0:
             if self.tail_mask:
-                hidden, alphas, token_num = self.tail_process_fn(hidden, alphas, token_num, mask=mask)
+                hidden, alphas, token_num = self.tail_process_fn(hidden, alphas,
+                                                                 token_num,
+                                                                 mask=mask)
             else:
-                hidden, alphas, token_num = self.tail_process_fn(hidden, alphas, token_num, mask=None)
+                hidden, alphas, token_num = self.tail_process_fn(hidden, alphas,
+                                                                 token_num,
+                                                                 mask=None)
 
         acoustic_embeds, cif_peak = cif(hidden, alphas, self.threshold)
         if target_length is None and self.tail_threshold > 0.0:
@@ -190,11 +224,14 @@ class PredictorV2(nn.Module):
 
         return acoustic_embeds, token_num, alphas, cif_peak
 
-    def tail_process_fn(self, hidden, alphas, token_num: Optional[torch.Tensor] = None, mask: Optional[torch.Tensor] = None):
+    def tail_process_fn(self, hidden, alphas,
+                        token_num: Optional[torch.Tensor] = None,
+                        mask: Optional[torch.Tensor] = None):
         b, t, d = hidden.size()
         tail_threshold = self.tail_threshold
         if mask is not None:
-            zeros_t = torch.zeros((b, 1), dtype=torch.float32, device=alphas.device)
+            zeros_t = torch.zeros((b, 1), dtype=torch.float32,
+                                  device=alphas.device)
             ones_t = torch.ones_like(zeros_t)
             mask_1 = torch.cat([mask, zeros_t], dim=1)
             mask_2 = torch.cat([ones_t, mask], dim=1)
@@ -203,10 +240,13 @@ class PredictorV2(nn.Module):
             alphas = torch.cat([alphas, zeros_t], dim=1)
             alphas = torch.add(alphas, tail_threshold)
         else:
-            tail_threshold_tensor = torch.tensor([tail_threshold], dtype=alphas.dtype).to(alphas.device)
+            tail_threshold_tensor = torch.tensor([tail_threshold],
+                                                 dtype=alphas.dtype).to(
+                alphas.device)
             tail_threshold_tensor = torch.reshape(tail_threshold_tensor, (1, 1))
             if b > 1:
-                alphas = torch.cat([alphas, tail_threshold_tensor.repeat(b, 1)], dim=1)
+                alphas = torch.cat([alphas, tail_threshold_tensor.repeat(b, 1)],
+                                   dim=1)
             else:
                 alphas = torch.cat([alphas, tail_threshold_tensor], dim=1)
         zeros = torch.zeros((b, 1, d), dtype=hidden.dtype).to(hidden.device)
@@ -236,33 +276,46 @@ class PredictorV2(nn.Module):
 
         index = torch.ones([batch_size, max_token_num], dtype=int_type)
         index = torch.cumsum(index, dim=1)
-        index = index[:, :, None].repeat(1, 1, maximum_length).to(alphas_cumsum.device)
+        index = index[:, :, None].repeat(1, 1, maximum_length).to(
+            alphas_cumsum.device)
 
-        index_div = torch.floor(torch.true_divide(alphas_cumsum, index)).type(int_type)
+        index_div = torch.floor(torch.true_divide(alphas_cumsum, index)).type(
+            int_type)
         index_div_bool_zeros = index_div.eq(0)
         index_div_bool_zeros_count = torch.sum(index_div_bool_zeros, dim=-1) + 1
-        index_div_bool_zeros_count = torch.clamp(index_div_bool_zeros_count, 0, encoder_sequence_length.max())
-        token_num_mask = (~make_pad_mask(token_num, maxlen=max_token_num)).to(token_num.device)
+        index_div_bool_zeros_count = torch.clamp(index_div_bool_zeros_count, 0,
+                                                 encoder_sequence_length.max())
+        token_num_mask = (~make_pad_mask(token_num, maxlen=max_token_num)).to(
+            token_num.device)
         index_div_bool_zeros_count *= token_num_mask
 
-        index_div_bool_zeros_count_tile = index_div_bool_zeros_count[:, :, None].repeat(1, 1, maximum_length)
+        index_div_bool_zeros_count_tile = \
+            index_div_bool_zeros_count[:, :, None].repeat(1, 1, maximum_length)
         ones = torch.ones_like(index_div_bool_zeros_count_tile)
         zeros = torch.zeros_like(index_div_bool_zeros_count_tile)
         ones = torch.cumsum(ones, dim=2)
         cond = index_div_bool_zeros_count_tile == ones
         index_div_bool_zeros_count_tile = torch.where(cond, zeros, ones)
 
-        index_div_bool_zeros_count_tile_bool = index_div_bool_zeros_count_tile.type(torch.bool)
-        index_div_bool_zeros_count_tile = 1 - index_div_bool_zeros_count_tile_bool.type(int_type)
-        index_div_bool_zeros_count_tile_out = torch.sum(index_div_bool_zeros_count_tile, dim=1)
-        index_div_bool_zeros_count_tile_out = index_div_bool_zeros_count_tile_out.type(int_type)
-        predictor_mask = (~make_pad_mask(encoder_sequence_length, maxlen=encoder_sequence_length.max())).type(
-            int_type).to(encoder_sequence_length.device)
-        index_div_bool_zeros_count_tile_out = index_div_bool_zeros_count_tile_out * predictor_mask
+        index_div_bool_zeros_count_tile_bool = index_div_bool_zeros_count_tile \
+            .type(torch.bool)
+        index_div_bool_zeros_count_tile = \
+            1 - index_div_bool_zeros_count_tile_bool.type(int_type)
+        index_div_bool_zeros_count_tile_out = torch.sum(
+            index_div_bool_zeros_count_tile, dim=1)
+        index_div_bool_zeros_count_tile_out = \
+            index_div_bool_zeros_count_tile_out.type(int_type)
+        predictor_mask = (~make_pad_mask(encoder_sequence_length,
+                                         maxlen=encoder_sequence_length.max())) \
+            .type(int_type).to(encoder_sequence_length.device)
+        index_div_bool_zeros_count_tile_out = \
+            index_div_bool_zeros_count_tile_out * predictor_mask
 
         predictor_alignments = index_div_bool_zeros_count_tile_out
-        predictor_alignments_length = predictor_alignments.sum(-1).type(encoder_sequence_length.dtype)
-        return predictor_alignments.detach(), predictor_alignments_length.detach()
+        predictor_alignments_length = predictor_alignments.sum(-1).type(
+            encoder_sequence_length.dtype)
+        return predictor_alignments.detach(), \
+            predictor_alignments_length.detach()
 
 
 class MAELoss(nn.Module):
@@ -293,14 +346,15 @@ def cif(hidden: torch.Tensor, alphas: torch.Tensor, threshold: float):
 
     for t in range(len_time):
         alpha = alphas[:, t]
-        distribution_completion = torch.ones([batch_size], device=hidden.device) - integrate
+        distribution_completion = torch.ones([batch_size],
+                                             device=hidden.device) - integrate
 
         integrate += alpha
         list_fires.append(integrate)
 
         fire_place = integrate >= threshold
-        integrate = torch.where(fire_place,
-                                integrate - torch.ones([batch_size], device=hidden.device),
+        integrate = torch.where(fire_place, integrate -
+                                torch.ones([batch_size], device=hidden.device),
                                 integrate)
         cur = torch.where(fire_place,
                           distribution_completion,
@@ -320,7 +374,9 @@ def cif(hidden: torch.Tensor, alphas: torch.Tensor, threshold: float):
     max_label_len = len_labels.max()
     for b in range(batch_size):
         fire = fires[b, :]
-        l = torch.index_select(frames[b, :, :], 0, torch.nonzero(fire >= threshold).squeeze())
-        pad_l = torch.zeros([int(max_label_len - l.size(0)), hidden_size], device=hidden.device)
+        l = torch.index_select(frames[b, :, :], 0,
+                               torch.nonzero(fire >= threshold).squeeze())
+        pad_l = torch.zeros([int(max_label_len - l.size(0)), hidden_size],
+                            device=hidden.device)
         list_ls.append(torch.cat([l, pad_l], 0))
     return torch.stack(list_ls, 0), fires

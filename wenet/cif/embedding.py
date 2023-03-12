@@ -15,7 +15,8 @@ def _pre_hook(
 
     Note:
         We saved self.pe until v.0.5.2 but we have omitted it later.
-        Therefore, we remove the item "pe" from `state_dict` for backward compatibility.
+        Therefore, we remove the item "pe" from `state_dict` for backward
+        compatibility.
 
     """
     k = prefix + "pe"
@@ -59,7 +60,8 @@ class PositionalEncoding(torch.nn.Module):
                 x.size(1) - 1, -1, -1.0, dtype=torch.float32
             ).unsqueeze(1)
         else:
-            position = torch.arange(0, x.size(1), dtype=torch.float32).unsqueeze(1)
+            position = torch.arange(0, x.size(1),
+                                    dtype=torch.float32).unsqueeze(1)
         div_term = torch.exp(
             torch.arange(0, self.d_model, 2, dtype=torch.float32)
             * -(math.log(10000.0) / self.d_model)

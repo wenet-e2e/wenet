@@ -67,8 +67,10 @@ def get_args():
                             'attention', 'ctc_greedy_search',
                             'ctc_prefix_beam_search', 'attention_rescoring',
                             'rnnt_greedy_search', 'rnnt_beam_search',
-                            'rnnt_beam_attn_rescoring', 'ctc_beam_td_attn_rescoring',
-                            'hlg_onebest', 'hlg_rescore', 'cif_greedy_search', 'cif_beam_search',
+                            'rnnt_beam_attn_rescoring',
+                            'ctc_beam_td_attn_rescoring', 'hlg_onebest',
+                            'hlg_rescore', 'cif_greedy_search',
+                            'cif_beam_search',
                         ],
                         default='attention',
                         help='decoding mode')
@@ -92,13 +94,13 @@ def get_args():
     parser.add_argument('--transducer_weight',
                         type=float,
                         default=0.0,
-                        help='transducer weight for rescoring weight in transducer \
-                                 attention rescore mode')
+                        help='transducer weight for rescoring weight in '
+                             'transducer attention rescore mode')
     parser.add_argument('--attn_weight',
                         type=float,
                         default=0.0,
-                        help='attention weight for rescoring weight in transducer \
-                              attention rescore mode')
+                        help='attention weight for rescoring weight in '
+                             'transducer attention rescore mode')
     parser.add_argument('--decoding_chunk_size',
                         type=int,
                         default=-1,
@@ -163,8 +165,8 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-    if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring', 'cif_beam_search',
-                     ] and args.batch_size > 1:
+    if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring',
+                     'cif_beam_search', ] and args.batch_size > 1:
         logging.fatal(
             'decoding mode {} must be running with batch_size == 1'.format(
                 args.mode))
@@ -374,8 +376,10 @@ def main():
                     if w == eos:
                         break
                     content.append(char_dict[w])
-                logging.info('{} {}'.format(key, args.connect_symbol.join(content)))
-                fout.write('{} {}\n'.format(key, args.connect_symbol.join(content)))
+                logging.info('{} {}'.format(key, args.connect_symbol
+                                            .join(content)))
+                fout.write('{} {}\n'.format(key, args.connect_symbol
+                                            .join(content)))
 
 
 if __name__ == '__main__':

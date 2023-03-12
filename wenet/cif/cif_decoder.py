@@ -1,16 +1,18 @@
-from typing import Union, Tuple, List
-import logging
+from typing import Tuple
 import torch
 import torch.nn as nn
-import numpy as np
 
 from typeguard import check_argument_types
 
 from wenet.cif.utils import make_pad_mask, sequence_mask
-from wenet.cif.attention import MultiHeadedAttention, MultiHeadedAttentionSANMDecoder, MultiHeadedAttentionCrossAtt
+from wenet.cif.attention import MultiHeadedAttention, \
+    MultiHeadedAttentionSANMDecoder, MultiHeadedAttentionCrossAtt
 from wenet.cif.decoder_layer import DecoderLayer, DecoderLayerSANM
 from wenet.cif.embedding import PositionalEncoding
-from wenet.cif.positionwise_feed_forward import PositionwiseFeedForward, PositionwiseFeedForwardDecoderSANM
+from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.cif.positionwise_feed_forward import \
+    PositionwiseFeedForwardDecoderSANM
+from wenet.utils.mask import subsequent_mask
 
 
 class BaseDecoder(nn.Module):
@@ -64,7 +66,8 @@ class BaseDecoder(nn.Module):
                 pos_enc_class(attention_dim, positional_dropout_rate),
             )
         else:
-            raise ValueError(f"only 'embed' or 'linear' is supported: {input_layer}")
+            raise ValueError(f"only 'embed' or 'linear' is supported: "
+                             f"{input_layer}")
 
         self.normalize_before = normalize_before
         if self.normalize_before:
@@ -105,14 +108,14 @@ class BaseDecoder(nn.Module):
         # tgt_mask: (B, 1, L)
         tgt_mask = (~make_pad_mask(ys_in_lens)[:, None, :]).to(tgt.device)
         # m: (1, L, L)
-        m = subsequent_mask(tgt_mask.size(-1), device=tgt_mask.device).unsqueeze(0)
+        m = subsequent_mask(tgt_mask.size(-1),
+                            device=tgt_mask.device).unsqueeze(0)
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
 
         memory = hs_pad
-        memory_mask = (~make_pad_mask(hlens, maxlen=memory.size(1)))[:, None, :].to(
-            memory.device
-        )
+        memory_mask = (~make_pad_mask(
+            hlens, maxlen=memory.size(1)))[:, None, :].to(memory.device)
         # Padding for Longformer
         if memory_mask.shape[-1] != memory.shape[1]:
             padlen = memory.shape[1] - memory_mask.shape[-1]
@@ -136,7 +139,8 @@ class BaseDecoder(nn.Module):
 class CIFDecoderSAN(BaseDecoder):
     """
     author: Speech Lab, Alibaba Group, China
-    Paraformer: Fast and Accurate Parallel Transformer for Non-autoregressive End-to-End Speech Recognition
+    Paraformer: Fast and Accurate Parallel Transformer for Non-autoregressive
+    End-to-End Speech Recognition
     https://arxiv.org/abs/2006.01713
     """
 
@@ -180,7 +184,8 @@ class CIFDecoderSAN(BaseDecoder):
                 MultiHeadedAttention(
                     attention_heads, attention_dim, src_attention_dropout_rate
                 ),
-                PositionwiseFeedForward(attention_dim, linear_units, dropout_rate),
+                PositionwiseFeedForward(attention_dim, linear_units,
+                                        dropout_rate),
                 dropout_rate,
                 normalize_before,
                 concat_after)
@@ -218,9 +223,9 @@ class CIFDecoderSAN(BaseDecoder):
         tgt_mask = (~make_pad_mask(ys_in_lens)[:, None, :]).to(tgt.device)
 
         memory = hs_pad
-        memory_mask = (~make_pad_mask(hlens, maxlen=memory.size(1)))[:, None, :].to(
-            memory.device
-        )
+        memory_mask = (~make_pad_mask(hlens,
+                                      maxlen=memory.size(1)))[:, None, :] \
+            .to(memory.device)
         # Padding for Longformer
         if memory_mask.shape[-1] != memory.shape[1]:
             padlen = memory.shape[1] - memory_mask.shape[-1]
@@ -251,7 +256,8 @@ class CIFDecoderSAN(BaseDecoder):
 class CIFDecoderSANM(BaseDecoder):
     """
     author: Speech Lab, Alibaba Group, China
-    Paraformer: Fast and Accurate Parallel Transformer for Non-autoregressive End-to-End Speech Recognition
+    Paraformer: Fast and Accurate Parallel Transformer for Non-autoregressive
+    End-to-End Speech Recognition
     https://arxiv.org/abs/2006.01713
     """
 
@@ -302,7 +308,8 @@ class CIFDecoderSANM(BaseDecoder):
                 pos_enc_class(attention_dim, positional_dropout_rate),
             )
         else:
-            raise ValueError(f"only 'embed' or 'linear' is supported: {input_layer}")
+            raise ValueError(
+                f"only 'embed' or 'linear' is supported: {input_layer}")
 
         self.normalize_before = normalize_before
         if self.normalize_before:
@@ -320,12 +327,14 @@ class CIFDecoderSANM(BaseDecoder):
             DecoderLayerSANM(
                 attention_dim,
                 MultiHeadedAttentionSANMDecoder(
-                    attention_dim, self_attention_dropout_rate, kernel_size, sanm_shfit=sanm_shfit
+                    attention_dim, self_attention_dropout_rate, kernel_size,
+                    sanm_shfit=sanm_shfit
                 ),
                 MultiHeadedAttentionCrossAtt(
                     attention_heads, attention_dim, src_attention_dropout_rate
                 ),
-                PositionwiseFeedForwardDecoderSANM(attention_dim, linear_units, dropout_rate),
+                PositionwiseFeedForwardDecoderSANM(attention_dim, linear_units,
+                                                   dropout_rate),
                 dropout_rate,
                 normalize_before,
                 concat_after,
@@ -338,10 +347,13 @@ class CIFDecoderSANM(BaseDecoder):
                 DecoderLayerSANM(
                     attention_dim,
                     MultiHeadedAttentionSANMDecoder(
-                        attention_dim, self_attention_dropout_rate, kernel_size, sanm_shfit=0
+                        attention_dim, self_attention_dropout_rate, kernel_size,
+                        sanm_shfit=0
                     ),
                     None,
-                    PositionwiseFeedForwardDecoderSANM(attention_dim, linear_units, dropout_rate),
+                    PositionwiseFeedForwardDecoderSANM(attention_dim,
+                                                       linear_units,
+                                                       dropout_rate),
                     dropout_rate,
                     normalize_before,
                     concat_after,
@@ -352,7 +364,8 @@ class CIFDecoderSANM(BaseDecoder):
                 attention_dim,
                 None,
                 None,
-                PositionwiseFeedForwardDecoderSANM(attention_dim, linear_units, dropout_rate),
+                PositionwiseFeedForwardDecoderSANM(attention_dim, linear_units,
+                                                   dropout_rate),
                 dropout_rate,
                 normalize_before,
                 concat_after,
@@ -395,20 +408,24 @@ class CIFDecoderSANM(BaseDecoder):
         # )
 
         for decoder in self.decoders:
-            x, tgt_mask, memory, memory_mask, _ = decoder(x, tgt_mask, memory, memory_mask)
+            x, tgt_mask, memory, memory_mask, _ = decoder(x, tgt_mask, memory,
+                                                          memory_mask)
 
         if self.decoders2 is not None:
             # x, tgt_mask, memory, memory_mask, _ = self.decoders2(
             #     x, tgt_mask, memory, memory_mask
             # )
             for decoder in self.decoders2:
-                x, tgt_mask, memory, memory_mask, _ = decoder(x, tgt_mask, memory, memory_mask)
+                x, tgt_mask, memory, memory_mask, _ = decoder(x, tgt_mask,
+                                                              memory,
+                                                              memory_mask)
 
         # x, tgt_mask, memory, memory_mask, _ = self.decoders3(
         #     x, tgt_mask, memory, memory_mask
         # )
         for decoder in self.decoders3:
-            x, tgt_mask, memory, memory_mask, _ = decoder(x, tgt_mask, memory, memory_mask)
+            x, tgt_mask, memory, memory_mask, _ = decoder(x, tgt_mask, memory,
+                                                          memory_mask)
 
         if self.normalize_before:
             x = self.after_norm(x)
@@ -417,4 +434,3 @@ class CIFDecoderSANM(BaseDecoder):
 
         olens = tgt_mask.sum(1)
         return x, olens
-
