@@ -35,6 +35,7 @@ from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--config', required=True, help='config file')
@@ -113,7 +114,8 @@ def get_args():
                         help="Pre-trained model to initialize encoder")
     parser.add_argument("--enc_init_mods",
                         default="encoder.",
-                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+                        type=lambda s: [str(mod) for mod in s.split(",") if
+                                        s != ""],
                         help="List of encoder modules \
                         to initialize ,separated by a comma")
     parser.add_argument('--lfmmi_dir',
@@ -305,7 +307,8 @@ def main():
 
     if final_epoch is not None and args.rank == 0:
         final_model_path = os.path.join(model_dir, 'final.pt')
-        os.remove(final_model_path) if os.path.exists(final_model_path) else None
+        os.remove(final_model_path) if os.path.exists(
+            final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
 
