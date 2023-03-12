@@ -16,7 +16,7 @@ help:
 .PHONY: help Makefile
 
 api:
-	sphinx-apidoc -f --separate --module-first --no-toc -o ./python_api ../wenet
+	sphinx-apidoc -f --separate --module-first -d 2 -o ./python_api ../wenet
 	sed -i 's:^wenet:Python API Reference:g' ./python_api/modules.rst
 	sed -i 's:^=====:====================:g' ./python_api/modules.rst
 
