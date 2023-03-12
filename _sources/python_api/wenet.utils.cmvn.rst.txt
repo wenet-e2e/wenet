@@ -1,0 +1,7 @@
+wenet.utils.cmvn module
+=======================
+
+.. automodule:: wenet.utils.cmvn
+   :members:
+   :undoc-members:
+   :show-inheritance:

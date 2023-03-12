@@ -1,0 +1,7 @@
+wenet.utils.ctc\_util module
+============================
+
+.. automodule:: wenet.utils.ctc_util
+   :members:
+   :undoc-members:
+   :show-inheritance:

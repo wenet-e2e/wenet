@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wenet.utils package &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="wenet.utils.checkpoint module" href="wenet.utils.checkpoint.html" />
+    <link rel="prev" title="wenet.transformer.swish module" href="wenet.transformer.swish.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../train.html">How to train models?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../production.html">Production Runtime</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../reference.html">Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../python_binding.html">Python Binding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../papers.html">Papers</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">Python API Reference</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="wenet.html">wenet package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="wenet.html#subpackages">Subpackages</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../reference.html">Reference</a></li>
+          <li class="breadcrumb-item"><a href="modules.html">Python API Reference</a></li>
+          <li class="breadcrumb-item"><a href="wenet.html">wenet package</a></li>
+      <li class="breadcrumb-item active">wenet.utils package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/python_api/wenet.utils.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="module-wenet.utils">
+<span id="wenet-utils-package"></span><h1>wenet.utils package<a class="headerlink" href="#module-wenet.utils" title="Permalink to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.checkpoint.html">wenet.utils.checkpoint module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.cmvn.html">wenet.utils.cmvn module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.common.html">wenet.utils.common module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.add_blank"><code class="docutils literal notranslate"><span class="pre">add_blank()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.add_sos_eos"><code class="docutils literal notranslate"><span class="pre">add_sos_eos()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.get_activation"><code class="docutils literal notranslate"><span class="pre">get_activation()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.get_rnn"><code class="docutils literal notranslate"><span class="pre">get_rnn()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.get_subsample"><code class="docutils literal notranslate"><span class="pre">get_subsample()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.log_add"><code class="docutils literal notranslate"><span class="pre">log_add()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.pad_list"><code class="docutils literal notranslate"><span class="pre">pad_list()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.remove_duplicates_and_blank"><code class="docutils literal notranslate"><span class="pre">remove_duplicates_and_blank()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.replace_duplicates_with_blank"><code class="docutils literal notranslate"><span class="pre">replace_duplicates_with_blank()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.reverse_pad_list"><code class="docutils literal notranslate"><span class="pre">reverse_pad_list()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.common.html#wenet.utils.common.th_accuracy"><code class="docutils literal notranslate"><span class="pre">th_accuracy()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.config.html">wenet.utils.config module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.config.html#wenet.utils.config.override_config"><code class="docutils literal notranslate"><span class="pre">override_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.ctc_util.html">wenet.utils.ctc_util module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.executor.html">wenet.utils.executor module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.executor.html#wenet.utils.executor.Executor"><code class="docutils literal notranslate"><span class="pre">Executor</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.file_utils.html">wenet.utils.file_utils module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.file_utils.html#wenet.utils.file_utils.read_lists"><code class="docutils literal notranslate"><span class="pre">read_lists()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.file_utils.html#wenet.utils.file_utils.read_non_lang_symbols"><code class="docutils literal notranslate"><span class="pre">read_non_lang_symbols()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.file_utils.html#wenet.utils.file_utils.read_symbol_table"><code class="docutils literal notranslate"><span class="pre">read_symbol_table()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.init_model.html">wenet.utils.init_model module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.mask.html">wenet.utils.mask module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.mask.html#wenet.utils.mask.add_optional_chunk_mask"><code class="docutils literal notranslate"><span class="pre">add_optional_chunk_mask()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.mask.html#wenet.utils.mask.make_non_pad_mask"><code class="docutils literal notranslate"><span class="pre">make_non_pad_mask()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.mask.html#wenet.utils.mask.make_pad_mask"><code class="docutils literal notranslate"><span class="pre">make_pad_mask()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.mask.html#wenet.utils.mask.mask_finished_preds"><code class="docutils literal notranslate"><span class="pre">mask_finished_preds()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.mask.html#wenet.utils.mask.mask_finished_scores"><code class="docutils literal notranslate"><span class="pre">mask_finished_scores()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.mask.html#wenet.utils.mask.subsequent_chunk_mask"><code class="docutils literal notranslate"><span class="pre">subsequent_chunk_mask()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.mask.html#wenet.utils.mask.subsequent_mask"><code class="docutils literal notranslate"><span class="pre">subsequent_mask()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="wenet.utils.scheduler.html">wenet.utils.scheduler module</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.CosineAnnealing"><code class="docutils literal notranslate"><span class="pre">CosineAnnealing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.NoamAnnealing"><code class="docutils literal notranslate"><span class="pre">NoamAnnealing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.NoamHoldAnnealing"><code class="docutils literal notranslate"><span class="pre">NoamHoldAnnealing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.SquareAnnealing"><code class="docutils literal notranslate"><span class="pre">SquareAnnealing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.SquareRootAnnealing"><code class="docutils literal notranslate"><span class="pre">SquareRootAnnealing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.SquareRootConstantPolicy"><code class="docutils literal notranslate"><span class="pre">SquareRootConstantPolicy</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupAnnealHoldPolicy"><code class="docutils literal notranslate"><span class="pre">WarmupAnnealHoldPolicy</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupHoldPolicy"><code class="docutils literal notranslate"><span class="pre">WarmupHoldPolicy</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupLR"><code class="docutils literal notranslate"><span class="pre">WarmupLR</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupPolicy"><code class="docutils literal notranslate"><span class="pre">WarmupPolicy</span></code></a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="wenet.transformer.swish.html" class="btn btn-neutral float-left" title="wenet.transformer.swish module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="wenet.utils.checkpoint.html" class="btn btn-neutral float-right" title="wenet.utils.checkpoint module" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

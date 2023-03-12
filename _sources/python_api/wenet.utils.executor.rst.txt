@@ -1,0 +1,7 @@
+wenet.utils.executor module
+===========================
+
+.. automodule:: wenet.utils.executor
+   :members:
+   :undoc-members:
+   :show-inheritance:

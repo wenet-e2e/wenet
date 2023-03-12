@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pretrained Models in WeNet &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Pretrained Models in WeNet &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -38,7 +40,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="train.html">How to train models?</a></li>
@@ -94,23 +96,23 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="pretrained-models-in-wenet">
-<h1>Pretrained Models in WeNet<a class="headerlink" href="#pretrained-models-in-wenet" title="Permalink to this headline"></a></h1>
-<div class="section" id="model-types">
-<h2>Model Types<a class="headerlink" href="#model-types" title="Permalink to this headline"></a></h2>
+<section id="pretrained-models-in-wenet">
+<h1>Pretrained Models in WeNet<a class="headerlink" href="#pretrained-models-in-wenet" title="Permalink to this heading"></a></h1>
+<section id="model-types">
+<h2>Model Types<a class="headerlink" href="#model-types" title="Permalink to this heading"></a></h2>
 <p>We provide two types of pretrained model in WeNet to facilitate users with different requirements.</p>
 <ol class="simple">
 <li><p><strong>Checkpoint Model</strong>, with suffix <strong>.pt</strong>, the model trained and saved as checkpoint by WeNet python code, you can reproduce our published result with it, or you can use it as checkpoint to continue.</p></li>
 <li><p><strong>Runtime Model</strong>, with suffix <strong>.zip</strong>, you can directly use <code class="docutils literal notranslate"><span class="pre">runtime</span> <span class="pre">model</span></code> in our <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch">x86</a> or <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/android">android</a> runtime, the <code class="docutils literal notranslate"><span class="pre">runtime</span> <span class="pre">model</span></code> is export by Pytorch JIT on the <code class="docutils literal notranslate"><span class="pre">checkpoint</span> <span class="pre">model</span></code>. And the runtime models has been quantized to reduce the model size and network traffic.</p></li>
 </ol>
-</div>
-<div class="section" id="model-license">
-<h2>Model License<a class="headerlink" href="#model-license" title="Permalink to this headline"></a></h2>
+</section>
+<section id="model-license">
+<h2>Model License<a class="headerlink" href="#model-license" title="Permalink to this heading"></a></h2>
 <p>The pretrained model in WeNet follows the license of it’s corresponding dataset.
 For example, the pretrained model on LibriSpeech follows <code class="docutils literal notranslate"><span class="pre">CC</span> <span class="pre">BY</span> <span class="pre">4.0</span></code>, since it is used as license of the LibriSpeech dataset, see http://openslr.org/12/.</p>
-</div>
-<div class="section" id="model-list">
-<h2>Model List<a class="headerlink" href="#model-list" title="Permalink to this headline"></a></h2>
+</section>
+<section id="model-list">
+<h2>Model List<a class="headerlink" href="#model-list" title="Permalink to this heading"></a></h2>
 <p>Here is a list of the pretrained models on different datasets. The model structure, model size, and download link are given.</p>
 <table border="1" class="docutils">
 <thead>
@@ -166,8 +168,8 @@ For example, the pretrained model on LibriSpeech follows <code class="docutils l
 <td><a href="https://horizon.ai" target="_blank"><img src="https://raw.githubusercontent.com/wenet-e2e/wenet-contributors/main/companies/hobot.png" width="100px"></a></td>
 </tr>
 </tbody>
-</table></div>
-</div>
+</table></section>
+</section>
 
 
            </div>

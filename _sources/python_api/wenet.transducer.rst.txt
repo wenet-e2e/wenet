@@ -1,0 +1,17 @@
+wenet.transducer package
+========================
+
+.. automodule:: wenet.transducer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.transducer.joint
+   wenet.transducer.predictor
+   wenet.transducer.transducer

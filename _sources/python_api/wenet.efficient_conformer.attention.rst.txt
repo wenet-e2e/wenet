@@ -1,0 +1,7 @@
+wenet.efficient\_conformer.attention module
+===========================================
+
+.. automodule:: wenet.efficient_conformer.attention
+   :members:
+   :undoc-members:
+   :show-inheritance:

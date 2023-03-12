@@ -1,0 +1,18 @@
+wenet.dataset package
+=====================
+
+.. automodule:: wenet.dataset
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.dataset.dataset
+   wenet.dataset.kaldi_io
+   wenet.dataset.processor
+   wenet.dataset.wav_distortion

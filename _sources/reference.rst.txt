@@ -7,4 +7,5 @@ Reference
 
    ./python_binding.md
    ./papers.md
+   ./python_api/modules.rst
 

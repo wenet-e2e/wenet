@@ -1,0 +1,7 @@
+wenet.transformer.subsampling module
+====================================
+
+.. automodule:: wenet.transformer.subsampling
+   :members:
+   :undoc-members:
+   :show-inheritance:

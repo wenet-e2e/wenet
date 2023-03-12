@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tutorial on LibriSpeech &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Tutorial on LibriSpeech &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -40,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="train.html">How to train models?</a><ul class="current">
@@ -118,15 +120,15 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="tutorial-on-librispeech">
-<h1>Tutorial on LibriSpeech<a class="headerlink" href="#tutorial-on-librispeech" title="Permalink to this headline"></a></h1>
+<section id="tutorial-on-librispeech">
+<h1>Tutorial on LibriSpeech<a class="headerlink" href="#tutorial-on-librispeech" title="Permalink to this heading"></a></h1>
 <p>If you meet any problems when going through this tutorial, please feel free to ask in github <a class="reference external" href="https://github.com/mobvoi/wenet/issues">issues</a>. Thanks for any kind of feedback.</p>
-<div class="section" id="setup-environment">
-<h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this headline"></a></h2>
+<section id="setup-environment">
+<h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this heading"></a></h2>
 <p>Please follow <a class="reference external" href="https://github.com/wenet-e2e/wenet#installation">Installation</a> to install WeNet.</p>
-</div>
-<div class="section" id="first-experiment">
-<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this headline"></a></h2>
+</section>
+<section id="first-experiment">
+<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this heading"></a></h2>
 <p>We provide a recipe <code class="docutils literal notranslate"><span class="pre">example/librispeech/s0/run.sh</span></code> on librispeech data.</p>
 <p>The recipe is simple and we suggest you run each stage one by one manually and check the result to understand the whole process.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">example</span><span class="o">/</span><span class="n">librispeech</span><span class="o">/</span><span class="n">s0</span>
@@ -145,28 +147,28 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">stop_stage</span> <span class="mi">7</span>
 </pre></div>
 </div>
-<div class="section" id="stage-1-download-data">
-<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this headline"></a></h3>
+<section id="stage-1-download-data">
+<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">data_url</span><span class="o">=</span>www.openslr.org/resources/12
 <span class="nv">datadir</span><span class="o">=</span>/export/data/en-asr-data/OpenSLR/
-<span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le -1 <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge -1 <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="nb">echo</span> <span class="s2">&quot;stage -1: Data Download&quot;</span>
-  <span class="k">for</span> part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500<span class="p">;</span> <span class="k">do</span>
-    local/download_and_untar.sh <span class="si">${</span><span class="nv">datadir</span><span class="si">}</span> <span class="si">${</span><span class="nv">data_url</span><span class="si">}</span> <span class="si">${</span><span class="nv">part</span><span class="si">}</span>
-  <span class="k">done</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span>-1<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span>-1<span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;stage -1: Data Download&quot;</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span>part<span class="w"> </span><span class="k">in</span><span class="w"> </span>dev-clean<span class="w"> </span>test-clean<span class="w"> </span>dev-other<span class="w"> </span>test-other<span class="w"> </span>train-clean-100<span class="w"> </span>train-clean-360<span class="w"> </span>train-other-500<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span>local/download_and_untar.sh<span class="w"> </span><span class="si">${</span><span class="nv">datadir</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">data_url</span><span class="si">}</span><span class="w"> </span><span class="si">${</span><span class="nv">part</span><span class="si">}</span>
+<span class="w">  </span><span class="k">done</span>
 <span class="k">fi</span>
 </pre></div>
 </div>
 <p>This stage downloads the librispeech data to the local path <code class="docutils literal notranslate"><span class="pre">$data</span></code>. This may take several hours. If you have already downloaded the data, please change the <code class="docutils literal notranslate"><span class="pre">$data</span></code> variable in <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> and start from <code class="docutils literal notranslate"><span class="pre">--stage</span> <span class="pre">0</span></code>.</p>
-</div>
-<div class="section" id="stage-0-prepare-training-data">
-<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-0-prepare-training-data">
+<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">wave_data</span><span class="o">=</span>data
-<span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">0</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">0</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="k">for</span> part in dev-clean test-clean dev-other test-other train-clean-100 train-clean-360 train-other-500<span class="p">;</span> <span class="k">do</span>
-    <span class="c1"># use underscore-separated names in data directories.</span>
-    local/data_prep_torchaudio.sh <span class="si">${</span><span class="nv">datadir</span><span class="si">}</span>/LibriSpeech/<span class="si">${</span><span class="nv">part</span><span class="si">}</span> <span class="nv">$wave_data</span>/<span class="si">${</span><span class="nv">part</span><span class="p">//-/_</span><span class="si">}</span>
-  <span class="k">done</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span>part<span class="w"> </span><span class="k">in</span><span class="w"> </span>dev-clean<span class="w"> </span>test-clean<span class="w"> </span>dev-other<span class="w"> </span>test-other<span class="w"> </span>train-clean-100<span class="w"> </span>train-clean-360<span class="w"> </span>train-other-500<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="c1"># use underscore-separated names in data directories.</span>
+<span class="w">    </span>local/data_prep_torchaudio.sh<span class="w"> </span><span class="si">${</span><span class="nv">datadir</span><span class="si">}</span>/LibriSpeech/<span class="si">${</span><span class="nv">part</span><span class="si">}</span><span class="w"> </span><span class="nv">$wave_data</span>/<span class="si">${</span><span class="nv">part</span><span class="p">//-/_</span><span class="si">}</span>
+<span class="w">  </span><span class="k">done</span>
 <span class="k">fi</span>
 </pre></div>
 </div>
@@ -188,31 +190,31 @@
 </pre></div>
 </div>
 <p>If you want to train using your customized data, just organize the data into two files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>, and start from <code class="docutils literal notranslate"><span class="pre">stage</span> <span class="pre">1</span></code>.</p>
-</div>
-<div class="section" id="stage-1-extract-optinal-cmvn-features">
-<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this headline"></a></h3>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">1</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">1</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c1">### Task dependent. You have to design training and dev sets by yourself.</span>
-  <span class="c1">### But you can utilize Kaldi recipes in most cases</span>
-  <span class="nb">echo</span> <span class="s2">&quot;stage 1: Feature Generation&quot;</span>
-  mkdir -p <span class="nv">$wave_data</span>/train_960
-  <span class="c1"># merge total training data</span>
-  <span class="k">for</span> <span class="nb">set</span> in train_clean_100 train_clean_360 train_other_500<span class="p">;</span> <span class="k">do</span>
-    <span class="k">for</span> f in <span class="sb">`</span>ls <span class="nv">$wave_data</span>/<span class="nv">$set</span><span class="sb">`</span><span class="p">;</span> <span class="k">do</span>
-      cat <span class="nv">$wave_data</span>/<span class="nv">$set</span>/<span class="nv">$f</span> &gt;&gt; <span class="nv">$wave_data</span>/train_960/<span class="nv">$f</span>
-    <span class="k">done</span>
-  <span class="k">done</span>
-  mkdir -p <span class="nv">$wave_data</span>/dev
-  <span class="c1"># merge total dev data</span>
-  <span class="k">for</span> <span class="nb">set</span> in dev_clean dev_other<span class="p">;</span> <span class="k">do</span>
-    <span class="k">for</span> f in <span class="sb">`</span>ls <span class="nv">$wave_data</span>/<span class="nv">$set</span><span class="sb">`</span><span class="p">;</span> <span class="k">do</span>
-      cat <span class="nv">$wave_data</span>/<span class="nv">$set</span>/<span class="nv">$f</span> &gt;&gt; <span class="nv">$wave_data</span>/dev/<span class="nv">$f</span>
-    <span class="k">done</span>
-  <span class="k">done</span>
+</section>
+<section id="stage-1-extract-optinal-cmvn-features">
+<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="c1">### Task dependent. You have to design training and dev sets by yourself.</span>
+<span class="w">  </span><span class="c1">### But you can utilize Kaldi recipes in most cases</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;stage 1: Feature Generation&quot;</span>
+<span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$wave_data</span>/train_960
+<span class="w">  </span><span class="c1"># merge total training data</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>train_clean_100<span class="w"> </span>train_clean_360<span class="w"> </span>train_other_500<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="sb">`</span>ls<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$set</span><span class="sb">`</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">      </span>cat<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$set</span>/<span class="nv">$f</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$wave_data</span>/train_960/<span class="nv">$f</span>
+<span class="w">    </span><span class="k">done</span>
+<span class="w">  </span><span class="k">done</span>
+<span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$wave_data</span>/dev
+<span class="w">  </span><span class="c1"># merge total dev data</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="k">in</span><span class="w"> </span>dev_clean<span class="w"> </span>dev_other<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>f<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="sb">`</span>ls<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$set</span><span class="sb">`</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">      </span>cat<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$set</span>/<span class="nv">$f</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$wave_data</span>/dev/<span class="nv">$f</span>
+<span class="w">    </span><span class="k">done</span>
+<span class="w">  </span><span class="k">done</span>
 
-  tools/compute_cmvn_stats.py --num_workers <span class="m">16</span> --train_config <span class="nv">$train_config</span> <span class="se">\</span>
-    --in_scp <span class="nv">$wave_data</span>/<span class="nv">$train_set</span>/wav.scp <span class="se">\</span>
-    --out_cmvn <span class="nv">$wave_data</span>/<span class="nv">$train_set</span>/global_cmvn
+<span class="w">  </span>tools/compute_cmvn_stats.py<span class="w"> </span>--num_workers<span class="w"> </span><span class="m">16</span><span class="w"> </span>--train_config<span class="w"> </span><span class="nv">$train_config</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--in_scp<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$train_set</span>/wav.scp<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--out_cmvn<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$train_set</span>/global_cmvn
 
 <span class="k">fi</span>
 </pre></div>
@@ -220,27 +222,27 @@
 <p>The librispeech corpus contains 3 subsets for training, namely <code class="docutils literal notranslate"><span class="pre">train_clean_100</span></code>, <code class="docutils literal notranslate"><span class="pre">train_clean_360</span></code>, and <code class="docutils literal notranslate"><span class="pre">train_other_500</span></code>,
 so we first merge them to get our final training data.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute_cmvn_stats.py</span></code> is used to extract global cmvn(cepstral mean and variance normalization) statistics. These statistics will be used to normalize the acoustic features. Setting <code class="docutils literal notranslate"><span class="pre">cmvn=false</span></code> will skip this step.</p>
-</div>
-<div class="section" id="stage-2-generate-label-token-dictionary">
-<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-2-generate-label-token-dictionary">
+<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">dict</span><span class="o">=</span><span class="nv">$wave_data</span>/lang_char/<span class="si">${</span><span class="nv">train_set</span><span class="si">}</span>_<span class="si">${</span><span class="nv">bpemode</span><span class="si">}${</span><span class="nv">nbpe</span><span class="si">}</span>_units.txt
 <span class="nv">bpemodel</span><span class="o">=</span><span class="nv">$wave_data</span>/lang_char/<span class="si">${</span><span class="nv">train_set</span><span class="si">}</span>_<span class="si">${</span><span class="nv">bpemode</span><span class="si">}${</span><span class="nv">nbpe</span><span class="si">}</span>
-<span class="nb">echo</span> <span class="s2">&quot;dictionary: </span><span class="si">${</span><span class="nv">dict</span><span class="si">}</span><span class="s2">&quot;</span>
-<span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">2</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">2</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c1">### Task dependent. You have to check non-linguistic symbols used in the corpus.</span>
-  <span class="nb">echo</span> <span class="s2">&quot;stage 2: Dictionary and Json Data Preparation&quot;</span>
-  mkdir -p data/lang_char/
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;dictionary: </span><span class="si">${</span><span class="nv">dict</span><span class="si">}</span><span class="s2">&quot;</span>
+<span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="c1">### Task dependent. You have to check non-linguistic symbols used in the corpus.</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;stage 2: Dictionary and Json Data Preparation&quot;</span>
+<span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span>data/lang_char/
 
-  <span class="nb">echo</span> <span class="s2">&quot;&lt;blank&gt; 0&quot;</span> &gt; <span class="si">${</span><span class="nv">dict</span><span class="si">}</span> <span class="c1"># 0 will be used for &quot;blank&quot; in CTC</span>
-  <span class="nb">echo</span> <span class="s2">&quot;&lt;unk&gt; 1&quot;</span> &gt;&gt; <span class="si">${</span><span class="nv">dict</span><span class="si">}</span> <span class="c1"># &lt;unk&gt; must be 1</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&lt;blank&gt; 0&quot;</span><span class="w"> </span>&gt;<span class="w"> </span><span class="si">${</span><span class="nv">dict</span><span class="si">}</span><span class="w"> </span><span class="c1"># 0 will be used for &quot;blank&quot; in CTC</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&lt;unk&gt; 1&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="si">${</span><span class="nv">dict</span><span class="si">}</span><span class="w"> </span><span class="c1"># &lt;unk&gt; must be 1</span>
 
-  <span class="c1"># we borrowed these code and scripts which are related bpe from ESPnet.</span>
-  cut -f <span class="m">2</span>- -d<span class="s2">&quot; &quot;</span> <span class="nv">$wave_data</span>/<span class="si">${</span><span class="nv">train_set</span><span class="si">}</span>/text &gt; <span class="nv">$wave_data</span>/lang_char/input.txt
-  tools/spm_train --input<span class="o">=</span><span class="nv">$wave_data</span>/lang_char/input.txt --vocab_size<span class="o">=</span><span class="si">${</span><span class="nv">nbpe</span><span class="si">}</span> --model_type<span class="o">=</span><span class="si">${</span><span class="nv">bpemode</span><span class="si">}</span> --model_prefix<span class="o">=</span><span class="si">${</span><span class="nv">bpemodel</span><span class="si">}</span> --input_sentence_size<span class="o">=</span><span class="m">100000000</span>
-  tools/spm_encode --model<span class="o">=</span><span class="si">${</span><span class="nv">bpemodel</span><span class="si">}</span>.model --output_format<span class="o">=</span>piece &lt; <span class="nv">$wave_data</span>/lang_char/input.txt <span class="p">|</span> tr <span class="s1">&#39; &#39;</span> <span class="s1">&#39;\n&#39;</span> <span class="p">|</span> sort <span class="p">|</span> uniq <span class="p">|</span> awk <span class="s1">&#39;{print $0 &quot; &quot; NR+1}&#39;</span> &gt;&gt; <span class="si">${</span><span class="nv">dict</span><span class="si">}</span>
-  <span class="nv">num_token</span><span class="o">=</span><span class="k">$(</span>cat <span class="nv">$dict</span> <span class="p">|</span> wc -l<span class="k">)</span>
-  <span class="nb">echo</span> <span class="s2">&quot;&lt;sos/eos&gt; </span><span class="nv">$num_token</span><span class="s2">&quot;</span> &gt;&gt; <span class="nv">$dict</span> <span class="c1"># &lt;eos&gt;</span>
-  wc -l <span class="si">${</span><span class="nv">dict</span><span class="si">}</span>
+<span class="w">  </span><span class="c1"># we borrowed these code and scripts which are related bpe from ESPnet.</span>
+<span class="w">  </span>cut<span class="w"> </span>-f<span class="w"> </span><span class="m">2</span>-<span class="w"> </span>-d<span class="s2">&quot; &quot;</span><span class="w"> </span><span class="nv">$wave_data</span>/<span class="si">${</span><span class="nv">train_set</span><span class="si">}</span>/text<span class="w"> </span>&gt;<span class="w"> </span><span class="nv">$wave_data</span>/lang_char/input.txt
+<span class="w">  </span>tools/spm_train<span class="w"> </span>--input<span class="o">=</span><span class="nv">$wave_data</span>/lang_char/input.txt<span class="w"> </span>--vocab_size<span class="o">=</span><span class="si">${</span><span class="nv">nbpe</span><span class="si">}</span><span class="w"> </span>--model_type<span class="o">=</span><span class="si">${</span><span class="nv">bpemode</span><span class="si">}</span><span class="w"> </span>--model_prefix<span class="o">=</span><span class="si">${</span><span class="nv">bpemodel</span><span class="si">}</span><span class="w"> </span>--input_sentence_size<span class="o">=</span><span class="m">100000000</span>
+<span class="w">  </span>tools/spm_encode<span class="w"> </span>--model<span class="o">=</span><span class="si">${</span><span class="nv">bpemodel</span><span class="si">}</span>.model<span class="w"> </span>--output_format<span class="o">=</span>piece<span class="w"> </span>&lt;<span class="w"> </span><span class="nv">$wave_data</span>/lang_char/input.txt<span class="w"> </span><span class="p">|</span><span class="w"> </span>tr<span class="w"> </span><span class="s1">&#39; &#39;</span><span class="w"> </span><span class="s1">&#39;\n&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>sort<span class="w"> </span><span class="p">|</span><span class="w"> </span>uniq<span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span><span class="s1">&#39;{print $0 &quot; &quot; NR+1}&#39;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="si">${</span><span class="nv">dict</span><span class="si">}</span>
+<span class="w">  </span><span class="nv">num_token</span><span class="o">=</span><span class="k">$(</span>cat<span class="w"> </span><span class="nv">$dict</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l<span class="k">)</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;&lt;sos/eos&gt; </span><span class="nv">$num_token</span><span class="s2">&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span><span class="nv">$dict</span><span class="w"> </span><span class="c1"># &lt;eos&gt;</span>
+<span class="w">  </span>wc<span class="w"> </span>-l<span class="w"> </span><span class="si">${</span><span class="nv">dict</span><span class="si">}</span>
 <span class="k">fi</span>
 </pre></div>
 </div>
@@ -271,16 +273,16 @@ ZZ 5000
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;unk&gt;</span></code> denotes the unknown token, any out-of-vocabulary tokens will be mapped into it.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;sos/eos&gt;</span></code> denotes start-of-speech and end-of-speech symbols for attention based encoder decoder training, and they shares the same id.</p></li>
 </ul>
-</div>
-<div class="section" id="stage-3-prepare-wenet-data-format">
-<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this headline"></a></h3>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">3</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">3</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c1"># Prepare wenet required data</span>
-  <span class="nb">echo</span> <span class="s2">&quot;Prepare data, prepare required format&quot;</span>
-  <span class="k">for</span> x in dev <span class="si">${</span><span class="nv">recog_set</span><span class="si">}</span> <span class="nv">$train_set</span> <span class="p">;</span> <span class="k">do</span>
-    tools/make_raw_list.py <span class="nv">$wave_data</span>/<span class="nv">$x</span>/wav.scp <span class="nv">$wave_data</span>/<span class="nv">$x</span>/text <span class="se">\</span>
-        <span class="nv">$wave_data</span>/<span class="nv">$x</span>/data.list
-  <span class="k">done</span>
+</section>
+<section id="stage-3-prepare-wenet-data-format">
+<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="c1"># Prepare wenet required data</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Prepare data, prepare required format&quot;</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span>x<span class="w"> </span><span class="k">in</span><span class="w"> </span>dev<span class="w"> </span><span class="si">${</span><span class="nv">recog_set</span><span class="si">}</span><span class="w"> </span><span class="nv">$train_set</span><span class="w"> </span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span>tools/make_raw_list.py<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$x</span>/wav.scp<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$x</span>/text<span class="w"> </span><span class="se">\</span>
+<span class="w">        </span><span class="nv">$wave_data</span>/<span class="nv">$x</span>/data.list
+<span class="w">  </span><span class="k">done</span>
 
 <span class="k">fi</span>
 </pre></div>
@@ -301,45 +303,45 @@ ZZ 5000
 Please see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/examples/gigaspeech/s0">gigaspeech</a>(10k hours) or
 <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0">wenetspeech</a>(10k hours)
 for how to use <code class="docutils literal notranslate"><span class="pre">shard</span></code> style <code class="docutils literal notranslate"><span class="pre">data.list</span></code> if you want to apply WeNet on big data set(more than 5k).</p>
-</div>
-<div class="section" id="stage-4-neural-network-training">
-<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this headline"></a></h3>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">4</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">4</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c1"># Training</span>
-  mkdir -p <span class="nv">$dir</span>
-  <span class="nv">INIT_FILE</span><span class="o">=</span><span class="nv">$dir</span>/ddp_init
-  rm -f <span class="nv">$INIT_FILE</span> <span class="c1"># delete old one before starting</span>
-  <span class="nv">init_method</span><span class="o">=</span>file://<span class="k">$(</span>readlink -f <span class="nv">$INIT_FILE</span><span class="k">)</span>
-  <span class="nb">echo</span> <span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">: init method is </span><span class="nv">$init_method</span><span class="s2">&quot;</span>
-  <span class="nv">num_gpus</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$CUDA_VISIBLE_DEVICES</span> <span class="p">|</span> awk -F <span class="s2">&quot;,&quot;</span> <span class="s1">&#39;{print NF}&#39;</span><span class="k">)</span>
-  <span class="c1"># Use &quot;nccl&quot; if it works, otherwise use &quot;gloo&quot;</span>
-  <span class="nv">dist_backend</span><span class="o">=</span><span class="s2">&quot;nccl&quot;</span>
-  <span class="nv">cmvn_opts</span><span class="o">=</span>
-  <span class="nv">$cmvn</span> <span class="o">&amp;&amp;</span> <span class="nv">cmvn_opts</span><span class="o">=</span><span class="s2">&quot;--cmvn </span><span class="nv">$wave_data</span><span class="s2">/</span><span class="si">${</span><span class="nv">train_set</span><span class="si">}</span><span class="s2">/global_cmvn&quot;</span>
-  <span class="c1"># train.py will write $train_config to $dir/train.yaml with model input</span>
-  <span class="c1"># and output dimension, train.yaml will be used for inference or model</span>
-  <span class="c1"># export later</span>
-  <span class="k">for</span> <span class="o">((</span><span class="nv">i</span> <span class="o">=</span> <span class="m">0</span><span class="p">;</span> i &lt; <span class="nv">$num_gpus</span><span class="p">;</span> ++i<span class="o">))</span><span class="p">;</span> <span class="k">do</span>
-  <span class="o">{</span>
-    <span class="nv">gpu_id</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$CUDA_VISIBLE_DEVICES</span> <span class="p">|</span> cut -d<span class="s1">&#39;,&#39;</span> -f$<span class="o">[</span><span class="nv">$i</span>+1<span class="o">]</span><span class="k">)</span>
-    python wenet/bin/train.py --gpu <span class="nv">$gpu_id</span> <span class="se">\</span>
-      --config <span class="nv">$train_config</span> <span class="se">\</span>
-      --data_type raw <span class="se">\</span>
-      --symbol_table <span class="nv">$dict</span> <span class="se">\</span>
-      --train_data <span class="nv">$wave_data</span>/<span class="nv">$train_set</span>/data.list <span class="se">\</span>
-      --cv_data <span class="nv">$wave_data</span>/dev/data.list <span class="se">\</span>
-      <span class="si">${</span><span class="nv">checkpoint</span><span class="p">:+--checkpoint </span><span class="nv">$checkpoint</span><span class="si">}</span> <span class="se">\</span>
-      --model_dir <span class="nv">$dir</span> <span class="se">\</span>
-      --ddp.init_method <span class="nv">$init_method</span> <span class="se">\</span>
-      --ddp.world_size <span class="nv">$num_gpus</span> <span class="se">\</span>
-      --ddp.rank <span class="nv">$i</span> <span class="se">\</span>
-      --ddp.dist_backend <span class="nv">$dist_backend</span> <span class="se">\</span>
-      --num_workers <span class="m">1</span> <span class="se">\</span>
-      <span class="nv">$cmvn_opts</span> <span class="se">\</span>
-      --pin_memory
-  <span class="o">}</span> <span class="p">&amp;</span>
-  <span class="k">done</span>
-  <span class="nb">wait</span>
+</section>
+<section id="stage-4-neural-network-training">
+<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="c1"># Training</span>
+<span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$dir</span>
+<span class="w">  </span><span class="nv">INIT_FILE</span><span class="o">=</span><span class="nv">$dir</span>/ddp_init
+<span class="w">  </span>rm<span class="w"> </span>-f<span class="w"> </span><span class="nv">$INIT_FILE</span><span class="w"> </span><span class="c1"># delete old one before starting</span>
+<span class="w">  </span><span class="nv">init_method</span><span class="o">=</span>file://<span class="k">$(</span>readlink<span class="w"> </span>-f<span class="w"> </span><span class="nv">$INIT_FILE</span><span class="k">)</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$0</span><span class="s2">: init method is </span><span class="nv">$init_method</span><span class="s2">&quot;</span>
+<span class="w">  </span><span class="nv">num_gpus</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="nv">$CUDA_VISIBLE_DEVICES</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span>-F<span class="w"> </span><span class="s2">&quot;,&quot;</span><span class="w"> </span><span class="s1">&#39;{print NF}&#39;</span><span class="k">)</span>
+<span class="w">  </span><span class="c1"># Use &quot;nccl&quot; if it works, otherwise use &quot;gloo&quot;</span>
+<span class="w">  </span><span class="nv">dist_backend</span><span class="o">=</span><span class="s2">&quot;nccl&quot;</span>
+<span class="w">  </span><span class="nv">cmvn_opts</span><span class="o">=</span>
+<span class="w">  </span><span class="nv">$cmvn</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nv">cmvn_opts</span><span class="o">=</span><span class="s2">&quot;--cmvn </span><span class="nv">$wave_data</span><span class="s2">/</span><span class="si">${</span><span class="nv">train_set</span><span class="si">}</span><span class="s2">/global_cmvn&quot;</span>
+<span class="w">  </span><span class="c1"># train.py will write $train_config to $dir/train.yaml with model input</span>
+<span class="w">  </span><span class="c1"># and output dimension, train.yaml will be used for inference or model</span>
+<span class="w">  </span><span class="c1"># export later</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="o">((</span><span class="nv">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0</span><span class="p">;</span><span class="w"> </span>i<span class="w"> </span>&lt;<span class="w"> </span><span class="nv">$num_gpus</span><span class="p">;</span><span class="w"> </span>++i<span class="o">))</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">  </span><span class="o">{</span>
+<span class="w">    </span><span class="nv">gpu_id</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="nv">$CUDA_VISIBLE_DEVICES</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d<span class="s1">&#39;,&#39;</span><span class="w"> </span>-f$<span class="o">[</span><span class="nv">$i</span>+1<span class="o">]</span><span class="k">)</span>
+<span class="w">    </span>python<span class="w"> </span>wenet/bin/train.py<span class="w"> </span>--gpu<span class="w"> </span><span class="nv">$gpu_id</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--config<span class="w"> </span><span class="nv">$train_config</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--data_type<span class="w"> </span>raw<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--symbol_table<span class="w"> </span><span class="nv">$dict</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--train_data<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$train_set</span>/data.list<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--cv_data<span class="w"> </span><span class="nv">$wave_data</span>/dev/data.list<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span><span class="si">${</span><span class="nv">checkpoint</span><span class="p">:+--checkpoint </span><span class="nv">$checkpoint</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--model_dir<span class="w"> </span><span class="nv">$dir</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--ddp.init_method<span class="w"> </span><span class="nv">$init_method</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--ddp.world_size<span class="w"> </span><span class="nv">$num_gpus</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--ddp.rank<span class="w"> </span><span class="nv">$i</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--ddp.dist_backend<span class="w"> </span><span class="nv">$dist_backend</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--num_workers<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span><span class="nv">$cmvn_opts</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--pin_memory
+<span class="w">  </span><span class="o">}</span><span class="w"> </span><span class="p">&amp;</span>
+<span class="w">  </span><span class="k">done</span>
+<span class="w">  </span><span class="nb">wait</span>
 <span class="k">fi</span>
 </pre></div>
 </div>
@@ -366,65 +368,65 @@ You could use tensorboard to monitor the loss.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>tensorboard --logdir tensorboard/$your_exp_name/ --port 12598 --bind_all
 </pre></div>
 </div>
-</div>
-<div class="section" id="stage-5-recognize-wav-using-the-trained-model">
-<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this headline"></a></h3>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">5</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">5</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
+</section>
+<section id="stage-5-recognize-wav-using-the-trained-model">
+<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="c1"># Test model, please specify the model you want to test by --checkpoint</span>
-  <span class="nv">cmvn_opts</span><span class="o">=</span>
-  <span class="nv">$cmvn</span> <span class="o">&amp;&amp;</span> <span class="nv">cmvn_opts</span><span class="o">=</span><span class="s2">&quot;--cmvn data/</span><span class="si">${</span><span class="nv">train_set</span><span class="si">}</span><span class="s2">/global_cmvn&quot;</span>
-  <span class="c1"># TODO, Add model average here</span>
-  mkdir -p <span class="nv">$dir</span>/test
-  <span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">average_checkpoint</span><span class="si">}</span> <span class="o">==</span> <span class="nb">true</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-    <span class="nv">decode_checkpoint</span><span class="o">=</span><span class="nv">$dir</span>/avg_<span class="si">${</span><span class="nv">average_num</span><span class="si">}</span>.pt
-    <span class="nb">echo</span> <span class="s2">&quot;do model average and final checkpoint is </span><span class="nv">$decode_checkpoint</span><span class="s2">&quot;</span>
-    python wenet/bin/average_model.py <span class="se">\</span>
-      --dst_model <span class="nv">$decode_checkpoint</span> <span class="se">\</span>
-      --src_path <span class="nv">$dir</span>  <span class="se">\</span>
-      --num <span class="si">${</span><span class="nv">average_num</span><span class="si">}</span> <span class="se">\</span>
-      --val_best
-  <span class="k">fi</span>
-  <span class="c1"># Specify decoding_chunk_size if it&#39;s a unified dynamic chunk trained model</span>
-  <span class="c1"># -1 for full chunk</span>
-  <span class="nv">decoding_chunk_size</span><span class="o">=</span>
-  <span class="nv">ctc_weight</span><span class="o">=</span><span class="m">0</span>.5
-  <span class="c1"># Polling GPU id begin with index 0</span>
-  <span class="nv">num_gpus</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$CUDA_VISIBLE_DEVICES</span> <span class="p">|</span> awk -F <span class="s2">&quot;,&quot;</span> <span class="s1">&#39;{print NF}&#39;</span><span class="k">)</span>
-  <span class="nv">idx</span><span class="o">=</span><span class="m">0</span>
-  <span class="k">for</span> <span class="nb">test</span> in <span class="nv">$recog_set</span><span class="p">;</span> <span class="k">do</span>
-    <span class="k">for</span> mode in <span class="si">${</span><span class="nv">decode_modes</span><span class="si">}</span><span class="p">;</span> <span class="k">do</span>
-    <span class="o">{</span>
-      <span class="o">{</span>
-        <span class="nv">test_dir</span><span class="o">=</span><span class="nv">$dir</span>/<span class="si">${</span><span class="nv">test</span><span class="si">}</span>_<span class="si">${</span><span class="nv">mode</span><span class="si">}</span>
-        mkdir -p <span class="nv">$test_dir</span>
-        <span class="nv">gpu_id</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="nv">$CUDA_VISIBLE_DEVICES</span> <span class="p">|</span> cut -d<span class="s1">&#39;,&#39;</span> -f$<span class="o">[</span><span class="nv">$idx</span>+1<span class="o">]</span><span class="k">)</span>
-        python wenet/bin/recognize.py --gpu <span class="nv">$gpu_id</span> <span class="se">\</span>
-          --mode <span class="nv">$mode</span> <span class="se">\</span>
-          --config <span class="nv">$dir</span>/train.yaml <span class="se">\</span>
-          --data_type raw <span class="se">\</span>
-          --test_data <span class="nv">$wave_data</span>/<span class="nv">$test</span>/data.list <span class="se">\</span>
-          --checkpoint <span class="nv">$decode_checkpoint</span> <span class="se">\</span>
-          --beam_size <span class="m">10</span> <span class="se">\</span>
-          --batch_size <span class="m">1</span> <span class="se">\</span>
-          --penalty <span class="m">0</span>.0 <span class="se">\</span>
-          --dict <span class="nv">$dict</span> <span class="se">\</span>
-          --result_file <span class="nv">$test_dir</span>/text_bpe <span class="se">\</span>
-          --ctc_weight <span class="nv">$ctc_weight</span> <span class="se">\</span>
-          <span class="si">${</span><span class="nv">decoding_chunk_size</span><span class="p">:+--decoding_chunk_size </span><span class="nv">$decoding_chunk_size</span><span class="si">}</span>
+<span class="w">  </span><span class="nv">cmvn_opts</span><span class="o">=</span>
+<span class="w">  </span><span class="nv">$cmvn</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nv">cmvn_opts</span><span class="o">=</span><span class="s2">&quot;--cmvn data/</span><span class="si">${</span><span class="nv">train_set</span><span class="si">}</span><span class="s2">/global_cmvn&quot;</span>
+<span class="w">  </span><span class="c1"># TODO, Add model average here</span>
+<span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$dir</span>/test
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">average_checkpoint</span><span class="si">}</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="nb">true</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nv">decode_checkpoint</span><span class="o">=</span><span class="nv">$dir</span>/avg_<span class="si">${</span><span class="nv">average_num</span><span class="si">}</span>.pt
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;do model average and final checkpoint is </span><span class="nv">$decode_checkpoint</span><span class="s2">&quot;</span>
+<span class="w">    </span>python<span class="w"> </span>wenet/bin/average_model.py<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--dst_model<span class="w"> </span><span class="nv">$decode_checkpoint</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--src_path<span class="w"> </span><span class="nv">$dir</span><span class="w">  </span><span class="se">\</span>
+<span class="w">      </span>--num<span class="w"> </span><span class="si">${</span><span class="nv">average_num</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--val_best
+<span class="w">  </span><span class="k">fi</span>
+<span class="w">  </span><span class="c1"># Specify decoding_chunk_size if it&#39;s a unified dynamic chunk trained model</span>
+<span class="w">  </span><span class="c1"># -1 for full chunk</span>
+<span class="w">  </span><span class="nv">decoding_chunk_size</span><span class="o">=</span>
+<span class="w">  </span><span class="nv">ctc_weight</span><span class="o">=</span><span class="m">0</span>.5
+<span class="w">  </span><span class="c1"># Polling GPU id begin with index 0</span>
+<span class="w">  </span><span class="nv">num_gpus</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="nv">$CUDA_VISIBLE_DEVICES</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>awk<span class="w"> </span>-F<span class="w"> </span><span class="s2">&quot;,&quot;</span><span class="w"> </span><span class="s1">&#39;{print NF}&#39;</span><span class="k">)</span>
+<span class="w">  </span><span class="nv">idx</span><span class="o">=</span><span class="m">0</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="nv">$recog_set</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="k">for</span><span class="w"> </span>mode<span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="si">${</span><span class="nv">decode_modes</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span><span class="o">{</span>
+<span class="w">      </span><span class="o">{</span>
+<span class="w">        </span><span class="nv">test_dir</span><span class="o">=</span><span class="nv">$dir</span>/<span class="si">${</span><span class="nv">test</span><span class="si">}</span>_<span class="si">${</span><span class="nv">mode</span><span class="si">}</span>
+<span class="w">        </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$test_dir</span>
+<span class="w">        </span><span class="nv">gpu_id</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="nv">$CUDA_VISIBLE_DEVICES</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>cut<span class="w"> </span>-d<span class="s1">&#39;,&#39;</span><span class="w"> </span>-f$<span class="o">[</span><span class="nv">$idx</span>+1<span class="o">]</span><span class="k">)</span>
+<span class="w">        </span>python<span class="w"> </span>wenet/bin/recognize.py<span class="w"> </span>--gpu<span class="w"> </span><span class="nv">$gpu_id</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--mode<span class="w"> </span><span class="nv">$mode</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--config<span class="w"> </span><span class="nv">$dir</span>/train.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--data_type<span class="w"> </span>raw<span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--test_data<span class="w"> </span><span class="nv">$wave_data</span>/<span class="nv">$test</span>/data.list<span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--checkpoint<span class="w"> </span><span class="nv">$decode_checkpoint</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--beam_size<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--batch_size<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--penalty<span class="w"> </span><span class="m">0</span>.0<span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--dict<span class="w"> </span><span class="nv">$dict</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--result_file<span class="w"> </span><span class="nv">$test_dir</span>/text_bpe<span class="w"> </span><span class="se">\</span>
+<span class="w">          </span>--ctc_weight<span class="w"> </span><span class="nv">$ctc_weight</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span><span class="si">${</span><span class="nv">decoding_chunk_size</span><span class="p">:+--decoding_chunk_size </span><span class="nv">$decoding_chunk_size</span><span class="si">}</span>
 
-        tools/spm_decode --model<span class="o">=</span><span class="si">${</span><span class="nv">bpemodel</span><span class="si">}</span>.model --input_format<span class="o">=</span>piece &lt; <span class="nv">$test_dir</span>/text_bpe <span class="p">|</span> sed -e <span class="s2">&quot;s/▁/ /g&quot;</span> &gt; <span class="nv">$test_dir</span>/text
-        python tools/compute-wer.py --char<span class="o">=</span><span class="m">1</span> --v<span class="o">=</span><span class="m">1</span> <span class="se">\</span>
-          <span class="nv">$wave_data</span>/<span class="nv">$test</span>/text <span class="nv">$test_dir</span>/text &gt; <span class="nv">$test_dir</span>/wer
-      <span class="o">}</span> <span class="p">&amp;</span>
+<span class="w">        </span>tools/spm_decode<span class="w"> </span>--model<span class="o">=</span><span class="si">${</span><span class="nv">bpemodel</span><span class="si">}</span>.model<span class="w"> </span>--input_format<span class="o">=</span>piece<span class="w"> </span>&lt;<span class="w"> </span><span class="nv">$test_dir</span>/text_bpe<span class="w"> </span><span class="p">|</span><span class="w"> </span>sed<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;s/▁/ /g&quot;</span><span class="w"> </span>&gt;<span class="w"> </span><span class="nv">$test_dir</span>/text
+<span class="w">        </span>python<span class="w"> </span>tools/compute-wer.py<span class="w"> </span>--char<span class="o">=</span><span class="m">1</span><span class="w"> </span>--v<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="se">\</span>
+<span class="w">          </span><span class="nv">$wave_data</span>/<span class="nv">$test</span>/text<span class="w"> </span><span class="nv">$test_dir</span>/text<span class="w"> </span>&gt;<span class="w"> </span><span class="nv">$test_dir</span>/wer
+<span class="w">      </span><span class="o">}</span><span class="w"> </span><span class="p">&amp;</span>
 
-      <span class="o">((</span><span class="nv">idx</span><span class="o">+=</span><span class="m">1</span><span class="o">))</span>
-      <span class="k">if</span> <span class="o">[</span> <span class="nv">$idx</span> -eq <span class="nv">$num_gpus</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-        <span class="nv">idx</span><span class="o">=</span><span class="m">0</span>
-      <span class="k">fi</span>
-    <span class="o">}</span>
-    <span class="k">done</span>
-  <span class="k">done</span>
-  <span class="nb">wait</span>
+<span class="w">      </span><span class="o">((</span><span class="nv">idx</span><span class="o">+=</span><span class="m">1</span><span class="o">))</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="nv">$idx</span><span class="w"> </span>-eq<span class="w"> </span><span class="nv">$num_gpus</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">        </span><span class="nv">idx</span><span class="o">=</span><span class="m">0</span>
+<span class="w">      </span><span class="k">fi</span>
+<span class="w">    </span><span class="o">}</span>
+<span class="w">    </span><span class="k">done</span>
+<span class="w">  </span><span class="k">done</span>
+<span class="w">  </span><span class="nb">wait</span>
 
 <span class="k">fi</span>
 </pre></div>
@@ -452,78 +454,78 @@ You could use tensorboard to monitor the loss.</p>
 <li><p>WER evaluation</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute-wer.py</span></code> will calculate the word (or char) error rate of the result.</p>
-</div>
-<div class="section" id="stage-6-optional-export-the-trained-model">
-<h3>Stage 6(Optional): Export the trained model<a class="headerlink" href="#stage-6-optional-export-the-trained-model" title="Permalink to this headline"></a></h3>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">6</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">6</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="c1"># Export the best model you want</span>
-  python wenet/bin/export_jit.py <span class="se">\</span>
-    --config <span class="nv">$dir</span>/train.yaml <span class="se">\</span>
-    --checkpoint <span class="nv">$dir</span>/avg_<span class="si">${</span><span class="nv">average_num</span><span class="si">}</span>.pt <span class="se">\</span>
-    --output_file <span class="nv">$dir</span>/final.zip
+</section>
+<section id="stage-6-optional-export-the-trained-model">
+<h3>Stage 6(Optional): Export the trained model<a class="headerlink" href="#stage-6-optional-export-the-trained-model" title="Permalink to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="c1"># Export the best model you want</span>
+<span class="w">  </span>python<span class="w"> </span>wenet/bin/export_jit.py<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--config<span class="w"> </span><span class="nv">$dir</span>/train.yaml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--checkpoint<span class="w"> </span><span class="nv">$dir</span>/avg_<span class="si">${</span><span class="nv">average_num</span><span class="si">}</span>.pt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output_file<span class="w"> </span><span class="nv">$dir</span>/final.zip
 <span class="k">fi</span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">wenet/bin/export_jit.py</span></code> will export the trained model using Libtorch.
 The exported model files can be easily used for C++ inference in our runtime.
 It is required if you want to integrate language model(LM), as shown in Stage 7.</p>
-</div>
-<div class="section" id="stage-7-optional-add-lm-and-test-it-with-runtime">
-<h3>Stage 7(Optional): Add LM and test it with runtime<a class="headerlink" href="#stage-7-optional-add-lm-and-test-it-with-runtime" title="Permalink to this headline"></a></h3>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stage</span><span class="si">}</span> -le <span class="m">7</span> <span class="o">]</span> <span class="o">&amp;&amp;</span> <span class="o">[</span> <span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span> -ge <span class="m">7</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-  <span class="nv">lm</span><span class="o">=</span>data/local/lm
-  <span class="nv">lexicon</span><span class="o">=</span>data/local/dict/lexicon.txt
-  mkdir -p <span class="nv">$lm</span>
-  mkdir -p data/local/dict
+</section>
+<section id="stage-7-optional-add-lm-and-test-it-with-runtime">
+<h3>Stage 7(Optional): Add LM and test it with runtime<a class="headerlink" href="#stage-7-optional-add-lm-and-test-it-with-runtime" title="Permalink to this heading"></a></h3>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">7</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">7</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">  </span><span class="nv">lm</span><span class="o">=</span>data/local/lm
+<span class="w">  </span><span class="nv">lexicon</span><span class="o">=</span>data/local/dict/lexicon.txt
+<span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$lm</span>
+<span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span>data/local/dict
 
-  <span class="c1"># 7.1 Download &amp; format LM</span>
-  <span class="nv">which_lm</span><span class="o">=</span><span class="m">3</span>-gram.pruned.1e-7.arpa.gz
-  <span class="k">if</span> <span class="o">[</span> ! -e <span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/<span class="si">${</span><span class="nv">which_lm</span><span class="si">}</span> <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-    wget http://www.openslr.org/resources/11/<span class="si">${</span><span class="nv">which_lm</span><span class="si">}</span> -P <span class="si">${</span><span class="nv">lm</span><span class="si">}</span>
-  <span class="k">fi</span>
-  <span class="nb">echo</span> <span class="s2">&quot;unzip lm(</span><span class="nv">$which_lm</span><span class="s2">)...&quot;</span>
-  gunzip -k <span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/<span class="si">${</span><span class="nv">which_lm</span><span class="si">}</span> -c &gt; <span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/lm.arpa
-  <span class="nb">echo</span> <span class="s2">&quot;Lm saved as </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span><span class="s2">/lm.arpa&quot;</span>
+<span class="w">  </span><span class="c1"># 7.1 Download &amp; format LM</span>
+<span class="w">  </span><span class="nv">which_lm</span><span class="o">=</span><span class="m">3</span>-gram.pruned.1e-7.arpa.gz
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-e<span class="w"> </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/<span class="si">${</span><span class="nv">which_lm</span><span class="si">}</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span>wget<span class="w"> </span>http://www.openslr.org/resources/11/<span class="si">${</span><span class="nv">which_lm</span><span class="si">}</span><span class="w"> </span>-P<span class="w"> </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span>
+<span class="w">  </span><span class="k">fi</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;unzip lm(</span><span class="nv">$which_lm</span><span class="s2">)...&quot;</span>
+<span class="w">  </span>gunzip<span class="w"> </span>-k<span class="w"> </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/<span class="si">${</span><span class="nv">which_lm</span><span class="si">}</span><span class="w"> </span>-c<span class="w"> </span>&gt;<span class="w"> </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/lm.arpa
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Lm saved as </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span><span class="s2">/lm.arpa&quot;</span>
 
-  <span class="c1"># 7.2 Prepare dict</span>
-  <span class="nv">unit_file</span><span class="o">=</span><span class="nv">$dict</span>
-  <span class="nv">bpemodel</span><span class="o">=</span><span class="nv">$bpemodel</span>
-  <span class="c1"># use $dir/words.txt (unit_file) and $dir/train_960_unigram5000 (bpemodel)</span>
-  <span class="c1"># if you download pretrained librispeech conformer model</span>
-  cp <span class="nv">$unit_file</span> data/local/dict/units.txt
-  <span class="k">if</span> <span class="o">[</span> ! -e <span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/librispeech-lexicon.txt <span class="o">]</span><span class="p">;</span> <span class="k">then</span>
-    wget http://www.openslr.org/resources/11/librispeech-lexicon.txt -P <span class="si">${</span><span class="nv">lm</span><span class="si">}</span>
-  <span class="k">fi</span>
-  <span class="nb">echo</span> <span class="s2">&quot;build lexicon...&quot;</span>
-  tools/fst/prepare_dict.py <span class="nv">$unit_file</span> <span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/librispeech-lexicon.txt <span class="se">\</span>
-    <span class="nv">$lexicon</span> <span class="nv">$bpemodel</span>.model
-  <span class="nb">echo</span> <span class="s2">&quot;lexicon saved as &#39;</span><span class="nv">$lexicon</span><span class="s2">&#39;&quot;</span>
+<span class="w">  </span><span class="c1"># 7.2 Prepare dict</span>
+<span class="w">  </span><span class="nv">unit_file</span><span class="o">=</span><span class="nv">$dict</span>
+<span class="w">  </span><span class="nv">bpemodel</span><span class="o">=</span><span class="nv">$bpemodel</span>
+<span class="w">  </span><span class="c1"># use $dir/words.txt (unit_file) and $dir/train_960_unigram5000 (bpemodel)</span>
+<span class="w">  </span><span class="c1"># if you download pretrained librispeech conformer model</span>
+<span class="w">  </span>cp<span class="w"> </span><span class="nv">$unit_file</span><span class="w"> </span>data/local/dict/units.txt
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span>!<span class="w"> </span>-e<span class="w"> </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/librispeech-lexicon.txt<span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span>wget<span class="w"> </span>http://www.openslr.org/resources/11/librispeech-lexicon.txt<span class="w"> </span>-P<span class="w"> </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span>
+<span class="w">  </span><span class="k">fi</span>
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;build lexicon...&quot;</span>
+<span class="w">  </span>tools/fst/prepare_dict.py<span class="w"> </span><span class="nv">$unit_file</span><span class="w"> </span><span class="si">${</span><span class="nv">lm</span><span class="si">}</span>/librispeech-lexicon.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span><span class="nv">$lexicon</span><span class="w"> </span><span class="nv">$bpemodel</span>.model
+<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;lexicon saved as &#39;</span><span class="nv">$lexicon</span><span class="s2">&#39;&quot;</span>
 
-  <span class="c1"># 7.3 Build decoding TLG</span>
-  tools/fst/compile_lexicon_token_fst.sh <span class="se">\</span>
-     data/local/dict data/local/tmp data/local/lang
-  tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span>
+<span class="w">  </span><span class="c1"># 7.3 Build decoding TLG</span>
+<span class="w">  </span>tools/fst/compile_lexicon_token_fst.sh<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span>data/local/dict<span class="w"> </span>data/local/tmp<span class="w"> </span>data/local/lang
+<span class="w">  </span>tools/fst/make_tlg.sh<span class="w"> </span>data/local/lm<span class="w"> </span>data/local/lang<span class="w"> </span>data/lang_test<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span>
 
-  <span class="c1"># 7.4 Decoding with runtime</span>
-  <span class="nv">fst_dir</span><span class="o">=</span>data/lang_test
-  <span class="k">for</span> <span class="nb">test</span> in <span class="si">${</span><span class="nv">recog_set</span><span class="si">}</span><span class="p">;</span> <span class="k">do</span>
-    ./tools/decode.sh --nj <span class="m">6</span> <span class="se">\</span>
-      --beam <span class="m">10</span>.0 --lattice_beam <span class="m">5</span> --max_active <span class="m">7000</span> --blank_skip_thresh <span class="m">0</span>.98 <span class="se">\</span>
-      --ctc_weight <span class="m">0</span>.5 --rescoring_weight <span class="m">1</span>.0 --acoustic_scale <span class="m">1</span>.2 <span class="se">\</span>
-      --fst_path <span class="nv">$fst_dir</span>/TLG.fst <span class="se">\</span>
-      --dict_path <span class="nv">$fst_dir</span>/words.txt <span class="se">\</span>
-      data/<span class="nv">$test</span>/wav.scp data/<span class="nv">$test</span>/text <span class="nv">$dir</span>/final.zip <span class="nv">$fst_dir</span>/units.txt <span class="se">\</span>
-      <span class="nv">$dir</span>/lm_with_runtime_<span class="si">${</span><span class="nv">test</span><span class="si">}</span>
-    tail <span class="nv">$dir</span>/lm_with_runtime_<span class="si">${</span><span class="nv">test</span><span class="si">}</span>/wer
-  <span class="k">done</span>
+<span class="w">  </span><span class="c1"># 7.4 Decoding with runtime</span>
+<span class="w">  </span><span class="nv">fst_dir</span><span class="o">=</span>data/lang_test
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="nb">test</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="si">${</span><span class="nv">recog_set</span><span class="si">}</span><span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<span class="w">    </span>./tools/decode.sh<span class="w"> </span>--nj<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--beam<span class="w"> </span><span class="m">10</span>.0<span class="w"> </span>--lattice_beam<span class="w"> </span><span class="m">5</span><span class="w"> </span>--max_active<span class="w"> </span><span class="m">7000</span><span class="w"> </span>--blank_skip_thresh<span class="w"> </span><span class="m">0</span>.98<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--ctc_weight<span class="w"> </span><span class="m">0</span>.5<span class="w"> </span>--rescoring_weight<span class="w"> </span><span class="m">1</span>.0<span class="w"> </span>--acoustic_scale<span class="w"> </span><span class="m">1</span>.2<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--fst_path<span class="w"> </span><span class="nv">$fst_dir</span>/TLG.fst<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>--dict_path<span class="w"> </span><span class="nv">$fst_dir</span>/words.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span>data/<span class="nv">$test</span>/wav.scp<span class="w"> </span>data/<span class="nv">$test</span>/text<span class="w"> </span><span class="nv">$dir</span>/final.zip<span class="w"> </span><span class="nv">$fst_dir</span>/units.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">      </span><span class="nv">$dir</span>/lm_with_runtime_<span class="si">${</span><span class="nv">test</span><span class="si">}</span>
+<span class="w">    </span>tail<span class="w"> </span><span class="nv">$dir</span>/lm_with_runtime_<span class="si">${</span><span class="nv">test</span><span class="si">}</span>/wer
+<span class="w">  </span><span class="k">done</span>
 <span class="k">fi</span>
 </pre></div>
 </div>
 <p>LM is  only supported in runtime, you have to build the runtime as shown in <a class="reference external" href="https://github.com/wenet-e2e/wenet#installation">Installation</a>,
 and please refer <a class="reference external" href="https://wenet-e2e.github.io/wenet/lm.html">LM for WeNet</a> for the details of LM design.</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>

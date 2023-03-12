@@ -1,0 +1,7 @@
+wenet.utils.checkpoint module
+=============================
+
+.. automodule:: wenet.utils.checkpoint
+   :members:
+   :undoc-members:
+   :show-inheritance:

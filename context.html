@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Context Biasing &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Context Biasing &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -40,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="train.html">How to train models?</a></li>
@@ -110,111 +112,111 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="context-biasing">
-<h1>Context Biasing<a class="headerlink" href="#context-biasing" title="Permalink to this headline"></a></h1>
+<section id="context-biasing">
+<h1>Context Biasing<a class="headerlink" href="#context-biasing" title="Permalink to this heading"></a></h1>
 <p>In the practical application of ASR, the recognition effect of commonly used words is better, but for some unique words, the recognition accuracy may be low. Contextual biasing is the problem of injecting prior knowledge into an ASR system during inference, for example a user’s favorite songs, contacts, apps or location. Conventional ASR systems perform contextual biasing by building an n-gram finite state transducer (FST) from a list of biasing phrases, which is composed on-the-fly with the decoder graph during decoding. This helps to bias the recognition result towards the n-grams contained in the contextual FST, and thus improves accuracy in certain scenarios.</p>
 <p>In WeNet, we compute the biasing scores $P_C(\mathbf y)$, which are interpolated with the base model $P(\mathbf y|\mathbf x)$ using shallow-fusion during beam search, including CTC prefix beam search and CTC WFST beam search.</p>
 <p>$$
 \mathbf y^*=\mathrm{arg,max,log}P(\mathbf y|\mathbf x)+\lambda,\mathrm{log},P_C(\mathbf y)
 $$</p>
 <p>where, $\lambda$ is a tunable hyperparameter controlling how much the contextual LM influences the overall model score during beam search.</p>
-<div class="section" id="context-graph">
-<h2>Context Graph<a class="headerlink" href="#context-graph" title="Permalink to this headline"></a></h2>
+<section id="context-graph">
+<h2>Context Graph<a class="headerlink" href="#context-graph" title="Permalink to this heading"></a></h2>
 <p>If we want to improve the score of the word “cat”, and the biasing score $\lambda,\mathrm{log},P_C(\mathbf y)$ of each character is 0.25. The context graph can be constructed as follow:</p>
 <p><img alt="context graph" src="_images/context_graph.png" /></p>
 <p>In the decoding process, when the corresponding prefix is matched, the corresponding score reward will be obtained. In order to avoid artificially boosting prefixes which match early on but do not match the entire phrase, we add a special failure arc which removes the boosted score.</p>
 <p>WeNet records only one state for each prefix, to easily determine the boundary of the matched hot word. That is, only one hot word can be matched at the same time, and only after the hot word matching succeeds or fails can other hot words start matching.</p>
-<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span> <span class="n">ContextGraph</span><span class="o">::</span><span class="n">GetNextState</span><span class="p">(</span><span class="kt">int</span> <span class="n">cur_state</span><span class="p">,</span> <span class="kt">int</span> <span class="n">word_id</span><span class="p">,</span> <span class="kt">float</span><span class="o">*</span> <span class="n">score</span><span class="p">,</span>
-                               <span class="kt">bool</span><span class="o">*</span> <span class="n">is_start_boundary</span><span class="p">,</span> <span class="kt">bool</span><span class="o">*</span> <span class="n">is_end_boundary</span><span class="p">)</span> <span class="p">{</span>
-  <span class="kt">int</span> <span class="n">next_state</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-  <span class="c1">// Traverse the arcs of current state.</span>
-  <span class="k">for</span> <span class="p">(</span><span class="n">fst</span><span class="o">::</span><span class="n">ArcIterator</span><span class="o">&lt;</span><span class="n">fst</span><span class="o">::</span><span class="n">StdFst</span><span class="o">&gt;</span> <span class="n">aiter</span><span class="p">(</span><span class="o">*</span><span class="n">graph_</span><span class="p">,</span> <span class="n">cur_state</span><span class="p">);</span> <span class="o">!</span><span class="n">aiter</span><span class="p">.</span><span class="n">Done</span><span class="p">();</span>
-       <span class="n">aiter</span><span class="p">.</span><span class="n">Next</span><span class="p">())</span> <span class="p">{</span>
-    <span class="k">const</span> <span class="n">fst</span><span class="o">::</span><span class="n">StdArc</span><span class="o">&amp;</span> <span class="n">arc</span> <span class="o">=</span> <span class="n">aiter</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
-    <span class="k">if</span> <span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-      <span class="c1">// Record the score of the backoff arc. It might will be covered.</span>
-      <span class="o">*</span><span class="n">score</span> <span class="o">=</span> <span class="n">arc</span><span class="p">.</span><span class="n">weight</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
-    <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span> <span class="o">==</span> <span class="n">word_id</span><span class="p">)</span> <span class="p">{</span>
-      <span class="c1">// If they match, record the next state and the score.</span>
-      <span class="n">next_state</span> <span class="o">=</span> <span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">;</span>
-      <span class="o">*</span><span class="n">score</span> <span class="o">=</span> <span class="n">arc</span><span class="p">.</span><span class="n">weight</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
-      <span class="c1">// Check whether is the boundary of the hot word.</span>
-      <span class="k">if</span> <span class="p">(</span><span class="n">cur_state</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-        <span class="o">*</span><span class="n">is_start_boundary</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-      <span class="p">}</span>
-      <span class="k">if</span> <span class="p">(</span><span class="n">graph_</span><span class="o">-&gt;</span><span class="n">Final</span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">)</span> <span class="o">==</span> <span class="n">fst</span><span class="o">::</span><span class="n">StdArc</span><span class="o">::</span><span class="n">Weight</span><span class="o">::</span><span class="n">One</span><span class="p">())</span> <span class="p">{</span>
-        <span class="o">*</span><span class="n">is_end_boundary</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
-      <span class="p">}</span>
-      <span class="k">break</span><span class="p">;</span>
-    <span class="p">}</span>
-  <span class="p">}</span>
-  <span class="k">return</span> <span class="n">next_state</span><span class="p">;</span>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">ContextGraph::GetNextState</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">cur_state</span><span class="p">,</span><span class="w"> </span><span class="kt">int</span><span class="w"> </span><span class="n">word_id</span><span class="p">,</span><span class="w"> </span><span class="kt">float</span><span class="o">*</span><span class="w"> </span><span class="n">score</span><span class="p">,</span>
+<span class="w">                               </span><span class="kt">bool</span><span class="o">*</span><span class="w"> </span><span class="n">is_start_boundary</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="o">*</span><span class="w"> </span><span class="n">is_end_boundary</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="kt">int</span><span class="w"> </span><span class="n">next_state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">  </span><span class="c1">// Traverse the arcs of current state.</span>
+<span class="w">  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">fst</span><span class="o">::</span><span class="n">ArcIterator</span><span class="o">&lt;</span><span class="n">fst</span><span class="o">::</span><span class="n">StdFst</span><span class="o">&gt;</span><span class="w"> </span><span class="n">aiter</span><span class="p">(</span><span class="o">*</span><span class="n">graph_</span><span class="p">,</span><span class="w"> </span><span class="n">cur_state</span><span class="p">);</span><span class="w"> </span><span class="o">!</span><span class="n">aiter</span><span class="p">.</span><span class="n">Done</span><span class="p">();</span>
+<span class="w">       </span><span class="n">aiter</span><span class="p">.</span><span class="n">Next</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">const</span><span class="w"> </span><span class="n">fst</span><span class="o">::</span><span class="n">StdArc</span><span class="o">&amp;</span><span class="w"> </span><span class="n">arc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">aiter</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// Record the score of the backoff arc. It might will be covered.</span>
+<span class="w">      </span><span class="o">*</span><span class="n">score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arc</span><span class="p">.</span><span class="n">weight</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
+<span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">word_id</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="c1">// If they match, record the next state and the score.</span>
+<span class="w">      </span><span class="n">next_state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">;</span>
+<span class="w">      </span><span class="o">*</span><span class="n">score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">arc</span><span class="p">.</span><span class="n">weight</span><span class="p">.</span><span class="n">Value</span><span class="p">();</span>
+<span class="w">      </span><span class="c1">// Check whether is the boundary of the hot word.</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">cur_state</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="o">*</span><span class="n">is_start_boundary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">      </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">graph_</span><span class="o">-&gt;</span><span class="n">Final</span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">)</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">fst</span><span class="o">::</span><span class="n">StdArc</span><span class="o">::</span><span class="n">Weight</span><span class="o">::</span><span class="n">One</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="o">*</span><span class="n">is_end_boundary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">      </span><span class="k">break</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="k">return</span><span class="w"> </span><span class="n">next_state</span><span class="p">;</span>
 <span class="p">}</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="ctc-prefix-beam-search">
-<h2>CTC Prefix Beam Search<a class="headerlink" href="#ctc-prefix-beam-search" title="Permalink to this headline"></a></h2>
+</section>
+<section id="ctc-prefix-beam-search">
+<h2>CTC Prefix Beam Search<a class="headerlink" href="#ctc-prefix-beam-search" title="Permalink to this heading"></a></h2>
 <p>In the process of CTC prefix beam search, each prefix needs to record the hot word matching information. After appending the current output character, if the prefix changes, call the above function <code class="docutils literal notranslate"><span class="pre">GetNextState</span></code> to update the state and score of the hot word. If it is the start or end of a hot word, it is also necessary to record the position, which are used to insert the start tag and end tag in the result, such as: “The &lt;context&gt;cat&lt;/context&gt; is in the bag”.</p>
-</div>
-<div class="section" id="ctc-wfst-beam-search">
-<h2>CTC WFST Beam Search<a class="headerlink" href="#ctc-wfst-beam-search" title="Permalink to this headline"></a></h2>
+</section>
+<section id="ctc-wfst-beam-search">
+<h2>CTC WFST Beam Search<a class="headerlink" href="#ctc-wfst-beam-search" title="Permalink to this heading"></a></h2>
 <p>WeNet adopts the Lattice Faster Online Decoder from Kaldi for WFST beam search. We have to modify the <code class="docutils literal notranslate"><span class="pre">lattice-faster-decoder.cc</span></code> to support context biasing.</p>
 <p>WFST beam search decodes in the TLG graph according to the CTC outputs. If we bias the input label of the TLG, we need to compose the context graph with the Token graph. Finally, we decide to bias TLG’s output towards the contextual fst. We need to modify the <code class="docutils literal notranslate"><span class="pre">ProcessEmitting</span></code> and <code class="docutils literal notranslate"><span class="pre">ProcessNonemitting</span></code> functions as follow:</p>
-<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">Elem</span> <span class="o">*</span><span class="n">e_next</span> <span class="o">=</span>
-    <span class="n">FindOrAddToken</span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">,</span> <span class="n">frame</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">tot_cost</span><span class="p">,</span> <span class="n">tok</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">Elem</span><span class="w"> </span><span class="o">*</span><span class="n">e_next</span><span class="w"> </span><span class="o">=</span>
+<span class="w">    </span><span class="n">FindOrAddToken</span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">nextstate</span><span class="p">,</span><span class="w"> </span><span class="n">frame</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="n">tot_cost</span><span class="p">,</span><span class="w"> </span><span class="n">tok</span><span class="p">,</span><span class="w"> </span><span class="nb">NULL</span><span class="p">);</span>
 <span class="c1">// NULL: no change indicator needed</span>
 
 <span class="c1">// ========== Context code BEGIN ===========</span>
-<span class="kt">bool</span> <span class="n">is_start_boundary</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-<span class="kt">bool</span> <span class="n">is_end_boundary</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
-<span class="kt">float</span> <span class="n">context_score</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
-<span class="k">if</span> <span class="p">(</span><span class="n">context_graph_</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">olabel</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="o">-&gt;</span><span class="n">context_state</span> <span class="o">=</span> <span class="n">tok</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="p">;</span>
-  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
-    <span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="o">-&gt;</span><span class="n">context_state</span> <span class="o">=</span> <span class="n">context_graph_</span><span class="o">-&gt;</span><span class="n">GetNextState</span><span class="p">(</span>
-      <span class="n">tok</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="p">,</span> <span class="n">arc</span><span class="p">.</span><span class="n">olabel</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">context_score</span><span class="p">,</span>
-      <span class="o">&amp;</span><span class="n">is_start_boundary</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">is_end_boundary</span><span class="p">);</span>
-    <span class="n">graph_cost</span> <span class="o">-=</span> <span class="n">context_score</span><span class="p">;</span>
-  <span class="p">}</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">is_start_boundary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="kt">bool</span><span class="w"> </span><span class="n">is_end_boundary</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+<span class="kt">float</span><span class="w"> </span><span class="n">context_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">context_graph_</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">arc</span><span class="p">.</span><span class="n">olabel</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tok</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context_graph_</span><span class="o">-&gt;</span><span class="n">GetNextState</span><span class="p">(</span>
+<span class="w">      </span><span class="n">tok</span><span class="o">-&gt;</span><span class="n">context_state</span><span class="p">,</span><span class="w"> </span><span class="n">arc</span><span class="p">.</span><span class="n">olabel</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">context_score</span><span class="p">,</span>
+<span class="w">      </span><span class="o">&amp;</span><span class="n">is_start_boundary</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">is_end_boundary</span><span class="p">);</span>
+<span class="w">    </span><span class="n">graph_cost</span><span class="w"> </span><span class="o">-=</span><span class="w"> </span><span class="n">context_score</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 <span class="c1">// ========== Context code END ==========</span>
 
 <span class="c1">// Add ForwardLink from tok to next_tok (put on head of list</span>
 <span class="c1">// tok-&gt;links)</span>
-<span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span> <span class="o">=</span> <span class="k">new</span> <span class="n">ForwardLinkT</span><span class="p">(</span><span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">,</span> <span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span><span class="p">,</span> <span class="n">arc</span><span class="p">.</span><span class="n">olabel</span><span class="p">,</span>
-                              <span class="n">graph_cost</span><span class="p">,</span> <span class="n">ac_cost</span><span class="p">,</span> <span class="n">is_start_boundary</span><span class="p">,</span>
-                              <span class="n">is_end_boundary</span><span class="p">,</span> <span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span><span class="p">);</span>
-<span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span><span class="o">-&gt;</span><span class="n">context_score</span> <span class="o">=</span> <span class="n">context_score</span><span class="p">;</span>
+<span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">new</span><span class="w"> </span><span class="n">ForwardLinkT</span><span class="p">(</span><span class="n">e_next</span><span class="o">-&gt;</span><span class="n">val</span><span class="p">,</span><span class="w"> </span><span class="n">arc</span><span class="p">.</span><span class="n">ilabel</span><span class="p">,</span><span class="w"> </span><span class="n">arc</span><span class="p">.</span><span class="n">olabel</span><span class="p">,</span>
+<span class="w">                              </span><span class="n">graph_cost</span><span class="p">,</span><span class="w"> </span><span class="n">ac_cost</span><span class="p">,</span><span class="w"> </span><span class="n">is_start_boundary</span><span class="p">,</span>
+<span class="w">                              </span><span class="n">is_end_boundary</span><span class="p">,</span><span class="w"> </span><span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span><span class="p">);</span>
+<span class="n">tok</span><span class="o">-&gt;</span><span class="n">links</span><span class="o">-&gt;</span><span class="n">context_score</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context_score</span><span class="p">;</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="pruning">
-<h2>Pruning<a class="headerlink" href="#pruning" title="Permalink to this headline"></a></h2>
+</section>
+<section id="pruning">
+<h2>Pruning<a class="headerlink" href="#pruning" title="Permalink to this heading"></a></h2>
 <p>The backoff arc will return the accumulated scores to a single ForwardLink. It leads to the cost of that ForwardLink is too large. We have to remove the cost returned by backoff arc before pruning.</p>
-<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span> <span class="n">LatticeFasterDecoderTpl</span><span class="o">&lt;</span><span class="n">FST</span><span class="p">,</span> <span class="n">Token</span><span class="o">&gt;::</span><span class="n">PruneForwardLinks</span><span class="p">(</span>
-    <span class="n">int32</span> <span class="n">frame_plus_one</span><span class="p">,</span> <span class="kt">bool</span> <span class="o">*</span><span class="n">extra_costs_changed</span><span class="p">,</span> <span class="kt">bool</span> <span class="o">*</span><span class="n">links_pruned</span><span class="p">,</span>
-    <span class="n">BaseFloat</span> <span class="n">delta</span><span class="p">)</span> <span class="p">{</span>
-  <span class="p">...</span>
-  <span class="n">BaseFloat</span> <span class="n">link_extra_cost</span> <span class="o">=</span>
-            <span class="n">next_tok</span><span class="o">-&gt;</span><span class="n">extra_cost</span> <span class="o">+</span>
-            <span class="p">((</span><span class="n">tok</span><span class="o">-&gt;</span><span class="n">tot_cost</span> <span class="o">+</span> <span class="n">link</span><span class="o">-&gt;</span><span class="n">acoustic_cost</span> <span class="o">+</span> <span class="n">link</span><span class="o">-&gt;</span><span class="n">graph_cost</span><span class="p">)</span> <span class="o">-</span>
-             <span class="n">next_tok</span><span class="o">-&gt;</span><span class="n">tot_cost</span><span class="p">);</span>  <span class="c1">// difference in brackets is &gt;= 0</span>
-  <span class="c1">// ========== Context code BEGIN ===========</span>
-  <span class="c1">// graph_cost contains the score of hot word</span>
-  <span class="c1">// link-&gt;context_score &lt; 0 means the hot word of the link is returned from backoff arc</span>
-  <span class="k">if</span> <span class="p">(</span><span class="n">link</span><span class="o">-&gt;</span><span class="n">context_score</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-    <span class="n">link_extra_cost</span> <span class="o">+=</span> <span class="n">link</span><span class="o">-&gt;</span><span class="n">context_score</span><span class="p">;</span>
-  <span class="p">}</span>
-  <span class="c1">// ========== Context code END ==========</span>
-  <span class="c1">// link_exta_cost is the difference in score between the best paths</span>
-  <span class="c1">// through link source state and through link destination state</span>
+<div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="n">LatticeFasterDecoderTpl</span><span class="o">&lt;</span><span class="n">FST</span><span class="p">,</span><span class="w"> </span><span class="n">Token</span><span class="o">&gt;::</span><span class="n">PruneForwardLinks</span><span class="p">(</span>
+<span class="w">    </span><span class="n">int32</span><span class="w"> </span><span class="n">frame_plus_one</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="o">*</span><span class="n">extra_costs_changed</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="o">*</span><span class="n">links_pruned</span><span class="p">,</span>
+<span class="w">    </span><span class="n">BaseFloat</span><span class="w"> </span><span class="n">delta</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">...</span>
+<span class="w">  </span><span class="n">BaseFloat</span><span class="w"> </span><span class="n">link_extra_cost</span><span class="w"> </span><span class="o">=</span>
+<span class="w">            </span><span class="n">next_tok</span><span class="o">-&gt;</span><span class="n">extra_cost</span><span class="w"> </span><span class="o">+</span>
+<span class="w">            </span><span class="p">((</span><span class="n">tok</span><span class="o">-&gt;</span><span class="n">tot_cost</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">link</span><span class="o">-&gt;</span><span class="n">acoustic_cost</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">link</span><span class="o">-&gt;</span><span class="n">graph_cost</span><span class="p">)</span><span class="w"> </span><span class="o">-</span>
+<span class="w">             </span><span class="n">next_tok</span><span class="o">-&gt;</span><span class="n">tot_cost</span><span class="p">);</span><span class="w">  </span><span class="c1">// difference in brackets is &gt;= 0</span>
+<span class="w">  </span><span class="c1">// ========== Context code BEGIN ===========</span>
+<span class="w">  </span><span class="c1">// graph_cost contains the score of hot word</span>
+<span class="w">  </span><span class="c1">// link-&gt;context_score &lt; 0 means the hot word of the link is returned from backoff arc</span>
+<span class="w">  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">link</span><span class="o">-&gt;</span><span class="n">context_score</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">link_extra_cost</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="n">link</span><span class="o">-&gt;</span><span class="n">context_score</span><span class="p">;</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="w">  </span><span class="c1">// ========== Context code END ==========</span>
+<span class="w">  </span><span class="c1">// link_exta_cost is the difference in score between the best paths</span>
+<span class="w">  </span><span class="c1">// through link source state and through link destination state</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h2>
 <ol class="simple">
 <li><p>Specify the <code class="docutils literal notranslate"><span class="pre">--context_path</span></code> to a text file.</p>
 <ul class="simple">
@@ -224,23 +226,23 @@ $$</p>
 </li>
 <li><p>Specify the <code class="docutils literal notranslate"><span class="pre">--context_score</span></code>, the reward of each word in the context.</p></li>
 </ol>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span> /home/wenet/runtime/libtorch
-<span class="nb">export</span> <span class="nv">GLOG_logtostderr</span><span class="o">=</span><span class="m">1</span>
-<span class="nb">export</span> <span class="nv">GLOG_v</span><span class="o">=</span><span class="m">2</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>/home/wenet/runtime/libtorch
+<span class="nb">export</span><span class="w"> </span><span class="nv">GLOG_logtostderr</span><span class="o">=</span><span class="m">1</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">GLOG_v</span><span class="o">=</span><span class="m">2</span>
 <span class="nv">wav_path</span><span class="o">=</span>docker_resource/test.wav
 <span class="nv">context_path</span><span class="o">=</span>docker_resource/context.txt
 <span class="nv">model_dir</span><span class="o">=</span>docker_resource/model
-./build/decoder_main <span class="se">\</span>
-    --chunk_size -1 <span class="se">\</span>
-    --wav_path <span class="nv">$wav_path</span> <span class="se">\</span>
-    --model_path <span class="nv">$model_dir</span>/final.zip <span class="se">\</span>
-    --context_path <span class="nv">$context_path</span> <span class="se">\</span>
-    --context_score <span class="m">3</span> <span class="se">\</span>
-    --unit_path <span class="nv">$model_dir</span>/units.txt <span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span> <span class="p">|</span> tee log.txt
+./build/decoder_main<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--chunk_size<span class="w"> </span>-1<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--wav_path<span class="w"> </span><span class="nv">$wav_path</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--model_path<span class="w"> </span><span class="nv">$model_dir</span>/final.zip<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--context_path<span class="w"> </span><span class="nv">$context_path</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--context_score<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--unit_path<span class="w"> </span><span class="nv">$model_dir</span>/units.txt<span class="w"> </span><span class="m">2</span>&gt;<span class="p">&amp;</span><span class="m">1</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>tee<span class="w"> </span>log.txt
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

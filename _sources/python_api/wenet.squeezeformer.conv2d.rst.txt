@@ -1,0 +1,7 @@
+wenet.squeezeformer.conv2d module
+=================================
+
+.. automodule:: wenet.squeezeformer.conv2d
+   :members:
+   :undoc-members:
+   :show-inheritance:

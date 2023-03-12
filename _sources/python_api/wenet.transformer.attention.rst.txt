@@ -1,0 +1,7 @@
+wenet.transformer.attention module
+==================================
+
+.. automodule:: wenet.transformer.attention
+   :members:
+   :undoc-members:
+   :show-inheritance:

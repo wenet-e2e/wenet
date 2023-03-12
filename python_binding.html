@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Python Binding &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Python Binding &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -40,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="train.html">How to train models?</a></li>
@@ -57,6 +59,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="papers.html">Papers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python_api/modules.html">Python API Reference</a></li>
 </ul>
 </li>
 </ul>
@@ -110,8 +113,8 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="python-binding">
-<h1>Python Binding<a class="headerlink" href="#python-binding" title="Permalink to this headline"></a></h1>
+<section id="python-binding">
+<h1>Python Binding<a class="headerlink" href="#python-binding" title="Permalink to this heading"></a></h1>
 <p>This is a python binding of WeNet.</p>
 <p>WeNet is a production first and production ready end-to-end speech recognition toolkit.</p>
 <p>The best things of the binding are:</p>
@@ -121,22 +124,22 @@
 <li><p>N-best, contextual biasing, and timestamp supports, which are very important for speech productions.</p></li>
 <li><p>Alignment support. You can get phone level alignments this tool, on developing.</p></li>
 </ol>
-<div class="section" id="install">
-<h2>Install<a class="headerlink" href="#install" title="Permalink to this headline"></a></h2>
+<section id="install">
+<h2>Install<a class="headerlink" href="#install" title="Permalink to this heading"></a></h2>
 <p>Python 3.6+ is required.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip3 install wenetruntime
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip3<span class="w"> </span>install<span class="w"> </span>wenetruntime
 </pre></div>
 </div>
-</div>
-<div class="section" id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this headline"></a></h2>
+</section>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h2>
 <p>Note:</p>
 <ol class="simple">
 <li><p>For macOS, wenetruntime packed <code class="docutils literal notranslate"><span class="pre">libtorch.so</span></code>, so we can’t import torch and wenetruntime at the same time.</p></li>
 <li><p>For Windows and Linux, wenetruntime depends on torch. Please install and import the same version <code class="docutils literal notranslate"><span class="pre">torch</span></code> as wenetruntime.</p></li>
 </ol>
-<div class="section" id="non-streaming-usage">
-<h3>Non-streaming Usage<a class="headerlink" href="#non-streaming-usage" title="Permalink to this headline"></a></h3>
+<section id="non-streaming-usage">
+<h3>Non-streaming Usage<a class="headerlink" href="#non-streaming-usage" title="Permalink to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">wenetruntime</span> <span class="k">as</span> <span class="nn">wenet</span>
@@ -175,9 +178,9 @@ If not provided, official model for specific <code class="docutils literal notra
                         <span class="n">context_score</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="streaming-usage">
-<h3>Streaming Usage<a class="headerlink" href="#streaming-usage" title="Permalink to this headline"></a></h3>
+</section>
+<section id="streaming-usage">
+<h3>Streaming Usage<a class="headerlink" href="#streaming-usage" title="Permalink to this heading"></a></h3>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">wave</span>
@@ -200,17 +203,17 @@ If not provided, official model for specific <code class="docutils literal notra
 </pre></div>
 </div>
 <p>You can use the same parameters as we introduced above to control the behavior of <code class="docutils literal notranslate"><span class="pre">wenet.Decoder</span></code></p>
-</div>
-</div>
-<div class="section" id="build-on-your-local-machine">
-<h2>Build on Your Local Machine<a class="headerlink" href="#build-on-your-local-machine" title="Permalink to this headline"></a></h2>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/wenet-e2e/wenet.git
-<span class="nb">cd</span> wenet/runtime/binding/python
-python setup.py install
+</section>
+</section>
+<section id="build-on-your-local-machine">
+<h2>Build on Your Local Machine<a class="headerlink" href="#build-on-your-local-machine" title="Permalink to this heading"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wenet-e2e/wenet.git
+<span class="nb">cd</span><span class="w"> </span>wenet/runtime/binding/python
+python<span class="w"> </span>setup.py<span class="w"> </span>install
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

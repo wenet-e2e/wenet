@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LM for WeNet &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>LM for WeNet &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -40,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="train.html">How to train models?</a></li>
@@ -110,12 +112,12 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="lm-for-wenet">
-<h1>LM for WeNet<a class="headerlink" href="#lm-for-wenet" title="Permalink to this headline"></a></h1>
+<section id="lm-for-wenet">
+<h1>LM for WeNet<a class="headerlink" href="#lm-for-wenet" title="Permalink to this heading"></a></h1>
 <p>WeNet uses n-gram based statistical language model and the WFST framework to support the custom language model.
 And LM is only supported in runtime of WeNet.</p>
-<div class="section" id="motivation">
-<h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this headline"></a></h2>
+<section id="motivation">
+<h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this heading"></a></h2>
 <p>Why n-gram based LM? This may be the first question many people will ask.
 Now that LM based on RNN and Transformer is in full swing, why does WeNet go backward?
 The reason is simple, it is for productivity.
@@ -137,9 +139,9 @@ The difference to traditional speech recognition are:</p>
 <li><p>The training in WeNet is pure end to end.</p></li>
 <li><p>As described below, LM is optional in decoding, you can choose whether to use LM according to your needs and application scenarios.</p></li>
 </ol>
-</div>
-<div class="section" id="system-design">
-<h2>System Design<a class="headerlink" href="#system-design" title="Permalink to this headline"></a></h2>
+</section>
+<section id="system-design">
+<h2>System Design<a class="headerlink" href="#system-design" title="Permalink to this heading"></a></h2>
 <p>The whole system is shown in the bellowing picture. There are two ways to generate N-best.</p>
 <p><img alt="LM System Design" src="_images/lm_system.png" /></p>
 <ol class="simple">
@@ -156,9 +158,9 @@ We can see there is no phonemes and there is no need to design pronunciation on 
 <li><p>G is the language model, namely compiling the n-gram to standard WFST representation.</p></li>
 </ol>
 <p>The second is the decoder, which is the same as the traditional decoder, which uses the standard Viterbi beam search algorithm in decoding.</p>
-</div>
-<div class="section" id="implementation">
-<h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this headline"></a></h2>
+</section>
+<section id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this heading"></a></h2>
 <p>WeNet draws on the decoder and related tools in Kaldi to support LM and WFST based decoding.
 For ease of using and keeping independence, we directly migrated the code related to decoding in Kaldi to <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/core/kaldi">this directory</a> in WeNet runtime.
 And modify and organize according to the following principles:</p>
@@ -173,45 +175,45 @@ And we use blank frame skipping to speed up decoding.</p>
 <p>In addition, WeNet also migrated related tools for building the decoding graph,
 such as arpa2fst, fstdeterminizestar, fsttablecompose, fstminimizeencoded, and other tools.
 So all the tools related to LM are built-in tools and can be used out of the box.</p>
-</div>
-<div class="section" id="results">
-<h2>Results<a class="headerlink" href="#results" title="Permalink to this headline"></a></h2>
+</section>
+<section id="results">
+<h2>Results<a class="headerlink" href="#results" title="Permalink to this heading"></a></h2>
 <p>We get consistent gain (3%~10%) on different datasets,
 including aishell, aishell2, and librispeech,
 please go to the corresponding example dataset for the details.</p>
-</div>
-<div class="section" id="how-to-use">
-<h2>How to use?<a class="headerlink" href="#how-to-use" title="Permalink to this headline"></a></h2>
+</section>
+<section id="how-to-use">
+<h2>How to use?<a class="headerlink" href="#how-to-use" title="Permalink to this heading"></a></h2>
 <p>Here is an example from aishell, which shows how to prepare the dictionary, how to train the LM,
 how to build the graph, and how to decode with the runtime.</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># 7.1 Prepare dict</span>
 <span class="nv">unit_file</span><span class="o">=</span><span class="nv">$dict</span>
-mkdir -p data/local/dict
-cp <span class="nv">$unit_file</span> data/local/dict/units.txt
-tools/fst/prepare_dict.py <span class="nv">$unit_file</span> <span class="si">${</span><span class="nv">data</span><span class="si">}</span>/resource_aishell/lexicon.txt <span class="se">\</span>
-    data/local/dict/lexicon.txt
+mkdir<span class="w"> </span>-p<span class="w"> </span>data/local/dict
+cp<span class="w"> </span><span class="nv">$unit_file</span><span class="w"> </span>data/local/dict/units.txt
+tools/fst/prepare_dict.py<span class="w"> </span><span class="nv">$unit_file</span><span class="w"> </span><span class="si">${</span><span class="nv">data</span><span class="si">}</span>/resource_aishell/lexicon.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data/local/dict/lexicon.txt
 <span class="c1"># 7.2 Train lm</span>
 <span class="nv">lm</span><span class="o">=</span>data/local/lm
-mkdir -p <span class="nv">$lm</span>
-tools/filter_scp.pl data/train/text <span class="se">\</span>
-     <span class="nv">$data</span>/data_aishell/transcript/aishell_transcript_v0.8.txt &gt; <span class="nv">$lm</span>/text
+mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$lm</span>
+tools/filter_scp.pl<span class="w"> </span>data/train/text<span class="w"> </span><span class="se">\</span>
+<span class="w">     </span><span class="nv">$data</span>/data_aishell/transcript/aishell_transcript_v0.8.txt<span class="w"> </span>&gt;<span class="w"> </span><span class="nv">$lm</span>/text
 local/aishell_train_lms.sh
 <span class="c1"># 7.3 Build decoding TLG</span>
-tools/fst/compile_lexicon_token_fst.sh <span class="se">\</span>
-    data/local/dict data/local/tmp data/local/lang
-tools/fst/make_tlg.sh data/local/lm data/local/lang data/lang_test <span class="o">||</span> <span class="nb">exit</span> <span class="m">1</span><span class="p">;</span>
+tools/fst/compile_lexicon_token_fst.sh<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data/local/dict<span class="w"> </span>data/local/tmp<span class="w"> </span>data/local/lang
+tools/fst/make_tlg.sh<span class="w"> </span>data/local/lm<span class="w"> </span>data/local/lang<span class="w"> </span>data/lang_test<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">exit</span><span class="w"> </span><span class="m">1</span><span class="p">;</span>
 <span class="c1"># 7.4 Decoding with runtime</span>
-./tools/decode.sh --nj <span class="m">16</span> <span class="se">\</span>
-    --beam <span class="m">15</span>.0 --lattice_beam <span class="m">7</span>.5 --max_active <span class="m">7000</span> <span class="se">\</span>
-    --blank_skip_thresh <span class="m">0</span>.98 --ctc_weight <span class="m">0</span>.5 --rescoring_weight <span class="m">1</span>.0 <span class="se">\</span>
-    --fst_path data/lang_test/TLG.fst <span class="se">\</span>
-    --dict_path data/lang_test/words.txt <span class="se">\</span>
-    data/test/wav.scp data/test/text <span class="nv">$dir</span>/final.zip <span class="se">\</span>
-    data/lang_test/units.txt <span class="nv">$dir</span>/lm_with_runtime
+./tools/decode.sh<span class="w"> </span>--nj<span class="w"> </span><span class="m">16</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--beam<span class="w"> </span><span class="m">15</span>.0<span class="w"> </span>--lattice_beam<span class="w"> </span><span class="m">7</span>.5<span class="w"> </span>--max_active<span class="w"> </span><span class="m">7000</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--blank_skip_thresh<span class="w"> </span><span class="m">0</span>.98<span class="w"> </span>--ctc_weight<span class="w"> </span><span class="m">0</span>.5<span class="w"> </span>--rescoring_weight<span class="w"> </span><span class="m">1</span>.0<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--fst_path<span class="w"> </span>data/lang_test/TLG.fst<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--dict_path<span class="w"> </span>data/lang_test/words.txt<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data/test/wav.scp<span class="w"> </span>data/test/text<span class="w"> </span><span class="nv">$dir</span>/final.zip<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>data/lang_test/units.txt<span class="w"> </span><span class="nv">$dir</span>/lm_with_runtime
 </pre></div>
 </div>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

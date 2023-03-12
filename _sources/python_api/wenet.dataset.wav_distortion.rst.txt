@@ -1,0 +1,7 @@
+wenet.dataset.wav\_distortion module
+====================================
+
+.. automodule:: wenet.dataset.wav_distortion
+   :members:
+   :undoc-members:
+   :show-inheritance:

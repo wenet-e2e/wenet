@@ -1,0 +1,7 @@
+wenet.utils.init\_model module
+==============================
+
+.. automodule:: wenet.utils.init_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

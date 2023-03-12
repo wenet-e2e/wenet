@@ -1,0 +1,7 @@
+wenet.transformer.embedding module
+==================================
+
+.. automodule:: wenet.transformer.embedding
+   :members:
+   :undoc-members:
+   :show-inheritance:

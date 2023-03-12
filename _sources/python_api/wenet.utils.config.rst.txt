@@ -1,0 +1,7 @@
+wenet.utils.config module
+=========================
+
+.. automodule:: wenet.utils.config
+   :members:
+   :undoc-members:
+   :show-inheritance:

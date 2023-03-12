@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Runtime for WeNet &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Runtime for WeNet &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -40,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1"><a class="reference internal" href="train.html">How to train models?</a></li>
@@ -113,8 +115,8 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="runtime-for-wenet">
-<h1>Runtime for WeNet<a class="headerlink" href="#runtime-for-wenet" title="Permalink to this headline"></a></h1>
+<section id="runtime-for-wenet">
+<h1>Runtime for WeNet<a class="headerlink" href="#runtime-for-wenet" title="Permalink to this heading"></a></h1>
 <p>WeNet runtime uses <a class="reference external" href="https://arxiv.org/pdf/2102.01547.pdf">Unified Two Pass (U2)</a> framework for inference. U2 has the following advantages:</p>
 <ul class="simple">
 <li><p><strong>Unified</strong>: U2 unified the streaming and non-streaming model in a simple way, and our runtime is also unified. Therefore you can easily balance the latency and accuracy by changing chunk_size (described in the following section).</p></li>
@@ -122,8 +124,8 @@
 <li><p><strong>Fast</strong>: Our runtime uses attention rescoring based decoding method described in U2, which is much faster than a traditional autoregressive beam search.</p></li>
 <li><p><strong>Other benefits</strong>: In practice, we find U2 is more stable on long-form speech than standard transformer which usually fails or degrades a lot on long-form speech; and we can easily get the word-level time stamps by CTC spikes in U2. Both of these aspects are favored for industry adoption.</p></li>
 </ul>
-<div class="section" id="platforms-supported">
-<h2>Platforms Supported<a class="headerlink" href="#platforms-supported" title="Permalink to this headline"></a></h2>
+<section id="platforms-supported">
+<h2>Platforms Supported<a class="headerlink" href="#platforms-supported" title="Permalink to this heading"></a></h2>
 <p>The WeNet runtime supports the following platforms.</p>
 <ul class="simple">
 <li><p>Server</p>
@@ -137,19 +139,19 @@
 </ul>
 </li>
 </ul>
-</div>
-<div class="section" id="architecture-and-implementation">
-<h2>Architecture and Implementation<a class="headerlink" href="#architecture-and-implementation" title="Permalink to this headline"></a></h2>
-<div class="section" id="architecture">
-<h3>Architecture<a class="headerlink" href="#architecture" title="Permalink to this headline"></a></h3>
+</section>
+<section id="architecture-and-implementation">
+<h2>Architecture and Implementation<a class="headerlink" href="#architecture-and-implementation" title="Permalink to this heading"></a></h2>
+<section id="architecture">
+<h3>Architecture<a class="headerlink" href="#architecture" title="Permalink to this heading"></a></h3>
 <p>The following picture shows how U2 works.</p>
 <p><img alt="U2" src="_images/u2.gif" /></p>
 <p>When input is not finished, the input frames $x_t$ are fed into the <em>Shared Encoder</em> module frame by frame to get the encoder output $e_t$, then $e_t$ is transformed by the <em>CTC Activation</em> module (typically, it’s just a linear transform with a log_softmax) to get the CTC prob $y_t$ at current frame, and $y_t$ is further used by the <em>CTC prefix beam search</em> module to generate n-best results at current time $t$, and the best result is used as partial result of the U2 system.</p>
 <p>When input is finished at time $T$, the n-best results from the <em>CTC prefix beam search</em> module and the encoder output $e_1, e_2, e_3, …, e_T$ are fed into the <em>Attention Decoder</em> module, then the <em>Attention Decoder</em> module computes a score for every result. The result with the best score is selected as the final result of U2 system.</p>
 <p>We can group $C$ continuous frames $x_t, x_{t+1}, x_{t+C}$ as one chunk for the <em>Shared Encoder</em> module, and $C$ is called chunk_size in the U2 framework. The chunk_size will affect the attention computation in the <em>Shared Encoder</em> module. When chunk_size is infinite, it is a non-streaming case. The system gives the best accuracy with infinite latency. When chunk_size is limited (typically less than 1s), it is a streaming case. The system has limited latency and also gives promising accuracy. So the developer can balance the accuracy and latency and setting a proper chunk_size.</p>
-</div>
-<div class="section" id="interface-design">
-<h3>Interface Design<a class="headerlink" href="#interface-design" title="Permalink to this headline"></a></h3>
+</section>
+<section id="interface-design">
+<h3>Interface Design<a class="headerlink" href="#interface-design" title="Permalink to this heading"></a></h3>
 <p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code
 by &#64;torch.jit.export (see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/asr_model.py">asr_model.py</a>),
 which are required and used in C++ runtime in <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch/decoder/torch_asr_model.cc">torch_asr_model.cc</a>.
@@ -191,9 +193,9 @@ Here we just list the interface and give a brief introduction.</p>
 <td>used for the <em>Attention Decoder</em> module</td>
 </tr>
 </tbody>
-</table></div>
-<div class="section" id="cache-in-details">
-<h3>Cache in Details<a class="headerlink" href="#cache-in-details" title="Permalink to this headline"></a></h3>
+</table></section>
+<section id="cache-in-details">
+<h3>Cache in Details<a class="headerlink" href="#cache-in-details" title="Permalink to this heading"></a></h3>
 <p>For streaming scenario, the <em>Shared Encoder</em> module works in an incremental way. The current chunk computation requries the inputs and outputs of all the history chunks. We implement the incremental computation by using caches. Overall, two types of cache are used in our runtime.</p>
 <ul class="simple">
 <li><p>att_cache: the attention cache of the <em>Shared Encoder</em>(Conformer/Transformer) module.</p></li>
@@ -206,17 +208,17 @@ In our implementation, we simply overlap the input to avoid subsampling CNN cach
 It is simple and straightforward with negligible additional cost since subsampling CNN only costs a very small fraction of the whole computation.
 The following picture shows how it works, where the blue color is for the overlap part of current inputs and previous inputs.</p>
 <p><img alt="Overlap input for Subsampling CNN" src="_images/subsampling_overalp.gif" /></p>
-</div>
-</div>
-<div class="section" id="references">
-<h2>References<a class="headerlink" href="#references" title="Permalink to this headline"></a></h2>
+</section>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h2>
 <ol class="simple">
 <li><p><a class="reference external" href="https://distill.pub/2017/ctc/">Sequence Modeling With CTC</a></p></li>
 <li><p><a class="reference external" href="https://arxiv.org/pdf/1408.2873.pdf">First-Pass Large Vocabulary Continuous Speech Recognition using Bi-Directional Recurrent DNNs</a></p></li>
 <li><p><a class="reference external" href="https://arxiv.org/pdf/2012.05481.pdf">Unified Streaming and Non-streaming Two-pass End-to-end Model for Speech Recognition</a></p></li>
 </ol>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

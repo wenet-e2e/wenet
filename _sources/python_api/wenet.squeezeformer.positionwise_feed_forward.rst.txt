@@ -1,0 +1,7 @@
+wenet.squeezeformer.positionwise\_feed\_forward module
+======================================================
+
+.. automodule:: wenet.squeezeformer.positionwise_feed_forward
+   :members:
+   :undoc-members:
+   :show-inheritance:

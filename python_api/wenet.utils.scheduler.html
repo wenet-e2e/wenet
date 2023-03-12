@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wenet.utils.scheduler module &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="wenet.utils.mask module" href="wenet.utils.mask.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../train.html">How to train models?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../production.html">Production Runtime</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../reference.html">Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../python_binding.html">Python Binding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../papers.html">Papers</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html">Python API Reference</a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="wenet.html">wenet package</a><ul class="current">
+<li class="toctree-l4 current"><a class="reference internal" href="wenet.html#subpackages">Subpackages</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../reference.html">Reference</a></li>
+          <li class="breadcrumb-item"><a href="modules.html">Python API Reference</a></li>
+          <li class="breadcrumb-item"><a href="wenet.html">wenet package</a></li>
+          <li class="breadcrumb-item"><a href="wenet.utils.html">wenet.utils package</a></li>
+      <li class="breadcrumb-item active">wenet.utils.scheduler module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/python_api/wenet.utils.scheduler.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<section id="module-wenet.utils.scheduler">
+<span id="wenet-utils-scheduler-module"></span><h1>wenet.utils.scheduler module<a class="headerlink" href="#module-wenet.utils.scheduler" title="Permalink to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.CosineAnnealing">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">CosineAnnealing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#CosineAnnealing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.CosineAnnealing" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#wenet.utils.scheduler.WarmupAnnealHoldPolicy" title="wenet.utils.scheduler.WarmupAnnealHoldPolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">WarmupAnnealHoldPolicy</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.NoamAnnealing">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">NoamAnnealing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">d_model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#NoamAnnealing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.NoamAnnealing" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_LRScheduler</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.NoamAnnealing.get_lr">
+<span class="sig-name descname"><span class="pre">get_lr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#NoamAnnealing.get_lr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.NoamAnnealing.get_lr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.NoamHoldAnnealing">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">NoamHoldAnnealing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decay_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#NoamHoldAnnealing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.NoamHoldAnnealing" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#wenet.utils.scheduler.WarmupHoldPolicy" title="wenet.utils.scheduler.WarmupHoldPolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">WarmupHoldPolicy</span></code></a></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.NoamHoldAnnealing.set_step">
+<span class="sig-name descname"><span class="pre">set_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#NoamHoldAnnealing.set_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.NoamHoldAnnealing.set_step" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.SquareAnnealing">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">SquareAnnealing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-05</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#SquareAnnealing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.SquareAnnealing" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#wenet.utils.scheduler.WarmupPolicy" title="wenet.utils.scheduler.WarmupPolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">WarmupPolicy</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.SquareRootAnnealing">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">SquareRootAnnealing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#SquareRootAnnealing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.SquareRootAnnealing" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#wenet.utils.scheduler.WarmupPolicy" title="wenet.utils.scheduler.WarmupPolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">WarmupPolicy</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.SquareRootConstantPolicy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">SquareRootConstantPolicy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constant_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constant_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#SquareRootConstantPolicy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.SquareRootConstantPolicy" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_LRScheduler</span></code></p>
+<p>Adds warmup kwargs and warmup logic to lr policy.
+All arguments should be passed as kwargs for clarity,
+:param warmup_steps: Number of training steps in warmup stage
+:param warmup_ratio: Ratio of warmup steps to total steps
+:param max_steps: Total number of steps while training or <cite>None</cite> for</p>
+<blockquote>
+<div><p>infinite training</p>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.SquareRootConstantPolicy.get_lr">
+<span class="sig-name descname"><span class="pre">get_lr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#SquareRootConstantPolicy.get_lr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.SquareRootConstantPolicy.get_lr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupAnnealHoldPolicy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">WarmupAnnealHoldPolicy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constant_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">constant_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupAnnealHoldPolicy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupAnnealHoldPolicy" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_LRScheduler</span></code></p>
+<p>Adds warmup kwargs and warmup logic to lr policy.
+All arguments should be passed as kwargs for clarity,
+:param warmup_steps: Number of training steps in warmup stage
+:param warmup_ratio: Ratio of warmup steps to total steps
+:param max_steps: Total number of steps while training or <cite>None</cite> for</p>
+<blockquote>
+<div><p>infinite training</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>min_lr</strong> – Minimum lr to hold the learning rate after decay at.</p></li>
+<li><p><strong>constant_steps</strong> – Number of steps to keep lr constant at.</p></li>
+<li><p><strong>constant_ratio</strong> – Ratio of steps to keep lr constant.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupAnnealHoldPolicy.get_lr">
+<span class="sig-name descname"><span class="pre">get_lr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupAnnealHoldPolicy.get_lr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupAnnealHoldPolicy.get_lr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupHoldPolicy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">WarmupHoldPolicy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hold_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hold_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupHoldPolicy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupHoldPolicy" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#wenet.utils.scheduler.WarmupPolicy" title="wenet.utils.scheduler.WarmupPolicy"><code class="xref py py-class docutils literal notranslate"><span class="pre">WarmupPolicy</span></code></a></p>
+<dl class="simple">
+<dt>Variant of WarmupPolicy which maintains high</dt><dd><p>learning rate for a defined number of steps.</p>
+</dd>
+</dl>
+<p>All arguments should be passed as kwargs for clarity,
+:param warmup_steps: Number of training steps in warmup stage
+:param warmup_ratio: Ratio of warmup steps to total steps
+:param hold_steps: Number of training steps to</p>
+<blockquote>
+<div><p>hold the learning rate after warm up</p>
+</div></blockquote>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hold_ratio</strong> – Ratio of hold steps to total steps</p></li>
+<li><p><strong>max_steps</strong> – Total number of steps while training or <cite>None</cite> for
+infinite training</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupHoldPolicy.get_lr">
+<span class="sig-name descname"><span class="pre">get_lr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupHoldPolicy.get_lr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupHoldPolicy.get_lr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupLR">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">WarmupLR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optimizer</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_steps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">25000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupLR"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupLR" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_LRScheduler</span></code></p>
+<p>The WarmupLR scheduler</p>
+<p>This scheduler is almost same as NoamLR Scheduler except for following
+difference:</p>
+<dl class="simple">
+<dt>NoamLR:</dt><dd><dl class="simple">
+<dt>lr = optimizer.lr * model_size ** -0.5</dt><dd><ul class="simple">
+<li><p>min(step ** -0.5, step * warmup_step ** -1.5)</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+<dt>WarmupLR:</dt><dd><dl class="simple">
+<dt>lr = optimizer.lr * warmup_step ** 0.5</dt><dd><ul class="simple">
+<li><p>min(step ** -0.5, step * warmup_step ** -1.5)</p></li>
+</ul>
+</dd>
+</dl>
+</dd>
+</dl>
+<p>Note that the maximum lr equals to optimizer.lr in this scheduler.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupLR.get_lr">
+<span class="sig-name descname"><span class="pre">get_lr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupLR.get_lr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupLR.get_lr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupLR.set_step">
+<span class="sig-name descname"><span class="pre">set_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">step</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupLR.set_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupLR.set_step" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupPolicy">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.scheduler.</span></span><span class="sig-name descname"><span class="pre">WarmupPolicy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">optimizer</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">warmup_ratio</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_steps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_lr</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">last_epoch</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupPolicy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupPolicy" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">_LRScheduler</span></code></p>
+<p>Adds warmup kwargs and warmup logic to lr policy.
+All arguments should be passed as kwargs for clarity,
+:param warmup_steps: Number of training steps in warmup stage
+:param warmup_ratio: Ratio of warmup steps to total steps
+:param max_steps: Total number of steps while training or <cite>None</cite> for</p>
+<blockquote>
+<div><p>infinite training</p>
+</div></blockquote>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.utils.scheduler.WarmupPolicy.get_lr">
+<span class="sig-name descname"><span class="pre">get_lr</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/scheduler.html#WarmupPolicy.get_lr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.scheduler.WarmupPolicy.get_lr" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="wenet.utils.mask.html" class="btn btn-neutral float-left" title="wenet.utils.mask module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

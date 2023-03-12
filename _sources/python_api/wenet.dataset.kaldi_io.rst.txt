@@ -1,0 +1,7 @@
+wenet.dataset.kaldi\_io module
+==============================
+
+.. automodule:: wenet.dataset.kaldi_io
+   :members:
+   :undoc-members:
+   :show-inheritance:

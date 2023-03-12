@@ -1,0 +1,7 @@
+wenet.efficient\_conformer.encoder module
+=========================================
+
+.. automodule:: wenet.efficient_conformer.encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

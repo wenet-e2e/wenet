@@ -1,0 +1,21 @@
+wenet.squeezeformer package
+===========================
+
+.. automodule:: wenet.squeezeformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.squeezeformer.attention
+   wenet.squeezeformer.conv2d
+   wenet.squeezeformer.convolution
+   wenet.squeezeformer.encoder
+   wenet.squeezeformer.encoder_layer
+   wenet.squeezeformer.positionwise_feed_forward
+   wenet.squeezeformer.subsampling

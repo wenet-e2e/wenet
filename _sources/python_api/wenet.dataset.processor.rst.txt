@@ -1,0 +1,7 @@
+wenet.dataset.processor module
+==============================
+
+.. automodule:: wenet.dataset.processor
+   :members:
+   :undoc-members:
+   :show-inheritance:

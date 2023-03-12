@@ -1,0 +1,7 @@
+wenet.squeezeformer.subsampling module
+======================================
+
+.. automodule:: wenet.squeezeformer.subsampling
+   :members:
+   :undoc-members:
+   :show-inheritance:

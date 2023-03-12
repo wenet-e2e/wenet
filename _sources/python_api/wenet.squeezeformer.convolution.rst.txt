@@ -1,0 +1,7 @@
+wenet.squeezeformer.convolution module
+======================================
+
+.. automodule:: wenet.squeezeformer.convolution
+   :members:
+   :undoc-members:
+   :show-inheritance:

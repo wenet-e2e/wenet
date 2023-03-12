@@ -1,0 +1,7 @@
+wenet.transformer.asr\_model module
+===================================
+
+.. automodule:: wenet.transformer.asr_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+wenet.efficient\_conformer.subsampling module
+=============================================
+
+.. automodule:: wenet.efficient_conformer.subsampling
+   :members:
+   :undoc-members:
+   :show-inheritance:

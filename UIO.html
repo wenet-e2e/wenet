@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Big Data Training: UIO &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Big Data Training: UIO &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -40,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="train.html">How to train models?</a><ul class="current">
@@ -118,13 +120,13 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="big-data-training-uio">
-<h1>Big Data Training: UIO<a class="headerlink" href="#big-data-training-uio" title="Permalink to this headline"></a></h1>
+<section id="big-data-training-uio">
+<h1>Big Data Training: UIO<a class="headerlink" href="#big-data-training-uio" title="Permalink to this heading"></a></h1>
 <p>In order to support the model training of industrial tens of millions of hours of speech dataset, the data processing
 method UIO (Unified IO) has been updated in WeNet. The document will introduce UIO from the following sections:
 Necessity of upgrading IO mothod, System design of UIO, Validation experiments, Usage of UIO, Q&amp;A.</p>
-<div class="section" id="necessity-of-upgrading-io-mothod">
-<h2>Necessity of upgrading IO mothod<a class="headerlink" href="#necessity-of-upgrading-io-mothod" title="Permalink to this headline"></a></h2>
+<section id="necessity-of-upgrading-io-mothod">
+<h2>Necessity of upgrading IO mothod<a class="headerlink" href="#necessity-of-upgrading-io-mothod" title="Permalink to this heading"></a></h2>
 <p>The old IO method in WeNet is based on Pytorch’s native Dataset. During training, it need to load all training audio
 paths and correspondingly labels into the memory at one time, then randomly read data. In the case of industrial-grade
 ultra-large-scale data (egs: more than 50,000 hours or 50 million or more audio), this method will cause the training
@@ -134,11 +136,11 @@ to fail to run for two reasons:</p>
 <li><p>Slow down reading performance:  In the case that the large-scale data memory cannot be used as a file cache, the training
 data reading speed is greatly reduced.</p></li>
 </ul>
-</div>
-<div class="section" id="system-design-of-uio">
-<h2>System design of UIO<a class="headerlink" href="#system-design-of-uio" title="Permalink to this headline"></a></h2>
-<div class="section" id="overall-design">
-<h3>Overall design<a class="headerlink" href="#overall-design" title="Permalink to this headline"></a></h3>
+</section>
+<section id="system-design-of-uio">
+<h2>System design of UIO<a class="headerlink" href="#system-design-of-uio" title="Permalink to this heading"></a></h2>
+<section id="overall-design">
+<h3>Overall design<a class="headerlink" href="#overall-design" title="Permalink to this heading"></a></h3>
 <p>Inspired by the following industrial methods(egs: <a class="reference external" href="https://github.com/webdataset/webdataset">webdataset</a>, <a class="reference external" href="https://www.tensorflow.org/tutorials/load_data/tfrecord">TFRecord</a>),
 WeNet redesigned the IO method. Its core idea is to make the audio and labels of multiple small data(such as 1000 pieces),
 into compressed packets (tar) and read them based on the IterableDataset of Pytorch. The advantages of this method is：</p>
@@ -160,9 +162,9 @@ The required documents must be sorted into Kaldi style file: wav.scp and text.(I
 reading and network cloud storage file reading. The required files must be sorted into compressed packages. Audio (wav)
 and label (txt) are stored in a single compressed package in sequence.</p></li>
 </ul>
-</div>
-<div class="section" id="chain-io">
-<h3>Chain IO<a class="headerlink" href="#chain-io" title="Permalink to this headline"></a></h3>
+</section>
+<section id="chain-io">
+<h3>Chain IO<a class="headerlink" href="#chain-io" title="Permalink to this heading"></a></h3>
 <p>Inspired by TFRecord chain IO, UIO also adopts chain implementation. In practical use, chain IO is more flexible,
 easier to expand and easier to debug. TFRecord IO example as follows,</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_dataset</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">):</span>
@@ -205,13 +207,13 @@ Only when the data in the buffer is insufficient during the next training can th
 At this time, the training is blocked on the read data. In a word, when the prefetch is very small, the training will
 block reading data in part of the time, because the previous data is still in cache. Therefore, you can set a large
 prefetch to avoid this problem.</p>
-</div>
-</div>
-<div class="section" id="validation-experiments">
-<h2>Validation experiments<a class="headerlink" href="#validation-experiments" title="Permalink to this headline"></a></h2>
+</section>
+</section>
+<section id="validation-experiments">
+<h2>Validation experiments<a class="headerlink" href="#validation-experiments" title="Permalink to this heading"></a></h2>
 <p>At present, we have verified the accuracy of UIO on aishell (200 hours) and wenetspeech (10000 hours) data respectively.</p>
-<div class="section" id="aishell-raw-vs-shard">
-<h3>Aishell(<code class="docutils literal notranslate"><span class="pre">raw</span></code> vs <code class="docutils literal notranslate"><span class="pre">shard</span></code>)<a class="headerlink" href="#aishell-raw-vs-shard" title="Permalink to this headline"></a></h3>
+<section id="aishell-raw-vs-shard">
+<h3>Aishell(<code class="docutils literal notranslate"><span class="pre">raw</span></code> vs <code class="docutils literal notranslate"><span class="pre">shard</span></code>)<a class="headerlink" href="#aishell-raw-vs-shard" title="Permalink to this heading"></a></h3>
 <table border="1" class="docutils">
 <thead>
 <tr>
@@ -233,17 +235,17 @@ prefetch to avoid this problem.</p>
 <td style="text-align: left;">4.67</td>
 </tr>
 </tbody>
-</table></div>
-<div class="section" id="wenetspeech-shard">
-<h3>WenetSpeech(<code class="docutils literal notranslate"><span class="pre">shard</span></code>)<a class="headerlink" href="#wenetspeech-shard" title="Permalink to this headline"></a></h3>
+</table></section>
+<section id="wenetspeech-shard">
+<h3>WenetSpeech(<code class="docutils literal notranslate"><span class="pre">shard</span></code>)<a class="headerlink" href="#wenetspeech-shard" title="Permalink to this heading"></a></h3>
 <p><img alt="UIO WenetSpeech" src="_images/UIO_wenetspeech_cer.png" /></p>
 <p>WeNet and ESPnet use similar model structure and parameter configuration, and they achieve similar recognition rate,
 which shows the correctness of UIO in WeNet. And during the training, we observed that the overall utilization rate of
 GPU of UIO is more than 80% - 90%, indicating that the overall IO reading efficiency is very high.</p>
-</div>
-</div>
-<div class="section" id="usage-of-uio">
-<h2>Usage of UIO<a class="headerlink" href="#usage-of-uio" title="Permalink to this headline"></a></h2>
+</section>
+</section>
+<section id="usage-of-uio">
+<h2>Usage of UIO<a class="headerlink" href="#usage-of-uio" title="Permalink to this heading"></a></h2>
 <p>For detailed usage of UIO, please refer to the aishell dataset example:
 https://github.com/wenet-e2e/wenet/blob/main/examples/aishell/s0/run.sh
 At present, all datasets in WeNet have used UIO as the default data preparation.</p>
@@ -254,13 +256,13 @@ At present, all datasets in WeNet have used UIO as the default data preparation.
 <li><p><code class="docutils literal notranslate"><span class="pre">symbol_table</span></code>: specify modeling unit</p></li>
 </ul>
 <p>For example:</p>
-<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python wenet/bin/train.py --gpu <span class="nv">$gpu_id</span> <span class="se">\</span>
-  --config <span class="nv">$train_config</span> <span class="se">\</span>
-  --data_type <span class="nv">$data_type</span> <span class="se">\</span>
-  --symbol_table <span class="nv">$dict</span> <span class="se">\</span>
-  --train_data <span class="nv">$feat_dir</span>/<span class="nv">$train_set</span>/data.list <span class="se">\</span>
-  --cv_data <span class="nv">$feat_dir</span>/dev/data.list <span class="se">\</span>
-  ...
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>wenet/bin/train.py<span class="w"> </span>--gpu<span class="w"> </span><span class="nv">$gpu_id</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--config<span class="w"> </span><span class="nv">$train_config</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--data_type<span class="w"> </span><span class="nv">$data_type</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--symbol_table<span class="w"> </span><span class="nv">$dict</span><span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--train_data<span class="w"> </span><span class="nv">$feat_dir</span>/<span class="nv">$train_set</span>/data.list<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>--cv_data<span class="w"> </span><span class="nv">$feat_dir</span>/dev/data.list<span class="w"> </span><span class="se">\</span>
+<span class="w">  </span>...
 </pre></div>
 </div>
 <p>If data_type is <code class="docutils literal notranslate"><span class="pre">raw</span></code>, the format of data.list is as follows:</p>
@@ -281,9 +283,9 @@ At present, all datasets in WeNet have used UIO as the default data preparation.
 <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">examplebucket</span><span class="o">.</span><span class="n">oss</span><span class="o">-</span><span class="n">cn</span><span class="o">-</span><span class="n">hangzhou</span><span class="o">.</span><span class="n">aliyuncs</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">exampledir</span><span class="o">/</span><span class="mf">2.</span><span class="n">tar</span><span class="o">.</span><span class="n">gz</span>
 </pre></div>
 </div>
-</div>
-<div class="section" id="q-a">
-<h2>Q&amp;A<a class="headerlink" href="#q-a" title="Permalink to this headline"></a></h2>
+</section>
+<section id="q-a">
+<h2>Q&amp;A<a class="headerlink" href="#q-a" title="Permalink to this heading"></a></h2>
 <p>Q1: How to operate distributed partition of training data?</p>
 <p>A: According to rank and num_workers can segment the data. for example:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">DistributedSampler</span><span class="p">:</span>
@@ -308,8 +310,8 @@ At present, all datasets in WeNet have used UIO as the default data preparation.
 </div>
 <p>Q2: How to deal with unbalanced data?</p>
 <p>A: Use model.join() to handle the imbalance of data allocated on each rank. Please refer <a class="reference external" href="https://pytorch.org/tutorials/advanced/generic_join.html#how-does-join-work">this</a>.</p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

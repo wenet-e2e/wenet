@@ -1,0 +1,24 @@
+wenet.utils package
+===================
+
+.. automodule:: wenet.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.utils.checkpoint
+   wenet.utils.cmvn
+   wenet.utils.common
+   wenet.utils.config
+   wenet.utils.ctc_util
+   wenet.utils.executor
+   wenet.utils.file_utils
+   wenet.utils.init_model
+   wenet.utils.mask
+   wenet.utils.scheduler

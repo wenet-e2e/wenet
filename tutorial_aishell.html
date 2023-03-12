@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tutorial on AIShell &mdash; wenet  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Tutorial on AIShell &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -40,7 +42,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Install</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="train.html">How to train models?</a><ul class="current">
@@ -117,15 +119,15 @@
     text-align: unset;
 }
 </style>
-<div class="section" id="tutorial-on-aishell">
-<h1>Tutorial on AIShell<a class="headerlink" href="#tutorial-on-aishell" title="Permalink to this headline"></a></h1>
+<section id="tutorial-on-aishell">
+<h1>Tutorial on AIShell<a class="headerlink" href="#tutorial-on-aishell" title="Permalink to this heading"></a></h1>
 <p>If you meet any problems when going through this tutorial, please feel free to ask in github <a class="reference external" href="https://github.com/mobvoi/wenet/issues">issues</a>. Thanks for any kind of feedback.</p>
-<div class="section" id="setup-environment">
-<h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this headline"></a></h2>
+<section id="setup-environment">
+<h2>Setup environment<a class="headerlink" href="#setup-environment" title="Permalink to this heading"></a></h2>
 <p>Please follow <a class="reference external" href="https://github.com/wenet-e2e/wenet#installation">Installation</a> to install WeNet.</p>
-</div>
-<div class="section" id="first-experiment">
-<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this headline"></a></h2>
+</section>
+<section id="first-experiment">
+<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this heading"></a></h2>
 <p>We provide a recipe <code class="docutils literal notranslate"><span class="pre">example/aishell/s0/run.sh</span></code> on aishell-1 data.</p>
 <p>The recipe is simple and we suggest you run each stage one by one manually and check the result to understand the whole process.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">example</span><span class="o">/</span><span class="n">aishell</span><span class="o">/</span><span class="n">s0</span>
@@ -143,13 +145,13 @@
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">run</span><span class="o">.</span><span class="n">sh</span> <span class="o">--</span><span class="n">stage</span> <span class="o">-</span><span class="mi">1</span> <span class="o">--</span><span class="n">stop_stage</span> <span class="mi">6</span>
 </pre></div>
 </div>
-<div class="section" id="stage-1-download-data">
-<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this headline"></a></h3>
+<section id="stage-1-download-data">
+<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this heading"></a></h3>
 <p>This stage downloads the aishell-1 data to the local path <code class="docutils literal notranslate"><span class="pre">$data</span></code>. This may take several hours. If you have already downloaded the data, please change the <code class="docutils literal notranslate"><span class="pre">$data</span></code> variable in <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> and start from <code class="docutils literal notranslate"><span class="pre">--stage</span> <span class="pre">0</span></code>.
 Please set a <strong>absolute path</strong> for <code class="docutils literal notranslate"><span class="pre">$data</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">/home/username/asr-data/aishell/</span></code></p>
-</div>
-<div class="section" id="stage-0-prepare-training-data">
-<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-0-prepare-training-data">
+<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this heading"></a></h3>
 <p>In this stage, <code class="docutils literal notranslate"><span class="pre">local/aishell_data_prep.sh</span></code> organizes the original aishell-1 data into two files:</p>
 <ul class="simple">
 <li><p><strong>wav.scp</strong> each line records two tab-separated columns : <code class="docutils literal notranslate"><span class="pre">wav_id</span></code> and <code class="docutils literal notranslate"><span class="pre">wav_path</span></code></p></li>
@@ -172,14 +174,14 @@ Please set a <strong>absolute path</strong> for <code class="docutils literal no
 </pre></div>
 </div>
 <p>If you want to train using your customized data, just organize the data into two files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>, and start from <code class="docutils literal notranslate"><span class="pre">stage</span> <span class="pre">1</span></code>.</p>
-</div>
-<div class="section" id="stage-1-extract-optinal-cmvn-features">
-<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-1-extract-optinal-cmvn-features">
+<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this heading"></a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">example/aishell/s0</span></code> uses raw wav as input and and <a class="reference external" href="https://pytorch.org/audio/stable/index.html">TorchAudio</a> to extract the features just-in-time in dataloader. So in this step we just copy the training wav.scp and text file into the <code class="docutils literal notranslate"><span class="pre">raw_wav/train/</span></code> dir.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute_cmvn_stats.py</span></code> is used to extract global cmvn(cepstral mean and variance normalization) statistics. These statistics will be used to normalize the acoustic features. Setting <code class="docutils literal notranslate"><span class="pre">cmvn=false</span></code> will skip this step.</p>
-</div>
-<div class="section" id="stage-2-generate-label-token-dictionary">
-<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-2-generate-label-token-dictionary">
+<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this heading"></a></h3>
 <p>The dict is a map between label tokens (we use characters for Aishell-1) and
 the integer indices.</p>
 <p>An example dict is as follows</p>
@@ -198,9 +200,9 @@ the integer indices.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;unk&gt;</span></code> denotes the unknown token, any out-of-vocabulary tokens will be mapped into it.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">&lt;sos/eos&gt;</span></code> denotes start-of-speech and end-of-speech symbols for attention based encoder decoder training, and they shares the same id.</p></li>
 </ul>
-</div>
-<div class="section" id="stage-3-prepare-wenet-data-format">
-<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-3-prepare-wenet-data-format">
+<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this heading"></a></h3>
 <p>This stage generates the WeNet required format file <code class="docutils literal notranslate"><span class="pre">data.list</span></code>. Each line in <code class="docutils literal notranslate"><span class="pre">data.list</span></code> is in json format which contains the following fields.</p>
 <ol class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">key</span></code>: key of the utterance</p></li>
@@ -217,9 +219,9 @@ the integer indices.</p>
 Please see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/examples/gigaspeech/s0">gigaspeech</a>(10k hours) or
 <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/examples/wenetspeech/s0">wenetspeech</a>(10k hours)
 for how to use <code class="docutils literal notranslate"><span class="pre">shard</span></code> style <code class="docutils literal notranslate"><span class="pre">data.list</span></code> if you want to apply WeNet on big data set(more than 5k).</p>
-</div>
-<div class="section" id="stage-4-neural-network-training">
-<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-4-neural-network-training">
+<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this heading"></a></h3>
 <p>The NN model is trained in this step.</p>
 <ul class="simple">
 <li><p>Multi-GPU mode</p></li>
@@ -243,9 +245,9 @@ You could use tensorboard to monitor the loss.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>tensorboard --logdir tensorboard/$your_exp_name/ --port 12598 --bind_all
 </pre></div>
 </div>
-</div>
-<div class="section" id="stage-5-recognize-wav-using-the-trained-model">
-<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-5-recognize-wav-using-the-trained-model">
+<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this heading"></a></h3>
 <p>This stage shows how to recognize a set of wavs into texts. It also shows how to do the model averaging.</p>
 <ul class="simple">
 <li><p>Average model</p></li>
@@ -269,13 +271,13 @@ You could use tensorboard to monitor the loss.</p>
 <li><p>WER evaluation</p></li>
 </ul>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute-wer.py</span></code> will calculate the word (or char) error rate of the result. If you run the recipe without any change, you may get WER ~= 5%.</p>
-</div>
-<div class="section" id="stage-6-export-the-trained-model">
-<h3>Stage 6: Export the trained model<a class="headerlink" href="#stage-6-export-the-trained-model" title="Permalink to this headline"></a></h3>
+</section>
+<section id="stage-6-export-the-trained-model">
+<h3>Stage 6: Export the trained model<a class="headerlink" href="#stage-6-export-the-trained-model" title="Permalink to this heading"></a></h3>
 <p><code class="docutils literal notranslate"><span class="pre">wenet/bin/export_jit.py</span></code> will export the trained model using Libtorch. The exported model files can be easily used for inference in other programming languages such as C++.</p>
-</div>
-</div>
-</div>
+</section>
+</section>
+</section>
 
 
            </div>

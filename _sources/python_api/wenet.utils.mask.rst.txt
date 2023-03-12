@@ -1,0 +1,7 @@
+wenet.utils.mask module
+=======================
+
+.. automodule:: wenet.utils.mask
+   :members:
+   :undoc-members:
+   :show-inheritance:
