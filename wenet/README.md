@@ -1,4 +1,4 @@
-* Module Introduction
+# Module Introduction
 
 Here is a brief introduction of each module(directory).
 
@@ -17,6 +17,7 @@ Here is a brief introduction of each module(directory).
 
 `transducer`, `squeezeformer`, and `efficient_conformer` are all based on `transformer`,
 they resue a lot of the common blocks of `tranformer`.
-**If you want to contribute your own x-former, please reuse as much as possible**.
+
+**If you want to contribute your own x-former, please reuse the current code as much as possible**.
 
 
