@@ -100,6 +100,7 @@ def init_model(configs):
                            attention_decoder=decoder,
                            joint=joint,
                            ctc=ctc,
+                           lfmmi_dir=configs.get('lfmmi_dir', ''),
                            **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
