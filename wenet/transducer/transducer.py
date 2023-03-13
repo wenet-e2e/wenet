@@ -29,6 +29,7 @@ class Transducer(ASRModel):
         attention_decoder: Optional[Union[TransformerDecoder,
                                           BiTransformerDecoder]] = None,
         ctc: Optional[CTC] = None,
+        lfmmi_dir: str = '',
         ctc_weight: float = 0,
         ignore_id: int = IGNORE_ID,
         reverse_weight: float = 0.0,
@@ -39,7 +40,7 @@ class Transducer(ASRModel):
     ) -> None:
         assert check_argument_types()
         assert attention_weight + ctc_weight + transducer_weight == 1.0
-        super().__init__(vocab_size, encoder, attention_decoder, ctc,
+        super().__init__(vocab_size, encoder, attention_decoder, ctc, lfmmi_dir,
                          ctc_weight, ignore_id, reverse_weight, lsm_weight,
                          length_normalized_loss)
 
