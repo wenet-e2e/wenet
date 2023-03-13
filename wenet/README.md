@@ -14,8 +14,9 @@ Here is a brief introduction of each module(directory).
 * `transducer`: transducer implementation
 * `squeezeformer`: squeezeformer implementation, please refer [paper](https://arxiv.org/pdf/2206.00888.pdf)
 * `efficient_conformer`: efficient conformer implementation, please refer [paper](https://arxiv.org/pdf/2109.01163.pdf)
+* `cif`: Continuous Integrate-and-Fire implemented, please refer [paper](https://arxiv.org/pdf/1905.11235.pdf)
 
-`transducer`, `squeezeformer`, and `efficient_conformer` are all based on `transformer`,
+`transducer`, `squeezeformer`, `efficient_conformer`, and `cif` are all based on `transformer`,
 they resue a lot of the common blocks of `tranformer`.
 
 **If you want to contribute your own x-former, please reuse the current code as much as possible**.
