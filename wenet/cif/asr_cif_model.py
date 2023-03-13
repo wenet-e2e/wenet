@@ -1,4 +1,5 @@
 # Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Di Wu)
+#               2023 ASLP@NWPU (authors: He Wang, Fan Yu)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-# Modified from ESPnet(https://github.com/espnet/espnet)
+# Modified from ESPnet(https://github.com/espnet/espnet) and
+# FunASR(https://github.com/alibaba-damo-academy/FunASR)
+
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
