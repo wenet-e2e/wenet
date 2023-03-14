@@ -5,12 +5,12 @@ Here is a brief introduction of each module(directory).
 * `bin`: training and recognition binaries
 * `dataset`: IO design
 * `utils`: common utils
-* `tranformer`: the core of `WeNet`, in which the standard transformer/conformer is implemented. It contains the common blocks(backbone) of speech transformers.
+* `transformer`: the core of `WeNet`, in which the standard transformer/conformer is implemented. It contains the common blocks(backbone) of speech transformers.
   * transformer/attention.py: Standard multi head attention
   * transformer/embedding.py: Standard position encoding
   * transformer/positionwise_feed_forward.py: Standard feed forward in transformer
-  * tranformer/convolution.py: ConvolutionModule in Conformer model
-  * tranformer/subsampling.py: Subsampling implementation for speech task
+  * transformer/convolution.py: ConvolutionModule in Conformer model
+  * transformer/subsampling.py: Subsampling implementation for speech task
 * `transducer`: transducer implementation
 * `squeezeformer`: squeezeformer implementation, please refer [paper](https://arxiv.org/pdf/2206.00888.pdf)
 * `efficient_conformer`: efficient conformer implementation, please refer [paper](https://arxiv.org/pdf/2109.01163.pdf)
