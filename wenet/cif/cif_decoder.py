@@ -19,11 +19,14 @@ import torch.nn as nn
 
 from typeguard import check_argument_types
 
-from wenet.cif.utils import make_pad_mask, sequence_mask
-from wenet.cif.attention import MultiHeadedAttention, \
-    MultiHeadedAttentionSANMDecoder, MultiHeadedAttentionCrossAtt
-from wenet.cif.decoder_layer import DecoderLayer, DecoderLayerSANM
-from wenet.cif.embedding import PositionalEncoding
+from wenet.utils.mask import make_pad_mask
+from wenet.cif.utils import sequence_mask
+from wenet.transformer.attention import MultiHeadedAttention
+from wenet.cif.attention import MultiHeadedAttentionSANMDecoder,\
+    MultiHeadedAttentionCrossAtt
+from wenet.transformer.decoder_layer import DecoderLayer
+from wenet.cif.decoder_layer import DecoderLayerSANM
+from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.cif.positionwise_feed_forward import \
     PositionwiseFeedForwardDecoderSANM
@@ -130,7 +133,7 @@ class BaseDecoder(nn.Module):
 
         memory = hs_pad
         memory_mask = (~make_pad_mask(
-            hlens, maxlen=memory.size(1)))[:, None, :].to(memory.device)
+            hlens, max_len=memory.size(1)))[:, None, :].to(memory.device)
         # Padding for Longformer
         if memory_mask.shape[-1] != memory.shape[1]:
             padlen = memory.shape[1] - memory_mask.shape[-1]
@@ -239,7 +242,7 @@ class CIFDecoderSAN(BaseDecoder):
 
         memory = hs_pad
         memory_mask = (~make_pad_mask(hlens,
-                                      maxlen=memory.size(1)))[:, None, :] \
+                                      max_len=memory.size(1)))[:, None, :] \
             .to(memory.device)
         # Padding for Longformer
         if memory_mask.shape[-1] != memory.shape[1]:

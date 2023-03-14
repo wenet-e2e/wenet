@@ -25,7 +25,7 @@ from wenet.cif.cif_decoder import CIFDecoderSAN
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.cif.predictor import MAELoss
-from wenet.cif.utils import make_pad_mask
+from wenet.utils.mask import make_pad_mask
 from wenet.cif.search.beam_search import Hypothesis
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
                                 remove_duplicates_and_blank, th_accuracy)
@@ -139,7 +139,7 @@ class ASRCIFModel(torch.nn.Module):
     ) -> Tuple[torch.Tensor, float, torch.Tensor]:
         encoder_out_mask = (~make_pad_mask(
             encoder_out_lens,
-            maxlen=encoder_out.size(1))[:, None, :]).to(encoder_out.device)
+            max_len=encoder_out.size(1))[:, None, :]).to(encoder_out.device)
         if self.predictor_bias == 1:
             _, ys_pad = add_sos_eos(ys_pad, self.sos, self.eos, self.ignore_id)
             ys_pad_lens = ys_pad_lens + self.predictor_bias
@@ -167,7 +167,7 @@ class ASRCIFModel(torch.nn.Module):
     def calc_predictor(self, encoder_out, encoder_out_lens):
 
         encoder_out_mask = (
-            ~make_pad_mask(encoder_out_lens, maxlen=encoder_out.size(1))
+            ~make_pad_mask(encoder_out_lens, max_len=encoder_out.size(1))
             [:, None, :]).to(encoder_out.device)
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
             self.predictor(

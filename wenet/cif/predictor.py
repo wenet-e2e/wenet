@@ -17,7 +17,7 @@ from typing import Optional
 
 import torch
 from torch import nn
-from wenet.cif.utils import make_pad_mask
+from wenet.utils.mask import make_pad_mask
 
 
 class PredictorV1(nn.Module):
@@ -141,7 +141,7 @@ class PredictorV1(nn.Module):
         index_div_bool_zeros_count = torch.sum(index_div_bool_zeros, dim=-1) + 1
         index_div_bool_zeros_count = torch.clamp(index_div_bool_zeros_count, 0,
                                                  encoder_sequence_length.max())
-        token_num_mask = (~make_pad_mask(token_num, maxlen=max_token_num)).to(
+        token_num_mask = (~make_pad_mask(token_num, max_len=max_token_num)).to(
             token_num.device)
         index_div_bool_zeros_count *= token_num_mask
 
@@ -162,7 +162,7 @@ class PredictorV1(nn.Module):
         index_div_bool_zeros_count_tile_out = \
             index_div_bool_zeros_count_tile_out.type(int_type)
         predictor_mask = (~make_pad_mask(encoder_sequence_length,
-                                         maxlen=encoder_sequence_length
+                                         max_len=encoder_sequence_length
                                          .max())).type(int_type)\
             .to(encoder_sequence_length.device)
         index_div_bool_zeros_count_tile_out = \
@@ -301,7 +301,7 @@ class PredictorV2(nn.Module):
         index_div_bool_zeros_count = torch.sum(index_div_bool_zeros, dim=-1) + 1
         index_div_bool_zeros_count = torch.clamp(index_div_bool_zeros_count, 0,
                                                  encoder_sequence_length.max())
-        token_num_mask = (~make_pad_mask(token_num, maxlen=max_token_num)).to(
+        token_num_mask = (~make_pad_mask(token_num, max_len=max_token_num)).to(
             token_num.device)
         index_div_bool_zeros_count *= token_num_mask
 
@@ -322,7 +322,7 @@ class PredictorV2(nn.Module):
         index_div_bool_zeros_count_tile_out = \
             index_div_bool_zeros_count_tile_out.type(int_type)
         predictor_mask = (~make_pad_mask(encoder_sequence_length,
-                                         maxlen=encoder_sequence_length
+                                         max_len=encoder_sequence_length
                                          .max())) \
             .type(int_type).to(encoder_sequence_length.device)
         index_div_bool_zeros_count_tile_out = \

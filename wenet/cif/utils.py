@@ -20,41 +20,6 @@ import torch
 import numpy as np
 
 
-def make_pad_mask(lengths: torch.Tensor, length_dim: int = -1,
-                  maxlen: Optional[int] = None):
-    """Make mask tensor containing indices of padded part.
-
-    Args:
-        lengths (LongTensor or List): Batch of lengths (B,).
-        xs (Tensor, Optional)
-        length_dim (int, optional): Dimension indicator of the above tensor.
-            See the example.
-        maxlen (int, optional)
-
-    Returns:
-        Tensor: Mask tensor containing indices of padded part.
-                dtype=torch.uint8 in PyTorch 1.2-
-                dtype=torch.bool in PyTorch 1.2+ (including 1.2)
-
-
-    """
-    if length_dim == 0:
-        raise ValueError("length_dim cannot be 0: {}".format(length_dim))
-
-    bs = lengths.size(0)
-    if maxlen is None:
-        maxlen = lengths.max()
-    else:
-        assert maxlen >= lengths.max().item()
-
-    seq_range = torch.arange(0, maxlen, dtype=torch.int64)
-    seq_range_expand = seq_range.unsqueeze(0).expand(bs, maxlen)
-    seq_length_expand = lengths.unsqueeze(-1).to(seq_range_expand.device)
-    mask = seq_range_expand >= seq_length_expand
-
-    return mask
-
-
 def sequence_mask(lengths, maxlen: Optional[int] = None,
                   dtype: torch.dtype = torch.float32,
                   device: Optional[torch.device] = None) -> torch.Tensor:
