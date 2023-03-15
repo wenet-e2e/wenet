@@ -24,7 +24,14 @@ By using MO, user can specify shape of multiple inputs by `--input` option, or j
 * Step 3. Build WeNet with OpenVINO™.
 
 Please refer [system requirement](https://github.com/openvinotoolkit/openvino#system-requirements) to check if the hardware platform available by OpenVINO™.
-
+The OpenVINO Linux installation package will not provide Intel TBB runtime library and pugixml library, please check if your system already installed:
+``` sh
+# For Ubuntu and Debian:
+sudo apt install libtbb-dev libpugixml-dev
+# For CentOS:
+sudo yum install tbb-devel pugixml-devel
+```
+To build WeNet with OpenVINO:
 ``` sh
 mkdir build && cd build
 cmake -DOPENVINO=ON -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF ..
