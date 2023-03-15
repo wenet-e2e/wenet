@@ -10,11 +10,12 @@ def _sampler(pdf: torch.Tensor, num_samples: int,
 
 
 def compute_mask_indices(
-    size: torch.Size,
-    mask_prob: float,
-    mask_length: int,
-    min_masks: int = 0,
-    device=torch.device('cpu')) -> torch.Tensor:
+        size: torch.Size,
+        mask_prob: float,
+        mask_length: int,
+        min_masks: int = 0,
+        device=torch.device('cpu'),
+) -> torch.Tensor:
 
     assert len(size) == 2
     batch_size, seq_length = size
