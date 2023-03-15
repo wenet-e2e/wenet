@@ -31,7 +31,7 @@ ln -s lexicon.txt $tgt_dir/uniq_lexicon.txt
 
 # 2. prepare token level bigram
 cat $train_dir/text | awk '{print $2}'| sed -r 's/(.)/ \1/g' > $tgt_dir/transcript_chars.txt
-cat $train_dir/text | awk '{print $2}'| sed -r 's/(.)/ \1/g' >> $tgt_dir/transcript_chars.txt
+cat $dev_dir/text | awk '{print $2}'| sed -r 's/(.)/ \1/g' >> $tgt_dir/transcript_chars.txt
 
 ./shared/make_kn_lm.py \
     -ngram-order 2 \
