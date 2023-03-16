@@ -21,15 +21,15 @@ fi
 pip install -r tools/k2/icefall/requirements.txt
 export PYTHONPATH=`pwd`/tools/k2/icefall:`pwd`/tools/k2/icefall/egs/aishell/ASR/local:$PYTHONPATH
 
-# 1. prepare tokens.txt words.txt wordlist lexicon.txt uniq_lexicon.txt
+# 1. prepare wordlist
 mkdir -p $tgt_dir
-cp $train_dir/units.txt $tgt_dir/tokens.txt
-awk 'FNR==1{print "<eps> 0"}FNR==2{print "<UNK> 1"}FNR>2&&FNR<=4232{print $1,FNR-1}END{printf("#0 %s\n<s> %s\n</s> %s\n",FNR-1,FNR,FNR+1)}' $tgt_dir/tokens.txt > $tgt_dir/words.txt
-awk 'FNR>2&&FNR<=4232{print $1}END{printf("<UNK>")}' $tgt_dir/tokens.txt > $tgt_dir/wordlist
-awk 'FNR>2&&FNR<=4232{print $1,$1}END{printf("<UNK> <unk>\n")}' $tgt_dir/tokens.txt > $tgt_dir/lexicon.txt
+awk 'FNR>2&&FNR<=4232{print $1}END{printf("<UNK>")}' $train_dir/units.txt > $tgt_dir/wordlist
+
+# 2. prepare L.pt tokens.txt words.txt lexicon.txt uniq_lexicon.txt
+python tools/k2/prepare_char.py $train_dir/units.txt $tgt_dir/wordlist $tgt_dir
 ln -s lexicon.txt $tgt_dir/uniq_lexicon.txt
 
-# 2. prepare token level bigram
+# 3. prepare token level bigram
 cat $train_dir/text | awk '{print $2}'| sed -r 's/(.)/ \1/g' > $tgt_dir/transcript_chars.txt
 cat $dev_dir/text | awk '{print $2}'| sed -r 's/(.)/ \1/g' >> $tgt_dir/transcript_chars.txt
 
@@ -42,6 +42,3 @@ python -m kaldilm \
     --disambig-symbol='#0' \
     --max-order=2 \
     $tgt_dir/P.arpa > $tgt_dir/P.fst.txt
-
-# 3. prepare L.pt
-python tools/k2/prepare_char.py $tgt_dir/tokens.txt $tgt_dir/wordlist $tgt_dir
