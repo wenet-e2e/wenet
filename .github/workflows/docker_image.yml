@@ -34,7 +34,6 @@ jobs:
         docker cp $id:$torch_lib/libtorch.so wenet/lib
         docker cp $id:$torch_lib/libtorch_cpu.so wenet/lib
         docker cp $id:$(docker exec $id sh -c "ls ${torch_lib}/libgomp-*") wenet/lib
-        docker cp -L $id:$fst_lib/libfst.so.8 wenet/lib
 
         ls -al wenet/lib
         cat << EOF > run.sh
