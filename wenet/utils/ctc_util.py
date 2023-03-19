@@ -53,7 +53,8 @@ def forced_align(ctc_probs: torch.Tensor,
             if y_insert_blank[s] == blank_id or s < 2 or y_insert_blank[
                     s] == y_insert_blank[s - 2]:
                 candidates = torch.tensor(
-                    [log_alpha[t - 1, s], log_alpha[t - 1, s - 1]])
+                    [log_alpha[t - 1, s], 
+                     log_alpha[t - 1, s - 1] if s > 0 else -float('inf')]])
                 prev_state = [s, s - 1]
             else:
                 candidates = torch.tensor([
