@@ -21,7 +21,6 @@ from typing import Tuple, Optional, List, Union
 
 import torch
 import logging
-from typeguard import check_argument_types
 import torch.nn.functional as F
 
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
@@ -94,7 +93,6 @@ class EfficientConformerEncoder(torch.nn.Module):
             group_size (int): group size of every GroupedAttention layer
             stride_kernel (bool): default True. True: recompute cnn kernels with stride.
         """
-        assert check_argument_types()
         super().__init__()
         self._output_size = output_size
 

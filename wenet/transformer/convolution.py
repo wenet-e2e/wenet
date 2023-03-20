@@ -19,7 +19,6 @@ from typing import Tuple
 
 import torch
 from torch import nn
-from typeguard import check_argument_types
 
 
 class ConvolutionModule(nn.Module):
@@ -37,7 +36,6 @@ class ConvolutionModule(nn.Module):
             kernel_size (int): Kernel size of conv layers.
             causal (int): Whether use causal convolution or not
         """
-        assert check_argument_types()
         super().__init__()
 
         self.pointwise_conv1 = nn.Conv1d(

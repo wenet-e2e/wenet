@@ -15,7 +15,6 @@
 
 import torch
 import torch.nn.functional as F
-from typeguard import check_argument_types
 
 
 class CTC(torch.nn.Module):
@@ -34,7 +33,6 @@ class CTC(torch.nn.Module):
             dropout_rate: dropout rate (0.0 ~ 1.0)
             reduce: reduce the CTC loss into a scalar
         """
-        assert check_argument_types()
         super().__init__()
         eprojs = encoder_output_size
         self.dropout_rate = dropout_rate
