@@ -4,7 +4,7 @@ import torch
 import torchaudio
 from torch import nn
 from torch.nn.utils.rnn import pad_sequence
-from typeguard import check_argument_types
+
 from wenet.transducer.predictor import PredictorBase
 from wenet.transducer.search.greedy_search import basic_greedy_search
 from wenet.transducer.search.prefix_beam_search import PrefixBeamSearch
@@ -38,7 +38,6 @@ class Transducer(ASRModel):
         transducer_weight: float = 1.0,
         attention_weight: float = 0.0,
     ) -> None:
-        assert check_argument_types()
         assert attention_weight + ctc_weight + transducer_weight == 1.0
         super().__init__(vocab_size, encoder, attention_decoder, ctc, lfmmi_dir,
                          ctc_weight, ignore_id, reverse_weight, lsm_weight,

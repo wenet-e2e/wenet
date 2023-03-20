@@ -17,8 +17,6 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
-from typeguard import check_argument_types
-
 from wenet.utils.mask import make_pad_mask
 from wenet.cif.utils import sequence_mask
 from wenet.transformer.attention import MultiHeadedAttention
@@ -61,7 +59,6 @@ class BaseDecoder(nn.Module):
             pos_enc_class=PositionalEncoding,
             normalize_before: bool = True,
     ):
-        assert check_argument_types()
         super().__init__()
         attention_dim = encoder_output_size
 
@@ -174,7 +171,6 @@ class CIFDecoderSAN(BaseDecoder):
             normalize_before: bool = True,
             embeds_id: int = -1,
     ):
-        assert check_argument_types()
         super().__init__(
             vocab_size=vocab_size,
             encoder_output_size=encoder_output_size,
@@ -291,7 +287,6 @@ class CIFDecoderSANM(BaseDecoder):
             kernel_size: int = 21,
             sanm_shfit: int = 0
     ):
-        assert check_argument_types()
         super().__init__(
             vocab_size=vocab_size,
             encoder_output_size=encoder_output_size,

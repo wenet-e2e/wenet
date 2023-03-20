@@ -3,7 +3,6 @@ pyyaml>=5.1
 sentencepiece
 tensorboard
 tensorboardX
-typeguard
 textgrid
 pytest
 flake8==3.8.2

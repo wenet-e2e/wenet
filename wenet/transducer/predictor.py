@@ -2,7 +2,6 @@ from typing import List, Optional, Tuple
 
 import torch
 from torch import nn
-from typeguard import check_argument_types
 from wenet.utils.common import get_activation, get_rnn
 
 
@@ -67,7 +66,6 @@ class RNNPredictor(PredictorBase):
                  bias: bool = True,
                  rnn_type: str = "lstm",
                  dropout: float = 0.1) -> None:
-        assert check_argument_types()
         super().__init__()
         self.n_layers = num_layers
         self.hidden_size = hidden_size
@@ -220,7 +218,6 @@ class EmbeddingPredictor(PredictorBase):
                  bias: bool = False,
                  layer_norm_epsilon: float = 1e-5) -> None:
 
-        assert check_argument_types()
         super().__init__()
         # multi head
         self.num_heads = n_head
@@ -377,7 +374,6 @@ class ConvPredictor(PredictorBase):
                  activation: str = "relu",
                  bias: bool = False,
                  layer_norm_epsilon: float = 1e-5) -> None:
-        assert check_argument_types()
         super().__init__()
 
         assert history_size >= 0
