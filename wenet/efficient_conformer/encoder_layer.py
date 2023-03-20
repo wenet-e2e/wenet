@@ -40,10 +40,6 @@ class StrideConformerEncoderLayer(nn.Module):
         normalize_before (bool):
             True: use layer_norm before each sub-block.
             False: use layer_norm after each sub-block.
-        concat_after (bool): Whether to concat attention layer's input and
-            output.
-            True: x -> x + linear(concat(x, att(x)))
-            False: x -> x + att(x)
     """
     def __init__(
         self,
@@ -54,8 +50,7 @@ class StrideConformerEncoderLayer(nn.Module):
         conv_module: Optional[nn.Module] = None,
         pointwise_conv_layer: Optional[nn.Module] = None,
         dropout_rate: float = 0.1,
-        normalize_before: bool = True,
-        concat_after: bool = False,
+        normalize_before: bool = True
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -79,7 +74,6 @@ class StrideConformerEncoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
-        self.concat_after = concat_after
         self.concat_linear = nn.Linear(size + size, size)
 
     def forward(
@@ -131,11 +125,7 @@ class StrideConformerEncoderLayer(nn.Module):
         x_att, new_att_cache = self.self_attn(
             x, x, x, mask, pos_emb, att_cache)
 
-        if self.concat_after:
-            x_concat = torch.cat((x, x_att), dim=-1)
-            x = residual + self.concat_linear(x_concat)
-        else:
-            x = residual + self.dropout(x_att)
+        x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm_mha(x)
 
