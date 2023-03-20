@@ -34,11 +34,6 @@ class DecoderLayerSANM(nn.Module):
         dropout_rate (float): Dropout rate.
         normalize_before (bool): Whether to use layer_norm before the first
                 block.
-        concat_after (bool): Whether to concat attention layer's input and
-                output.
-            if True, additional linear will be applied.
-            i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied. i.e. x -> x + att(x)
     """
 
     def __init__(
@@ -49,7 +44,6 @@ class DecoderLayerSANM(nn.Module):
             feed_forward: nn.Module,
             dropout_rate: float,
             normalize_before: bool = True,
-            concat_after: bool = False,
     ):
         """Construct an DecoderLayer object."""
         super(DecoderLayerSANM, self).__init__()
@@ -64,13 +58,6 @@ class DecoderLayerSANM(nn.Module):
             self.norm3 = nn.LayerNorm(size, eps=1e-12)
         self.dropout = nn.Dropout(dropout_rate)
         self.normalize_before = normalize_before
-        self.concat_after = concat_after
-        if self.concat_after:
-            self.concat_linear1 = nn.Linear(size + size, size)
-            self.concat_linear2 = nn.Linear(size + size, size)
-        else:
-            self.concat_linear1 = nn.Identity()
-            self.concat_linear2 = nn.Identity()
 
     def forward(
             self,
