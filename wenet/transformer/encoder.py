@@ -52,7 +52,6 @@ class BaseEncoder(torch.nn.Module):
         input_layer: str = "conv2d",
         pos_enc_layer_type: str = "abs_pos",
         normalize_before: bool = True,
-        concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
@@ -77,10 +76,6 @@ class BaseEncoder(torch.nn.Module):
             normalize_before (bool):
                 True: use layer_norm before each sub-block of a layer.
                 False: use layer_norm after each sub-block of a layer.
-            concat_after (bool): whether to concat attention layer's input
-                and output.
-                True: x -> x + linear(concat(x, att(x)))
-                False: x -> x + att(x)
             static_chunk_size (int): chunk size for static chunk training and
                 decoding
             use_dynamic_chunk (bool): whether use dynamic chunk size for
@@ -341,7 +336,6 @@ class TransformerEncoder(BaseEncoder):
         input_layer: str = "conv2d",
         pos_enc_layer_type: str = "abs_pos",
         normalize_before: bool = True,
-        concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
@@ -356,7 +350,7 @@ class TransformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         concat_after, static_chunk_size, use_dynamic_chunk,
+                         static_chunk_size, use_dynamic_chunk,
                          global_cmvn, use_dynamic_left_chunk)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
@@ -365,7 +359,7 @@ class TransformerEncoder(BaseEncoder):
                                      attention_dropout_rate),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate), dropout_rate,
-                normalize_before, concat_after) for _ in range(num_blocks)
+                normalize_before) for _ in range(num_blocks)
         ])
 
 
@@ -384,7 +378,6 @@ class ConformerEncoder(BaseEncoder):
         input_layer: str = "conv2d",
         pos_enc_layer_type: str = "rel_pos",
         normalize_before: bool = True,
-        concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
@@ -419,7 +412,7 @@ class ConformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         concat_after, static_chunk_size, use_dynamic_chunk,
+                         static_chunk_size, use_dynamic_chunk,
                          global_cmvn, use_dynamic_left_chunk)
         activation = get_activation(activation_type)
 
@@ -457,6 +450,5 @@ class ConformerEncoder(BaseEncoder):
                     *convolution_layer_args) if use_cnn_module else None,
                 dropout_rate,
                 normalize_before,
-                concat_after,
             ) for _ in range(num_blocks)
         ])
