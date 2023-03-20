@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wenet.transformer.asr_model &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../train.html">How to train models?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../production.html">Production Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wenet.transformer.asr_model</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wenet.transformer.asr_model</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Di Wu)</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1"># Modified from ESPnet(https://github.com/espnet/espnet)</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<span class="kn">from</span> <span class="nn">torch.nn.utils.rnn</span> <span class="kn">import</span> <span class="n">pad_sequence</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">k2</span>
+    <span class="kn">from</span> <span class="nn">icefall.utils</span> <span class="kn">import</span> <span class="n">get_texts</span>
+    <span class="kn">from</span> <span class="nn">icefall.decode</span> <span class="kn">import</span> <span class="n">get_lattice</span><span class="p">,</span> <span class="n">Nbest</span><span class="p">,</span> <span class="n">one_best_decoding</span>
+    <span class="kn">from</span> <span class="nn">icefall.mmi</span> <span class="kn">import</span> <span class="n">LFMMILoss</span>
+    <span class="kn">from</span> <span class="nn">icefall.mmi_graph_compiler</span> <span class="kn">import</span> <span class="n">MmiTrainingGraphCompiler</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Failed to import k2 and icefall. </span><span class="se">\</span>
+<span class="s1">        Notice that they are necessary for </span><span class="se">\</span>
+<span class="s1">        hlg_onebest/hlg_rescore decoding and LF-MMI training&#39;</span><span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">wenet.transformer.ctc</span> <span class="kn">import</span> <span class="n">CTC</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.decoder</span> <span class="kn">import</span> <span class="n">TransformerDecoder</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.encoder</span> <span class="kn">import</span> <span class="n">TransformerEncoder</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.label_smoothing_loss</span> <span class="kn">import</span> <span class="n">LabelSmoothingLoss</span>
+<span class="kn">from</span> <span class="nn">wenet.utils.common</span> <span class="kn">import</span> <span class="p">(</span><span class="n">IGNORE_ID</span><span class="p">,</span> <span class="n">add_sos_eos</span><span class="p">,</span> <span class="n">log_add</span><span class="p">,</span>
+                                <span class="n">remove_duplicates_and_blank</span><span class="p">,</span> <span class="n">th_accuracy</span><span class="p">,</span>
+                                <span class="n">reverse_pad_list</span><span class="p">)</span>
+<span class="kn">from</span> <span class="nn">wenet.utils.mask</span> <span class="kn">import</span> <span class="p">(</span><span class="n">make_pad_mask</span><span class="p">,</span> <span class="n">mask_finished_preds</span><span class="p">,</span>
+                              <span class="n">mask_finished_scores</span><span class="p">,</span> <span class="n">subsequent_mask</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ASRModel"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel">[docs]</a><span class="k">class</span> <span class="nc">ASRModel</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;CTC-attention hybrid Encoder-Decoder model&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">vocab_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">encoder</span><span class="p">:</span> <span class="n">TransformerEncoder</span><span class="p">,</span>
+        <span class="n">decoder</span><span class="p">:</span> <span class="n">TransformerDecoder</span><span class="p">,</span>
+        <span class="n">ctc</span><span class="p">:</span> <span class="n">CTC</span><span class="p">,</span>
+        <span class="n">lfmmi_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">ctc_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
+        <span class="n">ignore_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">IGNORE_ID</span><span class="p">,</span>
+        <span class="n">reverse_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">lsm_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">length_normalized_loss</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">assert</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">ctc_weight</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">ctc_weight</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># note that eos is the same as sos (equivalent ID)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sos</span> <span class="o">=</span> <span class="n">vocab_size</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eos</span> <span class="o">=</span> <span class="n">vocab_size</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span> <span class="o">=</span> <span class="n">vocab_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span> <span class="o">=</span> <span class="n">ignore_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctc_weight</span> <span class="o">=</span> <span class="n">ctc_weight</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reverse_weight</span> <span class="o">=</span> <span class="n">reverse_weight</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span> <span class="o">=</span> <span class="n">encoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span> <span class="o">=</span> <span class="n">decoder</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span> <span class="o">=</span> <span class="n">ctc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">criterion_att</span> <span class="o">=</span> <span class="n">LabelSmoothingLoss</span><span class="p">(</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">vocab_size</span><span class="p">,</span>
+            <span class="n">padding_idx</span><span class="o">=</span><span class="n">ignore_id</span><span class="p">,</span>
+            <span class="n">smoothing</span><span class="o">=</span><span class="n">lsm_weight</span><span class="p">,</span>
+            <span class="n">normalize_length</span><span class="o">=</span><span class="n">length_normalized_loss</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lfmmi_dir</span> <span class="o">=</span> <span class="n">lfmmi_dir</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfmmi_dir</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">load_lfmmi_resource</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ASRModel.forward"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">text_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Frontend + Encoder + Decoder + Calc loss</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            speech: (Batch, Length, ...)</span>
+<span class="sd">            speech_lengths: (Batch, )</span>
+<span class="sd">            text: (Batch, Length)</span>
+<span class="sd">            text_lengths: (Batch,)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">assert</span> <span class="n">text_lengths</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="n">text_lengths</span><span class="o">.</span><span class="n">shape</span>
+        <span class="c1"># Check that batch_size is unified</span>
+        <span class="k">assert</span> <span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">speech_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">text</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span>
+                <span class="n">text_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="p">(</span><span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span>
+                                         <span class="n">text</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">text_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="c1"># 1. Encoder</span>
+        <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">)</span>
+        <span class="n">encoder_out_lens</span> <span class="o">=</span> <span class="n">encoder_mask</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># 2a. Attention-decoder branch</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc_weight</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
+            <span class="n">loss_att</span><span class="p">,</span> <span class="n">acc_att</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_att_loss</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span>
+                                                    <span class="n">text</span><span class="p">,</span> <span class="n">text_lengths</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loss_att</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># 2b. CTC branch or LF-MMI loss</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc_weight</span> <span class="o">!=</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfmmi_dir</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
+                <span class="n">loss_ctc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_lfmmi_loss</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">loss_ctc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_out_lens</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span>
+                                    <span class="n">text_lengths</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loss_ctc</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">loss_ctc</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_att</span>
+        <span class="k">elif</span> <span class="n">loss_att</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_ctc</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc_weight</span> <span class="o">*</span> <span class="n">loss_ctc</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">ctc_weight</span><span class="p">)</span> <span class="o">*</span> <span class="n">loss_att</span>
+        <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;loss&quot;</span><span class="p">:</span> <span class="n">loss</span><span class="p">,</span> <span class="s2">&quot;loss_att&quot;</span><span class="p">:</span> <span class="n">loss_att</span><span class="p">,</span> <span class="s2">&quot;loss_ctc&quot;</span><span class="p">:</span> <span class="n">loss_ctc</span><span class="p">}</span></div>
+
+    <span class="k">def</span> <span class="nf">_calc_att_loss</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">encoder_out</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">encoder_mask</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">ys_pad</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">ys_pad_lens</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="n">ys_in_pad</span><span class="p">,</span> <span class="n">ys_out_pad</span> <span class="o">=</span> <span class="n">add_sos_eos</span><span class="p">(</span><span class="n">ys_pad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">,</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="n">ys_in_lens</span> <span class="o">=</span> <span class="n">ys_pad_lens</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># reverse the seq, used for right to left decoder</span>
+        <span class="n">r_ys_pad</span> <span class="o">=</span> <span class="n">reverse_pad_list</span><span class="p">(</span><span class="n">ys_pad</span><span class="p">,</span> <span class="n">ys_pad_lens</span><span class="p">,</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">))</span>
+        <span class="n">r_ys_in_pad</span><span class="p">,</span> <span class="n">r_ys_out_pad</span> <span class="o">=</span> <span class="n">add_sos_eos</span><span class="p">(</span><span class="n">r_ys_pad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">,</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="c1"># 1. Forward decoder</span>
+        <span class="n">decoder_out</span><span class="p">,</span> <span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span>
+                                                     <span class="n">ys_in_pad</span><span class="p">,</span> <span class="n">ys_in_lens</span><span class="p">,</span>
+                                                     <span class="n">r_ys_in_pad</span><span class="p">,</span>
+                                                     <span class="bp">self</span><span class="o">.</span><span class="n">reverse_weight</span><span class="p">)</span>
+        <span class="c1"># 2. Compute attention loss</span>
+        <span class="n">loss_att</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion_att</span><span class="p">(</span><span class="n">decoder_out</span><span class="p">,</span> <span class="n">ys_out_pad</span><span class="p">)</span>
+        <span class="n">r_loss_att</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_weight</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="n">r_loss_att</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">criterion_att</span><span class="p">(</span><span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">r_ys_out_pad</span><span class="p">)</span>
+        <span class="n">loss_att</span> <span class="o">=</span> <span class="n">loss_att</span> <span class="o">*</span> <span class="p">(</span>
+            <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_weight</span><span class="p">)</span> <span class="o">+</span> <span class="n">r_loss_att</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">reverse_weight</span>
+        <span class="n">acc_att</span> <span class="o">=</span> <span class="n">th_accuracy</span><span class="p">(</span>
+            <span class="n">decoder_out</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vocab_size</span><span class="p">),</span>
+            <span class="n">ys_out_pad</span><span class="p">,</span>
+            <span class="n">ignore_label</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">loss_att</span><span class="p">,</span> <span class="n">acc_att</span>
+
+    <span class="k">def</span> <span class="nf">_forward_encoder</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+        <span class="c1"># Let&#39;s assume B = batch_size</span>
+        <span class="c1"># 1. Encoder</span>
+        <span class="k">if</span> <span class="n">simulate_streaming</span> <span class="ow">and</span> <span class="n">decoding_chunk_size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">forward_chunk_by_chunk</span><span class="p">(</span>
+                <span class="n">speech</span><span class="p">,</span>
+                <span class="n">decoding_chunk_size</span><span class="o">=</span><span class="n">decoding_chunk_size</span><span class="p">,</span>
+                <span class="n">num_decoding_left_chunks</span><span class="o">=</span><span class="n">num_decoding_left_chunks</span>
+            <span class="p">)</span>  <span class="c1"># (B, maxlen, encoder_dim)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="p">(</span>
+                <span class="n">speech</span><span class="p">,</span>
+                <span class="n">speech_lengths</span><span class="p">,</span>
+                <span class="n">decoding_chunk_size</span><span class="o">=</span><span class="n">decoding_chunk_size</span><span class="p">,</span>
+                <span class="n">num_decoding_left_chunks</span><span class="o">=</span><span class="n">num_decoding_left_chunks</span>
+            <span class="p">)</span>  <span class="c1"># (B, maxlen, encoder_dim)</span>
+        <span class="k">return</span> <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span>
+
+<div class="viewcode-block" id="ASRModel.recognize"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.recognize">[docs]</a>    <span class="k">def</span> <span class="nf">recognize</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">beam_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Apply beam search on attention decoder</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            speech (torch.Tensor): (batch, max_len, feat_dim)</span>
+<span class="sd">            speech_length (torch.Tensor): (batch, )</span>
+<span class="sd">            beam_size (int): beam size for beam search</span>
+<span class="sd">            decoding_chunk_size (int): decoding chunk for dynamic chunk</span>
+<span class="sd">                trained model.</span>
+<span class="sd">                &lt;0: for decoding, use full chunk.</span>
+<span class="sd">                &gt;0: for decoding, use fixed chunk size as set.</span>
+<span class="sd">                0: used for training, it&#39;s prohibited here</span>
+<span class="sd">            simulate_streaming (bool): whether do encoder forward in a</span>
+<span class="sd">                streaming fashion</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: decoding result, (batch, max_result_len)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">speech_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">decoding_chunk_size</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">speech</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="c1"># Let&#39;s assume B = batch_size and N = beam_size</span>
+        <span class="c1"># 1. Encoder</span>
+        <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_encoder</span><span class="p">(</span>
+            <span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">,</span> <span class="n">decoding_chunk_size</span><span class="p">,</span>
+            <span class="n">num_decoding_left_chunks</span><span class="p">,</span>
+            <span class="n">simulate_streaming</span><span class="p">)</span>  <span class="c1"># (B, maxlen, encoder_dim)</span>
+        <span class="n">maxlen</span> <span class="o">=</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">encoder_dim</span> <span class="o">=</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">running_size</span> <span class="o">=</span> <span class="n">batch_size</span> <span class="o">*</span> <span class="n">beam_size</span>
+        <span class="n">encoder_out</span> <span class="o">=</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+            <span class="n">running_size</span><span class="p">,</span> <span class="n">maxlen</span><span class="p">,</span> <span class="n">encoder_dim</span><span class="p">)</span>  <span class="c1"># (B*N, maxlen, encoder_dim)</span>
+        <span class="n">encoder_mask</span> <span class="o">=</span> <span class="n">encoder_mask</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
+            <span class="mi">1</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">running_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span>
+                                     <span class="n">maxlen</span><span class="p">)</span>  <span class="c1"># (B*N, 1, max_len)</span>
+
+        <span class="n">hyps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">([</span><span class="n">running_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span>
+                          <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">fill_</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sos</span><span class="p">)</span>  <span class="c1"># (B*N, 1)</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)]</span> <span class="o">*</span> <span class="p">(</span><span class="n">beam_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span>
+                              <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">([</span><span class="n">batch_size</span><span class="p">])</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span>
+            <span class="n">device</span><span class="p">)</span>  <span class="c1"># (B*N, 1)</span>
+        <span class="n">end_flag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">scores</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="c1"># 2. Decoder forward step by step</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">maxlen</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="c1"># Stop if all batch and all beam produce eos</span>
+            <span class="k">if</span> <span class="n">end_flag</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span> <span class="o">==</span> <span class="n">running_size</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="c1"># 2.1 Forward decoder step</span>
+            <span class="n">hyps_mask</span> <span class="o">=</span> <span class="n">subsequent_mask</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
+                <span class="n">running_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>  <span class="c1"># (B*N, i, i)</span>
+            <span class="c1"># logp: (B*N, vocab)</span>
+            <span class="n">logp</span><span class="p">,</span> <span class="n">cache</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="o">.</span><span class="n">forward_one_step</span><span class="p">(</span>
+                <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span> <span class="n">hyps</span><span class="p">,</span> <span class="n">hyps_mask</span><span class="p">,</span> <span class="n">cache</span><span class="p">)</span>
+            <span class="c1"># 2.2 First beam prune: select topk best prob at current time</span>
+            <span class="n">top_k_logp</span><span class="p">,</span> <span class="n">top_k_index</span> <span class="o">=</span> <span class="n">logp</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">beam_size</span><span class="p">)</span>  <span class="c1"># (B*N, N)</span>
+            <span class="n">top_k_logp</span> <span class="o">=</span> <span class="n">mask_finished_scores</span><span class="p">(</span><span class="n">top_k_logp</span><span class="p">,</span> <span class="n">end_flag</span><span class="p">)</span>
+            <span class="n">top_k_index</span> <span class="o">=</span> <span class="n">mask_finished_preds</span><span class="p">(</span><span class="n">top_k_index</span><span class="p">,</span> <span class="n">end_flag</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">)</span>
+            <span class="c1"># 2.3 Second beam prune: select topk score with history</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span> <span class="o">+</span> <span class="n">top_k_logp</span>  <span class="c1"># (B*N, N), broadcast add</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">beam_size</span> <span class="o">*</span> <span class="n">beam_size</span><span class="p">)</span>  <span class="c1"># (B, N*N)</span>
+            <span class="n">scores</span><span class="p">,</span> <span class="n">offset_k_index</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">k</span><span class="o">=</span><span class="n">beam_size</span><span class="p">)</span>  <span class="c1"># (B, N)</span>
+            <span class="c1"># Update cache to be consistent with new topk scores / hyps</span>
+            <span class="n">cache_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">offset_k_index</span> <span class="o">//</span> <span class="n">beam_size</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B*N)</span>
+            <span class="n">base_cache_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">])</span> <span class="o">*</span> <span class="n">beam_size</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B*N)</span>
+            <span class="n">cache_index</span> <span class="o">=</span> <span class="n">base_cache_index</span> <span class="o">+</span> <span class="n">cache_index</span>
+            <span class="n">cache</span> <span class="o">=</span> <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">cache_index</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">]</span>
+            <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B*N, 1)</span>
+            <span class="c1"># 2.4. Compute base index in top_k_index,</span>
+            <span class="c1"># regard top_k_index as (B*N*N),regard offset_k_index as (B*N),</span>
+            <span class="c1"># then find offset_k_index in top_k_index</span>
+            <span class="n">base_k_index</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">])</span>  <span class="c1"># (B, N)</span>
+            <span class="n">base_k_index</span> <span class="o">=</span> <span class="n">base_k_index</span> <span class="o">*</span> <span class="n">beam_size</span> <span class="o">*</span> <span class="n">beam_size</span>
+            <span class="n">best_k_index</span> <span class="o">=</span> <span class="n">base_k_index</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="n">offset_k_index</span><span class="o">.</span><span class="n">view</span><span class="p">(</span>
+                <span class="o">-</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B*N)</span>
+
+            <span class="c1"># 2.5 Update best hyps</span>
+            <span class="n">best_k_pred</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="n">top_k_index</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span>
+                                             <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                                             <span class="n">index</span><span class="o">=</span><span class="n">best_k_index</span><span class="p">)</span>  <span class="c1"># (B*N)</span>
+            <span class="n">best_hyps_index</span> <span class="o">=</span> <span class="n">best_k_index</span> <span class="o">//</span> <span class="n">beam_size</span>
+            <span class="n">last_best_k_hyps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span>
+                <span class="n">hyps</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">best_hyps_index</span><span class="p">)</span>  <span class="c1"># (B*N, i)</span>
+            <span class="n">hyps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">last_best_k_hyps</span><span class="p">,</span> <span class="n">best_k_pred</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)),</span>
+                             <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B*N, i+1)</span>
+
+            <span class="c1"># 2.6 Update end flag</span>
+            <span class="n">end_flag</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">hyps</span><span class="p">[:,</span> <span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">)</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># 3. Select best of best</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">)</span>
+        <span class="c1"># TODO: length normalization</span>
+        <span class="n">best_scores</span><span class="p">,</span> <span class="n">best_index</span> <span class="o">=</span> <span class="n">scores</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">best_hyps_index</span> <span class="o">=</span> <span class="n">best_index</span> <span class="o">+</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
+            <span class="n">batch_size</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span> <span class="o">*</span> <span class="n">beam_size</span>
+        <span class="n">best_hyps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">index_select</span><span class="p">(</span><span class="n">hyps</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">best_hyps_index</span><span class="p">)</span>
+        <span class="n">best_hyps</span> <span class="o">=</span> <span class="n">best_hyps</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
+        <span class="k">return</span> <span class="n">best_hyps</span><span class="p">,</span> <span class="n">best_scores</span></div>
+
+<div class="viewcode-block" id="ASRModel.ctc_greedy_search"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.ctc_greedy_search">[docs]</a>    <span class="k">def</span> <span class="nf">ctc_greedy_search</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Apply CTC greedy search</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            speech (torch.Tensor): (batch, max_len, feat_dim)</span>
+<span class="sd">            speech_length (torch.Tensor): (batch, )</span>
+<span class="sd">            beam_size (int): beam size for beam search</span>
+<span class="sd">            decoding_chunk_size (int): decoding chunk for dynamic chunk</span>
+<span class="sd">                trained model.</span>
+<span class="sd">                &lt;0: for decoding, use full chunk.</span>
+<span class="sd">                &gt;0: for decoding, use fixed chunk size as set.</span>
+<span class="sd">                0: used for training, it&#39;s prohibited here</span>
+<span class="sd">            simulate_streaming (bool): whether do encoder forward in a</span>
+<span class="sd">                streaming fashion</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List[List[int]]: best path result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">speech_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">decoding_chunk_size</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># Let&#39;s assume B = batch_size</span>
+        <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_encoder</span><span class="p">(</span>
+            <span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">,</span> <span class="n">decoding_chunk_size</span><span class="p">,</span>
+            <span class="n">num_decoding_left_chunks</span><span class="p">,</span>
+            <span class="n">simulate_streaming</span><span class="p">)</span>  <span class="c1"># (B, maxlen, encoder_dim)</span>
+        <span class="n">maxlen</span> <span class="o">=</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">encoder_out_lens</span> <span class="o">=</span> <span class="n">encoder_mask</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">ctc_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span>
+            <span class="n">encoder_out</span><span class="p">)</span>  <span class="c1"># (B, maxlen, vocab_size)</span>
+        <span class="n">topk_prob</span><span class="p">,</span> <span class="n">topk_index</span> <span class="o">=</span> <span class="n">ctc_probs</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># (B, maxlen, 1)</span>
+        <span class="n">topk_index</span> <span class="o">=</span> <span class="n">topk_index</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">maxlen</span><span class="p">)</span>  <span class="c1"># (B, maxlen)</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="n">make_pad_mask</span><span class="p">(</span><span class="n">encoder_out_lens</span><span class="p">,</span> <span class="n">maxlen</span><span class="p">)</span>  <span class="c1"># (B, maxlen)</span>
+        <span class="n">topk_index</span> <span class="o">=</span> <span class="n">topk_index</span><span class="o">.</span><span class="n">masked_fill_</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">)</span>  <span class="c1"># (B, maxlen)</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="p">[</span><span class="n">hyp</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="k">for</span> <span class="n">hyp</span> <span class="ow">in</span> <span class="n">topk_index</span><span class="p">]</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="n">topk_prob</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="p">[</span><span class="n">remove_duplicates_and_blank</span><span class="p">(</span><span class="n">hyp</span><span class="p">)</span> <span class="k">for</span> <span class="n">hyp</span> <span class="ow">in</span> <span class="n">hyps</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">hyps</span><span class="p">,</span> <span class="n">scores</span></div>
+
+    <span class="k">def</span> <span class="nf">_ctc_prefix_beam_search</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">beam_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; CTC prefix beam search inner implementation</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            speech (torch.Tensor): (batch, max_len, feat_dim)</span>
+<span class="sd">            speech_length (torch.Tensor): (batch, )</span>
+<span class="sd">            beam_size (int): beam size for beam search</span>
+<span class="sd">            decoding_chunk_size (int): decoding chunk for dynamic chunk</span>
+<span class="sd">                trained model.</span>
+<span class="sd">                &lt;0: for decoding, use full chunk.</span>
+<span class="sd">                &gt;0: for decoding, use fixed chunk size as set.</span>
+<span class="sd">                0: used for training, it&#39;s prohibited here</span>
+<span class="sd">            simulate_streaming (bool): whether do encoder forward in a</span>
+<span class="sd">                streaming fashion</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[List[int]]: nbest results</span>
+<span class="sd">            torch.Tensor: encoder output, (1, max_len, encoder_dim),</span>
+<span class="sd">                it will be used for rescoring in attention rescoring mode</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">speech_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">decoding_chunk_size</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># For CTC prefix beam search, we only support batch_size=1</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="c1"># Let&#39;s assume B = batch_size and N = beam_size</span>
+        <span class="c1"># 1. Encoder forward and get CTC score</span>
+        <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_encoder</span><span class="p">(</span>
+            <span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">,</span> <span class="n">decoding_chunk_size</span><span class="p">,</span>
+            <span class="n">num_decoding_left_chunks</span><span class="p">,</span>
+            <span class="n">simulate_streaming</span><span class="p">)</span>  <span class="c1"># (B, maxlen, encoder_dim)</span>
+        <span class="n">maxlen</span> <span class="o">=</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">ctc_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span>
+            <span class="n">encoder_out</span><span class="p">)</span>  <span class="c1"># (1, maxlen, vocab_size)</span>
+        <span class="n">ctc_probs</span> <span class="o">=</span> <span class="n">ctc_probs</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># cur_hyps: (prefix, (blank_ending_score, none_blank_ending_score))</span>
+        <span class="n">cur_hyps</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">tuple</span><span class="p">(),</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)))]</span>
+        <span class="c1"># 2. CTC beam search step by step</span>
+        <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">maxlen</span><span class="p">):</span>
+            <span class="n">logp</span> <span class="o">=</span> <span class="n">ctc_probs</span><span class="p">[</span><span class="n">t</span><span class="p">]</span>  <span class="c1"># (vocab_size,)</span>
+            <span class="c1"># key: prefix, value (pb, pnb), default value(-inf, -inf)</span>
+            <span class="n">next_hyps</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">),</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)))</span>
+            <span class="c1"># 2.1 First beam prune: select topk best</span>
+            <span class="n">top_k_logp</span><span class="p">,</span> <span class="n">top_k_index</span> <span class="o">=</span> <span class="n">logp</span><span class="o">.</span><span class="n">topk</span><span class="p">(</span><span class="n">beam_size</span><span class="p">)</span>  <span class="c1"># (beam_size,)</span>
+            <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">top_k_index</span><span class="p">:</span>
+                <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+                <span class="n">ps</span> <span class="o">=</span> <span class="n">logp</span><span class="p">[</span><span class="n">s</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+                <span class="k">for</span> <span class="n">prefix</span><span class="p">,</span> <span class="p">(</span><span class="n">pb</span><span class="p">,</span> <span class="n">pnb</span><span class="p">)</span> <span class="ow">in</span> <span class="n">cur_hyps</span><span class="p">:</span>
+                    <span class="n">last</span> <span class="o">=</span> <span class="n">prefix</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">prefix</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="kc">None</span>
+                    <span class="k">if</span> <span class="n">s</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># blank</span>
+                        <span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span> <span class="o">=</span> <span class="n">next_hyps</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span>
+                        <span class="n">n_pb</span> <span class="o">=</span> <span class="n">log_add</span><span class="p">([</span><span class="n">n_pb</span><span class="p">,</span> <span class="n">pb</span> <span class="o">+</span> <span class="n">ps</span><span class="p">,</span> <span class="n">pnb</span> <span class="o">+</span> <span class="n">ps</span><span class="p">])</span>
+                        <span class="n">next_hyps</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span><span class="p">)</span>
+                    <span class="k">elif</span> <span class="n">s</span> <span class="o">==</span> <span class="n">last</span><span class="p">:</span>
+                        <span class="c1">#  Update *ss -&gt; *s;</span>
+                        <span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span> <span class="o">=</span> <span class="n">next_hyps</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span>
+                        <span class="n">n_pnb</span> <span class="o">=</span> <span class="n">log_add</span><span class="p">([</span><span class="n">n_pnb</span><span class="p">,</span> <span class="n">pnb</span> <span class="o">+</span> <span class="n">ps</span><span class="p">])</span>
+                        <span class="n">next_hyps</span><span class="p">[</span><span class="n">prefix</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span><span class="p">)</span>
+                        <span class="c1"># Update *s-s -&gt; *ss, - is for blank</span>
+                        <span class="n">n_prefix</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="p">)</span>
+                        <span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span> <span class="o">=</span> <span class="n">next_hyps</span><span class="p">[</span><span class="n">n_prefix</span><span class="p">]</span>
+                        <span class="n">n_pnb</span> <span class="o">=</span> <span class="n">log_add</span><span class="p">([</span><span class="n">n_pnb</span><span class="p">,</span> <span class="n">pb</span> <span class="o">+</span> <span class="n">ps</span><span class="p">])</span>
+                        <span class="n">next_hyps</span><span class="p">[</span><span class="n">n_prefix</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">n_prefix</span> <span class="o">=</span> <span class="n">prefix</span> <span class="o">+</span> <span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="p">)</span>
+                        <span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span> <span class="o">=</span> <span class="n">next_hyps</span><span class="p">[</span><span class="n">n_prefix</span><span class="p">]</span>
+                        <span class="n">n_pnb</span> <span class="o">=</span> <span class="n">log_add</span><span class="p">([</span><span class="n">n_pnb</span><span class="p">,</span> <span class="n">pb</span> <span class="o">+</span> <span class="n">ps</span><span class="p">,</span> <span class="n">pnb</span> <span class="o">+</span> <span class="n">ps</span><span class="p">])</span>
+                        <span class="n">next_hyps</span><span class="p">[</span><span class="n">n_prefix</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">n_pb</span><span class="p">,</span> <span class="n">n_pnb</span><span class="p">)</span>
+
+            <span class="c1"># 2.2 Second beam prune</span>
+            <span class="n">next_hyps</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">next_hyps</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
+                               <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">log_add</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])),</span>
+                               <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">cur_hyps</span> <span class="o">=</span> <span class="n">next_hyps</span><span class="p">[:</span><span class="n">beam_size</span><span class="p">]</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="p">[(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">log_add</span><span class="p">([</span><span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]]))</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">cur_hyps</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">hyps</span><span class="p">,</span> <span class="n">encoder_out</span>
+
+<div class="viewcode-block" id="ASRModel.ctc_prefix_beam_search"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.ctc_prefix_beam_search">[docs]</a>    <span class="k">def</span> <span class="nf">ctc_prefix_beam_search</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">beam_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Apply CTC prefix beam search</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            speech (torch.Tensor): (batch, max_len, feat_dim)</span>
+<span class="sd">            speech_length (torch.Tensor): (batch, )</span>
+<span class="sd">            beam_size (int): beam size for beam search</span>
+<span class="sd">            decoding_chunk_size (int): decoding chunk for dynamic chunk</span>
+<span class="sd">                trained model.</span>
+<span class="sd">                &lt;0: for decoding, use full chunk.</span>
+<span class="sd">                &gt;0: for decoding, use fixed chunk size as set.</span>
+<span class="sd">                0: used for training, it&#39;s prohibited here</span>
+<span class="sd">            simulate_streaming (bool): whether do encoder forward in a</span>
+<span class="sd">                streaming fashion</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[int]: CTC prefix beam search nbest results</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">hyps</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ctc_prefix_beam_search</span><span class="p">(</span><span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">,</span>
+                                               <span class="n">beam_size</span><span class="p">,</span> <span class="n">decoding_chunk_size</span><span class="p">,</span>
+                                               <span class="n">num_decoding_left_chunks</span><span class="p">,</span>
+                                               <span class="n">simulate_streaming</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">hyps</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ASRModel.attention_rescoring"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.attention_rescoring">[docs]</a>    <span class="k">def</span> <span class="nf">attention_rescoring</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">beam_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">ctc_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">reverse_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Apply attention rescoring decoding, CTC prefix beam search</span>
+<span class="sd">            is applied first to get nbest, then we resoring the nbest on</span>
+<span class="sd">            attention decoder with corresponding encoder out</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            speech (torch.Tensor): (batch, max_len, feat_dim)</span>
+<span class="sd">            speech_length (torch.Tensor): (batch, )</span>
+<span class="sd">            beam_size (int): beam size for beam search</span>
+<span class="sd">            decoding_chunk_size (int): decoding chunk for dynamic chunk</span>
+<span class="sd">                trained model.</span>
+<span class="sd">                &lt;0: for decoding, use full chunk.</span>
+<span class="sd">                &gt;0: for decoding, use fixed chunk size as set.</span>
+<span class="sd">                0: used for training, it&#39;s prohibited here</span>
+<span class="sd">            simulate_streaming (bool): whether do encoder forward in a</span>
+<span class="sd">                streaming fashion</span>
+<span class="sd">            reverse_weight (float): right to left decoder weight</span>
+<span class="sd">            ctc_weight (float): ctc score weight</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[int]: Attention rescoring result</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">speech_lengths</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">decoding_chunk_size</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="n">reverse_weight</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+            <span class="c1"># decoder should be a bitransformer decoder if reverse_weight &gt; 0.0</span>
+            <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">,</span> <span class="s1">&#39;right_decoder&#39;</span><span class="p">)</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">speech</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="n">speech</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># For attention rescoring we only support batch_size=1</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="c1"># encoder_out: (1, maxlen, encoder_dim), len(hyps) = beam_size</span>
+        <span class="n">hyps</span><span class="p">,</span> <span class="n">encoder_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ctc_prefix_beam_search</span><span class="p">(</span>
+            <span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">,</span> <span class="n">decoding_chunk_size</span><span class="p">,</span>
+            <span class="n">num_decoding_left_chunks</span><span class="p">,</span> <span class="n">simulate_streaming</span><span class="p">)</span>
+
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">)</span> <span class="o">==</span> <span class="n">beam_size</span>
+        <span class="n">hyps_pad</span> <span class="o">=</span> <span class="n">pad_sequence</span><span class="p">([</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">hyp</span> <span class="ow">in</span> <span class="n">hyps</span>
+        <span class="p">],</span> <span class="kc">True</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>  <span class="c1"># (beam_size, max_hyps_len)</span>
+        <span class="n">ori_hyps_pad</span> <span class="o">=</span> <span class="n">hyps_pad</span>
+        <span class="n">hyps_lens</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">for</span> <span class="n">hyp</span> <span class="ow">in</span> <span class="n">hyps</span><span class="p">],</span>
+                                 <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>  <span class="c1"># (beam_size,)</span>
+        <span class="n">hyps_pad</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">add_sos_eos</span><span class="p">(</span><span class="n">hyps_pad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="n">hyps_lens</span> <span class="o">=</span> <span class="n">hyps_lens</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># Add &lt;sos&gt; at begining</span>
+        <span class="n">encoder_out</span> <span class="o">=</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">beam_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">encoder_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">beam_size</span><span class="p">,</span>
+                                  <span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                                  <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">,</span>
+                                  <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="c1"># used for right to left decoder</span>
+        <span class="n">r_hyps_pad</span> <span class="o">=</span> <span class="n">reverse_pad_list</span><span class="p">(</span><span class="n">ori_hyps_pad</span><span class="p">,</span> <span class="n">hyps_lens</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="n">r_hyps_pad</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">add_sos_eos</span><span class="p">(</span><span class="n">r_hyps_pad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="n">decoder_out</span><span class="p">,</span> <span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span>
+            <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span> <span class="n">hyps_pad</span><span class="p">,</span> <span class="n">hyps_lens</span><span class="p">,</span> <span class="n">r_hyps_pad</span><span class="p">,</span>
+            <span class="n">reverse_weight</span><span class="p">)</span>  <span class="c1"># (beam_size, max_hyps_len, vocab_size)</span>
+        <span class="n">decoder_out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">decoder_out</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">decoder_out</span> <span class="o">=</span> <span class="n">decoder_out</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="c1"># r_decoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a</span>
+        <span class="c1"># conventional transformer decoder.</span>
+        <span class="n">r_decoder_out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">r_decoder_out</span> <span class="o">=</span> <span class="n">r_decoder_out</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="c1"># Only use decoder score for rescoring</span>
+        <span class="n">best_score</span> <span class="o">=</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s1">&#39;inf&#39;</span><span class="p">)</span>
+        <span class="n">best_index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">hyp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hyps</span><span class="p">):</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="n">score</span> <span class="o">+=</span> <span class="n">decoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="n">w</span><span class="p">]</span>
+            <span class="n">score</span> <span class="o">+=</span> <span class="n">decoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="mi">0</span><span class="p">])][</span><span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">]</span>
+            <span class="c1"># add right to left decoder score</span>
+            <span class="k">if</span> <span class="n">reverse_weight</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">r_score</span> <span class="o">=</span> <span class="mf">0.0</span>
+                <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="n">r_score</span> <span class="o">+=</span> <span class="n">r_decoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">-</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">][</span><span class="n">w</span><span class="p">]</span>
+                <span class="n">r_score</span> <span class="o">+=</span> <span class="n">r_decoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="mi">0</span><span class="p">])][</span><span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">]</span>
+                <span class="n">score</span> <span class="o">=</span> <span class="n">score</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">reverse_weight</span><span class="p">)</span> <span class="o">+</span> <span class="n">r_score</span> <span class="o">*</span> <span class="n">reverse_weight</span>
+            <span class="c1"># add ctc score</span>
+            <span class="n">score</span> <span class="o">+=</span> <span class="n">hyp</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">ctc_weight</span>
+            <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="n">best_score</span><span class="p">:</span>
+                <span class="n">best_score</span> <span class="o">=</span> <span class="n">score</span>
+                <span class="n">best_index</span> <span class="o">=</span> <span class="n">i</span>
+        <span class="k">return</span> <span class="n">hyps</span><span class="p">[</span><span class="n">best_index</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">best_score</span></div>
+
+<div class="viewcode-block" id="ASRModel.load_lfmmi_resource"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.load_lfmmi_resource">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">ignore</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">load_lfmmi_resource</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/tokens.txt&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lfmmi_dir</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fin</span><span class="p">:</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;&lt;sos/eos&gt;&#39;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">sos_eos_id</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph_compiler</span> <span class="o">=</span> <span class="n">MmiTrainingGraphCompiler</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lfmmi_dir</span><span class="p">,</span>
+            <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+            <span class="n">oov</span><span class="o">=</span><span class="s2">&quot;&lt;UNK&gt;&quot;</span><span class="p">,</span>
+            <span class="n">sos_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sos_eos_id</span><span class="p">,</span>
+            <span class="n">eos_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sos_eos_id</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lfmmi</span> <span class="o">=</span> <span class="n">LFMMILoss</span><span class="p">(</span>
+            <span class="n">graph_compiler</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">graph_compiler</span><span class="p">,</span>
+            <span class="n">den_scale</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">use_pruned_intersect</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">word_table</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">/words.txt&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lfmmi_dir</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fin</span><span class="p">:</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">word_table</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">ignore</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_calc_lfmmi_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="n">ctc_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">)</span>
+        <span class="n">supervision_segments</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_mask</span><span class="p">)),</span>
+             <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_mask</span><span class="p">)),</span>
+             <span class="n">encoder_mask</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">),),</span> <span class="mi">1</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">dense_fsa_vec</span> <span class="o">=</span> <span class="n">k2</span><span class="o">.</span><span class="n">DenseFsaVec</span><span class="p">(</span>
+            <span class="n">ctc_probs</span><span class="p">,</span>
+            <span class="n">supervision_segments</span><span class="p">,</span>
+            <span class="n">allow_truncate</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">word_table</span><span class="p">[</span><span class="n">j</span><span class="o">.</span><span class="n">item</span><span class="p">()]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span> <span class="k">if</span> <span class="n">j</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">text</span><span class="p">]</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfmmi</span><span class="p">(</span><span class="n">dense_fsa_vec</span><span class="o">=</span><span class="n">dense_fsa_vec</span><span class="p">,</span> <span class="n">texts</span><span class="o">=</span><span class="n">text</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">loss</span>
+
+<div class="viewcode-block" id="ASRModel.load_hlg_resource_if_necessary"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.load_hlg_resource_if_necessary">[docs]</a>    <span class="k">def</span> <span class="nf">load_hlg_resource_if_necessary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hlg</span><span class="p">,</span> <span class="n">word</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;hlg&#39;</span><span class="p">):</span>
+            <span class="n">device</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span> <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">()</span> <span class="k">else</span> <span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hlg</span> <span class="o">=</span> <span class="n">k2</span><span class="o">.</span><span class="n">Fsa</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">hlg</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hlg</span><span class="p">,</span> <span class="s2">&quot;lm_scores&quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hlg</span><span class="o">.</span><span class="n">lm_scores</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hlg</span><span class="o">.</span><span class="n">scores</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;word_table&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">word_table</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">word</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fin</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">fin</span><span class="p">:</span>
+                    <span class="n">arr</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                    <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">word_table</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ASRModel.hlg_onebest"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.hlg_onebest">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">hlg_onebest</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">hlg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">word</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">symbol_table</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_hlg_resource_if_necessary</span><span class="p">(</span><span class="n">hlg</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
+        <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_encoder</span><span class="p">(</span>
+            <span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">,</span> <span class="n">decoding_chunk_size</span><span class="p">,</span>
+            <span class="n">num_decoding_left_chunks</span><span class="p">,</span>
+            <span class="n">simulate_streaming</span><span class="p">)</span>  <span class="c1"># (B, maxlen, encoder_dim)</span>
+        <span class="n">ctc_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span>
+            <span class="n">encoder_out</span><span class="p">)</span>  <span class="c1"># (1, maxlen, vocab_size)</span>
+        <span class="n">supervision_segments</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_mask</span><span class="p">)),</span>
+             <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_mask</span><span class="p">)),</span>
+             <span class="n">encoder_mask</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()),</span> <span class="mi">1</span><span class="p">,)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">lattice</span> <span class="o">=</span> <span class="n">get_lattice</span><span class="p">(</span>
+            <span class="n">nnet_output</span><span class="o">=</span><span class="n">ctc_probs</span><span class="p">,</span>
+            <span class="n">decoding_graph</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hlg</span><span class="p">,</span>
+            <span class="n">supervision_segments</span><span class="o">=</span><span class="n">supervision_segments</span><span class="p">,</span>
+            <span class="n">search_beam</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+            <span class="n">output_beam</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+            <span class="n">min_active_states</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+            <span class="n">max_active_states</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+            <span class="n">subsampling_factor</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">best_path</span> <span class="o">=</span> <span class="n">one_best_decoding</span><span class="p">(</span><span class="n">lattice</span><span class="o">=</span><span class="n">lattice</span><span class="p">,</span> <span class="n">use_double_scores</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="n">get_texts</span><span class="p">(</span><span class="n">best_path</span><span class="p">)</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="p">[[</span><span class="n">symbol_table</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">word_table</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">hyps</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">hyps</span></div>
+
+<div class="viewcode-block" id="ASRModel.hlg_rescore"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.hlg_rescore">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">no_grad</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">hlg_rescore</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">simulate_streaming</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">lm_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">decoder_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">r_decoder_scale</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">hlg</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">word</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
+        <span class="n">symbol_table</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">load_hlg_resource_if_necessary</span><span class="p">(</span><span class="n">hlg</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
+        <span class="n">device</span> <span class="o">=</span> <span class="n">speech</span><span class="o">.</span><span class="n">device</span>
+        <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_encoder</span><span class="p">(</span>
+            <span class="n">speech</span><span class="p">,</span> <span class="n">speech_lengths</span><span class="p">,</span> <span class="n">decoding_chunk_size</span><span class="p">,</span>
+            <span class="n">num_decoding_left_chunks</span><span class="p">,</span>
+            <span class="n">simulate_streaming</span><span class="p">)</span>  <span class="c1"># (B, maxlen, encoder_dim)</span>
+        <span class="n">ctc_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span>
+            <span class="n">encoder_out</span><span class="p">)</span>  <span class="c1"># (1, maxlen, vocab_size)</span>
+        <span class="n">supervision_segments</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_mask</span><span class="p">)),</span>
+             <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_mask</span><span class="p">)),</span>
+             <span class="n">encoder_mask</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">cpu</span><span class="p">()),</span> <span class="mi">1</span><span class="p">,)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+        <span class="n">lattice</span> <span class="o">=</span> <span class="n">get_lattice</span><span class="p">(</span>
+            <span class="n">nnet_output</span><span class="o">=</span><span class="n">ctc_probs</span><span class="p">,</span>
+            <span class="n">decoding_graph</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">hlg</span><span class="p">,</span>
+            <span class="n">supervision_segments</span><span class="o">=</span><span class="n">supervision_segments</span><span class="p">,</span>
+            <span class="n">search_beam</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+            <span class="n">output_beam</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
+            <span class="n">min_active_states</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+            <span class="n">max_active_states</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+            <span class="n">subsampling_factor</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">nbest</span> <span class="o">=</span> <span class="n">Nbest</span><span class="o">.</span><span class="n">from_lattice</span><span class="p">(</span>
+            <span class="n">lattice</span><span class="o">=</span><span class="n">lattice</span><span class="p">,</span>
+            <span class="n">num_paths</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+            <span class="n">use_double_scores</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">nbest_scale</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,)</span>
+        <span class="n">nbest</span> <span class="o">=</span> <span class="n">nbest</span><span class="o">.</span><span class="n">intersect</span><span class="p">(</span><span class="n">lattice</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">nbest</span><span class="o">.</span><span class="n">fsa</span><span class="p">,</span> <span class="s2">&quot;lm_scores&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">nbest</span><span class="o">.</span><span class="n">fsa</span><span class="p">,</span> <span class="s2">&quot;tokens&quot;</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">nbest</span><span class="o">.</span><span class="n">fsa</span><span class="o">.</span><span class="n">tokens</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span>
+
+        <span class="n">tokens_shape</span> <span class="o">=</span> <span class="n">nbest</span><span class="o">.</span><span class="n">fsa</span><span class="o">.</span><span class="n">arcs</span><span class="o">.</span><span class="n">shape</span><span class="p">()</span><span class="o">.</span><span class="n">remove_axis</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="n">k2</span><span class="o">.</span><span class="n">RaggedTensor</span><span class="p">(</span><span class="n">tokens_shape</span><span class="p">,</span> <span class="n">nbest</span><span class="o">.</span><span class="n">fsa</span><span class="o">.</span><span class="n">tokens</span><span class="p">)</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="n">tokens</span><span class="o">.</span><span class="n">remove_values_leq</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="n">tokens</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+        <span class="c1"># cal attention_score</span>
+        <span class="n">hyps_pad</span> <span class="o">=</span> <span class="n">pad_sequence</span><span class="p">([</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">hyp</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">hyp</span> <span class="ow">in</span> <span class="n">hyps</span>
+        <span class="p">],</span> <span class="kc">True</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>  <span class="c1"># (beam_size, max_hyps_len)</span>
+        <span class="n">ori_hyps_pad</span> <span class="o">=</span> <span class="n">hyps_pad</span>
+        <span class="n">hyps_lens</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">)</span> <span class="k">for</span> <span class="n">hyp</span> <span class="ow">in</span> <span class="n">hyps</span><span class="p">],</span>
+                                 <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
+                                 <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">)</span>  <span class="c1"># (beam_size,)</span>
+        <span class="n">hyps_pad</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">add_sos_eos</span><span class="p">(</span><span class="n">hyps_pad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="n">hyps_lens</span> <span class="o">=</span> <span class="n">hyps_lens</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># Add &lt;sos&gt; at begining</span>
+        <span class="n">encoder_out_repeat</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">tot_scores</span> <span class="o">=</span> <span class="n">nbest</span><span class="o">.</span><span class="n">tot_scores</span><span class="p">()</span>
+        <span class="n">repeats</span> <span class="o">=</span> <span class="p">[</span><span class="n">tot_scores</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">tot_scores</span><span class="o">.</span><span class="n">dim0</span><span class="p">)]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">)):</span>
+            <span class="n">encoder_out_repeat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">encoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">repeats</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">encoder_out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">encoder_out_repeat</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">encoder_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                                  <span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                                  <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">,</span>
+                                  <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="c1"># used for right to left decoder</span>
+        <span class="n">r_hyps_pad</span> <span class="o">=</span> <span class="n">reverse_pad_list</span><span class="p">(</span><span class="n">ori_hyps_pad</span><span class="p">,</span> <span class="n">hyps_lens</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="n">r_hyps_pad</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">add_sos_eos</span><span class="p">(</span><span class="n">r_hyps_pad</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">,</span>
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">)</span>
+        <span class="n">reverse_weight</span> <span class="o">=</span> <span class="mf">0.5</span>
+        <span class="n">decoder_out</span><span class="p">,</span> <span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span>
+            <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span> <span class="n">hyps_pad</span><span class="p">,</span> <span class="n">hyps_lens</span><span class="p">,</span> <span class="n">r_hyps_pad</span><span class="p">,</span>
+            <span class="n">reverse_weight</span><span class="p">)</span>  <span class="c1"># (beam_size, max_hyps_len, vocab_size)</span>
+        <span class="n">decoder_out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">decoder_out</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">decoder_out</span> <span class="o">=</span> <span class="n">decoder_out</span>
+        <span class="c1"># r_decoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a</span>
+        <span class="c1"># conventional transformer decoder.</span>
+        <span class="n">r_decoder_out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">r_decoder_out</span> <span class="o">=</span> <span class="n">r_decoder_out</span>
+
+        <span class="n">decoder_scores</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="nb">sum</span><span class="p">([</span><span class="n">decoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">hyps</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]]</span>
+                                            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">[</span><span class="n">i</span><span class="p">]))])</span>
+                                       <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">))],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">r_decoder_scores</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">)):</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
+                <span class="n">score</span> <span class="o">+=</span> <span class="n">r_decoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">-</span> <span class="n">j</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">hyps</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]]</span>
+            <span class="n">score</span> <span class="o">+=</span> <span class="n">r_decoder_out</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyps</span><span class="p">[</span><span class="n">i</span><span class="p">]),</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">]</span>
+            <span class="n">r_decoder_scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">score</span><span class="p">)</span>
+        <span class="n">r_decoder_scores</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">r_decoder_scores</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="n">am_scores</span> <span class="o">=</span> <span class="n">nbest</span><span class="o">.</span><span class="n">compute_am_scores</span><span class="p">()</span>
+        <span class="n">ngram_lm_scores</span> <span class="o">=</span> <span class="n">nbest</span><span class="o">.</span><span class="n">compute_lm_scores</span><span class="p">()</span>
+        <span class="n">tot_scores</span> <span class="o">=</span> <span class="n">am_scores</span><span class="o">.</span><span class="n">values</span> <span class="o">+</span> <span class="n">lm_scale</span> <span class="o">*</span> <span class="n">ngram_lm_scores</span><span class="o">.</span><span class="n">values</span> <span class="o">+</span> \
+            <span class="n">decoder_scale</span> <span class="o">*</span> <span class="n">decoder_scores</span> <span class="o">+</span> <span class="n">r_decoder_scale</span> <span class="o">*</span> <span class="n">r_decoder_scores</span>
+        <span class="n">ragged_tot_scores</span> <span class="o">=</span> <span class="n">k2</span><span class="o">.</span><span class="n">RaggedTensor</span><span class="p">(</span><span class="n">nbest</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">tot_scores</span><span class="p">)</span>
+        <span class="n">max_indexes</span> <span class="o">=</span> <span class="n">ragged_tot_scores</span><span class="o">.</span><span class="n">argmax</span><span class="p">()</span>
+        <span class="n">best_path</span> <span class="o">=</span> <span class="n">k2</span><span class="o">.</span><span class="n">index_fsa</span><span class="p">(</span><span class="n">nbest</span><span class="o">.</span><span class="n">fsa</span><span class="p">,</span> <span class="n">max_indexes</span><span class="p">)</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="n">get_texts</span><span class="p">(</span><span class="n">best_path</span><span class="p">)</span>
+        <span class="n">hyps</span> <span class="o">=</span> <span class="p">[[</span><span class="n">symbol_table</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">word_table</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">hyps</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">hyps</span></div>
+
+<div class="viewcode-block" id="ASRModel.subsampling_rate"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.subsampling_rate">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">subsampling_rate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Export interface for c++ call, return subsampling_rate of the</span>
+<span class="sd">            model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">subsampling_rate</span></div>
+
+<div class="viewcode-block" id="ASRModel.right_context"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.right_context">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">right_context</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Export interface for c++ call, return right_context of the model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">right_context</span></div>
+
+<div class="viewcode-block" id="ASRModel.sos_symbol"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.sos_symbol">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">sos_symbol</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Export interface for c++ call, return sos symbol id of the model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">sos</span></div>
+
+<div class="viewcode-block" id="ASRModel.eos_symbol"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.eos_symbol">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">eos_symbol</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Export interface for c++ call, return eos symbol id of the model</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span></div>
+
+<div class="viewcode-block" id="ASRModel.forward_encoder_chunk"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.forward_encoder_chunk">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">forward_encoder_chunk</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">xs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">required_cache_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">att_cache</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">cnn_cache</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Export interface for c++ call, give input chunk xs, and return</span>
+<span class="sd">            output from time 0 to current chunk.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            xs (torch.Tensor): chunk input, with shape (b=1, time, mel-dim),</span>
+<span class="sd">                where `time == (chunk_size - 1) * subsample_rate + \</span>
+<span class="sd">                        subsample.right_context + 1`</span>
+<span class="sd">            offset (int): current offset in encoder output time stamp</span>
+<span class="sd">            required_cache_size (int): cache size required for next chunk</span>
+<span class="sd">                compuation</span>
+<span class="sd">                &gt;=0: actual cache size</span>
+<span class="sd">                &lt;0: means all history cache is required</span>
+<span class="sd">            att_cache (torch.Tensor): cache tensor for KEY &amp; VALUE in</span>
+<span class="sd">                transformer/conformer attention, with shape</span>
+<span class="sd">                (elayers, head, cache_t1, d_k * 2), where</span>
+<span class="sd">                `head * d_k == hidden-dim` and</span>
+<span class="sd">                `cache_t1 == chunk_size * num_decoding_left_chunks`.</span>
+<span class="sd">            cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,</span>
+<span class="sd">                (elayers, b=1, hidden-dim, cache_t2), where</span>
+<span class="sd">                `cache_t2 == cnn.lorder - 1`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: output of current input xs,</span>
+<span class="sd">                with shape (b=1, chunk_size, hidden-dim).</span>
+<span class="sd">            torch.Tensor: new attention cache required for next chunk, with</span>
+<span class="sd">                dynamic shape (elayers, head, ?, d_k * 2)</span>
+<span class="sd">                depending on required_cache_size.</span>
+<span class="sd">            torch.Tensor: new conformer cnn cache required for next chunk, with</span>
+<span class="sd">                same shape as the original cnn_cache.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">forward_chunk</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">required_cache_size</span><span class="p">,</span>
+                                          <span class="n">att_cache</span><span class="p">,</span> <span class="n">cnn_cache</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ASRModel.ctc_activation"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.ctc_activation">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">ctc_activation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">xs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Export interface for c++ call, apply linear transform and log</span>
+<span class="sd">            softmax before ctc</span>
+<span class="sd">        Args:</span>
+<span class="sd">            xs (torch.Tensor): encoder output</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: activation before ctc</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">ctc</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ASRModel.is_bidirectional_decoder"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.is_bidirectional_decoder">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">is_bidirectional_decoder</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: decoder output</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">,</span> <span class="s1">&#39;right_decoder&#39;</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="ASRModel.forward_attention_decoder"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.forward_attention_decoder">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">export</span>
+    <span class="k">def</span> <span class="nf">forward_attention_decoder</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">hyps</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">hyps_lens</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">encoder_out</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">reverse_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Export interface for c++ call, forward decoder with multiple</span>
+<span class="sd">            hypothesis from ctc prefix beam search and one encoder output</span>
+<span class="sd">        Args:</span>
+<span class="sd">            hyps (torch.Tensor): hyps from ctc prefix beam search, already</span>
+<span class="sd">                pad sos at the begining</span>
+<span class="sd">            hyps_lens (torch.Tensor): length of each hyp in hyps</span>
+<span class="sd">            encoder_out (torch.Tensor): corresponding encoder output</span>
+<span class="sd">            r_hyps (torch.Tensor): hyps from ctc prefix beam search, already</span>
+<span class="sd">                pad eos at the begining which is used fo right to left decoder</span>
+<span class="sd">            reverse_weight: used for verfing whether used right to left decoder,</span>
+<span class="sd">            &gt; 0 will use.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: decoder output</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">num_hyps</span> <span class="o">=</span> <span class="n">hyps</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="n">hyps_lens</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="n">num_hyps</span>
+        <span class="n">encoder_out</span> <span class="o">=</span> <span class="n">encoder_out</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">num_hyps</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">encoder_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">num_hyps</span><span class="p">,</span>
+                                  <span class="mi">1</span><span class="p">,</span>
+                                  <span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                                  <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">,</span>
+                                  <span class="n">device</span><span class="o">=</span><span class="n">encoder_out</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># input for right to left decoder</span>
+        <span class="c1"># this hyps_lens has count &lt;sos&gt; token, we need minus it.</span>
+        <span class="n">r_hyps_lens</span> <span class="o">=</span> <span class="n">hyps_lens</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="c1"># this hyps has included &lt;sos&gt; token, so it should be</span>
+        <span class="c1"># convert the original hyps.</span>
+        <span class="n">r_hyps</span> <span class="o">=</span> <span class="n">hyps</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
+        <span class="c1">#   &gt;&gt;&gt; r_hyps</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([[ 1,  2,  3],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [ 9,  8,  4],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [ 2, -1, -1]])</span>
+        <span class="c1">#   &gt;&gt;&gt; r_hyps_lens</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([3, 3, 1])</span>
+
+        <span class="c1"># NOTE(Mddct): `pad_sequence` is not supported by ONNX, it is used</span>
+        <span class="c1">#   in `reverse_pad_list` thus we have to refine the below code.</span>
+        <span class="c1">#   Issue: https://github.com/wenet-e2e/wenet/issues/1113</span>
+        <span class="c1"># Equal to:</span>
+        <span class="c1">#   &gt;&gt;&gt; r_hyps = reverse_pad_list(r_hyps, r_hyps_lens, float(self.ignore_id))</span>
+        <span class="c1">#   &gt;&gt;&gt; r_hyps, _ = add_sos_eos(r_hyps, self.sos, self.eos, self.ignore_id)</span>
+        <span class="n">max_len</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">r_hyps_lens</span><span class="p">)</span>
+        <span class="n">index_range</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_len</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">encoder_out</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">seq_len_expand</span> <span class="o">=</span> <span class="n">r_hyps_lens</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">seq_mask</span> <span class="o">=</span> <span class="n">seq_len_expand</span> <span class="o">&gt;</span> <span class="n">index_range</span>  <span class="c1"># (beam, max_len)</span>
+        <span class="c1">#   &gt;&gt;&gt; seq_mask</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([[ True,  True,  True],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [ True,  True,  True],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [ True, False, False]])</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="p">(</span><span class="n">seq_len_expand</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">index_range</span>  <span class="c1"># (beam, max_len)</span>
+        <span class="c1">#   &gt;&gt;&gt; index</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([[ 2,  1,  0],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [ 2,  1,  0],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [ 0, -1, -2]])</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">*</span> <span class="n">seq_mask</span>
+        <span class="c1">#   &gt;&gt;&gt; index</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([[2, 1, 0],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [2, 1, 0],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [0, 0, 0]])</span>
+        <span class="n">r_hyps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">gather</span><span class="p">(</span><span class="n">r_hyps</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+        <span class="c1">#   &gt;&gt;&gt; r_hyps</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([[3, 2, 1],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [4, 8, 9],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [2, 2, 2]])</span>
+        <span class="n">r_hyps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">seq_mask</span><span class="p">,</span> <span class="n">r_hyps</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">eos</span><span class="p">)</span>
+        <span class="c1">#   &gt;&gt;&gt; r_hyps</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([[3, 2, 1],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [4, 8, 9],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [2, eos, eos]])</span>
+        <span class="n">r_hyps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">hyps</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">],</span> <span class="n">r_hyps</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1">#   &gt;&gt;&gt; r_hyps</span>
+        <span class="c1">#   &gt;&gt;&gt; tensor([[sos, 3, 2, 1],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [sos, 4, 8, 9],</span>
+        <span class="c1">#   &gt;&gt;&gt;         [sos, 2, eos, eos]])</span>
+
+        <span class="n">decoder_out</span><span class="p">,</span> <span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">decoder</span><span class="p">(</span>
+            <span class="n">encoder_out</span><span class="p">,</span> <span class="n">encoder_mask</span><span class="p">,</span> <span class="n">hyps</span><span class="p">,</span> <span class="n">hyps_lens</span><span class="p">,</span> <span class="n">r_hyps</span><span class="p">,</span>
+            <span class="n">reverse_weight</span><span class="p">)</span>  <span class="c1"># (num_hyps, max_hyps_len, vocab_size)</span>
+        <span class="n">decoder_out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">decoder_out</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># right to left decoder may be not used during decoding process,</span>
+        <span class="c1"># which depends on reverse_weight param.</span>
+        <span class="c1"># r_dccoder_out will be 0.0, if reverse_weight is 0.0</span>
+        <span class="n">r_decoder_out</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">log_softmax</span><span class="p">(</span><span class="n">r_decoder_out</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">decoder_out</span><span class="p">,</span> <span class="n">r_decoder_out</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

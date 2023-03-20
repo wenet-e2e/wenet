@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wenet.efficient_conformer.convolution &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../train.html">How to train models?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../production.html">Production Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wenet.efficient_conformer.convolution</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wenet.efficient_conformer.convolution</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Di Wu)</span>
+<span class="c1">#               2022 58.com(Wuba) Inc AI Lab.</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1"># Modified from ESPnet(https://github.com/espnet/espnet)</span>
+
+<span class="sd">&quot;&quot;&quot;ConvolutionModule definition.&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
+
+
+<div class="viewcode-block" id="ConvolutionModule"><a class="viewcode-back" href="../../../python_api/wenet.efficient_conformer.convolution.html#wenet.efficient_conformer.convolution.ConvolutionModule">[docs]</a><span class="k">class</span> <span class="nc">ConvolutionModule</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;ConvolutionModule in Conformer model.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">channels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">kernel_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span>
+                 <span class="n">activation</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(),</span>
+                 <span class="n">norm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;batch_norm&quot;</span><span class="p">,</span>
+                 <span class="n">causal</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">stride</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Construct an ConvolutionModule object.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            channels (int): The number of channels of conv layers.</span>
+<span class="sd">            kernel_size (int): Kernel size of conv layers.</span>
+<span class="sd">            causal (int): Whether use causal convolution or not</span>
+<span class="sd">            stride (int): Stride Convolution, for efficient Conformer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pointwise_conv1</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">(</span>
+            <span class="n">channels</span><span class="p">,</span>
+            <span class="mi">2</span> <span class="o">*</span> <span class="n">channels</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># self.lorder is used to distinguish if it&#39;s a causal convolution,</span>
+        <span class="c1"># if self.lorder &gt; 0: it&#39;s a causal convolution, the input will be</span>
+        <span class="c1">#    padded with self.lorder frames on the left in forward.</span>
+        <span class="c1"># else: it&#39;s a symmetrical convolution</span>
+        <span class="k">if</span> <span class="n">causal</span><span class="p">:</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lorder</span> <span class="o">=</span> <span class="n">kernel_size</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># kernel_size should be an odd number for none causal convolution</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="n">kernel_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span>
+            <span class="n">padding</span> <span class="o">=</span> <span class="p">(</span><span class="n">kernel_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">lorder</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">depthwise_conv</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">(</span>
+            <span class="n">channels</span><span class="p">,</span>
+            <span class="n">channels</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="n">stride</span><span class="p">,</span>  <span class="c1"># for depthwise_conv in StrideConv</span>
+            <span class="n">padding</span><span class="o">=</span><span class="n">padding</span><span class="p">,</span>
+            <span class="n">groups</span><span class="o">=</span><span class="n">channels</span><span class="p">,</span>
+            <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">assert</span> <span class="n">norm</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;batch_norm&#39;</span><span class="p">,</span> <span class="s1">&#39;layer_norm&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">norm</span> <span class="o">==</span> <span class="s2">&quot;batch_norm&quot;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">use_layer_norm</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm1d</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">use_layer_norm</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="n">channels</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pointwise_conv2</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">(</span>
+            <span class="n">channels</span><span class="p">,</span>
+            <span class="n">channels</span><span class="p">,</span>
+            <span class="n">kernel_size</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">stride</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+            <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+            <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activation</span> <span class="o">=</span> <span class="n">activation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stride</span> <span class="o">=</span> <span class="n">stride</span>
+
+<div class="viewcode-block" id="ConvolutionModule.forward"><a class="viewcode-back" href="../../../python_api/wenet.efficient_conformer.convolution.html#wenet.efficient_conformer.convolution.ConvolutionModule.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">mask_pad</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">),</span>
+        <span class="n">cache</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)),</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute convolution module.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            x (torch.Tensor): Input tensor (#batch, time, channels).</span>
+<span class="sd">            mask_pad (torch.Tensor): used for batch padding (#batch, 1, time),</span>
+<span class="sd">                (0, 0, 0) means fake mask.</span>
+<span class="sd">            cache (torch.Tensor): left context cache, it is only</span>
+<span class="sd">                used in causal convolution (#batch, channels, cache_t),</span>
+<span class="sd">                (0, 0, 0) meas fake cache.</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: Output tensor (#batch, time, channels).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># exchange the temporal dimension and the feature dimension</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># (#batch, channels, time)</span>
+
+        <span class="c1"># mask batch padding</span>
+        <span class="k">if</span> <span class="n">mask_pad</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># time &gt; 0</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">masked_fill_</span><span class="p">(</span><span class="o">~</span><span class="n">mask_pad</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lorder</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cache</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># cache_t == 0</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lorder</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="s1">&#39;constant&#39;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># When export ONNX，the first cache is not None but all-zero,</span>
+                <span class="c1"># cause shape error in residual block,</span>
+                <span class="c1">#   eg. cache14 + x9 = 23, 23-7+1=17 != 9</span>
+                <span class="n">cache</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lorder</span><span class="p">:]</span>
+                <span class="k">assert</span> <span class="n">cache</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># equal batch</span>
+                <span class="k">assert</span> <span class="n">cache</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># equal channel</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">cache</span><span class="p">,</span> <span class="n">x</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">assert</span> <span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">lorder</span><span class="p">)</span>
+            <span class="n">new_cache</span> <span class="o">=</span> <span class="n">x</span><span class="p">[:,</span> <span class="p">:,</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lorder</span><span class="p">:]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># It&#39;s better we just return None if no cache is requried,</span>
+            <span class="c1"># However, for JIT export, here we just fake one tensor instead of</span>
+            <span class="c1"># None.</span>
+            <span class="n">new_cache</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">dtype</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">x</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+
+        <span class="c1"># GLU mechanism</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pointwise_conv1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>  <span class="c1"># (batch, 2*channel, dim)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">glu</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (batch, channel, dim)</span>
+
+        <span class="c1"># 1D Depthwise Conv</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">depthwise_conv</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_layer_norm</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_layer_norm</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pointwise_conv2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="c1"># mask batch padding</span>
+        <span class="k">if</span> <span class="n">mask_pad</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>  <span class="c1"># time &gt; 0</span>
+            <span class="k">if</span> <span class="n">mask_pad</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="o">!=</span> <span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+                <span class="n">mask_pad</span> <span class="o">=</span> <span class="n">mask_pad</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">::</span><span class="bp">self</span><span class="o">.</span><span class="n">stride</span><span class="p">]</span>
+            <span class="n">x</span><span class="o">.</span><span class="n">masked_fill_</span><span class="p">(</span><span class="o">~</span><span class="n">mask_pad</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">x</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">new_cache</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

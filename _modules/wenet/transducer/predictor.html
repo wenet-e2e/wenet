@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wenet.transducer.predictor &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../train.html">How to train models?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../production.html">Production Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wenet.transducer.predictor</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wenet.transducer.predictor</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
+<span class="kn">from</span> <span class="nn">wenet.utils.common</span> <span class="kn">import</span> <span class="n">get_activation</span><span class="p">,</span> <span class="n">get_rnn</span>
+
+
+<div class="viewcode-block" id="ApplyPadding"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ApplyPadding">[docs]</a><span class="k">def</span> <span class="nf">ApplyPadding</span><span class="p">(</span><span class="nb">input</span><span class="p">,</span> <span class="n">padding</span><span class="p">,</span> <span class="n">pad_value</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        input:   [bs, max_time_step, dim]</span>
+<span class="sd">        padding: [bs, max_time_step]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">padding</span> <span class="o">*</span> <span class="n">pad_value</span> <span class="o">+</span> <span class="nb">input</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">padding</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="PredictorBase"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase">[docs]</a><span class="k">class</span> <span class="nc">PredictorBase</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+
+    <span class="c1"># NOTE(Mddct): We can use ABC abstract here, but</span>
+    <span class="c1"># keep this class simple enough for now</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="PredictorBase.init_state"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase.init_state">[docs]</a>    <span class="k">def</span> <span class="nf">init_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                   <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                   <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;zero&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">device</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;this is a base precictor&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PredictorBase.batch_to_cache"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase.batch_to_cache">[docs]</a>    <span class="k">def</span> <span class="nf">batch_to_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">cache</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;this is a base precictor&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PredictorBase.cache_to_batch"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase.cache_to_batch">[docs]</a>    <span class="k">def</span> <span class="nf">cache_to_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">cache</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;this is a base precictor&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PredictorBase.forward"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="o">=</span> <span class="nb">input</span><span class="p">,</span> <span class="n">cache</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;this is a base precictor&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="PredictorBase.forward_step"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase.forward_step">[docs]</a>    <span class="k">def</span> <span class="nf">forward_step</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">padding</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+            <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="o">=</span> <span class="nb">input</span><span class="p">,</span> <span class="n">padding</span><span class="p">,</span> <span class="n">cache</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;this is a base precictor&quot;</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="RNNPredictor"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor">[docs]</a><span class="k">class</span> <span class="nc">RNNPredictor</span><span class="p">(</span><span class="n">PredictorBase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">voca_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">embed_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">output_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">embed_dropout</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">hidden_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">num_layers</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+                 <span class="n">rnn_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;lstm&quot;</span><span class="p">,</span>
+                 <span class="n">dropout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">=</span> <span class="n">num_layers</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_size</span> <span class="o">=</span> <span class="n">hidden_size</span>
+        <span class="c1"># disable rnn base out projection</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">voca_size</span><span class="p">,</span> <span class="n">embed_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">embed_dropout</span><span class="p">)</span>
+        <span class="c1"># NOTE(Mddct): rnn base from torch not support layer norm</span>
+        <span class="c1"># will add layer norm and prune value in cell and layer</span>
+        <span class="c1"># ref: https://github.com/Mddct/neural-lm/blob/main/models/gru_cell.py</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span> <span class="o">=</span> <span class="n">get_rnn</span><span class="p">(</span><span class="n">rnn_type</span><span class="o">=</span><span class="n">rnn_type</span><span class="p">)(</span><span class="n">input_size</span><span class="o">=</span><span class="n">embed_size</span><span class="p">,</span>
+                                              <span class="n">hidden_size</span><span class="o">=</span><span class="n">hidden_size</span><span class="p">,</span>
+                                              <span class="n">num_layers</span><span class="o">=</span><span class="n">num_layers</span><span class="p">,</span>
+                                              <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">,</span>
+                                              <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                              <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">projection</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="n">output_size</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RNNPredictor.forward"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            input (torch.Tensor): [batch, max_time).</span>
+<span class="sd">            padding (torch.Tensor): [batch, max_time]</span>
+<span class="sd">            cache : rnn predictor cache[0] == state_m</span>
+<span class="sd">                    cache[1] == state_c</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            output: [batch, max_time, output_size]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># NOTE(Mddct): we don&#39;t use pack input format</span>
+        <span class="n">embed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>  <span class="c1"># [batch, max_time, emb_size]</span>
+        <span class="n">embed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">embed</span><span class="p">)</span>
+        <span class="n">states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_state</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span>
+                                    <span class="n">device</span><span class="o">=</span><span class="nb">input</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+            <span class="n">states</span> <span class="o">=</span> <span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+            <span class="n">states</span> <span class="o">=</span> <span class="p">(</span><span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cache</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">out</span><span class="p">,</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span><span class="p">(</span><span class="n">embed</span><span class="p">,</span> <span class="n">states</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">projection</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+
+        <span class="c1"># NOTE(Mddct): Although we don&#39;t use staate in transducer</span>
+        <span class="c1"># training forward, we need make it right for padding value</span>
+        <span class="c1"># so we create forward_step for infering, forward for training</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">m</span><span class="p">,</span> <span class="n">c</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="RNNPredictor.batch_to_cache"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor.batch_to_cache">[docs]</a>    <span class="k">def</span> <span class="nf">batch_to_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">           cache: [state_m, state_c]</span>
+<span class="sd">               state_ms: [1*n_layers, bs, ...]</span>
+<span class="sd">               state_cs: [1*n_layers, bs, ...]</span>
+<span class="sd">        Returns:</span>
+<span class="sd">           new_cache: [[state_m_1, state_c_1], [state_m_2, state_c_2]...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="n">state_ms</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">state_cs</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">assert</span> <span class="n">state_ms</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">state_cs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">new_cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">state_m</span><span class="p">,</span> <span class="n">state_c</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">state_ms</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span>
+                                    <span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">state_cs</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)):</span>
+            <span class="n">new_cache</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">state_m</span><span class="p">,</span> <span class="n">state_c</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">new_cache</span></div>
+
+<div class="viewcode-block" id="RNNPredictor.cache_to_batch"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor.cache_to_batch">[docs]</a>    <span class="k">def</span> <span class="nf">cache_to_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            cache : [[state_m_1, state_c_1], [state_m_1, state_c_1]...]</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            new_caceh: [state_ms, state_cs],</span>
+<span class="sd">                state_ms: [1*n_layers, bs, ...]</span>
+<span class="sd">                state_cs: [1*n_layers, bs, ...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">state_ms</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">states</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">states</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">state_cs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">states</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">states</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">state_ms</span><span class="p">,</span> <span class="n">state_cs</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="RNNPredictor.init_state"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor.init_state">[docs]</a>    <span class="k">def</span> <span class="nf">init_state</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+        <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;zero&quot;</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="c1"># TODO(Mddct): xavier init method</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span>
+                        <span class="n">batch_size</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_size</span><span class="p">,</span>
+                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">),</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span><span class="p">,</span>
+                        <span class="n">batch_size</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">hidden_size</span><span class="p">,</span>
+                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="p">]</span></div>
+
+<div class="viewcode-block" id="RNNPredictor.forward_step"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor.forward_step">[docs]</a>    <span class="k">def</span> <span class="nf">forward_step</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">padding</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+            <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            input (torch.Tensor): [batch_size, time_step=1]</span>
+<span class="sd">            padding (torch.Tensor): [batch_size,1], 1 is padding value</span>
+<span class="sd">            cache : rnn predictor cache[0] == state_m</span>
+<span class="sd">                    cache[1] == state_c</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
+        <span class="n">state_m</span><span class="p">,</span> <span class="n">state_c</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cache</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">embed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>  <span class="c1"># [batch, 1, emb_size]</span>
+        <span class="n">embed</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">embed</span><span class="p">)</span>
+        <span class="n">out</span><span class="p">,</span> <span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">c</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rnn</span><span class="p">(</span><span class="n">embed</span><span class="p">,</span> <span class="p">(</span><span class="n">state_m</span><span class="p">,</span> <span class="n">state_c</span><span class="p">))</span>
+
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">projection</span><span class="p">(</span><span class="n">out</span><span class="p">)</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">ApplyPadding</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">padding</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">state_m</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">ApplyPadding</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">padding</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">state_c</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="p">[</span><span class="n">m</span><span class="p">,</span> <span class="n">c</span><span class="p">])</span></div></div>
+
+
+<div class="viewcode-block" id="EmbeddingPredictor"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor">[docs]</a><span class="k">class</span> <span class="nc">EmbeddingPredictor</span><span class="p">(</span><span class="n">PredictorBase</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Embedding predictor</span>
+
+<span class="sd">    Described in:</span>
+<span class="sd">    https://arxiv.org/pdf/2109.07513.pdf</span>
+
+<span class="sd">    embed-&gt; proj -&gt; layer norm -&gt; swish</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">voca_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">embed_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">embed_dropout</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">n_head</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">history_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                 <span class="n">activation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;swish&quot;</span><span class="p">,</span>
+                 <span class="n">bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">layer_norm_epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># multi head</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">=</span> <span class="n">n_head</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span> <span class="o">=</span> <span class="n">embed_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span> <span class="o">=</span> <span class="n">history_size</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos_embed</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">embed_size</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                         <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">voca_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed_dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">embed_dropout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ffn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">layer_norm_epsilon</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span> <span class="o">=</span> <span class="n">get_activation</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
+
+<div class="viewcode-block" id="EmbeddingPredictor.init_state"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor.init_state">[docs]</a>    <span class="k">def</span> <span class="nf">init_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                   <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                   <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;zero&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="n">_</span> <span class="o">=</span> <span class="n">method</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span>
+                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">),</span>
+        <span class="p">]</span></div>
+
+<div class="viewcode-block" id="EmbeddingPredictor.batch_to_cache"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor.batch_to_cache">[docs]</a>    <span class="k">def</span> <span class="nf">batch_to_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            cache : [history]</span>
+<span class="sd">                history: [bs, ...]</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            new_ache : [[history_1], [history_2], [history_3]...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">cache_0</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">cache_0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+            <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">h</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">history</span></div>
+
+<div class="viewcode-block" id="EmbeddingPredictor.cache_to_batch"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor.cache_to_batch">[docs]</a>    <span class="k">def</span> <span class="nf">cache_to_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            cache : [[history_1], [history_2], [history3]...]</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            new_caceh: [history],</span>
+<span class="sd">                history: [bs, ...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">history</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="EmbeddingPredictor.forward"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; forward for training</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>  <span class="c1"># [bs, seq_len, embed]</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_dropout</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">zeros</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_state</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="nb">input</span><span class="o">.</span><span class="n">device</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="n">zeros</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">zeros</span><span class="p">,</span> <span class="nb">input</span><span class="p">),</span>
+                          <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># [bs, context_size-1 + seq_len, embed]</span>
+
+        <span class="nb">input</span> <span class="o">=</span> <span class="nb">input</span><span class="o">.</span><span class="n">unfold</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span>
+            <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># [bs, seq_len, context_size, embed]</span>
+        <span class="c1"># multi head pos: [n_head, embed, context_size]</span>
+        <span class="n">multi_head_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos_embed</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span><span class="p">)</span>
+
+        <span class="c1"># broadcast dot attenton</span>
+        <span class="n">input_expand</span> <span class="o">=</span> <span class="nb">input</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span>
+            <span class="mi">2</span><span class="p">)</span>  <span class="c1"># [bs, seq_len, 1, context_size, embed]</span>
+        <span class="n">multi_head_pos</span> <span class="o">=</span> <span class="n">multi_head_pos</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span>
+            <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># [num_heads, context_size, embed]</span>
+
+        <span class="c1"># [bs, seq_len, num_heads, context_size, embed]</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="n">input_expand</span> <span class="o">*</span> <span class="n">multi_head_pos</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="n">weight</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span>
+            <span class="mi">3</span><span class="p">)</span>  <span class="c1"># [bs, seq_len, num_heads, 1, context_size]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">weight</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">input_expand</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span>
+            <span class="n">dim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># [bs, seq_len, num_heads, embed]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># [bs, seq_len, embed]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span><span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ffn</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span></div>
+
+<div class="viewcode-block" id="EmbeddingPredictor.forward_step"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor.forward_step">[docs]</a>    <span class="k">def</span> <span class="nf">forward_step</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">padding</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; forward step for inference</span>
+<span class="sd">        Args:</span>
+<span class="sd">            input (torch.Tensor): [batch_size, time_step=1]</span>
+<span class="sd">            padding (torch.Tensor): [batch_size,1], 1 is padding value</span>
+<span class="sd">            cache: for embedding predictor, cache[0] == history</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">history</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>  <span class="c1"># [bs, 1, embed]</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_dropout</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+        <span class="n">context_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">history</span><span class="p">,</span> <span class="nb">input</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">input_expand</span> <span class="o">=</span> <span class="n">context_input</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span>
+            <span class="mi">2</span><span class="p">)</span>  <span class="c1"># [bs, 1, 1, context_size, embed]</span>
+
+        <span class="c1"># multi head pos: [n_head, embed, context_size]</span>
+        <span class="n">multi_head_pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos_embed</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_heads</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span><span class="p">)</span>
+
+        <span class="n">multi_head_pos</span> <span class="o">=</span> <span class="n">multi_head_pos</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span>
+            <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># [num_heads, context_size, embed]</span>
+        <span class="c1"># [bs, 1, num_heads, context_size, embed]</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="n">input_expand</span> <span class="o">*</span> <span class="n">multi_head_pos</span>
+        <span class="n">weight</span> <span class="o">=</span> <span class="n">weight</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span>
+            <span class="mi">3</span><span class="p">)</span>  <span class="c1"># [bs, 1, num_heads, 1, context_size]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">weight</span><span class="o">.</span><span class="n">matmul</span><span class="p">(</span><span class="n">input_expand</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span>
+            <span class="n">dim</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>  <span class="c1"># [bs, 1, num_heads, embed]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>  <span class="c1"># [bs, 1, embed]</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_heads</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span><span class="p">)</span>
+
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ffn</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="n">new_cache</span> <span class="o">=</span> <span class="n">context_input</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span>
+        <span class="c1"># TODO(Mddct): we need padding new_cache in future</span>
+        <span class="c1"># new_cache = ApplyPadding(history, padding, new_cache)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="p">[</span><span class="n">new_cache</span><span class="p">])</span></div></div>
+
+
+<div class="viewcode-block" id="ConvPredictor"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor">[docs]</a><span class="k">class</span> <span class="nc">ConvPredictor</span><span class="p">(</span><span class="n">PredictorBase</span><span class="p">):</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                 <span class="n">voca_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">embed_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                 <span class="n">embed_dropout</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+                 <span class="n">history_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
+                 <span class="n">activation</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;relu&quot;</span><span class="p">,</span>
+                 <span class="n">bias</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+                 <span class="n">layer_norm_epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-5</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+        <span class="k">assert</span> <span class="n">history_size</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span> <span class="o">=</span> <span class="n">embed_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span> <span class="o">=</span> <span class="n">history_size</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">voca_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed_dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">p</span><span class="o">=</span><span class="n">embed_dropout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conv</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Conv1d</span><span class="p">(</span><span class="n">in_channels</span><span class="o">=</span><span class="n">embed_size</span><span class="p">,</span>
+                              <span class="n">out_channels</span><span class="o">=</span><span class="n">embed_size</span><span class="p">,</span>
+                              <span class="n">kernel_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">context_size</span><span class="p">,</span>
+                              <span class="n">padding</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                              <span class="n">groups</span><span class="o">=</span><span class="n">embed_size</span><span class="p">,</span>
+                              <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="n">embed_size</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">layer_norm_epsilon</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span> <span class="o">=</span> <span class="n">get_activation</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ConvPredictor.init_state"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor.init_state">[docs]</a>    <span class="k">def</span> <span class="nf">init_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                   <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+                   <span class="n">device</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                   <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;zero&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+        <span class="k">assert</span> <span class="n">batch_size</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="k">assert</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;zero&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span>
+                        <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+        <span class="p">]</span></div>
+
+<div class="viewcode-block" id="ConvPredictor.cache_to_batch"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor.cache_to_batch">[docs]</a>    <span class="k">def</span> <span class="nf">cache_to_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            cache : [[history_1], [history_2], [history3]...]</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            new_caceh: [history],</span>
+<span class="sd">                history: [bs, ...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">h</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">cache</span><span class="p">],</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">history</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="ConvPredictor.batch_to_cache"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor.batch_to_cache">[docs]</a>    <span class="k">def</span> <span class="nf">batch_to_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                       <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            cache : [history]</span>
+<span class="sd">                history: [bs, ...]</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            new_ache : [[history_1], [history_2], [history_3]...]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">cache_0</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">history</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">h</span> <span class="ow">in</span> <span class="n">torch</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">cache_0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+            <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">h</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">history</span></div>
+
+<div class="viewcode-block" id="ConvPredictor.forward"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+                <span class="n">cache</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; forward for training</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>  <span class="c1"># [bs, seq_len, embed]</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_dropout</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">zeros</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">init_state</span><span class="p">(</span><span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="nb">input</span><span class="o">.</span><span class="n">device</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="n">zeros</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="nb">input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">zeros</span><span class="p">,</span> <span class="nb">input</span><span class="p">),</span>
+                          <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># [bs, context_size-1 + seq_len, embed]</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="nb">input</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="ConvPredictor.forward_step"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor.forward_step">[docs]</a>    <span class="k">def</span> <span class="nf">forward_step</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">padding</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+            <span class="n">cache</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; forward step for inference</span>
+<span class="sd">        Args:</span>
+<span class="sd">            input (torch.Tensor): [batch_size, time_step=1]</span>
+<span class="sd">            padding (torch.Tensor): [batch_size,1], 1 is padding value</span>
+<span class="sd">            cache: for embedding predictor, cache[0] == history</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="nb">input</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">cache</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="n">cache</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">assert</span> <span class="n">history</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_size</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>  <span class="c1"># [bs, 1, embed]</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_dropout</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+        <span class="n">context_input</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">history</span><span class="p">,</span> <span class="nb">input</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="nb">input</span> <span class="o">=</span> <span class="n">context_input</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">conv</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span><span class="o">.</span><span class="n">permute</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">out</span><span class="p">))</span>
+
+        <span class="n">new_cache</span> <span class="o">=</span> <span class="n">context_input</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span>
+        <span class="c1"># TODO(Mddct): apply padding in future</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="p">[</span><span class="n">new_cache</span><span class="p">])</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

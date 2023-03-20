@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wenet.utils.scheduler &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../train.html">How to train models?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../production.html">Production Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wenet.utils.scheduler</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wenet.utils.scheduler</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) 2020 Mobvoi Inc (Binbin Zhang)</span>
+<span class="c1">#               2022 Ximalaya Inc (Yuguang Yang)</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1"># Modified from ESPnet(https://github.com/espnet/espnet)</span>
+<span class="c1">#               NeMo(https://github.com/NVIDIA/NeMo)</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Union</span>
+
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch.optim.lr_scheduler</span> <span class="kn">import</span> <span class="n">_LRScheduler</span>
+
+
+<div class="viewcode-block" id="WarmupLR"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupLR">[docs]</a><span class="k">class</span> <span class="nc">WarmupLR</span><span class="p">(</span><span class="n">_LRScheduler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The WarmupLR scheduler</span>
+
+<span class="sd">    This scheduler is almost same as NoamLR Scheduler except for following</span>
+<span class="sd">    difference:</span>
+
+<span class="sd">    NoamLR:</span>
+<span class="sd">        lr = optimizer.lr * model_size ** -0.5</span>
+<span class="sd">             * min(step ** -0.5, step * warmup_step ** -1.5)</span>
+<span class="sd">    WarmupLR:</span>
+<span class="sd">        lr = optimizer.lr * warmup_step ** 0.5</span>
+<span class="sd">             * min(step ** -0.5, step * warmup_step ** -1.5)</span>
+
+<span class="sd">    Note that the maximum lr equals to optimizer.lr in this scheduler.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">optimizer</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span><span class="p">,</span>
+            <span class="n">warmup_steps</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="mi">25000</span><span class="p">,</span>
+            <span class="n">last_epoch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="n">warmup_steps</span>
+
+        <span class="c1"># __init__() must be invoked before setting field</span>
+        <span class="c1"># because step() is also invoked in __init__()</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">last_epoch</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">(warmup_steps=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="si">}</span><span class="s2">)&quot;</span>
+
+<div class="viewcode-block" id="WarmupLR.get_lr"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupLR.get_lr">[docs]</a>    <span class="k">def</span> <span class="nf">get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">step_num</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="n">lr</span> <span class="o">*</span> <span class="n">step_num</span> <span class="o">**</span> <span class="o">-</span><span class="mf">0.5</span>
+                <span class="k">for</span> <span class="n">lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span>
+                <span class="n">lr</span>
+                <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">**</span> <span class="mf">0.5</span>
+                <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="n">step_num</span> <span class="o">**</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">step_num</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">**</span> <span class="o">-</span><span class="mf">1.5</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+            <span class="p">]</span></div>
+
+<div class="viewcode-block" id="WarmupLR.set_step"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupLR.set_step">[docs]</a>    <span class="k">def</span> <span class="nf">set_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span> <span class="o">=</span> <span class="n">step</span></div></div>
+
+
+<div class="viewcode-block" id="WarmupPolicy"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupPolicy">[docs]</a><span class="k">class</span> <span class="nc">WarmupPolicy</span><span class="p">(</span><span class="n">_LRScheduler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Adds warmup kwargs and warmup logic to lr policy.</span>
+<span class="sd">    All arguments should be passed as kwargs for clarity,</span>
+<span class="sd">    Args:</span>
+<span class="sd">        warmup_steps: Number of training steps in warmup stage</span>
+<span class="sd">        warmup_ratio: Ratio of warmup steps to total steps</span>
+<span class="sd">        max_steps: Total number of steps while training or `None` for</span>
+<span class="sd">            infinite training</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">warmup_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warmup_ratio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                 <span class="n">max_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">warmup_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span>\
+            <span class="s2">&quot;Either use particular number of step or ratio&quot;</span>
+        <span class="k">assert</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> \
+            <span class="s2">&quot;If there is a ratio, there should be a total steps&quot;</span>
+
+        <span class="c1"># It is necessary to assign all attributes *before* __init__,</span>
+        <span class="c1"># as class is wrapped by an inner class.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="n">max_steps</span>
+        <span class="k">if</span> <span class="n">warmup_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="n">warmup_steps</span>
+        <span class="k">elif</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">warmup_ratio</span> <span class="o">*</span> <span class="n">max_steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="o">=</span> <span class="n">min_lr</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">last_epoch</span><span class="p">)</span>
+
+<div class="viewcode-block" id="WarmupPolicy.get_lr"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupPolicy.get_lr">[docs]</a>    <span class="k">def</span> <span class="nf">get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr_called_within_step</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;To get the last learning rate computed &quot;</span>
+                <span class="s2">&quot;by the scheduler, please use `get_last_lr()`.&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span>
+
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_warmup_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_warmup_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">lr_val</span> <span class="o">=</span> <span class="p">(</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">initial_lr</span> <span class="o">*</span> <span class="n">lr_val</span> <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Simple const lr policy&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span></div>
+
+
+<div class="viewcode-block" id="SquareRootConstantPolicy"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.SquareRootConstantPolicy">[docs]</a><span class="k">class</span> <span class="nc">SquareRootConstantPolicy</span><span class="p">(</span><span class="n">_LRScheduler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Adds warmup kwargs and warmup logic to lr policy.</span>
+<span class="sd">    All arguments should be passed as kwargs for clarity,</span>
+<span class="sd">    Args:</span>
+<span class="sd">        warmup_steps: Number of training steps in warmup stage</span>
+<span class="sd">        warmup_ratio: Ratio of warmup steps to total steps</span>
+<span class="sd">        max_steps: Total number of steps while training or `None` for</span>
+<span class="sd">            infinite training</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">constant_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">constant_ratio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">max_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span>
+    <span class="p">):</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">constant_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                    <span class="ow">and</span> <span class="n">constant_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span> \
+            <span class="s2">&quot;Either use particular number of step or ratio&quot;</span>
+        <span class="k">assert</span> <span class="n">constant_ratio</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> \
+            <span class="s2">&quot;If there is a ratio, there should be a total steps&quot;</span>
+
+        <span class="c1"># It is necessary to assign all attributes *before* __init__,</span>
+        <span class="c1"># as class is wrapped by an inner class.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="n">max_steps</span>
+        <span class="k">if</span> <span class="n">constant_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">=</span> <span class="n">constant_steps</span>
+        <span class="k">elif</span> <span class="n">constant_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">constant_ratio</span> <span class="o">*</span> <span class="n">max_steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">constant_lr</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">constant_steps</span> <span class="o">**</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="o">=</span> <span class="n">min_lr</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">last_epoch</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SquareRootConstantPolicy.get_lr"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.SquareRootConstantPolicy.get_lr">[docs]</a>    <span class="k">def</span> <span class="nf">get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr_called_within_step</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;To get the last learning rate computed &quot;</span>
+                <span class="s2">&quot;by the scheduler, please use `get_last_lr()`.&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span>
+
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">constant_lr</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Simple const lr policy&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span></div>
+
+
+<div class="viewcode-block" id="WarmupHoldPolicy"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupHoldPolicy">[docs]</a><span class="k">class</span> <span class="nc">WarmupHoldPolicy</span><span class="p">(</span><span class="n">WarmupPolicy</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Variant of WarmupPolicy which maintains high</span>
+<span class="sd">       learning rate for a defined number of steps.</span>
+<span class="sd">    All arguments should be passed as kwargs for clarity,</span>
+<span class="sd">    Args:</span>
+<span class="sd">        warmup_steps: Number of training steps in warmup stage</span>
+<span class="sd">        warmup_ratio: Ratio of warmup steps to total steps</span>
+<span class="sd">        hold_steps: Number of training steps to</span>
+<span class="sd">                    hold the learning rate after warm up</span>
+<span class="sd">        hold_ratio: Ratio of hold steps to total steps</span>
+<span class="sd">        max_steps: Total number of steps while training or `None` for</span>
+<span class="sd">            infinite training</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">optimizer</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">warmup_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">warmup_ratio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">hold_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">hold_ratio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">max_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">min_lr</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">hold_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">hold_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span> \
+            <span class="s2">&quot;Either use particular number of step or ratio&quot;</span>
+        <span class="k">assert</span> <span class="n">hold_ratio</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> \
+            <span class="s2">&quot;If there is a ratio, there should be a total steps&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="o">=</span> <span class="n">min_lr</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_warmup_lr</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+        <span class="c1"># Necessary to duplicate as class attributes are hidden in inner class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="n">max_steps</span>
+        <span class="k">if</span> <span class="n">warmup_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="n">warmup_steps</span>
+        <span class="k">elif</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">warmup_ratio</span> <span class="o">*</span> <span class="n">max_steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">hold_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hold_steps</span> <span class="o">=</span> <span class="n">hold_steps</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span>
+        <span class="k">elif</span> <span class="n">hold_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hold_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">hold_ratio</span> <span class="o">*</span> <span class="n">max_steps</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">hold_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">optimizer</span><span class="p">,</span>
+            <span class="n">warmup_steps</span><span class="o">=</span><span class="n">warmup_steps</span><span class="p">,</span>
+            <span class="n">warmup_ratio</span><span class="o">=</span><span class="n">warmup_ratio</span><span class="p">,</span>
+            <span class="n">max_steps</span><span class="o">=</span><span class="n">max_steps</span><span class="p">,</span>
+            <span class="n">last_epoch</span><span class="o">=</span><span class="n">last_epoch</span><span class="p">,</span>
+            <span class="n">min_lr</span><span class="o">=</span><span class="n">min_lr</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="WarmupHoldPolicy.get_lr"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupHoldPolicy.get_lr">[docs]</a>    <span class="k">def</span> <span class="nf">get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr_called_within_step</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;To get the last learning rate computed by the scheduler,&quot;</span>
+                <span class="s2">&quot; &quot;</span> <span class="s2">&quot;please use `get_last_lr()`.&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span>
+
+        <span class="c1"># Warmup phase</span>
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_warmup_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="c1"># Hold phase</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">step</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">step</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">hold_steps</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="WarmupAnnealHoldPolicy"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupAnnealHoldPolicy">[docs]</a><span class="k">class</span> <span class="nc">WarmupAnnealHoldPolicy</span><span class="p">(</span><span class="n">_LRScheduler</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Adds warmup kwargs and warmup logic to lr policy.</span>
+<span class="sd">    All arguments should be passed as kwargs for clarity,</span>
+<span class="sd">    Args:</span>
+<span class="sd">        warmup_steps: Number of training steps in warmup stage</span>
+<span class="sd">        warmup_ratio: Ratio of warmup steps to total steps</span>
+<span class="sd">        max_steps: Total number of steps while training or `None` for</span>
+<span class="sd">            infinite training</span>
+<span class="sd">        min_lr: Minimum lr to hold the learning rate after decay at.</span>
+<span class="sd">        constant_steps: Number of steps to keep lr constant at.</span>
+<span class="sd">        constant_ratio: Ratio of steps to keep lr constant.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span>
+            <span class="n">optimizer</span><span class="p">,</span>
+            <span class="o">*</span><span class="p">,</span>
+            <span class="n">warmup_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">warmup_ratio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">constant_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">constant_ratio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">max_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">min_lr</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+            <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">warmup_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                    <span class="ow">and</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span> \
+            <span class="s2">&quot;Either use particular number of step or ratio&quot;</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">constant_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                    <span class="ow">and</span> <span class="n">constant_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span> \
+            <span class="s2">&quot;Either use constant_steps or constant_ratio&quot;</span>
+        <span class="k">assert</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> \
+            <span class="s2">&quot;If there is a ratio, there should be a total steps&quot;</span>
+
+        <span class="c1"># It is necessary to assign all attributes *before* __init__,</span>
+        <span class="c1"># as class is wrapped by an inner class.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="n">max_steps</span>
+
+        <span class="k">if</span> <span class="n">warmup_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="n">warmup_steps</span>
+        <span class="k">elif</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">warmup_ratio</span> <span class="o">*</span> <span class="n">max_steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">if</span> <span class="n">constant_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">=</span> <span class="n">constant_steps</span>
+        <span class="k">elif</span> <span class="n">constant_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">constant_ratio</span> <span class="o">*</span> <span class="n">max_steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">decay_steps</span> <span class="o">=</span> <span class="n">max_steps</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="o">=</span> <span class="n">min_lr</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">last_epoch</span><span class="p">)</span>
+
+<div class="viewcode-block" id="WarmupAnnealHoldPolicy.get_lr"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.WarmupAnnealHoldPolicy.get_lr">[docs]</a>    <span class="k">def</span> <span class="nf">get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr_called_within_step</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;To get the last learning rate computed &quot;</span>
+                <span class="s2">&quot;by the scheduler, please use `get_last_lr()`.&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span>
+
+        <span class="c1"># Warmup steps</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_warmup_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="c1"># Constant steps after warmup and decay</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">decay_steps</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_constant_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+        <span class="c1"># Min lr after max steps of updates</span>
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_warmup_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">lr_val</span> <span class="o">=</span> <span class="p">(</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">initial_lr</span> <span class="o">*</span> <span class="n">lr_val</span> <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_get_constant_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Simple const lr policy&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span></div>
+
+
+<span class="k">def</span> <span class="nf">_squareroot_annealing</span><span class="p">(</span><span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">):</span>
+    <span class="n">mult</span> <span class="o">=</span> <span class="p">((</span><span class="n">max_steps</span> <span class="o">-</span> <span class="n">step</span><span class="p">)</span> <span class="o">/</span> <span class="n">max_steps</span><span class="p">)</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="n">out_lr</span> <span class="o">=</span> <span class="n">initial_lr</span> <span class="o">*</span> <span class="n">mult</span>
+    <span class="n">out_lr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">out_lr</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out_lr</span>
+
+
+<span class="k">def</span> <span class="nf">_square_annealing</span><span class="p">(</span><span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">):</span>
+    <span class="n">mult</span> <span class="o">=</span> <span class="p">((</span><span class="n">max_steps</span> <span class="o">-</span> <span class="n">step</span><span class="p">)</span> <span class="o">/</span> <span class="n">max_steps</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">out_lr</span> <span class="o">=</span> <span class="n">initial_lr</span> <span class="o">*</span> <span class="n">mult</span>
+    <span class="n">out_lr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">out_lr</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">out_lr</span>
+
+
+<span class="k">def</span> <span class="nf">_cosine_annealing</span><span class="p">(</span><span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">):</span>
+    <span class="n">mult</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">step</span> <span class="o">/</span> <span class="n">max_steps</span><span class="p">))</span>
+    <span class="n">out_lr</span> <span class="o">=</span> <span class="p">(</span><span class="n">initial_lr</span> <span class="o">-</span> <span class="n">min_lr</span><span class="p">)</span> <span class="o">*</span> <span class="n">mult</span> <span class="o">+</span> <span class="n">min_lr</span>
+    <span class="k">return</span> <span class="n">out_lr</span>
+
+
+<span class="k">def</span> <span class="nf">_linear_warmup_with_cosine_annealing</span><span class="p">(</span><span class="n">max_lr</span><span class="p">,</span> <span class="n">warmup_steps</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span>
+                                         <span class="n">decay_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">):</span>
+    <span class="k">assert</span> <span class="n">max_lr</span> <span class="o">&gt;</span> <span class="n">min_lr</span>
+    <span class="c1"># Use linear warmup for the initial part.</span>
+    <span class="k">if</span> <span class="n">warmup_steps</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">step</span> <span class="o">&lt;=</span> <span class="n">warmup_steps</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">max_lr</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">step</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">warmup_steps</span><span class="p">)</span>
+
+    <span class="c1"># For any steps larger than `decay_steps`, use `min_lr`.</span>
+    <span class="k">if</span> <span class="n">step</span> <span class="o">&gt;</span> <span class="n">warmup_steps</span> <span class="o">+</span> <span class="n">decay_steps</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">min_lr</span>
+
+    <span class="c1"># If we are done with the warmup period, use the decay style.</span>
+    <span class="n">num_steps_</span> <span class="o">=</span> <span class="n">step</span> <span class="o">-</span> <span class="n">warmup_steps</span>
+    <span class="n">decay_steps_</span> <span class="o">=</span> <span class="n">decay_steps</span>
+    <span class="n">decay_ratio</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">num_steps_</span><span class="p">)</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="n">decay_steps_</span><span class="p">)</span>
+    <span class="k">assert</span> <span class="n">decay_ratio</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+    <span class="k">assert</span> <span class="n">decay_ratio</span> <span class="o">&lt;=</span> <span class="mf">1.0</span>
+    <span class="n">delta_lr</span> <span class="o">=</span> <span class="n">max_lr</span> <span class="o">-</span> <span class="n">min_lr</span>
+
+    <span class="n">coeff</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">decay_ratio</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1.0</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">min_lr</span> <span class="o">+</span> <span class="n">coeff</span> <span class="o">*</span> <span class="n">delta_lr</span>
+
+
+<span class="k">def</span> <span class="nf">_poly_decay</span><span class="p">(</span><span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">decay_steps</span><span class="p">,</span> <span class="n">power</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">,</span> <span class="n">cycle</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">cycle</span><span class="p">:</span>
+        <span class="n">multiplier</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="k">if</span> <span class="n">step</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">step</span> <span class="o">/</span> <span class="n">decay_steps</span><span class="p">)</span>
+        <span class="n">decay_steps</span> <span class="o">*=</span> <span class="n">multiplier</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="n">decay_steps</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">step</span> <span class="o">/</span> <span class="n">decay_steps</span>
+    <span class="n">lr</span> <span class="o">=</span> <span class="p">(</span><span class="n">initial_lr</span> <span class="o">-</span> <span class="n">min_lr</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">p</span><span class="p">,</span> <span class="n">power</span><span class="p">)</span>
+    <span class="n">lr</span> <span class="o">+=</span> <span class="n">min_lr</span>
+    <span class="k">return</span> <span class="n">lr</span>
+
+
+<span class="k">def</span> <span class="nf">_noam_hold_annealing</span><span class="p">(</span><span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="p">,</span> <span class="n">warmup_steps</span><span class="p">,</span>
+                         <span class="n">hold_steps</span><span class="p">,</span> <span class="n">decay_rate</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">):</span>
+    <span class="c1"># hold_steps = total number of steps</span>
+    <span class="c1"># to hold the LR, not the warmup + hold steps.</span>
+    <span class="n">T_warmup_decay</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">warmup_steps</span> <span class="o">**</span> <span class="n">decay_rate</span><span class="p">)</span>
+    <span class="n">T_hold_decay</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="n">step</span> <span class="o">-</span> <span class="n">hold_steps</span><span class="p">)</span> <span class="o">**</span> <span class="n">decay_rate</span><span class="p">)</span>
+    <span class="n">lr</span> <span class="o">=</span> <span class="p">(</span><span class="n">initial_lr</span> <span class="o">*</span> <span class="n">T_warmup_decay</span><span class="p">)</span> <span class="o">/</span> <span class="n">T_hold_decay</span>
+    <span class="n">lr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">lr</span><span class="p">,</span> <span class="n">min_lr</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lr</span>
+
+
+<div class="viewcode-block" id="SquareAnnealing"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.SquareAnnealing">[docs]</a><span class="k">class</span> <span class="nc">SquareAnnealing</span><span class="p">(</span><span class="n">WarmupPolicy</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span> <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">max_steps</span><span class="o">=</span><span class="n">max_steps</span><span class="p">,</span>
+                         <span class="n">last_epoch</span><span class="o">=</span><span class="n">last_epoch</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="n">min_lr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">new_lrs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">_square_annealing</span><span class="p">(</span>
+                <span class="n">initial_lr</span><span class="o">=</span><span class="n">initial_lr</span><span class="p">,</span>
+                <span class="n">step</span><span class="o">=</span><span class="n">step</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">,</span>
+                <span class="n">max_steps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">,</span>
+                <span class="n">min_lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_lrs</span></div>
+
+
+<div class="viewcode-block" id="SquareRootAnnealing"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.SquareRootAnnealing">[docs]</a><span class="k">class</span> <span class="nc">SquareRootAnnealing</span><span class="p">(</span><span class="n">WarmupPolicy</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">max_steps</span><span class="o">=</span><span class="n">max_steps</span><span class="p">,</span>
+                         <span class="n">last_epoch</span><span class="o">=</span><span class="n">last_epoch</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="n">min_lr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="n">new_lrs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">_squareroot_annealing</span><span class="p">(</span><span class="n">initial_lr</span><span class="o">=</span><span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                                  <span class="n">max_steps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_lrs</span></div>
+
+
+<div class="viewcode-block" id="CosineAnnealing"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.CosineAnnealing">[docs]</a><span class="k">class</span> <span class="nc">CosineAnnealing</span><span class="p">(</span><span class="n">WarmupAnnealHoldPolicy</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
+                 <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">max_steps</span><span class="o">=</span><span class="n">max_steps</span><span class="p">,</span>
+                         <span class="n">last_epoch</span><span class="o">=</span><span class="n">last_epoch</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="n">min_lr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">initial_lr</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> received an initial learning rate &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;that was lower than the minimum learning rate.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">new_lrs</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">_cosine_annealing</span><span class="p">(</span>
+                    <span class="n">initial_lr</span><span class="o">=</span><span class="n">initial_lr</span><span class="p">,</span>
+                    <span class="n">step</span><span class="o">=</span><span class="n">step</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">,</span>
+                    <span class="n">max_steps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">,</span>
+                    <span class="n">min_lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+            <span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">new_lrs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_linear_warmup_with_cosine_annealing_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">new_lrs</span>
+
+    <span class="k">def</span> <span class="nf">_get_warmup_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">constant_steps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_get_warmup_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Use linear warmup for the initial part.</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_linear_warmup_with_cosine_annealing_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_constant_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="c1"># Only called when `constant_steps` &gt; 0.</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_linear_warmup_with_cosine_annealing_lr</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_linear_warmup_with_cosine_annealing_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="c1"># Cosine Schedule for Megatron LM,</span>
+        <span class="c1"># slightly different warmup schedule + constant LR at the end.</span>
+        <span class="n">new_lrs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">_linear_warmup_with_cosine_annealing</span><span class="p">(</span>
+                <span class="n">max_lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">warmup_steps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">,</span>
+                <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                <span class="n">decay_steps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">decay_steps</span><span class="p">,</span>
+                <span class="n">min_lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_lrs</span></div>
+
+
+<div class="viewcode-block" id="NoamAnnealing"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.NoamAnnealing">[docs]</a><span class="k">class</span> <span class="nc">NoamAnnealing</span><span class="p">(</span><span class="n">_LRScheduler</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">d_model</span><span class="p">,</span> <span class="n">warmup_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warmup_ratio</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">max_steps</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_normalize</span> <span class="o">=</span> <span class="n">d_model</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="ow">not</span> <span class="p">(</span><span class="n">warmup_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                    <span class="ow">and</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">),</span> \
+            <span class="s2">&quot;Either use particular number of step or ratio&quot;</span>
+        <span class="k">assert</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">max_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span> \
+            <span class="s2">&quot;If there is a ratio, there should be a total steps&quot;</span>
+
+        <span class="c1"># It is necessary to assign all attributes *before* __init__,</span>
+        <span class="c1"># as class is wrapped by an inner class.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_steps</span> <span class="o">=</span> <span class="n">max_steps</span>
+        <span class="k">if</span> <span class="n">warmup_steps</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="n">warmup_steps</span>
+        <span class="k">elif</span> <span class="n">warmup_ratio</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">warmup_ratio</span> <span class="o">*</span> <span class="n">max_steps</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span> <span class="o">=</span> <span class="n">min_lr</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">last_epoch</span><span class="p">)</span>
+
+<div class="viewcode-block" id="NoamAnnealing.get_lr"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.NoamAnnealing.get_lr">[docs]</a>    <span class="k">def</span> <span class="nf">get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_lr_called_within_step</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;To get the last learning rate computed &quot;</span>
+                <span class="s2">&quot;by the scheduler, please use `get_last_lr()`.&quot;</span><span class="p">,</span>
+                <span class="ne">UserWarning</span><span class="p">,</span> <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span>
+            <span class="p">)</span>
+
+        <span class="n">step</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">initial_lr</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="si">}</span><span class="s2"> received an initial learning rate &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;that was lower than the minimum learning rate.&quot;</span>
+                <span class="p">)</span>
+
+        <span class="n">new_lrs</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_noam_annealing</span><span class="p">(</span><span class="n">initial_lr</span><span class="o">=</span><span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">)</span> <span class="k">for</span>
+                   <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_lrs</span></div>
+
+    <span class="k">def</span> <span class="nf">_noam_annealing</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_lr</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">mult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="n">step</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">),</span>
+                                         <span class="n">step</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.5</span><span class="p">)))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">mult</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize</span> <span class="o">*</span> <span class="n">step</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">)</span>
+
+        <span class="n">out_lr</span> <span class="o">=</span> <span class="n">initial_lr</span> <span class="o">*</span> <span class="n">mult</span>
+        <span class="k">if</span> <span class="n">step</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">:</span>
+            <span class="n">out_lr</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">out_lr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">out_lr</span></div>
+
+
+<div class="viewcode-block" id="NoamHoldAnnealing"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.NoamHoldAnnealing">[docs]</a><span class="k">class</span> <span class="nc">NoamHoldAnnealing</span><span class="p">(</span><span class="n">WarmupHoldPolicy</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">optimizer</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">max_steps</span><span class="p">,</span> <span class="n">decay_rate</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                 <span class="n">last_epoch</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        From Nemo:</span>
+<span class="sd">        Implementation of the Noam Hold Annealing policy</span>
+<span class="sd">        from the SqueezeFormer paper.</span>
+
+<span class="sd">        Unlike NoamAnnealing, the peak learning rate</span>
+<span class="sd">        can be explicitly set for this scheduler.</span>
+<span class="sd">        The schedule first performs linear warmup,</span>
+<span class="sd">        then holds the peak LR, then decays with some schedule for</span>
+<span class="sd">        the remainder of the steps.</span>
+<span class="sd">        Therefore the min-lr is still dependent</span>
+<span class="sd">        on the hyper parameters selected.</span>
+
+<span class="sd">        It&#39;s schedule is determined by three factors-</span>
+
+<span class="sd">        Warmup Steps: Initial stage, where linear warmup</span>
+<span class="sd">            occurs uptil the peak LR is reached. Unlike NoamAnnealing,</span>
+<span class="sd">            the peak LR is explicitly stated here instead of a scaling factor.</span>
+
+<span class="sd">        Hold Steps: Intermediate stage, where the peak LR</span>
+<span class="sd">            is maintained for some number of steps. In this region,</span>
+<span class="sd">            the high peak LR allows the model to converge faster</span>
+<span class="sd">            if training is stable. However the high LR</span>
+<span class="sd">            may also cause instability during training.</span>
+<span class="sd">            Should usually be a significant fraction of training</span>
+<span class="sd">            steps (around 30-40% of the entire training steps).</span>
+
+<span class="sd">        Decay Steps: Final stage, where the LR rapidly decays</span>
+<span class="sd">            with some scaling rate (set by decay rate).</span>
+<span class="sd">            To attain Noam decay, use 0.5,</span>
+<span class="sd">            for Squeezeformer recommended decay, use 1.0.</span>
+<span class="sd">            The fast decay after prolonged high LR during</span>
+<span class="sd">            hold phase allows for rapid convergence.</span>
+
+<span class="sd">        References:</span>
+<span class="sd">            - [Squeezeformer:</span>
+<span class="sd">            An Efficient Transformer for Automatic Speech Recognition]</span>
+<span class="sd">            (https://arxiv.org/abs/2206.00888)</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            optimizer: Pytorch compatible Optimizer object.</span>
+<span class="sd">            warmup_steps: Number of training steps in warmup stage</span>
+<span class="sd">            warmup_ratio: Ratio of warmup steps to total steps</span>
+<span class="sd">            hold_steps: Number of training steps to</span>
+<span class="sd">                        hold the learning rate after warm up</span>
+<span class="sd">            hold_ratio: Ratio of hold steps to total steps</span>
+<span class="sd">            max_steps: Total number of steps while training or `None` for</span>
+<span class="sd">                infinite training</span>
+<span class="sd">            decay_rate: Float value describing the polynomial decay</span>
+<span class="sd">                        after the hold period. Default value</span>
+<span class="sd">                        of 0.5 corresponds to Noam decay.</span>
+<span class="sd">            min_lr: Minimum learning rate.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">decay_rate</span> <span class="o">=</span> <span class="n">decay_rate</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span> <span class="n">max_steps</span><span class="o">=</span><span class="n">max_steps</span><span class="p">,</span>
+                         <span class="n">last_epoch</span><span class="o">=</span><span class="n">last_epoch</span><span class="p">,</span> <span class="n">min_lr</span><span class="o">=</span><span class="n">min_lr</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_lr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Noam scheduler cannot be used without warmup steps&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">hold_steps</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">hold_steps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">hold_steps</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hold_steps</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">new_lrs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">_noam_hold_annealing</span><span class="p">(</span>
+                <span class="n">initial_lr</span><span class="p">,</span>
+                <span class="n">step</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                <span class="n">warmup_steps</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">,</span>
+                <span class="n">hold_steps</span><span class="o">=</span><span class="n">hold_steps</span><span class="p">,</span>
+                <span class="n">decay_rate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">decay_rate</span><span class="p">,</span>
+                <span class="n">min_lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">min_lr</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">initial_lr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">base_lrs</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="n">new_lrs</span>
+
+<div class="viewcode-block" id="NoamHoldAnnealing.set_step"><a class="viewcode-back" href="../../../python_api/wenet.utils.scheduler.html#wenet.utils.scheduler.NoamHoldAnnealing.set_step">[docs]</a>    <span class="k">def</span> <span class="nf">set_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">last_epoch</span> <span class="o">=</span> <span class="n">step</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

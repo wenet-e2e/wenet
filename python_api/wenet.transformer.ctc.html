@@ -90,8 +90,70 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="wenet-transformer-ctc-module">
-<h1>wenet.transformer.ctc module<a class="headerlink" href="#wenet-transformer-ctc-module" title="Permalink to this heading"></a></h1>
+  <section id="module-wenet.transformer.ctc">
+<span id="wenet-transformer-ctc-module"></span><h1>wenet.transformer.ctc module<a class="headerlink" href="#module-wenet.transformer.ctc" title="Permalink to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="wenet.transformer.ctc.CTC">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.transformer.ctc.</span></span><span class="sig-name descname"><span class="pre">CTC</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">odim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encoder_output_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reduce</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/transformer/ctc.html#CTC"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.ctc.CTC" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>CTC module</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.transformer.ctc.CTC.argmax">
+<span class="sig-name descname"><span class="pre">argmax</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hs_pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/wenet/transformer/ctc.html#CTC.argmax"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.ctc.CTC.argmax" title="Permalink to this definition"></a></dt>
+<dd><p>argmax of frame activations</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>hs_pad</strong> (<em>torch.Tensor</em>) – 3d tensor (B, Tmax, eprojs)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>argmax applied 2d tensor (B, Tmax)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.transformer.ctc.CTC.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hs_pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hlens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ys_pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ys_lens</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/wenet/transformer/ctc.html#CTC.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.ctc.CTC.forward" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate CTC loss.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hs_pad</strong> – batch of padded hidden state sequences (B, Tmax, D)</p></li>
+<li><p><strong>hlens</strong> – batch of lengths of hidden state sequences (B)</p></li>
+<li><p><strong>ys_pad</strong> – batch of padded character id sequence tensor (B, Lmax)</p></li>
+<li><p><strong>ys_lens</strong> – batch of lengths of character sequence (B)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.transformer.ctc.CTC.log_softmax">
+<span class="sig-name descname"><span class="pre">log_softmax</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hs_pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/wenet/transformer/ctc.html#CTC.log_softmax"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.ctc.CTC.log_softmax" title="Permalink to this definition"></a></dt>
+<dd><p>log_softmax of frame activations</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>hs_pad</strong> (<em>Tensor</em>) – 3d tensor (B, Tmax, eprojs)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>log softmax applied 3d tensor (B, Tmax, odim)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="wenet.transformer.ctc.CTC.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.transformer.ctc.CTC.training" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 </section>
 
 

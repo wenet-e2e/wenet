@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wenet.transformer.encoder &mdash; wenet  documentation</title>
+      <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../../" id="documentation_options" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+        <script src="../../../_static/sphinx_highlight.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            wenet
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Install</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../train.html">How to train models?</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../production.html">Production Runtime</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../reference.html">Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">wenet</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">wenet.transformer.encoder</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for wenet.transformer.encoder</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Copyright (c) 2021 Mobvoi Inc (Binbin Zhang, Di Wu)</span>
+<span class="c1">#               2022 Xingchen Song (sxc19@mails.tsinghua.edu.cn)</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1">#   http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="c1"># Modified from ESPnet(https://github.com/espnet/espnet)</span>
+
+<span class="sd">&quot;&quot;&quot;Encoder definition.&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+
+<span class="kn">from</span> <span class="nn">wenet.transformer.attention</span> <span class="kn">import</span> <span class="n">MultiHeadedAttention</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.attention</span> <span class="kn">import</span> <span class="n">RelPositionMultiHeadedAttention</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.convolution</span> <span class="kn">import</span> <span class="n">ConvolutionModule</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.embedding</span> <span class="kn">import</span> <span class="n">PositionalEncoding</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.embedding</span> <span class="kn">import</span> <span class="n">RelPositionalEncoding</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.embedding</span> <span class="kn">import</span> <span class="n">NoPositionalEncoding</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.encoder_layer</span> <span class="kn">import</span> <span class="n">TransformerEncoderLayer</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.encoder_layer</span> <span class="kn">import</span> <span class="n">ConformerEncoderLayer</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.positionwise_feed_forward</span> <span class="kn">import</span> <span class="n">PositionwiseFeedForward</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.subsampling</span> <span class="kn">import</span> <span class="n">Conv2dSubsampling4</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.subsampling</span> <span class="kn">import</span> <span class="n">Conv2dSubsampling6</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.subsampling</span> <span class="kn">import</span> <span class="n">Conv2dSubsampling8</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.subsampling</span> <span class="kn">import</span> <span class="n">LinearNoSubsampling</span>
+<span class="kn">from</span> <span class="nn">wenet.utils.common</span> <span class="kn">import</span> <span class="n">get_activation</span>
+<span class="kn">from</span> <span class="nn">wenet.utils.mask</span> <span class="kn">import</span> <span class="n">make_pad_mask</span>
+<span class="kn">from</span> <span class="nn">wenet.utils.mask</span> <span class="kn">import</span> <span class="n">add_optional_chunk_mask</span>
+
+
+<div class="viewcode-block" id="BaseEncoder"><a class="viewcode-back" href="../../../python_api/wenet.transformer.encoder.html#wenet.transformer.encoder.BaseEncoder">[docs]</a><span class="k">class</span> <span class="nc">BaseEncoder</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">output_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="n">attention_heads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">linear_units</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2048</span><span class="p">,</span>
+        <span class="n">num_blocks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+        <span class="n">dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">positional_dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">attention_dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">input_layer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;conv2d&quot;</span><span class="p">,</span>
+        <span class="n">pos_enc_layer_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;abs_pos&quot;</span><span class="p">,</span>
+        <span class="n">normalize_before</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">static_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">use_dynamic_chunk</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">global_cmvn</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">use_dynamic_left_chunk</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Args:</span>
+<span class="sd">            input_size (int): input dim</span>
+<span class="sd">            output_size (int): dimension of attention</span>
+<span class="sd">            attention_heads (int): the number of heads of multi head attention</span>
+<span class="sd">            linear_units (int): the hidden units number of position-wise feed</span>
+<span class="sd">                forward</span>
+<span class="sd">            num_blocks (int): the number of decoder blocks</span>
+<span class="sd">            dropout_rate (float): dropout rate</span>
+<span class="sd">            attention_dropout_rate (float): dropout rate in attention</span>
+<span class="sd">            positional_dropout_rate (float): dropout rate after adding</span>
+<span class="sd">                positional encoding</span>
+<span class="sd">            input_layer (str): input layer type.</span>
+<span class="sd">                optional [linear, conv2d, conv2d6, conv2d8]</span>
+<span class="sd">            pos_enc_layer_type (str): Encoder positional encoding layer type.</span>
+<span class="sd">                opitonal [abs_pos, scaled_abs_pos, rel_pos, no_pos]</span>
+<span class="sd">            normalize_before (bool):</span>
+<span class="sd">                True: use layer_norm before each sub-block of a layer.</span>
+<span class="sd">                False: use layer_norm after each sub-block of a layer.</span>
+<span class="sd">            static_chunk_size (int): chunk size for static chunk training and</span>
+<span class="sd">                decoding</span>
+<span class="sd">            use_dynamic_chunk (bool): whether use dynamic chunk size for</span>
+<span class="sd">                training or not, You can only use fixed chunk(chunk_size &gt; 0)</span>
+<span class="sd">                or dyanmic chunk size(use_dynamic_chunk = True)</span>
+<span class="sd">            global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module</span>
+<span class="sd">            use_dynamic_left_chunk (bool): whether use dynamic left chunk in</span>
+<span class="sd">                dynamic chunk training</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span> <span class="o">=</span> <span class="n">output_size</span>
+
+        <span class="k">if</span> <span class="n">pos_enc_layer_type</span> <span class="o">==</span> <span class="s2">&quot;abs_pos&quot;</span><span class="p">:</span>
+            <span class="n">pos_enc_class</span> <span class="o">=</span> <span class="n">PositionalEncoding</span>
+        <span class="k">elif</span> <span class="n">pos_enc_layer_type</span> <span class="o">==</span> <span class="s2">&quot;rel_pos&quot;</span><span class="p">:</span>
+            <span class="n">pos_enc_class</span> <span class="o">=</span> <span class="n">RelPositionalEncoding</span>
+        <span class="k">elif</span> <span class="n">pos_enc_layer_type</span> <span class="o">==</span> <span class="s2">&quot;no_pos&quot;</span><span class="p">:</span>
+            <span class="n">pos_enc_class</span> <span class="o">=</span> <span class="n">NoPositionalEncoding</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unknown pos_enc_layer: &quot;</span> <span class="o">+</span> <span class="n">pos_enc_layer_type</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">input_layer</span> <span class="o">==</span> <span class="s2">&quot;linear&quot;</span><span class="p">:</span>
+            <span class="n">subsampling_class</span> <span class="o">=</span> <span class="n">LinearNoSubsampling</span>
+        <span class="k">elif</span> <span class="n">input_layer</span> <span class="o">==</span> <span class="s2">&quot;conv2d&quot;</span><span class="p">:</span>
+            <span class="n">subsampling_class</span> <span class="o">=</span> <span class="n">Conv2dSubsampling4</span>
+        <span class="k">elif</span> <span class="n">input_layer</span> <span class="o">==</span> <span class="s2">&quot;conv2d6&quot;</span><span class="p">:</span>
+            <span class="n">subsampling_class</span> <span class="o">=</span> <span class="n">Conv2dSubsampling6</span>
+        <span class="k">elif</span> <span class="n">input_layer</span> <span class="o">==</span> <span class="s2">&quot;conv2d8&quot;</span><span class="p">:</span>
+            <span class="n">subsampling_class</span> <span class="o">=</span> <span class="n">Conv2dSubsampling8</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;unknown input_layer: &quot;</span> <span class="o">+</span> <span class="n">input_layer</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">global_cmvn</span> <span class="o">=</span> <span class="n">global_cmvn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">embed</span> <span class="o">=</span> <span class="n">subsampling_class</span><span class="p">(</span>
+            <span class="n">input_size</span><span class="p">,</span>
+            <span class="n">output_size</span><span class="p">,</span>
+            <span class="n">dropout_rate</span><span class="p">,</span>
+            <span class="n">pos_enc_class</span><span class="p">(</span><span class="n">output_size</span><span class="p">,</span> <span class="n">positional_dropout_rate</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span> <span class="o">=</span> <span class="n">normalize_before</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">after_norm</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="n">output_size</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">static_chunk_size</span> <span class="o">=</span> <span class="n">static_chunk_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_dynamic_chunk</span> <span class="o">=</span> <span class="n">use_dynamic_chunk</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_dynamic_left_chunk</span> <span class="o">=</span> <span class="n">use_dynamic_left_chunk</span>
+
+<div class="viewcode-block" id="BaseEncoder.output_size"><a class="viewcode-back" href="../../../python_api/wenet.transformer.encoder.html#wenet.transformer.encoder.BaseEncoder.output_size">[docs]</a>    <span class="k">def</span> <span class="nf">output_size</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span></div>
+
+<div class="viewcode-block" id="BaseEncoder.forward"><a class="viewcode-back" href="../../../python_api/wenet.transformer.encoder.html#wenet.transformer.encoder.BaseEncoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">xs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">xs_lens</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Embed positions in tensor.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            xs: padded input tensor (B, T, D)</span>
+<span class="sd">            xs_lens: input length (B)</span>
+<span class="sd">            decoding_chunk_size: decoding chunk size for dynamic chunk</span>
+<span class="sd">                0: default for training, use random dynamic chunk.</span>
+<span class="sd">                &lt;0: for decoding, use full chunk.</span>
+<span class="sd">                &gt;0: for decoding, use fixed chunk size as set.</span>
+<span class="sd">            num_decoding_left_chunks: number of left chunks, this is for decoding,</span>
+<span class="sd">            the chunk size is decoding_chunk_size.</span>
+<span class="sd">                &gt;=0: use num_decoding_left_chunks</span>
+<span class="sd">                &lt;0: use all left chunks</span>
+<span class="sd">        Returns:</span>
+<span class="sd">            encoder output tensor xs, and subsampled masks</span>
+<span class="sd">            xs: padded output tensor (B, T&#39; ~= T/subsample_rate, D)</span>
+<span class="sd">            masks: torch.Tensor batch padding mask after subsample</span>
+<span class="sd">                (B, 1, T&#39; ~= T/subsample_rate)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">T</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">masks</span> <span class="o">=</span> <span class="o">~</span><span class="n">make_pad_mask</span><span class="p">(</span><span class="n">xs_lens</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>  <span class="c1"># (B, 1, T)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_cmvn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">xs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_cmvn</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+        <span class="n">xs</span><span class="p">,</span> <span class="n">pos_emb</span><span class="p">,</span> <span class="n">masks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">masks</span><span class="p">)</span>
+        <span class="n">mask_pad</span> <span class="o">=</span> <span class="n">masks</span>  <span class="c1"># (B, 1, T/subsample_rate)</span>
+        <span class="n">chunk_masks</span> <span class="o">=</span> <span class="n">add_optional_chunk_mask</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">masks</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">use_dynamic_chunk</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">use_dynamic_left_chunk</span><span class="p">,</span>
+                                              <span class="n">decoding_chunk_size</span><span class="p">,</span>
+                                              <span class="bp">self</span><span class="o">.</span><span class="n">static_chunk_size</span><span class="p">,</span>
+                                              <span class="n">num_decoding_left_chunks</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">layer</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">encoders</span><span class="p">:</span>
+            <span class="n">xs</span><span class="p">,</span> <span class="n">chunk_masks</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">chunk_masks</span><span class="p">,</span> <span class="n">pos_emb</span><span class="p">,</span> <span class="n">mask_pad</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
+            <span class="n">xs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">after_norm</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+        <span class="c1"># Here we assume the mask is not changed in encoder layers, so just</span>
+        <span class="c1"># return the masks before encoder layers, and the masks will be used</span>
+        <span class="c1"># for cross attention with decoder later</span>
+        <span class="k">return</span> <span class="n">xs</span><span class="p">,</span> <span class="n">masks</span></div>
+
+<div class="viewcode-block" id="BaseEncoder.forward_chunk"><a class="viewcode-back" href="../../../python_api/wenet.transformer.encoder.html#wenet.transformer.encoder.BaseEncoder.forward_chunk">[docs]</a>    <span class="k">def</span> <span class="nf">forward_chunk</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">xs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">offset</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">required_cache_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">att_cache</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">cnn_cache</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">att_mask</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">),</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Forward just one chunk</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            xs (torch.Tensor): chunk input, with shape (b=1, time, mel-dim),</span>
+<span class="sd">                where `time == (chunk_size - 1) * subsample_rate + \</span>
+<span class="sd">                        subsample.right_context + 1`</span>
+<span class="sd">            offset (int): current offset in encoder output time stamp</span>
+<span class="sd">            required_cache_size (int): cache size required for next chunk</span>
+<span class="sd">                compuation</span>
+<span class="sd">                &gt;=0: actual cache size</span>
+<span class="sd">                &lt;0: means all history cache is required</span>
+<span class="sd">            att_cache (torch.Tensor): cache tensor for KEY &amp; VALUE in</span>
+<span class="sd">                transformer/conformer attention, with shape</span>
+<span class="sd">                (elayers, head, cache_t1, d_k * 2), where</span>
+<span class="sd">                `head * d_k == hidden-dim` and</span>
+<span class="sd">                `cache_t1 == chunk_size * num_decoding_left_chunks`.</span>
+<span class="sd">            cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,</span>
+<span class="sd">                (elayers, b=1, hidden-dim, cache_t2), where</span>
+<span class="sd">                `cache_t2 == cnn.lorder - 1`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            torch.Tensor: output of current input xs,</span>
+<span class="sd">                with shape (b=1, chunk_size, hidden-dim).</span>
+<span class="sd">            torch.Tensor: new attention cache required for next chunk, with</span>
+<span class="sd">                dynamic shape (elayers, head, ?, d_k * 2)</span>
+<span class="sd">                depending on required_cache_size.</span>
+<span class="sd">            torch.Tensor: new conformer cnn cache required for next chunk, with</span>
+<span class="sd">                same shape as the original cnn_cache.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+        <span class="c1"># tmp_masks is just for interface compatibility</span>
+        <span class="n">tmp_masks</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span>
+                               <span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span>
+                               <span class="n">device</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">device</span><span class="p">,</span>
+                               <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+        <span class="n">tmp_masks</span> <span class="o">=</span> <span class="n">tmp_masks</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_cmvn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">xs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">global_cmvn</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+        <span class="c1"># NOTE(xcsong): Before embed, shape(xs) is (b=1, time, mel-dim)</span>
+        <span class="n">xs</span><span class="p">,</span> <span class="n">pos_emb</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">tmp_masks</span><span class="p">,</span> <span class="n">offset</span><span class="p">)</span>
+        <span class="c1"># NOTE(xcsong): After  embed, shape(xs) is (b=1, chunk_size, hidden-dim)</span>
+        <span class="n">elayers</span><span class="p">,</span> <span class="n">cache_t1</span> <span class="o">=</span> <span class="n">att_cache</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">att_cache</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">chunk_size</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">attention_key_size</span> <span class="o">=</span> <span class="n">cache_t1</span> <span class="o">+</span> <span class="n">chunk_size</span>
+        <span class="n">pos_emb</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">position_encoding</span><span class="p">(</span>
+            <span class="n">offset</span><span class="o">=</span><span class="n">offset</span> <span class="o">-</span> <span class="n">cache_t1</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">attention_key_size</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">required_cache_size</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">next_cache_start</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">elif</span> <span class="n">required_cache_size</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">next_cache_start</span> <span class="o">=</span> <span class="n">attention_key_size</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">next_cache_start</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">attention_key_size</span> <span class="o">-</span> <span class="n">required_cache_size</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">r_att_cache</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">r_cnn_cache</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">layer</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">encoders</span><span class="p">):</span>
+            <span class="c1"># NOTE(xcsong): Before layer.forward</span>
+            <span class="c1">#   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),</span>
+            <span class="c1">#   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)</span>
+            <span class="n">xs</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">new_att_cache</span><span class="p">,</span> <span class="n">new_cnn_cache</span> <span class="o">=</span> <span class="n">layer</span><span class="p">(</span>
+                <span class="n">xs</span><span class="p">,</span> <span class="n">att_mask</span><span class="p">,</span> <span class="n">pos_emb</span><span class="p">,</span>
+                <span class="n">att_cache</span><span class="o">=</span><span class="n">att_cache</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">elayers</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">att_cache</span><span class="p">,</span>
+                <span class="n">cnn_cache</span><span class="o">=</span><span class="n">cnn_cache</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">if</span> <span class="n">cnn_cache</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">cnn_cache</span>
+            <span class="p">)</span>
+            <span class="c1"># NOTE(xcsong): After layer.forward</span>
+            <span class="c1">#   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),</span>
+            <span class="c1">#   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)</span>
+            <span class="n">r_att_cache</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_att_cache</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">next_cache_start</span><span class="p">:,</span> <span class="p">:])</span>
+            <span class="n">r_cnn_cache</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">new_cnn_cache</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
+            <span class="n">xs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">after_norm</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+
+        <span class="c1"># NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),</span>
+        <span class="c1">#   ? may be larger than cache_t1, it depends on required_cache_size</span>
+        <span class="n">r_att_cache</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">r_att_cache</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="c1"># NOTE(xcsong): shape(r_cnn_cache) is (e, b=1, hidden-dim, cache_t2)</span>
+        <span class="n">r_cnn_cache</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">r_cnn_cache</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">r_att_cache</span><span class="p">,</span> <span class="n">r_cnn_cache</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="BaseEncoder.forward_chunk_by_chunk"><a class="viewcode-back" href="../../../python_api/wenet.transformer.encoder.html#wenet.transformer.encoder.BaseEncoder.forward_chunk_by_chunk">[docs]</a>    <span class="k">def</span> <span class="nf">forward_chunk_by_chunk</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">xs</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+        <span class="n">decoding_chunk_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">num_decoding_left_chunks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Forward input chunk by chunk with chunk_size like a streaming</span>
+<span class="sd">            fashion</span>
+
+<span class="sd">        Here we should pay special attention to computation cache in the</span>
+<span class="sd">        streaming style forward chunk by chunk. Three things should be taken</span>
+<span class="sd">        into account for computation in the current network:</span>
+<span class="sd">            1. transformer/conformer encoder layers output cache</span>
+<span class="sd">            2. convolution in conformer</span>
+<span class="sd">            3. convolution in subsampling</span>
+
+<span class="sd">        However, we don&#39;t implement subsampling cache for:</span>
+<span class="sd">            1. We can control subsampling module to output the right result by</span>
+<span class="sd">               overlapping input instead of cache left context, even though it</span>
+<span class="sd">               wastes some computation, but subsampling only takes a very</span>
+<span class="sd">               small fraction of computation in the whole model.</span>
+<span class="sd">            2. Typically, there are several covolution layers with subsampling</span>
+<span class="sd">               in subsampling module, it is tricky and complicated to do cache</span>
+<span class="sd">               with different convolution layers with different subsampling</span>
+<span class="sd">               rate.</span>
+<span class="sd">            3. Currently, nn.Sequential is used to stack all the convolution</span>
+<span class="sd">               layers in subsampling, we need to rewrite it to make it work</span>
+<span class="sd">               with cache, which is not prefered.</span>
+<span class="sd">        Args:</span>
+<span class="sd">            xs (torch.Tensor): (1, max_len, dim)</span>
+<span class="sd">            chunk_size (int): decoding chunk size</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">decoding_chunk_size</span> <span class="o">&gt;</span> <span class="mi">0</span>
+        <span class="c1"># The model is trained by static or dynamic chunk</span>
+        <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">static_chunk_size</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_dynamic_chunk</span>
+        <span class="n">subsampling</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">subsampling_rate</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed</span><span class="o">.</span><span class="n">right_context</span> <span class="o">+</span> <span class="mi">1</span>  <span class="c1"># Add current frame</span>
+        <span class="n">stride</span> <span class="o">=</span> <span class="n">subsampling</span> <span class="o">*</span> <span class="n">decoding_chunk_size</span>
+        <span class="n">decoding_window</span> <span class="o">=</span> <span class="p">(</span><span class="n">decoding_chunk_size</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">subsampling</span> <span class="o">+</span> <span class="n">context</span>
+        <span class="n">num_frames</span> <span class="o">=</span> <span class="n">xs</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">att_cache</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">cnn_cache</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">xs</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">required_cache_size</span> <span class="o">=</span> <span class="n">decoding_chunk_size</span> <span class="o">*</span> <span class="n">num_decoding_left_chunks</span>
+
+        <span class="c1"># Feed forward overlap input step by step</span>
+        <span class="k">for</span> <span class="n">cur</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_frames</span> <span class="o">-</span> <span class="n">context</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">stride</span><span class="p">):</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">cur</span> <span class="o">+</span> <span class="n">decoding_window</span><span class="p">,</span> <span class="n">num_frames</span><span class="p">)</span>
+            <span class="n">chunk_xs</span> <span class="o">=</span> <span class="n">xs</span><span class="p">[:,</span> <span class="n">cur</span><span class="p">:</span><span class="n">end</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">att_cache</span><span class="p">,</span> <span class="n">cnn_cache</span><span class="p">)</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward_chunk</span><span class="p">(</span>
+                <span class="n">chunk_xs</span><span class="p">,</span> <span class="n">offset</span><span class="p">,</span> <span class="n">required_cache_size</span><span class="p">,</span> <span class="n">att_cache</span><span class="p">,</span> <span class="n">cnn_cache</span><span class="p">)</span>
+            <span class="n">outputs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+            <span class="n">offset</span> <span class="o">+=</span> <span class="n">y</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">ys</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">(</span><span class="n">outputs</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">masks</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">ys</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">1</span><span class="p">)),</span> <span class="n">device</span><span class="o">=</span><span class="n">ys</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ys</span><span class="p">,</span> <span class="n">masks</span></div></div>
+
+
+<div class="viewcode-block" id="TransformerEncoder"><a class="viewcode-back" href="../../../python_api/wenet.transformer.encoder.html#wenet.transformer.encoder.TransformerEncoder">[docs]</a><span class="k">class</span> <span class="nc">TransformerEncoder</span><span class="p">(</span><span class="n">BaseEncoder</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Transformer encoder module.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">output_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="n">attention_heads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">linear_units</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2048</span><span class="p">,</span>
+        <span class="n">num_blocks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+        <span class="n">dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">positional_dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">attention_dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">input_layer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;conv2d&quot;</span><span class="p">,</span>
+        <span class="n">pos_enc_layer_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;abs_pos&quot;</span><span class="p">,</span>
+        <span class="n">normalize_before</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">static_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">use_dynamic_chunk</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">global_cmvn</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">use_dynamic_left_chunk</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot; Construct TransformerEncoder</span>
+
+<span class="sd">        See Encoder for the meaning of each parameter.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">input_size</span><span class="p">,</span> <span class="n">output_size</span><span class="p">,</span> <span class="n">attention_heads</span><span class="p">,</span>
+                         <span class="n">linear_units</span><span class="p">,</span> <span class="n">num_blocks</span><span class="p">,</span> <span class="n">dropout_rate</span><span class="p">,</span>
+                         <span class="n">positional_dropout_rate</span><span class="p">,</span> <span class="n">attention_dropout_rate</span><span class="p">,</span>
+                         <span class="n">input_layer</span><span class="p">,</span> <span class="n">pos_enc_layer_type</span><span class="p">,</span> <span class="n">normalize_before</span><span class="p">,</span>
+                         <span class="n">static_chunk_size</span><span class="p">,</span> <span class="n">use_dynamic_chunk</span><span class="p">,</span>
+                         <span class="n">global_cmvn</span><span class="p">,</span> <span class="n">use_dynamic_left_chunk</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoders</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">([</span>
+            <span class="n">TransformerEncoderLayer</span><span class="p">(</span>
+                <span class="n">output_size</span><span class="p">,</span>
+                <span class="n">MultiHeadedAttention</span><span class="p">(</span><span class="n">attention_heads</span><span class="p">,</span> <span class="n">output_size</span><span class="p">,</span>
+                                     <span class="n">attention_dropout_rate</span><span class="p">),</span>
+                <span class="n">PositionwiseFeedForward</span><span class="p">(</span><span class="n">output_size</span><span class="p">,</span> <span class="n">linear_units</span><span class="p">,</span>
+                                        <span class="n">dropout_rate</span><span class="p">),</span> <span class="n">dropout_rate</span><span class="p">,</span>
+                <span class="n">normalize_before</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_blocks</span><span class="p">)</span>
+        <span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="ConformerEncoder"><a class="viewcode-back" href="../../../python_api/wenet.transformer.encoder.html#wenet.transformer.encoder.ConformerEncoder">[docs]</a><span class="k">class</span> <span class="nc">ConformerEncoder</span><span class="p">(</span><span class="n">BaseEncoder</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Conformer encoder module.&quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">input_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">output_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
+        <span class="n">attention_heads</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
+        <span class="n">linear_units</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2048</span><span class="p">,</span>
+        <span class="n">num_blocks</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">6</span><span class="p">,</span>
+        <span class="n">dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">positional_dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
+        <span class="n">attention_dropout_rate</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">input_layer</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;conv2d&quot;</span><span class="p">,</span>
+        <span class="n">pos_enc_layer_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rel_pos&quot;</span><span class="p">,</span>
+        <span class="n">normalize_before</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">static_chunk_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="n">use_dynamic_chunk</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">global_cmvn</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">use_dynamic_left_chunk</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">positionwise_conv_kernel_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">macaron_style</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">selfattention_layer_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rel_selfattn&quot;</span><span class="p">,</span>
+        <span class="n">activation_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;swish&quot;</span><span class="p">,</span>
+        <span class="n">use_cnn_module</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">cnn_module_kernel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">15</span><span class="p">,</span>
+        <span class="n">causal</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">cnn_module_norm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;batch_norm&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Construct ConformerEncoder</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            input_size to use_dynamic_chunk, see in BaseEncoder</span>
+<span class="sd">            positionwise_conv_kernel_size (int): Kernel size of positionwise</span>
+<span class="sd">                conv1d layer.</span>
+<span class="sd">            macaron_style (bool): Whether to use macaron style for</span>
+<span class="sd">                positionwise layer.</span>
+<span class="sd">            selfattention_layer_type (str): Encoder attention layer type,</span>
+<span class="sd">                the parameter has no effect now, it&#39;s just for configure</span>
+<span class="sd">                compatibility.</span>
+<span class="sd">            activation_type (str): Encoder activation function type.</span>
+<span class="sd">            use_cnn_module (bool): Whether to use convolution module.</span>
+<span class="sd">            cnn_module_kernel (int): Kernel size of convolution module.</span>
+<span class="sd">            causal (bool): whether to use causal convolution or not.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">input_size</span><span class="p">,</span> <span class="n">output_size</span><span class="p">,</span> <span class="n">attention_heads</span><span class="p">,</span>
+                         <span class="n">linear_units</span><span class="p">,</span> <span class="n">num_blocks</span><span class="p">,</span> <span class="n">dropout_rate</span><span class="p">,</span>
+                         <span class="n">positional_dropout_rate</span><span class="p">,</span> <span class="n">attention_dropout_rate</span><span class="p">,</span>
+                         <span class="n">input_layer</span><span class="p">,</span> <span class="n">pos_enc_layer_type</span><span class="p">,</span> <span class="n">normalize_before</span><span class="p">,</span>
+                         <span class="n">static_chunk_size</span><span class="p">,</span> <span class="n">use_dynamic_chunk</span><span class="p">,</span>
+                         <span class="n">global_cmvn</span><span class="p">,</span> <span class="n">use_dynamic_left_chunk</span><span class="p">)</span>
+        <span class="n">activation</span> <span class="o">=</span> <span class="n">get_activation</span><span class="p">(</span><span class="n">activation_type</span><span class="p">)</span>
+
+        <span class="c1"># self-attention module definition</span>
+        <span class="k">if</span> <span class="n">pos_enc_layer_type</span> <span class="o">!=</span> <span class="s2">&quot;rel_pos&quot;</span><span class="p">:</span>
+            <span class="n">encoder_selfattn_layer</span> <span class="o">=</span> <span class="n">MultiHeadedAttention</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">encoder_selfattn_layer</span> <span class="o">=</span> <span class="n">RelPositionMultiHeadedAttention</span>
+        <span class="n">encoder_selfattn_layer_args</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">attention_heads</span><span class="p">,</span>
+            <span class="n">output_size</span><span class="p">,</span>
+            <span class="n">attention_dropout_rate</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># feed-forward module definition</span>
+        <span class="n">positionwise_layer</span> <span class="o">=</span> <span class="n">PositionwiseFeedForward</span>
+        <span class="n">positionwise_layer_args</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">output_size</span><span class="p">,</span>
+            <span class="n">linear_units</span><span class="p">,</span>
+            <span class="n">dropout_rate</span><span class="p">,</span>
+            <span class="n">activation</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="c1"># convolution module definition</span>
+        <span class="n">convolution_layer</span> <span class="o">=</span> <span class="n">ConvolutionModule</span>
+        <span class="n">convolution_layer_args</span> <span class="o">=</span> <span class="p">(</span><span class="n">output_size</span><span class="p">,</span> <span class="n">cnn_module_kernel</span><span class="p">,</span> <span class="n">activation</span><span class="p">,</span>
+                                  <span class="n">cnn_module_norm</span><span class="p">,</span> <span class="n">causal</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">encoders</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">ModuleList</span><span class="p">([</span>
+            <span class="n">ConformerEncoderLayer</span><span class="p">(</span>
+                <span class="n">output_size</span><span class="p">,</span>
+                <span class="n">encoder_selfattn_layer</span><span class="p">(</span><span class="o">*</span><span class="n">encoder_selfattn_layer_args</span><span class="p">),</span>
+                <span class="n">positionwise_layer</span><span class="p">(</span><span class="o">*</span><span class="n">positionwise_layer_args</span><span class="p">),</span>
+                <span class="n">positionwise_layer</span><span class="p">(</span>
+                    <span class="o">*</span><span class="n">positionwise_layer_args</span><span class="p">)</span> <span class="k">if</span> <span class="n">macaron_style</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">convolution_layer</span><span class="p">(</span>
+                    <span class="o">*</span><span class="n">convolution_layer_args</span><span class="p">)</span> <span class="k">if</span> <span class="n">use_cnn_module</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">dropout_rate</span><span class="p">,</span>
+                <span class="n">normalize_before</span><span class="p">,</span>
+            <span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_blocks</span><span class="p">)</span>
+        <span class="p">])</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020, wenet-team.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
