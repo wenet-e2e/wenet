@@ -24,6 +24,9 @@ from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
+from wenet.cif.asr_cif_model import ASRCIFModel
+from wenet.cif.predictor import PredictorV1, PredictorV2
+from wenet.cif.cif_decoder import CIFDecoderSAN, CIFDecoderSANM
 from wenet.utils.cmvn import load_cmvn
 
 
@@ -54,7 +57,8 @@ def init_model(configs):
         encoder = EfficientConformerEncoder(input_dim,
                                             global_cmvn=global_cmvn,
                                             **configs['encoder_conf'],
-                                            **configs['encoder_conf']['efficient_conf']
+                                            **configs['encoder_conf']
+                                            ['efficient_conf']
                                             if 'efficient_conf' in
                                                configs['encoder_conf'] else {})
     else:
@@ -64,6 +68,18 @@ def init_model(configs):
     if decoder_type == 'transformer':
         decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                      **configs['decoder_conf'])
+    elif decoder_type.startswith('cif'):
+        decoder_type = configs.get('decoder', 'cif_decoder_san')
+        if decoder_type == 'cif_decoder_san':
+            decoder = CIFDecoderSAN(vocab_size, encoder.output_size(),
+                                    **configs['decoder_conf'])
+        elif decoder_type == 'cif_decoder_sanm':
+            decoder = CIFDecoderSANM(vocab_size, encoder.output_size(),
+                                     **configs['decoder_conf'])
+        else:
+            raise NotImplementedError(
+                "for cif decoders, only cif_decoder_san and cif_decoder_sanm "
+                "support now")
     else:
         assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
         assert configs['decoder_conf']['r_num_blocks'] > 0
@@ -100,11 +116,29 @@ def init_model(configs):
                            attention_decoder=decoder,
                            joint=joint,
                            ctc=ctc,
+                           lfmmi_dir=configs.get('lfmmi_dir', ''),
                            **configs['model_conf'])
+    elif 'cif_predictor' in configs:
+        predictor_type = configs.get('cif_predictor', 'predictor')
+        if predictor_type == 'predictor_v1':
+            predictor = PredictorV1(**configs['cif_predictor_conf'])
+        elif predictor_type == 'predictor_v2':
+            predictor = PredictorV2(**configs['cif_predictor_conf'])
+        else:
+            raise NotImplementedError(
+                "for cif predictors, only predictor_v1 and predictor_v2 "
+                "support now")
+        model = ASRCIFModel(vocab_size=vocab_size,
+                            encoder=encoder,
+                            decoder=decoder,
+                            ctc=ctc,
+                            predictor=predictor,
+                            **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
                          encoder=encoder,
                          decoder=decoder,
                          ctc=ctc,
+                         lfmmi_dir=configs.get('lfmmi_dir', ''),
                          **configs['model_conf'])
     return model

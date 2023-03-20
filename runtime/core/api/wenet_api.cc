@@ -19,7 +19,12 @@
 #include <vector>
 
 #include "decoder/asr_decoder.h"
+#ifdef USE_ONNX
+#include "decoder/onnx_asr_model.h"
+#endif
+#ifdef USE_TORCH
 #include "decoder/torch_asr_model.h"
+#endif
 #include "post_processor/post_processor.h"
 #include "utils/file.h"
 #include "utils/json.h"
@@ -34,11 +39,21 @@ class Recognizer {
         std::make_shared<wenet::FeaturePipeline>(*feature_config_);
     // Resource init
     resource_ = std::make_shared<wenet::DecodeResource>();
+#ifdef USE_ONNX
+    LOG(INFO) << "Reading onnx model ";
+    wenet::OnnxAsrModel::InitEngineThreads();
+    std::string model_path = model_dir;
+    auto model = std::make_shared<wenet::OnnxAsrModel>();
+#elif USE_TORCH
+    LOG(INFO) << "Reading torch model ";
     wenet::TorchAsrModel::InitEngineThreads();
     std::string model_path = wenet::JoinPath(model_dir, "final.zip");
     CHECK(wenet::FileExists(model_path));
 
     auto model = std::make_shared<wenet::TorchAsrModel>();
+#else
+    LOG(FATAL) << "Please rebuild with options '-DONNX=ON' or '-DTORCH=ON'.";
+#endif
     model->Read(model_path);
     resource_->model = model;
 

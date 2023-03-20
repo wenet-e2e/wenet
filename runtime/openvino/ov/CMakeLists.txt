@@ -1,0 +1,18 @@
+message("cmake build type is ${CMAKE_BUILD_TYPE} .")
+
+if(OPENVINO)
+  list(APPEND ov_asr_model_srcs ./ov_asr_model.cc)
+  message(STATUS "Use src_files: [ ${ov_asr_model_srcs} ] to compile ov_asr_model .")
+
+  add_library(ov_asr_model STATIC ${ov_asr_model_srcs})
+  include(openvino)
+  set(OpenVINO_DIR ${openvino_SOURCE_DIR}/runtime/cmake)
+  set(TBB_DIR ${openvino_SOURCE_DIR}/runtime/3rdparty/tbb/cmake)
+  find_package(OpenVINO REQUIRED)
+  find_package(TBB REQUIRED)
+  if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+      target_link_libraries(ov_asr_model PUBLIC openvino::runtime)
+    else()
+      target_link_libraries(ov_asr_model PUBLIC openvino openvino_intel_cpu_plugin)
+  endif()
+endif()

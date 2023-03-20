@@ -117,7 +117,7 @@ model_dir=your_model_dir
 export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=your_test_wav_path
-./build/websocket_client_main \
+./build/bin/websocket_client_main \
     --hostname 127.0.0.1 --port 10086 \
     --wav_path $wav_path 2>&1 | tee client.log
 ```

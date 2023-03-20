@@ -34,6 +34,9 @@
 #ifdef USE_BPU
 #include "bpu/bpu_asr_model.h"
 #endif
+#ifdef USE_OPENVINO
+#include "ov/ov_asr_model.h"
+#endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
 #include "utils/flags.h"
@@ -51,6 +54,9 @@ DEFINE_string(xpu_model_dir, "",
 // BPUAsrModel flags
 DEFINE_string(bpu_model_dir, "",
               "directory where the HORIZON BPU model is saved");
+// OVAsrModel flags
+DEFINE_string(openvino_dir, "", "directory where the OV model is saved");
+DEFINE_int32(core_number, 1, "Core number of process");
 
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
@@ -174,8 +180,18 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 #else
     LOG(FATAL) << "Please rebuild with cmake options '-DBPU=ON'.";
 #endif
+  } else if (!FLAGS_openvino_dir.empty()) {
+#ifdef USE_OPENVINO
+    LOG(INFO) << "Read OpenVINO model ";
+    auto model = std::make_shared<OVAsrModel>();
+    model->InitEngineThreads(FLAGS_core_number);
+    model->Read(FLAGS_openvino_dir);
+    resource->model = model;
+#else
+    LOG(FATAL) << "Please rebuild with cmake options '-DOPENVINO=ON'.";
+#endif
   } else {
-    LOG(FATAL) << "Please set ONNX, TORCH, XPU or BPU model path!!!";
+    LOG(FATAL) << "Please set ONNX, TORCH, XPU, BPU or OpenVINO model path!!!";
   }
 
   LOG(INFO) << "Reading unit table " << FLAGS_unit_path;

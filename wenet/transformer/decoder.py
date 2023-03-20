@@ -42,9 +42,6 @@ class TransformerDecoder(torch.nn.Module):
         normalize_before:
             True: use layer_norm before each sub-block of a layer.
             False: use layer_norm after each sub-block of a layer.
-        concat_after: whether to concat attention layer's input and output
-            True: x -> x + linear(concat(x, att(x)))
-            False: x -> x + att(x)
     """
     def __init__(
         self,
@@ -60,7 +57,6 @@ class TransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
-        concat_after: bool = False,
     ):
         assert check_argument_types()
         super().__init__()
@@ -90,7 +86,6 @@ class TransformerDecoder(torch.nn.Module):
                                         dropout_rate),
                 dropout_rate,
                 normalize_before,
-                concat_after,
             ) for _ in range(self.num_blocks)
         ])
 
@@ -202,9 +197,6 @@ class BiTransformerDecoder(torch.nn.Module):
         normalize_before:
             True: use layer_norm before each sub-block of a layer.
             False: use layer_norm after each sub-block of a layer.
-        concat_after: whether to concat attention layer's input and output
-            True: x -> x + linear(concat(x, att(x)))
-            False: x -> x + att(x)
     """
     def __init__(
         self,
@@ -221,7 +213,6 @@ class BiTransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
-        concat_after: bool = False,
     ):
 
         assert check_argument_types()
@@ -230,13 +221,13 @@ class BiTransformerDecoder(torch.nn.Module):
             vocab_size, encoder_output_size, attention_heads, linear_units,
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before, concat_after)
+            input_layer, use_output_layer, normalize_before)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before, concat_after)
+            input_layer, use_output_layer, normalize_before)
 
     def forward(
         self,

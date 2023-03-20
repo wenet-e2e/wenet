@@ -71,10 +71,18 @@ class WavReader {
 
     WavHeader header;
     fread(&header, 1, sizeof(header), fp);
+    if ((0 != strncmp(header.riff, "RIFF", 4)) || \
+        (0 != strncmp(header.wav, "WAVE", 4)) ||  \
+        (0 != strncmp(header.fmt, "fmt", 3))) {
+      fprintf(stderr,
+              "WaveData: expect audio format data.\n");
+      return false;
+    }
     if (header.fmt_size < 16) {
       fprintf(stderr,
               "WaveData: expect PCM format data "
               "to have fmt chunk of at least size 16.\n");
+      fclose(fp);
       return false;
     } else if (header.fmt_size > 16) {
       int offset = 44 - 8 + header.fmt_size - 16;
