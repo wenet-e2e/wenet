@@ -48,11 +48,6 @@ class BaseDecoder(nn.Module):
         use_output_layer: whether to use output layer
         pos_enc_class: PositionalEncoding or ScaledPositionalEncoding
         normalize_before: whether to use layer_norm before the first block
-        concat_after: whether to concat attention layer's input and output
-            if True, additional linear will be applied.
-            i.e. x -> x + linear(concat(x, att(x)))
-            if False, no additional linear will be applied.
-            i.e. x -> x + att(x)
     """
 
     def __init__(
@@ -177,7 +172,6 @@ class CIFDecoderSAN(BaseDecoder):
             use_output_layer: bool = True,
             pos_enc_class=PositionalEncoding,
             normalize_before: bool = True,
-            concat_after: bool = False,
             embeds_id: int = -1,
     ):
         assert check_argument_types()
@@ -205,8 +199,7 @@ class CIFDecoderSAN(BaseDecoder):
                 PositionwiseFeedForward(attention_dim, linear_units,
                                         dropout_rate),
                 dropout_rate,
-                normalize_before,
-                concat_after)
+                normalize_before)
             for _ in range(num_blocks)
         ])
 
@@ -294,7 +287,6 @@ class CIFDecoderSANM(BaseDecoder):
             use_output_layer: bool = True,
             pos_enc_class=PositionalEncoding,
             normalize_before: bool = True,
-            concat_after: bool = False,
             att_layer_num: int = 6,
             kernel_size: int = 21,
             sanm_shfit: int = 0
@@ -355,7 +347,6 @@ class CIFDecoderSANM(BaseDecoder):
                                                    dropout_rate),
                 dropout_rate,
                 normalize_before,
-                concat_after,
             ) for _ in range(att_layer_num)
         ])
         if num_blocks - att_layer_num <= 0:
@@ -374,7 +365,6 @@ class CIFDecoderSANM(BaseDecoder):
                                                        dropout_rate),
                     dropout_rate,
                     normalize_before,
-                    concat_after,
                 ) for _ in range(num_blocks - att_layer_num)
             ])
         self.decoders3 = torch.nn.ModuleList([
@@ -386,7 +376,6 @@ class CIFDecoderSANM(BaseDecoder):
                                                    dropout_rate),
                 dropout_rate,
                 normalize_before,
-                concat_after,
             ) for _ in range(1)
         ])
 
