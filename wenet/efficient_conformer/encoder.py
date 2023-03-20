@@ -61,7 +61,6 @@ class EfficientConformerEncoder(torch.nn.Module):
         input_layer: str = "conv2d",
         pos_enc_layer_type: str = "rel_pos",
         normalize_before: bool = True,
-        concat_after: bool = False,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
@@ -221,7 +220,6 @@ class EfficientConformerEncoder(torch.nn.Module):
                         count_include_pad=False),   # pointwise_conv_layer
                     dropout_rate,
                     normalize_before,
-                    concat_after,
                 ))
                 index = index + 1
             else:
@@ -239,7 +237,6 @@ class EfficientConformerEncoder(torch.nn.Module):
                         *convolution_layer_args_normal) if use_cnn_module else None,
                     dropout_rate,
                     normalize_before,
-                    concat_after,
                 ))
 
         self.encoders = torch.nn.ModuleList(layers)
