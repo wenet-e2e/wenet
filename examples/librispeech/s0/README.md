@@ -236,6 +236,7 @@ test other
     * num_blocks 12, cnn_module_kernel 15, group_size 3
 * Decoding info:
     * ctc_weight 0.5, reverse_weight 0.3, average_num 20
+* Model Download: [wenet_efficient_conformer_librispeech_v1](https://huggingface.co/58AILab/wenet_efficient_conformer_librispeech_v1)
 
 test clean
 
@@ -271,6 +272,7 @@ test other
     * num_blocks 12, cnn_module_kernel 15, group_size 3
 * Decoding info:
     * ctc_weight 0.5, reverse_weight 0.3, average_num 20
+* Model Download: [wenet_efficient_conformer_librispeech_v2](https://huggingface.co/58AILab/wenet_efficient_conformer_librispeech_v2)
 
 test clean
 
