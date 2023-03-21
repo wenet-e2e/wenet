@@ -104,6 +104,8 @@
 <span class="sd">            `MultiHeadedAttention` instance can be used as the argument.</span>
 <span class="sd">        src_attn (torch.nn.Module): Inter-attention module instance.</span>
 <span class="sd">            `MultiHeadedAttention` instance can be used as the argument.</span>
+<span class="sd">            If `None` is passed, Inter-attention is not used, such as</span>
+<span class="sd">            CIF, GPT, and other decoder only model.</span>
 <span class="sd">        feed_forward (torch.nn.Module): Feed-forward module instance.</span>
 <span class="sd">            `PositionwiseFeedForward` instance can be used as the argument.</span>
 <span class="sd">        dropout_rate (float): Dropout rate.</span>
@@ -115,7 +117,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">self_attn</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
-        <span class="n">src_attn</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
+        <span class="n">src_attn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">],</span>
         <span class="n">feed_forward</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">,</span>
         <span class="n">dropout_rate</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">normalize_before</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
@@ -183,13 +185,14 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
             <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm1</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
-        <span class="n">residual</span> <span class="o">=</span> <span class="n">x</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-        <span class="n">x</span> <span class="o">=</span> <span class="n">residual</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">src_attn</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">memory_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
-            <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_attn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">residual</span> <span class="o">=</span> <span class="n">x</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">x</span> <span class="o">=</span> <span class="n">residual</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">src_attn</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">memory</span><span class="p">,</span> <span class="n">memory_mask</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
+                <span class="n">x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
 
         <span class="n">residual</span> <span class="o">=</span> <span class="n">x</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">normalize_before</span><span class="p">:</span>
