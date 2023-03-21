@@ -26,7 +26,7 @@ from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.cif.asr_cif_model import ASRCIFModel
 from wenet.cif.predictor import PredictorV1, PredictorV2
-from wenet.cif.cif_decoder import CIFDecoderSAN, CIFDecoderSANM
+from wenet.cif.cif_decoder import CIFDecoderSAN
 from wenet.utils.cmvn import load_cmvn
 
 
@@ -73,9 +73,6 @@ def init_model(configs):
         if decoder_type == 'cif_decoder_san':
             decoder = CIFDecoderSAN(vocab_size, encoder.output_size(),
                                     **configs['decoder_conf'])
-        elif decoder_type == 'cif_decoder_sanm':
-            decoder = CIFDecoderSANM(vocab_size, encoder.output_size(),
-                                     **configs['decoder_conf'])
         else:
             raise NotImplementedError(
                 "for cif decoders, only cif_decoder_san and cif_decoder_sanm "
