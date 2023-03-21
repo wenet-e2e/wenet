@@ -18,7 +18,6 @@ import torch
 import torch.nn as nn
 
 from wenet.utils.mask import make_pad_mask
-from wenet.cif.utils import sequence_mask
 from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.embedding import PositionalEncoding
@@ -253,4 +252,3 @@ class CIFDecoderSAN(BaseDecoder):
             return x, olens, embeds_outputs
         else:
             return x, olens
-
