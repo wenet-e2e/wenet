@@ -13,14 +13,12 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         python-version: [3.8]
-        pytorch-version: [1.10.0]
-        torchaudio-version: [0.10.0]
     steps:
       - name: Cache Python Packages
         uses: actions/cache@v1
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ matrix.pytorch-version }}-${{ hashFiles('**/setup.py') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/setup.py') }}
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
@@ -41,7 +39,6 @@ jobs:
       - name: Install Wenet Dependencies
         run: |
           set -eux
-          pip install torch==${{ matrix.pytorch-version }} torchvision torchaudio==${{ matrix.torchaudio-version }}
           pip install -r requirements.txt
       - name: Run Pytest
         run: |

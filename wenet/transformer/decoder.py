@@ -17,7 +17,6 @@
 from typing import Tuple, List, Optional
 
 import torch
-from typeguard import check_argument_types
 
 from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
@@ -58,7 +57,6 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
     ):
-        assert check_argument_types()
         super().__init__()
         attention_dim = encoder_output_size
 
@@ -215,7 +213,6 @@ class BiTransformerDecoder(torch.nn.Module):
         normalize_before: bool = True,
     ):
 
-        assert check_argument_types()
         super().__init__()
         self.left_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,

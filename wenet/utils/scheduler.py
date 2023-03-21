@@ -22,8 +22,6 @@ import warnings
 import torch
 from torch.optim.lr_scheduler import _LRScheduler
 
-from typeguard import check_argument_types
-
 
 class WarmupLR(_LRScheduler):
     """The WarmupLR scheduler
@@ -48,7 +46,6 @@ class WarmupLR(_LRScheduler):
             warmup_steps: Union[int, float] = 25000,
             last_epoch: int = -1,
     ):
-        assert check_argument_types()
         self.warmup_steps = warmup_steps
 
         # __init__() must be invoked before setting field

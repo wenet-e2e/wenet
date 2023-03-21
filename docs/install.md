@@ -25,7 +25,6 @@ git clone https://github.com/wenet-e2e/wenet.git
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
-conda install pytorch=1.10.0 torchvision torchaudio=0.10.0 cudatoolkit=11.1 -c pytorch -c conda-forge
 ```
 
 ## Build for deployment

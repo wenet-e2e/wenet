@@ -2,7 +2,6 @@ from typing import Optional
 
 import torch
 from torch import nn
-from typeguard import check_argument_types
 from wenet.utils.common import get_activation
 
 
@@ -17,7 +16,6 @@ class TransducerJoint(torch.nn.Module):
                  postjoin_linear: bool = False,
                  joint_mode: str = 'add',
                  activation: str = "tanh"):
-        assert check_argument_types()
         # TODO(Mddct): concat in future
         assert joint_mode in ['add']
         super().__init__()
