@@ -29,6 +29,8 @@ class DecoderLayer(nn.Module):
             `MultiHeadedAttention` instance can be used as the argument.
         src_attn (torch.nn.Module): Inter-attention module instance.
             `MultiHeadedAttention` instance can be used as the argument.
+            If `None` is passed, Inter-attention is not used, such as
+            CIF, GPT, and other decoder only model.
         feed_forward (torch.nn.Module): Feed-forward module instance.
             `PositionwiseFeedForward` instance can be used as the argument.
         dropout_rate (float): Dropout rate.
@@ -40,7 +42,7 @@ class DecoderLayer(nn.Module):
         self,
         size: int,
         self_attn: nn.Module,
-        src_attn: nn.Module,
+        src_attn: Optional[nn.Module],
         feed_forward: nn.Module,
         dropout_rate: float,
         normalize_before: bool = True,
@@ -108,13 +110,14 @@ class DecoderLayer(nn.Module):
         if not self.normalize_before:
             x = self.norm1(x)
 
-        residual = x
-        if self.normalize_before:
-            x = self.norm2(x)
-        x = residual + self.dropout(
-            self.src_attn(x, memory, memory, memory_mask)[0])
-        if not self.normalize_before:
-            x = self.norm2(x)
+        if self.src_attn is not None:
+            residual = x
+            if self.normalize_before:
+                x = self.norm2(x)
+            x = residual + self.dropout(
+                self.src_attn(x, memory, memory, memory_mask)[0])
+            if not self.normalize_before:
+                x = self.norm2(x)
 
         residual = x
         if self.normalize_before:
