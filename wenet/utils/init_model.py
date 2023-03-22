@@ -75,8 +75,7 @@ def init_model(configs):
                                     **configs['decoder_conf'])
         else:
             raise NotImplementedError(
-                "for cif decoders, only cif_decoder_san and cif_decoder_sanm "
-                "support now")
+                "for cif decoders, only cif_decoder_san support now")
     else:
         assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
         assert configs['decoder_conf']['r_num_blocks'] > 0
