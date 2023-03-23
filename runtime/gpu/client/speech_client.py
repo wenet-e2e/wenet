@@ -52,7 +52,11 @@ class OfflineSpeechClient(object):
             request_id=str(sequence_id),
             outputs=outputs,
         )
-        result = response.as_numpy("TRANSCRIPTS")[0].decode("utf-8")
+        decoding_results = response.as_numpy("TRANSCRIPTS")[0]
+        if type(decoding_results) == np.ndarray:
+            result = b" ".join(decoding_results).decode("utf-8")
+        else:
+            result = decoding_results.decode("utf-8")
         return [result]
 
 

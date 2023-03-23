@@ -5,5 +5,4 @@ onnxruntime-gpu
 onnx_graphsurgeon>=0.3.21 --index-url https://pypi.ngc.nvidia.com
 polygraphy
 cuda-python
-typeguard
 onnxmltools
