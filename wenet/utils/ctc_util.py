@@ -71,8 +71,8 @@ def forced_align(ctc_probs: torch.Tensor,
         log_alpha[-1, len(y_insert_blank) - 1],
         log_alpha[-1, len(y_insert_blank) - 2]
     ])
-    prev_state = [len(y_insert_blank) - 1, len(y_insert_blank) - 2]
-    state_seq[-1] = prev_state[torch.argmax(candidates)]
+    final_state = [len(y_insert_blank) - 1, len(y_insert_blank) - 2]
+    state_seq[-1] = final_state[torch.argmax(candidates)]
     for t in range(ctc_probs.size(0) - 2, -1, -1):
         state_seq[t] = state_path[t + 1, state_seq[t + 1, 0]]
 
