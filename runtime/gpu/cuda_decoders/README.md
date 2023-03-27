@@ -1,6 +1,6 @@
 ## Using CUDA based Decoders for Triton ASR Server
 ### Introduction
-The triton model repository `model_repo_cuda_decoder` here, integrates the [CUDA WFST decoder](https://github.com/nvidia-riva/riva-asrlib-decoder) originally described in https://arxiv.org/abs/1910.10032. We take small conformer fp16 onnx inference for offline ASR as an example. 
+The triton model repository `model_repo_cuda_decoder` here, integrates the [CUDA WFST decoder](https://github.com/nvidia-riva/riva-asrlib-decoder) originally described in https://arxiv.org/abs/1910.10032. We take small conformer fp16 onnx inference for offline ASR as an example.
 
 ### Quick Start
 ```sh
