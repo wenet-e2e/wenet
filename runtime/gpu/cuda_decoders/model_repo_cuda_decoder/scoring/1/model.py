@@ -19,7 +19,6 @@ import torch
 from torch.utils.dlpack import from_dlpack
 import json
 import os
-import time
 import yaml
 from decoder import RivaWFSTDecoder, ctc_greedy_search
 
@@ -125,7 +124,10 @@ class TritonPythonModel:
         self.ignore_id = ignore_id
 
         if self.decoding_method == "tlg":
-            self.decoder = RivaWFSTDecoder(len(self.vocabulary), self.tlg_dir, self.tlg_decoding_config, self.beam_size)
+            self.decoder = RivaWFSTDecoder(len(self.vocabulary),
+                                           self.tlg_dir,
+                                           self.tlg_decoding_config,
+                                           self.beam_size)
 
     def load_vocab(self, vocab_file):
         """
@@ -142,8 +144,8 @@ class TritonPythonModel:
             vocab[id] = char
         return id2vocab, vocab
 
-    def collect_inputs(self,requests):
-        encoder_out_list, encoder_out_lens_list, ctc_log_probs_list, batch_count_list = [], [], [], []
+    def collect_inputs(self, requests):
+        encoder_out_list, encoder_out_lens_list, ctc_log_probs_list, batch_count_list = [], [], [], [] # noqa
         for request in requests:
             # Perform inference on the request and append it to responses list...
             in_0 = pb_utils.get_input_tensor_by_name(request, "encoder_out")
@@ -159,13 +161,17 @@ class TritonPythonModel:
             ctc_log_probs_list.append(in_2_tensor)
 
             batch_count_list.append(in_0_tensor.shape[0])
-        
+
         encoder_tensors, logits_tensors = [], []
         for encoder_tensor, logits_tensor in zip(encoder_out_list, ctc_log_probs_list):
             encoder_tensors += [item.squeeze(0) for item in encoder_tensor.split(1)]
             logits_tensors += [item.squeeze(0) for item in logits_tensor.split(1)]
-        encoder_out = torch.nn.utils.rnn.pad_sequence(encoder_tensors, batch_first=True, padding_value=0.0)
-        logits = torch.nn.utils.rnn.pad_sequence(logits_tensors, batch_first=True, padding_value=0.0)
+        encoder_out = torch.nn.utils.rnn.pad_sequence(encoder_tensors,
+                                                      batch_first=True,
+                                                      padding_value=0.0)
+        logits = torch.nn.utils.rnn.pad_sequence(logits_tensors,
+                                                 batch_first=True,
+                                                 padding_value=0.0)
         encoder_out_len = torch.cat(encoder_out_lens_list, dim=0)
         return encoder_out, encoder_out_len, logits, batch_count_list
 
@@ -213,7 +219,7 @@ class TritonPythonModel:
         # as they will be overridden in subsequent inference requests. You can
         # make a copy of the underlying NumPy array and store it if it is
         # required.
-        encoder_out, encoder_out_len, ctc_log_probs, batch_count = self.collect_inputs(requests)
+        encoder_out, encoder_out_len, ctc_log_probs, batch_count = self.collect_inputs(requests) # noqa
         ctc_log_probs = ctc_log_probs.cuda()
         if self.decoding_method == "tlg":
             results = self.decoder.decode(ctc_log_probs, encoder_out_len)
@@ -225,7 +231,10 @@ class TritonPythonModel:
 
         if len(total_hyps) > sum(batch_count) and self.rescore:
             assert len(total_hyps) == self.beam_size * sum(batch_count)
-            total_hyps = self.rescore_hyps(total_hyps, total_tokens, encoder_out, encoder_out_len)
+            total_hyps = self.rescore_hyps(total_hyps,
+                                           total_tokens,
+                                           encoder_out,
+                                           encoder_out_len)
 
         responses = self.prepare_response(total_hyps, batch_count)
         return responses

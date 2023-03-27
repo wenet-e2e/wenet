@@ -16,7 +16,7 @@ pip3 install -r requirements.txt
 bash run.sh
 ```
 
-### TODO: Performance of Small Offline ASR Model using Different Decoders 
+### TODO: Performance of Small Offline ASR Model using Different Decoders
 
 Benchmark(offline conformer model trained on Aishell1) based on Aishell1 test set with V100, the total audio duration is 36108.919 seconds.
 

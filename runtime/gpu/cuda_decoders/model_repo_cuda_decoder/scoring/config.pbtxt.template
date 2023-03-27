@@ -35,7 +35,7 @@ parameters [
   },
   {
     key: "decoding_method",
-    value: { string_value: "DECODING_METHOD"} # tlg, ctc_greedy_search, cpu_ctc_beam_search, cuda_ctc_beam_search 
+    value: { string_value: "DECODING_METHOD"} # tlg, ctc_greedy_search, cpu_ctc_beam_search, cuda_ctc_beam_search
   },
   {
     key: "attention_rescoring",

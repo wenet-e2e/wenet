@@ -1,7 +1,8 @@
 import os
 import torch
 from typing import List
-from riva.asrlib.decoder.python_decoder import BatchedMappedDecoderCuda, BatchedMappedDecoderCudaConfig
+from riva.asrlib.decoder.python_decoder import (BatchedMappedDecoderCuda,
+                                                BatchedMappedDecoderCudaConfig)
 
 def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
     """Make mask tensor containing indices of padded part.
@@ -28,7 +29,9 @@ def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
     mask = seq_range_expand >= seq_length_expand
     return mask
 
-def remove_duplicates_and_blank(hyp: List[int], eos: int, blank_id: int = 0) -> List[int]:
+def remove_duplicates_and_blank(hyp: List[int],
+                                eos: int,
+                                blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
@@ -57,7 +60,7 @@ class RivaWFSTDecoder:
         config = BatchedMappedDecoderCudaConfig()
         config.online_opts.decoder_opts.lattice_beam = beam_size
 
-        config.online_opts.lattice_postprocessor_opts.acoustic_scale=config_dict['acoustic_scale']
+        config.online_opts.lattice_postprocessor_opts.acoustic_scale = config_dict['acoustic_scale'] # noqa
         config.n_input_per_chunk = config_dict['n_input_per_chunk']
         config.online_opts.decoder_opts.default_beam = config_dict['default_beam']
         config.online_opts.decoder_opts.max_active = config_dict['max_active']
@@ -66,10 +69,11 @@ class RivaWFSTDecoder:
         config.online_opts.num_channels = config_dict['num_channels']
         config.online_opts.frame_shift_seconds = config_dict['frame_shift_seconds']
         config.online_opts.lattice_postprocessor_opts.lm_scale = config_dict['lm_scale']
-        config.online_opts.lattice_postprocessor_opts.word_ins_penalty = config_dict['word_ins_penalty']
+        config.online_opts.lattice_postprocessor_opts.word_ins_penalty = config_dict['word_ins_penalty'] # noqa
 
         self.decoder = BatchedMappedDecoderCuda(
-            config, os.path.join(tlg_dir, "TLG.fst"), os.path.join(tlg_dir, "words.txt"), vocab_size
+            config, os.path.join(tlg_dir, "TLG.fst"),
+            os.path.join(tlg_dir, "words.txt"), vocab_size
         )
 
     def decode(self, logits, length):
@@ -84,6 +88,6 @@ class RivaWFSTDecoder:
         for sent in results:
             hyp = [word[0] for word in sent]
             hyp_zh = "".join(hyp)
-            nbest_list = [hyp_zh] # TODO: add real nbest
+            nbest_list = [hyp_zh]  # TODO: add real nbest
             total_hyps.append(nbest_list)
         return total_hyps

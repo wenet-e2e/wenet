@@ -33,7 +33,7 @@ INSTANCE_NUM_FOR_SCORING=2
 MAX_BATCH_SIZE=16
 MAX_BATCH_FOR_SCORING=16
 # Decoding parameters
-BEAM_SIZE=10 
+BEAM_SIZE=10
 DECODING_METHOD=tlg # ctc_greedy_search
 
 
@@ -92,10 +92,11 @@ fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
      echo "build tlg"
-     # take aishell1 as example
+     # take aishell1 as example, you may skip it by using our pre-built TLG
+     # https://huggingface.co/yuekai/aishell1_tlg_essentials/tree/main/output
      bash build_tlg.sh
-     # mv TLG files to model_repo_path
      tlg_dir=./data/lang_test
+     # mv TLG files to model_repo_path
      cp $tlg_dir/TLG.fst $model_repo_path/scoring/1/lang
      cp $tlg_dir/words.txt $model_repo_path/scoring/1/lang
 fi
