@@ -96,6 +96,7 @@
 <span class="kn">from</span> <span class="nn">wenet.transformer.attention</span> <span class="kn">import</span> <span class="n">MultiHeadedAttention</span>
 <span class="kn">from</span> <span class="nn">wenet.transformer.decoder_layer</span> <span class="kn">import</span> <span class="n">DecoderLayer</span>
 <span class="kn">from</span> <span class="nn">wenet.transformer.embedding</span> <span class="kn">import</span> <span class="n">PositionalEncoding</span>
+<span class="kn">from</span> <span class="nn">wenet.transformer.embedding</span> <span class="kn">import</span> <span class="n">NoPositionalEncoding</span>
 <span class="kn">from</span> <span class="nn">wenet.transformer.positionwise_feed_forward</span> <span class="kn">import</span> <span class="n">PositionwiseFeedForward</span>
 <span class="kn">from</span> <span class="nn">wenet.utils.mask</span> <span class="kn">import</span> <span class="p">(</span><span class="n">subsequent_mask</span><span class="p">,</span> <span class="n">make_pad_mask</span><span class="p">)</span>
 
@@ -140,6 +141,9 @@
                 <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">attention_dim</span><span class="p">),</span>
                 <span class="n">PositionalEncoding</span><span class="p">(</span><span class="n">attention_dim</span><span class="p">,</span> <span class="n">positional_dropout_rate</span><span class="p">),</span>
             <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">input_layer</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">embed</span> <span class="o">=</span> <span class="n">NoPositionalEncoding</span><span class="p">(</span><span class="n">attention_dim</span><span class="p">,</span>
+                                              <span class="n">positional_dropout_rate</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;only &#39;embed&#39; is supported: </span><span class="si">{</span><span class="n">input_layer</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
