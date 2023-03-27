@@ -18,7 +18,7 @@ encoder_conf:
     selfattention_layer_type: 'rel_selfattn'
 
 # decoder related
-decoder: cif_decoder_san
+decoder: transformer
 decoder_conf:
     attention_heads: 4
     linear_units: 2048
@@ -27,6 +27,7 @@ decoder_conf:
     positional_dropout_rate: 0.1
     self_attention_dropout_rate: 0.0
     src_attention_dropout_rate: 0.0
+    input_layer: 'none'
 
 cif_predictor: predictor_v1
 cif_predictor_conf:

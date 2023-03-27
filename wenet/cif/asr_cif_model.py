@@ -21,7 +21,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 
 from wenet.transformer.ctc import CTC
-from wenet.cif.cif_decoder import CIFDecoderSAN
+from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.cif.predictor import MAELoss
@@ -38,7 +38,7 @@ class ASRCIFModel(torch.nn.Module):
             self,
             vocab_size: int,
             encoder: TransformerEncoder,
-            decoder: CIFDecoderSAN,
+            decoder: TransformerDecoder,
             ctc: CTC,
             predictor,
             ctc_weight: float = 0.5,
@@ -102,7 +102,7 @@ class ASRCIFModel(torch.nn.Module):
         # 2a. Attention-decoder branch
         if self.ctc_weight != 1.0:
             loss_att, acc_att, loss_pre = self._calc_att_loss(encoder_out,
-                                                              encoder_out_lens,
+                                                              encoder_mask,
                                                               text,
                                                               text_lengths)
         else:
@@ -133,24 +133,20 @@ class ASRCIFModel(torch.nn.Module):
     def _calc_att_loss(
             self,
             encoder_out: torch.Tensor,
-            encoder_out_lens: torch.Tensor,
+            encoder_mask: torch.Tensor,
             ys_pad: torch.Tensor,
             ys_pad_lens: torch.Tensor,
     ) -> Tuple[torch.Tensor, float, torch.Tensor]:
-        encoder_out_mask = (~make_pad_mask(
-            encoder_out_lens,
-            max_len=encoder_out.size(1))[:, None, :]).to(encoder_out.device)
         if self.predictor_bias == 1:
             _, ys_pad = add_sos_eos(ys_pad, self.sos, self.eos, self.ignore_id)
             ys_pad_lens = ys_pad_lens + self.predictor_bias
         pre_acoustic_embeds, pre_token_length, _, pre_peak_index = \
-            self.predictor(encoder_out, ys_pad, encoder_out_mask,
+            self.predictor(encoder_out, ys_pad, encoder_mask,
                            ignore_id=self.ignore_id)
         # 1. Forward decoder
-        decoder_outs = self.decoder(
-            encoder_out, encoder_out_lens, pre_acoustic_embeds, ys_pad_lens
+        decoder_out, _, _ = self.decoder(
+            encoder_out, encoder_mask, pre_acoustic_embeds, ys_pad_lens
         )
-        decoder_out, _ = decoder_outs[0], decoder_outs[1]
 
         # 2. Compute attention loss
         loss_att = self.criterion_att(decoder_out, ys_pad)
@@ -164,24 +160,23 @@ class ASRCIFModel(torch.nn.Module):
 
         return loss_att, acc_att, loss_pre
 
-    def calc_predictor(self, encoder_out, encoder_out_lens):
+    def calc_predictor(self, encoder_out, encoder_mask):
 
-        encoder_out_mask = (
-            ~make_pad_mask(encoder_out_lens, max_len=encoder_out.size(1))
+        encoder_mask = (
+            ~make_pad_mask(encoder_mask, max_len=encoder_out.size(1))
             [:, None, :]).to(encoder_out.device)
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
             self.predictor(
                 encoder_out, None,
-                encoder_out_mask,
+                encoder_mask,
                 ignore_id=self.ignore_id)
         return pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index
 
     def cal_decoder_with_predictor(self, encoder_out, encoder_out_lens,
                                    sematic_embeds, ys_pad_lens):
 
-        decoder_outs = self.decoder(encoder_out, encoder_out_lens,
-                                    sematic_embeds, ys_pad_lens)
-        decoder_out = decoder_outs[0]
+        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_lens,
+                                         sematic_embeds, ys_pad_lens)
         decoder_out = torch.log_softmax(decoder_out, dim=-1)
         return decoder_out, ys_pad_lens
 
@@ -413,7 +408,7 @@ class ASRCIFModel(torch.nn.Module):
             simulate_streaming)  # (B, maxlen, encoder_dim)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         # 2. Predictor
-        predictor_outs = self.calc_predictor(encoder_out, encoder_out_lens)
+        predictor_outs = self.calc_predictor(encoder_out, encoder_mask)
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
             predictor_outs[0], predictor_outs[1], \
             predictor_outs[2], predictor_outs[3]
@@ -495,7 +490,7 @@ class ASRCIFModel(torch.nn.Module):
             simulate_streaming)  # (B, maxlen, encoder_dim)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         # 2. Predictor
-        predictor_outs = self.calc_predictor(encoder_out, encoder_out_lens)
+        predictor_outs = self.calc_predictor(encoder_out, encoder_mask)
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
             predictor_outs[0], predictor_outs[1], \
             predictor_outs[2], predictor_outs[3]
