@@ -38,11 +38,9 @@ num_utts_per_shard=1000
 
 train_set=train
 # Optional train_config
-#1. train_config=conf/train_cif_conformer_prev1.yaml CIF DecoderSAN + PredictorV1
-#2. train_config=conf/train_cif_conformer_prev2.yaml CIF DecoderSAN + PredictorV1
-train_config=conf/train_cif_conformer_prev1.yaml
+train_config=conf/train_cif_conformer.yaml
 cmvn=true
-dir=exp/conformer_prev1
+dir=exp/cif_conformer
 checkpoint=
 
 # use average_checkpoint will get better result
