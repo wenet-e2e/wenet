@@ -25,7 +25,7 @@ from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.cif.asr_cif_model import ASRCIFModel
-from wenet.cif.predictor import PredictorV1, PredictorV2
+from wenet.cif.predictor import Predictor
 from wenet.utils.cmvn import load_cmvn
 
 
@@ -106,15 +106,7 @@ def init_model(configs):
                            lfmmi_dir=configs.get('lfmmi_dir', ''),
                            **configs['model_conf'])
     elif 'cif_predictor' in configs:
-        predictor_type = configs.get('cif_predictor', 'predictor')
-        if predictor_type == 'predictor_v1':
-            predictor = PredictorV1(**configs['cif_predictor_conf'])
-        elif predictor_type == 'predictor_v2':
-            predictor = PredictorV2(**configs['cif_predictor_conf'])
-        else:
-            raise NotImplementedError(
-                "for cif predictors, only predictor_v1 and predictor_v2 "
-                "support now")
+        predictor = Predictor(**configs['cif_predictor_conf'])
         model = ASRCIFModel(vocab_size=vocab_size,
                             encoder=encoder,
                             decoder=decoder,
