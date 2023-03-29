@@ -24,7 +24,7 @@ from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
-from wenet.cif.asr_cif_model import ASRCIFModel
+from wenet.cif.cif_model import CIFModel
 from wenet.cif.predictor import Predictor
 from wenet.utils.cmvn import load_cmvn
 
@@ -106,7 +106,7 @@ def init_model(configs):
                            **configs['model_conf'])
     elif 'cif_predictor' in configs:
         predictor = Predictor(**configs['cif_predictor_conf'])
-        model = ASRCIFModel(vocab_size=vocab_size,
+        model = CIFModel(vocab_size=vocab_size,
                             encoder=encoder,
                             decoder=decoder,
                             ctc=ctc,
