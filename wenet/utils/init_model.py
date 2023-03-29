@@ -103,7 +103,6 @@ def init_model(configs):
                            attention_decoder=decoder,
                            joint=joint,
                            ctc=ctc,
-                           lfmmi_dir=configs.get('lfmmi_dir', ''),
                            **configs['model_conf'])
     elif 'cif_predictor' in configs:
         predictor = Predictor(**configs['cif_predictor_conf'])
