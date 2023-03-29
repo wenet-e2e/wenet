@@ -38,6 +38,8 @@ num_utts_per_shard=1000
 
 train_set=train
 # Optional train_config
+# conf/train_cif_conformer.yaml: standard non streaming CIF,
+# conf/train_paraformer.yaml: paraformer like CIF, apply encoder-decoder attention
 train_config=conf/train_cif_conformer.yaml
 cmvn=true
 dir=exp/cif_conformer

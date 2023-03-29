@@ -28,7 +28,7 @@ decoder_conf:
     self_attention_dropout_rate: 0.0
     src_attention_dropout_rate: 0.0
     input_layer: 'none'
-    src_attention: false
+    src_attention: true
 
 cif_predictor: predictor_v1
 cif_predictor_conf:

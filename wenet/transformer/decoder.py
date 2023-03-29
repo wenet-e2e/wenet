@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """Decoder definition."""
 from typing import Tuple, List, Optional
 
@@ -42,7 +41,10 @@ class TransformerDecoder(torch.nn.Module):
         normalize_before:
             True: use layer_norm before each sub-block of a layer.
             False: use layer_norm after each sub-block of a layer.
+        src_attention: if false, encoder-decoder cross attention is not
+                       applied, such as CIF model
     """
+
     def __init__(
         self,
         vocab_size: int,
@@ -57,6 +59,7 @@ class TransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
+        src_attention: bool = True,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -83,7 +86,8 @@ class TransformerDecoder(torch.nn.Module):
                 MultiHeadedAttention(attention_heads, attention_dim,
                                      self_attention_dropout_rate),
                 MultiHeadedAttention(attention_heads, attention_dim,
-                                     src_attention_dropout_rate),
+                                     src_attention_dropout_rate)
+                if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
                                         dropout_rate),
                 dropout_rate,
@@ -200,6 +204,7 @@ class BiTransformerDecoder(torch.nn.Module):
             True: use layer_norm before each sub-block of a layer.
             False: use layer_norm after each sub-block of a layer.
     """
+
     def __init__(
         self,
         vocab_size: int,
