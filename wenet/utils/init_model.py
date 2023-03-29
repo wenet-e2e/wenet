@@ -107,11 +107,11 @@ def init_model(configs):
     elif 'cif_predictor' in configs:
         predictor = Predictor(**configs['cif_predictor_conf'])
         model = CIFModel(vocab_size=vocab_size,
-                            encoder=encoder,
-                            decoder=decoder,
-                            ctc=ctc,
-                            predictor=predictor,
-                            **configs['model_conf'])
+                         encoder=encoder,
+                         decoder=decoder,
+                         ctc=ctc,
+                         predictor=predictor,
+                         **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
                          encoder=encoder,

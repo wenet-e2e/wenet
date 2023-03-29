@@ -15,21 +15,18 @@
 # Modified from ESPnet(https://github.com/espnet/espnet) and
 # FunASR(https://github.com/alibaba-damo-academy/FunASR)
 
-from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import torch
 
+from wenet.cif.predictor import MAELoss
+from wenet.cif.search.beam_search import Hypothesis
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import TransformerEncoder
-from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
-from wenet.cif.predictor import MAELoss
+from wenet.utils.common import (IGNORE_ID, add_sos_eos, th_accuracy)
 from wenet.utils.mask import make_pad_mask
-from wenet.cif.search.beam_search import Hypothesis
-from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
-                                remove_duplicates_and_blank, th_accuracy)
 
 
 class CIFModel(ASRModel):
