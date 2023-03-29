@@ -1,6 +1,9 @@
 # Performance Record
 
-## Conformer CIF Result
+## Standard CIF Conformer Result(TODO)
+
+
+## Paraformer like CIF Conformer Result
 
 * Feature info: using fbank feature, dither, cmvn, online speed perturb
 * Training info: lr 0.002, batch size 16, 4 gpu, acc_grad 4, 240 epochs, dither 0.1
