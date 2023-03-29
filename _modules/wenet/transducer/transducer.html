@@ -104,7 +104,6 @@
         <span class="n">attention_decoder</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="n">TransformerDecoder</span><span class="p">,</span>
                                           <span class="n">BiTransformerDecoder</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">ctc</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">CTC</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">lfmmi_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
         <span class="n">ctc_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
         <span class="n">ignore_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">IGNORE_ID</span><span class="p">,</span>
         <span class="n">reverse_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
@@ -114,7 +113,7 @@
         <span class="n">attention_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">assert</span> <span class="n">attention_weight</span> <span class="o">+</span> <span class="n">ctc_weight</span> <span class="o">+</span> <span class="n">transducer_weight</span> <span class="o">==</span> <span class="mf">1.0</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="n">attention_decoder</span><span class="p">,</span> <span class="n">ctc</span><span class="p">,</span> <span class="n">lfmmi_dir</span><span class="p">,</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">vocab_size</span><span class="p">,</span> <span class="n">encoder</span><span class="p">,</span> <span class="n">attention_decoder</span><span class="p">,</span> <span class="n">ctc</span><span class="p">,</span>
                          <span class="n">ctc_weight</span><span class="p">,</span> <span class="n">ignore_id</span><span class="p">,</span> <span class="n">reverse_weight</span><span class="p">,</span> <span class="n">lsm_weight</span><span class="p">,</span>
                          <span class="n">length_normalized_loss</span><span class="p">)</span>
 

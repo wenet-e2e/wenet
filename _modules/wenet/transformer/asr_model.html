@@ -125,12 +125,12 @@
         <span class="n">encoder</span><span class="p">:</span> <span class="n">TransformerEncoder</span><span class="p">,</span>
         <span class="n">decoder</span><span class="p">:</span> <span class="n">TransformerDecoder</span><span class="p">,</span>
         <span class="n">ctc</span><span class="p">:</span> <span class="n">CTC</span><span class="p">,</span>
-        <span class="n">lfmmi_dir</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">ctc_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="n">ignore_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">IGNORE_ID</span><span class="p">,</span>
         <span class="n">reverse_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
         <span class="n">lsm_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
         <span class="n">length_normalized_loss</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">lfmmi_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="k">assert</span> <span class="mf">0.0</span> <span class="o">&lt;=</span> <span class="n">ctc_weight</span> <span class="o">&lt;=</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">ctc_weight</span>
 
