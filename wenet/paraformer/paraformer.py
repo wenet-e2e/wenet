@@ -20,7 +20,7 @@ from typing import Dict, Optional, Tuple
 import torch
 
 from wenet.cif.predictor import MAELoss
-from wenet.cif.search.beam_search import Hypothesis
+from wenet.paraformer.search.beam_search import Hypothesis
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
@@ -29,9 +29,10 @@ from wenet.utils.common import (IGNORE_ID, add_sos_eos, th_accuracy)
 from wenet.utils.mask import make_pad_mask
 
 
-class CIFModel(ASRModel):
-    """ Continuous Integrate-and-Fire model
-        see https://arxiv.org/pdf/1905.11235.pdf
+class Paraformer(ASRModel):
+    """ Paraformer: Fast and Accurate Parallel Transformer for
+        Non-autoregressive End-to-End Speech Recognition
+        see https://arxiv.org/pdf/2206.08317.pdf
     """
 
     def __init__(
@@ -169,7 +170,7 @@ class CIFModel(ASRModel):
     def recognize(self):
         raise NotImplementedError
 
-    def cif_greedy_search(
+    def paraformer_greedy_search(
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
@@ -249,7 +250,7 @@ class CIFModel(ASRModel):
                 hyps.append(token_int)
         return hyps
 
-    def cif_beam_search(
+    def paraformer_beam_search(
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,

@@ -17,8 +17,9 @@
 import numpy as np
 import torch
 
-from wenet.cif.search.ctc_prefix_score import CTCPrefixScore, CTCPrefixScoreTH
-from wenet.cif.search.scorer_interface import BatchPartialScorerInterface
+from wenet.paraformer.search.ctc_prefix_score import CTCPrefixScore
+from wenet.paraformer.search.ctc_prefix_score import CTCPrefixScoreTH
+from wenet.paraformer.search.scorer_interface import BatchPartialScorerInterface
 
 
 class CTCPrefixScorer(BatchPartialScorerInterface):

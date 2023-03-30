@@ -22,9 +22,9 @@ from typing import NamedTuple
 
 import torch
 
-from wenet.cif.utils import end_detect
-from wenet.cif.search.ctc import CTCPrefixScorer
-from wenet.cif.search.scorer_interface import ScorerInterface, \
+from wenet.paraformer.utils import end_detect
+from wenet.paraformer.search.ctc import CTCPrefixScorer
+from wenet.paraformer.search.scorer_interface import ScorerInterface, \
     PartialScorerInterface
 
 

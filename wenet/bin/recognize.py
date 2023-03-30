@@ -25,12 +25,11 @@ import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
+from wenet.paraformer.search.beam_search import build_beam_search
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
-
-from wenet.cif.search.beam_search import build_beam_search
 
 
 def get_args():
@@ -69,8 +68,8 @@ def get_args():
                             'rnnt_greedy_search', 'rnnt_beam_search',
                             'rnnt_beam_attn_rescoring',
                             'ctc_beam_td_attn_rescoring', 'hlg_onebest',
-                            'hlg_rescore', 'cif_greedy_search',
-                            'cif_beam_search',
+                            'hlg_rescore', 'paraformer_greedy_search',
+                            'paraformer_beam_search',
                         ],
                         default='attention',
                         help='decoding mode')
@@ -166,7 +165,7 @@ def main():
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
     if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring',
-                     'cif_beam_search', ] and args.batch_size > 1:
+                     'paraformer_beam_search', ] and args.batch_size > 1:
         logging.fatal(
             'decoding mode {} must be running with batch_size == 1'.format(
                 args.mode))
@@ -225,10 +224,10 @@ def main():
     model.eval()
 
     # Build BeamSearchCIF object
-    if args.mode == 'cif_beam_search':
-        cif_beam_search = build_beam_search(model, args, device)
+    if args.mode == 'paraformer_beam_search':
+        paraformer_beam_search = build_beam_search(model, args, device)
     else:
-        cif_beam_search = None
+        paraformer_beam_search = None
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
@@ -355,16 +354,16 @@ def main():
                     hlg=args.hlg,
                     word=args.word,
                     symbol_table=symbol_table)
-            elif args.mode == 'cif_beam_search':
-                hyps = model.cif_beam_search(
+            elif args.mode == 'paraformer_beam_search':
+                hyps = model.paraformer_beam_search(
                     feats,
                     feats_lengths,
-                    beam_search=cif_beam_search,
+                    beam_search=paraformer_beam_search,
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
-            elif args.mode == 'cif_greedy_search':
-                hyps = model.cif_greedy_search(
+            elif args.mode == 'paraformer_greedy_search':
+                hyps = model.paraformer_greedy_search(
                     feats,
                     feats_lengths,
                     decoding_chunk_size=args.decoding_chunk_size,

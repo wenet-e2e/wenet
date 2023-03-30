@@ -28,9 +28,8 @@ decoder_conf:
     self_attention_dropout_rate: 0.0
     src_attention_dropout_rate: 0.0
     input_layer: 'none'
-    src_attention: false
 
-cif_predictor: predictor_v1
+paraformer: true
 cif_predictor_conf:
     idim: 256
     threshold: 1.0
