@@ -24,7 +24,7 @@ from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
-from wenet.cif.cif_model import CIFModel
+from wenet.paraformer.paraformer import Paraformer
 from wenet.cif.predictor import Predictor
 from wenet.utils.cmvn import load_cmvn
 
@@ -104,14 +104,14 @@ def init_model(configs):
                            joint=joint,
                            ctc=ctc,
                            **configs['model_conf'])
-    elif 'cif_predictor' in configs:
+    elif 'paraformer' in configs:
         predictor = Predictor(**configs['cif_predictor_conf'])
-        model = CIFModel(vocab_size=vocab_size,
-                         encoder=encoder,
-                         decoder=decoder,
-                         ctc=ctc,
-                         predictor=predictor,
-                         **configs['model_conf'])
+        model = Paraformer(vocab_size=vocab_size,
+                           encoder=encoder,
+                           decoder=decoder,
+                           ctc=ctc,
+                           predictor=predictor,
+                           **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
                          encoder=encoder,
