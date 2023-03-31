@@ -57,6 +57,8 @@ if __name__ == "__main__":
         stats = json.load(stats_f)
         model_stats = stats["model_stats"]
         for model_state in model_stats:
+            if "last_inference" not in model_state:
+                continue
             summary_f.write(f"model name is {model_state['name']} \n")
             model_inference_stats = model_state["inference_stats"]
             total_queue_time_s = (

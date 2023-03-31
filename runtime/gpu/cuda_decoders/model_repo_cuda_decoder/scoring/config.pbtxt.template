@@ -19,7 +19,7 @@ max_batch_size: MAX_BATCH
 parameters [
   {
     key: "vocabulary",
-    value: { string_value: "DICT_PATH"}
+    value: { string_value: "./model_repo_cuda_decoder/scoring/units.txt"}
   },
   {
     key: "tlg_dir",

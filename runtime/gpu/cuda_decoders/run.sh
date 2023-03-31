@@ -19,7 +19,6 @@ stop_stage=3
 
 #<wenet_onnx_gpu_models>
 onnx_model_dir=$(pwd)/aishell_onnx
-DICT_PATH=$onnx_model_dir/words.txt
 
 # modify model parameters according to your own model
 D_MODEL=256
@@ -41,8 +40,8 @@ model_repo_path=./model_repo_cuda_decoder
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
    echo "export to onnx files"
-   #wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20211025_conformer_exp.tar.gz --no-check-certificate
-   #tar zxvf 20211025_conformer_exp.tar.gz
+   wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20211025_conformer_exp.tar.gz --no-check-certificate
+   tar zxvf 20211025_conformer_exp.tar.gz
    model_dir=$(pwd)/20211025_conformer_exp
    mkdir -p $onnx_model_dir
    cd ../../../
@@ -70,7 +69,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
      do
           cp $model_repo_path/$dir/config.pbtxt.template $model_repo_path/$dir/config.pbtxt
 
-          sed -i "s|DICT_PATH|${DICT_PATH}|g" $model_repo_path/$dir/config.pbtxt
           sed -i "s/BEAM_SIZE/${BEAM_SIZE}/g" $model_repo_path/$dir/config.pbtxt
           sed -i "s/VOCAB_SIZE/${VOCAB_SIZE}/g" $model_repo_path/$dir/config.pbtxt
           sed -i "s/MAX_DELAY/${MAX_DELAY}/g" $model_repo_path/$dir/config.pbtxt
@@ -92,10 +90,15 @@ fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
      echo "build tlg"
-     # take aishell1 as example, you may skip it by using our pre-built TLG
-     # https://huggingface.co/yuekai/aishell1_tlg_essentials/tree/main/output
-     bash build_tlg.sh
-     tlg_dir=./data/lang_test
+     # take aishell1 as example, you may build it using your own lm.
+     # bash build_tlg.sh
+     # tlg_dir=./data/lang_test
+     # or you can download our pre-built TLG for this aishell1 tutorial.
+     apt-get install git-lfs
+     git-lfs install
+     git clone https://huggingface.co/yuekai/aishell1_tlg_essentials.git
+     tlg_dir=./aishell1_tlg_essentials/output
+
      # mv TLG files to model_repo_path
      cp $tlg_dir/TLG.fst $model_repo_path/scoring/1/lang
      cp $tlg_dir/words.txt $model_repo_path/scoring/1/lang
@@ -109,6 +112,8 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
      mkdir -p $model_repo_path/decoder/1/
      cp $onnx_model_dir/decoder_fp16.onnx $model_repo_path/decoder/1/
 
+     cp $onnx_model_dir/words.txt $model_repo_path/scoring/units.txt
+
      mkdir -p $model_repo_path/attention_rescoring/1/
 fi
 
@@ -117,5 +122,4 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
    tritonserver --model-repository $model_repo_path \
                --pinned-memory-pool-byte-size=512000000 \
                --cuda-memory-pool-byte-size=0:1024000000
-
 fi

@@ -123,7 +123,7 @@ class TritonPythonModel:
         self.eos = eos
         self.ignore_id = ignore_id
 
-        if self.decoding_method == "tlg":
+        if "tlg" in self.decoding_method:
             self.decoder = RivaWFSTDecoder(len(self.vocabulary),
                                            self.tlg_dir,
                                            self.tlg_decoding_config,
@@ -221,20 +221,22 @@ class TritonPythonModel:
         # required.
         encoder_out, encoder_out_len, ctc_log_probs, batch_count = self.collect_inputs(requests) # noqa
         ctc_log_probs = ctc_log_probs.cuda()
-        if self.decoding_method == "tlg":
-            results = self.decoder.decode(ctc_log_probs, encoder_out_len)
-            # list(str), list((float), list(int)) # TODO: add token_ids, time stamps
-            total_hyps = self.decoder.get_nbest_list(results)
+        if self.decoding_method == "tlg_mbr":
+            total_hyps = self.decoder.decode_mbr(ctc_log_probs, encoder_out_len)
+            # TODO: add token_ids, time stamps
         elif self.decoding_method == "ctc_greedy_search":
             total_hyps = ctc_greedy_search(ctc_log_probs, encoder_out_len,
                                            self.vocabulary, self.blank_id, self.eos)
+        elif self.decoding_method == "tlg":
+            nbest_hyps, nbest_ids = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len)
+            total_hyps = [nbest[0] for nbest in nbest_hyps]
 
-        if len(total_hyps) > sum(batch_count) and self.rescore:
-            assert len(total_hyps) == self.beam_size * sum(batch_count)
-            total_hyps = self.rescore_hyps(total_hyps,
-                                           total_tokens,
-                                           encoder_out,
-                                           encoder_out_len)
+        if self.decoding_method == "tlg" and self.rescore:
+            assert self.beam_size > 1, "Beam size must be greater than 1 for rescoring"
+            selected_ids = self.rescore_hyps(nbest_ids,
+                                             encoder_out,
+                                             encoder_out_len)
+            total_hyps = [nbest[i] for nbest, i in zip(nbest_hyps, selected_ids)]
 
         responses = self.prepare_response(total_hyps, batch_count)
         return responses
