@@ -4,3 +4,6 @@
 [submodule "tools/3rd_party/ctcdecode-cpp"]
 	path = tools/3rd_party/ctcdecode-cpp
 	url = https://github.com/Kevindurant111/ctcdecode-cpp.git
+[submodule "tools/3rd_party/Fbank-Extractor"]
+	path = tools/3rd_party/Fbank-Extractor
+	url = https://github.com/Kevindurant111/Fbank-Extractor.git
