@@ -39,7 +39,7 @@ parameters [
   },
   {
     key: "attention_rescoring",
-    value: { string_value: "0"}
+    value: { string_value: "1"}
   },
   {
     key: "bidecoder",

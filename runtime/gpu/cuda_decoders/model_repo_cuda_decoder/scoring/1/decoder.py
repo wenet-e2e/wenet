@@ -93,36 +93,45 @@ class RivaWFSTDecoder:
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
         before = logits.shape
+        # TODO: remove this hack, nanobind bug WAR
+        flag = 0
         if logits.shape[0] == 1:
+            flag = 1
             logits = logits.repeat(2,1,1)
             sequence_lengths_tensor = sequence_lengths_tensor.repeat(2)
         results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)
-        if logits.shape[0] == 1:
+        if flag:
             results = results[0:1]        
         total_hyps, total_hyps_id = [], []
+        max_hyp_len = 3
         for nbest_sentences in results:
             nbest_list, nbest_id_list = [], []
             for sent in nbest_sentences:
                 # subtract 1 to get the label id, since fst decoder adds 1 to the label id
                 hyp_ids = [label - 1 for label in sent.ilabels]
-                new_hyp = remove_duplicates_and_blank(hyp_ids, eos=self.vocab_size-1, blank_id=0)
+                # padding for hyps_pad_sos_eos
+                new_hyp = [self.vocab_size-1] + remove_duplicates_and_blank(hyp_ids, eos=self.vocab_size-1, blank_id=0) + [self.vocab_size-1]
+                max_hyp_len = max(max_hyp_len, len(new_hyp))
                 nbest_id_list.append(new_hyp)
 
                 hyp = "".join(self.word_id_to_word_str[word] for word in sent.words if word != 0)
                 nbest_list.append(hyp)
-
+            nbest_list += [""] * (self.nbest - len(nbest_list))
             total_hyps.append(nbest_list)
+            nbest_id_list += [[self.vocab_size-1, 0, self.vocab_size-1]] * (self.nbest - len(nbest_id_list))
             total_hyps_id.append(nbest_id_list)
-        return total_hyps, total_hyps_id
+        return total_hyps, total_hyps_id, max_hyp_len
 
     def decode_mbr(self, logits, length):
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
+        flag = 0
         if logits.shape[0] == 1:
+            flag = 1
             logits = logits.repeat(2,1,1)
             sequence_lengths_tensor = sequence_lengths_tensor.repeat(2)
         results = self.decoder.decode_mbr(logits, sequence_lengths_tensor)
-        if logits.shape[0] == 1:
+        if flag:
             results = results[0:1]
         total_hyps = []
         for sent in results:

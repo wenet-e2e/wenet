@@ -16,7 +16,7 @@ import triton_python_backend_utils as pb_utils
 import numpy as np
 
 import torch
-from torch.utils.dlpack import from_dlpack
+from torch.utils.dlpack import from_dlpack, to_dlpack
 import json
 import os
 import yaml
@@ -175,12 +175,52 @@ class TritonPythonModel:
         encoder_out_len = torch.cat(encoder_out_lens_list, dim=0)
         return encoder_out, encoder_out_len, logits, batch_count_list
 
-    def rescore_hyps(self, total_hyps, total_tokens, encoder_out, encoder_out_len):
+    def rescore_hyps(self, total_tokens, max_hyp_len, encoder_out, encoder_out_len):
         """
         Rescore the hypotheses with attention rescoring
         """
-        # TODO: add attention rescoring
-        return total_hyps
+        input1 = pb_utils.Tensor.from_dlpack( "encoder_out", to_dlpack(encoder_out))
+        input2 = pb_utils.Tensor.from_dlpack( "encoder_out_lens", to_dlpack(encoder_out_len.unsqueeze(-1)))
+        hyps_pad_sos_eos = np.zeros([len(total_tokens), self.beam_size, max_hyp_len], dtype=np.int64)
+        hyps_lens_sos = np.zeros([len(total_tokens), self.beam_size], dtype=np.int32)
+        ctc_scores = np.zeros([len(total_tokens), self.beam_size], dtype=np.float16) # TODO: zero here
+
+        for i, hyps in enumerate(total_tokens):
+            for j, hyp in enumerate(hyps):
+                hyps_pad_sos_eos[i][j][:len(hyp)] = hyp
+                hyps_lens_sos[i][j] = len(hyp) - 1
+        input3 = pb_utils.Tensor( "hyps_pad_sos_eos", hyps_pad_sos_eos)
+        input4 = pb_utils.Tensor( "hyps_lens_sos", hyps_lens_sos)
+        input5 = pb_utils.Tensor( "ctc_score", ctc_scores)
+        input_tensors = [input1, input2, input3, input4, input5]
+
+        if self.bidecoder:
+            r_hyps_pad_sos_eos = np.zeros([len(total_tokens), self.beam_size, max_hyp_len], dtype=np.int64)
+            for i, hyps in enumerate(total_tokens):
+                for j, hyp in enumerate(hyps):
+                    r_hyps_pad_sos_eos[i][j][:len(hyp)] = hyp[::-1]
+            input6 = pb_utils.Tensor.from_dlpack( "r_hyps_pad_sos_eos", r_hyps_pad_sos_eos)
+            input_tensors.insert(-1, input6)
+
+        inference_request = pb_utils.InferenceRequest(
+            model_name='decoder',
+            requested_output_names=['best_index'],
+            inputs=input_tensors)
+
+        inference_response = inference_request.exec() 
+        if inference_response.has_error():
+            raise pb_utils.TritonModelException(inference_response.error().message())
+        else:
+            # Extract the output tensors from the inference response.
+            best_index = pb_utils.get_output_tensor_by_name(inference_response,
+                                                            'best_index')
+            if best_index.is_cpu():
+                best_index = best_index.as_numpy()
+            else:
+                best_index = from_dlpack(best_index.to_dlpack())
+                best_index = best_index.cpu().numpy()
+            best_index = np.squeeze(best_index, -1).tolist()
+            return best_index
 
     def prepare_response(self, hyps, batch_count_list):
         """
@@ -223,17 +263,17 @@ class TritonPythonModel:
         ctc_log_probs = ctc_log_probs.cuda()
         if self.decoding_method == "tlg_mbr":
             total_hyps = self.decoder.decode_mbr(ctc_log_probs, encoder_out_len)
-            # TODO: add token_ids, time stamps
         elif self.decoding_method == "ctc_greedy_search":
             total_hyps = ctc_greedy_search(ctc_log_probs, encoder_out_len,
                                            self.vocabulary, self.blank_id, self.eos)
         elif self.decoding_method == "tlg":
-            nbest_hyps, nbest_ids = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len)
+            nbest_hyps, nbest_ids, max_hyp_len = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len)
             total_hyps = [nbest[0] for nbest in nbest_hyps]
 
         if self.decoding_method == "tlg" and self.rescore:
             assert self.beam_size > 1, "Beam size must be greater than 1 for rescoring"
             selected_ids = self.rescore_hyps(nbest_ids,
+                                             max_hyp_len,
                                              encoder_out,
                                              encoder_out_len)
             total_hyps = [nbest[i] for nbest, i in zip(nbest_hyps, selected_ids)]
