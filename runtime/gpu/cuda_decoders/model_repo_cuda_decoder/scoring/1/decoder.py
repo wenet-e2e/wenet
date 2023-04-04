@@ -92,16 +92,7 @@ class RivaWFSTDecoder:
     def decode_nbest(self, logits, length):
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
-        before = logits.shape
-        # TODO: remove this hack, nanobind bug WAR
-        flag = 0
-        if logits.shape[0] == 1:
-            flag = 1
-            logits = logits.repeat(2,1,1)
-            sequence_lengths_tensor = sequence_lengths_tensor.repeat(2)
-        results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)
-        if flag:
-            results = results[0:1]        
+        results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)    
         total_hyps, total_hyps_id = [], []
         max_hyp_len = 3
         for nbest_sentences in results:
@@ -125,14 +116,7 @@ class RivaWFSTDecoder:
     def decode_mbr(self, logits, length):
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
-        flag = 0
-        if logits.shape[0] == 1:
-            flag = 1
-            logits = logits.repeat(2,1,1)
-            sequence_lengths_tensor = sequence_lengths_tensor.repeat(2)
         results = self.decoder.decode_mbr(logits, sequence_lengths_tensor)
-        if flag:
-            results = results[0:1]
         total_hyps = []
         for sent in results:
             hyp = [word[0] for word in sent]
