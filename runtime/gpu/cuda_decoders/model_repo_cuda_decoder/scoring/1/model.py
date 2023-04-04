@@ -179,27 +179,32 @@ class TritonPythonModel:
         """
         Rescore the hypotheses with attention rescoring
         """
-        input1 = pb_utils.Tensor.from_dlpack( "encoder_out", to_dlpack(encoder_out))
-        input2 = pb_utils.Tensor.from_dlpack( "encoder_out_lens", to_dlpack(encoder_out_len.unsqueeze(-1)))
-        hyps_pad_sos_eos = np.zeros([len(total_tokens), self.beam_size, max_hyp_len], dtype=np.int64)
+        input1 = pb_utils.Tensor.from_dlpack("encoder_out", to_dlpack(encoder_out))
+        input2 = pb_utils.Tensor.from_dlpack("encoder_out_lens",
+                                             to_dlpack(encoder_out_len.unsqueeze(-1)))
+        hyps_pad_sos_eos = np.zeros([len(total_tokens),
+                                     self.beam_size, max_hyp_len], dtype=np.int64)
         hyps_lens_sos = np.zeros([len(total_tokens), self.beam_size], dtype=np.int32)
-        ctc_scores = np.zeros([len(total_tokens), self.beam_size], dtype=np.float16) # TODO: zero here
+        ctc_scores = np.zeros([len(total_tokens),
+                               self.beam_size], dtype=np.float16)  # TODO: zero here
 
         for i, hyps in enumerate(total_tokens):
             for j, hyp in enumerate(hyps):
                 hyps_pad_sos_eos[i][j][:len(hyp)] = hyp
                 hyps_lens_sos[i][j] = len(hyp) - 1
-        input3 = pb_utils.Tensor( "hyps_pad_sos_eos", hyps_pad_sos_eos)
-        input4 = pb_utils.Tensor( "hyps_lens_sos", hyps_lens_sos)
-        input5 = pb_utils.Tensor( "ctc_score", ctc_scores)
+        input3 = pb_utils.Tensor("hyps_pad_sos_eos", hyps_pad_sos_eos)
+        input4 = pb_utils.Tensor("hyps_lens_sos", hyps_lens_sos)
+        input5 = pb_utils.Tensor("ctc_score", ctc_scores)
         input_tensors = [input1, input2, input3, input4, input5]
 
         if self.bidecoder:
-            r_hyps_pad_sos_eos = np.zeros([len(total_tokens), self.beam_size, max_hyp_len], dtype=np.int64)
+            r_hyps_pad_sos_eos = np.zeros([len(total_tokens),
+                                           self.beam_size, max_hyp_len], dtype=np.int64)
             for i, hyps in enumerate(total_tokens):
                 for j, hyp in enumerate(hyps):
                     r_hyps_pad_sos_eos[i][j][:len(hyp)] = hyp[::-1]
-            input6 = pb_utils.Tensor.from_dlpack( "r_hyps_pad_sos_eos", r_hyps_pad_sos_eos)
+            input6 = pb_utils.Tensor.from_dlpack("r_hyps_pad_sos_eos",
+                                                 r_hyps_pad_sos_eos)
             input_tensors.insert(-1, input6)
 
         inference_request = pb_utils.InferenceRequest(
@@ -207,7 +212,7 @@ class TritonPythonModel:
             requested_output_names=['best_index'],
             inputs=input_tensors)
 
-        inference_response = inference_request.exec() 
+        inference_response = inference_request.exec()
         if inference_response.has_error():
             raise pb_utils.TritonModelException(inference_response.error().message())
         else:
@@ -267,7 +272,7 @@ class TritonPythonModel:
             total_hyps = ctc_greedy_search(ctc_log_probs, encoder_out_len,
                                            self.vocabulary, self.blank_id, self.eos)
         elif self.decoding_method == "tlg":
-            nbest_hyps, nbest_ids, max_hyp_len = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len)
+            nbest_hyps, nbest_ids, max_hyp_len = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len) # noqa 
             total_hyps = [nbest[0] for nbest in nbest_hyps]
 
         if self.decoding_method == "tlg" and self.rescore:

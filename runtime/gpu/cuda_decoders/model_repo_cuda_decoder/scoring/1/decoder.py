@@ -97,24 +97,26 @@ class RivaWFSTDecoder:
         logits, length = self.frame_reducer(logits, length.cuda(), logits)
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
-        results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)    
+        results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)
         total_hyps, total_hyps_id = [], []
         max_hyp_len = 3
         for nbest_sentences in results:
             nbest_list, nbest_id_list = [], []
             for sent in nbest_sentences:
-                # subtract 1 to get the label id, since fst decoder adds 1 to the label id
+                # subtract 1 to get the label id,
+                # since fst decoder adds 1 to the label id
                 hyp_ids = [label - 1 for label in sent.ilabels]
                 # padding for hyps_pad_sos_eos
-                new_hyp = [self.vocab_size-1] + remove_duplicates_and_blank(hyp_ids, eos=self.vocab_size-1, blank_id=0) + [self.vocab_size-1]
+                new_hyp = [self.vocab_size - 1] + remove_duplicates_and_blank(hyp_ids, eos=self.vocab_size - 1, blank_id=0) + [self.vocab_size - 1] # noqa
                 max_hyp_len = max(max_hyp_len, len(new_hyp))
                 nbest_id_list.append(new_hyp)
 
-                hyp = "".join(self.word_id_to_word_str[word] for word in sent.words if word != 0)
+                hyp = "".join(self.word_id_to_word_str[word]
+                              for word in sent.words if word != 0)
                 nbest_list.append(hyp)
             nbest_list += [""] * (self.nbest - len(nbest_list))
             total_hyps.append(nbest_list)
-            nbest_id_list += [[self.vocab_size-1, 0, self.vocab_size-1]] * (self.nbest - len(nbest_id_list))
+            nbest_id_list += [[self.vocab_size - 1, 0, self.vocab_size - 1]] * (self.nbest - len(nbest_id_list)) # noqa
             total_hyps_id.append(nbest_id_list)
         return total_hyps, total_hyps_id, max_hyp_len
 
