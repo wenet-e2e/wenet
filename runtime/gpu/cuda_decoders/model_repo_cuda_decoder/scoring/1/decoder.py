@@ -3,6 +3,7 @@ import torch
 from typing import List
 from riva.asrlib.decoder.python_decoder import (BatchedMappedDecoderCuda,
                                                 BatchedMappedDecoderCudaConfig)
+from frame_reducer import FrameReducer
 
 def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
     """Make mask tensor containing indices of padded part.
@@ -81,6 +82,8 @@ class RivaWFSTDecoder:
 
         config.online_opts.lattice_postprocessor_opts.nbest = beam_size
 
+        # config.online_opts.decoder_opts.blank_penalty = -5.0
+
         self.decoder = BatchedMappedDecoderCuda(
             config, os.path.join(tlg_dir, "TLG.fst"),
             os.path.join(tlg_dir, "words.txt"), vocab_size
@@ -88,8 +91,10 @@ class RivaWFSTDecoder:
         self.word_id_to_word_str = load_word_symbols(os.path.join(tlg_dir, "words.txt"))
         self.nbest = beam_size
         self.vocab_size = vocab_size
+        self.frame_reducer = FrameReducer(0.98)
 
     def decode_nbest(self, logits, length):
+        logits, length = self.frame_reducer(logits, length.cuda(), logits)
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
         results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)    
@@ -114,6 +119,8 @@ class RivaWFSTDecoder:
         return total_hyps, total_hyps_id, max_hyp_len
 
     def decode_mbr(self, logits, length):
+        logits, length = self.frame_reducer(logits, length.cuda(), logits)
+        # logits[:,:,0] -= 2.0
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
         results = self.decoder.decode_mbr(logits, sequence_lengths_tensor)
