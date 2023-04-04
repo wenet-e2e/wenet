@@ -272,7 +272,7 @@ class TritonPythonModel:
             total_hyps = ctc_greedy_search(ctc_log_probs, encoder_out_len,
                                            self.vocabulary, self.blank_id, self.eos)
         elif self.decoding_method == "tlg":
-            nbest_hyps, nbest_ids, max_hyp_len = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len) # noqa 
+            nbest_hyps, nbest_ids, max_hyp_len = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len) # noqa
             total_hyps = [nbest[0] for nbest in nbest_hyps]
 
         if self.decoding_method == "tlg" and self.rescore:
