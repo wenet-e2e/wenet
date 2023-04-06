@@ -33,6 +33,7 @@ __pycache__/
 
 exp
 data
+data-*/
 raw_wav
 tensorboard
 **/*build*
