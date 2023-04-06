@@ -3,7 +3,8 @@
 encoder: conformer
 encoder_conf:
     output_size: 256    # dimension of attention
-    attention_heads: 4
+    # attention_heads: 4
+    attention_heads: 8  #2023.2.28
     linear_units: 2048  # the number of units of position-wise feed forward
     num_blocks: 12      # the number of encoder blocks
     dropout_rate: 0.1
@@ -20,7 +21,9 @@ encoder_conf:
 # decoder related
 decoder: transformer
 decoder_conf:
-    attention_heads: 4
+    # attention_heads: 4
+    # attention_heads: 8  #2023.2.28
+    attention_heads: 12 #2023.3.23
     linear_units: 2048
     num_blocks: 6
     dropout_rate: 0.1
@@ -30,46 +33,49 @@ decoder_conf:
 
 # hybrid CTC/attention
 model_conf:
-    ctc_weight: 0.3
-    lsm_weight: 0.1     # label smoothing option
-    length_normalized_loss: false
+    ctc_weight: 0.3     #ctc占0.3，AED占0.7
+    lsm_weight: 0.1     # label smoothing option ，改变真实概率分布，抑制模型过拟合，更强泛化能力
+    length_normalized_loss: false   #是否使用长度归一化的loss
 
 dataset_conf:
     filter_conf:
-        max_length: 40960
+        # max_length: 40960       #音频长度，帧的数目超过max_length，被过滤
+        max_length: 10240
         min_length: 0
-        token_max_length: 200
+        token_max_length: 100   #如果输出的文本长度超200，被过滤(不用)
         token_min_length: 1
     resample_conf:
-        resample_rate: 16000
-    speed_perturb: true
+        resample_rate: 16000    #重采样成16k
+    speed_perturb: true         #是否做加速的数据增广，数据扰动
     fbank_conf:
-        num_mel_bins: 80
-        frame_shift: 10
-        frame_length: 25
-        dither: 0.1
-    spec_aug: true
-    spec_aug_conf:
-        num_t_mask: 2
+        num_mel_bins: 80        #fbank提取的维度是80
+        frame_shift: 10         #帧移10ms
+        frame_length: 25        #帧长25ms
+        dither: 0.1             #在特征上加0.1的扰动(抖动)
+    spec_aug: true              #数据增广
+    spec_aug_conf:              
+        num_t_mask: 2           #数据增广的参数：
         num_f_mask: 2
         max_t: 50
         max_f: 10
-    shuffle: true
+    shuffle: true               #数据洗牌
     shuffle_conf:
         shuffle_size: 1500
-    sort: true
+    sort: true                  #数据排序
     sort_conf:
         sort_size: 500  # sort_size should be less than shuffle_size
     batch_conf:
-        batch_type: 'static' # static or dynamic
-        batch_size: 16
+        batch_type: 'static'    # static or dynamic
+        batch_size: 4          #batch size
 
 grad_clip: 5
 accum_grad: 4
-max_epoch: 240
-log_interval: 100
+#max_epoch: 240                 #跑多少个epoch
+max_epoch: 80
+log_interval: 100       #多少个batch会输出一次log
 
-optim: adam
+
+optim: adam             #adam优化器
 optim_conf:
     lr: 0.002
 scheduler: warmuplr     # pytorch v1.1.0+ required
