@@ -1,16 +1,5 @@
-# Copyright (c) 2020 Mobvoi Inc. (authors: Binbin Zhang, Di Wu)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# Copyright (C) 2018-2023 Intel Corporation
+# SPDX-License-Identifier: Apache-2.0
 
 from __future__ import print_function
 
@@ -37,19 +26,18 @@ def get_args():
     return args
 
 def scripting(model):
-    with torch.no_grad():
-        script_model = torch.jit.script(model)
-        script_model = torch.jit.freeze(
-                        script_model,
-                        preserved_attrs=["forward_encoder_chunk",
-                                         "ctc_activation",
-                                         "forward_attention_decoder",
-                                         "subsampling_rate",
-                                         "right_context",
-                                         "sos_symbol",
-                                         "eos_symbol",
-                                         "is_bidirectional_decoder"]
-                        )
+    script_model = torch.jit.script(model)
+    script_model = torch.jit.freeze(
+                    script_model,
+                    preserved_attrs=["forward_encoder_chunk",
+                                     "ctc_activation",
+                                     "forward_attention_decoder",
+                                     "subsampling_rate",
+                                     "right_context",
+                                     "sos_symbol",
+                                     "eos_symbol",
+                                     "is_bidirectional_decoder"]
+                    )
     return script_model
 
 def main():
@@ -90,7 +78,7 @@ def main():
             model, {torch.nn.Linear}, dtype=torch.qint8
         )
         print(quantized_model)
-        script_quant_model = torch.jit.script(quantized_model)
+        script_quant_model = scripting(quantized_model)
         script_quant_model.save(args.output_quant_file)
         print('Export quantized model successfully, '
               'see {}'.format(args.output_quant_file))
