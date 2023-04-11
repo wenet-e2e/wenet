@@ -14,7 +14,7 @@
 # limitations under the License.
 
 export CUDA_VISIBLE_DEVICES="0"
-stage=0
+stage=-1
 stop_stage=3
 
 #<wenet_onnx_gpu_models>
@@ -33,7 +33,7 @@ MAX_BATCH_SIZE=16
 MAX_BATCH_FOR_SCORING=16
 # Decoding parameters
 BEAM_SIZE=10
-DECODING_METHOD=tlg # ctc_greedy_search
+DECODING_METHOD=tlg_mbr # ctc_greedy_search
 
 
 model_repo_path=./model_repo_cuda_decoder

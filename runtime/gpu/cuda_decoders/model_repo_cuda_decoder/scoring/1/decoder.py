@@ -65,10 +65,9 @@ def load_word_symbols(path):
     return word_id_to_word_str
 
 class RivaWFSTDecoder:
-    def __init__(self, vocab_size, tlg_dir, config_dict, beam_size=8.0):
+    def __init__(self, vocab_size, tlg_dir, config_dict, nbest = 10):
         config = BatchedMappedDecoderCudaConfig()
-        config.online_opts.decoder_opts.lattice_beam = beam_size
-
+        config.online_opts.decoder_opts.lattice_beam = config_dict['lattice_beam']
         config.online_opts.lattice_postprocessor_opts.acoustic_scale = config_dict['acoustic_scale'] # noqa
         config.n_input_per_chunk = config_dict['n_input_per_chunk']
         config.online_opts.decoder_opts.default_beam = config_dict['default_beam']
@@ -80,7 +79,9 @@ class RivaWFSTDecoder:
         config.online_opts.lattice_postprocessor_opts.lm_scale = config_dict['lm_scale']
         config.online_opts.lattice_postprocessor_opts.word_ins_penalty = config_dict['word_ins_penalty'] # noqa
 
-        config.online_opts.lattice_postprocessor_opts.nbest = beam_size
+        config.online_opts.num_decoder_copy_threads = 2
+        config.online_opts.num_post_processing_worker_threads = 4
+        config.online_opts.lattice_postprocessor_opts.nbest = nbest
 
         # config.online_opts.decoder_opts.blank_penalty = -5.0
 
@@ -89,7 +90,7 @@ class RivaWFSTDecoder:
             os.path.join(tlg_dir, "words.txt"), vocab_size
         )
         self.word_id_to_word_str = load_word_symbols(os.path.join(tlg_dir, "words.txt"))
-        self.nbest = beam_size
+        self.nbest = nbest
         self.vocab_size = vocab_size
         self.frame_reducer = FrameReducer(0.98)
 
@@ -98,10 +99,10 @@ class RivaWFSTDecoder:
         logits = logits.to(torch.float32).contiguous()
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
         results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)
-        total_hyps, total_hyps_id = [], []
-        max_hyp_len = 3
+        total_hyps, total_hyps_id, total_scores = [], [], []
+        max_hyp_len = 3 # [sos, 0, eos]
         for nbest_sentences in results:
-            nbest_list, nbest_id_list = [], []
+            nbest_list, nbest_id_list, nbest_scores = [], [], []
             for sent in nbest_sentences:
                 # subtract 1 to get the label id,
                 # since fst decoder adds 1 to the label id
@@ -114,11 +115,14 @@ class RivaWFSTDecoder:
                 hyp = "".join(self.word_id_to_word_str[word]
                               for word in sent.words if word != 0)
                 nbest_list.append(hyp)
+                nbest_scores.append(sent.score)
             nbest_list += [""] * (self.nbest - len(nbest_list))
             total_hyps.append(nbest_list)
             nbest_id_list += [[self.vocab_size - 1, 0, self.vocab_size - 1]] * (self.nbest - len(nbest_id_list)) # noqa
             total_hyps_id.append(nbest_id_list)
-        return total_hyps, total_hyps_id, max_hyp_len
+            nbest_scores += [0.0] * (self.nbest - len(nbest_scores))
+            total_scores.append(nbest_scores)
+        return total_hyps, total_hyps_id, total_scores, max_hyp_len
 
     def decode_mbr(self, logits, length):
         logits, length = self.frame_reducer(logits, length.cuda(), logits)

@@ -39,7 +39,7 @@ parameters [
   },
   {
     key: "attention_rescoring",
-    value: { string_value: "1"}
+    value: { string_value: "0"}
   },
   {
     key: "bidecoder",
@@ -48,6 +48,9 @@ parameters [
   {
     key: "lm_path"
     value: { string_value: "None"} # for ctc beam search methods
+  },
+  { key: "FORCE_CPU_ONLY_INPUT_TENSORS"
+    value: {string_value: "no"}
   }
 ]
 
@@ -95,6 +98,6 @@ dynamic_batching {
 instance_group [
     {
       count: INSTANCE_NUM
-      kind: KIND_CPU
+      kind: KIND_GPU
     }
   ]

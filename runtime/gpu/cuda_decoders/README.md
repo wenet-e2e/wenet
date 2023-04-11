@@ -18,10 +18,10 @@ bash run.sh
 
 ### TODO: Performance of Small Offline ASR Model using Different Decoders
 
-Benchmark(offline conformer model trained on Aishell1) based on Aishell1 test set with V100, the total audio duration is 36108.919 seconds.
+Benchmark(small offline conformer onnx fp16 model trained on Aishell1) based on Aishell1 test set with V100, the total audio duration is 36108.919 seconds.
 
-<!-- (Note: decoding time is the time spent by the decoding process)
-|Decoding Method | decoding time(s) | WER (%)    |
-|----------|--------------------|----------------|
-| CTC Greedy Search                |  | 4.97  |
-| CUDA WFST Decoding (3-gram LM)   |  |   | -->
+(Note: 80 concurrent tasks, service has been fully warm up.)
+|Decoding Method | decoding time(s) | WER (%) |
+|----------|--------------------|-------------|
+| CTC Greedy Search             | 23s | 4.97  |
+| CUDA TLG 1-best (3-gram LM)   | 31s | 4.58  |
