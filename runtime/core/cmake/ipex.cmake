@@ -35,6 +35,6 @@ DOWNLOAD_NO_EXTRACT 	TRUE
 PATCH_COMMAND		bash ${FETCHCONTENT_BASE_DIR}/${LIBIPEX_SCRIPT_NAME} install ${libtorch_SOURCE_DIR}
 )
 FetchContent_MakeAvailable(intel_ext_pt)
-find_package(intel_ext_pt_cpu REQUIRED PATHS  ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
+find_package(intel_ext_pt_cpu REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS} -DC10_USE_GLOG")
