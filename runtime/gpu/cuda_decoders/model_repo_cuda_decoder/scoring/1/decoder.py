@@ -65,7 +65,7 @@ def load_word_symbols(path):
     return word_id_to_word_str
 
 class RivaWFSTDecoder:
-    def __init__(self, vocab_size, tlg_dir, config_dict, nbest = 10):
+    def __init__(self, vocab_size, tlg_dir, config_dict, nbest=10):
         config = BatchedMappedDecoderCudaConfig()
         config.online_opts.decoder_opts.lattice_beam = config_dict['lattice_beam']
         config.online_opts.lattice_postprocessor_opts.acoustic_scale = config_dict['acoustic_scale'] # noqa
@@ -100,7 +100,7 @@ class RivaWFSTDecoder:
         sequence_lengths_tensor = length.to(torch.long).to('cpu').contiguous()
         results = self.decoder.decode_nbest(logits, sequence_lengths_tensor)
         total_hyps, total_hyps_id, total_scores = [], [], []
-        max_hyp_len = 3 # [sos, 0, eos]
+        max_hyp_len = 3  # [sos, 0, eos]
         for nbest_sentences in results:
             nbest_list, nbest_id_list, nbest_scores = [], [], []
             for sent in nbest_sentences:

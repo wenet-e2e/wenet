@@ -16,7 +16,7 @@ import triton_python_backend_utils as pb_utils
 import numpy as np
 
 import torch
-from torch.utils.dlpack import from_dlpack, to_dlpack
+from torch.utils.dlpack import from_dlpack
 import json
 import os
 import yaml
@@ -175,7 +175,8 @@ class TritonPythonModel:
         encoder_out_len = torch.cat(encoder_out_lens_list, dim=0)
         return encoder_out, encoder_out_len, logits, batch_count_list
 
-    def rescore_hyps(self, total_tokens, nbest_scores, max_hyp_len, encoder_out, encoder_out_len):
+    def rescore_hyps(self, total_tokens, nbest_scores,
+                     max_hyp_len, encoder_out, encoder_out_len):
         """
         Rescore the hypotheses with attention rescoring
         """
