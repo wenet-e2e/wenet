@@ -12,6 +12,7 @@ import yaml
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.init_model import init_model
 import intel_extension_for_pytorch as ipex
+from intel_extension_for_pytorch.quantization import prepare, convert
 
 def get_args():
     parser = argparse.ArgumentParser(description='export your script model')
@@ -74,11 +75,16 @@ def main():
 
     # Export quantized jit torch script model
     if args.output_quant_file:
-        quantized_model = torch.quantization.quantize_dynamic(
-            model, {torch.nn.Linear}, dtype=torch.qint8
-        )
-        print(quantized_model)
-        script_quant_model = scripting(quantized_model)
+        dynamic_qconfig = ipex.quantization.default_dynamic_qconfig
+        dummy_data = (torch.zeros(1, 67, 80),
+                      16,
+                      -16,
+                      torch.zeros(12, 4, 32, 128),
+                      torch.zeros(12, 1, 256, 7)
+                     )
+        model = prepare(model, dynamic_qconfig, dummy_data)
+        model = convert(model)
+        script_quant_model = scripting(model)
         script_quant_model.save(args.output_quant_file)
         print('Export quantized model successfully, '
               'see {}'.format(args.output_quant_file))
