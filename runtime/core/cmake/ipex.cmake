@@ -28,11 +28,11 @@ else()
   set(LIBIPEX_SCRIPT_NAME "libintel-ext-pt-1.13.100%2Bcpu.run")
 endif()
 FetchContent_Declare(intel_ext_pt
-URL			${LIBIPEX_URL}
-URL_HASH		${URL_HASH}
-DOWNLOAD_DIR		${FETCHCONTENT_BASE_DIR}
-DOWNLOAD_NO_EXTRACT 	TRUE
-PATCH_COMMAND		bash ${FETCHCONTENT_BASE_DIR}/${LIBIPEX_SCRIPT_NAME} install ${libtorch_SOURCE_DIR}
+URL                  ${LIBIPEX_URL}
+URL_HASH             ${URL_HASH}
+DOWNLOAD_DIR         ${FETCHCONTENT_BASE_DIR}
+DOWNLOAD_NO_EXTRACT  TRUE
+PATCH_COMMAND        bash ${FETCHCONTENT_BASE_DIR}/${LIBIPEX_SCRIPT_NAME} install ${libtorch_SOURCE_DIR}
 )
 FetchContent_MakeAvailable(intel_ext_pt)
 find_package(intel_ext_pt_cpu REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
