@@ -57,19 +57,21 @@ if __name__ == "__main__":
         stats = json.load(stats_f)
         model_stats = stats["model_stats"]
         for model_state in model_stats:
+            if "last_inference" not in model_state:
+                continue
             summary_f.write(f"model name is {model_state['name']} \n")
             model_inference_stats = model_state["inference_stats"]
             total_queue_time_s = (
-                int(model_inference_stats["queue"]["ns"]) / 10e9
+                int(model_inference_stats["queue"]["ns"]) / 1e9
             )
             total_infer_time_s = (
-                int(model_inference_stats["compute_infer"]["ns"]) / 10e9
+                int(model_inference_stats["compute_infer"]["ns"]) / 1e9
             )
             total_input_time_s = (
-                int(model_inference_stats["compute_input"]["ns"]) / 10e9
+                int(model_inference_stats["compute_input"]["ns"]) / 1e9
             )
             total_output_time_s = (
-                int(model_inference_stats["compute_output"]["ns"]) / 10e9
+                int(model_inference_stats["compute_output"]["ns"]) / 1e9
             )
             summary_f.write(
                 f"queue {total_queue_time_s:<5.2f} s, infer {total_infer_time_s:<5.2f} s, input {total_input_time_s:<5.2f} s, output {total_output_time_s:<5.2f} s \n" # noqa
@@ -86,9 +88,9 @@ if __name__ == "__main__":
                     == compute_output["count"]
                     == compute_input["count"]
                 )
-                compute_infer_time_ms = int(compute_infer["ns"]) / 10e6
-                compute_input_time_ms = int(compute_input["ns"]) / 10e6
-                compute_output_time_ms = int(compute_output["ns"]) / 10e6
+                compute_infer_time_ms = int(compute_infer["ns"]) / 1e6
+                compute_input_time_ms = int(compute_input["ns"]) / 1e6
+                compute_output_time_ms = int(compute_output["ns"]) / 1e6
                 summary_f.write(
                     f"Batch_size {batch_size:<2}, {batch_count:<5} times, infer {compute_infer_time_ms:<9.2f} ms, avg {compute_infer_time_ms/batch_count:.2f} ms, {compute_infer_time_ms/batch_count/batch_size:.2f} ms " # noqa
                 )
