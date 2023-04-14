@@ -27,18 +27,19 @@ def get_args():
     return args
 
 def scripting(model):
-    script_model = torch.jit.script(model)
-    script_model = torch.jit.freeze(
-                    script_model,
-                    preserved_attrs=["forward_encoder_chunk",
-                                     "ctc_activation",
-                                     "forward_attention_decoder",
-                                     "subsampling_rate",
-                                     "right_context",
-                                     "sos_symbol",
-                                     "eos_symbol",
-                                     "is_bidirectional_decoder"]
-                    )
+    with torch.inference_mode():
+        script_model = torch.jit.script(model)
+        script_model = torch.jit.freeze(
+                        script_model,
+                        preserved_attrs=["forward_encoder_chunk",
+                                         "ctc_activation",
+                                         "forward_attention_decoder",
+                                         "subsampling_rate",
+                                         "right_context",
+                                         "sos_symbol",
+                                         "eos_symbol",
+                                         "is_bidirectional_decoder"]
+                        )
     return script_model
 
 def main():
