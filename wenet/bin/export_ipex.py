@@ -19,11 +19,11 @@ def get_args():
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--output_file', default=None, help='output file')
-    parser.add_argument('--dtype',                                  \
-                        default="fp32",                             \
+    parser.add_argument('--dtype',
+                        default="fp32",
                         help='choose the dtype to run:[fp32,bf16]')
-    parser.add_argument('--output_quant_file',                      \
-                        default=None,                               \
+    parser.add_argument('--output_quant_file',
+                        default=None,
                         help='output quantized model file')
     args = parser.parse_args()
     return args
@@ -31,16 +31,16 @@ def get_args():
 def scripting(model):
     with torch.inference_mode():
         script_model = torch.jit.script(model)
-        script_model = torch.jit.freeze(                                \
-                        script_model,                                   \
-                        preserved_attrs=["forward_encoder_chunk",       \
-                                         "ctc_activation",              \
-                                         "forward_attention_decoder",   \
-                                         "subsampling_rate",            \
-                                         "right_context",               \
-                                         "sos_symbol",                  \
-                                         "eos_symbol",                  \
-                                         "is_bidirectional_decoder"]    \
+        script_model = torch.jit.freeze(
+            script_model,
+            preserved_attrs=["forward_encoder_chunk",
+                             "ctc_activation",
+                             "forward_attention_decoder",
+                             "subsampling_rate",
+                             "right_context",
+                             "sos_symbol",
+                             "eos_symbol",
+                             "is_bidirectional_decoder"]
         )
     return script_model
 
@@ -83,8 +83,7 @@ def main():
                       16,
                       -16,
                       torch.zeros(12, 4, 32, 128),
-                      torch.zeros(12, 1, 256, 7)
-        )
+                      torch.zeros(12, 1, 256, 7))
         model = prepare(model, dynamic_qconfig, dummy_data)
         model = convert(model)
         script_quant_model = scripting(model)
