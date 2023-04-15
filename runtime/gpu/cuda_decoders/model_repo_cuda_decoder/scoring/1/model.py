@@ -123,7 +123,7 @@ class TritonPythonModel:
         self.eos = eos
         self.ignore_id = ignore_id
 
-        if self.decoding_method == "tlg":
+        if "tlg" in self.decoding_method:
             self.decoder = RivaWFSTDecoder(len(self.vocabulary),
                                            self.tlg_dir,
                                            self.tlg_decoding_config,
@@ -175,12 +175,14 @@ class TritonPythonModel:
         encoder_out_len = torch.cat(encoder_out_lens_list, dim=0)
         return encoder_out, encoder_out_len, logits, batch_count_list
 
-    def rescore_hyps(self, total_hyps, total_tokens, encoder_out, encoder_out_len):
+    def rescore_hyps(self, total_tokens, nbest_scores,
+                     max_hyp_len, encoder_out, encoder_out_len):
         """
         Rescore the hypotheses with attention rescoring
         """
-        # TODO: add attention rescoring
-        return total_hyps
+        # TODO: need separated am_score, lm_score
+        # https://github.com/k2-fsa/icefall/blob/master/icefall/decode.py#L1072-L1075
+        raise NotImplementedError
 
     def prepare_response(self, hyps, batch_count_list):
         """
@@ -221,20 +223,23 @@ class TritonPythonModel:
         # required.
         encoder_out, encoder_out_len, ctc_log_probs, batch_count = self.collect_inputs(requests) # noqa
         ctc_log_probs = ctc_log_probs.cuda()
-        if self.decoding_method == "tlg":
-            results = self.decoder.decode(ctc_log_probs, encoder_out_len)
-            # list(str), list((float), list(int)) # TODO: add token_ids, time stamps
-            total_hyps = self.decoder.get_nbest_list(results)
+        if self.decoding_method == "tlg_mbr":
+            total_hyps = self.decoder.decode_mbr(ctc_log_probs, encoder_out_len)
         elif self.decoding_method == "ctc_greedy_search":
             total_hyps = ctc_greedy_search(ctc_log_probs, encoder_out_len,
                                            self.vocabulary, self.blank_id, self.eos)
+        elif self.decoding_method == "tlg":
+            nbest_hyps, nbest_ids, nbest_scores, max_hyp_len = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len) # noqa
+            total_hyps = [nbest[0] for nbest in nbest_hyps]
 
-        if len(total_hyps) > sum(batch_count) and self.rescore:
-            assert len(total_hyps) == self.beam_size * sum(batch_count)
-            total_hyps = self.rescore_hyps(total_hyps,
-                                           total_tokens,
-                                           encoder_out,
-                                           encoder_out_len)
+        if self.decoding_method == "tlg" and self.rescore:
+            assert self.beam_size > 1, "Beam size must be greater than 1 for rescoring"
+            selected_ids = self.rescore_hyps(nbest_ids,
+                                             nbest_scores,
+                                             max_hyp_len,
+                                             encoder_out,
+                                             encoder_out_len)
+            total_hyps = [nbest[i] for nbest, i in zip(nbest_hyps, selected_ids)]
 
         responses = self.prepare_response(total_hyps, batch_count)
         return responses
