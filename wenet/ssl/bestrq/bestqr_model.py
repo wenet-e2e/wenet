@@ -1,8 +1,11 @@
+import math
 from typing import Optional, Tuple
 import torch
 
 from wenet.ssl.bestrq.mask import compute_mask_indices_v2
 from wenet.utils.mask import make_pad_mask
+from wenet.transformer.attention import RelPositionMultiHeadedAttention
+from wenet.transformer.encoder_layer import ConformerEncoderLayer
 
 
 def quantize_vector(latent: torch.Tensor, codebook: torch.Tensor):
@@ -45,7 +48,7 @@ def quantize_vector(latent: torch.Tensor, codebook: torch.Tensor):
     codes = torch.argmin(distance, dim=-1)
 
     # [B, G, C]
-    one_hot = torch.nn.functional.one_hot(codes, c)
+    one_hot = torch.nn.functional.one_hot(codes, c).type(codebook.dtype)
     quantized = torch.einsum('bgc,cgd->bgd', one_hot, codebook)
     quantized = torch.reshape(quantized, [b, d])
     return quantized, codes, one_hot
@@ -124,6 +127,45 @@ class BestRQModel(torch.nn.Module):
             requires_grad=False,
         )
         torch.nn.init.normal_(self.embeddings)
+
+        # force reset encoder papameter
+        self.reset_encoder_parameter()
+
+    def reset_encoder_parameter(self):
+
+        def _reset_parameter(module: torch.nn.Module):
+            if isinstance(module, torch.nn.Linear):
+                torch.nn.init.trunc_normal_(module.weight.data,
+                                            mean=0.0,
+                                            std=0.02)
+                if module.bias is not None:
+                    module.bias.data.zero_()
+            elif isinstance(module, torch.nn.Conv1d):
+                torch.nn.init.kaiming_normal_(module.weight)
+                if module.bias is not None:
+                    k = math.sqrt(module.groups /
+                                  (module.in_channels * module.kernel_size[0]))
+                    torch.nn.init.uniform_(module.bias, a=-k, b=k)
+            elif isinstance(module, torch.Tensor):
+                torch.nn.init.trunc_normal_(module)
+            else:
+                raise NotImplementedError("other module not support now")
+
+        encoders = self.encoder.encoders
+        for _, layer in enumerate(encoders):
+            self_attn = layer.self_attn
+            _reset_parameter(self_attn.linear_q)
+            _reset_parameter(self_attn.linear_k)
+            _reset_parameter(self_attn.linear_v)
+            _reset_parameter(self_attn.linear_out)
+            if isinstance(self_attn, RelPositionMultiHeadedAttention):
+                _reset_parameter(self_attn.pos_bias_u)
+                _reset_parameter(self_attn.pos_bias_v)
+            if isinstance(layer, ConformerEncoderLayer):
+                conv1, conv2 = (layer.conv_module.pointwise_conv1,
+                                layer.conv_module.depthwise_conv)
+                _reset_parameter(conv1)
+                _reset_parameter(conv2)
 
     def forward(
         self,
