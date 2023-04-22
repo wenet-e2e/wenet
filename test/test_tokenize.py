@@ -103,9 +103,9 @@ def test_tokenize(symbol_table_path):
     )
     for (hyp, ref) in zip(outs, refs):
         assert(len(hyp["tokens"]) == len(ref["tokens"]))
-        assert(all([h == r for h, r in zip(hyp["tokens"], ref["tokens"])]))
+        assert(all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
         assert(len(hyp["label"]) == len(ref["label"]))
-        assert(all([h == r for h, r in zip(hyp["label"], ref["label"])]))
+        assert(all(h == r for h, r in zip(hyp["label"], ref["label"])))
 
 @pytest.mark.parametrize("use_pbe_model", [True, False])
 def test_non_lang_symbol_tokenize(use_pbe_model):
