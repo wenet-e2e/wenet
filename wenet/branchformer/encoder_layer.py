@@ -17,10 +17,8 @@
 """BranchformerEncoderLayer definition."""
 
 import torch
-import numpy
 import torch.nn as nn
 from typing import Optional, Tuple
-from wenet.branchformer.fastformer import FastSelfAttention
 
 class BranchformerEncoderLayer(torch.nn.Module):
     """Branchformer encoder layer module.

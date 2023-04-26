@@ -63,8 +63,8 @@ def init_model(configs):
                                                configs['encoder_conf'] else {})
     elif encoder_type == 'branchformer':
         encoder = BranchformerEncoder(input_dim,
-                                    global_cmvn=global_cmvn,
-                                    **configs['encoder_conf'])
+                                      global_cmvn=global_cmvn,
+                                      **configs['encoder_conf'])
     else:
         encoder = TransformerEncoder(input_dim,
                                      global_cmvn=global_cmvn,
