@@ -38,13 +38,10 @@ num_utts_per_shard=1000
 
 train_set=train
 # Optional train_config
-#1. train_config=conf/train_cif_conformer_prev1.yaml CIF DecoderSAN + PredictorV1
-#2. train_config=conf/train_cif_conformer_prev2.yaml CIF DecoderSAN + PredictorV1
-#3. train_config=conf/train_cif_conformer_sanm_prev1.yaml CIF DecoderSANM + PredictorV2
-#4. train_config=conf/train_cif_conformer_sanm_prev2.yaml CIF DecoderSANM + PredictorV2
-train_config=conf/train_cif_conformer_sanm_prev1.yaml
+# conf/train_paraformer.yaml: paraformer like CIF, apply encoder-decoder attention
+train_config=conf/train_paraformer.yaml
 cmvn=true
-dir=exp/conformer_sanm_prev1
+dir=exp/paraformer
 checkpoint=
 
 # use average_checkpoint will get better result
@@ -54,8 +51,8 @@ average_num=20
 #decode_modes="ctc_greedy_search ctc_prefix_beam_search cif_greedy_search cif_beam_search"
 # Since the Predictor Loss also plays an important role in the training of the CIF models,
 # the performance of the predictor cannot be used by using the CTC-related decoding methods,
-# so we strongly recommend that you use the 'cif_greedy_search' and 'cif_beam_search'.
-decode_modes="cif_greedy_search cif_beam_search"
+# so we strongly recommend that you use the 'paraformer_greedy_search' and 'paraformer_beam_search'.
+decode_modes="paraformer_greedy_search paraformer_beam_search"
 
 . tools/parse_options.sh || exit 1;
 

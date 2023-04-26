@@ -24,6 +24,7 @@
 #ifndef IOS
 #include "torch/torch.h"
 #endif
+#include <torch/csrc/jit/passes/tensorexpr_fuser.h>
 
 namespace wenet {
 
@@ -45,6 +46,9 @@ void TorchAsrModel::Read(const std::string& model_path) {
     VLOG(1) << "CUDA available! Running on GPU";
     device = at::kCUDA;
   }
+#endif
+#ifdef USE_IPEX
+  torch::jit::setTensorExprFuserEnabled(false);
 #endif
   torch::jit::script::Module model = torch::jit::load(model_path, device);
   model_ = std::make_shared<TorchModule>(std::move(model));

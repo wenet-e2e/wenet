@@ -128,6 +128,7 @@ def main():
     test_conf['filter_conf']['min_output_input_ratio'] = 0
     test_conf['speed_perturb'] = False
     test_conf['spec_aug'] = False
+    test_conf['spec_sub'] = False
     test_conf['spec_trim'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False

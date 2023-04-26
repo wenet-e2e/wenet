@@ -75,7 +75,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
           --optShapes=chunk_xs:${OPT_BATCH}x67x80,chunk_lens:${OPT_BATCH},offset:${OPT_BATCH}x1,att_cache:${OPT_BATCH}x12x4x80x128,cnn_cache:${OPT_BATCH}x12x256x7,cache_mask:${OPT_BATCH}x1x80 \
           --maxShapes=chunk_xs:${MAX_BATCH}x67x80,chunk_lens:${MAX_BATCH},offset:${MAX_BATCH}x1,att_cache:${MAX_BATCH}x12x4x80x128,cnn_cache:${MAX_BATCH}x12x256x7,cache_mask:${MAX_BATCH}x1x80 \
           --plugins=$outputs_dir/LayerNorm.so \
-          --saveEngine=$outputs_dir/encoder_fp16_v2.plan
+          --saveEngine=$outputs_dir/encoder_fp16.plan
 fi
 
 

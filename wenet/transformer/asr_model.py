@@ -50,12 +50,12 @@ class ASRModel(torch.nn.Module):
         encoder: TransformerEncoder,
         decoder: TransformerDecoder,
         ctc: CTC,
-        lfmmi_dir: str,
         ctc_weight: float = 0.5,
         ignore_id: int = IGNORE_ID,
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
+        lfmmi_dir: str = '',
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
 

@@ -1,0 +1,103 @@
+# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "scoring"
+backend: "python"
+max_batch_size: MAX_BATCH
+
+parameters [
+  {
+    key: "vocabulary",
+    value: { string_value: "./model_repo_cuda_decoder/scoring/units.txt"}
+  },
+  {
+    key: "tlg_dir",
+    value: { string_value: "./model_repo_cuda_decoder/scoring/1/lang"}
+  },
+  {
+    key: "tlg_decoding_config",
+    value: { string_value: "./model_repo_cuda_decoder/scoring/1/wfst_decoding_config.yaml"}
+  },
+  {
+    key: "beam_size",
+    value: { string_value: "BEAM_SIZE"}
+  },
+  {
+    key: "decoding_method",
+    value: { string_value: "DECODING_METHOD"} # tlg, ctc_greedy_search, cpu_ctc_beam_search, cuda_ctc_beam_search
+  },
+  {
+    key: "attention_rescoring",
+    value: { string_value: "0"}
+  },
+  {
+    key: "bidecoder",
+    value: { string_value: "0"} # for attention rescoring decoder
+  },
+  {
+    key: "lm_path"
+    value: { string_value: "None"} # for ctc beam search methods
+  },
+  { key: "FORCE_CPU_ONLY_INPUT_TENSORS"
+    value: {string_value: "no"}
+  }
+]
+
+
+input [
+  {
+    name: "encoder_out"
+    data_type: TYPE_FP16
+    dims: [-1, D_MODEL]
+  },
+  {
+    name: "encoder_out_lens"
+    data_type: TYPE_INT32
+    dims: [1]
+    reshape: { shape: [ ] }
+  },
+  {
+    name: "batch_log_probs"
+    data_type: TYPE_FP16
+    dims: [-1, BEAM_SIZE]
+  },
+  {
+    name: "batch_log_probs_idx"
+    data_type: TYPE_INT64
+    dims: [-1, BEAM_SIZE]
+  },
+  {
+    name: "ctc_log_probs"
+    data_type: TYPE_FP16
+    dims: [-1, VOCAB_SIZE]
+  }
+]
+
+output [
+  {
+    name: "OUTPUT0"
+    data_type: TYPE_STRING
+    dims: [1]
+  }
+]
+
+dynamic_batching {
+  max_queue_delay_microseconds: MAX_DELAY
+  }
+instance_group [
+    {
+      count: INSTANCE_NUM
+      kind: KIND_GPU
+    }
+  ]
