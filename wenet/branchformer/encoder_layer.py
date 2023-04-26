@@ -1,6 +1,6 @@
 """BranchformerEncoderLayer definition."""
 
-
+import time
 import torch
 import numpy
 import torch.nn as nn
@@ -145,7 +145,6 @@ class BranchformerEncoderLayer(torch.nn.Module):
         x1 = x
         x2 = x
     
-
         # Branch 1: multi-headed attention module
         if self.attn is not None:
             x1 = self.norm_mha(x1)
@@ -154,6 +153,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
 
         # Branch 2: convolutional gating mlp
         # Fake new cnn cache here, and then change it in conv_module
+
         new_cnn_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
         if self.cgmlp is not None:
             x2 = self.norm_mlp(x2)
@@ -168,65 +168,6 @@ class BranchformerEncoderLayer(torch.nn.Module):
                 x = x + stoch_layer_coeff * self.dropout(
                     self.merge_proj(torch.cat([x1, x2], dim=-1))
                 )
-            # elif self.merge_method == "learned_ave":
-            #     if (
-            #         self.training
-            #         and self.attn_branch_drop_rate > 0
-            #         and torch.rand(1).item() < self.attn_branch_drop_rate
-            #     ):
-            #         # Drop the attn branch
-            #         w1, w2 = 0.0, 1.0
-            #     else:
-            #         # branch1
-            #         score1 = (
-            #             self.pooling_proj1(x1).transpose(1, 2) / self.size**0.5
-            #         )  # (batch, 1, time)
-            #         if mask is not None:
-            #             min_value = float(
-            #                 numpy.finfo(
-            #                     torch.tensor(0, dtype=score1.dtype).numpy().dtype
-            #                 ).min
-            #             )
-            #             score1 = score1.masked_fill(mask.eq(0), min_value)
-            #             score1 = torch.softmax(score1, dim=-1).masked_fill(
-            #                 mask.eq(0), 0.0
-            #             )
-            #         else:
-            #             score1 = torch.softmax(score1, dim=-1)
-            #         pooled1 = torch.matmul(score1, x1).squeeze(1)  # (batch, size)
-            #         weight1 = self.weight_proj1(pooled1)  # (batch, 1)
-
-            #         # branch2
-            #         score2 = (
-            #             self.pooling_proj2(x2).transpose(1, 2) / self.size**0.5
-            #         )  # (batch, 1, time)
-            #         if mask is not None:
-            #             min_value = float(
-            #                 numpy.finfo(
-            #                     torch.tensor(0, dtype=score2.dtype).numpy().dtype
-            #                 ).min
-            #             )
-            #             score2 = score2.masked_fill(mask.eq(0), min_value)
-            #             score2 = torch.softmax(score2, dim=-1).masked_fill(
-            #                 mask.eq(0), 0.0
-            #             )
-            #         else:
-            #             score2 = torch.softmax(score2, dim=-1)
-            #         pooled2 = torch.matmul(score2, x2).squeeze(1)  # (batch, size)
-            #         weight2 = self.weight_proj2(pooled2)  # (batch, 1)
-
-            #         # normalize weights of two branches
-            #         merge_weights = torch.softmax(
-            #             torch.cat([weight1, weight2], dim=-1), dim=-1
-            #         )  # (batch, 2)
-            #         merge_weights = merge_weights.unsqueeze(-1).unsqueeze(
-            #             -1
-            #         )  # (batch, 2, 1, 1)
-            #         w1, w2 = merge_weights[:, 0], merge_weights[:, 1]  # (batch, 1, 1)
-
-            #     x = x + stoch_layer_coeff * self.dropout(
-            #         self.merge_proj(w1 * x1 + w2 * x2)
-            #     )
             elif self.merge_method == "fixed_ave":
                 x = x + stoch_layer_coeff * self.dropout(
                     self.merge_proj(

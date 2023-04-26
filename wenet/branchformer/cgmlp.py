@@ -105,8 +105,6 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
         if self.linear is not None:
             x_g = self.linear(x_g)
 
-        # if gate_add is not None:
-        #     x_g = x_g + gate_add
 
         x_g = self.act(x_g)
         out = x_r * x_g  # (N, T, D/2)

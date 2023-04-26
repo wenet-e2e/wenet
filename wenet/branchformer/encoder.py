@@ -307,9 +307,8 @@ class BranchformerEncoder(nn.Module):
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
             r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
             r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
-        # torch jit failed
-        # if self.normalize_before:
-        #     xs = self.after_norm(xs)
+
+        xs = self.after_norm(xs)
 
         # NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),
         #   ? may be larger than cache_t1, it depends on required_cache_size
