@@ -181,3 +181,26 @@
 | attention decoder      | 4.87 | 5.03 | 5.07 |
 | ctc prefix beam search | 4.97 | 5.18 | 5.20 |
 | attention rescoring    | 4.56 | 4.75 | 4.77 |
+
+
+## U2++ Branchformer Result
+
+* Feature info: using fbank feature, dither=1.0, cmvn, oneline speed perturb
+* * Model info:
+    * Model Params: 48,384,667
+    * Num Encoder Layer: 24
+    * CNN Kernel Size: 63
+    * Merge Method: concat
+* Training info: lr 0.001, weight_decay: 0.000001, batch size 16, 3 gpu, acc_grad 1, 360 epochs
+* Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30, lm_scale 0.7, decoder_scale 0.1, r_decoder_scale 0.7
+* Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
+
+| decoding mode/chunk size  | CER  |
+|---------------------------|-------|
+| ctc greedy search         | 5.28  |
+| ctc prefix beam search    | 5.28  |
+| attention decoder         | 5.12  |
+| attention rescoring       | 4.81  |
+| LM + attention rescoring  | 4.46  |
+
+
