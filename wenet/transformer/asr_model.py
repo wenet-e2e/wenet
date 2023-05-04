@@ -89,7 +89,7 @@ class ASRModel(torch.nn.Module):
         text_lengths: torch.Tensor,
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
-        
+
         Args:
             speech: (Batch, Length, ...)
             speech_lengths: (Batch, )
@@ -201,6 +201,7 @@ class ASRModel(torch.nn.Module):
         simulate_streaming: bool = False,
     ) -> torch.Tensor:
         """ Apply beam search on attention decoder
+
         Args:
             speech (torch.Tensor): (batch, max_len, feat_dim)
             speech_length (torch.Tensor): (batch, )
@@ -212,6 +213,7 @@ class ASRModel(torch.nn.Module):
                 0: used for training, it's prohibited here
             simulate_streaming (bool): whether do encoder forward in a
                 streaming fashion
+
         Returns:
             torch.Tensor: decoding result, (batch, max_result_len)
         """
@@ -310,6 +312,7 @@ class ASRModel(torch.nn.Module):
         simulate_streaming: bool = False,
     ) -> List[List[int]]:
         """ Apply CTC greedy search
+
         Args:
             speech (torch.Tensor): (batch, max_len, feat_dim)
             speech_length (torch.Tensor): (batch, )
@@ -356,6 +359,7 @@ class ASRModel(torch.nn.Module):
     ) -> Tuple[List[List[int]], torch.Tensor]:
         """ CTC prefix beam search inner implementation
         Args:
+
             speech (torch.Tensor): (batch, max_len, feat_dim)
             speech_length (torch.Tensor): (batch, )
             beam_size (int): beam size for beam search
@@ -366,6 +370,7 @@ class ASRModel(torch.nn.Module):
                 0: used for training, it's prohibited here
             simulate_streaming (bool): whether do encoder forward in a
                 streaming fashion
+
         Returns:
             List[List[int]]: nbest results
             torch.Tensor: encoder output, (1, max_len, encoder_dim),
@@ -438,6 +443,7 @@ class ASRModel(torch.nn.Module):
         simulate_streaming: bool = False,
     ) -> List[int]:
         """ Apply CTC prefix beam search
+
         Args:
             speech (torch.Tensor): (batch, max_len, feat_dim)
             speech_length (torch.Tensor): (batch, )
@@ -449,6 +455,7 @@ class ASRModel(torch.nn.Module):
                 0: used for training, it's prohibited here
             simulate_streaming (bool): whether do encoder forward in a
                 streaming fashion
+
         Returns:
             List[int]: CTC prefix beam search nbest results
         """
@@ -472,6 +479,7 @@ class ASRModel(torch.nn.Module):
         """ Apply attention rescoring decoding, CTC prefix beam search
             is applied first to get nbest, then we resoring the nbest on
             attention decoder with corresponding encoder out
+
         Args:
             speech (torch.Tensor): (batch, max_len, feat_dim)
             speech_length (torch.Tensor): (batch, )
@@ -485,6 +493,7 @@ class ASRModel(torch.nn.Module):
                 streaming fashion
             reverse_weight (float): right to left decoder weight
             ctc_weight (float): ctc score weight
+
         Returns:
             List[int]: Attention rescoring result
         """
@@ -797,6 +806,7 @@ class ASRModel(torch.nn.Module):
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Export interface for c++ call, give input chunk xs, and return
             output from time 0 to current chunk.
+
         Args:
             xs (torch.Tensor): chunk input, with shape (b=1, time, mel-dim),
                 where `time == (chunk_size - 1) * subsample_rate + \
@@ -814,6 +824,7 @@ class ASRModel(torch.nn.Module):
             cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,
                 (elayers, b=1, hidden-dim, cache_t2), where
                 `cache_t2 == cnn.lorder - 1`
+
         Returns:
             torch.Tensor: output of current input xs,
                 with shape (b=1, chunk_size, hidden-dim).
@@ -822,6 +833,7 @@ class ASRModel(torch.nn.Module):
                 depending on required_cache_size.
             torch.Tensor: new conformer cnn cache required for next chunk, with
                 same shape as the original cnn_cache.
+
         """
         return self.encoder.forward_chunk(xs, offset, required_cache_size,
                                           att_cache, cnn_cache)
@@ -832,8 +844,10 @@ class ASRModel(torch.nn.Module):
             softmax before ctc
         Args:
             xs (torch.Tensor): encoder output
+
         Returns:
             torch.Tensor: activation before ctc
+
         """
         return self.ctc.log_softmax(xs)
 
@@ -867,6 +881,7 @@ class ASRModel(torch.nn.Module):
                 pad eos at the begining which is used fo right to left decoder
             reverse_weight: used for verfing whether used right to left decoder,
             > 0 will use.
+
         Returns:
             torch.Tensor: decoder output
         """
