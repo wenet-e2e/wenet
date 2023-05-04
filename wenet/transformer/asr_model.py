@@ -358,8 +358,8 @@ class ASRModel(torch.nn.Module):
         simulate_streaming: bool = False,
     ) -> Tuple[List[List[int]], torch.Tensor]:
         """ CTC prefix beam search inner implementation
-        Args:
 
+        Args:
             speech (torch.Tensor): (batch, max_len, feat_dim)
             speech_length (torch.Tensor): (batch, )
             beam_size (int): beam size for beam search
