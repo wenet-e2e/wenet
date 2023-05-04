@@ -195,7 +195,7 @@
 * Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30, lm_scale 0.7, decoder_scale 0.1, r_decoder_scale 0.7
 * Git hash: 5a1342312668e7a5abb83aed1e53256819cebf95
 
-| decoding mode/chunk size  | CER  |
+| decoding mode             | CER   |
 |---------------------------|-------|
 | ctc greedy search         | 5.28  |
 | ctc prefix beam search    | 5.28  |
