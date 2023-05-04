@@ -17,7 +17,6 @@
 import torch
 import torch.nn as nn
 from typing import List, Optional, Tuple, Union
-from typeguard import check_argument_types
 
 from wenet.branchformer.attention import (
     MultiHeadedAttention,
@@ -72,7 +71,6 @@ class BranchformerEncoder(nn.Module):
         use_dynamic_left_chunk: bool = False,
         causal: bool = False,
     ):
-        assert check_argument_types()
         super().__init__()
         self._output_size = output_size
 
