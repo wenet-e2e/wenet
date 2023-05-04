@@ -89,6 +89,7 @@ class ASRModel(torch.nn.Module):
         text_lengths: torch.Tensor,
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
+        
         Args:
             speech: (Batch, Length, ...)
             speech_lengths: (Batch, )
