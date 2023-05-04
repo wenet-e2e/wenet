@@ -31,7 +31,7 @@ from wenet.branchformer.embedding import (
 
 from wenet.branchformer.encoder_layer import BranchformerEncoderLayer
 from wenet.branchformer.cgmlp import ConvolutionalGatingMLP
-from wenet.branchformer.mask import make_pad_mask
+from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
 from wenet.transformer.subsampling import Conv2dSubsampling4
 

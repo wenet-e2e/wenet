@@ -144,10 +144,18 @@ void TorchAsrModel::ForwardEncoderFunc(
   std::vector<torch::jit::IValue> inputs = {feats, offset_, required_cache_size,
                                             att_cache_, cnn_cache_};
 
+  std::ofstream OutFile("/home/likai/wenet-dev/.vscode/output1.txt");
   // Refer interfaces in wenet/transformer/asr_model.py
   auto outputs =
       model_->get_method("forward_encoder_chunk")(inputs).toTuple()->elements();
   CHECK_EQ(outputs.size(), 3);
+
+  // 输出 encoder output
+  // std::cout << outputs[1] << std::endl;
+  // OutFile << outputs[1];
+  // OutFile.close();
+  // debug end
+
 #ifdef USE_GPU
   torch::Tensor chunk_out = outputs[0].toTensor().to(at::kCPU);
   att_cache_ = outputs[1].toTensor().to(at::kCPU);
