@@ -159,8 +159,8 @@ class ConvolutionalGatingMLP(torch.nn.Module):
         x: torch.Tensor,
         pos_emb: torch.Tensor,
         mask: torch.Tensor,
-        cache: torch.Tensor = torch.zeros((0, 0, 0))) \
-    -> Tuple[torch.Tensor, torch.Tensor]:
+        cache: torch.Tensor = torch.zeros((0, 0, 0))
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
 
         xs_pad = x
 
