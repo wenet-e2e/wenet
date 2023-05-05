@@ -154,12 +154,13 @@ class ConvolutionalGatingMLP(torch.nn.Module):
         )
         self.channel_proj2 = torch.nn.Linear(linear_units // 2, size)
 
-    def forward(self,
-                x: torch.Tensor,
-                pos_emb: torch.Tensor,
-                mask: torch.Tensor,
-                cache: torch.Tensor = torch.zeros((0, 0, 0))) \
-                -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self,
+        x: torch.Tensor,
+        pos_emb: torch.Tensor,
+        mask: torch.Tensor,
+        cache: torch.Tensor = torch.zeros((0, 0, 0))) \
+    -> Tuple[torch.Tensor, torch.Tensor]:
 
         xs_pad = x
 

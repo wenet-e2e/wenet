@@ -105,7 +105,8 @@ class BranchformerEncoderLayer(torch.nn.Module):
         else:
             self.merge_proj = torch.nn.Identity()
 
-    def forward(self,
+    def forward(
+        self,
         x: torch.Tensor,
         mask: torch.Tensor,
         pos_emb: torch.Tensor,

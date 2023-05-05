@@ -83,7 +83,7 @@ class MultiHeadedAttention(nn.Module):
         Args:
             value (torch.Tensor): Transformed value (#batch, n_head, time2, d_k).
             scores (torch.Tensor): Attention score (#batch, n_head, time1, time2).
-            mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2) 
+            mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2),
                  (0, 0, 0) means fake mask.
 
         Returns:
@@ -107,7 +107,7 @@ class MultiHeadedAttention(nn.Module):
         #   1. onnx(16/-1, -1/-1, 16/0)
         #   2. jit (16/-1, -1/-1, 16/0, 16/4)
         else:
-            attn = torch.softmax(scores, dim=-1)# (B,H,T1,T2)
+            attn = torch.softmax(scores, dim=-1)  # (B,H,T1,T2)
 
         p_attn = self.dropout(attn)
         x = torch.matmul(p_attn, value)  # (B,H,T,d_k)
