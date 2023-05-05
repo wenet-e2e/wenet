@@ -96,25 +96,25 @@ class MultiHeadedAttention(nn.Module):
         #           1st chunk to ease the onnx export.]
         #   2. pytorch training
         if mask.size(2) > 0 :  # time2 > 0
-            mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
+            mask = mask.unsqueeze(1).eq(0)  # (B, 1, *, T2)
             # For last chunk, time2 might be larger than scores.size(-1)
-            mask = mask[:, :, :, :scores.size(-1)]  # (batch, 1, *, time2)
+            mask = mask[:, :, :, :scores.size(-1)]  # (B, 1, *, T2)
             scores = scores.masked_fill(mask, -float('inf'))
             attn = torch.softmax(scores, dim=-1).masked_fill(
-                mask, 0.0)  # (batch, head, time1, time2)
+                mask, 0.0)  # (B, H, T1, T2)
         # NOTE(xcsong): When will `if mask.size(2) > 0` be False?
         #   1. onnx(16/-1, -1/-1, 16/0)
         #   2. jit (16/-1, -1/-1, 16/0, 16/4)
         else:
-            attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
+            attn = torch.softmax(scores, dim=-1)# (B,H,T1,T2)
 
         p_attn = self.dropout(attn)
-        x = torch.matmul(p_attn, value)  # (batch, head, time1, d_k)
+        x = torch.matmul(p_attn, value)  # (B,H,T,d_k)
         x = (
             x.transpose(1, 2).contiguous().view(n_batch, -1, self.h * self.d_k)
-        )  # (batch, time1, d_model)
+        )  # (B, T1, d_model)
 
-        return self.linear_out(x)  # (batch, time1, d_model)
+        return self.linear_out(x)  # (B, T1, d_model)
 
     def forward(self, query, key, value, mask):
         """Compute scaled dot product attention.
@@ -174,13 +174,11 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         """
 
-        #zero_pad = torch.zeros((*x.size()[:3], 1), device=x.device, dtype=x.dtype)
         zero_pad = torch.zeros((x.size()[0], x.size()[1], x.size()[2], 1),
                                device=x.device,
                                dtype=x.dtype)
         x_padded = torch.cat([zero_pad, x], dim=-1)
 
-        #x_padded = x_padded.view(*x.size()[:2], x.size(3) + 1, x.size(2))
         x_padded = x_padded.view(x.size()[0],
                                  x.size()[1],
                                  x.size(3) + 1, x.size(2))

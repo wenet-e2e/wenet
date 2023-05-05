@@ -136,8 +136,8 @@ class ScaledPositionalEncoding(PositionalEncoding):
 
     def forward(self,
                 x: torch.Tensor,
-                offset: Union[int, torch.Tensor] = 0,
-    )-> Tuple[torch.Tensor, torch.Tensor]:
+                offset: Union[int, torch.Tensor] = 0) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
         """Add positional encoding.
 
         Args:

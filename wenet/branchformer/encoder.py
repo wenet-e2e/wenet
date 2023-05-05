@@ -167,20 +167,18 @@ class BranchformerEncoder(nn.Module):
                 f"should be equal to num_blocks ({num_blocks})"
             )
 
-        self.encoders = torch.nn.ModuleList([
-            BranchformerEncoderLayer(
-                output_size,
-                encoder_selfattn_layer(*encoder_selfattn_layer_args)
-                if use_attn
-                else None,
-                cgmlp_layer(*cgmlp_layer_args) if use_cgmlp else None,
-                dropout_rate,
-                merge_method,
-                cgmlp_weight[lnum],
-                attn_branch_drop_rate[lnum],
-                stochastic_depth_rate[lnum],
-            ) for lnum in range(num_blocks)
-            ])
+        self.encoders = torch.nn.ModuleList([BranchformerEncoderLayer(
+            output_size,
+            encoder_selfattn_layer(*encoder_selfattn_layer_args)
+            if use_attn
+            else None,
+            cgmlp_layer(*cgmlp_layer_args) if use_cgmlp else None,
+            dropout_rate,
+            merge_method,
+            cgmlp_weight[lnum],
+            attn_branch_drop_rate[lnum],
+            stochastic_depth_rate[lnum]) for lnum in range(num_blocks)
+        ])
         self.after_norm = nn.LayerNorm(output_size)
         self.static_chunk_size = static_chunk_size
         self.global_cmvn = global_cmvn

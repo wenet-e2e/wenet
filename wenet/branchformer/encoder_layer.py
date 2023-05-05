@@ -112,7 +112,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
                 mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
                 att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
                 cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+               ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
         Args:
@@ -138,7 +138,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
 
 
         stoch_layer_coeff = 1.0
-        ############ torch jit failed
+        # torch jit failed
         # skip_layer = False
         # # with stochastic depth, residual connection `x + f(x)` becomes
         # # `x <- x + 1 / (1 - p) * f(x)` at training time.

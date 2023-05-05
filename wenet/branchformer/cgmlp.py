@@ -158,14 +158,18 @@ class ConvolutionalGatingMLP(torch.nn.Module):
                 x: torch.Tensor,
                 pos_emb: torch.Tensor,
                 mask: torch.Tensor,
-                cache: torch.Tensor = torch.zeros((0, 0, 0))
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+                cache: torch.Tensor = torch.zeros((0, 0, 0))) \
+             -> Tuple[torch.Tensor, torch.Tensor]:
 
         xs_pad = x
 
-        xs_pad = self.channel_proj1(xs_pad)  # size -> linear_units
-        xs_pad, new_cnn_cache = self.csgu(xs_pad, cache)  # linear_units -> linear_units/2
-        xs_pad = self.channel_proj2(xs_pad)  # linear_units/2 -> size
+        # size -> linear_units
+        xs_pad = self.channel_proj1(xs_pad)
+        # linear_units -> linear_units/2
+        xs_pad, new_cnn_cache = self.csgu(xs_pad, cache)
+        # linear_units/2 -> size
+        xs_pad = self.channel_proj2(xs_pad)
+
         out = xs_pad
 
         return out, new_cnn_cache
