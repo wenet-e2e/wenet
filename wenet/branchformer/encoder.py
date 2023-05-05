@@ -1,6 +1,6 @@
 # Copyright (c) 2022 Yifan Peng (Carnegie Mellon University)
 #               2023 Voicecomm Inc (Kai Li)
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -230,7 +230,7 @@ class BranchformerEncoder(nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
-        for layer in self.encoders:                                      
+        for layer in self.encoders:
             xs, chunk_masks, _ , _ = layer(xs, chunk_masks, pos_emb, mask_pad)
 
         xs = self.after_norm(xs)
@@ -238,7 +238,7 @@ class BranchformerEncoder(nn.Module):
         # return the masks before encoder layers, and the masks will be used
         # for cross attention with decoder later
         return xs, masks
-    
+
     def forward_chunk(
         self,
         xs: torch.Tensor,

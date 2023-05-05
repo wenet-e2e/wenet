@@ -1,6 +1,6 @@
 # Copyright (c) 2022 Yifan Peng (Carnegie Mellon University)
 #               2023 Voicecomm Inc (Kai Li)
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -44,7 +44,7 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
         super().__init__()
 
         # split input channels
-        n_channels = size // 2  
+        n_channels = size // 2
         self.norm = nn.LayerNorm(n_channels)
         # self.lorder is used to distinguish if it's a causal convolution,
         # if self.lorder > 0: it's a causal convolution, the input will be
@@ -155,9 +155,9 @@ class ConvolutionalGatingMLP(torch.nn.Module):
         self.channel_proj2 = torch.nn.Linear(linear_units // 2, size)
 
     def forward(self,
-                x: torch.Tensor, 
+                x: torch.Tensor,
                 pos_emb: torch.Tensor,
-                mask: torch.Tensor, 
+                mask: torch.Tensor,
                 cache: torch.Tensor = torch.zeros((0, 0, 0))
     ) -> Tuple[torch.Tensor, torch.Tensor]:
 

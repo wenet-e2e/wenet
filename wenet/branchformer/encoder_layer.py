@@ -1,6 +1,6 @@
 # Copyright (c) 2022 Yifan Peng (Carnegie Mellon University)
 #               2023 Voicecomm Inc (Kai Li)
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -105,9 +105,9 @@ class BranchformerEncoderLayer(torch.nn.Module):
         else:
             self.merge_proj = torch.nn.Identity()
 
-    def forward(self, 
-                x: torch.Tensor, 
-                mask: torch.Tensor, 
+    def forward(self,
+                x: torch.Tensor,
+                mask: torch.Tensor,
                 pos_emb: torch.Tensor,
                 mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
                 att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
@@ -142,7 +142,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
         # skip_layer = False
         # # with stochastic depth, residual connection `x + f(x)` becomes
         # # `x <- x + 1 / (1 - p) * f(x)` at training time.
-        
+
         # if self.training and self.stochastic_depth_rate > 0:
         #     skip_layer = torch.rand(1).item() < self.stochastic_depth_rate
         #     stoch_layer_coeff = 1.0 / (1 - self.stochastic_depth_rate)
@@ -157,7 +157,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
         # Two branches
         x1 = x
         x2 = x
-    
+
         # Branch 1: multi-headed attention module
         if self.attn is not None:
             x1 = self.norm_mha(x1)

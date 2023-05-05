@@ -1,6 +1,6 @@
 # Copyright (c) 2019 Shigeki Karita
 #               2020 Mobvoi Inc. (authors: Binbin Zhang, Di Wu)
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -134,7 +134,7 @@ class ScaledPositionalEncoding(PositionalEncoding):
         """Reset parameters."""
         self.alpha.data = torch.tensor(1.0)
 
-    def forward(self, 
+    def forward(self,
                 x: torch.Tensor,
                 offset: Union[int, torch.Tensor] = 0,
     )-> Tuple[torch.Tensor, torch.Tensor]:
