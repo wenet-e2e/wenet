@@ -106,13 +106,13 @@ class BranchformerEncoderLayer(torch.nn.Module):
             self.merge_proj = torch.nn.Identity()
 
     def forward(self,
-                x: torch.Tensor,
-                mask: torch.Tensor,
-                pos_emb: torch.Tensor,
-                mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-                cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-               ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        x: torch.Tensor,
+        mask: torch.Tensor,
+        pos_emb: torch.Tensor,
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
         Args:

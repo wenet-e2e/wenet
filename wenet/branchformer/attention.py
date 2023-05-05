@@ -83,7 +83,8 @@ class MultiHeadedAttention(nn.Module):
         Args:
             value (torch.Tensor): Transformed value (#batch, n_head, time2, d_k).
             scores (torch.Tensor): Attention score (#batch, n_head, time1, time2).
-            mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2) (0, 0, 0) means fake mask..
+            mask (torch.Tensor): Mask (#batch, 1, time2) or (#batch, time1, time2) 
+                 (0, 0, 0) means fake mask.
 
         Returns:
             torch.Tensor: Transformed value (#batch, time1, d_model)
@@ -249,7 +250,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
         # Remove rel_shift since it is useless in speech recognition,
         # and it requires special attention for streaming.
-        #matrix_bd = self.rel_shift(matrix_bd)
+        # matrix_bd = self.rel_shift(matrix_bd)
 
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k
