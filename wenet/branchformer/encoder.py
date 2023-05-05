@@ -74,17 +74,6 @@ class BranchformerEncoder(nn.Module):
         super().__init__()
         self._output_size = output_size
 
-        if rel_pos_type == "legacy":
-            if pos_enc_layer_type == "rel_pos":
-                pos_enc_layer_type = "legacy_rel_pos"
-            if attention_layer_type == "rel_selfattn":
-                attention_layer_type = "legacy_rel_selfattn"
-        elif rel_pos_type == "latest":
-            assert attention_layer_type != "legacy_rel_selfattn"
-            assert pos_enc_layer_type != "legacy_rel_pos"
-        else:
-            raise ValueError("unknown rel_pos_type: " + rel_pos_type)
-
         if pos_enc_layer_type == "abs_pos":
             pos_enc_class = PositionalEncoding
         elif pos_enc_layer_type == "no_pos":

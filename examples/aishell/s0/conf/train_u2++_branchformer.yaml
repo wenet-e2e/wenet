@@ -7,7 +7,6 @@ encoder_conf:
     attention_heads: 4
     attention_layer_type: rel_selfattn
     pos_enc_layer_type: rel_pos
-    rel_pos_type: latest
     use_cgmlp: true
     cgmlp_linear_units: 2048
     cgmlp_conv_kernel: 63
