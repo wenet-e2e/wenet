@@ -28,7 +28,6 @@ import torch.nn as nn
 from wenet.utils.common import get_activation
 
 
-
 class ConvolutionalSpatialGatingUnit(torch.nn.Module):
     """Convolutional Spatial Gating Unit (CSGU)."""
 
@@ -166,10 +165,13 @@ class ConvolutionalGatingMLP(torch.nn.Module):
 
         # size -> linear_units
         xs_pad = self.channel_proj1(xs_pad)
+
         # linear_units -> linear_units/2
         xs_pad, new_cnn_cache = self.csgu(xs_pad, cache)
+
         # linear_units/2 -> size
         xs_pad = self.channel_proj2(xs_pad)
+
 
         out = xs_pad
 

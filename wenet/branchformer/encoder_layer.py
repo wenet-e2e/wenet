@@ -20,6 +20,7 @@ import torch
 import torch.nn as nn
 from typing import Optional, Tuple
 
+
 class BranchformerEncoderLayer(torch.nn.Module):
     """Branchformer encoder layer module.
 
@@ -80,9 +81,6 @@ class BranchformerEncoderLayer(torch.nn.Module):
         if self.use_two_branches:
             if self.merge_method == "concat":
                 self.merge_proj = torch.nn.Linear(size + size, size)
-            # elif self.merge_method == "learned_ave":
-            #     # linear projection after weighted average
-            #     self.merge_proj = torch.nn.Linear(size, size)
             elif self.merge_method == "fixed_ave":
                 assert (
                     0.0 <= cgmlp_weight <= 1.0
@@ -136,24 +134,16 @@ class BranchformerEncoderLayer(torch.nn.Module):
             torch.Tensor: cnn_cahce tensor (#batch, size, cache_t2).
         """
 
-
-
         stoch_layer_coeff = 1.0
-        # torch jit failed
-        # skip_layer = False
-        # # with stochastic depth, residual connection `x + f(x)` becomes
-        # # `x <- x + 1 / (1 - p) * f(x)` at training time.
+        skip_layer = False
+        # with stochastic depth, residual connection `x + f(x)` becomes
+        # `x <- x + 1 / (1 - p) * f(x)` at training time.
+        if self.training and self.stochastic_depth_rate > 0:
+            skip_layer = torch.rand(1).item() < self.stochastic_depth_rate
+            stoch_layer_coeff = 1.0 / (1 - self.stochastic_depth_rate)
 
-        # if self.training and self.stochastic_depth_rate > 0:
-        #     skip_layer = torch.rand(1).item() < self.stochastic_depth_rate
-        #     stoch_layer_coeff = 1.0 / (1 - self.stochastic_depth_rate)
-
-        # if skip_layer:
-        #     # if cache is not None:
-        #     #     x = torch.cat([cache, x], dim=1)
-        #     if pos_emb is not None:
-        #         return (x, pos_emb), mask
-        #     return x, mask
+        if skip_layer:
+            return x, mask, att_cache, cnn_cache
 
         # Two branches
         x1 = x
@@ -167,13 +157,10 @@ class BranchformerEncoderLayer(torch.nn.Module):
 
         # Branch 2: convolutional gating mlp
         # Fake new cnn cache here, and then change it in conv_module
-
         new_cnn_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
         if self.cgmlp is not None:
             x2 = self.norm_mlp(x2)
-
             x2, new_cnn_cache = self.cgmlp(x2, pos_emb, mask_pad, cnn_cache)
-
             x2 = self.dropout(x2)
 
         # Merge two branches
