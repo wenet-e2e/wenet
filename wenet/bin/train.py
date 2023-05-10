@@ -398,6 +398,9 @@ def main():
             'epoch': epoch, 'lr': lr, 'cv_loss': cv_loss, 'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')
         }
+        if local_rank == 0:
+            writer.add_scalar('epoch/cv_loss', cv_loss, epoch)
+            writer.add_scalar('epoch/lr', lr, epoch)
         if args.deepspeed:
             # NOTE(xcsong): All ranks should call this API, but only rank 0
             #   save the general model params. see:
@@ -412,7 +415,7 @@ def main():
                     model_dir, "{}/{}.pt".format(model_dir, epoch),
                     tag='{}'.format(epoch))
                 os.system("rm -rf {}/{}".format(model_dir, epoch))
-        elif local_rank == 0:
+        else:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
             save_checkpoint(model, save_model_path, infos)
         final_epoch = epoch
