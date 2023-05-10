@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# Modified from ESPnet(https://github.com/espnet/espnet)
 
 """BranchformerEncoderLayer definition."""
 
@@ -70,17 +70,22 @@ class BranchformerEncoderLayer(torch.nn.Module):
 
         self.dropout = torch.nn.Dropout(dropout_rate)
 
-        # # attention-based pooling for two branches
-        # self.pooling_proj1 = torch.nn.Linear(size, 1)
-        # self.pooling_proj2 = torch.nn.Linear(size, 1)
-
-        # # linear projections for calculating merging weights
-        # self.weight_proj1 = torch.nn.Linear(size, 1)
-        # self.weight_proj2 = torch.nn.Linear(size, 1)
-
         if self.use_two_branches:
             if self.merge_method == "concat":
                 self.merge_proj = torch.nn.Linear(size + size, size)
+
+            elif self.merge_method == "learned_ave":
+                # # attention-based pooling for two branches
+                self.pooling_proj1 = torch.nn.Linear(size, 1)
+                self.pooling_proj2 = torch.nn.Linear(size, 1)
+
+                # # linear projections for calculating merging weights
+                self.weight_proj1 = torch.nn.Linear(size, 1)
+                self.weight_proj2 = torch.nn.Linear(size, 1)
+
+                # linear projection after weighted average
+                self.merge_proj = torch.nn.Linear(size, size)
+
             elif self.merge_method == "fixed_ave":
                 assert (
                     0.0 <= cgmlp_weight <= 1.0
@@ -116,14 +121,14 @@ class BranchformerEncoderLayer(torch.nn.Module):
 
         Args:
             x (Union[Tuple, torch.Tensor]): Input tensor  (#batch, time, size).
-            mask (torch.Tensor): Mask tensor for the input (#batch, 1, time).
+            mask (torch.Tensor): Mask tensor for the input (#batch, time, time).
             pos_emb (torch.Tensor): positional encoding, must not be None
-                for ConformerEncoderLayer.
+                for BranchformerEncoderLayer.
             mask_pad (torch.Tensor): batch padding mask used for conv module.
                 (#batch, 1，time), (0, 0, 0) means fake mask.
             att_cache (torch.Tensor): Cache tensor of the KEY & VALUE
                 (#batch=1, head, cache_t1, d_k * 2), head * d_k == size.
-            cnn_cache (torch.Tensor): Convolution cache in conformer layer
+            cnn_cache (torch.Tensor): Convolution cache in cgmlp layer
                 (#batch=1, size, cache_t2)
 
         Returns:
@@ -168,6 +173,47 @@ class BranchformerEncoderLayer(torch.nn.Module):
             if self.merge_method == "concat":
                 x = x + stoch_layer_coeff * self.dropout(
                     self.merge_proj(torch.cat([x1, x2], dim=-1))
+                )
+            elif self.merge_method == "learned_ave":
+                if (
+                    self.training
+                    and self.attn_branch_drop_rate > 0
+                    and torch.rand(1).item() < self.attn_branch_drop_rate
+                ):
+                    # Drop the attn branch
+                    w1, w2 = torch.tensor(0.0), torch.tensor(1.0)
+                else:
+                    # branch1
+                    score1 = (self.pooling_proj1(x1).transpose(1, 2) / self.size**0.5)
+                    score1 = score1.masked_fill(mask_pad.eq(0), -float('inf'))
+                    score1 = torch.softmax(score1, dim=-1).masked_fill(
+                        mask_pad.eq(0), 0.0
+                    )
+
+                    pooled1 = torch.matmul(score1, x1).squeeze(1)  # (batch, size)
+                    weight1 = self.weight_proj1(pooled1)  # (batch, 1)
+
+                    # branch2
+                    score2 = (self.pooling_proj2(x2).transpose(1, 2) / self.size**0.5)
+                    score2 = score2.masked_fill(mask_pad.eq(0), -float('inf'))
+                    score2 = torch.softmax(score2, dim=-1).masked_fill(
+                        mask_pad.eq(0), 0.0
+                    )
+
+                    pooled2 = torch.matmul(score2, x2).squeeze(1)  # (batch, size)
+                    weight2 = self.weight_proj2(pooled2)  # (batch, 1)
+
+                    # normalize weights of two branches
+                    merge_weights = torch.softmax(
+                        torch.cat([weight1, weight2], dim=-1), dim=-1
+                    )  # (batch, 2)
+                    merge_weights = merge_weights.unsqueeze(-1).unsqueeze(
+                        -1
+                    )  # (batch, 2, 1, 1)
+                    w1, w2 = merge_weights[:, 0], merge_weights[:, 1]  # (batch, 1, 1)
+
+                x = x + stoch_layer_coeff * self.dropout(
+                    self.merge_proj(w1 * x1 + w2 * x2)
                 )
             elif self.merge_method == "fixed_ave":
                 x = x + stoch_layer_coeff * self.dropout(
