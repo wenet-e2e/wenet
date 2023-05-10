@@ -37,6 +37,7 @@ class Executor:
         epoch = args.get('epoch', 0)
         accum_grad = args.get('accum_grad', 1)
         is_distributed = args.get('is_distributed', True)
+        is_deepspeed = args.get('is_deepspeed', False)
         use_amp = args.get('use_amp', False)
         logging.info('using accumulate grad, new batch size is {} times'
                      ' larger than before'.format(accum_grad))
@@ -71,20 +72,41 @@ class Executor:
                 else:
                     context = nullcontext
                 with context():
-                    # autocast context
-                    # The more details about amp can be found in
-                    # https://pytorch.org/docs/stable/notes/amp_examples.html
-                    with torch.cuda.amp.autocast(scaler is not None):
+                    if is_deepspeed:
                         loss_dict = model(feats, feats_lengths, target,
                                           target_lengths)
                         loss = loss_dict['loss'] / accum_grad
-                    if use_amp:
-                        scaler.scale(loss).backward()
-                    else:
-                        loss.backward()
+                        # computes the gradients for the given loss
+                        model.backward(loss)
+                    elif not is_deepspeed:
+                        # autocast context
+                        # The more details about amp can be found in
+                        # https://pytorch.org/docs/stable/notes/amp_examples.html
+                        with torch.cuda.amp.autocast(scaler is not None):
+                            loss_dict = model(feats, feats_lengths, target,
+                                              target_lengths)
+                            loss = loss_dict['loss'] / accum_grad
+                        if use_amp:
+                            scaler.scale(loss).backward()
+                        else:
+                            loss.backward()
 
                 num_seen_utts += num_utts
-                if batch_idx % accum_grad == 0:
+                if is_deepspeed:
+                    if rank == 0 and writer is not None \
+                            and model.is_gradient_accumulation_boundary():
+                        writer.add_scalar('train_loss', loss.item(), self.step)
+                    # NOTE(xcsong): The step() function in DeepSpeed engine updates
+                    #   the model parameters as well as the learning rate. There is
+                    #   no need to manually perform scheduler.step(). In addition,
+                    #   Zeroing the gradients is handled automatically by DeepSpeed
+                    #   after the weights have been updated using a mini-batch.
+                    #   DeepSpeed also performs gradient averaging automatically
+                    #   at the gradient accumulation boundaries. In other words:
+                    #   `ds_model.step() = optimizer.step() + scheduler.step() + optimizer.zero_grad() + accum_grad` # noqa
+                    #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
+                    model.step()
+                elif batch_idx % accum_grad == 0:
                     if rank == 0 and writer is not None:
                         writer.add_scalar('train_loss', loss, self.step)
                     # Use mixed precision training
