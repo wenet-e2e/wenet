@@ -164,7 +164,8 @@ def main():
             ds_configs = json.load(fin)
 
     # deepspeed read world_size from env
-    assert args.world_size == -1 if args.deepspeed else None
+    if args.deepspeed:
+        assert args.world_size == -1
     # distributed means pytorch native ddp, it parse world_size from args
     distributed = args.world_size > 1
     local_rank = args.rank
