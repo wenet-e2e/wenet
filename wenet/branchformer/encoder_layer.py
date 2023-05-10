@@ -82,7 +82,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
                 # # linear projections for calculating merging weights
                 self.weight_proj1 = torch.nn.Linear(size, 1)
                 self.weight_proj2 = torch.nn.Linear(size, 1)
-                
+
                 # linear projection after weighted average
                 self.merge_proj = torch.nn.Linear(size, size)
 
@@ -186,7 +186,9 @@ class BranchformerEncoderLayer(torch.nn.Module):
                     # branch1
                     score1 = (self.pooling_proj1(x1).transpose(1, 2) / self.size**0.5)
                     score1 = score1.masked_fill(mask_pad.eq(0), -float('inf'))
-                    score1 = torch.softmax(score1, dim=-1).masked_fill(mask_pad.eq(0), 0.0)
+                    score1 = torch.softmax(score1, dim=-1).masked_fill(
+                        mask_pad.eq(0), 0.0
+                    )
 
                     pooled1 = torch.matmul(score1, x1).squeeze(1)  # (batch, size)
                     weight1 = self.weight_proj1(pooled1)  # (batch, 1)
@@ -194,7 +196,9 @@ class BranchformerEncoderLayer(torch.nn.Module):
                     # branch2
                     score2 = (self.pooling_proj2(x2).transpose(1, 2) / self.size**0.5)
                     score2 = score2.masked_fill(mask_pad.eq(0), -float('inf'))
-                    score2 = torch.softmax(score2, dim=-1).masked_fill(mask_pad.eq(0), 0.0)
+                    score2 = torch.softmax(score2, dim=-1).masked_fill(
+                        mask_pad.eq(0), 0.0
+                    )
 
                     pooled2 = torch.matmul(score2, x2).squeeze(1)  # (batch, size)
                     weight2 = self.weight_proj2(pooled2)  # (batch, 1)
@@ -203,7 +207,9 @@ class BranchformerEncoderLayer(torch.nn.Module):
                     merge_weights = torch.softmax(
                         torch.cat([weight1, weight2], dim=-1), dim=-1
                     )  # (batch, 2)
-                    merge_weights = merge_weights.unsqueeze(-1).unsqueeze(-1)  # (batch, 2, 1, 1)
+                    merge_weights = merge_weights.unsqueeze(-1).unsqueeze(
+                        -1
+                    )  # (batch, 2, 1, 1)
                     w1, w2 = merge_weights[:, 0], merge_weights[:, 1]  # (batch, 1, 1)
 
                 x = x + stoch_layer_coeff * self.dropout(
