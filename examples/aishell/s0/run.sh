@@ -56,6 +56,7 @@ average_num=30
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
 deepspeed=false
+deepspeed_save_states="model_only"
 
 . tools/parse_options.sh || exit 1;
 
@@ -144,7 +145,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       wenet/bin/train.py \
         --deepspeed \
         --deepspeed_config conf/ds_stage2.json \
-        --deepspeed.save_states "model_only" \
+        --deepspeed.save_states ${deepspeed_save_states} \
         --ddp.dist_backend $dist_backend \
         --ddp.init_method $init_method \
         --data_type  $data_type \
