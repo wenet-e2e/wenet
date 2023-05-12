@@ -70,19 +70,19 @@ class BranchformerEncoderLayer(torch.nn.Module):
 
         self.dropout = torch.nn.Dropout(dropout_rate)
 
+        # # attention-based pooling for two branches
+        self.pooling_proj1 = torch.nn.Linear(size, 1)
+        self.pooling_proj2 = torch.nn.Linear(size, 1)
+
+        # # linear projections for calculating merging weights
+        self.weight_proj1 = torch.nn.Linear(size, 1)
+        self.weight_proj2 = torch.nn.Linear(size, 1)
+
         if self.use_two_branches:
             if self.merge_method == "concat":
                 self.merge_proj = torch.nn.Linear(size + size, size)
 
             elif self.merge_method == "learned_ave":
-                # # attention-based pooling for two branches
-                self.pooling_proj1 = torch.nn.Linear(size, 1)
-                self.pooling_proj2 = torch.nn.Linear(size, 1)
-
-                # # linear projections for calculating merging weights
-                self.weight_proj1 = torch.nn.Linear(size, 1)
-                self.weight_proj2 = torch.nn.Linear(size, 1)
-
                 # linear projection after weighted average
                 self.merge_proj = torch.nn.Linear(size, size)
 
@@ -157,7 +157,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
         # Branch 1: multi-headed attention module
         if self.attn is not None:
             x1 = self.norm_mha(x1)
-            x_att, new_att_cache = self.attn(x1, x1, x1, pos_emb, mask, att_cache)
+            x_att, new_att_cache = self.attn(x1, x1, x1, mask, pos_emb, att_cache)
             x1 = self.dropout(x_att)
 
         # Branch 2: convolutional gating mlp

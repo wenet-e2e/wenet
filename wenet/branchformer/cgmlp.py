@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# Modified from ESPnet(https://github.com/espnet/espnet)
 
 """MLP with convolutional gating (cgMLP) definition.
 
@@ -120,7 +120,6 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
         if self.linear is not None:
             x_g = self.linear(x_g)
 
-
         x_g = self.act(x_g)
         out = x_r * x_g  # (N, T, D/2)
         out = self.dropout(out)
@@ -171,7 +170,6 @@ class ConvolutionalGatingMLP(torch.nn.Module):
 
         # linear_units/2 -> size
         xs_pad = self.channel_proj2(xs_pad)
-
 
         out = xs_pad
 
