@@ -363,8 +363,8 @@ def main():
             if "scheduler" in ds_configs:
                 scheduler = None
             else:
-                def scheduler(opt): return scheduler_type(
-                    opt, **configs['scheduler_conf'])
+                def scheduler(opt):
+                    return scheduler_type(opt, **configs['scheduler_conf'])
         model, optimizer, _, scheduler = deepspeed.initialize(
             args=args, model=model, optimizer=optimizer,
             lr_scheduler=scheduler, model_parameters=model.parameters())
