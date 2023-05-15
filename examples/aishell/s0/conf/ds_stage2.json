@@ -7,7 +7,7 @@
     "enabled": false,
     "auto_cast": false,
     "loss_scale": 0,
-    "initial_scale_power": 16,
+    "initial_scale_power": 8,
     "loss_scale_window": 1000,
     "hysteresis": 2,
     "min_loss_scale": 1
@@ -19,16 +19,18 @@
   "zero_optimization": {
     "stage": 2,
     "offload_optimizer": {
-      "device": "none"
+      "device": "none",
+      "pin_memory": true
     },
     "offload_param": {
-      "device": "none"
+      "device": "none",
+      "pin_memory": true
     },
     "allgather_partitions": true,
-    "allgather_bucket_size": 5e8,
+    "allgather_bucket_size": 1e7,
     "overlap_comm": true,
     "reduce_scatter": true,
-    "reduce_bucket_size": 5e8,
+    "reduce_bucket_size": 1e7,
     "contiguous_gradients" : true
   },
   "activation_checkpointing": {
@@ -37,7 +39,7 @@
     "contiguous_memory_optimization": false,
     "number_checkpoints": null,
     "synchronize_checkpoint_boundary": false,
-    "profile": false
+    "profile": true
   },
   "flops_profiler": {
     "enabled": false,
