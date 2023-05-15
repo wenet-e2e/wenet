@@ -39,6 +39,13 @@ class Executor:
         is_distributed = args.get('is_distributed', True)
         is_deepspeed = args.get('is_deepspeed', False)
         use_amp = args.get('use_amp', False)
+        ds_dtype = args.get('ds_dtype', "fp32")
+        if ds_dtype == "fp16":
+            ds_dtype = torch.float16
+        elif ds_dtype == "bf16":
+            ds_dtype = torch.bfloat16
+        else:
+            ds_dtype = None
         logging.info('using accumulate grad, new batch size is {} times'
                      ' larger than before'.format(accum_grad))
         if use_amp:
@@ -73,8 +80,12 @@ class Executor:
                     context = nullcontext
                 with context():
                     if is_deepspeed:
-                        loss_dict = model(feats, feats_lengths, target,
-                                          target_lengths)
+                        with torch.cuda.amp.autocast(
+                            enabled=ds_dtype is not None,
+                            dtype=ds_dtype, cache_enabled=False
+                        ):
+                            loss_dict = model(feats, feats_lengths, target,
+                                              target_lengths)
                         loss = loss_dict['loss'] / accum_grad
                         # computes the gradients for the given loss
                         model.backward(loss)
@@ -148,6 +159,14 @@ class Executor:
         rank = args.get('rank', 0)
         epoch = args.get('epoch', 0)
         log_interval = args.get('log_interval', 10)
+        is_deepspeed = args.get('is_deepspeed', False)
+        ds_dtype = args.get('ds_dtype', "fp32")
+        if ds_dtype == "fp16":
+            ds_dtype = torch.float16
+        elif ds_dtype == "bf16":
+            ds_dtype = torch.bfloat16
+        else:  # fp32
+            ds_dtype = None
         # in order to avoid division by 0
         num_seen_utts = 1
         total_loss = 0.0
@@ -161,7 +180,15 @@ class Executor:
                 num_utts = target_lengths.size(0)
                 if num_utts == 0:
                     continue
-                loss_dict = model(feats, feats_lengths, target, target_lengths)
+                if is_deepspeed:
+                    with torch.cuda.amp.autocast(
+                        enabled=ds_dtype is not None,
+                        dtype=ds_dtype, cache_enabled=False
+                    ):
+                        loss_dict = model(feats, feats_lengths,
+                                          target, target_lengths)
+                else:
+                    loss_dict = model(feats, feats_lengths, target, target_lengths)
                 loss = loss_dict['loss']
                 if torch.isfinite(loss):
                     num_seen_utts += num_utts

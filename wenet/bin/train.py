@@ -162,6 +162,12 @@ def main():
     if args.deepspeed:
         with open(args.deepspeed_config, 'r') as fin:
             ds_configs = json.load(fin)
+        if "fp16" in ds_configs and ds_configs["fp16"]["enabled"] == True:
+            configs["ds_dtype"] = "fp16"
+        elif "bf16" in ds_configs and ds_configs["bf16"]["enabled"] == True:
+            configs["ds_dtype"] = "bf16"
+        else:
+            configs["ds_dtype"] = "fp32"
 
     # deepspeed read world_size from env
     if args.deepspeed:
@@ -238,13 +244,11 @@ def main():
                                    batch_size=None,
                                    pin_memory=args.pin_memory,
                                    num_workers=args.num_workers,
-                                   persistent_workers=True,
                                    prefetch_factor=args.prefetch)
     cv_data_loader = DataLoader(cv_dataset,
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
                                 num_workers=args.num_workers,
-                                persistent_workers=True,
                                 prefetch_factor=args.prefetch)
 
     if 'fbank_conf' in configs['dataset_conf']:
@@ -336,21 +340,31 @@ def main():
         optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
     else:
         raise ValueError("unknown optimizer: " + configs['optim'])
+    scheduler_type = None
     if configs['scheduler'] == 'warmuplr':
+        scheduler_type = WarmupLR
         scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
     elif configs['scheduler'] == 'NoamHoldAnnealing':
+        scheduler_type = NoamHoldAnnealing
         scheduler = NoamHoldAnnealing(optimizer, **configs['scheduler_conf'])
     else:
         raise ValueError("unknown scheduler: " + configs['scheduler'])
 
     # NOTE(xcsong): Custom optimizer might yield poor performance when
     #   zero-offload is enabled, if you do want to offload optimizer to CPU,
-    #   please set optimizer & scheduler in ds_config.json, see:
+    #   please set optimizer in ds_config.json, see:
     #   (https://www.deepspeed.ai/docs/config-json/#optimizer-parameters)
     if args.deepspeed:
-        if "optimizer" in ds_configs and "scheduler" in ds_configs:
-            # disable custom optimizer if it is set in ds_config
-            optimizer, scheduler = None, None
+        if "optimizer" in ds_configs:
+            # NOTE(xcsong): Disable custom optimizer if it is set in ds_config,
+            # extremely useful when enable cpu_offload, DeepspeedCpuAdam
+            # could be 4~5x faster than torch native adam
+            optimizer = None
+            if "scheduler" in ds_configs:
+                scheduler = None
+            else:
+                scheduler = lambda opt: scheduler_type(
+                    opt, **configs['scheduler_conf'])
         model, optimizer, _, scheduler = deepspeed.initialize(
             args=args, model=model, optimizer=optimizer,
             lr_scheduler=scheduler, model_parameters=model.parameters())
