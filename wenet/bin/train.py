@@ -162,9 +162,9 @@ def main():
     if args.deepspeed:
         with open(args.deepspeed_config, 'r') as fin:
             ds_configs = json.load(fin)
-        if "fp16" in ds_configs and ds_configs["fp16"]["enabled"] == True:
+        if "fp16" in ds_configs and ds_configs["fp16"]["enabled"]:
             configs["ds_dtype"] = "fp16"
-        elif "bf16" in ds_configs and ds_configs["bf16"]["enabled"] == True:
+        elif "bf16" in ds_configs and ds_configs["bf16"]["enabled"]:
             configs["ds_dtype"] = "bf16"
         else:
             configs["ds_dtype"] = "fp32"
@@ -363,7 +363,7 @@ def main():
             if "scheduler" in ds_configs:
                 scheduler = None
             else:
-                scheduler = lambda opt: scheduler_type(
+                def scheduler(opt): return scheduler_type(
                     opt, **configs['scheduler_conf'])
         model, optimizer, _, scheduler = deepspeed.initialize(
             args=args, model=model, optimizer=optimizer,
