@@ -140,8 +140,9 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     # NOTE(xcsong): deepspeed fails with gloo, see
     #   https://github.com/microsoft/DeepSpeed/issues/2818
     dist_backend="nccl"
-    python tools/filter_uneven_data.py data/$train_set/data.list \
-      $data_type $num_gpus $num_utts_per_shard data/$train_set/data.list.filter
+    [ ! -f data/$train_set/data.list.filter ] && \
+      python tools/filter_uneven_data.py data/$train_set/data.list \
+        $data_type $num_gpus $num_utts_per_shard data/$train_set/data.list.filter
     deepspeed --include localhost:$CUDA_VISIBLE_DEVICES \
       wenet/bin/train.py \
         --deepspeed \
