@@ -165,7 +165,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
         new_cnn_cache = torch.zeros((0, 0, 0), dtype=x.dtype, device=x.device)
         if self.cgmlp is not None:
             x2 = self.norm_mlp(x2)
-            x2, new_cnn_cache = self.cgmlp(x2, pos_emb, mask_pad, cnn_cache)
+            x2, new_cnn_cache = self.cgmlp(x2, mask_pad, cnn_cache)
             x2 = self.dropout(x2)
 
         # Merge two branches

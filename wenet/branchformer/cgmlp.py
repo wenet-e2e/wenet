@@ -84,12 +84,18 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
             torch.nn.init.normal_(self.linear.weight, std=1e-6)
             torch.nn.init.ones_(self.linear.bias)
 
-    def forward(self, x, cache: torch.Tensor = torch.zeros((0, 0, 0))):
+    def forward(
+        self,
+        x: torch.Tensor,
+        cache: torch.Tensor = torch.zeros((0, 0, 0))
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward method
 
         Args:
             x (torch.Tensor): (batch, time, channels)
-            gate_add (torch.Tensor): (batch, time, channels/2) not used yet
+            cache (torch.Tensor): left context cache, it is only
+                used in causal convolution (#batch, channels, cache_t),
+                (0, 0, 0) meas fake cache.
 
         Returns:
             out (torch.Tensor): (batch, time, channels/2)
@@ -155,10 +161,22 @@ class ConvolutionalGatingMLP(torch.nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        pos_emb: torch.Tensor,
         mask: torch.Tensor,
         cache: torch.Tensor = torch.zeros((0, 0, 0))
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Forward method
+
+        Args:
+            x (torch.Tensor): (batch, time, channels)
+            mask_pad (torch.Tensor): used for batch padding (#batch, 1, time),
+                (0, 0, 0) means fake mask. Not used yet
+            cache (torch.Tensor): left context cache, it is only
+                used in causal convolution (#batch, channels, cache_t),
+                (0, 0, 0) meas fake cache.
+
+        Returns:
+            out (torch.Tensor): (batch, time, channels/2)
+        """
 
         xs_pad = x
 
