@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+# Modified from ESPnet(https://github.com/espnet/espnet)
 
 """MLP with convolutional gating (cgMLP) definition.
 
@@ -84,12 +84,18 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
             torch.nn.init.normal_(self.linear.weight, std=1e-6)
             torch.nn.init.ones_(self.linear.bias)
 
-    def forward(self, x, cache: torch.Tensor = torch.zeros((0, 0, 0))):
+    def forward(
+        self,
+        x: torch.Tensor,
+        cache: torch.Tensor = torch.zeros((0, 0, 0))
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward method
 
         Args:
             x (torch.Tensor): (batch, time, channels)
-            gate_add (torch.Tensor): (batch, time, channels/2) not used yet
+            cache (torch.Tensor): left context cache, it is only
+                used in causal convolution (#batch, channels, cache_t),
+                (0, 0, 0) meas fake cache.
 
         Returns:
             out (torch.Tensor): (batch, time, channels/2)
@@ -119,7 +125,6 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
         x_g = self.conv(x_g.transpose(1, 2)).transpose(1, 2)  # (N, T, D/2)
         if self.linear is not None:
             x_g = self.linear(x_g)
-
 
         x_g = self.act(x_g)
         out = x_r * x_g  # (N, T, D/2)
@@ -156,10 +161,22 @@ class ConvolutionalGatingMLP(torch.nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        pos_emb: torch.Tensor,
         mask: torch.Tensor,
         cache: torch.Tensor = torch.zeros((0, 0, 0))
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Forward method
+
+        Args:
+            x (torch.Tensor): (batch, time, channels)
+            mask_pad (torch.Tensor): used for batch padding (#batch, 1, time),
+                (0, 0, 0) means fake mask. Not used yet
+            cache (torch.Tensor): left context cache, it is only
+                used in causal convolution (#batch, channels, cache_t),
+                (0, 0, 0) meas fake cache.
+
+        Returns:
+            out (torch.Tensor): (batch, time, channels/2)
+        """
 
         xs_pad = x
 
@@ -171,7 +188,6 @@ class ConvolutionalGatingMLP(torch.nn.Module):
 
         # linear_units/2 -> size
         xs_pad = self.channel_proj2(xs_pad)
-
 
         out = xs_pad
 

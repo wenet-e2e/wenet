@@ -12,29 +12,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+# Modified from ESPnet(https://github.com/espnet/espnet)
 
+"""Encoder definition."""
 
 import torch
 import torch.nn as nn
 from typing import List, Optional, Tuple, Union
 
-from wenet.branchformer.attention import (
+from wenet.transformer.attention import (
     MultiHeadedAttention,
     RelPositionMultiHeadedAttention,
 )
-from wenet.branchformer.embedding import (
+from wenet.transformer.embedding import (
     RelPositionalEncoding,
     PositionalEncoding,
     NoPositionalEncoding,
-    ScaledPositionalEncoding
+)
+from wenet.transformer.subsampling import (
+    Conv2dSubsampling4,
+    Conv2dSubsampling6,
+    Conv2dSubsampling8,
 )
 
 from wenet.branchformer.encoder_layer import BranchformerEncoderLayer
 from wenet.branchformer.cgmlp import ConvolutionalGatingMLP
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
-from wenet.transformer.subsampling import Conv2dSubsampling4
-
 
 
 class BranchformerEncoder(nn.Module):
@@ -48,7 +52,6 @@ class BranchformerEncoder(nn.Module):
         attention_heads: int = 4,
         attention_layer_type: str = "rel_selfattn",
         pos_enc_layer_type: str = "rel_pos",
-        rel_pos_type: str = "latest",
         use_cgmlp: bool = True,
         cgmlp_linear_units: int = 2048,
         cgmlp_conv_kernel: int = 31,
@@ -62,7 +65,6 @@ class BranchformerEncoder(nn.Module):
         positional_dropout_rate: float = 0.1,
         attention_dropout_rate: float = 0.0,
         input_layer: Optional[str] = "conv2d",
-        zero_triu: bool = False,
         padding_idx: int = -1,
         stochastic_depth_rate: Union[float, List[float]] = 0.0,
         static_chunk_size: int = 0,
@@ -81,8 +83,6 @@ class BranchformerEncoder(nn.Module):
         elif pos_enc_layer_type == "rel_pos":
             assert attention_layer_type == "rel_selfattn"
             pos_enc_class = RelPositionalEncoding
-        elif pos_enc_layer_type == "scaled_abs_pos":
-            pos_enc_class = ScaledPositionalEncoding
         else:
             raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
 
@@ -95,6 +95,20 @@ class BranchformerEncoder(nn.Module):
             )
         elif input_layer == "conv2d":
             self.embed = Conv2dSubsampling4(
+                input_size,
+                output_size,
+                dropout_rate,
+                pos_enc_class(output_size, positional_dropout_rate),
+            )
+        elif input_layer == "conv2d6":
+            self.embed = Conv2dSubsampling6(
+                input_size,
+                output_size,
+                dropout_rate,
+                pos_enc_class(output_size, positional_dropout_rate),
+            )
+        elif input_layer == "conv2d8":
+            self.embed = Conv2dSubsampling8(
                 input_size,
                 output_size,
                 dropout_rate,
@@ -117,7 +131,6 @@ class BranchformerEncoder(nn.Module):
                 attention_heads,
                 output_size,
                 attention_dropout_rate,
-                zero_triu,
             )
         else:
             raise ValueError("unknown encoder_attn_layer: " + attention_layer_type)
@@ -314,7 +327,6 @@ class BranchformerEncoder(nn.Module):
         r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
 
         return (xs, r_att_cache, r_cnn_cache)
-
 
     def forward_chunk_by_chunk(
         self,
