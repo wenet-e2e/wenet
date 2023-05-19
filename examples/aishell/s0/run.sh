@@ -48,6 +48,8 @@ train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
 checkpoint=
+num_workers=8
+prefetch=500
 
 # use average_checkpoint will get better result
 average_checkpoint=true
@@ -125,7 +127,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
-  dist_backend="gloo"
+  dist_backend="nccl"
   world_size=`expr $num_gpus \* $num_nodes`
   echo "total gpus is: $world_size"
   cmvn_opts=
@@ -157,8 +159,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --cv_data data/dev/data.list \
         ${checkpoint:+--checkpoint $checkpoint} \
         --model_dir $dir \
-        --num_workers 8 \
-        --prefetch 500 \
+        --num_workers ${num_workers} \
+        --prefetch ${prefetch} \
         $cmvn_opts \
         --pin_memory
   else
@@ -181,8 +183,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --ddp.world_size $world_size \
         --ddp.rank $rank \
         --ddp.dist_backend $dist_backend \
-        --num_workers 8 \
-        --prefetch 500 \
+        --num_workers ${num_workers} \
+        --prefetch ${prefetch} \
         $cmvn_opts \
         --pin_memory
     } &

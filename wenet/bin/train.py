@@ -244,11 +244,13 @@ def main():
                                    batch_size=None,
                                    pin_memory=args.pin_memory,
                                    num_workers=args.num_workers,
+                                   persistent_workers=True,
                                    prefetch_factor=args.prefetch)
     cv_data_loader = DataLoader(cv_dataset,
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
                                 num_workers=args.num_workers,
+                                persistent_workers=True,
                                 prefetch_factor=args.prefetch)
 
     if 'fbank_conf' in configs['dataset_conf']:
@@ -378,11 +380,12 @@ def main():
         # NOTE(xcsong): All ranks should call this API, but only rank 0
         #   save the general model params. see:
         #   https://github.com/microsoft/DeepSpeed/issues/2993
-        model.save_checkpoint(save_dir=model_dir, tag='init')
-        if args.save_states == "model_only" and local_rank == 0:
-            convert_zero_checkpoint_to_fp32_state_dict(
-                model_dir, "{}/init.pt".format(model_dir), tag='init')
-            os.system("rm -rf {}/{}".format(model_dir, "init"))
+        with torch.no_grad():
+            model.save_checkpoint(save_dir=model_dir, tag='init')
+            if args.save_states == "model_only" and local_rank == 0:
+                convert_zero_checkpoint_to_fp32_state_dict(
+                    model_dir, "{}/init.pt".format(model_dir), tag='init')
+                os.system("rm -rf {}/{}".format(model_dir, "init"))
     elif start_epoch == 0 and local_rank == 0:
         save_model_path = os.path.join(model_dir, 'init.pt')
         save_checkpoint(model, save_model_path)
@@ -419,16 +422,18 @@ def main():
             # NOTE(xcsong): All ranks should call this API, but only rank 0
             #   save the general model params. see:
             #   https://github.com/microsoft/DeepSpeed/issues/2993
-            model.save_checkpoint(save_dir=model_dir, tag='{}'.format(epoch),
-                                  client_state=infos)
             with open("{}/{}.yaml".format(model_dir, epoch), 'w') as fout:
                 data = yaml.dump(infos)
                 fout.write(data)
-            if args.save_states == "model_only" and local_rank == 0:
-                convert_zero_checkpoint_to_fp32_state_dict(
-                    model_dir, "{}/{}.pt".format(model_dir, epoch),
-                    tag='{}'.format(epoch))
-                os.system("rm -rf {}/{}".format(model_dir, epoch))
+            with torch.no_grad():
+                model.save_checkpoint(save_dir=model_dir,
+                                      tag='{}'.format(epoch),
+                                      client_state=infos)
+                if args.save_states == "model_only" and local_rank == 0:
+                    convert_zero_checkpoint_to_fp32_state_dict(
+                        model_dir, "{}/{}.pt".format(model_dir, epoch),
+                        tag='{}'.format(epoch))
+                    os.system("rm -rf {}/{}".format(model_dir, epoch))
         else:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
             save_checkpoint(model, save_model_path, infos)
