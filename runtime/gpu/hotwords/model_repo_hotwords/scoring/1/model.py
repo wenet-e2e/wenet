@@ -298,7 +298,7 @@ class TritonPythonModel:
             if best_index.is_cpu():
                 best_index = best_index.as_numpy()
             else:
-                best_index = from_dlpack(best_index.to_dlpack())
+                best_index = from_dlpack(best_index.to_dlpack()).clone()
                 best_index = best_index.cpu().numpy()
             hyps = []
             idx = 0

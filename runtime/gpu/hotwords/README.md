@@ -17,6 +17,7 @@ model_dir=$(pwd)/20210601_u2++_conformer_exp
 wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_exp.tar.gz --no-check-certificate
 tar -zxvf 20210601_u2++_conformer_exp.tar.gz
 model_dir=$(pwd)/20210601_u2++_conformer_exp
+
 onnx_model_dir=$model_dir/onnx_model_dir
 mkdir $onnx_model_dir
 
@@ -41,9 +42,12 @@ cp hotwords.yaml $onnx_model_dir
 ```
 cd wenet/runtime/gpu
 # docker version >= 19.03.2
-docker build . -f Dockerfile/Dockerfile.hotwordsserver -t wenet_hotwords_server:latest --network host
+# If download fails, please use https://huggingface.co/58AILab/wenet_u2pp_aishell1_with_hotwords/blob/main/Dockerfile/Dockerfile.hotwordsserver
+docker build . -f Dockerfile/Dockerfile.server -t wenet_hotwords_server:latest --network host
+
 # offline model
 docker run --gpus '"device=0"' --rm -it -v $PWD:/ws/gpu -v $PWD/hotwords/model_repo_hotwords:/ws/gpu/hotwords/model_repo -v $onnx_model_dir:/ws/onnx_model -p 8000:8000 -p 8001:8001 -p 8002:8002 --shm-size=1g --ulimit memlock=-1 wenet_hotwords_server:latest /workspace/scripts/convert_start_hotwords_server.sh
+
 # streaming model
 docker run --gpus '"device=0"' --rm -it -v $PWD:/ws/gpu -v $PWD/hotwords/model_repo_stateful_hotwords:/ws/gpu/hotwords/model_repo -v $onnx_model_dir:/ws/onnx_model -p 8000:8000 -p 8001:8001 -p 8002:8002 --shm-size=1g --ulimit memlock=-1  wenet_hotwords_server:latest /workspace/scripts/convert_start_hotwords_server.sh
 ```
