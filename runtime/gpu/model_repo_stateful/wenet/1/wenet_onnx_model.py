@@ -1,4 +1,5 @@
-# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2021 NVIDIA CORPORATION
+#               2023 58.com(Wuba) Inc AI Lab.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +20,9 @@ import os
 import torch
 import triton_python_backend_utils as pb_utils
 from torch.utils.dlpack import to_dlpack, from_dlpack
-from swig_decoders import ctc_beam_search_decoder_batch, Scorer, map_batch
+from swig_decoders import ctc_beam_search_decoder_batch, \
+    Scorer, HotWordsScorer, map_batch
+import yaml
 
 class WenetModel(object):
     def __init__(self, model_config, device):
@@ -48,6 +51,21 @@ class WenetModel(object):
         self.scorer = None
         if os.path.exists(lm_path):
             self.scorer = Scorer(alpha, beta, lm_path, self.vocab)
+
+        # load hotwords
+        self.hotwords_scorer = None
+        hotwords_path = params.get("hotwords_path", None)
+        if os.path.exists(hotwords_path):
+            self.hotwords = self.load_hotwords(hotwords_path)
+            max_order = 4
+            if self.hotwords is not None:
+                for w in self.hotwords:
+                    max_order = max(max_order, len(w))
+                self.hotwords_scorer = HotWordsScorer(self.hotwords, self.vocab,
+                                                      window_length=max_order,
+                                                      SPACE_ID=-2,
+                                                      is_character_based=True)
+                print(f"Successfully load hotwords! Hotwords orders = {max_order}")
 
         self.bidecoder = params.get('bidecoder')
         # rescore setting
@@ -92,11 +110,20 @@ class WenetModel(object):
             vocab[id] = char
         return (id2vocab, vocab, space_id, blank_id, sos_eos)
 
+    def load_hotwords(self, hotwords_file):
+        """
+        load hotwords.yaml
+        """
+        with open(hotwords_file, 'r', encoding="utf-8") as fin:
+            configs = yaml.load(fin, Loader=yaml.FullLoader)
+        return configs
+
     def parse_model_parameters(self, model_parameters):
         model_p = {"beam_size": 10,
                    "cutoff_prob": 0.999,
                    "vocab_path": None,
                    "lm_path": None,
+                   "hotwords_path": None,
                    "alpha": 2.0,
                    "beta": 1.0,
                    "rescoring": 0,
@@ -134,7 +161,9 @@ class WenetModel(object):
                                                            self.space_id,
                                                            self.cutoff_prob,
                                                            num_processes,
-                                                           self.scorer)
+                                                           self.scorer,
+                                                           self.hotwords_scorer,
+                                                           )
 
         if self.rescoring and len(rescore_index) != 0:
             # find the end of sequence
@@ -177,7 +206,8 @@ class WenetModel(object):
                                          batch_start, beam_size,
                                          blank_id, space_id,
                                          cutoff_prob, num_processes,
-                                         scorer):
+                                         scorer,
+                                         hotwords_scorer):
         """
         Return: Batch x Beam_size elements, each element is a tuple
                 (score, list of ids),
@@ -199,7 +229,8 @@ class WenetModel(object):
                                                    blank_id,
                                                    space_id,
                                                    cutoff_prob,
-                                                   scorer)
+                                                   scorer,
+                                                   hotwords_scorer)
         return score_hyps
 
     def batch_rescoring(self, score_hyps, hist_enc, hist_mask_len, max_len):

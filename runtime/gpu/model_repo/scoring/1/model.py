@@ -1,11 +1,27 @@
+# Copyright (c) 2021 NVIDIA CORPORATION
+#               2023 58.com(Wuba) Inc AI Lab.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import triton_python_backend_utils as pb_utils
 import numpy as np
 import multiprocessing
 from torch.utils.dlpack import from_dlpack
 from swig_decoders import ctc_beam_search_decoder_batch, \
-    Scorer, PathTrie, TrieVector, map_batch
+    Scorer, HotWordsScorer, PathTrie, TrieVector, map_batch
 import json
 import os
+import yaml
 
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
@@ -51,6 +67,7 @@ class TritonPythonModel:
         self.feature_size = encoder_config['dims'][-1]
 
         self.lm = None
+        self.hotwords_scorer = None
         self.init_ctc_rescore(self.model_config['parameters'])
         print('Initialized Rescoring!')
 
@@ -73,6 +90,8 @@ class TritonPythonModel:
                 cutoff_prob = float(value)
             elif key == "lm_path":
                 lm_path = value
+            elif key == "hotwords_path":
+                hotwords_path = value
             elif key == "alpha":
                 alpha = float(value)
             elif key == "beta":
@@ -89,6 +108,17 @@ class TritonPythonModel:
         if lm_path and os.path.exists(lm_path):
             self.lm = Scorer(alpha, beta, lm_path, vocab)
             print("Successfully load language model!")
+        if hotwords_path and os.path.exists(hotwords_path):
+            self.hotwords = self.load_hotwords(hotwords_path)
+            max_order = 4
+            if self.hotwords is not None:
+                for w in self.hotwords:
+                    max_order = max(max_order, len(w))
+                self.hotwords_scorer = HotWordsScorer(self.hotwords, vocab,
+                                                      window_length=max_order,
+                                                      SPACE_ID=-2,
+                                                      is_character_based=True)
+                print(f"Successfully load hotwords! Hotwords orders = {max_order}")
         self.vocabulary = vocab
         self.bidecoder = bidecoder
         sos = eos = len(vocab) - 1
@@ -109,6 +139,14 @@ class TritonPythonModel:
         for id, char in id2vocab.items():
             vocab[id] = char
         return id2vocab, vocab
+
+    def load_hotwords(self, hotwords_file):
+        """
+        load hotwords.yaml
+        """
+        with open(hotwords_file, 'r', encoding="utf-8") as fin:
+            configs = yaml.load(fin, Loader=yaml.FullLoader)
+        return configs
 
     def execute(self, requests):
         """`execute` must be implemented in every Python model. `execute`
@@ -184,7 +222,8 @@ class TritonPythonModel:
                                                    blank_id=self.blank_id,
                                                    space_id=-2,
                                                    cutoff_prob=self.cutoff_prob,
-                                                   ext_scorer=self.lm)
+                                                   ext_scorer=self.lm,
+                                                   hotwords_scorer=self.hotwords_scorer)
         all_hyps = []
         all_ctc_score = []
         max_seq_len = 0
