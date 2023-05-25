@@ -12,6 +12,7 @@ Subpackages
 .. toctree::
    :maxdepth: 2
 
+   wenet.branchformer
    wenet.dataset
    wenet.efficient_conformer
    wenet.squeezeformer

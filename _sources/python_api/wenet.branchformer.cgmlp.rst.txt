@@ -1,0 +1,7 @@
+wenet.branchformer.cgmlp module
+===============================
+
+.. automodule:: wenet.branchformer.cgmlp
+   :members:
+   :undoc-members:
+   :show-inheritance:
