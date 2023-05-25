@@ -100,6 +100,8 @@
 <span class="kn">import</span> <span class="nn">torchaudio.compliance.kaldi</span> <span class="k">as</span> <span class="nn">kaldi</span>
 <span class="kn">from</span> <span class="nn">torch.nn.utils.rnn</span> <span class="kn">import</span> <span class="n">pad_sequence</span>
 
+<span class="n">torchaudio</span><span class="o">.</span><span class="n">utils</span><span class="o">.</span><span class="n">sox_utils</span><span class="o">.</span><span class="n">set_buffer_size</span><span class="p">(</span><span class="mi">16500</span><span class="p">)</span>
+
 <span class="n">AUDIO_FORMAT_SETS</span> <span class="o">=</span> <span class="nb">set</span><span class="p">([</span><span class="s1">&#39;flac&#39;</span><span class="p">,</span> <span class="s1">&#39;mp3&#39;</span><span class="p">,</span> <span class="s1">&#39;m4a&#39;</span><span class="p">,</span> <span class="s1">&#39;ogg&#39;</span><span class="p">,</span> <span class="s1">&#39;opus&#39;</span><span class="p">,</span> <span class="s1">&#39;wav&#39;</span><span class="p">,</span> <span class="s1">&#39;wma&#39;</span><span class="p">])</span>
 
 
