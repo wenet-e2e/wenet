@@ -86,8 +86,12 @@ class Executor:
                         ):
                             loss_dict = model(feats, feats_lengths, target,
                                               target_lengths)
-                        loss = loss_dict['loss'] / accum_grad
-                        # computes the gradients for the given loss
+                        loss = loss_dict['loss']
+                        # NOTE(xcsong): Zeroing the gradients is handled automatically by DeepSpeed after the weights # noqa
+                        #   have been updated using a mini-batch. DeepSpeed also performs gradient averaging automatically # noqa
+                        #   at the gradient accumulation boundaries and addresses clip_grad_norm internally. In other words # noqa
+                        #   `model.backward(loss)` is equivalent to `loss.backward() + clip_grad_norm_() + optimizer.zero_grad() + accum_grad` # noqa
+                        #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
                         model.backward(loss)
                     elif not is_deepspeed:
                         # autocast context
@@ -107,14 +111,8 @@ class Executor:
                     if rank == 0 and writer is not None \
                             and model.is_gradient_accumulation_boundary():
                         writer.add_scalar('train_loss', loss.item(), self.step)
-                    # NOTE(xcsong): The step() function in DeepSpeed engine updates
-                    #   the model parameters as well as the learning rate. There is
-                    #   no need to manually perform scheduler.step(). In addition,
-                    #   Zeroing the gradients is handled automatically by DeepSpeed
-                    #   after the weights have been updated using a mini-batch.
-                    #   DeepSpeed also performs gradient averaging automatically
-                    #   at the gradient accumulation boundaries. In other words:
-                    #   `ds_model.step() = optimizer.step() + scheduler.step() + optimizer.zero_grad() + accum_grad` # noqa
+                    # NOTE(xcsong): The step() function in DeepSpeed engine updates the model parameters as well as the learning rate. There is # noqa
+                    #   no need to manually perform scheduler.step(). In other words: `ds_model.step() = optimizer.step() + scheduler.step()` # noqa
                     #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
                     model.step()
                     self.step += 1
