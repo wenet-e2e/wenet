@@ -374,7 +374,7 @@ def main():
     configs['is_distributed'] = distributed   # pytorch native ddp
     configs['is_deepspeed'] = args.deepspeed  # deepspeed
     configs['use_amp'] = args.use_amp
-    if start_epoch == 0 and args.deepspeed:
+    if args.deepspeed and start_epoch == 0:
         # NOTE(xcsong): All ranks should call this API, but only rank 0
         #   save the general model params. see:
         #   https://github.com/microsoft/DeepSpeed/issues/2993
@@ -384,7 +384,7 @@ def main():
                 convert_zero_checkpoint_to_fp32_state_dict(
                     model_dir, "{}/init.pt".format(model_dir), tag='init')
                 os.system("rm -rf {}/{}".format(model_dir, "init"))
-    elif start_epoch == 0 and local_rank == 0:
+    elif not args.deepspeed and start_epoch == 0 and local_rank == 0:
         save_model_path = os.path.join(model_dir, 'init.pt')
         save_checkpoint(model, save_model_path)
 
