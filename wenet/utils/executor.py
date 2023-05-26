@@ -79,7 +79,7 @@ class Executor:
                 else:
                     context = nullcontext
                 with context():
-                    if is_deepspeed:
+                    if is_deepspeed:  # deepspeed
                         with torch.cuda.amp.autocast(
                             enabled=ds_dtype is not None,
                             dtype=ds_dtype, cache_enabled=False
@@ -93,7 +93,7 @@ class Executor:
                         #   `model.backward(loss)` is equivalent to `loss.backward() + clip_grad_norm_() + optimizer.zero_grad() + accum_grad` # noqa
                         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
                         model.backward(loss)
-                    elif not is_deepspeed:
+                    else:             # pytorch native ddp
                         # autocast context
                         # The more details about amp can be found in
                         # https://pytorch.org/docs/stable/notes/amp_examples.html

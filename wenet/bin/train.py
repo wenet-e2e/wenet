@@ -244,13 +244,11 @@ def main():
                                    batch_size=None,
                                    pin_memory=args.pin_memory,
                                    num_workers=args.num_workers,
-                                   persistent_workers=True,
                                    prefetch_factor=args.prefetch)
     cv_data_loader = DataLoader(cv_dataset,
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
                                 num_workers=args.num_workers,
-                                persistent_workers=True,
                                 prefetch_factor=args.prefetch)
 
     if 'fbank_conf' in configs['dataset_conf']:
@@ -418,13 +416,13 @@ def main():
         if local_rank == 0:
             writer.add_scalar('epoch/cv_loss', cv_loss, epoch)
             writer.add_scalar('epoch/lr', lr, epoch)
+            with open("{}/{}.yaml".format(model_dir, epoch), 'w') as fout:
+                data = yaml.dump(infos)
+                fout.write(data)
         if args.deepspeed:
             # NOTE(xcsong): All ranks should call this API, but only rank 0
             #   save the general model params. see:
             #   https://github.com/microsoft/DeepSpeed/issues/2993
-            with open("{}/{}.yaml".format(model_dir, epoch), 'w') as fout:
-                data = yaml.dump(infos)
-                fout.write(data)
             with torch.no_grad():
                 model.save_checkpoint(save_dir=model_dir,
                                       tag='{}'.format(epoch),
@@ -434,7 +432,7 @@ def main():
                         model_dir, "{}/{}.pt".format(model_dir, epoch),
                         tag='{}'.format(epoch))
                     os.system("rm -rf {}/{}".format(model_dir, epoch))
-        else:
+        elif not args.deepspeed and local_rank == 0:
             save_model_path = os.path.join(model_dir, '{}.pt'.format(epoch))
             save_checkpoint(model, save_model_path, infos)
         final_epoch = epoch
