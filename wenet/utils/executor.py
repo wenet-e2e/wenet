@@ -116,7 +116,7 @@ class Executor:
                     #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
                     model.step()
                     self.step += 1
-                elif batch_idx % accum_grad == 0:
+                elif not is_deepspeed and batch_idx % accum_grad == 0:
                     if rank == 0 and writer is not None:
                         writer.add_scalar('train_loss', loss, self.step)
                     # Use mixed precision training
