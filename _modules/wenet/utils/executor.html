@@ -112,7 +112,15 @@
         <span class="n">epoch</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">accum_grad</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;accum_grad&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">is_distributed</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_distributed&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">is_deepspeed</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_deepspeed&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
         <span class="n">use_amp</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_amp&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">ds_dtype</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ds_dtype&#39;</span><span class="p">,</span> <span class="s2">&quot;fp32&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ds_dtype</span> <span class="o">==</span> <span class="s2">&quot;fp16&quot;</span><span class="p">:</span>
+            <span class="n">ds_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float16</span>
+        <span class="k">elif</span> <span class="n">ds_dtype</span> <span class="o">==</span> <span class="s2">&quot;bf16&quot;</span><span class="p">:</span>
+            <span class="n">ds_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ds_dtype</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;using accumulate grad, new batch size is </span><span class="si">{}</span><span class="s1"> times&#39;</span>
                      <span class="s1">&#39; larger than before&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">accum_grad</span><span class="p">))</span>
         <span class="k">if</span> <span class="n">use_amp</span><span class="p">:</span>
@@ -146,20 +154,44 @@
                 <span class="k">else</span><span class="p">:</span>
                     <span class="n">context</span> <span class="o">=</span> <span class="n">nullcontext</span>
                 <span class="k">with</span> <span class="n">context</span><span class="p">():</span>
-                    <span class="c1"># autocast context</span>
-                    <span class="c1"># The more details about amp can be found in</span>
-                    <span class="c1"># https://pytorch.org/docs/stable/notes/amp_examples.html</span>
-                    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">amp</span><span class="o">.</span><span class="n">autocast</span><span class="p">(</span><span class="n">scaler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
-                        <span class="n">loss_dict</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">feats</span><span class="p">,</span> <span class="n">feats_lengths</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span>
-                                          <span class="n">target_lengths</span><span class="p">)</span>
-                        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_dict</span><span class="p">[</span><span class="s1">&#39;loss&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">accum_grad</span>
-                    <span class="k">if</span> <span class="n">use_amp</span><span class="p">:</span>
-                        <span class="n">scaler</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
-                    <span class="k">else</span><span class="p">:</span>
-                        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">is_deepspeed</span><span class="p">:</span>  <span class="c1"># deepspeed</span>
+                        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">amp</span><span class="o">.</span><span class="n">autocast</span><span class="p">(</span>
+                            <span class="n">enabled</span><span class="o">=</span><span class="n">ds_dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+                            <span class="n">dtype</span><span class="o">=</span><span class="n">ds_dtype</span><span class="p">,</span> <span class="n">cache_enabled</span><span class="o">=</span><span class="kc">False</span>
+                        <span class="p">):</span>
+                            <span class="n">loss_dict</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">feats</span><span class="p">,</span> <span class="n">feats_lengths</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span>
+                                              <span class="n">target_lengths</span><span class="p">)</span>
+                        <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_dict</span><span class="p">[</span><span class="s1">&#39;loss&#39;</span><span class="p">]</span>
+                        <span class="c1"># NOTE(xcsong): Zeroing the gradients is handled automatically by DeepSpeed after the weights # noqa</span>
+                        <span class="c1">#   have been updated using a mini-batch. DeepSpeed also performs gradient averaging automatically # noqa</span>
+                        <span class="c1">#   at the gradient accumulation boundaries and addresses clip_grad_norm internally. In other words # noqa</span>
+                        <span class="c1">#   `model.backward(loss)` is equivalent to `loss.backward() + clip_grad_norm_() + optimizer.zero_grad() + accum_grad` # noqa</span>
+                        <span class="c1">#   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa</span>
+                        <span class="n">model</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>             <span class="c1"># pytorch native ddp</span>
+                        <span class="c1"># autocast context</span>
+                        <span class="c1"># The more details about amp can be found in</span>
+                        <span class="c1"># https://pytorch.org/docs/stable/notes/amp_examples.html</span>
+                        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">amp</span><span class="o">.</span><span class="n">autocast</span><span class="p">(</span><span class="n">scaler</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+                            <span class="n">loss_dict</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">feats</span><span class="p">,</span> <span class="n">feats_lengths</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span>
+                                              <span class="n">target_lengths</span><span class="p">)</span>
+                            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_dict</span><span class="p">[</span><span class="s1">&#39;loss&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">accum_grad</span>
+                        <span class="k">if</span> <span class="n">use_amp</span><span class="p">:</span>
+                            <span class="n">scaler</span><span class="o">.</span><span class="n">scale</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
 
                 <span class="n">num_seen_utts</span> <span class="o">+=</span> <span class="n">num_utts</span>
-                <span class="k">if</span> <span class="n">batch_idx</span> <span class="o">%</span> <span class="n">accum_grad</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_deepspeed</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">writer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> \
+                            <span class="ow">and</span> <span class="n">model</span><span class="o">.</span><span class="n">is_gradient_accumulation_boundary</span><span class="p">():</span>
+                        <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;train_loss&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+                    <span class="c1"># NOTE(xcsong): The step() function in DeepSpeed engine updates the model parameters as well as the learning rate. There is # noqa</span>
+                    <span class="c1">#   no need to manually perform scheduler.step(). In other words: `ds_model.step() = optimizer.step() + scheduler.step()` # noqa</span>
+                    <span class="c1">#   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa</span>
+                    <span class="n">model</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">elif</span> <span class="ow">not</span> <span class="n">is_deepspeed</span> <span class="ow">and</span> <span class="n">batch_idx</span> <span class="o">%</span> <span class="n">accum_grad</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">if</span> <span class="n">rank</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">writer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                         <span class="n">writer</span><span class="o">.</span><span class="n">add_scalar</span><span class="p">(</span><span class="s1">&#39;train_loss&#39;</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
                     <span class="c1"># Use mixed precision training</span>
@@ -200,6 +232,14 @@
         <span class="n">rank</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rank&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">epoch</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;epoch&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="n">log_interval</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;log_interval&#39;</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="n">is_deepspeed</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;is_deepspeed&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">ds_dtype</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ds_dtype&#39;</span><span class="p">,</span> <span class="s2">&quot;fp32&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">ds_dtype</span> <span class="o">==</span> <span class="s2">&quot;fp16&quot;</span><span class="p">:</span>
+            <span class="n">ds_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float16</span>
+        <span class="k">elif</span> <span class="n">ds_dtype</span> <span class="o">==</span> <span class="s2">&quot;bf16&quot;</span><span class="p">:</span>
+            <span class="n">ds_dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">bfloat16</span>
+        <span class="k">else</span><span class="p">:</span>  <span class="c1"># fp32</span>
+            <span class="n">ds_dtype</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="c1"># in order to avoid division by 0</span>
         <span class="n">num_seen_utts</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="n">total_loss</span> <span class="o">=</span> <span class="mf">0.0</span>
@@ -213,7 +253,15 @@
                 <span class="n">num_utts</span> <span class="o">=</span> <span class="n">target_lengths</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">num_utts</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                     <span class="k">continue</span>
-                <span class="n">loss_dict</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">feats</span><span class="p">,</span> <span class="n">feats_lengths</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">target_lengths</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">is_deepspeed</span><span class="p">:</span>
+                    <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">amp</span><span class="o">.</span><span class="n">autocast</span><span class="p">(</span>
+                        <span class="n">enabled</span><span class="o">=</span><span class="n">ds_dtype</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">,</span>
+                        <span class="n">dtype</span><span class="o">=</span><span class="n">ds_dtype</span><span class="p">,</span> <span class="n">cache_enabled</span><span class="o">=</span><span class="kc">False</span>
+                    <span class="p">):</span>
+                        <span class="n">loss_dict</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">feats</span><span class="p">,</span> <span class="n">feats_lengths</span><span class="p">,</span>
+                                          <span class="n">target</span><span class="p">,</span> <span class="n">target_lengths</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">loss_dict</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">feats</span><span class="p">,</span> <span class="n">feats_lengths</span><span class="p">,</span> <span class="n">target</span><span class="p">,</span> <span class="n">target_lengths</span><span class="p">)</span>
                 <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_dict</span><span class="p">[</span><span class="s1">&#39;loss&#39;</span><span class="p">]</span>
                 <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">loss</span><span class="p">):</span>
                     <span class="n">num_seen_utts</span> <span class="o">+=</span> <span class="n">num_utts</span>
