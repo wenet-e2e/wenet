@@ -37,7 +37,15 @@ class Executor:
         epoch = args.get('epoch', 0)
         accum_grad = args.get('accum_grad', 1)
         is_distributed = args.get('is_distributed', True)
+        is_deepspeed = args.get('is_deepspeed', False)
         use_amp = args.get('use_amp', False)
+        ds_dtype = args.get('ds_dtype', "fp32")
+        if ds_dtype == "fp16":
+            ds_dtype = torch.float16
+        elif ds_dtype == "bf16":
+            ds_dtype = torch.bfloat16
+        else:
+            ds_dtype = None
         logging.info('using accumulate grad, new batch size is {} times'
                      ' larger than before'.format(accum_grad))
         if use_amp:
@@ -71,20 +79,44 @@ class Executor:
                 else:
                     context = nullcontext
                 with context():
-                    # autocast context
-                    # The more details about amp can be found in
-                    # https://pytorch.org/docs/stable/notes/amp_examples.html
-                    with torch.cuda.amp.autocast(scaler is not None):
-                        loss_dict = model(feats, feats_lengths, target,
-                                          target_lengths)
-                        loss = loss_dict['loss'] / accum_grad
-                    if use_amp:
-                        scaler.scale(loss).backward()
-                    else:
-                        loss.backward()
+                    if is_deepspeed:  # deepspeed
+                        with torch.cuda.amp.autocast(
+                            enabled=ds_dtype is not None,
+                            dtype=ds_dtype, cache_enabled=False
+                        ):
+                            loss_dict = model(feats, feats_lengths, target,
+                                              target_lengths)
+                        loss = loss_dict['loss']
+                        # NOTE(xcsong): Zeroing the gradients is handled automatically by DeepSpeed after the weights # noqa
+                        #   have been updated using a mini-batch. DeepSpeed also performs gradient averaging automatically # noqa
+                        #   at the gradient accumulation boundaries and addresses clip_grad_norm internally. In other words # noqa
+                        #   `model.backward(loss)` is equivalent to `loss.backward() + clip_grad_norm_() + optimizer.zero_grad() + accum_grad` # noqa
+                        #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
+                        model.backward(loss)
+                    else:             # pytorch native ddp
+                        # autocast context
+                        # The more details about amp can be found in
+                        # https://pytorch.org/docs/stable/notes/amp_examples.html
+                        with torch.cuda.amp.autocast(scaler is not None):
+                            loss_dict = model(feats, feats_lengths, target,
+                                              target_lengths)
+                            loss = loss_dict['loss'] / accum_grad
+                        if use_amp:
+                            scaler.scale(loss).backward()
+                        else:
+                            loss.backward()
 
                 num_seen_utts += num_utts
-                if batch_idx % accum_grad == 0:
+                if is_deepspeed:
+                    if rank == 0 and writer is not None \
+                            and model.is_gradient_accumulation_boundary():
+                        writer.add_scalar('train_loss', loss.item(), self.step)
+                    # NOTE(xcsong): The step() function in DeepSpeed engine updates the model parameters as well as the learning rate. There is # noqa
+                    #   no need to manually perform scheduler.step(). In other words: `ds_model.step() = optimizer.step() + scheduler.step()` # noqa
+                    #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
+                    model.step()
+                    self.step += 1
+                elif not is_deepspeed and batch_idx % accum_grad == 0:
                     if rank == 0 and writer is not None:
                         writer.add_scalar('train_loss', loss, self.step)
                     # Use mixed precision training
@@ -125,6 +157,14 @@ class Executor:
         rank = args.get('rank', 0)
         epoch = args.get('epoch', 0)
         log_interval = args.get('log_interval', 10)
+        is_deepspeed = args.get('is_deepspeed', False)
+        ds_dtype = args.get('ds_dtype', "fp32")
+        if ds_dtype == "fp16":
+            ds_dtype = torch.float16
+        elif ds_dtype == "bf16":
+            ds_dtype = torch.bfloat16
+        else:  # fp32
+            ds_dtype = None
         # in order to avoid division by 0
         num_seen_utts = 1
         total_loss = 0.0
@@ -138,7 +178,15 @@ class Executor:
                 num_utts = target_lengths.size(0)
                 if num_utts == 0:
                     continue
-                loss_dict = model(feats, feats_lengths, target, target_lengths)
+                if is_deepspeed:
+                    with torch.cuda.amp.autocast(
+                        enabled=ds_dtype is not None,
+                        dtype=ds_dtype, cache_enabled=False
+                    ):
+                        loss_dict = model(feats, feats_lengths,
+                                          target, target_lengths)
+                else:
+                    loss_dict = model(feats, feats_lengths, target, target_lengths)
                 loss = loss_dict['loss']
                 if torch.isfinite(loss):
                     num_seen_utts += num_utts
