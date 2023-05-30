@@ -251,7 +251,7 @@ class BestRQModel(torch.nn.Module):
     def _stack_features(self, input: torch.Tensor) -> torch.Tensor:
 
         stack_input = input.unfold(1, size=self.stack_frames, step=self.stride)
-        stack_input = stack_input.transpose(-1,-2)
+        stack_input = stack_input.transpose(-1, -2)
         b, n, f, d = stack_input.size()
         stack_input = stack_input.reshape(b, n, f * d)
 
