@@ -22,6 +22,7 @@ from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
+from wenet.branchformer.encoder import BranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.paraformer.paraformer import Paraformer
@@ -60,6 +61,10 @@ def init_model(configs):
                                             ['efficient_conf']
                                             if 'efficient_conf' in
                                                configs['encoder_conf'] else {})
+    elif encoder_type == 'branchformer':
+        encoder = BranchformerEncoder(input_dim,
+                                      global_cmvn=global_cmvn,
+                                      **configs['encoder_conf'])
     else:
         encoder = TransformerEncoder(input_dim,
                                      global_cmvn=global_cmvn,
