@@ -82,11 +82,11 @@ parameters [
   },
   {
     key: "vocab_path",
-    value: { string_value: "/ws/onnx_model/units.txt"}
+    value: { string_value: "#vocabulary_path"}
   },
   {
     key: "lm_path",
-    value: { string_value: "/ws/onnx_model/lm.bin"}
+    value: { string_value: "#lm_path"}
   },
   {
    key: "hotwords_path",
