@@ -3,7 +3,6 @@
 # Copyright 2017 Xingyu Na
 # Apache 2.0
 # 过滤出在aishell_text中有转录结果的wav，取出这部分对应的转录结果，对过滤后的wav和transcript排序去重，记录到训练验证测试文件夹中的wav.scp和text
-# 生成data/train、dev、test
 
 . ./path.sh || exit 1;
 

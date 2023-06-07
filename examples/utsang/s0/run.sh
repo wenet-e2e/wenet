@@ -36,7 +36,8 @@ dict=data/dict/lang_char.txt    #生成的字典存放目录
 # faster on reading data and training.
 data_type=raw
 # data_type=shard
-# num_utts_per_shard=1000 #每个shard文件存放音频个数，默认1000
+# num_utts_per_shard=1000
+num_utts_per_shard=100 #每个shard文件存放音频个数，默认1000
 
 train_set=train   #用训练集运行
 # Optional train_config
@@ -73,7 +74,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-  # Data preparation ： 生成data/train、dev、test
+  # Data preparation
   local/aishell_data_prep.sh ${data}/data_amdo/wav \
     ${data}/data_amdo/transcript
 fi
@@ -89,7 +90,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     rm data/${x}/text.org
   done
 
-# 重采样：
   tools/compute_cmvn_stats.py --num_workers 16 --train_config $train_config \
     --in_scp data/${train_set}/wav.scp \
     --out_cmvn data/$train_set/global_cmvn
