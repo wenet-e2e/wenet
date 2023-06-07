@@ -29,6 +29,7 @@ from wenet.utils.init_model import init_model
 try:
     import onnx
     import onnxruntime
+    from onnxruntime.quantization import quantize_dynamic, QuantType
 except ImportError:
     print('Please install onnx and onnxruntime!')
     sys.exit(1)
@@ -169,6 +170,10 @@ def export_encoder(asr_model, args):
     #   the file and resave it.
     onnx.save(onnx_encoder, encoder_outpath)
     print_input_output_info(onnx_encoder, "onnx_encoder")
+    # Dynamic quantization
+    model_fp32 = encoder_outpath
+    model_quant = os.path.join(args['output_dir'], 'encoder.quant.onnx')
+    quantize_dynamic(model_fp32, model_quant, weight_type=QuantType.QUInt8)
     print('\t\tExport onnx_encoder, done! see {}'.format(encoder_outpath))
 
     print("\tStage-1.3: check onnx_encoder and torch_encoder")
@@ -266,6 +271,10 @@ def export_ctc(asr_model, args):
     onnx.helper.printable_graph(onnx_ctc.graph)
     onnx.save(onnx_ctc, ctc_outpath)
     print_input_output_info(onnx_ctc, "onnx_ctc")
+    # Dynamic quantization
+    model_fp32 = ctc_outpath
+    model_quant = os.path.join(args['output_dir'], 'ctc.quant.onnx')
+    quantize_dynamic(model_fp32, model_quant, weight_type=QuantType.QUInt8)
     print('\t\tExport onnx_ctc, done! see {}'.format(ctc_outpath))
 
     print("\tStage-2.3: check onnx_ctc and torch_ctc")
@@ -315,6 +324,9 @@ def export_decoder(asr_model, args):
     onnx.helper.printable_graph(onnx_decoder.graph)
     onnx.save(onnx_decoder, decoder_outpath)
     print_input_output_info(onnx_decoder, "onnx_decoder")
+    model_fp32 = decoder_outpath
+    model_quant = os.path.join(args['output_dir'], 'decoder.quant.onnx')
+    quantize_dynamic(model_fp32, model_quant, weight_type=QuantType.QUInt8)
     print('\t\tExport onnx_decoder, done! see {}'.format(
         decoder_outpath))
 
@@ -365,7 +377,7 @@ def main():
     arguments['reverse_weight'] = args.reverse_weight
     arguments['output_size'] = configs['encoder_conf']['output_size']
     arguments['num_blocks'] = configs['encoder_conf']['num_blocks']
-    arguments['cnn_module_kernel'] = configs['encoder_conf']['cnn_module_kernel']
+    arguments['cnn_module_kernel'] = configs['encoder_conf'].get('cnn_module_kernel', 1)
     arguments['head'] = configs['encoder_conf']['attention_heads']
     arguments['feature_size'] = configs['input_dim']
     arguments['vocab_size'] = configs['output_dim']

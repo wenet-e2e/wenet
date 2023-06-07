@@ -25,10 +25,12 @@ import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
+from wenet.paraformer.search.beam_search import build_beam_search
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
@@ -63,14 +65,41 @@ def get_args():
                         choices=[
                             'attention', 'ctc_greedy_search',
                             'ctc_prefix_beam_search', 'attention_rescoring',
-                            'rnnt_greedy_search'
+                            'rnnt_greedy_search', 'rnnt_beam_search',
+                            'rnnt_beam_attn_rescoring',
+                            'ctc_beam_td_attn_rescoring', 'hlg_onebest',
+                            'hlg_rescore', 'paraformer_greedy_search',
+                            'paraformer_beam_search',
                         ],
                         default='attention',
                         help='decoding mode')
+
+    parser.add_argument('--search_ctc_weight',
+                        type=float,
+                        default=1.0,
+                        help='ctc weight for nbest generation')
+    parser.add_argument('--search_transducer_weight',
+                        type=float,
+                        default=0.0,
+                        help='transducer weight for nbest generation')
     parser.add_argument('--ctc_weight',
                         type=float,
                         default=0.0,
-                        help='ctc weight for attention rescoring decode mode')
+                        help='ctc weight for rescoring weight in \
+                                  attention rescoring decode mode \
+                              ctc weight for rescoring weight in \
+                                  transducer attention rescore decode mode')
+
+    parser.add_argument('--transducer_weight',
+                        type=float,
+                        default=0.0,
+                        help='transducer weight for rescoring weight in '
+                             'transducer attention rescore mode')
+    parser.add_argument('--attn_weight',
+                        type=float,
+                        default=0.0,
+                        help='attention weight for rescoring weight in '
+                             'transducer attention rescore mode')
     parser.add_argument('--decoding_chunk_size',
                         type=int,
                         default=-1,
@@ -103,6 +132,27 @@ def get_args():
                         type=str,
                         help='used to connect the output characters')
 
+    parser.add_argument('--word',
+                        default='',
+                        type=str,
+                        help='word file, only used for hlg decode')
+    parser.add_argument('--hlg',
+                        default='',
+                        type=str,
+                        help='hlg file, only used for hlg decode')
+    parser.add_argument('--lm_scale',
+                        type=float,
+                        default=0.0,
+                        help='lm scale for hlg attention rescore decode')
+    parser.add_argument('--decoder_scale',
+                        type=float,
+                        default=0.0,
+                        help='lm scale for hlg attention rescore decode')
+    parser.add_argument('--r_decoder_scale',
+                        type=float,
+                        default=0.0,
+                        help='lm scale for hlg attention rescore decode')
+
     args = parser.parse_args()
     print(args)
     return args
@@ -114,8 +164,8 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-    if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring'
-                     ] and args.batch_size > 1:
+    if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring',
+                     'paraformer_beam_search', ] and args.batch_size > 1:
         logging.fatal(
             'decoding mode {} must be running with batch_size == 1'.format(
                 args.mode))
@@ -138,6 +188,7 @@ def main():
     test_conf['speed_perturb'] = False
     test_conf['spec_aug'] = False
     test_conf['spec_sub'] = False
+    test_conf['spec_trim'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
     if 'fbank_conf' in test_conf:
@@ -171,6 +222,13 @@ def main():
     model = model.to(device)
 
     model.eval()
+
+    # Build BeamSearchCIF object
+    if args.mode == 'paraformer_beam_search':
+        paraformer_beam_search = build_beam_search(model, args, device)
+    else:
+        paraformer_beam_search = None
+
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
             keys, feats, target, feats_lengths, target_lengths = batch
@@ -203,6 +261,51 @@ def main():
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
+            elif args.mode == 'rnnt_beam_search':
+                assert (feats.size(0) == 1)
+                assert 'predictor' in configs
+                hyps = model.beam_search(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    beam_size=args.beam_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    ctc_weight=args.search_ctc_weight,
+                    transducer_weight=args.search_transducer_weight)
+            elif args.mode == 'rnnt_beam_attn_rescoring':
+                assert (feats.size(0) == 1)
+                assert 'predictor' in configs
+                hyps = model.transducer_attention_rescoring(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    beam_size=args.beam_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    ctc_weight=args.ctc_weight,
+                    transducer_weight=args.transducer_weight,
+                    attn_weight=args.attn_weight,
+                    reverse_weight=args.reverse_weight,
+                    search_ctc_weight=args.search_ctc_weight,
+                    search_transducer_weight=args.search_transducer_weight)
+            elif args.mode == 'ctc_beam_td_attn_rescoring':
+                assert (feats.size(0) == 1)
+                assert 'predictor' in configs
+                hyps = model.transducer_attention_rescoring(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    beam_size=args.beam_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    ctc_weight=args.ctc_weight,
+                    transducer_weight=args.transducer_weight,
+                    attn_weight=args.attn_weight,
+                    reverse_weight=args.reverse_weight,
+                    search_ctc_weight=args.search_ctc_weight,
+                    search_transducer_weight=args.search_transducer_weight,
+                    beam_search_type='ctc')
             # ctc_prefix_beam_search and attention_rescoring only return one
             # result in List[int], change it to List[List[int]] for compatible
             # with other batch decoding mode
@@ -228,14 +331,54 @@ def main():
                     simulate_streaming=args.simulate_streaming,
                     reverse_weight=args.reverse_weight)
                 hyps = [hyp]
+            elif args.mode == 'hlg_onebest':
+                hyps = model.hlg_onebest(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    hlg=args.hlg,
+                    word=args.word,
+                    symbol_table=symbol_table)
+            elif args.mode == 'hlg_rescore':
+                hyps = model.hlg_rescore(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming,
+                    lm_scale=args.lm_scale,
+                    decoder_scale=args.decoder_scale,
+                    r_decoder_scale=args.r_decoder_scale,
+                    hlg=args.hlg,
+                    word=args.word,
+                    symbol_table=symbol_table)
+            elif args.mode == 'paraformer_beam_search':
+                hyps = model.paraformer_beam_search(
+                    feats,
+                    feats_lengths,
+                    beam_search=paraformer_beam_search,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming)
+            elif args.mode == 'paraformer_greedy_search':
+                hyps = model.paraformer_greedy_search(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    simulate_streaming=args.simulate_streaming)
             for i, key in enumerate(keys):
                 content = []
                 for w in hyps[i]:
                     if w == eos:
                         break
                     content.append(char_dict[w])
-                logging.info('{} {}'.format(key, args.connect_symbol.join(content)))
-                fout.write('{} {}\n'.format(key, args.connect_symbol.join(content)))
+                logging.info('{} {}'.format(key, args.connect_symbol
+                                            .join(content)))
+                fout.write('{} {}\n'.format(key, args.connect_symbol
+                                            .join(content)))
 
 
 if __name__ == '__main__':

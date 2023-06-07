@@ -131,7 +131,7 @@ class Conv2dSubsampling4(BaseSubsampling):
         b, c, t, f = x.size()
         x = self.out(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
-        return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-2:2]
+        return x, pos_emb, x_mask[:, :, 2::2][:, :, 2::2]
 
 
 class Conv2dSubsampling6(BaseSubsampling):
@@ -182,7 +182,7 @@ class Conv2dSubsampling6(BaseSubsampling):
         b, c, t, f = x.size()
         x = self.linear(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
-        return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-4:3]
+        return x, pos_emb, x_mask[:, :, 2::2][:, :, 4::3]
 
 
 class Conv2dSubsampling8(BaseSubsampling):
@@ -237,4 +237,4 @@ class Conv2dSubsampling8(BaseSubsampling):
         b, c, t, f = x.size()
         x = self.linear(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
-        return x, pos_emb, x_mask[:, :, :-2:2][:, :, :-2:2][:, :, :-2:2]
+        return x, pos_emb, x_mask[:, :, 2::2][:, :, 2::2][:, :, 2::2]

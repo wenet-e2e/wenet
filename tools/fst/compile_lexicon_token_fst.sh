@@ -23,7 +23,7 @@ if [ $# -ne 3 ]; then
   echo "usage: tools/fst/compile_lexicon_token_fst.sh <dict-src-dir> <tmp-dir> <lang-dir>"
   echo "e.g.: tools/fst/compile_lexicon_token_fst.sh data/local/dict data/local/lang_tmp data/lang"
   echo "<dict-src-dir> should contain the following files:"
-  echo "lexicon.txt lexicon_numbers.txt units.txt"
+  echo "lexicon.txt units.txt"
   echo "options: "
   exit 1;
 fi
@@ -34,6 +34,8 @@ dir=$3
 mkdir -p $dir $tmpdir
 
 [ -f path.sh ] && . ./path.sh
+
+export LC_ALL=C
 
 cp $srcdir/units.txt $dir
 
@@ -54,13 +56,13 @@ cat $srcdir/units.txt | awk '{print $1}' > $tmpdir/units.list
 (echo '<eps>';) | cat - $tmpdir/units.list $tmpdir/disambig.list | awk '{print $1 " " (NR-1)}' > $dir/tokens.txt
 
 # ctc_token_fst_corrected is too big and too slow for character based chinese modeling,
-# so here just use simple ctc_token_fst
-tools/fst/ctc_token_fst.py $dir/tokens.txt | \
+# so here use ctc_token_fst_compact
+tools/fst/ctc_token_fst_compact.py $dir/tokens.txt | \
   fstcompile --isymbols=$dir/tokens.txt --osymbols=$dir/tokens.txt --keep_isymbols=false --keep_osymbols=false | \
   fstarcsort --sort_type=olabel > $dir/T.fst || exit 1;
 
 # Encode the words with indices. Will be used in lexicon and language model FST compiling.
-cat $tmpdir/lexiconp.txt | awk '{print $1}' | sort | awk '
+cat $tmpdir/lexiconp.txt | awk '{print $1}' | sort | uniq | awk '
   BEGIN {
     print "<eps> 0";
   }

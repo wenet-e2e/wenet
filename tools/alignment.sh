@@ -24,8 +24,8 @@ ali_result=$dir/ali
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
     nj=32
-    # Prepare requried data for ctc alignment
-    echo "Prepare data, prepare requried format"
+    # Prepare required data for ctc alignment
+    echo "Prepare data, prepare required format"
     for x in $set; do
         tools/format_data.sh --nj ${nj} \
             --feat-type wav --feat $feat_dir/$x/wav.scp \

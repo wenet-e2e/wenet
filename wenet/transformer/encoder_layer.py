@@ -36,11 +36,6 @@ class TransformerEncoderLayer(nn.Module):
         normalize_before (bool):
             True: use layer_norm before each sub-block.
             False: to use layer_norm after each sub-block.
-        concat_after (bool): Whether to concat attention layer's input and
-            output.
-            True: x -> x + linear(concat(x, att(x)))
-            False: x -> x + att(x)
-
     """
     def __init__(
         self,
@@ -49,7 +44,6 @@ class TransformerEncoderLayer(nn.Module):
         feed_forward: torch.nn.Module,
         dropout_rate: float,
         normalize_before: bool = True,
-        concat_after: bool = False,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -60,11 +54,6 @@ class TransformerEncoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
-        self.concat_after = concat_after
-        if concat_after:
-            self.concat_linear = nn.Linear(size + size, size)
-        else:
-            self.concat_linear = nn.Identity()
 
     def forward(
         self,
@@ -101,14 +90,9 @@ class TransformerEncoderLayer(nn.Module):
         residual = x
         if self.normalize_before:
             x = self.norm1(x)
-
         x_att, new_att_cache = self.self_attn(
             x, x, x, mask, cache=att_cache)
-        if self.concat_after:
-            x_concat = torch.cat((x, x_att), dim=-1)
-            x = residual + self.concat_linear(x_concat)
-        else:
-            x = residual + self.dropout(x_att)
+        x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm1(x)
 
@@ -141,10 +125,6 @@ class ConformerEncoderLayer(nn.Module):
         normalize_before (bool):
             True: use layer_norm before each sub-block.
             False: use layer_norm after each sub-block.
-        concat_after (bool): Whether to concat attention layer's input and
-            output.
-            True: x -> x + linear(concat(x, att(x)))
-            False: x -> x + att(x)
     """
     def __init__(
         self,
@@ -155,7 +135,6 @@ class ConformerEncoderLayer(nn.Module):
         conv_module: Optional[nn.Module] = None,
         dropout_rate: float = 0.1,
         normalize_before: bool = True,
-        concat_after: bool = False,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -178,11 +157,6 @@ class ConformerEncoderLayer(nn.Module):
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
-        self.concat_after = concat_after
-        if self.concat_after:
-            self.concat_linear = nn.Linear(size + size, size)
-        else:
-            self.concat_linear = nn.Identity()
 
 
     def forward(
@@ -230,14 +204,9 @@ class ConformerEncoderLayer(nn.Module):
         residual = x
         if self.normalize_before:
             x = self.norm_mha(x)
-
         x_att, new_att_cache = self.self_attn(
             x, x, x, mask, pos_emb, att_cache)
-        if self.concat_after:
-            x_concat = torch.cat((x, x_att), dim=-1)
-            x = residual + self.concat_linear(x_concat)
-        else:
-            x = residual + self.dropout(x_att)
+        x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm_mha(x)
 
