@@ -213,7 +213,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
           --mode $mode \
           --config $dir/train.yaml \
           --data_type "shard" \
-          --symbol_table $dict \
           --bpe_model $bpemodel.model \
           --test_data $data/$test/format.data \
           --checkpoint $decode_checkpoint \

@@ -192,6 +192,92 @@ Our chunksize is 16 * 4 * 10 = 640 ms, so we should care about the perf of laten
 * Add language model: set `--lm_path` in the `convert_start_server.sh`. Notice the path of your language model is the path in docker.
 * You may refer to `wenet/bin/recognize_onnx.py` to run inference locally. If you want to add language model locally, you may refer to [here](https://github.com/Slyne/ctc_decoder/blob/master/README.md#usage)
 
+#### Add Hotwords
+* Add hotwords: If you use offline model, modify `hotwords_path` in `model_repo/scoring/config_template.pbtxt` (`None`->`/ws/model_repo/scoring/hotwords.yaml`). Otherwise, in streaming model, modify hotwords_path (`None`->`/ws/model_repo/wenet/hotwords.yaml`) in `model_repo_stateful/wenet/config_template.pbtxt`.
+* Then follow the steps in Instructions to start the hotwords server.
+
+We use `client.py` to test the effect of hotwords on AISHELL-1 Test dataset and AISHELL-1 hostwords sub-testsets.
+
+[AISHELL-1 Test dataset](https://www.openslr.org/33/)
+* Test set contains 7176 utterances (5 hours) from 20 speakers.
+
+| model (FP16)                 | RTF     | CER    |
+|------------------------------|---------|--------|
+| offline model w/o hotwords   | 0.00437 | 4.6805 |
+| offline model w/  hotwords   | 0.00428 | 4.5841 |
+| streaming model w/o hotwords | 0.01231 | 5.2777 |
+| streaming model w/  hotwords | 0.01195 | 5.1850 |
+
+[AISHELL-1 hostwords sub-testsets](https://www.modelscope.cn/datasets/speech_asr/speech_asr_aishell1_hotwords_testsets/summary)
+
+* Test set contains 235 utterances with 187 entities words.
+
+| model (FP16)               | Latency (s) | CER   | Recall | Precision | F1-score |
+|----------------------------|-------------|-------|--------|-----------|----------|
+| offline model w/o hotwords | 5.8673      | 13.85 | 0.27   | 0.99      | 0.43     |
+| offline model w/  hotwords | 5.6601      | 11.96 | 0.47   | 0.97      | 0.63     |
+
+Decoding result
+
+| Label                | hotwords  | pred w/o hotwords            | pred w/ hotwords             |
+|----------------------|-----------|------------------------------|------------------------------|
+| 以及拥有陈露的女单项目          | 陈露        | 以及拥有**陈鹭**的女单项目              | 以及拥有**陈露**的女单项目              |
+| 庞清和佟健终于可以放心地考虑退役的事情了 | 庞清<br/>佟健 | **庞青**和**董建**终于可以放心地考虑退役的事情了 | **庞清**和**佟健**终于可以放心地考虑退役的事情了 |
+| 赵继宏老板电器做厨电已经三十多年了    | 赵继宏       | **赵继红**老板电器做厨店已经三十多年了        | **赵继宏**老板电器做厨电已经三十多年了        |
+
+##### Tested ENV
+* CPU：40 Core, Intel(R) Xeon(R) Silver 4210 CPU @ 2.20GHz
+* GPU：NVIDIA GeForce RTX 2080 Ti
+* Acoustic model: [20210601_u2++_conformer_exp (AISHELL-1)](https://github.com/wenet-e2e/wenet/blob/main/docs/pretrained_models.md)
+
+Refer to more results: https://huggingface.co/58AILab/wenet_u2pp_aishell1_with_hotwords/tree/main/results
+##### Hotwords usage
+Please refer to the following steps how to use hotwordsboosting.
+* Step 1. Initialize HotWordsScorer
+```
+# if you don't want to use hotwords. set hotwords_scorer=None(default),
+# vocab_list is Chinese characters.
+hot_words = {'再接': 10, '再厉': -10, '好好学习': 100}
+hotwords_scorer = HotWordsScorer(hot_words, vocab_list, is_character_based=True)
+```
+If you set is_character_based is True (default mode), the first step is to combine Chinese characters into words, if words in hotwords dictionary then add hotwords score. If you set is_character_based is False, all words in the fixed window will be enumerated.
+
+* Step 2. Add hotwords_scorer when decoding
+```
+result = ctc_beam_search_decoder_batch(batch_chunk_log_prob_seq,
+                                        batch_chunk_log_probs_idx,
+                                        batch_root_trie,
+                                        batch_start,
+                                        beam_size, num_processes,
+                                        blank_id, space_id,
+                                        cutoff_prob, scorer, hotwords_scorer)
+```
+Please refer to [swig/test/test_zh.py](https://github.com/Slyne/ctc_decoder/blob/master/swig/test/test_zh.py#L108) for how to decode with hotwordsboosting.
+
+##### Hotwords evaluation
+
+Prepare decode result file `with_hotwords_ali.log` and label file `aishell1_text_hotwords`
+```
+# utt \t text
+BAC009S0764W0179    国务院发展研究中心市场经济研究所副所长邓郁松认为
+BAC009S0764W0205    本报记者王颖春国家发改委近日发出通知
+```
+
+Run the script for evaluation, with multiple result files separated by ';'.
+```
+cd runtime/gpu/scripts
+python compute_hotwords_f1.py \
+    --label="aishell1_text_hotwords" \
+    --preds="with_hotwords_ali.log;data/without_hotwords_ali.log" \
+    --hotword="../model_repo/scoring/hotwords.yaml"
+```
+
+Output ner file:
+```
+BAC009S0764W0179    国务院发展研究中心市场经济研究所副所长邓郁松认为    邓郁松
+BAC009S0764W0205    本报记者王颖春国家发改委近日发出通知  王颖春
+```
+
 #### Dynamic Left Chunks
 For online model, training with dynamic left chunk option on will help further improve the model accuracy.
 Let's take a look at the below table.

@@ -345,9 +345,10 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
     --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
     --chunk_size $chunk_size \
     --fst_path data/lang_test/TLG.fst \
+    --dict_path data/lang_test/words.txt \
     data/train/${dir_split}data_sublist${job_num}/wav.scp \
     data/train/${dir_split}data_sublist${job_num}/${hypo_name} $dir/final.zip \
-    data/lang_test/words.txt $dir/Hypo_LM_diff10/${cer_hypo_dir}_${job_num}
+    data/lang_test/units.txt $dir/Hypo_LM_diff10/${cer_hypo_dir}_${job_num}
   now=$(date +"%T")
   echo "end time : $now"
 fi
@@ -376,9 +377,10 @@ if [ ${stage} -le 7 ] && [ ${stop_stage} -ge 7 ] && [ ${label} -eq 1 ]; then
     --blank_skip_thresh 0.98 --ctc_weight 0.5 --rescoring_weight 1.0 \
     --chunk_size $chunk_size \
     --fst_path data/lang_test/TLG.fst \
+    --dict_path data/lang_test/words.txt \
     data/train/${dir_split}data_sublist${job_num}/wav.scp \
     data/train/${dir_split}data_sublist${job_num}/${label_file} $dir/final.zip \
-    data/lang_test/words.txt $dir/Hypo_LM_diff10/${cer_label_dir}_${job_num}
+    data/lang_test/units.txt $dir/Hypo_LM_diff10/${cer_label_dir}_${job_num}
   now=$(date +"%T")
   echo "end time : $now"
 fi

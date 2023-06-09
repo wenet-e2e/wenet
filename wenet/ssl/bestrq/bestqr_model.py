@@ -191,7 +191,7 @@ class BestRQModel(torch.nn.Module):
         subsampling_masks = masked_masks.unfold(1,
                                                 size=self.stack_frames,
                                                 step=self.stride)
-        code_ids_mask, _ = torch.max(subsampling_masks, 2)
+        code_ids_mask, _ = torch.min(subsampling_masks, 2)
 
         # 2.0 stack fbank
         unmasked_xs = self._stack_features(input)
@@ -251,6 +251,7 @@ class BestRQModel(torch.nn.Module):
     def _stack_features(self, input: torch.Tensor) -> torch.Tensor:
 
         stack_input = input.unfold(1, size=self.stack_frames, step=self.stride)
+        stack_input = stack_input.transpose(-1, -2)
         b, n, f, d = stack_input.size()
         stack_input = stack_input.reshape(b, n, f * d)
 
