@@ -2,8 +2,9 @@
 
 # Copyright 2017 Xingyu Na
 # Apache 2.0
-# 过滤出在aishell_text中有转录结果的wav，取出这部分对应的转录结果，对过滤后的wav和transcript排序去重，记录到训练验证测试文件夹中的wav.scp和text
-# 生成data/train、dev、test
+
+# 1、在data/local文件夹中：过滤出在aishell_text中有转录结果的wav，取出这部分对应的转录结果，对过滤后的wav和transcript排序、去重，记录到训练、验证、测试文件夹中的wav.scp和text
+# 2、将data/local文件夹对应的wav.scp和text，复制到data/train、data/dev、data/test （最后的local文件夹其实可以删除）
 
 . ./path.sh || exit 1;
 
@@ -52,21 +53,23 @@ rm -r $tmp_dir
 # Transcriptions preparation
 for dir in $train_dir $dev_dir $test_dir; do
   echo Preparing $dir transcriptions
-  # -e 表示执行替换操作。 \. 匹配字符 "."，因为 "." 在正则表达式中有特殊含义，所以需要进行转义；
+  # -e 表示edit，执行替换操作。 \. 匹配字符 "."，因为 "." 在正则表达式中有特殊含义，所以需要进行转义；
   # awk 是 Linux 中的一个文本处理工具，用于对文本进行各种操作和转换。
   # -F '/' 表示使用 "/" 作为分隔符。
-  sed -e 's/\.wav//' $dir/wav.flist | awk -F '/' '{print $NF}' > $dir/utt.list 
   # $dir/utt.list内容：音频文件id（文件名无后缀）
-  paste -d' ' $dir/utt.list $dir/wav.flist > $dir/wav.scp_all 
+  sed -e 's/\.wav//' $dir/wav.flist | awk -F '/' '{print $NF}' > $dir/utt.list 
+  # paste -d' '表示以空格作为delimiter定界符，将多个文件按字段粘贴到一起
   # wav.scp_all内容：音频文件id 文件路径
-  
+  paste -d' ' $dir/utt.list $dir/wav.flist > $dir/wav.scp_all 
+    
   # tools/filter_scp.pl：过滤aishell_transcript_v0.8.txt文件，输出第n个字段在utt.list中的行。
   # 测试命令：
     # 标准输入中，过滤第二个字段（-f 2），如果第二个字段在（echo 1;echo 2）中，则输出整行。
-    # perl filter_scp.pl -f 2 <(echo 1;echo 2) <(echo aaa 1;echo bbb 2;echo ccc 3;echo ddd 4;)
+    # perl tools/filter_scp.pl -f 2 <(echo 1;echo 2) <(echo aaa 1;echo bbb 2;echo ccc 3;echo ddd 4;)
     # 结果：
     # aaa 1
     # bbb 2
+  # 以下过滤出存在对应文件路径的转录内容：
   tools/filter_scp.pl -f 1 $dir/utt.list $aishell_text > $dir/transcripts.txt 
   # transcripts.txt内容：音频文件id 转录结果
   awk '{print $1}' $dir/transcripts.txt > $dir/utt.list # 将没有转录结果的音频文件过滤掉
