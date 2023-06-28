@@ -21,11 +21,11 @@ find_package(Torch REQUIRED PATHS ${libtorch_SOURCE_DIR} NO_DEFAULT_PATH)
 if(CXX11_ABI)
   set(LIBIPEX_URL "https://intel-optimized-pytorch.s3.cn-north-1.amazonaws.com.cn/libipex/cpu/libintel-ext-pt-cxx11-abi-2.0.100%2Bcpu.run")
   set(URL_HASH "SHA256=f172d9ebc2ca0c39cc93bb395721194f79767e1bc3f82b13e1edc07d1530a600")
-  set(LIBIPEX_SCRIPT_NAME "libintel-ext-pt-cxx11-abi-1.13.100%2Bcpu.run")
+  set(LIBIPEX_SCRIPT_NAME "libintel-ext-pt-cxx11-abi-2.0.100%2Bcpu.run")
 else()
   set(LIBIPEX_URL "https://intel-optimized-pytorch.s3.cn-north-1.amazonaws.com.cn/libipex/cpu/libintel-ext-pt-2.0.100%2Bcpu.run")
   set(URL_HASH "SHA256=8392f965dd9b8f6c0712acbb805c7e560e4965a0ade279b47a5f5a8363888268")
-  set(LIBIPEX_SCRIPT_NAME "libintel-ext-pt-1.13.100%2Bcpu.run")
+  set(LIBIPEX_SCRIPT_NAME "libintel-ext-pt-2.0.100%2Bcpu.run")
 endif()
 FetchContent_Declare(intel_ext_pt
 URL                  ${LIBIPEX_URL}
