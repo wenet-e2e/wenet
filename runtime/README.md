@@ -26,7 +26,7 @@ Here is a brief summary of all platforms and OSs. please note the corresponding 
 | ios             | ios                 | libtorch             | ios demo, [link](TODO)                                                                           |
 | kunlun          | linux               | xpu runtime          | Kunlun XPU runtime                                                                               |
 | libtorch        | linux, windows, mac | libtorch             | c++ build with libtorch                                                                          |
-| ipex            | linux               | libtorch + ipex      | c++ build with libtorch with ipex optimization                                                                         |
+| ipex            | linux               | libtorch + ipex      | c++ build with libtorch and ipex optimization                                                                         |
 | onnxrutnime     | linux, windows, mac | onnxruntime          | c++ build with onnxruntime                                                                       |
 | openvino        | linux, windows, mac | openvino             | c++ build with openvino                                                                          |
 | raspberrypi     | linux               | onnxruntime          | c++ build on raspberrypi with onnxruntime                                                        |

@@ -16,7 +16,7 @@ pip install -r requirements.txt
 ```
 Installation of IPEX
 ``` sh
-pip install intel_extension_for_pytorch==1.13.100 -f https://developer.intel.com/ipex-whl-stable-cpu
+pip install intel_extension_for_pytorch==2.0.100 -f https://developer.intel.com/ipex-whl-stable-cpu
 ```
 
 Installation of related tools: Intel® OpenMP and TCMalloc
@@ -36,14 +36,16 @@ based on the package manager of your system.
 For exporting FP32 runtime model
 ``` sh
 source examples/aishell/s0/path.sh
+export OMP_NUM_THREADS=1
 python wenet/bin/export_ipex.py \
     --config <model_config_yaml_filename> \
     --checkpoint <model_ckpt_filename> \
     --output_file <runtime_model_output_filename>
 ```
-If you have an Intel® 4th Generation Xeon (Sapphire Rapids) server, you can export a BF16 runtime model and get better performance by virtue of AMX instructions
+If you have an Intel® 4th Generation Xeon (Sapphire Rapids) server, you can export a BF16 runtime model and get better performance by virtue of [AMX instructions](https://en.wikipedia.org/wiki/Advanced_Matrix_Extensions)
 ``` sh
 source examples/aishell/s0/path.sh
+export OMP_NUM_THREADS=1
 python wenet/bin/export_ipex.py \
     --config <model_config_yaml_filename> \
     --checkpoint <model_ckpt_filename> \
@@ -53,6 +55,7 @@ python wenet/bin/export_ipex.py \
 And for exporting int8 quantized runtime model
 ``` sh
 source examples/aishell/s0/path.sh
+export OMP_NUM_THREADS=1
 python wenet/bin/export_ipex.py \
     --config <model_config_yaml_filename> \
     --checkpoint <model_ckpt_filename> \
@@ -73,13 +76,13 @@ export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=your_test_wav_path
 model_dir=your_model_dir
-ipexrun --no_python \
+ipexrun --no-python \
     ./build/bin/decoder_main \
         --chunk_size -1 \
         --wav_path $wav_path \
         --model_path $model_dir/final.zip \
         --unit_path $model_dir/units.txt 2>&1 | tee log.txt
 ```
-NOTE: Please refer [IPEX Launch Script Usage Guide](https://intel.github.io/intel-extension-for-pytorch/cpu/1.13.100+cpu/tutorials/performance_tuning/launch_script.html) for usage of advanced features.
+NOTE: Please refer [IPEX Launch Script Usage Guide](https://intel.github.io/intel-extension-for-pytorch/cpu/2.0.100+cpu/tutorials/performance_tuning/launch_script.html) for usage of advanced features.
 
 For advanced usage of WeNet, such as building Web/RPC/HTTP services, please refer [LibTorch Tutorial](../libtorch#advanced-usage). The difference is that the executables should be invoked via IPEX launch script `ipexrun`.
