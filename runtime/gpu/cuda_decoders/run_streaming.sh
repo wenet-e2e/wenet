@@ -18,11 +18,15 @@ stage=-1
 stop_stage=3
 
 #<wenet_onnx_gpu_models>
-onnx_model_dir=$(pwd)/aishell_onnx
-
+onnx_model_dir=$(pwd)/aishell_u2pp_onnx
+mkdir -p $onnx_model_dir
 # modify model parameters according to your own model
 D_MODEL=256
 VOCAB_SIZE=4233
+CACHE_SIZE=80 # decoding_chunk_size * num_decoding_left_chunks, 16 * 5
+NUM_HEAD=4
+CNN_KERNEL_SIZE=7 # CNN_KERNEL_SIZE - 1
+ATT_CACHE_OUTPUT_SIZE=128 # D_MODEL / NUM_HEAD * 2
 # Triton specific parameters
 # For more details, refer to
 # https://github.com/triton-inference-server/server/blob/main/docs/user_guide/model_configuration.md
@@ -31,19 +35,15 @@ INSTANCE_NUM=2
 INSTANCE_NUM_FOR_SCORING=2
 MAX_BATCH_SIZE=16
 MAX_BATCH_FOR_SCORING=16
-# Decoding parameters
-BEAM_SIZE=10
-DECODING_METHOD=tlg_mbr # ctc_greedy_search
 
-
-model_repo_path=./model_repo_cuda_decoder
+model_repo_path=./model_repo_stateful_cuda_decoder
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
    echo "export to onnx files"
-   wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20211025_conformer_exp.tar.gz --no-check-certificate
-   tar zxvf 20211025_conformer_exp.tar.gz
-   model_dir=$(pwd)/20211025_conformer_exp
-   mkdir -p $onnx_model_dir
+   wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2++_conformer_exp.tar.gz --no-check-certificate
+   tar zxvf 20210601_u2++_conformer_exp.tar.gz
+   model_dir=$(pwd)/20210601_u2++_conformer_exp
+
    cd ../../../
    export PYTHONPATH=$PYTHONPATH:$(pwd)
    python3 wenet/bin/export_onnx_gpu.py \
@@ -52,14 +52,16 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
            --cmvn_file=$model_dir/global_cmvn \
            --ctc_weight=0.5 \
            --output_onnx_dir=$onnx_model_dir \
-           --fp16  || exit 1
-   cp $model_dir/words.txt $model_dir/train.yaml $onnx_model_dir
+           --streaming \
+           --return_ctc_logprobs \
+           --fp16 || exit 1
+   cp $model_dir/units.txt $model_dir/train.yaml $onnx_model_dir
    cd -
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
      echo "auto gen config.pbtxt"
-     dirs="encoder decoder feature_extractor scoring attention_rescoring"
+     dirs="encoder feature_extractor scoring streaming_wenet"
      if [ ! -d $model_repo_path ]; then
         echo "Please cd to model_repo_path"
         exit 1
@@ -67,12 +69,16 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
 
      for dir in $dirs
      do
-          cp $model_repo_path/$dir/config.pbtxt.template $model_repo_path/$dir/config.pbtxt
+          cp $model_repo_path/$dir/config_template.pbtxt $model_repo_path/$dir/config.pbtxt
 
-          sed -i "s/BEAM_SIZE/${BEAM_SIZE}/g" $model_repo_path/$dir/config.pbtxt
           sed -i "s/VOCAB_SIZE/${VOCAB_SIZE}/g" $model_repo_path/$dir/config.pbtxt
           sed -i "s/MAX_DELAY/${MAX_DELAY}/g" $model_repo_path/$dir/config.pbtxt
           sed -i "s/D_MODEL/${D_MODEL}/g" $model_repo_path/$dir/config.pbtxt
+          sed -i "s/CACHE_SIZE/${CACHE_SIZE}/g" $model_repo_path/$dir/config.pbtxt
+          sed -i "s/NUM_HEAD/${NUM_HEAD}/g" $model_repo_path/$dir/config.pbtxt
+          sed -i "s/CNN_KERNEL_SIZE/${CNN_KERNEL_SIZE}/g" $model_repo_path/$dir/config.pbtxt
+          sed -i "s/ATT_CACHE_OUTPUT_SIZE/${ATT_CACHE_OUTPUT_SIZE}/g" $model_repo_path/$dir/config.pbtxt
+
           if [ "$dir" == "decoder" ]; then
                sed -i "s/MAX_BATCH/${MAX_BATCH_FOR_SCORING}/g" $model_repo_path/$dir/config.pbtxt
                sed -i "s/INSTANCE_NUM/${INSTANCE_NUM}/g" $model_repo_path/$dir/config.pbtxt
@@ -112,17 +118,15 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
      mkdir -p $model_repo_path/encoder/1/
      cp $onnx_model_dir/encoder_fp16.onnx $model_repo_path/encoder/1/
 
-     mkdir -p $model_repo_path/decoder/1/
-     cp $onnx_model_dir/decoder_fp16.onnx $model_repo_path/decoder/1/
+     cp $onnx_model_dir/units.txt $model_repo_path/scoring/units.txt
 
-     cp $onnx_model_dir/words.txt $model_repo_path/scoring/units.txt
-
-     mkdir -p $model_repo_path/attention_rescoring/1/
+     mkdir -p $model_repo_path/streaming_wenet/1/
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
    echo "launch triton server"
    tritonserver --model-repository $model_repo_path \
                --pinned-memory-pool-byte-size=512000000 \
-               --cuda-memory-pool-byte-size=0:1024000000
+               --cuda-memory-pool-byte-size=0:1024000000 \
+               --http-port 10086
 fi

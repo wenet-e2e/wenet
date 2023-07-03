@@ -1,2 +1,2 @@
-riva-asrlib-decoder
+riva-asrlib-decoder==0.4.0
 onnxmltools

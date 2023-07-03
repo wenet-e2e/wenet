@@ -13,15 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "wenet"
+name: "scoring"
 backend: "python"
-max_batch_size: 512
+max_batch_size: MAX_BATCH
 
 sequence_batching{
     max_sequence_idle_microseconds: 5000000
     oldest {
       max_candidate_sequences: 1024
-      preferred_batch_size: [32, 64, 128, 256]
     }
     control_input [
         {
@@ -65,61 +64,35 @@ sequence_batching{
 
 parameters [
   {
-    key: "beam_size",
-    value: { string_value: "#beam_size" }
+    key: "vocabulary",
+    value: { string_value: "./model_repo_stateful_cuda_decoder/scoring/units.txt"}
   },
   {
-    key: "cutoff_prob",
-    value: { string_value: "0.9999" }
+    key: "tlg_dir",
+    value: { string_value: "./model_repo_stateful_cuda_decoder/scoring/1/lang"}
   },
   {
-    key: "alpha",
-    value: { string_value: "2" }
+    key: "tlg_decoding_config",
+    value: { string_value: "./model_repo_stateful_cuda_decoder/scoring/1/wfst_decoding_config.yaml"}
   },
   {
-    key: "beta",
-    value: { string_value: "1" }
+    key: "decoding_method",
+    value: { string_value: "tlg"}
   },
-  {
-    key: "vocab_path",
-    value: { string_value: "#vocabulary_path"}
-  },
-  {
-    key: "lm_path",
-    value: { string_value: "#lm_path"}
-  },
-  {
-   key: "hotwords_path",
-   value : { string_value: "None"}
-  },
-  {
-    key: "bidecoder",
-    value: { string_value: "#bidecoder"}
-  },
-  {
-    key: "rescoring",
-    value: { string_value: "1" }
-  },
-  {
-   key: "FORCE_CPU_ONLY_INPUT_TENSORS",
-   value: {string_value:"yes"}
+  { key: "FORCE_CPU_ONLY_INPUT_TENSORS"
+    value: {string_value: "no"}
   }
 ]
 
 input [
    {
-    name: "log_probs"
-    data_type: TYPE_#DTYPE
-    dims: [-1, #beam_size] # [-1, beam_size]
-  },
-  {
-    name: "log_probs_idx"
-    data_type: TYPE_INT64
-    dims: [-1, #beam_size] # [-1, beam_size]
+    name: "ctc_log_probs"
+    data_type: TYPE_FP16
+    dims: [-1, -1] # [-1, vocab_size]
   },
   {
     name: "chunk_out"
-    data_type: TYPE_#DTYPE
+    data_type: TYPE_FP16
     dims: [-1, -1]
   },
   {
@@ -139,6 +112,6 @@ output [
 instance_group [
     {
       count: 2
-      kind: KIND_CPU
+      kind: KIND_GPU
     }
 ]

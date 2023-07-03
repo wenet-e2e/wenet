@@ -13,10 +13,13 @@ cd wenet/runtime/gpu/cuda_wfst_decoder
 # Use pip3 install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple if you encounter network issue
 pip3 install -r requirements.txt
 
+# For offline TLG ASR
 bash run.sh
+# For streaming TLG ASR
+bash run_streaming.sh
 ```
 
-### TODO: Performance of Small Offline ASR Model using Different Decoders
+### Performance of Small Offline ASR Model using Different Decoders
 
 Benchmark(small offline conformer onnx fp16 model trained on Aishell1) based on Aishell1 test set with V100, the total audio duration is 36108.919 seconds.
 

@@ -1,5 +1,4 @@
-# Copyright (c) 2021 NVIDIA CORPORATION
-#               2023 58.com(Wuba) Inc AI Lab.
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,15 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: "wenet"
+name: "feature_extractor"
 backend: "python"
-max_batch_size: 512
+max_batch_size: MAX_BATCH
 
+parameters [
+  {
+    key: "frame_length_ms",
+    value: { string_value: "25" }
+  },
+  {
+    key: "frame_shift_ms"
+    value: { string_value: "10" }
+  },
+  {
+    key: "sample_rate"
+    value: { string_value: "16000" }
+  },
+  {
+    key: "chunk_size_s",
+    value: { string_value: "0.64" }
+  }
+]
 sequence_batching{
     max_sequence_idle_microseconds: 5000000
     oldest {
-      max_candidate_sequences: 1024
-      preferred_batch_size: [32, 64, 128, 256]
+      max_candidate_sequences: 512
     }
     control_input [
         {
@@ -62,83 +78,33 @@ sequence_batching{
         }
     ]
 }
-
-parameters [
-  {
-    key: "beam_size",
-    value: { string_value: "#beam_size" }
-  },
-  {
-    key: "cutoff_prob",
-    value: { string_value: "0.9999" }
-  },
-  {
-    key: "alpha",
-    value: { string_value: "2" }
-  },
-  {
-    key: "beta",
-    value: { string_value: "1" }
-  },
-  {
-    key: "vocab_path",
-    value: { string_value: "#vocabulary_path"}
-  },
-  {
-    key: "lm_path",
-    value: { string_value: "#lm_path"}
-  },
-  {
-   key: "hotwords_path",
-   value : { string_value: "None"}
-  },
-  {
-    key: "bidecoder",
-    value: { string_value: "#bidecoder"}
-  },
-  {
-    key: "rescoring",
-    value: { string_value: "1" }
-  },
-  {
-   key: "FORCE_CPU_ONLY_INPUT_TENSORS",
-   value: {string_value:"yes"}
-  }
-]
-
 input [
-   {
-    name: "log_probs"
-    data_type: TYPE_#DTYPE
-    dims: [-1, #beam_size] # [-1, beam_size]
+  {
+    name: "wav"
+    data_type: TYPE_FP32
+    dims: [-1]
   },
   {
-    name: "log_probs_idx"
-    data_type: TYPE_INT64
-    dims: [-1, #beam_size] # [-1, beam_size]
-  },
-  {
-    name: "chunk_out"
-    data_type: TYPE_#DTYPE
-    dims: [-1, -1]
-  },
-  {
-    name: "chunk_out_lens"
+    name: "wav_lens"
     data_type: TYPE_INT32
     dims: [1]
   }
 ]
 output [
   {
-    name: "OUTPUT0"
-    data_type: TYPE_STRING
+    name: "speech"
+    data_type: TYPE_FP16
+    dims: [67, 80]
+  },
+  {
+    name: "speech_lengths"
+    data_type: TYPE_INT32
     dims: [1]
-    reshape { shape: [] }
   }
 ]
 instance_group [
     {
       count: 2
-      kind: KIND_CPU
+      kind: KIND_GPU
     }
 ]
