@@ -15,7 +15,7 @@ and see if the environment is suitable for leveraging resources to get optimal p
 ### Run in Docker Build
 
 We recommend using the docker environment to build the c++ binary to avoid
-system or environment problems. 
+system or environment problems.
 
 * Step 1. Build your docker image.
 
