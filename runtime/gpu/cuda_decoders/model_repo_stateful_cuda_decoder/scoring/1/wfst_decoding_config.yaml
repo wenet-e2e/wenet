@@ -1,0 +1,11 @@
+acoustic_scale: 10.0
+n_input_per_chunk: 50
+default_beam: 17.0
+lattice_beam: 4.0
+max_active: 7000
+determinize_lattice: True
+max_batch_size: 200
+num_channels: 400
+frame_shift_seconds: 0.04
+lm_scale: 5.0
+word_ins_penalty: 0.0
