@@ -14,7 +14,9 @@
 
 import json
 import math
-
+import logging 
+import sys
+# sys.path.insert(0, "/data1/zhang/my_wenet/examples/aishell/s0")
 import numpy as np
 
 
