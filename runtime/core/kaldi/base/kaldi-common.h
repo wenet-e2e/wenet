@@ -20,20 +20,20 @@
 #ifndef KALDI_BASE_KALDI_COMMON_H_
 #define KALDI_BASE_KALDI_COMMON_H_ 1
 
+#include <cassert>
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>  // C string stuff like strcpy
-#include <string>
+#include <fstream>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
-#include <cassert>
+#include <string>
 #include <vector>
-#include <iostream>
-#include <fstream>
 
-#include "base/kaldi-utils.h"
 #include "base/kaldi-error.h"
 #include "base/kaldi-types.h"
+#include "base/kaldi-utils.h"
 // #include "base/io-funcs.h"
 #include "base/kaldi-math.h"
 // #include "base/timer.h"

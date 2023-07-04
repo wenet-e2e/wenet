@@ -63,8 +63,8 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
   typedef typename Arc::Weight Weight;
 
  public:
-  TableMatcherImpl(const FST &fst, MatchType match_type,
-                   const TableMatcherOptions &opts = TableMatcherOptions())
+  TableMatcherImpl(const FST& fst, MatchType match_type,
+                   const TableMatcherOptions& opts = TableMatcherOptions())
       : match_type_(match_type),
         fst_(fst.Copy()),
         loop_(match_type == MATCH_INPUT
@@ -83,11 +83,11 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
       assert(0 && "Invalid FST properties");
   }
 
-  virtual const FST &GetFst() const { return *fst_; }
+  virtual const FST& GetFst() const { return *fst_; }
 
   virtual ~TableMatcherImpl() {
-    std::vector<ArcId> *const empty =
-        ((std::vector<ArcId> *)(NULL)) + 1;  // special marker.
+    std::vector<ArcId>* const empty =
+        ((std::vector<ArcId>*)(NULL)) + 1;  // special marker.
     for (size_t i = 0; i < tables_.size(); i++) {
       if (tables_[i] != NULL && tables_[i] != empty) delete tables_[i];
     }
@@ -104,13 +104,13 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
     }
     if (match_type_ == MATCH_NONE) LOG(FATAL) << "TableMatcher: bad match type";
     s_ = s;
-    std::vector<ArcId> *const empty =
-        ((std::vector<ArcId> *)(NULL)) + 1;  // special marker.
+    std::vector<ArcId>* const empty =
+        ((std::vector<ArcId>*)(NULL)) + 1;  // special marker.
     if (static_cast<size_t>(s) >= tables_.size()) {
       assert(s >= 0);
       tables_.resize(s + 1, NULL);
     }
-    std::vector<ArcId> *&this_table_ = tables_[s];  // note: ref to ptr.
+    std::vector<ArcId>*& this_table_ = tables_[s];  // note: ref to ptr.
     if (this_table_ == empty) {
       backoff_matcher_.SetState(s);
       return;
@@ -177,7 +177,7 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
       return current_loop_;
     }
   }
-  const Arc &Value() const {
+  const Arc& Value() const {
     if (aiter_)
       return current_loop_ ? loop_ : aiter_->Value();
     else
@@ -206,7 +206,7 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
       return backoff_matcher_.Done();
     }
   }
-  const Arc &Value() {
+  const Arc& Value() {
     if (aiter_ != NULL) {
       return (current_loop_ ? loop_ : aiter_->Value());
     } else {
@@ -214,7 +214,7 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
     }
   }
 
-  virtual TableMatcherImpl<FST> *Copy(bool safe = false) const {
+  virtual TableMatcherImpl<FST>* Copy(bool safe = false) const {
     assert(0);  // shouldn't be called.  This is not a "real" matcher,
     // although we derive from MatcherBase for convenience.
     return NULL;
@@ -229,17 +229,17 @@ class TableMatcherImpl : public MatcherBase<typename F::Arc> {
   virtual void SetState_(StateId s) { SetState(s); }
   virtual bool Find_(Label label) { return Find(label); }
   virtual bool Done_() const { return Done(); }
-  virtual const Arc &Value_() const { return Value(); }
+  virtual const Arc& Value_() const { return Value(); }
   virtual void Next_() { Next(); }
 
   MatchType match_type_;
-  FST *fst_;
+  FST* fst_;
   bool current_loop_;
   Label match_label_;
   Arc loop_;
-  ArcIterator<FST> *aiter_;
+  ArcIterator<FST>* aiter_;
   StateId s_;
-  std::vector<std::vector<ArcId> *> tables_;
+  std::vector<std::vector<ArcId>*> tables_;
   TableMatcherOptions opts_;
   BackoffMatcher backoff_matcher_;
 };
@@ -257,11 +257,11 @@ class TableMatcher : public MatcherBase<typename F::Arc> {
   typedef typename Arc::Weight Weight;
   typedef TableMatcherImpl<F, BackoffMatcher> Impl;
 
-  TableMatcher(const FST &fst, MatchType match_type,
-               const TableMatcherOptions &opts = TableMatcherOptions())
+  TableMatcher(const FST& fst, MatchType match_type,
+               const TableMatcherOptions& opts = TableMatcherOptions())
       : impl_(std::make_shared<Impl>(fst, match_type, opts)) {}
 
-  TableMatcher(const TableMatcher<FST, BackoffMatcher> &matcher,
+  TableMatcher(const TableMatcher<FST, BackoffMatcher>& matcher,
                bool safe = false)
       : impl_(matcher.impl_) {
     if (safe == true) {
@@ -269,7 +269,7 @@ class TableMatcher : public MatcherBase<typename F::Arc> {
     }
   }
 
-  virtual const FST &GetFst() const { return impl_->GetFst(); }
+  virtual const FST& GetFst() const { return impl_->GetFst(); }
 
   virtual MatchType Type(bool test) const { return impl_->Type(test); }
 
@@ -277,15 +277,15 @@ class TableMatcher : public MatcherBase<typename F::Arc> {
 
   bool Find(Label match_label) { return impl_->Find(match_label); }
 
-  const Arc &Value() const { return impl_->Value(); }
+  const Arc& Value() const { return impl_->Value(); }
 
   void Next() { return impl_->Next(); }
 
   bool Done() const { return impl_->Done(); }
 
-  const Arc &Value() { return impl_->Value(); }
+  const Arc& Value() { return impl_->Value(); }
 
-  virtual TableMatcher<FST, BackoffMatcher> *Copy(bool safe = false) const {
+  virtual TableMatcher<FST, BackoffMatcher>* Copy(bool safe = false) const {
     return new TableMatcher<FST, BackoffMatcher>(*this, safe);
   }
 
@@ -299,10 +299,10 @@ class TableMatcher : public MatcherBase<typename F::Arc> {
   virtual void SetState_(StateId s) { impl_->SetState(s); }
   virtual bool Find_(Label label) { return impl_->Find(label); }
   virtual bool Done_() const { return impl_->Done(); }
-  virtual const Arc &Value_() const { return impl_->Value(); }
+  virtual const Arc& Value_() const { return impl_->Value(); }
   virtual void Next_() { impl_->Next(); }
 
-  TableMatcher &operator=(const TableMatcher &) = delete;
+  TableMatcher& operator=(const TableMatcher&) = delete;
 };
 
 struct TableComposeOptions : public TableMatcherOptions {
@@ -310,7 +310,7 @@ struct TableComposeOptions : public TableMatcherOptions {
   ComposeFilter filter_type;  // Which pre-defined filter to use
   MatchType table_match_type;
 
-  explicit TableComposeOptions(const TableMatcherOptions &mo, bool c = true,
+  explicit TableComposeOptions(const TableMatcherOptions& mo, bool c = true,
                                ComposeFilter ft = SEQUENCE_FILTER,
                                MatchType tms = MATCH_OUTPUT)
       : TableMatcherOptions(mo),
@@ -324,9 +324,9 @@ struct TableComposeOptions : public TableMatcherOptions {
 };
 
 template <class Arc>
-void TableCompose(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
-                  MutableFst<Arc> *ofst,
-                  const TableComposeOptions &opts = TableComposeOptions()) {
+void TableCompose(const Fst<Arc>& ifst1, const Fst<Arc>& ifst2,
+                  MutableFst<Arc>* ofst,
+                  const TableComposeOptions& opts = TableComposeOptions()) {
   typedef Fst<Arc> F;
   CacheOptions nopts;
   nopts.gc_limit = 0;  // Cache only the last state for fastest copy.
@@ -349,17 +349,17 @@ void TableCompose(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
 /// matcher.
 template <class F>
 struct TableComposeCache {
-  TableMatcher<F> *matcher;
+  TableMatcher<F>* matcher;
   TableComposeOptions opts;
   explicit TableComposeCache(
-      const TableComposeOptions &opts = TableComposeOptions())
+      const TableComposeOptions& opts = TableComposeOptions())
       : matcher(NULL), opts(opts) {}
   ~TableComposeCache() { delete (matcher); }
 };
 
 template <class Arc>
-void TableCompose(const Fst<Arc> &ifst1, const Fst<Arc> &ifst2,
-                  MutableFst<Arc> *ofst, TableComposeCache<Fst<Arc> > *cache) {
+void TableCompose(const Fst<Arc>& ifst1, const Fst<Arc>& ifst2,
+                  MutableFst<Arc>* ofst, TableComposeCache<Fst<Arc> >* cache) {
   typedef Fst<Arc> F;
   assert(cache != NULL);
   CacheOptions nopts;

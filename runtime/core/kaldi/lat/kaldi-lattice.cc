@@ -18,17 +18,16 @@
 // See the Apache 2 License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "lat/kaldi-lattice.h"
 #include "fst/script/print-impl.h"
 
 namespace kaldi {
 
 /// Converts lattice types if necessary, deleting its input.
-template<class OrigWeightType>
-CompactLattice* ConvertToCompactLattice(fst::VectorFst<OrigWeightType> *ifst) {
+template <class OrigWeightType>
+CompactLattice* ConvertToCompactLattice(fst::VectorFst<OrigWeightType>* ifst) {
   if (!ifst) return NULL;
-  CompactLattice *ofst = new CompactLattice();
+  CompactLattice* ofst = new CompactLattice();
   ConvertLattice(*ifst, ofst);
   delete ifst;
   return ofst;
@@ -36,16 +35,16 @@ CompactLattice* ConvertToCompactLattice(fst::VectorFst<OrigWeightType> *ifst) {
 
 // This overrides the template if there is no type conversion going on
 // (for efficiency).
-template<>
-CompactLattice* ConvertToCompactLattice(CompactLattice *ifst) {
+template <>
+CompactLattice* ConvertToCompactLattice(CompactLattice* ifst) {
   return ifst;
 }
 
 /// Converts lattice types if necessary, deleting its input.
-template<class OrigWeightType>
-Lattice* ConvertToLattice(fst::VectorFst<OrigWeightType> *ifst) {
+template <class OrigWeightType>
+Lattice* ConvertToLattice(fst::VectorFst<OrigWeightType>* ifst) {
   if (!ifst) return NULL;
-  Lattice *ofst = new Lattice();
+  Lattice* ofst = new Lattice();
   ConvertLattice(*ifst, ofst);
   delete ifst;
   return ofst;
@@ -53,19 +52,18 @@ Lattice* ConvertToLattice(fst::VectorFst<OrigWeightType> *ifst) {
 
 // This overrides the template if there is no type conversion going on
 // (for efficiency).
-template<>
-Lattice* ConvertToLattice(Lattice *ifst) {
+template <>
+Lattice* ConvertToLattice(Lattice* ifst) {
   return ifst;
 }
 
-
-bool WriteCompactLattice(std::ostream &os, bool binary,
-                         const CompactLattice &t) {
+bool WriteCompactLattice(std::ostream& os, bool binary,
+                         const CompactLattice& t) {
   if (binary) {
     fst::FstWriteOptions opts;
     // Leave all the options default.  Normally these lattices wouldn't have any
-    // osymbols/isymbols so no point directing it not to write them (who knows what
-    // we'd want to if we had them).
+    // osymbols/isymbols so no point directing it not to write them (who knows
+    // what we'd want to if we had them).
     return t.Write(os, opts);
   } else {
     // Text-mode output.  Note: we expect that t.InputSymbols() and
@@ -76,11 +74,10 @@ bool WriteCompactLattice(std::ostream &os, bool binary,
     os << '\n';
     bool acceptor = true, write_one = false;
     fst::FstPrinter<CompactLatticeArc> printer(t, t.InputSymbols(),
-                                               t.OutputSymbols(),
-                                               NULL, acceptor, write_one, "\t");
+                                               t.OutputSymbols(), NULL,
+                                               acceptor, write_one, "\t");
     printer.Print(&os, "<unknown>");
-    if (os.fail())
-      KALDI_WARN << "Stream failure detected.";
+    if (os.fail()) KALDI_WARN << "Stream failure detected.";
     // Write another newline as a terminating character.  The read routine will
     // detect this [this is a Kaldi mechanism, not somethig in the original
     // OpenFst code].
@@ -98,6 +95,7 @@ class LatticeReader {
   typedef CompactLatticeWeight CWeight;
   typedef Arc::Label Label;
   typedef Arc::StateId StateId;
+
  public:
   // everything is static in this class.
 
@@ -105,13 +103,12 @@ class LatticeReader {
       whether it's a Lattice or CompactLattice in the stream so it tries to
       read both formats until it becomes clear which is the correct one.
   */
-  static std::pair<Lattice*, CompactLattice*> ReadText(
-      std::istream &is) {
+  static std::pair<Lattice*, CompactLattice*> ReadText(std::istream& is) {
     typedef std::pair<Lattice*, CompactLattice*> PairT;
     using std::string;
     using std::vector;
-    Lattice *fst = new Lattice();
-    CompactLattice *cfst = new CompactLattice();
+    Lattice* fst = new Lattice();
+    CompactLattice* cfst = new CompactLattice();
     string line;
     size_t nline = 0;
     string separator = FLAGS_fst_field_separator + "\r\n";
@@ -120,7 +117,7 @@ class LatticeReader {
       vector<string> col;
       // on Windows we'll write in text and read in binary mode.
       SplitStringToVector(line, separator.c_str(), true, &col);
-      if (col.size() == 0) break; // Empty line is a signal to stop, in our
+      if (col.size() == 0) break;  // Empty line is a signal to stop, in our
       // archive format.
       if (col.size() > 5) {
         KALDI_WARN << "Reading lattice: bad line in FST: " << line;
@@ -138,36 +135,36 @@ class LatticeReader {
                      static_cast<CompactLattice*>(NULL));
       }
       if (fst)
-        while (s >= fst->NumStates())
-          fst->AddState();
+        while (s >= fst->NumStates()) fst->AddState();
       if (cfst)
-        while (s >= cfst->NumStates())
-          cfst->AddState();
+        while (s >= cfst->NumStates()) cfst->AddState();
       if (nline == 1) {
         if (fst) fst->SetStart(s);
         if (cfst) cfst->SetStart(s);
       }
 
-      if (fst) { // we still have fst; try to read that arc.
+      if (fst) {  // we still have fst; try to read that arc.
         bool ok = true;
         Arc arc;
         Weight w;
         StateId d = s;
         switch (col.size()) {
-          case 1 :
+          case 1:
             fst->SetFinal(s, Weight::One());
             break;
           case 2:
-            if (!StrToWeight(col[1], true, &w)) ok = false;
-            else fst->SetFinal(s, w);
+            if (!StrToWeight(col[1], true, &w))
+              ok = false;
+            else
+              fst->SetFinal(s, w);
             break;
-          case 3: // 3 columns not ok for Lattice format; it's not an acceptor.
+          case 3:  // 3 columns not ok for Lattice format; it's not an acceptor.
             ok = false;
             break;
           case 4:
             ok = ConvertStringToInteger(col[1], &arc.nextstate) &&
-                ConvertStringToInteger(col[2], &arc.ilabel) &&
-                ConvertStringToInteger(col[3], &arc.olabel);
+                 ConvertStringToInteger(col[2], &arc.ilabel) &&
+                 ConvertStringToInteger(col[3], &arc.olabel);
             if (ok) {
               d = arc.nextstate;
               arc.weight = Weight::One();
@@ -176,9 +173,9 @@ class LatticeReader {
             break;
           case 5:
             ok = ConvertStringToInteger(col[1], &arc.nextstate) &&
-                ConvertStringToInteger(col[2], &arc.ilabel) &&
-                ConvertStringToInteger(col[3], &arc.olabel) &&
-                StrToWeight(col[4], false, &arc.weight);
+                 ConvertStringToInteger(col[2], &arc.ilabel) &&
+                 ConvertStringToInteger(col[3], &arc.olabel) &&
+                 StrToWeight(col[4], false, &arc.weight);
             if (ok) {
               d = arc.nextstate;
               fst->AddArc(s, arc);
@@ -187,8 +184,7 @@ class LatticeReader {
           default:
             ok = false;
         }
-        while (d >= fst->NumStates())
-          fst->AddState();
+        while (d >= fst->NumStates()) fst->AddState();
         if (!ok) {
           delete fst;
           fst = NULL;
@@ -200,16 +196,19 @@ class LatticeReader {
         CWeight w;
         StateId d = s;
         switch (col.size()) {
-          case 1 :
+          case 1:
             cfst->SetFinal(s, CWeight::One());
             break;
           case 2:
-            if (!StrToCWeight(col[1], true, &w)) ok = false;
-            else cfst->SetFinal(s, w);
+            if (!StrToCWeight(col[1], true, &w))
+              ok = false;
+            else
+              cfst->SetFinal(s, w);
             break;
-          case 3: // compact-lattice is acceptor format: state, next-state, label.
+          case 3:  // compact-lattice is acceptor format: state, next-state,
+                   // label.
             ok = ConvertStringToInteger(col[1], &arc.nextstate) &&
-                ConvertStringToInteger(col[2], &arc.ilabel);
+                 ConvertStringToInteger(col[2], &arc.ilabel);
             if (ok) {
               d = arc.nextstate;
               arc.olabel = arc.ilabel;
@@ -219,19 +218,19 @@ class LatticeReader {
             break;
           case 4:
             ok = ConvertStringToInteger(col[1], &arc.nextstate) &&
-                ConvertStringToInteger(col[2], &arc.ilabel) &&
-                StrToCWeight(col[3], false, &arc.weight);
+                 ConvertStringToInteger(col[2], &arc.ilabel) &&
+                 StrToCWeight(col[3], false, &arc.weight);
             if (ok) {
               d = arc.nextstate;
               arc.olabel = arc.ilabel;
               cfst->AddArc(s, arc);
             }
             break;
-          case 5: default:
+          case 5:
+          default:
             ok = false;
         }
-        while (d >= cfst->NumStates())
-          cfst->AddState();
+        while (d >= cfst->NumStates()) cfst->AddState();
         if (!ok) {
           delete cfst;
           cfst = NULL;
@@ -254,7 +253,7 @@ class LatticeReader {
     return PairT(fst, cfst);
   }
 
-  static bool StrToWeight(const std::string &s, bool allow_zero, Weight *w) {
+  static bool StrToWeight(const std::string& s, bool allow_zero, Weight* w) {
     std::istringstream strm(s);
     strm >> *w;
     if (!strm || (!allow_zero && *w == Weight::Zero())) {
@@ -263,7 +262,7 @@ class LatticeReader {
     return true;
   }
 
-  static  bool StrToCWeight(const std::string &s, bool allow_zero, CWeight *w) {
+  static bool StrToCWeight(const std::string& s, bool allow_zero, CWeight* w) {
     std::istringstream strm(s);
     strm >> *w;
     if (!strm || (!allow_zero && *w == CWeight::Zero())) {
@@ -273,8 +272,7 @@ class LatticeReader {
   }
 };
 
-
-CompactLattice *ReadCompactLatticeText(std::istream &is) {
+CompactLattice* ReadCompactLatticeText(std::istream& is) {
   std::pair<Lattice*, CompactLattice*> lat_pair = LatticeReader::ReadText(is);
   if (lat_pair.second != NULL) {
     delete lat_pair.first;
@@ -287,8 +285,7 @@ CompactLattice *ReadCompactLatticeText(std::istream &is) {
   }
 }
 
-
-Lattice *ReadLatticeText(std::istream &is) {
+Lattice* ReadLatticeText(std::istream& is) {
   std::pair<Lattice*, CompactLattice*> lat_pair = LatticeReader::ReadText(is);
   if (lat_pair.first != NULL) {
     delete lat_pair.second;
@@ -301,8 +298,7 @@ Lattice *ReadLatticeText(std::istream &is) {
   }
 }
 
-bool ReadCompactLattice(std::istream &is, bool binary,
-                        CompactLattice **clat) {
+bool ReadCompactLattice(std::istream& is, bool binary, CompactLattice** clat) {
   KALDI_ASSERT(*clat == NULL);
   if (binary) {
     fst::FstHeader hdr;
@@ -315,11 +311,12 @@ bool ReadCompactLattice(std::istream &is, bool binary,
                  << hdr.FstType();
       return false;
     }
-    fst::FstReadOptions ropts("<unspecified>",
-                              &hdr);
+    fst::FstReadOptions ropts("<unspecified>", &hdr);
 
-    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<float>, int32> T1;
-    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<double>, int32> T2;
+    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<float>, int32>
+        T1;
+    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<double>, int32>
+        T2;
     typedef fst::LatticeWeightTpl<float> T3;
     typedef fst::LatticeWeightTpl<double> T4;
     typedef fst::VectorFst<fst::ArcTpl<T1> > F1;
@@ -327,7 +324,7 @@ bool ReadCompactLattice(std::istream &is, bool binary,
     typedef fst::VectorFst<fst::ArcTpl<T3> > F3;
     typedef fst::VectorFst<fst::ArcTpl<T4> > F4;
 
-    CompactLattice *ans = NULL;
+    CompactLattice* ans = NULL;
     if (hdr.ArcType() == T1::Type()) {
       ans = ConvertToCompactLattice(F1::Read(is, ropts));
     } else if (hdr.ArcType() == T2::Type()) {
@@ -351,30 +348,30 @@ bool ReadCompactLattice(std::istream &is, bool binary,
     // The next line would normally consume the \r on Windows, plus any
     // extra spaces that might have got in there somehow.
     while (std::isspace(is.peek()) && is.peek() != '\n') is.get();
-    if (is.peek() == '\n') is.get(); // consume the newline.
-    else { // saw spaces but no newline.. this is not expected.
+    if (is.peek() == '\n')
+      is.get();  // consume the newline.
+    else {       // saw spaces but no newline.. this is not expected.
       KALDI_WARN << "Reading compact lattice: unexpected sequence of spaces "
                  << " at file position " << is.tellg();
       return false;
     }
-    *clat = ReadCompactLatticeText(is); // that routine will warn on error.
+    *clat = ReadCompactLatticeText(is);  // that routine will warn on error.
     return (*clat != NULL);
   }
 }
 
-
-bool CompactLatticeHolder::Read(std::istream &is) {
-  Clear(); // in case anything currently stored.
+bool CompactLatticeHolder::Read(std::istream& is) {
+  Clear();  // in case anything currently stored.
   int c = is.peek();
   if (c == -1) {
     KALDI_WARN << "End of stream detected reading CompactLattice.";
     return false;
-  } else if (isspace(c)) { // The text form of the lattice begins
+  } else if (isspace(c)) {  // The text form of the lattice begins
     // with space (normally, '\n'), so this means it's text (the binary form
-    // cannot begin with space because it starts with the FST Type() which is not
-    // space).
+    // cannot begin with space because it starts with the FST Type() which is
+    // not space).
     return ReadCompactLattice(is, false, &t_);
-  } else if (c != 214) { // 214 is first char of FST magic number,
+  } else if (c != 214) {  // 214 is first char of FST magic number,
     // on little-endian machines which is all we support (\326 octal)
     KALDI_WARN << "Reading compact lattice: does not appear to be an FST "
                << " [non-space but no magic number detected], file pos is "
@@ -385,12 +382,12 @@ bool CompactLatticeHolder::Read(std::istream &is) {
   }
 }
 
-bool WriteLattice(std::ostream &os, bool binary, const Lattice &t) {
+bool WriteLattice(std::ostream& os, bool binary, const Lattice& t) {
   if (binary) {
     fst::FstWriteOptions opts;
     // Leave all the options default.  Normally these lattices wouldn't have any
-    // osymbols/isymbols so no point directing it not to write them (who knows what
-    // we'd want to do if we had them).
+    // osymbols/isymbols so no point directing it not to write them (who knows
+    // what we'd want to do if we had them).
     return t.Write(os, opts);
   } else {
     // Text-mode output.  Note: we expect that t.InputSymbols() and
@@ -400,12 +397,10 @@ bool WriteLattice(std::ostream &os, bool binary, const Lattice &t) {
     // on its own line.
     os << '\n';
     bool acceptor = false, write_one = false;
-    fst::FstPrinter<LatticeArc> printer(t, t.InputSymbols(),
-                                        t.OutputSymbols(),
+    fst::FstPrinter<LatticeArc> printer(t, t.InputSymbols(), t.OutputSymbols(),
                                         NULL, acceptor, write_one, "\t");
     printer.Print(&os, "<unknown>");
-    if (os.fail())
-      KALDI_WARN << "Stream failure detected.";
+    if (os.fail()) KALDI_WARN << "Stream failure detected.";
     // Write another newline as a terminating character.  The read routine will
     // detect this [this is a Kaldi mechanism, not somethig in the original
     // OpenFst code].
@@ -414,8 +409,7 @@ bool WriteLattice(std::ostream &os, bool binary, const Lattice &t) {
   }
 }
 
-bool ReadLattice(std::istream &is, bool binary,
-                 Lattice **lat) {
+bool ReadLattice(std::istream& is, bool binary, Lattice** lat) {
   KALDI_ASSERT(*lat == NULL);
   if (binary) {
     fst::FstHeader hdr;
@@ -424,15 +418,15 @@ bool ReadLattice(std::istream &is, bool binary,
       return false;
     }
     if (hdr.FstType() != "vector") {
-      KALDI_WARN << "Reading lattice: unsupported FST type: "
-                 << hdr.FstType();
+      KALDI_WARN << "Reading lattice: unsupported FST type: " << hdr.FstType();
       return false;
     }
-    fst::FstReadOptions ropts("<unspecified>",
-                              &hdr);
+    fst::FstReadOptions ropts("<unspecified>", &hdr);
 
-    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<float>, int32> T1;
-    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<double>, int32> T2;
+    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<float>, int32>
+        T1;
+    typedef fst::CompactLatticeWeightTpl<fst::LatticeWeightTpl<double>, int32>
+        T2;
     typedef fst::LatticeWeightTpl<float> T3;
     typedef fst::LatticeWeightTpl<double> T4;
     typedef fst::VectorFst<fst::ArcTpl<T1> > F1;
@@ -440,7 +434,7 @@ bool ReadLattice(std::istream &is, bool binary,
     typedef fst::VectorFst<fst::ArcTpl<T3> > F3;
     typedef fst::VectorFst<fst::ArcTpl<T4> > F4;
 
-    Lattice *ans = NULL;
+    Lattice* ans = NULL;
     if (hdr.ArcType() == T1::Type()) {
       ans = ConvertToLattice(F1::Read(is, ropts));
     } else if (hdr.ArcType() == T2::Type()) {
@@ -464,33 +458,33 @@ bool ReadLattice(std::istream &is, bool binary,
     // The next line would normally consume the \r on Windows, plus any
     // extra spaces that might have got in there somehow.
     while (std::isspace(is.peek()) && is.peek() != '\n') is.get();
-    if (is.peek() == '\n') is.get(); // consume the newline.
-    else { // saw spaces but no newline.. this is not expected.
+    if (is.peek() == '\n')
+      is.get();  // consume the newline.
+    else {       // saw spaces but no newline.. this is not expected.
       KALDI_WARN << "Reading compact lattice: unexpected sequence of spaces "
                  << " at file position " << is.tellg();
       return false;
     }
-    *lat = ReadLatticeText(is); // that routine will warn on error.
+    *lat = ReadLatticeText(is);  // that routine will warn on error.
     return (*lat != NULL);
   }
 }
 
-
 /* Since we don't write the binary headers for this type of holder,
    we use a different method to work out whether we're in binary mode.
  */
-bool LatticeHolder::Read(std::istream &is) {
-  Clear(); // in case anything currently stored.
+bool LatticeHolder::Read(std::istream& is) {
+  Clear();  // in case anything currently stored.
   int c = is.peek();
   if (c == -1) {
     KALDI_WARN << "End of stream detected reading Lattice.";
     return false;
-  } else if (isspace(c)) { // The text form of the lattice begins
+  } else if (isspace(c)) {  // The text form of the lattice begins
     // with space (normally, '\n'), so this means it's text (the binary form
-    // cannot begin with space because it starts with the FST Type() which is not
-    // space).
+    // cannot begin with space because it starts with the FST Type() which is
+    // not space).
     return ReadLattice(is, false, &t_);
-  } else if (c != 214) { // 214 is first char of FST magic number,
+  } else if (c != 214) {  // 214 is first char of FST magic number,
     // on little-endian machines which is all we support (\326 octal)
     KALDI_WARN << "Reading compact lattice: does not appear to be an FST "
                << " [non-space but no magic number detected], file pos is "
@@ -501,6 +495,4 @@ bool LatticeHolder::Read(std::istream &is) {
   }
 }
 
-
-
-} // end namespace kaldi
+}  // end namespace kaldi

@@ -32,13 +32,13 @@
  fstminimizeencoded | fstprint
 */
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   try {
     using namespace kaldi;  // NOLINT
-    using namespace fst;  // NOLINT
+    using namespace fst;    // NOLINT
     using kaldi::int32;
 
-    const char *usage =
+    const char* usage =
         "Minimizes FST after encoding [similar to fstminimize, but no "
         "weight-pushing]\n"
         "\n"
@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     std::string fst_in_filename = po.GetOptArg(1),
                 fst_out_filename = po.GetOptArg(2);
 
-    VectorFst<StdArc> *fst = ReadFstKaldi(fst_in_filename);
+    VectorFst<StdArc>* fst = ReadFstKaldi(fst_in_filename);
 
     MinimizeEncoded(fst, delta);
 
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 
     delete fst;
     return 0;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << e.what();
     return -1;
   }

@@ -15,14 +15,14 @@
 #include <cstring>
 
 #if _MSC_VER
-#include <io.h>
 #include <fcntl.h>
+#include <io.h>
 #endif
 
 #include <fst/compat.h>
 #include <fst/flags.h>
 
-static const char *private_tmpdir = getenv("TMPDIR");
+static const char* private_tmpdir = getenv("TMPDIR");
 
 // DEFINE_int32(v, 0, "verbosity level");
 // DEFINE_bool(help, false, "show usage information");
@@ -33,7 +33,7 @@ DEFINE_string(tmpdir, private_tmpdir ? private_tmpdir : "/tmp",
 #else
 DEFINE_string(tmpdir, private_tmpdir ? private_tmpdir : getenv("TEMP"),
               "temporary directory");
-#endif // !_MSC_VER
+#endif  // !_MSC_VER
 
 using namespace std;
 
@@ -41,7 +41,7 @@ static string flag_usage;
 static string prog_src;
 
 // Sets prog_src to src.
-static void SetProgSrc(const char *src) {
+static void SetProgSrc(const char* src) {
   prog_src = src;
 #if _MSC_VER
   // This common code is invoked by all FST binaries, and only by them. Switch
@@ -65,8 +65,8 @@ static void SetProgSrc(const char *src) {
   }
 }
 
-void SetFlags(const char *usage, int *argc, char ***argv,
-              bool remove_flags, const char *src) {
+void SetFlags(const char* usage, int* argc, char*** argv, bool remove_flags,
+              const char* src) {
   flag_usage = usage;
   SetProgSrc(src);
 
@@ -84,20 +84,15 @@ void SetFlags(const char *usage, int *argc, char ***argv,
       val = argval.substr(pos + 1);
     }
     auto bool_register = FlagRegister<bool>::GetRegister();
-    if (bool_register->SetFlag(arg, val))
-      continue;
+    if (bool_register->SetFlag(arg, val)) continue;
     auto string_register = FlagRegister<string>::GetRegister();
-    if (string_register->SetFlag(arg, val))
-      continue;
+    if (string_register->SetFlag(arg, val)) continue;
     auto int32_register = FlagRegister<int32>::GetRegister();
-    if (int32_register->SetFlag(arg, val))
-      continue;
+    if (int32_register->SetFlag(arg, val)) continue;
     auto int64_register = FlagRegister<int64>::GetRegister();
-    if (int64_register->SetFlag(arg, val))
-      continue;
+    if (int64_register->SetFlag(arg, val)) continue;
     auto double_register = FlagRegister<double>::GetRegister();
-    if (double_register->SetFlag(arg, val))
-      continue;
+    if (double_register->SetFlag(arg, val)) continue;
     LOG(FATAL) << "SetFlags: Bad option: " << (*argv)[index];
   }
   if (remove_flags) {
@@ -118,15 +113,14 @@ void SetFlags(const char *usage, int *argc, char ***argv,
 
 // If flag is defined in file 'src' and 'in_src' true or is not
 // defined in file 'src' and 'in_src' is false, then print usage.
-static void
-ShowUsageRestrict(const std::set<pair<string, string>> &usage_set,
-                  const string &src, bool in_src, bool show_file) {
+static void ShowUsageRestrict(const std::set<pair<string, string>>& usage_set,
+                              const string& src, bool in_src, bool show_file) {
   string old_file;
   bool file_out = false;
   bool usage_out = false;
-  for (const auto &pair : usage_set) {
-    const auto &file = pair.first;
-    const auto &usage = pair.second;
+  for (const auto& pair : usage_set) {
+    const auto& file = pair.first;
+    const auto& usage = pair.second;
     bool match = file == src;
     if ((match && !in_src) || (!match && in_src)) continue;
     if (file != old_file) {

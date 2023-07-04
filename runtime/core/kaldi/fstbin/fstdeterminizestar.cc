@@ -55,13 +55,13 @@
 bool debug_location = false;
 void signal_handler(int) { debug_location = true; }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   try {
     using namespace kaldi;  // NOLINT
-    using namespace fst;  // NOLINT
+    using namespace fst;    // NOLINT
     using kaldi::int32;
 
-    const char *usage =
+    const char* usage =
         "Removes epsilons and determinizes in one step\n"
         "\n"
         "Usage:  fstdeterminizestar [in.fst [out.fst] ]\n"
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     signal(SIGUSR1, signal_handler);
 #endif
     // Normal case: just files.
-    VectorFst<StdArc> *fst = ReadFstKaldi(fst_in_str);
+    VectorFst<StdArc>* fst = ReadFstKaldi(fst_in_str);
 
     ArcSort(fst, ILabelCompare<StdArc>());  // improves speed.
     if (use_log) {
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
     WriteFstKaldi(*fst, fst_out_str);
     delete fst;
     return 0;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << e.what();
     return -1;
   }

@@ -21,8 +21,8 @@
 
 namespace kaldi {
 
-bool WriteIntegerVectorSimple(const std::string &wxfilename,
-                              const std::vector<int32> &list) {
+bool WriteIntegerVectorSimple(const std::string& wxfilename,
+                              const std::vector<int32>& list) {
   kaldi::Output ko;
   // false, false is: text-mode, no Kaldi header.
   if (!ko.Open(wxfilename, false, false)) return false;
@@ -30,11 +30,11 @@ bool WriteIntegerVectorSimple(const std::string &wxfilename,
   return ko.Close();
 }
 
-bool ReadIntegerVectorSimple(const std::string &rxfilename,
-                             std::vector<int32> *list) {
+bool ReadIntegerVectorSimple(const std::string& rxfilename,
+                             std::vector<int32>* list) {
   kaldi::Input ki;
   if (!ki.OpenTextMode(rxfilename)) return false;
-  std::istream &is = ki.Stream();
+  std::istream& is = ki.Stream();
   int32 i;
   list->clear();
   while (!(is >> i).fail()) list->push_back(i);
@@ -43,12 +43,12 @@ bool ReadIntegerVectorSimple(const std::string &rxfilename,
 }
 
 bool WriteIntegerVectorVectorSimple(
-    const std::string &wxfilename,
-    const std::vector<std::vector<int32> > &list) {
+    const std::string& wxfilename,
+    const std::vector<std::vector<int32> >& list) {
   kaldi::Output ko;
   // false, false is: text-mode, no Kaldi header.
   if (!ko.Open(wxfilename, false, false)) return false;
-  std::ostream &os = ko.Stream();
+  std::ostream& os = ko.Stream();
   for (size_t i = 0; i < list.size(); i++) {
     for (size_t j = 0; j < list[i].size(); j++) {
       os << list[i][j];
@@ -59,11 +59,11 @@ bool WriteIntegerVectorVectorSimple(
   return ko.Close();
 }
 
-bool ReadIntegerVectorVectorSimple(const std::string &rxfilename,
-                                   std::vector<std::vector<int32> > *list) {
+bool ReadIntegerVectorVectorSimple(const std::string& rxfilename,
+                                   std::vector<std::vector<int32> >* list) {
   kaldi::Input ki;
   if (!ki.OpenTextMode(rxfilename)) return false;
-  std::istream &is = ki.Stream();
+  std::istream& is = ki.Stream();
   list->clear();
   std::string line;
   while (std::getline(is, line)) {

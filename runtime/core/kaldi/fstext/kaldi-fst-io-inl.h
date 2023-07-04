@@ -30,7 +30,7 @@
 namespace fst {
 
 template <class Arc>
-void WriteFstKaldi(std::ostream &os, bool binary, const VectorFst<Arc> &t) {
+void WriteFstKaldi(std::ostream& os, bool binary, const VectorFst<Arc>& t) {
   bool ok;
   if (binary) {
     // Binary-mode writing.
@@ -60,7 +60,7 @@ void WriteFstKaldi(std::ostream &os, bool binary, const VectorFst<Arc> &t) {
 
 // Utility function used in ReadFstKaldi
 template <class W>
-inline bool StrToWeight(const std::string &s, bool allow_zero, W *w) {
+inline bool StrToWeight(const std::string& s, bool allow_zero, W* w) {
   std::istringstream strm(s);
   strm >> *w;
   if (strm.fail() || (!allow_zero && *w == W::Zero())) {
@@ -70,12 +70,12 @@ inline bool StrToWeight(const std::string &s, bool allow_zero, W *w) {
 }
 
 template <class Arc>
-void ReadFstKaldi(std::istream &is, bool binary, VectorFst<Arc> *fst) {
+void ReadFstKaldi(std::istream& is, bool binary, VectorFst<Arc>* fst) {
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
   if (binary) {
     // We don't have access to the filename here, so write [unknown].
-    VectorFst<Arc> *ans =
+    VectorFst<Arc>* ans =
         VectorFst<Arc>::Read(is, fst::FstReadOptions(std::string("[unknown]")));
     if (ans == NULL) {
       KALDI_ERR << "Error reading FST from stream.";
@@ -164,7 +164,7 @@ void ReadFstKaldi(std::istream &is, bool binary, VectorFst<Arc> *fst) {
 }
 
 template <class Arc>  // static
-bool VectorFstTplHolder<Arc>::Write(std::ostream &os, bool binary, const T &t) {
+bool VectorFstTplHolder<Arc>::Write(std::ostream& os, bool binary, const T& t) {
   try {
     WriteFstKaldi(os, binary, t);
     return true;
@@ -174,7 +174,7 @@ bool VectorFstTplHolder<Arc>::Write(std::ostream &os, bool binary, const T &t) {
 }
 
 template <class Arc>  // static
-bool VectorFstTplHolder<Arc>::Read(std::istream &is) {
+bool VectorFstTplHolder<Arc>::Read(std::istream& is) {
   Clear();
   int c = is.peek();
   if (c == -1) {
