@@ -44,26 +44,26 @@ class ConstIntegerSet {
  public:
   ConstIntegerSet() : lowest_member_(1), highest_member_(0) {}
 
-  void Init(const std::vector<I> &input) {
+  void Init(const std::vector<I>& input) {
     slow_set_ = input;
     SortAndUniq(&slow_set_);
     InitInternal();
   }
 
-  void Init(const std::set<I> &input) {
+  void Init(const std::set<I>& input) {
     CopySetToVector(input, &slow_set_);
     InitInternal();
   }
 
-  explicit ConstIntegerSet(const std::vector<I> &input) : slow_set_(input) {
+  explicit ConstIntegerSet(const std::vector<I>& input) : slow_set_(input) {
     SortAndUniq(&slow_set_);
     InitInternal();
   }
-  explicit ConstIntegerSet(const std::set<I> &input) {
+  explicit ConstIntegerSet(const std::set<I>& input) {
     CopySetToVector(input, &slow_set_);
     InitInternal();
   }
-  explicit ConstIntegerSet(const ConstIntegerSet<I> &other)
+  explicit ConstIntegerSet(const ConstIntegerSet<I>& other)
       : slow_set_(other.slow_set_) {
     InitInternal();
   }
@@ -76,8 +76,8 @@ class ConstIntegerSet {
   size_t size() const { return slow_set_.size(); }
   bool empty() const { return slow_set_.empty(); }
 
-  void Write(std::ostream &os, bool binary) const;
-  void Read(std::istream &is, bool binary);
+  void Write(std::ostream& os, bool binary) const;
+  void Read(std::istream& is, bool binary);
 
  private:
   I lowest_member_;

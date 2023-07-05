@@ -26,21 +26,21 @@
 // Do not include this file directly.  It is included by base/io-funcs.h
 
 #include <limits>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace kaldi {
 
 // Template that covers integers.
 template <class T>
-void WriteBasicType(std::ostream &os, bool binary, T t) {
+void WriteBasicType(std::ostream& os, bool binary, T t) {
   // Compile time assertion that this is not called with a wrong type.
   KALDI_ASSERT_IS_INTEGER_TYPE(T);
   if (binary) {
     char len_c = (std::numeric_limits<T>::is_signed ? 1 : -1) *
                  static_cast<char>(sizeof(t));
     os.put(len_c);
-    os.write(reinterpret_cast<const char *>(&t), sizeof(t));
+    os.write(reinterpret_cast<const char*>(&t), sizeof(t));
   } else {
     if (sizeof(t) == 1)
       os << static_cast<int16>(t) << " ";
@@ -54,7 +54,7 @@ void WriteBasicType(std::ostream &os, bool binary, T t) {
 
 // Template that covers integers.
 template <class T>
-inline void ReadBasicType(std::istream &is, bool binary, T *t) {
+inline void ReadBasicType(std::istream& is, bool binary, T* t) {
   KALDI_PARANOID_ASSERT(t != NULL);
   // Compile time assertion that this is not called with a wrong type.
   KALDI_ASSERT_IS_INTEGER_TYPE(T);
@@ -73,7 +73,7 @@ inline void ReadBasicType(std::istream &is, bool binary, T *t) {
                 << " read it later, if needed.";
       // insert code here to read "wrong" type.  Might have a switch statement.
     }
-    is.read(reinterpret_cast<char *>(t), sizeof(*t));
+    is.read(reinterpret_cast<char*>(t), sizeof(*t));
   } else {
     if (sizeof(*t) == 1) {
       int16 i;
@@ -91,8 +91,8 @@ inline void ReadBasicType(std::istream &is, bool binary, T *t) {
 
 // Template that covers integers.
 template <class T>
-inline void WriteIntegerPairVector(std::ostream &os, bool binary,
-                                   const std::vector<std::pair<T, T> > &v) {
+inline void WriteIntegerPairVector(std::ostream& os, bool binary,
+                                   const std::vector<std::pair<T, T> >& v) {
   // Compile time assertion that this is not called with a wrong type.
   KALDI_ASSERT_IS_INTEGER_TYPE(T);
   if (binary) {
@@ -100,9 +100,9 @@ inline void WriteIntegerPairVector(std::ostream &os, bool binary,
     os.write(&sz, 1);
     int32 vecsz = static_cast<int32>(v.size());
     KALDI_ASSERT((size_t)vecsz == v.size());
-    os.write(reinterpret_cast<const char *>(&vecsz), sizeof(vecsz));
+    os.write(reinterpret_cast<const char*>(&vecsz), sizeof(vecsz));
     if (vecsz != 0) {
-      os.write(reinterpret_cast<const char *>(&(v[0])), sizeof(T) * vecsz * 2);
+      os.write(reinterpret_cast<const char*>(&(v[0])), sizeof(T) * vecsz * 2);
     }
   } else {
     // focus here is on prettiness of text form rather than
@@ -128,8 +128,8 @@ inline void WriteIntegerPairVector(std::ostream &os, bool binary,
 
 // Template that covers integers.
 template <class T>
-inline void ReadIntegerPairVector(std::istream &is, bool binary,
-                                  std::vector<std::pair<T, T> > *v) {
+inline void ReadIntegerPairVector(std::istream& is, bool binary,
+                                  std::vector<std::pair<T, T> >* v) {
   KALDI_ASSERT_IS_INTEGER_TYPE(T);
   KALDI_ASSERT(v != NULL);
   if (binary) {
@@ -142,11 +142,11 @@ inline void ReadIntegerPairVector(std::istream &is, bool binary,
                 << is.tellg();
     }
     int32 vecsz;
-    is.read(reinterpret_cast<char *>(&vecsz), sizeof(vecsz));
+    is.read(reinterpret_cast<char*>(&vecsz), sizeof(vecsz));
     if (is.fail() || vecsz < 0) goto bad;
     v->resize(vecsz);
     if (vecsz > 0) {
-      is.read(reinterpret_cast<char *>(&((*v)[0])), sizeof(T) * vecsz * 2);
+      is.read(reinterpret_cast<char*>(&((*v)[0])), sizeof(T) * vecsz * 2);
     }
   } else {
     std::vector<std::pair<T, T> > tmp_v;  // use temporary so v doesn't use
@@ -198,8 +198,8 @@ bad:
 }
 
 template <class T>
-inline void WriteIntegerVector(std::ostream &os, bool binary,
-                               const std::vector<T> &v) {
+inline void WriteIntegerVector(std::ostream& os, bool binary,
+                               const std::vector<T>& v) {
   // Compile time assertion that this is not called with a wrong type.
   KALDI_ASSERT_IS_INTEGER_TYPE(T);
   if (binary) {
@@ -207,9 +207,9 @@ inline void WriteIntegerVector(std::ostream &os, bool binary,
     os.write(&sz, 1);
     int32 vecsz = static_cast<int32>(v.size());
     KALDI_ASSERT((size_t)vecsz == v.size());
-    os.write(reinterpret_cast<const char *>(&vecsz), sizeof(vecsz));
+    os.write(reinterpret_cast<const char*>(&vecsz), sizeof(vecsz));
     if (vecsz != 0) {
-      os.write(reinterpret_cast<const char *>(&(v[0])), sizeof(T) * vecsz);
+      os.write(reinterpret_cast<const char*>(&(v[0])), sizeof(T) * vecsz);
     }
   } else {
     // focus here is on prettiness of text form rather than
@@ -232,8 +232,8 @@ inline void WriteIntegerVector(std::ostream &os, bool binary,
 }
 
 template <class T>
-inline void ReadIntegerVector(std::istream &is, bool binary,
-                              std::vector<T> *v) {
+inline void ReadIntegerVector(std::istream& is, bool binary,
+                              std::vector<T>* v) {
   KALDI_ASSERT_IS_INTEGER_TYPE(T);
   KALDI_ASSERT(v != NULL);
   if (binary) {
@@ -246,11 +246,11 @@ inline void ReadIntegerVector(std::istream &is, bool binary,
                 << is.tellg();
     }
     int32 vecsz;
-    is.read(reinterpret_cast<char *>(&vecsz), sizeof(vecsz));
+    is.read(reinterpret_cast<char*>(&vecsz), sizeof(vecsz));
     if (is.fail() || vecsz < 0) goto bad;
     v->resize(vecsz);
     if (vecsz > 0) {
-      is.read(reinterpret_cast<char *>(&((*v)[0])), sizeof(T) * vecsz);
+      is.read(reinterpret_cast<char*>(&((*v)[0])), sizeof(T) * vecsz);
     }
   } else {
     std::vector<T> tmp_v;  // use temporary so v doesn't use extra memory
@@ -291,7 +291,7 @@ bad:
 
 // Initialize an opened stream for writing by writing an optional binary
 // header and modifying the floating-point precision.
-inline void InitKaldiOutputStream(std::ostream &os, bool binary) {
+inline void InitKaldiOutputStream(std::ostream& os, bool binary) {
   // This does not throw exceptions (does not check for errors).
   if (binary) {
     os.put('\0');
@@ -305,7 +305,7 @@ inline void InitKaldiOutputStream(std::ostream &os, bool binary) {
 
 /// Initialize an opened stream for reading by detecting the binary header and
 // setting the "binary" value appropriately.
-inline bool InitKaldiInputStream(std::istream &is, bool *binary) {
+inline bool InitKaldiInputStream(std::istream& is, bool* binary) {
   // Sets the 'binary' variable.
   // Throws exception in the very unusual situation that stream
   // starts with '\0' but not then 'B'.

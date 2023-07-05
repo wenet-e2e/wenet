@@ -46,7 +46,7 @@ class basic_pipebuf : public basic_filebuf<CharType, Traits> {
   typedef basic_pipebuf<CharType, Traits> ThisType;
 
  public:
-  basic_pipebuf(FILE *fptr, std::ios_base::openmode mode)
+  basic_pipebuf(FILE* fptr, std::ios_base::openmode mode)
       : basic_filebuf<CharType, Traits>() {
     this->open(fptr, mode);
     if (!this->is_open()) {
@@ -63,7 +63,7 @@ class basic_pipebuf : public std::basic_filebuf<CharType, Traits> {
   typedef basic_pipebuf<CharType, Traits> ThisType;
 
  public:
-  basic_pipebuf(FILE *fptr, std::ios_base::openmode mode)
+  basic_pipebuf(FILE* fptr, std::ios_base::openmode mode)
       : std::basic_filebuf<CharType, Traits>() {
     this->_M_file.sys_open(fptr, mode);
     if (!this->is_open()) {

@@ -32,67 +32,67 @@
 #include <set>
 #include <vector>
 
+#include "base/kaldi-common.h"  // for error reporting macros.
+#include "fst/script/print-impl.h"
 #include "fstext/determinize-star.h"
 #include "fstext/remove-eps-local.h"
-#include "base/kaldi-common.h"  // for error reporting macros.
 #include "util/text-utils.h"  // for SplitStringToVector
-#include "fst/script/print-impl.h"
 
 namespace fst {
 
 /// Returns the highest numbered output symbol id of the FST (or zero
 /// for an empty FST.
 template <class Arc>
-typename Arc::Label HighestNumberedOutputSymbol(const Fst<Arc> &fst);
+typename Arc::Label HighestNumberedOutputSymbol(const Fst<Arc>& fst);
 
 /// Returns the highest numbered input symbol id of the FST (or zero
 /// for an empty FST.
 template <class Arc>
-typename Arc::Label HighestNumberedInputSymbol(const Fst<Arc> &fst);
+typename Arc::Label HighestNumberedInputSymbol(const Fst<Arc>& fst);
 
 /// Returns the total number of arcs in an FST.
 template <class Arc>
-typename Arc::StateId NumArcs(const ExpandedFst<Arc> &fst);
+typename Arc::StateId NumArcs(const ExpandedFst<Arc>& fst);
 
 /// GetInputSymbols gets the list of symbols on the input of fst
 /// (including epsilon, if include_eps == true), as a sorted, unique
 /// list.
 template <class Arc, class I>
-void GetInputSymbols(const Fst<Arc> &fst, bool include_eps,
-                     std::vector<I> *symbols);
+void GetInputSymbols(const Fst<Arc>& fst, bool include_eps,
+                     std::vector<I>* symbols);
 
 /// GetOutputSymbols gets the list of symbols on the output of fst
 /// (including epsilon, if include_eps == true)
 template <class Arc, class I>
-void GetOutputSymbols(const Fst<Arc> &fst, bool include_eps,
-                      std::vector<I> *symbols);
+void GetOutputSymbols(const Fst<Arc>& fst, bool include_eps,
+                      std::vector<I>* symbols);
 
 /// ClearSymbols sets all the symbols on the input and/or
 /// output side of the FST to zero, as specified.
 /// It does not alter the symbol tables.
 template <class Arc>
-void ClearSymbols(bool clear_input, bool clear_output, MutableFst<Arc> *fst);
+void ClearSymbols(bool clear_input, bool clear_output, MutableFst<Arc>* fst);
 
 template <class I>
-void GetSymbols(const SymbolTable &symtab, bool include_eps,
-                std::vector<I> *syms_out);
+void GetSymbols(const SymbolTable& symtab, bool include_eps,
+                std::vector<I>* syms_out);
 
-inline void DeterminizeStarInLog(VectorFst<StdArc> *fst, float delta = kDelta,
-                                 bool *debug_ptr = NULL, int max_states = -1);
+inline void DeterminizeStarInLog(VectorFst<StdArc>* fst, float delta = kDelta,
+                                 bool* debug_ptr = NULL, int max_states = -1);
 
 // e.g. of using this function: PushInLog<REWEIGHT_TO_INITIAL>(fst,
 // kPushWeights|kPushLabels);
 
 template <ReweightType rtype>  // == REWEIGHT_TO_{INITIAL, FINAL}
-void PushInLog(VectorFst<StdArc> *fst, uint32 ptype, float delta = kDelta) {
+void PushInLog(VectorFst<StdArc>* fst, uint32 ptype, float delta = kDelta) {
   // PushInLog pushes the FST
   // and returns a new pushed FST (labels and weights pushed to the left).
-  VectorFst<LogArc> *fst_log =
+  VectorFst<LogArc>* fst_log =
       new VectorFst<LogArc>;  // Want to determinize in log semiring.
   Cast(*fst, fst_log);
   VectorFst<StdArc> tmp;
   *fst = tmp;  // free up memory.
-  VectorFst<LogArc> *fst_pushed_log = new VectorFst<LogArc>;
+  VectorFst<LogArc>* fst_pushed_log = new VectorFst<LogArc>;
   Push<LogArc, rtype>(*fst_log, fst_pushed_log, ptype, delta);
   Cast(*fst_pushed_log, fst);
   delete fst_log;
@@ -107,7 +107,7 @@ void PushInLog(VectorFst<StdArc> *fst, uint32 ptype, float delta = kDelta) {
 // in combinable paths are the same... hard to formalize this, but it's
 // something that is satisified by our normal FSTs.
 template <class Arc>
-void MinimizeEncoded(VectorFst<Arc> *fst, float delta = kDelta) {
+void MinimizeEncoded(VectorFst<Arc>* fst, float delta = kDelta) {
   Map(fst, QuantizeMapper<Arc>(delta));
   EncodeMapper<Arc> encoder(kEncodeLabels | kEncodeWeights, ENCODE);
   Encode(fst, &encoder);
@@ -124,9 +124,9 @@ void MinimizeEncoded(VectorFst<Arc> *fst, float delta = kDelta) {
 /// if the FST is empty.  If any of the output pointers are NULL, it does not
 /// create that output.
 template <class Arc, class I>
-bool GetLinearSymbolSequence(const Fst<Arc> &fst, std::vector<I> *isymbols_out,
-                             std::vector<I> *osymbols_out,
-                             typename Arc::Weight *tot_weight_out);
+bool GetLinearSymbolSequence(const Fst<Arc>& fst, std::vector<I>* isymbols_out,
+                             std::vector<I>* osymbols_out,
+                             typename Arc::Weight* tot_weight_out);
 
 /// This function converts an FST with a special structure, which is
 /// output by the OpenFst functions ShortestPath and RandGen, and converts
@@ -134,27 +134,27 @@ bool GetLinearSymbolSequence(const Fst<Arc> &fst, std::vector<I> *isymbols_out,
 /// the only state that has more than one (arcs-out or final-prob) is the
 /// start state.  fsts_out is resized to the appropriate size.
 template <class Arc>
-void ConvertNbestToVector(const Fst<Arc> &fst,
-                          std::vector<VectorFst<Arc> > *fsts_out);
+void ConvertNbestToVector(const Fst<Arc>& fst,
+                          std::vector<VectorFst<Arc> >* fsts_out);
 
 /// Takes the n-shortest-paths (using ShortestPath), but outputs
 /// the result as a vector of up to n fsts.  This function will
 /// size the "fsts_out" vector to however many paths it got
 /// (which will not exceed n).  n must be >= 1.
 template <class Arc>
-void NbestAsFsts(const Fst<Arc> &fst, size_t n,
-                 std::vector<VectorFst<Arc> > *fsts_out);
+void NbestAsFsts(const Fst<Arc>& fst, size_t n,
+                 std::vector<VectorFst<Arc> >* fsts_out);
 
 /// Creates unweighted linear acceptor from symbol sequence.
 template <class Arc, class I>
-void MakeLinearAcceptor(const std::vector<I> &labels, MutableFst<Arc> *ofst);
+void MakeLinearAcceptor(const std::vector<I>& labels, MutableFst<Arc>* ofst);
 
 /// Creates an unweighted acceptor with a linear structure, with alternatives
 /// at each position.  Epsilon is treated like a normal symbol here.
 /// Each position in "labels" must have at least one alternative.
 template <class Arc, class I>
 void MakeLinearAcceptorWithAlternatives(
-    const std::vector<std::vector<I> > &labels, MutableFst<Arc> *ofst);
+    const std::vector<std::vector<I> >& labels, MutableFst<Arc>* ofst);
 
 /// Does PreDeterminize and DeterminizeStar and then removes the disambiguation
 /// symbols. This is a form of determinization that will never blow up. Note
@@ -164,43 +164,43 @@ void MakeLinearAcceptorWithAlternatives(
 /// to log and do this, and maintain equivalence in tropical.
 
 template <class Arc>
-void SafeDeterminizeWrapper(MutableFst<Arc> *ifst, MutableFst<Arc> *ofst,
+void SafeDeterminizeWrapper(MutableFst<Arc>* ifst, MutableFst<Arc>* ofst,
                             float delta = kDelta);
 
 /// SafeDeterminizeMinimizeWapper is as SafeDeterminizeWrapper except that it
 /// also minimizes (encoded minimization, which is safe).  This algorithm will
 /// destroy "ifst".
 template <class Arc>
-void SafeDeterminizeMinimizeWrapper(MutableFst<Arc> *ifst, VectorFst<Arc> *ofst,
+void SafeDeterminizeMinimizeWrapper(MutableFst<Arc>* ifst, VectorFst<Arc>* ofst,
                                     float delta = kDelta);
 
 /// SafeDeterminizeMinimizeWapperInLog is as SafeDeterminizeMinimizeWrapper
 /// except it first casts tothe log semiring.
-void SafeDeterminizeMinimizeWrapperInLog(VectorFst<StdArc> *ifst,
-                                         VectorFst<StdArc> *ofst,
+void SafeDeterminizeMinimizeWrapperInLog(VectorFst<StdArc>* ifst,
+                                         VectorFst<StdArc>* ofst,
                                          float delta = kDelta);
 
 /// RemoveSomeInputSymbols removes any symbol that appears in "to_remove", from
 /// the input side of the FST, replacing them with epsilon.
 template <class Arc, class I>
-void RemoveSomeInputSymbols(const std::vector<I> &to_remove,
-                            MutableFst<Arc> *fst);
+void RemoveSomeInputSymbols(const std::vector<I>& to_remove,
+                            MutableFst<Arc>* fst);
 
 // MapInputSymbols will replace any input symbol i that is between 0 and
 // symbol_map.size()-1, with symbol_map[i].  It removes the input symbol
 // table of the FST.
 template <class Arc, class I>
-void MapInputSymbols(const std::vector<I> &symbol_map, MutableFst<Arc> *fst);
+void MapInputSymbols(const std::vector<I>& symbol_map, MutableFst<Arc>* fst);
 
 template <class Arc>
-void RemoveWeights(MutableFst<Arc> *fst);
+void RemoveWeights(MutableFst<Arc>* fst);
 
 /// Returns true if and only if the FST is such that the input symbols
 /// on arcs entering any given state all have the same value.
 /// if "start_is_epsilon", treat start-state as an epsilon input arc
 /// [i.e. ensure only epsilon can enter start-state].
 template <class Arc>
-bool PrecedingInputSymbolsAreSame(bool start_is_epsilon, const Fst<Arc> &fst);
+bool PrecedingInputSymbolsAreSame(bool start_is_epsilon, const Fst<Arc>& fst);
 
 /// This is as PrecedingInputSymbolsAreSame, but with a functor f that maps
 /// labels to classes. The function tests whether the symbols preceding any
@@ -211,18 +211,18 @@ bool PrecedingInputSymbolsAreSame(bool start_is_epsilon, const Fst<Arc> &fst);
 /// invalid labels.
 template <class Arc, class F>
 bool PrecedingInputSymbolsAreSameClass(bool start_is_epsilon,
-                                       const Fst<Arc> &fst, const F &f);
+                                       const Fst<Arc>& fst, const F& f);
 
 /// Returns true if and only if the FST is such that the input symbols
 /// on arcs exiting any given state all have the same value.
 /// If end_is_epsilon, treat end-state as an epsilon output arc [i.e. ensure
 /// end-states cannot have non-epsilon output transitions.]
 template <class Arc>
-bool FollowingInputSymbolsAreSame(bool end_is_epsilon, const Fst<Arc> &fst);
+bool FollowingInputSymbolsAreSame(bool end_is_epsilon, const Fst<Arc>& fst);
 
 template <class Arc, class F>
-bool FollowingInputSymbolsAreSameClass(bool end_is_epsilon, const Fst<Arc> &fst,
-                                       const F &f);
+bool FollowingInputSymbolsAreSameClass(bool end_is_epsilon, const Fst<Arc>& fst,
+                                       const F& f);
 
 /// MakePrecedingInputSymbolsSame ensures that all arcs entering any given fst
 /// state have the same input symbol.  It does this by detecting states
@@ -232,13 +232,13 @@ bool FollowingInputSymbolsAreSameClass(bool end_is_epsilon, const Fst<Arc> &fst,
 /// If "start_is_epsilon", ensure that start-state can have only epsilon-links
 /// into it.
 template <class Arc>
-void MakePrecedingInputSymbolsSame(bool start_is_epsilon, MutableFst<Arc> *fst);
+void MakePrecedingInputSymbolsSame(bool start_is_epsilon, MutableFst<Arc>* fst);
 
 /// As MakePrecedingInputSymbolsSame, but takes a functor object that maps
 /// labels to classes.
 template <class Arc, class F>
 void MakePrecedingInputSymbolsSameClass(bool start_is_epsilon,
-                                        MutableFst<Arc> *fst, const F &f);
+                                        MutableFst<Arc>* fst, const F& f);
 
 /// MakeFollowingInputSymbolsSame ensures that all arcs exiting any given fst
 /// state have the same input symbol.  It does this by detecting states that
@@ -249,13 +249,13 @@ void MakePrecedingInputSymbolsSameClass(bool start_is_epsilon,
 /// output-deterministic and stochastic, if it already was). If end_is_epsilon,
 /// treat "being a final-state" like having an epsilon output link.
 template <class Arc>
-void MakeFollowingInputSymbolsSame(bool end_is_epsilon, MutableFst<Arc> *fst);
+void MakeFollowingInputSymbolsSame(bool end_is_epsilon, MutableFst<Arc>* fst);
 
 /// As MakeFollowingInputSymbolsSame, but takes a functor object that maps
 /// labels to classes.
 template <class Arc, class F>
 void MakeFollowingInputSymbolsSameClass(bool end_is_epsilon,
-                                        MutableFst<Arc> *fst, const F &f);
+                                        MutableFst<Arc>* fst, const F& f);
 
 /// MakeLoopFst creates an FST that has a state that is both initial and
 /// final (weight == Weight::One()), and for each non-NULL pointer fsts[i],
@@ -279,14 +279,14 @@ void MakeFollowingInputSymbolsSameClass(bool end_is_epsilon,
 /// less well optimized and would have a lot of final-states.
 
 template <class Arc>
-VectorFst<Arc> *MakeLoopFst(const std::vector<const ExpandedFst<Arc> *> &fsts);
+VectorFst<Arc>* MakeLoopFst(const std::vector<const ExpandedFst<Arc>*>& fsts);
 
 /// ApplyProbabilityScale is applicable to FSTs in the log or tropical semiring.
 /// It multiplies the arc and final weights by "scale" [this is not the Mul
 /// operation of the semiring, it's actual multiplication, which is equivalent
 /// to taking a power in the semiring].
 template <class Arc>
-void ApplyProbabilityScale(float scale, MutableFst<Arc> *fst);
+void ApplyProbabilityScale(float scale, MutableFst<Arc>* fst);
 
 /// EqualAlign is similar to RandGen, but it generates a sequence with exactly
 /// "length" input symbols.  It returns true on success, false on failure
@@ -300,8 +300,8 @@ void ApplyProbabilityScale(float scale, MutableFst<Arc> *fst);
 /// sample from the FST). The input fst "ifst" must be connected or this may
 /// enter an infinite loop.
 template <class Arc>
-bool EqualAlign(const Fst<Arc> &ifst, typename Arc::StateId length,
-                int rand_seed, MutableFst<Arc> *ofst, int num_retries = 10);
+bool EqualAlign(const Fst<Arc>& ifst, typename Arc::StateId length,
+                int rand_seed, MutableFst<Arc>* ofst, int num_retries = 10);
 
 // RemoveUselessArcs removes arcs such that there is no input symbol
 // sequence for which the best path through the FST would contain
@@ -313,7 +313,7 @@ bool EqualAlign(const Fst<Arc> &ifst, typename Arc::StateId length,
 // Only works for tropical (not log) semiring as it uses
 // NaturalLess.
 template <class Arc>
-void RemoveUselessArcs(MutableFst<Arc> *fst);
+void RemoveUselessArcs(MutableFst<Arc>* fst);
 
 // PhiCompose is a version of composition where
 // the right hand FST (fst2) is treated as a backoff
@@ -321,8 +321,8 @@ void RemoveUselessArcs(MutableFst<Arc> *fst);
 // "failure transition", only taken when we don't
 // have a match for the requested symbol.
 template <class Arc>
-void PhiCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                typename Arc::Label phi_label, MutableFst<Arc> *fst);
+void PhiCompose(const Fst<Arc>& fst1, const Fst<Arc>& fst2,
+                typename Arc::Label phi_label, MutableFst<Arc>* fst);
 
 // PropagateFinal propagates final-probs through
 // "phi" transitions (note that here, phi_label may
@@ -343,7 +343,7 @@ void PhiCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
 // to remove those before calling this function.
 
 template <class Arc>
-void PropagateFinal(typename Arc::Label phi_label, MutableFst<Arc> *fst);
+void PropagateFinal(typename Arc::Label phi_label, MutableFst<Arc>* fst);
 
 // PhiCompose is a version of composition where
 // the right hand FST (fst2) has speciall "rho transitions"
@@ -351,8 +351,8 @@ void PropagateFinal(typename Arc::Label phi_label, MutableFst<Arc> *fst);
 // transitions will be rewritten with whatever symbol was on
 // the first FST.
 template <class Arc>
-void RhoCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                typename Arc::Label rho_label, MutableFst<Arc> *fst);
+void RhoCompose(const Fst<Arc>& fst1, const Fst<Arc>& fst2,
+                typename Arc::Label rho_label, MutableFst<Arc>* fst);
 
 /** This function returns true if, in the semiring of the FST, the sum (within
     the semiring) of all the arcs out of each state in the FST is one, to within
@@ -368,16 +368,16 @@ void RhoCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
 */
 
 template <class Arc>
-bool IsStochasticFst(const Fst<Arc> &fst,
+bool IsStochasticFst(const Fst<Arc>& fst,
                      float delta = kDelta,  // kDelta = 1.0/1024.0 by default.
-                     typename Arc::Weight *min_sum = NULL,
-                     typename Arc::Weight *max_sum = NULL);
+                     typename Arc::Weight* min_sum = NULL,
+                     typename Arc::Weight* max_sum = NULL);
 
 // IsStochasticFstInLog makes sure it's stochastic after casting to log.
 inline bool IsStochasticFstInLog(
-    const Fst<StdArc> &fst,
+    const Fst<StdArc>& fst,
     float delta = kDelta,  // kDelta = 1.0/1024.0 by default.
-    StdArc::Weight *min_sum = NULL, StdArc::Weight *max_sum = NULL);
+    StdArc::Weight* min_sum = NULL, StdArc::Weight* max_sum = NULL);
 
 }  // end namespace fst
 

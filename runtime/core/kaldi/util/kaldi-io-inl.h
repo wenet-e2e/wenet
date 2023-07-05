@@ -23,11 +23,11 @@
 
 namespace kaldi {
 
-bool Input::Open(const std::string &rxfilename, bool *binary) {
+bool Input::Open(const std::string& rxfilename, bool* binary) {
   return OpenInternal(rxfilename, true, binary);
 }
 
-bool Input::OpenTextMode(const std::string &rxfilename) {
+bool Input::OpenTextMode(const std::string& rxfilename) {
   return OpenInternal(rxfilename, false, NULL);
 }
 

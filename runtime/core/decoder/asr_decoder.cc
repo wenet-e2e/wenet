@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "decoder/asr_decoder.h"
 
 #include <ctype.h>
@@ -109,8 +108,8 @@ DecodeState AsrDecoder::AdvanceDecoding(bool block) {
   int forward_time = timer.Elapsed();
   if (opts_.ctc_wfst_search_opts.blank_scale != 1.0) {
     for (int i = 0; i < ctc_log_probs.size(); i++) {
-      ctc_log_probs[i][0] = ctc_log_probs[i][0]
-                  + std::log(opts_.ctc_wfst_search_opts.blank_scale);
+      ctc_log_probs[i][0] = ctc_log_probs[i][0] +
+                            std::log(opts_.ctc_wfst_search_opts.blank_scale);
     }
   }
   timer.Reset();

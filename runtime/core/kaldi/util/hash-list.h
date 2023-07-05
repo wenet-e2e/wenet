@@ -52,7 +52,7 @@ class HashList {
   struct Elem {
     I key;
     T val;
-    Elem *tail;
+    Elem* tail;
   };
 
   /// Constructor takes no arguments.
@@ -62,36 +62,36 @@ class HashList {
   /// Clears the hash and gives the head of the current list to the user;
   /// ownership is transferred to the user (the user must call Delete()
   /// for each element in the list, at his/her leisure).
-  Elem *Clear();
+  Elem* Clear();
 
   /// Gives the head of the current list to the user.  Ownership retained in the
   /// class.  Caution: in December 2013 the return type was changed to const
   /// Elem* and this function was made const.  You may need to change some types
   /// of local Elem* variables to const if this produces compilation errors.
-  const Elem *GetList() const;
+  const Elem* GetList() const;
 
   /// Think of this like delete().  It is to be called for each Elem in turn
   /// after you "obtained ownership" by doing Clear().  This is not the opposite
   /// of. Insert, it is the opposite of New.  It's really a memory operation.
-  inline void Delete(Elem *e);
+  inline void Delete(Elem* e);
 
   /// This should probably not be needed to be called directly by the user.
   /// Think of it as opposite
   /// to Delete();
-  inline Elem *New();
+  inline Elem* New();
 
   /// Find tries to find this element in the current list using the hashtable.
   /// It returns NULL if not present.  The Elem it returns is not owned by the
   /// user, it is part of the internal list owned by this object, but the user
   /// is free to modify the "val" element.
-  inline Elem *Find(I key);
+  inline Elem* Find(I key);
 
   /// Insert inserts a new element into the hashtable/stored list.
   /// Because element keys in a hashtable are unique, this operation checks
   /// whether each inserted element has a key equivalent to the one of an
   /// element already in the hashtable. If so, the element is not inserted,
   /// returning an pointer to this existing element.
-  inline Elem *Insert(I key, T val);
+  inline Elem* Insert(I key, T val);
 
   /// Insert inserts another element with same key into the hashtable/
   /// stored list.
@@ -118,21 +118,21 @@ class HashList {
   struct HashBucket {
     size_t prev_bucket;  // index to next bucket (-1 if list tail).  Note:
     // list of buckets goes in opposite direction to list of Elems.
-    Elem *last_elem;  // pointer to last element in this bucket (NULL if empty)
-    inline HashBucket(size_t i, Elem *e) : prev_bucket(i), last_elem(e) {}
+    Elem* last_elem;  // pointer to last element in this bucket (NULL if empty)
+    inline HashBucket(size_t i, Elem* e) : prev_bucket(i), last_elem(e) {}
   };
 
-  Elem *list_head_;          // head of currently stored list.
+  Elem* list_head_;          // head of currently stored list.
   size_t bucket_list_tail_;  // tail of list of active hash buckets.
 
   size_t hash_size_;  // number of hash buckets.
 
   std::vector<HashBucket> buckets_;
 
-  Elem *freed_head_;  // head of list of currently freed elements. [ready for
+  Elem* freed_head_;  // head of list of currently freed elements. [ready for
   // allocation]
 
-  std::vector<Elem *> allocated_;  // list of allocated blocks.
+  std::vector<Elem*> allocated_;  // list of allocated blocks.
 
   static const size_t allocate_block_size_ = 1024;  // Number of Elements to
   // allocate in one block.  Must be largish so storing allocated_ doesn't

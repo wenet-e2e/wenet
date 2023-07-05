@@ -85,8 +85,8 @@ namespace fst {
     reaching the 'max-states' limit, and a partial FST was generated.
 */
 template <class F>
-bool DeterminizeStar(F &ifst, MutableFst<typename F::Arc> *ofst,  // NOLINT
-                     float delta = kDelta, bool *debug_ptr = NULL,
+bool DeterminizeStar(F& ifst, MutableFst<typename F::Arc>* ofst,  // NOLINT
+                     float delta = kDelta, bool* debug_ptr = NULL,
                      int max_states = -1, bool allow_partial = false);
 
 /*  This is a version of DeterminizeStar with a slightly more "natural" output
@@ -102,9 +102,9 @@ bool DeterminizeStar(F &ifst, MutableFst<typename F::Arc> *ofst,  // NOLINT
     reaching the 'max-states' limit, and a partial FST was generated.
 */
 template <class F>
-bool DeterminizeStar(F &ifst,  // NOLINT
-                     MutableFst<GallicArc<typename F::Arc> > *ofst,
-                     float delta = kDelta, bool *debug_ptr = NULL,
+bool DeterminizeStar(F& ifst,  // NOLINT
+                     MutableFst<GallicArc<typename F::Arc> >* ofst,
+                     float delta = kDelta, bool* debug_ptr = NULL,
                      int max_states = -1, bool allow_partial = false);
 
 /// @} end "addtogroup fst_extensions"

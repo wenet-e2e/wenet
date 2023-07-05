@@ -44,11 +44,11 @@ namespace fst {
 /// the StdArc sense, so in these situations we maintain equivalence.
 
 template <class Arc>
-void RemoveEpsLocal(MutableFst<Arc> *fst);
+void RemoveEpsLocal(MutableFst<Arc>* fst);
 
 /// As RemoveEpsLocal but takes care to preserve stochasticity
 /// when cast to LogArc.
-inline void RemoveEpsLocalSpecial(MutableFst<StdArc> *fst);
+inline void RemoveEpsLocalSpecial(MutableFst<StdArc>* fst);
 
 }  // namespace fst
 

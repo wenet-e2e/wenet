@@ -72,12 +72,12 @@ int ConstIntegerSet<I>::count(I i) const {
 }
 
 template <class I>
-void ConstIntegerSet<I>::Write(std::ostream &os, bool binary) const {
+void ConstIntegerSet<I>::Write(std::ostream& os, bool binary) const {
   WriteIntegerVector(os, binary, slow_set_);
 }
 
 template <class I>
-void ConstIntegerSet<I>::Read(std::istream &is, bool binary) {
+void ConstIntegerSet<I>::Read(std::istream& is, bool binary) {
   ReadIntegerVector(is, binary, &slow_set_);
   InitInternal();
 }

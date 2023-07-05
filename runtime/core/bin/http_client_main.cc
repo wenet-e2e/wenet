@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include "frontend/wav.h"
+#include "http/http_client.h"
 #include "utils/flags.h"
 #include "utils/timer.h"
-#include "http/http_client.h"
 
 DEFINE_string(hostname, "127.0.0.1", "hostname of http server");
 DEFINE_int32(port, 10086, "port of http server");

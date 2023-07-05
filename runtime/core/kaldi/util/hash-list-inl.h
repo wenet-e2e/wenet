@@ -43,7 +43,7 @@ void HashList<I, T>::SetSize(size_t size) {
 }
 
 template <class I, class T>
-typename HashList<I, T>::Elem *HashList<I, T>::Clear() {
+typename HashList<I, T>::Elem* HashList<I, T>::Clear() {
   // Clears the hashtable and gives ownership of the currently contained list
   // to the user.
   for (size_t cur_bucket = bucket_list_tail_;
@@ -52,26 +52,26 @@ typename HashList<I, T>::Elem *HashList<I, T>::Clear() {
     buckets_[cur_bucket].last_elem = NULL;  // this is how we indicate "empty".
   }
   bucket_list_tail_ = static_cast<size_t>(-1);
-  Elem *ans = list_head_;
+  Elem* ans = list_head_;
   list_head_ = NULL;
   return ans;
 }
 
 template <class I, class T>
-const typename HashList<I, T>::Elem *HashList<I, T>::GetList() const {
+const typename HashList<I, T>::Elem* HashList<I, T>::GetList() const {
   return list_head_;
 }
 
 template <class I, class T>
-inline void HashList<I, T>::Delete(Elem *e) {
+inline void HashList<I, T>::Delete(Elem* e) {
   e->tail = freed_head_;
   freed_head_ = e;
 }
 
 template <class I, class T>
-inline typename HashList<I, T>::Elem *HashList<I, T>::Find(I key) {
+inline typename HashList<I, T>::Elem* HashList<I, T>::Find(I key) {
   size_t index = (static_cast<size_t>(key) % hash_size_);
-  HashBucket &bucket = buckets_[index];
+  HashBucket& bucket = buckets_[index];
   if (bucket.last_elem == NULL) {
     return NULL;  // empty bucket.
   } else {
@@ -79,20 +79,20 @@ inline typename HashList<I, T>::Elem *HashList<I, T>::Find(I key) {
                       ? list_head_
                       : buckets_[bucket.prev_bucket].last_elem->tail),
          *tail = bucket.last_elem->tail;
-    for (Elem *e = head; e != tail; e = e->tail)
+    for (Elem* e = head; e != tail; e = e->tail)
       if (e->key == key) return e;
     return NULL;  // Not found.
   }
 }
 
 template <class I, class T>
-inline typename HashList<I, T>::Elem *HashList<I, T>::New() {
+inline typename HashList<I, T>::Elem* HashList<I, T>::New() {
   if (freed_head_) {
-    Elem *ans = freed_head_;
+    Elem* ans = freed_head_;
     freed_head_ = freed_head_->tail;
     return ans;
   } else {
-    Elem *tmp = new Elem[allocate_block_size_];
+    Elem* tmp = new Elem[allocate_block_size_];
     for (size_t i = 0; i + 1 < allocate_block_size_; i++)
       tmp[i].tail = tmp + i + 1;
     tmp[allocate_block_size_ - 1].tail = NULL;
@@ -107,7 +107,7 @@ HashList<I, T>::~HashList() {
   // First test whether we had any memory leak within the
   // HashList, i.e. things for which the user did not call Delete().
   size_t num_in_list = 0, num_allocated = 0;
-  for (Elem *e = freed_head_; e != NULL; e = e->tail) num_in_list++;
+  for (Elem* e = freed_head_; e != NULL; e = e->tail) num_in_list++;
   for (size_t i = 0; i < allocated_.size(); i++) {
     num_allocated += allocate_block_size_;
     delete[] allocated_[i];
@@ -121,21 +121,21 @@ HashList<I, T>::~HashList() {
 }
 
 template <class I, class T>
-inline typename HashList<I, T>::Elem *HashList<I, T>::Insert(I key, T val) {
+inline typename HashList<I, T>::Elem* HashList<I, T>::Insert(I key, T val) {
   size_t index = (static_cast<size_t>(key) % hash_size_);
-  HashBucket &bucket = buckets_[index];
+  HashBucket& bucket = buckets_[index];
   // Check the element is existing or not.
   if (bucket.last_elem != NULL) {
     Elem *head = (bucket.prev_bucket == static_cast<size_t>(-1)
                       ? list_head_
                       : buckets_[bucket.prev_bucket].last_elem->tail),
          *tail = bucket.last_elem->tail;
-    for (Elem *e = head; e != tail; e = e->tail)
+    for (Elem* e = head; e != tail; e = e->tail)
       if (e->key == key) return e;
   }
 
   // This is a new element. Insert it.
-  Elem *elem = New();
+  Elem* elem = New();
   elem->key = key;
   elem->val = val;
   if (bucket.last_elem == NULL) {  // Unoccupied bucket.  Insert at
@@ -166,8 +166,8 @@ inline typename HashList<I, T>::Elem *HashList<I, T>::Insert(I key, T val) {
 template <class I, class T>
 void HashList<I, T>::InsertMore(I key, T val) {
   size_t index = (static_cast<size_t>(key) % hash_size_);
-  HashBucket &bucket = buckets_[index];
-  Elem *elem = New();
+  HashBucket& bucket = buckets_[index];
+  Elem* elem = New();
   elem->key = key;
   elem->val = val;
 
@@ -178,7 +178,7 @@ void HashList<I, T>::InsertMore(I key, T val) {
     bucket.last_elem = elem;
     return;
   }
-  Elem *e = (bucket.prev_bucket == static_cast<size_t>(-1)
+  Elem* e = (bucket.prev_bucket == static_cast<size_t>(-1)
                  ? list_head_
                  : buckets_[bucket.prev_bucket].last_elem->tail);
   // find place to insert in linked list

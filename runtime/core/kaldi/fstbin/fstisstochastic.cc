@@ -41,13 +41,13 @@
 // fstcompile | fstisstochastic --test-in-log=false --delta=1 returns 0 even
 // though not stochastic because we gave it an absurdly large delta.
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   try {
     using namespace kaldi;  // NOLINT
-    using namespace fst;  // NOLINT
+    using namespace fst;    // NOLINT
     using kaldi::int32;
 
-    const char *usage =
+    const char* usage =
         "Checks whether an FST is stochastic and exits with success if so.\n"
         "Prints out maximum error (in log units).\n"
         "\n"
@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
     std::string fst_in_filename = po.GetOptArg(1);
 
-    Fst<StdArc> *fst = ReadFstKaldiGeneric(fst_in_filename);
+    Fst<StdArc>* fst = ReadFstKaldiGeneric(fst_in_filename);
 
     bool ans;
     StdArc::Weight min, max;
@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
       return 0;  // success;
     else
       return 1;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << e.what();
     return -1;
   }

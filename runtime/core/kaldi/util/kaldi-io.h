@@ -91,7 +91,7 @@ enum OutputType { kNoOutput, kFileOutput, kStandardOutput, kPipeOutput };
 ///  - kFileOutput: Normal filenames
 ///  - kStandardOutput: The empty string or "-", interpreted as standard output
 ///  - kPipeOutput: pipes, e.g. "| gzip -c > /tmp/abc.gz"
-OutputType ClassifyWxfilename(const std::string &wxfilename);
+OutputType ClassifyWxfilename(const std::string& wxfilename);
 
 enum InputType {
   kNoInput,
@@ -109,14 +109,14 @@ enum InputType {
 ///  - kStandardInput: the empty string or "-"
 ///  - kPipeInput: e.g. "gunzip -c /tmp/abc.gz |"
 ///  - kOffsetFileInput: offsets into files, e.g.  /some/filename:12970
-InputType ClassifyRxfilename(const std::string &rxfilename);
+InputType ClassifyRxfilename(const std::string& rxfilename);
 
 class Output {
  public:
   // The normal constructor, provided for convenience.
   // Equivalent to calling with default constructor then Open()
   // with these arguments.
-  Output(const std::string &filename, bool binary, bool write_header = true);
+  Output(const std::string& filename, bool binary, bool write_header = true);
 
   Output() : impl_(NULL) {}
 
@@ -127,12 +127,12 @@ class Output {
   /// binary-mode header ('\0' then 'B').  You may call Open even if it is
   /// already open; it will close the existing stream and reopen (however if
   /// closing the old stream failed it will throw).
-  bool Open(const std::string &wxfilename, bool binary, bool write_header);
+  bool Open(const std::string& wxfilename, bool binary, bool write_header);
 
   inline bool IsOpen();  // return true if we have an open stream.  Does not
   // imply stream is good for writing.
 
-  std::ostream &Stream();  // will throw if not open; else returns stream.
+  std::ostream& Stream();  // will throw if not open; else returns stream.
 
   // Close closes the stream. Calling Close is never necessary unless you
   // want to avoid exceptions being thrown.  There are times when calling
@@ -147,7 +147,7 @@ class Output {
   ~Output();
 
  private:
-  OutputImplBase *impl_;  // non-NULL if open.
+  OutputImplBase* impl_;  // non-NULL if open.
   std::string filename_;
   KALDI_DISALLOW_COPY_AND_ASSIGN(Output);
 };
@@ -180,7 +180,7 @@ class Input {
   /// Equivalent to calling the default constructor followed by Open(); then, if
   /// binary != NULL, it calls ReadHeader(), putting the output in "binary"; it
   /// throws on error.
-  explicit Input(const std::string &rxfilename, bool *contents_binary = NULL);
+  explicit Input(const std::string& rxfilename, bool* contents_binary = NULL);
 
   Input() : impl_(NULL) {}
 
@@ -193,12 +193,12 @@ class Input {
   // not be open.  You may call Open even if it is already open; it will close
   // the existing stream and reopen (however if closing the old stream failed it
   // will throw).
-  inline bool Open(const std::string &rxfilename, bool *contents_binary = NULL);
+  inline bool Open(const std::string& rxfilename, bool* contents_binary = NULL);
 
   // As Open but (if the file system has text/binary modes) opens in text mode;
   // you shouldn't ever have to use this as in Kaldi we read even text files in
   // binary mode (and ignore the \r).
-  inline bool OpenTextMode(const std::string &rxfilename);
+  inline bool OpenTextMode(const std::string& rxfilename);
 
   // Return true if currently open for reading and Stream() will
   // succeed.  Does not guarantee that the stream is good.
@@ -211,21 +211,21 @@ class Input {
   int32 Close();
 
   // Returns the underlying stream. Throws if !IsOpen()
-  std::istream &Stream();
+  std::istream& Stream();
 
   // Destructor does not throw: input streams may legitimately fail so we
   // don't worry about the status when we close them.
   ~Input();
 
  private:
-  bool OpenInternal(const std::string &rxfilename, bool file_binary,
-                    bool *contents_binary);
-  InputImplBase *impl_;
+  bool OpenInternal(const std::string& rxfilename, bool file_binary,
+                    bool* contents_binary);
+  InputImplBase* impl_;
   KALDI_DISALLOW_COPY_AND_ASSIGN(Input);
 };
 
 template <class C>
-void ReadKaldiObject(const std::string &filename, C *c) {
+void ReadKaldiObject(const std::string& filename, C* c) {
   bool binary_in;
   Input ki(filename, &binary_in);
   c->Read(ki.Stream(), binary_in);
@@ -241,7 +241,7 @@ void ReadKaldiObject(const std::string &filename, C *c) {
 //                                  Matrix<double> *m);
 
 template <class C>
-inline void WriteKaldiObject(const C &c, const std::string &filename,
+inline void WriteKaldiObject(const C& c, const std::string& filename,
                              bool binary) {
   Output ko(filename, binary);
   c.Write(ko.Stream(), binary);
@@ -250,12 +250,12 @@ inline void WriteKaldiObject(const C &c, const std::string &filename,
 /// PrintableRxfilename turns the rxfilename into a more human-readable
 /// form for error reporting, i.e. it does quoting and escaping and
 /// replaces "" or "-" with "standard input".
-std::string PrintableRxfilename(const std::string &rxfilename);
+std::string PrintableRxfilename(const std::string& rxfilename);
 
 /// PrintableWxfilename turns the wxfilename into a more human-readable
 /// form for error reporting, i.e. it does quoting and escaping and
 /// replaces "" or "-" with "standard output".
-std::string PrintableWxfilename(const std::string &wxfilename);
+std::string PrintableWxfilename(const std::string& wxfilename);
 
 /// @}
 
