@@ -82,3 +82,31 @@ jobs:
           cpplint --recursive .
           if [ $? != 0 ]; then exit 1; fi
 
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.x
+          architecture: x64
+      - name: Fetch Wenet
+        uses: actions/checkout@v1
+      - name: Checkout PR tip
+        run: |
+          set -eux
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # We are on a PR, so actions/checkout leaves us on a merge commit.
+            # Check out the actual tip of the branch.
+            git checkout ${{ github.event.pull_request.head.sha }}
+          fi
+          echo ::set-output name=commit_sha::$(git rev-parse HEAD)
+        id: get_pr_tip
+      - name: Run clang-format
+        run: |
+          set -eux
+          pip install clang-format
+          clang-format --version
+          # find all cxx files in runtime/core (exclude kaldi & path) and dry-run clang-format
+          find runtime/core \( -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" \) ! -path "runtime/core/kaldi/*" ! -path "runtime/core/patch/*"  -exec clang-format -style=file --dry-run --Werror --verbose {} +
+          if [ $? != 0 ]; then echo "use `clang-format -style=file -i <file>` to inplace edit your files which didn't pass the lint" && exit 1; fi
