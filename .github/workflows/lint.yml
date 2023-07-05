@@ -108,5 +108,5 @@ jobs:
           pip install clang-format
           clang-format --version
           # find all cxx files in runtime/core (exclude kaldi & path) and dry-run clang-format
-          find runtime/core \( -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" \) ! -path "runtime/core/kaldi/*" ! -path "runtime/core/patch/*"  -exec clang-format -style=Google --dry-run --Werror --verbose {} +
+          find runtime/core \( -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" \) ! -path "runtime/core/kaldi/*" ! -path "runtime/core/patch/*"  -exec clang-format -style=file --dry-run --Werror --verbose {} +
           if [ $? != 0 ]; then echo "use `clang-format -style=file -i <file>` to inplace edit your files which didn't pass the lint" && exit 1; fi
