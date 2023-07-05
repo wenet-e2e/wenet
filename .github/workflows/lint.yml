@@ -109,4 +109,4 @@ jobs:
           clang-format --version
           # find all cxx files in runtime/core (exclude kaldi & path) and dry-run clang-format
           find runtime/core \( -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" \) ! -path "runtime/core/kaldi/*" ! -path "runtime/core/patch/*"  -exec clang-format -style=Google --dry-run --Werror --verbose {} +
-          if [ $? != 0 ]; then exit 1; fi
+          if [ $? != 0 ]; then echo "use `clang-format -style=file -i <file>` to inplace edit your files which didn't pass the lint" && exit 1; fi
