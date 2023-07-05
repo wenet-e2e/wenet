@@ -46,8 +46,8 @@ namespace fst {
 */
 template <class Weight, class Int>
 void ConvertLattice(
-    const ExpandedFst<ArcTpl<Weight> > &ifst,
-    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > *ofst,
+    const ExpandedFst<ArcTpl<Weight> >& ifst,
+    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > >* ofst,
     bool invert = true);
 
 /**
@@ -61,8 +61,8 @@ void ConvertLattice(
    */
 template <class Weight, class Int>
 void ConvertLattice(
-    const ExpandedFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > &ifst,
-    MutableFst<ArcTpl<Weight> > *ofst, bool invert = true);
+    const ExpandedFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > >& ifst,
+    MutableFst<ArcTpl<Weight> >* ofst, bool invert = true);
 
 /**
   Convert between CompactLattices and Lattices of different floating point
@@ -71,8 +71,8 @@ void ConvertLattice(
   conversion from LatticeWeight to TropicalWeight.
  */
 template <class WeightIn, class WeightOut>
-void ConvertLattice(const ExpandedFst<ArcTpl<WeightIn> > &ifst,
-                    MutableFst<ArcTpl<WeightOut> > *ofst);
+void ConvertLattice(const ExpandedFst<ArcTpl<WeightIn> >& ifst,
+                    MutableFst<ArcTpl<WeightOut> >* ofst);
 
 // Now define some ConvertLattice functions that require two phases of
 // conversion (don't bother coding these separately as they will be used rarely.
@@ -80,9 +80,10 @@ void ConvertLattice(const ExpandedFst<ArcTpl<WeightIn> > &ifst,
 // Lattice with float to CompactLattice with double.
 template <class Int>
 void ConvertLattice(
-    const ExpandedFst<ArcTpl<LatticeWeightTpl<float> > > &ifst,
-    MutableFst<ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<double>, Int> > >
-        *ofst) {
+    const ExpandedFst<ArcTpl<LatticeWeightTpl<float> > >& ifst,
+    MutableFst<
+        ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<double>, Int> > >*
+        ofst) {
   VectorFst<ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<float>, Int> > >
       fst;
   ConvertLattice(ifst, &fst);
@@ -92,9 +93,9 @@ void ConvertLattice(
 // Lattice with double to CompactLattice with float.
 template <class Int>
 void ConvertLattice(
-    const ExpandedFst<ArcTpl<LatticeWeightTpl<double> > > &ifst,
-    MutableFst<ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<float>, Int> > >
-        *ofst) {
+    const ExpandedFst<ArcTpl<LatticeWeightTpl<double> > >& ifst,
+    MutableFst<ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<float>, Int> > >*
+        ofst) {
   VectorFst<ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<double>, Int> > >
       fst;
   ConvertLattice(ifst, &fst);
@@ -105,8 +106,8 @@ void ConvertLattice(
 template <class Int>
 void ConvertLattice(
     const ExpandedFst<
-        ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<double>, Int> > > &ifst,
-    MutableFst<ArcTpl<LatticeWeightTpl<float> > > *ofst) {
+        ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<double>, Int> > >& ifst,
+    MutableFst<ArcTpl<LatticeWeightTpl<float> > >* ofst) {
   VectorFst<ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<float>, Int> > >
       fst;
   ConvertLattice(ifst, &fst);
@@ -117,8 +118,8 @@ void ConvertLattice(
 template <class Int>
 void ConvertLattice(
     const ExpandedFst<
-        ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<float>, Int> > > &ifst,
-    MutableFst<ArcTpl<LatticeWeightTpl<double> > > *ofst) {
+        ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<float>, Int> > >& ifst,
+    MutableFst<ArcTpl<LatticeWeightTpl<double> > >* ofst) {
   VectorFst<ArcTpl<CompactLatticeWeightTpl<LatticeWeightTpl<double>, Int> > >
       fst;
   ConvertLattice(ifst, &fst);
@@ -128,8 +129,8 @@ void ConvertLattice(
 /// Converts TropicalWeight to LatticeWeight (puts all the weight on
 /// the first float in the lattice's pair).
 template <class Real>
-void ConvertFstToLattice(const ExpandedFst<ArcTpl<TropicalWeight> > &ifst,
-                         MutableFst<ArcTpl<LatticeWeightTpl<Real> > > *ofst);
+void ConvertFstToLattice(const ExpandedFst<ArcTpl<TropicalWeight> >& ifst,
+                         MutableFst<ArcTpl<LatticeWeightTpl<Real> > >* ofst);
 
 /** Returns a default 2x2 matrix scaling factor for LatticeWeight */
 inline std::vector<std::vector<double> > DefaultLatticeScale() {
@@ -176,20 +177,20 @@ inline std::vector<std::vector<double> > LatticeScale(double lmwt,
     if we want to scale the acoustics by "acwt".
  */
 template <class Weight, class ScaleFloat>
-void ScaleLattice(const std::vector<std::vector<ScaleFloat> > &scale,
-                  MutableFst<ArcTpl<Weight> > *fst);
+void ScaleLattice(const std::vector<std::vector<ScaleFloat> >& scale,
+                  MutableFst<ArcTpl<Weight> >* fst);
 
 /// Removes state-level alignments (the strings that are
 /// part of the weights).
 template <class Weight, class Int>
 void RemoveAlignmentsFromCompactLattice(
-    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > *fst);
+    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > >* fst);
 
 /// Returns true if lattice has alignments, i.e. it has
 /// any nonempty strings inside its weights.
 template <class Weight, class Int>
 bool CompactLatticeHasAlignment(
-    const ExpandedFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > &fst);
+    const ExpandedFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > >& fst);
 
 /// Class StdToLatticeMapper maps a normal arc (StdArc)
 /// to a LatticeArc by putting the StdArc weight as the first
@@ -201,7 +202,7 @@ class StdToLatticeMapper {
   typedef ArcTpl<LatticeWeight> LatticeArc;
 
  public:
-  LatticeArc operator()(const StdArc &arc) {
+  LatticeArc operator()(const StdArc& arc) {
     // Note: we have to check whether the arc's weight is zero below,
     // and if so return (infinity, infinity) and not (infinity, zero),
     // because (infinity, zero) is not a valid LatticeWeight, which should
@@ -232,7 +233,7 @@ class LatticeToStdMapper {
   typedef ArcTpl<LatticeWeight> LatticeArc;
 
  public:
-  StdArc operator()(const LatticeArc &arc) {
+  StdArc operator()(const LatticeArc& arc) {
     return StdArc(arc.ilabel, arc.olabel,
                   StdArc::Weight(arc.weight.Value1() + arc.weight.Value2()),
                   arc.nextstate);
@@ -250,7 +251,7 @@ class LatticeToStdMapper {
 template <class Weight, class Int>
 void PruneCompactLattice(
     Weight beam,
-    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > > *fst);
+    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, Int> > >* fst);
 
 }  // end namespace fst
 

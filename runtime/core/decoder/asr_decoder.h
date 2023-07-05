@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef DECODER_ASR_DECODER_H_
 #define DECODER_ASR_DECODER_H_
 

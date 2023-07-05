@@ -35,7 +35,7 @@ namespace kaldi {
 /// \ref parse_options for more documentation.
 class ParseOptions : public OptionsItf {
  public:
-  explicit ParseOptions(const char *usage)
+  explicit ParseOptions(const char* usage)
       : print_args_(true),
         help_(false),
         usage_(usage),
@@ -46,7 +46,7 @@ class ParseOptions : public OptionsItf {
 #if !defined(_MSC_VER) && \
     !defined(__CYGWIN__)  // This is just a convenient place to set the stderr
                           // to line
-    setlinebuf(stderr);  // buffering mode, since it's called at program start.
+    setlinebuf(stderr);   // buffering mode, since it's called at program start.
 #endif  // This helps ensure different programs' output is not mixed up.
     RegisterStandard("config", &config_,
                      "Configuration file to read (this "
@@ -74,28 +74,28 @@ class ParseOptions : public OptionsItf {
     The options will now get registered as, e.g., --mfcc.frame-shift=10.0
     instead of just --frame-shift=10.0
    */
-  ParseOptions(const std::string &prefix, OptionsItf *other);
+  ParseOptions(const std::string& prefix, OptionsItf* other);
 
   ~ParseOptions() {}
 
   // Methods from the interface
-  void Register(const std::string &name, bool *ptr, const std::string &doc);
-  void Register(const std::string &name, int32 *ptr, const std::string &doc);
-  void Register(const std::string &name, uint32 *ptr, const std::string &doc);
-  void Register(const std::string &name, float *ptr, const std::string &doc);
-  void Register(const std::string &name, double *ptr, const std::string &doc);
-  void Register(const std::string &name, std::string *ptr,
-                const std::string &doc);
+  void Register(const std::string& name, bool* ptr, const std::string& doc);
+  void Register(const std::string& name, int32* ptr, const std::string& doc);
+  void Register(const std::string& name, uint32* ptr, const std::string& doc);
+  void Register(const std::string& name, float* ptr, const std::string& doc);
+  void Register(const std::string& name, double* ptr, const std::string& doc);
+  void Register(const std::string& name, std::string* ptr,
+                const std::string& doc);
 
   /// If called after registering an option and before calling
   /// Read(), disables that option from being used.  Will crash
   /// at runtime if that option had not been registered.
-  void DisableOption(const std::string &name);
+  void DisableOption(const std::string& name);
 
   /// This one is used for registering standard parameters of all the programs
   template <typename T>
-  void RegisterStandard(const std::string &name, T *ptr,
-                        const std::string &doc);
+  void RegisterStandard(const std::string& name, T* ptr,
+                        const std::string& doc);
 
   /**
     Parses the command line options and fills the ParseOptions-registered
@@ -107,18 +107,18 @@ class ParseOptions : public OptionsItf {
     Returns the first position in argv that was not used.
     [typically not useful: use NumParams() and GetParam(). ]
    */
-  int Read(int argc, const char *const *argv);
+  int Read(int argc, const char* const* argv);
 
   /// Prints the usage documentation [provided in the constructor].
   void PrintUsage(bool print_command_line = false);
   /// Prints the actual configuration of all the registered variables
-  void PrintConfig(std::ostream &os);
+  void PrintConfig(std::ostream& os);
 
   /// Reads the options values from a config file.  Must be called after
   /// registering all options.  This is usually used internally after the
   /// standard --config option is used, but it may also be called from a
   /// program.
-  void ReadConfigFile(const std::string &filename);
+  void ReadConfigFile(const std::string& filename);
 
   /// Number of positional parameters (c.f. argc-1).
   int NumArgs() const;
@@ -134,70 +134,70 @@ class ParseOptions : public OptionsItf {
   /// The following function will return a possibly quoted and escaped
   /// version of "str", according to the current shell.  Currently
   /// this is just hardwired to bash.  It's useful for debug output.
-  static std::string Escape(const std::string &str);
+  static std::string Escape(const std::string& str);
 
  private:
   /// Template to register various variable types,
   /// used for program-specific parameters
   template <typename T>
-  void RegisterTmpl(const std::string &name, T *ptr, const std::string &doc);
+  void RegisterTmpl(const std::string& name, T* ptr, const std::string& doc);
 
   // Following functions do just the datatype-specific part of the job
   /// Register boolean variable
-  void RegisterSpecific(const std::string &name, const std::string &idx,
-                        bool *b, const std::string &doc, bool is_standard);
+  void RegisterSpecific(const std::string& name, const std::string& idx,
+                        bool* b, const std::string& doc, bool is_standard);
   /// Register int32 variable
-  void RegisterSpecific(const std::string &name, const std::string &idx,
-                        int32 *i, const std::string &doc, bool is_standard);
+  void RegisterSpecific(const std::string& name, const std::string& idx,
+                        int32* i, const std::string& doc, bool is_standard);
   /// Register unsinged  int32 variable
-  void RegisterSpecific(const std::string &name, const std::string &idx,
-                        uint32 *u, const std::string &doc, bool is_standard);
+  void RegisterSpecific(const std::string& name, const std::string& idx,
+                        uint32* u, const std::string& doc, bool is_standard);
   /// Register float variable
-  void RegisterSpecific(const std::string &name, const std::string &idx,
-                        float *f, const std::string &doc, bool is_standard);
+  void RegisterSpecific(const std::string& name, const std::string& idx,
+                        float* f, const std::string& doc, bool is_standard);
   /// Register double variable [useful as we change BaseFloat type].
-  void RegisterSpecific(const std::string &name, const std::string &idx,
-                        double *f, const std::string &doc, bool is_standard);
+  void RegisterSpecific(const std::string& name, const std::string& idx,
+                        double* f, const std::string& doc, bool is_standard);
   /// Register string variable
-  void RegisterSpecific(const std::string &name, const std::string &idx,
-                        std::string *s, const std::string &doc,
+  void RegisterSpecific(const std::string& name, const std::string& idx,
+                        std::string* s, const std::string& doc,
                         bool is_standard);
 
   /// Does the actual job for both kinds of parameters
   /// Does the common part of the job for all datatypes,
   /// then calls RegisterSpecific
   template <typename T>
-  void RegisterCommon(const std::string &name, T *ptr, const std::string &doc,
+  void RegisterCommon(const std::string& name, T* ptr, const std::string& doc,
                       bool is_standard);
 
   /// Set option with name "key" to "value"; will crash if can't do it.
   /// "has_equal_sign" is used to allow --x for a boolean option x,
   /// and --y=, for a string option y.
-  bool SetOption(const std::string &key, const std::string &value,
+  bool SetOption(const std::string& key, const std::string& value,
                  bool has_equal_sign);
 
   bool ToBool(std::string str);
-  int32 ToInt(const std::string &str);
-  uint32 ToUint(const std::string &str);
-  float ToFloat(const std::string &str);
-  double ToDouble(const std::string &str);
+  int32 ToInt(const std::string& str);
+  uint32 ToUint(const std::string& str);
+  float ToFloat(const std::string& str);
+  double ToDouble(const std::string& str);
 
   // maps for option variables
-  std::map<std::string, bool *> bool_map_;
-  std::map<std::string, int32 *> int_map_;
-  std::map<std::string, uint32 *> uint_map_;
-  std::map<std::string, float *> float_map_;
-  std::map<std::string, double *> double_map_;
-  std::map<std::string, std::string *> string_map_;
+  std::map<std::string, bool*> bool_map_;
+  std::map<std::string, int32*> int_map_;
+  std::map<std::string, uint32*> uint_map_;
+  std::map<std::string, float*> float_map_;
+  std::map<std::string, double*> double_map_;
+  std::map<std::string, std::string*> string_map_;
 
   /**
      Structure for options' documentation
    */
   struct DocInfo {
     DocInfo() {}
-    DocInfo(const std::string &name, const std::string &usemsg)
+    DocInfo(const std::string& name, const std::string& usemsg)
         : name_(name), use_msg_(usemsg), is_standard_(false) {}
-    DocInfo(const std::string &name, const std::string &usemsg,
+    DocInfo(const std::string& name, const std::string& usemsg,
             bool is_standard)
         : name_(name), use_msg_(usemsg), is_standard_(is_standard) {}
 
@@ -212,24 +212,24 @@ class ParseOptions : public OptionsItf {
   bool help_;           ///< variable for the implicit --help parameter
   std::string config_;  ///< variable for the implicit --config parameter
   std::vector<std::string> positional_args_;
-  const char *usage_;
+  const char* usage_;
   int argc_;
-  const char *const *argv_;
+  const char* const* argv_;
 
   /// These members are not normally used. They are only used when the object
   /// is constructed with a prefix
   std::string prefix_;
-  OptionsItf *other_parser_;
+  OptionsItf* other_parser_;
 
  protected:
   /// SplitLongArg parses an argument of the form --a=b, --a=, or --a,
   /// and sets "has_equal_sign" to true if an equals-sign was parsed..
   /// this is needed in order to correctly allow --x for a boolean option
   /// x, and --y= for a string option y, and to disallow --x= and --y.
-  void SplitLongArg(const std::string &in, std::string *key, std::string *value,
-                    bool *has_equal_sign);
+  void SplitLongArg(const std::string& in, std::string* key, std::string* value,
+                    bool* has_equal_sign);
 
-  void NormalizeArgName(std::string *str);
+  void NormalizeArgName(std::string* str);
 };
 
 /// This template is provided for convenience in reading config classes from
@@ -238,7 +238,7 @@ class ParseOptions : public OptionsItf {
 /// "void Register(OptionsItf *opts)" which it can call to register the
 /// ParseOptions object.
 template <class C>
-void ReadConfigFromFile(const std::string &config_filename, C *c) {
+void ReadConfigFromFile(const std::string& config_filename, C* c) {
   std::ostringstream usage_str;
   usage_str << "Parsing config from "
             << "from '" << config_filename << "'";
@@ -250,7 +250,7 @@ void ReadConfigFromFile(const std::string &config_filename, C *c) {
 /// This variant of the template ReadConfigFromFile is for if you need to read
 /// two config classes from the same file.
 template <class C1, class C2>
-void ReadConfigsFromFile(const std::string &conf, C1 *c1, C2 *c2) {
+void ReadConfigsFromFile(const std::string& conf, C1* c1, C2* c2) {
   std::ostringstream usage_str;
   usage_str << "Parsing config from "
             << "from '" << conf << "'";

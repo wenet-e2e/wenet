@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef DECODER_SEARCH_INTERFACE_H_
 #define DECODER_SEARCH_INTERFACE_H_
 

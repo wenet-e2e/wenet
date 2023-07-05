@@ -116,9 +116,9 @@ struct DeterminizeLatticeOptions {
     does not use exceptions).  This is mainly useful for debug.  */
 template <class Weight, class IntType>
 bool DeterminizeLattice(
-    const Fst<ArcTpl<Weight> > &ifst, MutableFst<ArcTpl<Weight> > *ofst,
+    const Fst<ArcTpl<Weight> >& ifst, MutableFst<ArcTpl<Weight> >* ofst,
     DeterminizeLatticeOptions opts = DeterminizeLatticeOptions(),
-    bool *debug_ptr = NULL);
+    bool* debug_ptr = NULL);
 
 /*  This is a version of DeterminizeLattice with a slightly more "natural"
    output format, where the output sequences are encoded using the
@@ -130,10 +130,10 @@ bool DeterminizeLattice(
 */
 template <class Weight, class IntType>
 bool DeterminizeLattice(
-    const Fst<ArcTpl<Weight> > &ifst,
-    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, IntType> > > *ofst,
+    const Fst<ArcTpl<Weight> >& ifst,
+    MutableFst<ArcTpl<CompactLatticeWeightTpl<Weight, IntType> > >* ofst,
     DeterminizeLatticeOptions opts = DeterminizeLatticeOptions(),
-    bool *debug_ptr = NULL);
+    bool* debug_ptr = NULL);
 
 /// @} end "addtogroup fst_extensions"
 

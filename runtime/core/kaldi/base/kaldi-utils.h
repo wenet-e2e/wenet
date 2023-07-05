@@ -22,9 +22,9 @@
 #define KALDI_BASE_KALDI_UTILS_H_ 1
 
 #if defined(_MSC_VER)
-# define WIN32_LEAN_AND_MEAN
-# define NOMINMAX
-# include <windows.h>
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
 #endif
 
 #ifdef _MSC_VER
@@ -38,7 +38,7 @@
 #include <string>
 
 #if defined(_MSC_VER)
-#pragma warning(disable: 4244 4056 4305 4800 4267 4996 4756 4661)
+#pragma warning(disable : 4244 4056 4305 4800 4267 4996 4756 4661)
 #if _MSC_VER < 1400
 #define __restrict__
 #else
@@ -47,38 +47,35 @@
 #endif
 
 #if defined(_MSC_VER)
-#  define KALDI_MEMALIGN(align, size, pp_orig) \
+#define KALDI_MEMALIGN(align, size, pp_orig) \
   (*(pp_orig) = _aligned_malloc(size, align))
-#  define KALDI_MEMALIGN_FREE(x) _aligned_free(x)
+#define KALDI_MEMALIGN_FREE(x) _aligned_free(x)
 #elif defined(__CYGWIN__)
-#  define KALDI_MEMALIGN(align, size, pp_orig) \
+#define KALDI_MEMALIGN(align, size, pp_orig) \
   (*(pp_orig) = aligned_alloc(align, size))
-#  define KALDI_MEMALIGN_FREE(x) free(x)
+#define KALDI_MEMALIGN_FREE(x) free(x)
 #else
-#  define KALDI_MEMALIGN(align, size, pp_orig) \
-     (!posix_memalign(pp_orig, align, size) ? *(pp_orig) : NULL)
-#  define KALDI_MEMALIGN_FREE(x) free(x)
+#define KALDI_MEMALIGN(align, size, pp_orig) \
+  (!posix_memalign(pp_orig, align, size) ? *(pp_orig) : NULL)
+#define KALDI_MEMALIGN_FREE(x) free(x)
 #endif
 
 #ifdef __ICC
-#pragma warning(disable: 383)  // ICPC remark we don't want.
-#pragma warning(disable: 810)  // ICPC remark we don't want.
-#pragma warning(disable: 981)  // ICPC remark we don't want.
-#pragma warning(disable: 1418)  // ICPC remark we don't want.
-#pragma warning(disable: 444)  // ICPC remark we don't want.
-#pragma warning(disable: 869)  // ICPC remark we don't want.
-#pragma warning(disable: 1287)  // ICPC remark we don't want.
-#pragma warning(disable: 279)  // ICPC remark we don't want.
-#pragma warning(disable: 981)  // ICPC remark we don't want.
+#pragma warning(disable : 383)   // ICPC remark we don't want.
+#pragma warning(disable : 810)   // ICPC remark we don't want.
+#pragma warning(disable : 981)   // ICPC remark we don't want.
+#pragma warning(disable : 1418)  // ICPC remark we don't want.
+#pragma warning(disable : 444)   // ICPC remark we don't want.
+#pragma warning(disable : 869)   // ICPC remark we don't want.
+#pragma warning(disable : 1287)  // ICPC remark we don't want.
+#pragma warning(disable : 279)   // ICPC remark we don't want.
+#pragma warning(disable : 981)   // ICPC remark we don't want.
 #endif
-
 
 namespace kaldi {
 
-
 // CharToString prints the character in a human-readable form, for debugging.
-std::string CharToString(const char &c);
-
+std::string CharToString(const char& c);
 
 inline int MachineIsLittleEndian() {
   int check = 1;
@@ -91,52 +88,59 @@ inline int MachineIsLittleEndian() {
 void Sleep(float seconds);
 }  // namespace kaldi
 
-#define KALDI_SWAP8(a) do { \
-  int t = (reinterpret_cast<char*>(&a))[0];\
-          (reinterpret_cast<char*>(&a))[0]=(reinterpret_cast<char*>(&a))[7];\
-          (reinterpret_cast<char*>(&a))[7] = t;\
-      t = (reinterpret_cast<char*>(&a))[1];\
-          (reinterpret_cast<char*>(&a))[1]=(reinterpret_cast<char*>(&a))[6];\
-          (reinterpret_cast<char*>(&a))[6] = t;\
-      t = (reinterpret_cast<char*>(&a))[2];\
-          (reinterpret_cast<char*>(&a))[2]=(reinterpret_cast<char*>(&a))[5];\
-          (reinterpret_cast<char*>(&a))[5] = t;\
-      t = (reinterpret_cast<char*>(&a))[3];\
-          (reinterpret_cast<char*>(&a))[3]=(reinterpret_cast<char*>(&a))[4];\
-          (reinterpret_cast<char*>(&a))[4] = t;} while (0)
-#define KALDI_SWAP4(a) do { \
-  int t = (reinterpret_cast<char*>(&a))[0];\
-          (reinterpret_cast<char*>(&a))[0]=(reinterpret_cast<char*>(&a))[3];\
-          (reinterpret_cast<char*>(&a))[3] = t;\
-      t = (reinterpret_cast<char*>(&a))[1];\
-          (reinterpret_cast<char*>(&a))[1]=(reinterpret_cast<char*>(&a))[2];\
-          (reinterpret_cast<char*>(&a))[2]=t;} while (0)
-#define KALDI_SWAP2(a) do { \
-  int t = (reinterpret_cast<char*>(&a))[0];\
-          (reinterpret_cast<char*>(&a))[0]=(reinterpret_cast<char*>(&a))[1];\
-          (reinterpret_cast<char*>(&a))[1] = t;} while (0)
-
+#define KALDI_SWAP8(a)                                                   \
+  do {                                                                   \
+    int t = (reinterpret_cast<char*>(&a))[0];                            \
+    (reinterpret_cast<char*>(&a))[0] = (reinterpret_cast<char*>(&a))[7]; \
+    (reinterpret_cast<char*>(&a))[7] = t;                                \
+    t = (reinterpret_cast<char*>(&a))[1];                                \
+    (reinterpret_cast<char*>(&a))[1] = (reinterpret_cast<char*>(&a))[6]; \
+    (reinterpret_cast<char*>(&a))[6] = t;                                \
+    t = (reinterpret_cast<char*>(&a))[2];                                \
+    (reinterpret_cast<char*>(&a))[2] = (reinterpret_cast<char*>(&a))[5]; \
+    (reinterpret_cast<char*>(&a))[5] = t;                                \
+    t = (reinterpret_cast<char*>(&a))[3];                                \
+    (reinterpret_cast<char*>(&a))[3] = (reinterpret_cast<char*>(&a))[4]; \
+    (reinterpret_cast<char*>(&a))[4] = t;                                \
+  } while (0)
+#define KALDI_SWAP4(a)                                                   \
+  do {                                                                   \
+    int t = (reinterpret_cast<char*>(&a))[0];                            \
+    (reinterpret_cast<char*>(&a))[0] = (reinterpret_cast<char*>(&a))[3]; \
+    (reinterpret_cast<char*>(&a))[3] = t;                                \
+    t = (reinterpret_cast<char*>(&a))[1];                                \
+    (reinterpret_cast<char*>(&a))[1] = (reinterpret_cast<char*>(&a))[2]; \
+    (reinterpret_cast<char*>(&a))[2] = t;                                \
+  } while (0)
+#define KALDI_SWAP2(a)                                                   \
+  do {                                                                   \
+    int t = (reinterpret_cast<char*>(&a))[0];                            \
+    (reinterpret_cast<char*>(&a))[0] = (reinterpret_cast<char*>(&a))[1]; \
+    (reinterpret_cast<char*>(&a))[1] = t;                                \
+  } while (0)
 
 // Makes copy constructor and operator= private.
-#define KALDI_DISALLOW_COPY_AND_ASSIGN(type)    \
-  type(const type&);                  \
-  void operator = (const type&)
+#define KALDI_DISALLOW_COPY_AND_ASSIGN(type) \
+  type(const type&);                         \
+  void operator=(const type&)
 
-template<bool B> class KaldiCompileTimeAssert { };
-template<> class KaldiCompileTimeAssert<true> {
+template <bool B>
+class KaldiCompileTimeAssert {};
+template <>
+class KaldiCompileTimeAssert<true> {
  public:
-  static inline void Check() { }
+  static inline void Check() {}
 };
 
 #define KALDI_COMPILE_TIME_ASSERT(b) KaldiCompileTimeAssert<(b)>::Check()
 
-#define KALDI_ASSERT_IS_INTEGER_TYPE(I) \
-  KaldiCompileTimeAssert<std::numeric_limits<I>::is_specialized \
-                 && std::numeric_limits<I>::is_integer>::Check()
+#define KALDI_ASSERT_IS_INTEGER_TYPE(I)                            \
+  KaldiCompileTimeAssert<std::numeric_limits<I>::is_specialized && \
+                         std::numeric_limits<I>::is_integer>::Check()
 
-#define KALDI_ASSERT_IS_FLOATING_TYPE(F) \
-  KaldiCompileTimeAssert<std::numeric_limits<F>::is_specialized \
-                && !std::numeric_limits<F>::is_integer>::Check()
+#define KALDI_ASSERT_IS_FLOATING_TYPE(F)                           \
+  KaldiCompileTimeAssert<std::numeric_limits<F>::is_specialized && \
+                         !std::numeric_limits<F>::is_integer>::Check()
 
 #if defined(_MSC_VER)
 #define KALDI_STRCASECMP _stricmp
@@ -147,9 +151,9 @@ template<> class KaldiCompileTimeAssert<true> {
 #define KALDI_STRCASECMP strcasecmp
 #endif
 #ifdef _MSC_VER
-#  define KALDI_STRTOLL(cur_cstr, end_cstr) _strtoi64(cur_cstr, end_cstr, 10);
+#define KALDI_STRTOLL(cur_cstr, end_cstr) _strtoi64(cur_cstr, end_cstr, 10);
 #else
-#  define KALDI_STRTOLL(cur_cstr, end_cstr) strtoll(cur_cstr, end_cstr, 10);
+#define KALDI_STRTOLL(cur_cstr, end_cstr) strtoll(cur_cstr, end_cstr, 10);
 #endif
 
 #endif  // KALDI_BASE_KALDI_UTILS_H_

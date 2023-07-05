@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "decoder/context_graph.h"
 
 #include <utility>
@@ -66,8 +65,9 @@ void ContextGraph::BuildContextGraph(
     float escape_score = 0;
     for (size_t i = 0; i < words.size(); ++i) {
       int word_id = symbol_table_->Find(words[i]);
-      float score = (i * config_.incremental_context_score
-                     + config_.context_score) * UTF8StringLength(words[i]);
+      float score =
+          (i * config_.incremental_context_score + config_.context_score) *
+          UTF8StringLength(words[i]);
       next_state = (i < words.size() - 1) ? ofst->AddState() : start_state;
       ofst->AddArc(prev_state,
                    fst::StdArc(word_id, word_id, score, next_state));

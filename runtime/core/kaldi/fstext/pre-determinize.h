@@ -46,16 +46,16 @@ namespace fst {
 */
 
 template <class Arc, class Int>
-void PreDeterminize(MutableFst<Arc> *fst, typename Arc::Label first_new_symbol,
-                    std::vector<Int> *syms_out);
+void PreDeterminize(MutableFst<Arc>* fst, typename Arc::Label first_new_symbol,
+                    std::vector<Int>* syms_out);
 
 /* CreateNewSymbols is a helper function used inside PreDeterminize, and is also
    useful when you need to add a number of extra symbols to a different
    vocabulary from the one modified by PreDeterminize. */
 
 template <class Label>
-void CreateNewSymbols(SymbolTable *inputSymTable, int nSym, std::string prefix,
-                      std::vector<Label> *syms_out);
+void CreateNewSymbols(SymbolTable* inputSymTable, int nSym, std::string prefix,
+                      std::vector<Label>* syms_out);
 
 /** AddSelfLoops is a function you will probably want to use alongside
    PreDeterminize, to add self-loops to any FSTs that you compose on the left
@@ -74,22 +74,22 @@ void CreateNewSymbols(SymbolTable *inputSymTable, int nSym, std::string prefix,
    the n pairs of symbols on its input and output.
 */
 template <class Arc>
-void AddSelfLoops(MutableFst<Arc> *fst,
-                  const std::vector<typename Arc::Label> &isyms,
-                  const std::vector<typename Arc::Label> &osyms);
+void AddSelfLoops(MutableFst<Arc>* fst,
+                  const std::vector<typename Arc::Label>& isyms,
+                  const std::vector<typename Arc::Label>& osyms);
 
 /* DeleteSymbols replaces any instances of symbols in the vector symsIn,
    appearing on the input side, with epsilon. */
 /* It returns the number of instances of symbols deleted. */
 template <class Arc>
-int64 DeleteISymbols(MutableFst<Arc> *fst,
+int64 DeleteISymbols(MutableFst<Arc>* fst,
                      std::vector<typename Arc::Label> symsIn);
 
 /* CreateSuperFinal takes an FST, and creates an equivalent FST with a single
    final state with no transitions out and unit final weight, by inserting
    epsilon transitions as necessary. */
 template <class Arc>
-typename Arc::StateId CreateSuperFinal(MutableFst<Arc> *fst);
+typename Arc::StateId CreateSuperFinal(MutableFst<Arc>* fst);
 
 }  // end namespace fst
 

@@ -61,7 +61,7 @@ class Recognizer {
     std::string unit_path = wenet::JoinPath(model_dir, "units.txt");
     CHECK(wenet::FileExists(unit_path));
     resource_->unit_table = std::shared_ptr<fst::SymbolTable>(
-      fst::SymbolTable::ReadText(unit_path));
+        fst::SymbolTable::ReadText(unit_path));
 
     std::string fst_path = wenet::JoinPath(model_dir, "TLG.fst");
     if (wenet::FileExists(fst_path)) {  // With LM

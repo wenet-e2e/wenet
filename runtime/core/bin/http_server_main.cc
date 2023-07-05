@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include "decoder/params.h"
-#include "utils/log.h"
 #include "http/http_server.h"
+#include "utils/log.h"
 
 DEFINE_int32(port, 10086, "http listening port");
 

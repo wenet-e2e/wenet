@@ -35,14 +35,14 @@ namespace kaldi {
 /// WriteToList attempts to write this list of integers, one per line,
 /// to the given file, in text format.
 /// returns true if succeeded.
-bool WriteIntegerVectorSimple(const std::string &wxfilename,
-                              const std::vector<int32> &v);
+bool WriteIntegerVectorSimple(const std::string& wxfilename,
+                              const std::vector<int32>& v);
 
 /// ReadFromList attempts to read this list of integers, one per line,
 /// from the given file, in text format.
 /// returns true if succeeded.
-bool ReadIntegerVectorSimple(const std::string &rxfilename,
-                             std::vector<int32> *v);
+bool ReadIntegerVectorSimple(const std::string& rxfilename,
+                             std::vector<int32>* v);
 
 // This is a file format like:
 // 1 2
@@ -50,11 +50,11 @@ bool ReadIntegerVectorSimple(const std::string &rxfilename,
 //
 // 4 5 6
 // etc.
-bool WriteIntegerVectorVectorSimple(const std::string &wxfilename,
-                                    const std::vector<std::vector<int32> > &v);
+bool WriteIntegerVectorVectorSimple(const std::string& wxfilename,
+                                    const std::vector<std::vector<int32> >& v);
 
-bool ReadIntegerVectorVectorSimple(const std::string &rxfilename,
-                                   std::vector<std::vector<int32> > *v);
+bool ReadIntegerVectorVectorSimple(const std::string& rxfilename,
+                                   std::vector<std::vector<int32> >* v);
 
 }  // end namespace kaldi.
 

@@ -31,7 +31,7 @@ namespace kaldi {
 int32 g_kaldi_verbose_level = 0;
 static std::string program_name;  // NOLINT
 
-void SetProgramName(const char *basename) {
+void SetProgramName(const char* basename) {
   // Using the 'static std::string' for the program name is mostly harmless,
   // because (a) Kaldi logging is undefined before main(), and (b) no stdc++
   // string implementation has been found in the wild that would not be just
