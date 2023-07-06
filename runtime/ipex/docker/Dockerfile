@@ -7,7 +7,7 @@ RUN pip install intel_extension_for_pytorch==2.0.100 pyyaml six intel-openmp
 RUN ln -s /usr/lib/x86_64-linux-gnu/libtcmalloc.so.4 /usr/lib/x86_64-linux-gnu/libtcmalloc.so
 
 RUN git clone https://github.com/wenet-e2e/wenet.git /home/wenet
-ENV OME_NUM_THREADS=1
+ENV OMP_NUM_THREADS=1
 ARG src=/home/wenet/runtime/ipex
 RUN cmake -B $src/build -S $src -DCMAKE_BUILD_TYPE=Release && cmake --build $src/build -j32
 ENV LD_LIBRARY_PATH=$src/fc_base/libtorch-src/lib/:$LD_LIBRARY_PATH
