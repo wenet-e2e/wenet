@@ -2,9 +2,57 @@
 
 [Intel® Extension for PyTorch\*](https://github.com/intel/intel-extension-for-pytorch) (IPEX) extends [PyTorch\*](https://pytorch.org/) with up-to-date  optimization features for extra performance boost on Intel hardware. The optimizations take advantage of AVX-512, Vector Neural Network Instructions (AVX512 VNNI) and Intel® Advanced Matrix Extensions (Intel® AMX) on Intel CPUs as well as Intel X<sup>e</sup> Matrix Extensions (XMX) AI engines on Intel discrete GPUs.
 
-In the following we are introducing how to accelerate WeNet model inference performance on Intel® CPU machines with the adoption of Intel® Extension for PyTorch\*. The adoption mainly includes the export of pretrained models with IPEX optimization, as well as the buildup of WeNet runtime executables with IPEX C++ SDK.
+In the following we are introducing how to accelerate WeNet model inference performance on Intel® CPU machines with the adoption of Intel® Extension for PyTorch\*. The adoption mainly includes the export of pretrained models with IPEX optimization, as well as the buildup of WeNet runtime executables with IPEX C++ SDK. The buildup can be processed from local source code, or directly build and run a docker container in which the runtime binaries are ready.
 
+We provide a shell script for WeNet runtime environment checking. Please run the script
 
+``` sh
+sh env_checking.sh
+```
+
+and see if the environment is suitable for leveraging resources to get optimal performance for WeNet runtime models.
+
+### Run in Docker Build
+
+We recommend using the docker environment to build the c++ binary to avoid
+system or environment problems.
+
+* Step 1. Build your docker image.
+
+``` sh
+cd docker
+docker build --no-cache -t wenet-ipex:latest .
+```
+
+* Step 2. The pretrained PyTorch model checkpoint file (.pt) needs to be converted to TorchScript runtime model (.zip) via `export_ipex.py`. The detail usage for this model exporting process are introduced in [Run with Local Build](#run-with-local-build) section below. After model exporting, we can put all the resources, like runtime model, test wavs into a docker resource dir.
+
+``` sh
+mkdir -p docker_resource
+cp -r <your_model_dir> docker_resource/model
+cp <your_test_wav> docker_resource/test.wav
+```
+
+* Step 3. Start docker container.
+
+``` sh
+docker run --rm -v $PWD/docker_resource:/home/wenet/runtime/ipex/docker_resource -it wenet-ipex:latest bash
+```
+
+* Step 4. Test in docker container
+```
+cd /home/wenet/runtime/ipex
+export GLOG_logtostderr=1
+export GLOG_v=2
+wav_path=docker_resource/test.wav
+model_dir=docker_resource/model
+./build/bin/decoder_main \
+    --chunk_size -1 \
+    --wav_path $wav_path \
+    --model_path $model_dir/<runtime_model_filename> \
+    --unit_path $model_dir/units.txt 2>&1 | tee log.txt
+```
+
+### Run with Local Build
 
 * Step 1. Environment Setup.
 
@@ -80,7 +128,7 @@ ipexrun --no-python \
     ./build/bin/decoder_main \
         --chunk_size -1 \
         --wav_path $wav_path \
-        --model_path $model_dir/final.zip \
+        --model_path $model_dir/<runtime_model_filename> \
         --unit_path $model_dir/units.txt 2>&1 | tee log.txt
 ```
 NOTE: Please refer [IPEX Launch Script Usage Guide](https://intel.github.io/intel-extension-for-pytorch/cpu/2.0.100+cpu/tutorials/performance_tuning/launch_script.html) for usage of advanced features.
