@@ -571,5 +571,5 @@ def compute_loss(model: Transducer,
             pruned_loss_scale = 0.1 + 0.9 * (steps / model.warmup_steps)
         loss = (simple_loss_scale * simple_loss
                 + pruned_loss_scale * pruned_loss)
-        loss = loss /  encoder_out.size(0)
+        loss = loss / encoder_out.size(0)
     return loss
