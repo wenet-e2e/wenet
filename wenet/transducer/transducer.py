@@ -513,8 +513,8 @@ def compute_loss(model: Transducer,
         if steps > 2 * model.warmup_steps:
             delay_penalty = 0.00
         ys_in_pad = ys_in_pad.type(torch.int64)
-        boundary = torch.zeros((encoder_out.size(0), 4), 
-                               dtype=torch.int64, 
+        boundary = torch.zeros((encoder_out.size(0), 4),
+                               dtype=torch.int64,
                                device=encoder_out.device)
         boundary[:, 3] = encoder_mask.squeeze(1).sum(1)
         boundary[:, 2] = text_lengths
@@ -569,7 +569,7 @@ def compute_loss(model: Transducer,
         pruned_loss_scale = 1.0
         if steps >= model.warmup_steps:
             pruned_loss_scale = 0.1 + 0.9 * (steps / model.warmup_steps)
-        loss = (simple_loss_scale * simple_loss 
+        loss = (simple_loss_scale * simple_loss
                 + pruned_loss_scale * pruned_loss)
         loss = loss /  encoder_out.size(0)
     return loss
