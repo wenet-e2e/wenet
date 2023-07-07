@@ -40,8 +40,8 @@ class TransducerJoint(torch.nn.Module):
 
         self.ffn_out = nn.Linear(join_dim, voca_size)
 
-    def forward(self, 
-                enc_out: torch.Tensor, 
+    def forward(self,
+                enc_out: torch.Tensor,
                 pred_out: torch.Tensor,
                 pre_project: bool = True) -> torch.Tensor:
         """
