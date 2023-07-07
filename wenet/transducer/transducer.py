@@ -6,7 +6,6 @@ except ImportError:
     print('Failed to import k2 \
         Notice that they are necessary for \
         k2 rnnt loss training')
-    
 import torch
 import torchaudio
 from torch import nn
@@ -71,9 +70,9 @@ class Transducer(ASRModel):
         self.am_only_scale = am_only_scale
         self.warmup_steps = warmup_steps
         if self.enable_k2:
-            self.simple_lm_proj = torch.nn.Linear(
-                self.encoder.output_size(), vocab_size)
             self.simple_am_proj = torch.nn.Linear(
+                self.encoder.output_size(), vocab_size)
+            self.simple_lm_proj = torch.nn.Linear(
                 self.predictor.embed_size, vocab_size)
 
         # Note(Mddct): decoder also means predictor in transducer,
@@ -496,7 +495,6 @@ def compute_loss(model: Transducer,
                                                rnnt_text_lengths,
                                                blank=model.blank,
                                                reduction="mean")
-        
         # NOTE(Mddct): some loss implementation require pad valid is zero
         # torch.int32 rnnt_loss required
         rnnt_text = text.to(torch.int64)
@@ -526,17 +524,17 @@ def compute_loss(model: Transducer,
         am = model.simple_am_proj(encoder_out)
         with torch.cuda.amp.autocast(enabled=False):
             simple_loss, (px_grad, py_grad) = k2.rnnt_loss_smoothed(
-                    lm=lm.float(),
-                    am=am.float(),
-                    symbols=rnnt_text,
-                    termination_symbol=model.blank,
-                    lm_only_scale=model.lm_only_scale,
-                    am_only_scale=model.am_only_scale,
-                    boundary=boundary,
-                    reduction="sum",
-                    return_grad=True,
-                    delay_penalty=delay_penalty,
-                )
+                lm=lm.float(),
+                am=am.float(),
+                symbols=rnnt_text,
+                termination_symbol=model.blank,
+                lm_only_scale=model.lm_only_scale,
+                am_only_scale=model.am_only_scale,
+                boundary=boundary,
+                reduction="sum",
+                return_grad=True,
+                delay_penalty=delay_penalty,
+            )
         # ranges : [B, T, prune_range]
         ranges = k2.get_rnnt_prune_ranges(
             px_grad=px_grad,
@@ -574,5 +572,4 @@ def compute_loss(model: Transducer,
         loss = (simple_loss_scale * simple_loss 
                 + pruned_loss_scale * pruned_loss)
         loss = loss /  encoder_out.size(0)
-
     return loss
