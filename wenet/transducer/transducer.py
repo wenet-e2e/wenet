@@ -567,7 +567,7 @@ def compute_loss(model: Transducer,
             simple_loss_scale = (
                 1.0 - (steps / model.warmup_steps) * (1.0 - simple_loss_scale))
         pruned_loss_scale = 1.0
-        if steps >= model.warmup_steps:
+        if steps < model.warmup_steps:
             pruned_loss_scale = 0.1 + 0.9 * (steps / model.warmup_steps)
         loss = (simple_loss_scale * simple_loss
                 + pruned_loss_scale * pruned_loss)
