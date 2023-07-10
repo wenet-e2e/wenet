@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef DECODER_CONTEXT_GRAPH_H_
 #define DECODER_CONTEXT_GRAPH_H_
 

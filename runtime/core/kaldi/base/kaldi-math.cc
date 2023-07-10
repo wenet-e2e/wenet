@@ -23,8 +23,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #endif
-#include <string>
 #include <mutex>
+#include <string>
 
 namespace kaldi {
 // These routines are tested in matrix/matrix-test.cc
@@ -37,7 +37,7 @@ int32 RoundUpToNearestPowerOfTwo(int32 n) {
   n |= n >> 4;
   n |= n >> 8;
   n |= n >> 16;
-  return n+1;
+  return n + 1;
 }
 
 static std::mutex _RandMutex;
@@ -101,24 +101,24 @@ int32 RandInt(int32 min_val, int32 max_val, struct RandomState* state) {
 
 #ifdef _MSC_VER
   // RAND_MAX is quite small on Windows -> may need to handle larger numbers.
-  if (RAND_MAX > (max_val-min_val)*8) {
-        // *8 to avoid large inaccuracies in probability, from the modulus...
+  if (RAND_MAX > (max_val - min_val) * 8) {
+    // *8 to avoid large inaccuracies in probability, from the modulus...
     return min_val +
-      ((unsigned int)Rand(state) % (unsigned int)(max_val+1-min_val));
+           ((unsigned int)Rand(state) % (unsigned int)(max_val + 1 - min_val));
   } else {
-    if ((unsigned int)(RAND_MAX*RAND_MAX) >
-        (unsigned int)((max_val+1-min_val)*8)) {
-        // *8 to avoid inaccuracies in probability, from the modulus...
-      return min_val + ( (unsigned int)( (Rand(state)+RAND_MAX*Rand(state)))
-                    % (unsigned int)(max_val+1-min_val));
+    if ((unsigned int)(RAND_MAX * RAND_MAX) >
+        (unsigned int)((max_val + 1 - min_val) * 8)) {
+      // *8 to avoid inaccuracies in probability, from the modulus...
+      return min_val + ((unsigned int)((Rand(state) + RAND_MAX * Rand(state))) %
+                        (unsigned int)(max_val + 1 - min_val));
     } else {
       KALDI_ERR << "rand_int failed because we do not support such large "
-          "random numbers. (Extend this function).";
+                   "random numbers. (Extend this function).";
     }
   }
 #else
-  return min_val +
-      (static_cast<int32>(Rand(state)) % static_cast<int32>(max_val+1-min_val));
+  return min_val + (static_cast<int32>(Rand(state)) %
+                    static_cast<int32>(max_val + 1 - min_val));
 #endif
 }
 
@@ -135,21 +135,21 @@ int32 RandPoisson(float lambda, struct RandomState* state) {
     float u = RandUniform(state);
     p *= u;
   } while (p > L);
-  return k-1;
+  return k - 1;
 }
 
-void RandGauss2(float *a, float *b, RandomState *state) {
+void RandGauss2(float* a, float* b, RandomState* state) {
   KALDI_ASSERT(a);
   KALDI_ASSERT(b);
   float u1 = RandUniform(state);
   float u2 = RandUniform(state);
   u1 = sqrtf(-2.0f * logf(u1));
-  u2 =  2.0f * M_PI * u2;
+  u2 = 2.0f * M_PI * u2;
   *a = u1 * cosf(u2);
   *b = u1 * sinf(u2);
 }
 
-void RandGauss2(double *a, double *b, RandomState *state) {
+void RandGauss2(double* a, double* b, RandomState* state) {
   KALDI_ASSERT(a);
   KALDI_ASSERT(b);
   float a_float, b_float;
@@ -159,6 +159,5 @@ void RandGauss2(double *a, double *b, RandomState *state) {
   *a = a_float;
   *b = b_float;
 }
-
 
 }  // end namespace kaldi

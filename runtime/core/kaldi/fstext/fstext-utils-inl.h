@@ -45,12 +45,12 @@
 namespace fst {
 
 template <class Arc>
-typename Arc::Label HighestNumberedOutputSymbol(const Fst<Arc> &fst) {
+typename Arc::Label HighestNumberedOutputSymbol(const Fst<Arc>& fst) {
   typename Arc::Label ans = 0;
   for (StateIterator<Fst<Arc> > siter(fst); !siter.Done(); siter.Next()) {
     typename Arc::StateId s = siter.Value();
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       ans = std::max(ans, arc.olabel);
     }
   }
@@ -58,12 +58,12 @@ typename Arc::Label HighestNumberedOutputSymbol(const Fst<Arc> &fst) {
 }
 
 template <class Arc>
-typename Arc::Label HighestNumberedInputSymbol(const Fst<Arc> &fst) {
+typename Arc::Label HighestNumberedInputSymbol(const Fst<Arc>& fst) {
   typename Arc::Label ans = 0;
   for (StateIterator<Fst<Arc> > siter(fst); !siter.Done(); siter.Next()) {
     typename Arc::StateId s = siter.Value();
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       ans = std::max(ans, arc.ilabel);
     }
   }
@@ -71,7 +71,7 @@ typename Arc::Label HighestNumberedInputSymbol(const Fst<Arc> &fst) {
 }
 
 template <class Arc>
-typename Arc::StateId NumArcs(const ExpandedFst<Arc> &fst) {
+typename Arc::StateId NumArcs(const ExpandedFst<Arc>& fst) {
   typedef typename Arc::StateId StateId;
   StateId num_arcs = 0;
   for (StateId s = 0; s < fst.NumStates(); s++) num_arcs += fst.NumArcs(s);
@@ -79,14 +79,14 @@ typename Arc::StateId NumArcs(const ExpandedFst<Arc> &fst) {
 }
 
 template <class Arc, class I>
-void GetOutputSymbols(const Fst<Arc> &fst, bool include_eps,
-                      std::vector<I> *symbols) {
+void GetOutputSymbols(const Fst<Arc>& fst, bool include_eps,
+                      std::vector<I>* symbols) {
   KALDI_ASSERT_IS_INTEGER_TYPE(I);
   std::set<I> all_syms;
   for (StateIterator<Fst<Arc> > siter(fst); !siter.Done(); siter.Next()) {
     typename Arc::StateId s = siter.Value();
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       all_syms.insert(arc.olabel);
     }
   }
@@ -99,14 +99,14 @@ void GetOutputSymbols(const Fst<Arc> &fst, bool include_eps,
 }
 
 template <class Arc, class I>
-void GetInputSymbols(const Fst<Arc> &fst, bool include_eps,
-                     std::vector<I> *symbols) {
+void GetInputSymbols(const Fst<Arc>& fst, bool include_eps,
+                     std::vector<I>* symbols) {
   KALDI_ASSERT_IS_INTEGER_TYPE(I);
   unordered_set<I> all_syms;
   for (StateIterator<Fst<Arc> > siter(fst); !siter.Done(); siter.Next()) {
     typename Arc::StateId s = siter.Value();
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       all_syms.insert(arc.ilabel);
     }
   }
@@ -120,7 +120,7 @@ void GetInputSymbols(const Fst<Arc> &fst, bool include_eps,
 template <class Arc, class I>
 class RemoveSomeInputSymbolsMapper {
  public:
-  Arc operator()(const Arc &arc_in) {
+  Arc operator()(const Arc& arc_in) {
     Arc ans = arc_in;
     if (to_remove_set_.count(ans.ilabel) != 0)
       ans.ilabel = 0;  // remove this symbol
@@ -136,7 +136,7 @@ class RemoveSomeInputSymbolsMapper {
                        kILabelSorted | kNotILabelSorted;
     return props & ~to_remove;
   }
-  explicit RemoveSomeInputSymbolsMapper(const std::vector<I> &to_remove)
+  explicit RemoveSomeInputSymbolsMapper(const std::vector<I>& to_remove)
       : to_remove_set_(to_remove) {
     KALDI_ASSERT_IS_INTEGER_TYPE(I);
     assert(to_remove_set_.count(0) == 0);  // makes no sense to remove epsilon.
@@ -154,9 +154,9 @@ using LookaheadFst = ArcMapFst<Arc, Arc, RemoveSomeInputSymbolsMapper<Arc, I> >;
 // nnet3/nnet3-latgen-faster-lookahead.cc. For details of compose filters
 // see DefaultLookAhead in fst/compose.h
 template <class Arc, class I>
-LookaheadFst<Arc, I> *LookaheadComposeFst(const Fst<Arc> &ifst1,
-                                          const Fst<Arc> &ifst2,
-                                          const std::vector<I> &to_remove) {
+LookaheadFst<Arc, I>* LookaheadComposeFst(const Fst<Arc>& ifst1,
+                                          const Fst<Arc>& ifst2,
+                                          const std::vector<I>& to_remove) {
   fst::CacheOptions cache_opts(true, 1 << 25LL);
   fst::CacheOptions cache_opts_map(true, 0);
   fst::ArcMapFstOptions arcmap_opts(cache_opts);
@@ -166,8 +166,8 @@ LookaheadFst<Arc, I> *LookaheadComposeFst(const Fst<Arc> &ifst1,
 }
 
 template <class Arc, class I>
-void RemoveSomeInputSymbols(const std::vector<I> &to_remove,
-                            MutableFst<Arc> *fst) {
+void RemoveSomeInputSymbols(const std::vector<I>& to_remove,
+                            MutableFst<Arc>* fst) {
   KALDI_ASSERT_IS_INTEGER_TYPE(I);
   RemoveSomeInputSymbolsMapper<Arc, I> mapper(to_remove);
   Map(fst, mapper);
@@ -176,7 +176,7 @@ void RemoveSomeInputSymbols(const std::vector<I> &to_remove,
 template <class Arc, class I>
 class MapInputSymbolsMapper {
  public:
-  Arc operator()(const Arc &arc_in) {
+  Arc operator()(const Arc& arc_in) {
     Arc ans = arc_in;
     if (ans.ilabel > 0 && ans.ilabel < static_cast<typename Arc::Label>(
                                            (*symbol_mapping_).size()))
@@ -206,7 +206,7 @@ class MapInputSymbolsMapper {
   }
   // initialize with copy = false only if the "to_remove" argument will not be
   // deleted in the lifetime of this object.
-  MapInputSymbolsMapper(const std::vector<I> &to_remove, bool copy) {
+  MapInputSymbolsMapper(const std::vector<I>& to_remove, bool copy) {
     KALDI_ASSERT_IS_INTEGER_TYPE(I);
     if (copy)
       symbol_mapping_ = new std::vector<I>(to_remove);
@@ -220,12 +220,12 @@ class MapInputSymbolsMapper {
 
  private:
   bool owned;
-  const std::vector<I> *symbol_mapping_;
+  const std::vector<I>* symbol_mapping_;
 };
 
 template <class Arc, class I>
-void MapInputSymbols(const std::vector<I> &symbol_mapping,
-                     MutableFst<Arc> *fst) {
+void MapInputSymbols(const std::vector<I>& symbol_mapping,
+                     MutableFst<Arc>* fst) {
   KALDI_ASSERT_IS_INTEGER_TYPE(I);
   // false == don't copy the "symbol_mapping", retain pointer--
   // safe since short-lived object.
@@ -234,9 +234,9 @@ void MapInputSymbols(const std::vector<I> &symbol_mapping,
 }
 
 template <class Arc, class I>
-bool GetLinearSymbolSequence(const Fst<Arc> &fst, std::vector<I> *isymbols_out,
-                             std::vector<I> *osymbols_out,
-                             typename Arc::Weight *tot_weight_out) {
+bool GetLinearSymbolSequence(const Fst<Arc>& fst, std::vector<I>* isymbols_out,
+                             std::vector<I>* osymbols_out,
+                             typename Arc::Weight* tot_weight_out) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
 
@@ -264,7 +264,7 @@ bool GetLinearSymbolSequence(const Fst<Arc> &fst, std::vector<I> *isymbols_out,
       if (fst.NumArcs(cur_state) != 1) return false;
 
       ArcIterator<Fst<Arc> > iter(fst, cur_state);  // get the only arc.
-      const Arc &arc = iter.Value();
+      const Arc& arc = iter.Value();
       tot_weight = Times(arc.weight, tot_weight);
       if (arc.ilabel != 0) ilabel_seq.push_back(arc.ilabel);
       if (arc.olabel != 0) olabel_seq.push_back(arc.olabel);
@@ -275,8 +275,8 @@ bool GetLinearSymbolSequence(const Fst<Arc> &fst, std::vector<I> *isymbols_out,
 
 // see fstext-utils.h for comment.
 template <class Arc>
-void ConvertNbestToVector(const Fst<Arc> &fst,
-                          std::vector<VectorFst<Arc> > *fsts_out) {
+void ConvertNbestToVector(const Fst<Arc>& fst,
+                          std::vector<VectorFst<Arc> >* fsts_out) {
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
   fsts_out->clear();
@@ -295,8 +295,8 @@ void ConvertNbestToVector(const Fst<Arc> &fst,
   for (ArcIterator<Fst<Arc> > start_aiter(fst, start_state);
        !start_aiter.Done(); start_aiter.Next()) {
     fsts_out->resize(fsts_out->size() + 1);
-    VectorFst<Arc> &ofst = fsts_out->back();
-    const Arc &first_arc = start_aiter.Value();
+    VectorFst<Arc>& ofst = fsts_out->back();
+    const Arc& first_arc = start_aiter.Value();
     StateId cur_state = start_state, cur_ostate = ofst.AddState();
     ofst.SetStart(cur_ostate);
     StateId next_ostate = ofst.AddState();
@@ -312,7 +312,7 @@ void ConvertNbestToVector(const Fst<Arc> &fst,
         KALDI_ASSERT(fst.Final(cur_state) == Weight::Zero());
         // or problem with ShortestPath.
         ArcIterator<Fst<Arc> > aiter(fst, cur_state);
-        const Arc &arc = aiter.Value();
+        const Arc& arc = aiter.Value();
         next_ostate = ofst.AddState();
         ofst.AddArc(cur_ostate,
                     Arc(arc.ilabel, arc.olabel, arc.weight, next_ostate));
@@ -330,8 +330,8 @@ void ConvertNbestToVector(const Fst<Arc> &fst,
 
 // see fstext-utils.sh for comment.
 template <class Arc>
-void NbestAsFsts(const Fst<Arc> &fst, size_t n,
-                 std::vector<VectorFst<Arc> > *fsts_out) {
+void NbestAsFsts(const Fst<Arc>& fst, size_t n,
+                 std::vector<VectorFst<Arc> >* fsts_out) {
   KALDI_ASSERT(n > 0);
   KALDI_ASSERT(fsts_out != NULL);
   VectorFst<Arc> nbest_fst;
@@ -341,7 +341,7 @@ void NbestAsFsts(const Fst<Arc> &fst, size_t n,
 
 template <class Arc, class I>
 void MakeLinearAcceptorWithAlternatives(
-    const std::vector<std::vector<I> > &labels, MutableFst<Arc> *ofst) {
+    const std::vector<std::vector<I> >& labels, MutableFst<Arc>* ofst) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
 
@@ -361,7 +361,7 @@ void MakeLinearAcceptorWithAlternatives(
 }
 
 template <class Arc, class I>
-void MakeLinearAcceptor(const std::vector<I> &labels, MutableFst<Arc> *ofst) {
+void MakeLinearAcceptor(const std::vector<I>& labels, MutableFst<Arc>* ofst) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
 
@@ -378,8 +378,8 @@ void MakeLinearAcceptor(const std::vector<I> &labels, MutableFst<Arc> *ofst) {
 }
 
 template <class I>
-void GetSymbols(const SymbolTable &symtab, bool include_eps,
-                std::vector<I> *syms_out) {
+void GetSymbols(const SymbolTable& symtab, bool include_eps,
+                std::vector<I>* syms_out) {
   KALDI_ASSERT(syms_out != NULL);
   syms_out->clear();
   for (SymbolTableIterator iter(symtab); !iter.Done(); iter.Next()) {
@@ -392,7 +392,7 @@ void GetSymbols(const SymbolTable &symtab, bool include_eps,
 }
 
 template <class Arc>
-void SafeDeterminizeWrapper(MutableFst<Arc> *ifst, MutableFst<Arc> *ofst,
+void SafeDeterminizeWrapper(MutableFst<Arc>* ifst, MutableFst<Arc>* ofst,
                             float delta) {
   typename Arc::Label highest_sym = HighestNumberedInputSymbol(*ifst);
   std::vector<typename Arc::Label> extra_syms;
@@ -402,7 +402,7 @@ void SafeDeterminizeWrapper(MutableFst<Arc> *ifst, MutableFst<Arc> *ofst,
 }
 
 template <class Arc>
-void SafeDeterminizeMinimizeWrapper(MutableFst<Arc> *ifst, VectorFst<Arc> *ofst,
+void SafeDeterminizeMinimizeWrapper(MutableFst<Arc>* ifst, VectorFst<Arc>* ofst,
                                     float delta) {
   typename Arc::Label highest_sym = HighestNumberedInputSymbol(*ifst);
   std::vector<typename Arc::Label> extra_syms;
@@ -413,36 +413,36 @@ void SafeDeterminizeMinimizeWrapper(MutableFst<Arc> *ifst, VectorFst<Arc> *ofst,
   MinimizeEncoded(ofst, delta);
 }
 
-inline void DeterminizeStarInLog(VectorFst<StdArc> *fst, float delta,
-                                 bool *debug_ptr, int max_states) {
+inline void DeterminizeStarInLog(VectorFst<StdArc>* fst, float delta,
+                                 bool* debug_ptr, int max_states) {
   // DeterminizeStarInLog determinizes 'fst' in the log semiring, using
   // the DeterminizeStar algorithm (which also removes epsilons).
 
   ArcSort(fst, ILabelCompare<StdArc>());  // helps DeterminizeStar to be faster.
-  VectorFst<LogArc> *fst_log =
+  VectorFst<LogArc>* fst_log =
       new VectorFst<LogArc>;  // Want to determinize in log semiring.
   Cast(*fst, fst_log);
   VectorFst<StdArc> tmp;
   *fst = tmp;  // make fst empty to free up memory. [actually may make no
                // difference..]
-  VectorFst<LogArc> *fst_det_log = new VectorFst<LogArc>;
+  VectorFst<LogArc>* fst_det_log = new VectorFst<LogArc>;
   DeterminizeStar(*fst_log, fst_det_log, delta, debug_ptr, max_states);
   Cast(*fst_det_log, fst);
   delete fst_log;
   delete fst_det_log;
 }
 
-inline void DeterminizeInLog(VectorFst<StdArc> *fst) {
+inline void DeterminizeInLog(VectorFst<StdArc>* fst) {
   // DeterminizeInLog determinizes 'fst' in the log semiring.
 
   ArcSort(fst, ILabelCompare<StdArc>());  // helps DeterminizeStar to be faster.
-  VectorFst<LogArc> *fst_log =
+  VectorFst<LogArc>* fst_log =
       new VectorFst<LogArc>;  // Want to determinize in log semiring.
   Cast(*fst, fst_log);
   VectorFst<StdArc> tmp;
   *fst = tmp;  // make fst empty to free up memory. [actually may make no
                // difference..]
-  VectorFst<LogArc> *fst_det_log = new VectorFst<LogArc>;
+  VectorFst<LogArc>* fst_det_log = new VectorFst<LogArc>;
   Determinize(*fst_log, fst_det_log);
   Cast(*fst_det_log, fst);
   delete fst_log;
@@ -451,13 +451,13 @@ inline void DeterminizeInLog(VectorFst<StdArc> *fst) {
 
 // make it inline to avoid having to put it in a .cc file.
 // destructive algorithm (changes ifst as well as ofst).
-inline void SafeDeterminizeMinimizeWrapperInLog(VectorFst<StdArc> *ifst,
-                                                VectorFst<StdArc> *ofst,
+inline void SafeDeterminizeMinimizeWrapperInLog(VectorFst<StdArc>* ifst,
+                                                VectorFst<StdArc>* ofst,
                                                 float delta) {
-  VectorFst<LogArc> *ifst_log =
+  VectorFst<LogArc>* ifst_log =
       new VectorFst<LogArc>;  // Want to determinize in log semiring.
   Cast(*ifst, ifst_log);
-  VectorFst<LogArc> *ofst_log = new VectorFst<LogArc>;
+  VectorFst<LogArc>* ofst_log = new VectorFst<LogArc>;
   SafeDeterminizeWrapper(ifst_log, ofst_log, delta);
   Cast(*ofst_log, ofst);
   delete ifst_log;
@@ -468,12 +468,12 @@ inline void SafeDeterminizeMinimizeWrapperInLog(VectorFst<StdArc> *ifst,
                                  // log semiring so do it with StdARc.
 }
 
-inline void SafeDeterminizeWrapperInLog(VectorFst<StdArc> *ifst,
-                                        VectorFst<StdArc> *ofst, float delta) {
-  VectorFst<LogArc> *ifst_log =
+inline void SafeDeterminizeWrapperInLog(VectorFst<StdArc>* ifst,
+                                        VectorFst<StdArc>* ofst, float delta) {
+  VectorFst<LogArc>* ifst_log =
       new VectorFst<LogArc>;  // Want to determinize in log semiring.
   Cast(*ifst, ifst_log);
-  VectorFst<LogArc> *ofst_log = new VectorFst<LogArc>;
+  VectorFst<LogArc>* ofst_log = new VectorFst<LogArc>;
   SafeDeterminizeWrapper(ifst_log, ofst_log, delta);
   Cast(*ofst_log, ofst);
   delete ifst_log;
@@ -481,7 +481,7 @@ inline void SafeDeterminizeWrapperInLog(VectorFst<StdArc> *ifst,
 }
 
 template <class Arc>
-void RemoveWeights(MutableFst<Arc> *ifst) {
+void RemoveWeights(MutableFst<Arc>* ifst) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
 
@@ -505,18 +505,18 @@ template <class T>
 struct IdentityFunction {
   typedef T Arg;
   typedef T Result;
-  T operator()(const T &t) const { return t; }
+  T operator()(const T& t) const { return t; }
 };
 
 template <class Arc>
-bool PrecedingInputSymbolsAreSame(bool start_is_epsilon, const Fst<Arc> &fst) {
+bool PrecedingInputSymbolsAreSame(bool start_is_epsilon, const Fst<Arc>& fst) {
   IdentityFunction<typename Arc::Label> f;
   return PrecedingInputSymbolsAreSameClass(start_is_epsilon, fst, f);
 }
 
 template <class Arc, class F>  // F is functor type from labels to classes.
 bool PrecedingInputSymbolsAreSameClass(bool start_is_epsilon,
-                                       const Fst<Arc> &fst, const F &f) {
+                                       const Fst<Arc>& fst, const F& f) {
   typedef typename F::Result ClassType;
   typedef typename Arc::StateId StateId;
   std::vector<ClassType> classes;
@@ -533,7 +533,7 @@ bool PrecedingInputSymbolsAreSameClass(bool start_is_epsilon,
   for (StateIterator<Fst<Arc> > siter(fst); !siter.Done(); siter.Next()) {
     StateId s = siter.Value();
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       if (classes.size() <= arc.nextstate)
         classes.resize(arc.nextstate + 1, noClass);
       if (classes[arc.nextstate] == noClass)
@@ -546,14 +546,14 @@ bool PrecedingInputSymbolsAreSameClass(bool start_is_epsilon,
 }
 
 template <class Arc>
-bool FollowingInputSymbolsAreSame(bool end_is_epsilon, const Fst<Arc> &fst) {
+bool FollowingInputSymbolsAreSame(bool end_is_epsilon, const Fst<Arc>& fst) {
   IdentityFunction<typename Arc::Label> f;
   return FollowingInputSymbolsAreSameClass(end_is_epsilon, fst, f);
 }
 
 template <class Arc, class F>
-bool FollowingInputSymbolsAreSameClass(bool end_is_epsilon, const Fst<Arc> &fst,
-                                       const F &f) {
+bool FollowingInputSymbolsAreSameClass(bool end_is_epsilon, const Fst<Arc>& fst,
+                                       const F& f) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
   typedef typename F::Result ClassType;
@@ -562,7 +562,7 @@ bool FollowingInputSymbolsAreSameClass(bool end_is_epsilon, const Fst<Arc> &fst,
     StateId s = siter.Value();
     ClassType c = noClass;
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       if (c == noClass)
         c = f(arc.ilabel);
       else if (c != f(arc.ilabel))
@@ -577,14 +577,14 @@ bool FollowingInputSymbolsAreSameClass(bool end_is_epsilon, const Fst<Arc> &fst,
 
 template <class Arc>
 void MakePrecedingInputSymbolsSame(bool start_is_epsilon,
-                                   MutableFst<Arc> *fst) {
+                                   MutableFst<Arc>* fst) {
   IdentityFunction<typename Arc::Label> f;
   MakePrecedingInputSymbolsSameClass(start_is_epsilon, fst, f);
 }
 
 template <class Arc, class F>
 void MakePrecedingInputSymbolsSameClass(bool start_is_epsilon,
-                                        MutableFst<Arc> *fst, const F &f) {
+                                        MutableFst<Arc>* fst, const F& f) {
   typedef typename F::Result ClassType;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
@@ -604,7 +604,7 @@ void MakePrecedingInputSymbolsSameClass(bool start_is_epsilon,
   for (StateIterator<Fst<Arc> > siter(*fst); !siter.Done(); siter.Next()) {
     StateId s = siter.Value();
     for (ArcIterator<Fst<Arc> > aiter(*fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       if (classes.size() <= static_cast<size_t>(arc.nextstate))
         classes.resize(arc.nextstate + 1, noClass);
       if (classes[arc.nextstate] == noClass)
@@ -624,7 +624,7 @@ void MakePrecedingInputSymbolsSameClass(bool start_is_epsilon,
   for (StateIterator<Fst<Arc> > siter(*fst); !siter.Done(); siter.Next()) {
     StateId s = siter.Value();
     for (ArcIterator<Fst<Arc> > aiter(*fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       if (arc.ilabel != 0 && bad_states_ciset.count(arc.nextstate) != 0)
         arcs_to_change.push_back(std::make_pair(s, aiter.Position()));
     }
@@ -659,14 +659,14 @@ void MakePrecedingInputSymbolsSameClass(bool start_is_epsilon,
 }
 
 template <class Arc>
-void MakeFollowingInputSymbolsSame(bool end_is_epsilon, MutableFst<Arc> *fst) {
+void MakeFollowingInputSymbolsSame(bool end_is_epsilon, MutableFst<Arc>* fst) {
   IdentityFunction<typename Arc::Label> f;
   MakeFollowingInputSymbolsSameClass(end_is_epsilon, fst, f);
 }
 
 template <class Arc, class F>
 void MakeFollowingInputSymbolsSameClass(bool end_is_epsilon,
-                                        MutableFst<Arc> *fst, const F &f) {
+                                        MutableFst<Arc>* fst, const F& f) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
   typedef typename F::Result ClassType;
@@ -678,7 +678,7 @@ void MakeFollowingInputSymbolsSameClass(bool end_is_epsilon,
     ClassType c = noClass;
     bool bad = false;
     for (ArcIterator<Fst<Arc> > aiter(*fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       if (c == noClass) {
         c = f(arc.ilabel);
       } else if (c != f(arc.ilabel)) {
@@ -700,7 +700,7 @@ void MakeFollowingInputSymbolsSameClass(bool end_is_epsilon,
       my_arcs.push_back(aiter.Value());
 
     for (size_t j = 0; j < my_arcs.size(); j++) {
-      Arc &arc = my_arcs[j];
+      Arc& arc = my_arcs[j];
       if (arc.ilabel != 0) {
         StateId newstate = fst->AddState();
         // Create a new state for each non-eps arc in original FST, out of each
@@ -718,26 +718,26 @@ void MakeFollowingInputSymbolsSameClass(bool end_is_epsilon,
 }
 
 template <class Arc>
-VectorFst<Arc> *MakeLoopFst(const std::vector<const ExpandedFst<Arc> *> &fsts) {
+VectorFst<Arc>* MakeLoopFst(const std::vector<const ExpandedFst<Arc>*>& fsts) {
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Label Label;
 
-  VectorFst<Arc> *ans = new VectorFst<Arc>;
+  VectorFst<Arc>* ans = new VectorFst<Arc>;
   StateId loop_state = ans->AddState();  // = 0.
   ans->SetStart(loop_state);
   ans->SetFinal(loop_state, Weight::One());
 
   // "cache" is used as an optimization when some of the pointers in "fsts"
   // may have the same value.
-  unordered_map<const ExpandedFst<Arc> *, Arc> cache;
+  unordered_map<const ExpandedFst<Arc>*, Arc> cache;
 
   for (Label i = 0; i < static_cast<Label>(fsts.size()); i++) {
-    const ExpandedFst<Arc> *fst = fsts[i];
+    const ExpandedFst<Arc>* fst = fsts[i];
     if (fst == NULL) continue;
     {  // optimization with cache: helpful if some members of "fsts" may
       // contain the same pointer value (e.g. in GetHTransducer).
-      typename unordered_map<const ExpandedFst<Arc> *, Arc>::iterator iter =
+      typename unordered_map<const ExpandedFst<Arc>*, Arc>::iterator iter =
           cache.find(fst);
       if (iter != cache.end()) {
         Arc arc = iter->second;
@@ -776,7 +776,7 @@ VectorFst<Arc> *MakeLoopFst(const std::vector<const ExpandedFst<Arc> *> &fsts) {
       // Add arcs out of state s.
       for (ArcIterator<ExpandedFst<Arc> > aiter(*fst, s); !aiter.Done();
            aiter.Next()) {
-        const Arc &arc = aiter.Value();
+        const Arc& arc = aiter.Value();
         Label olabel = (s == fst_start_state && share_start_state ? i : 0);
         Arc newarc(arc.ilabel, olabel, arc.weight, state_map[arc.nextstate]);
         ans->AddArc(state_map[s], newarc);
@@ -792,7 +792,7 @@ VectorFst<Arc> *MakeLoopFst(const std::vector<const ExpandedFst<Arc> *> &fsts) {
 }
 
 template <class Arc>
-void ClearSymbols(bool clear_input, bool clear_output, MutableFst<Arc> *fst) {
+void ClearSymbols(bool clear_input, bool clear_output, MutableFst<Arc>* fst) {
   for (StateIterator<MutableFst<Arc> > siter(*fst); !siter.Done();
        siter.Next()) {
     typename Arc::StateId s = siter.Value();
@@ -816,7 +816,7 @@ void ClearSymbols(bool clear_input, bool clear_output, MutableFst<Arc> *fst) {
 }
 
 template <class Arc>
-void ApplyProbabilityScale(float scale, MutableFst<Arc> *fst) {
+void ApplyProbabilityScale(float scale, MutableFst<Arc>* fst) {
   typedef typename Arc::Weight Weight;
   typedef typename Arc::StateId StateId;
   for (StateIterator<MutableFst<Arc> > siter(*fst); !siter.Done();
@@ -836,7 +836,7 @@ void ApplyProbabilityScale(float scale, MutableFst<Arc> *fst) {
 // return arc-offset of self-loop with ilabel (or -1 if none exists).
 // if more than one such self-loop, pick first one.
 template <class Arc>
-ssize_t FindSelfLoopWithILabel(const Fst<Arc> &fst, typename Arc::StateId s) {
+ssize_t FindSelfLoopWithILabel(const Fst<Arc>& fst, typename Arc::StateId s) {
   for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next())
     if (aiter.Value().nextstate == s && aiter.Value().ilabel != 0)
       return static_cast<ssize_t>(aiter.Position());
@@ -844,8 +844,8 @@ ssize_t FindSelfLoopWithILabel(const Fst<Arc> &fst, typename Arc::StateId s) {
 }
 
 template <class Arc>
-bool EqualAlign(const Fst<Arc> &ifst, typename Arc::StateId length,
-                int rand_seed, MutableFst<Arc> *ofst, int num_retries) {
+bool EqualAlign(const Fst<Arc>& ifst, typename Arc::StateId length,
+                int rand_seed, MutableFst<Arc>* ofst, int num_retries) {
   srand(rand_seed);
   KALDI_ASSERT(ofst->NumStates() == 0);  // make sure ofst empty.
   // make sure all states can reach final-state (or this algorithm may enter
@@ -893,7 +893,7 @@ bool EqualAlign(const Fst<Arc> &ifst, typename Arc::StateId length,
       if (arc_offset < num_arcs) {  // an actual arc.
         ArcIterator<Fst<Arc> > aiter(ifst, s);
         aiter.Seek(arc_offset);
-        const Arc &arc = aiter.Value();
+        const Arc& arc = aiter.Value();
         if (arc.nextstate == s) {
           continue;  // don't take this self-loop arc
         } else {
@@ -990,7 +990,7 @@ bool EqualAlign(const Fst<Arc> &ifst, typename Arc::StateId length,
 // Only works for tropical (not log) semiring as it uses
 // NaturalLess.
 template <class Arc>
-void RemoveUselessArcs(MutableFst<Arc> *fst) {
+void RemoveUselessArcs(MutableFst<Arc>* fst) {
   typedef typename Arc::Label Label;
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
@@ -1007,7 +1007,7 @@ void RemoveUselessArcs(MutableFst<Arc> *fst) {
     for (ArcIterator<MutableFst<Arc> > aiter(*fst, state); !aiter.Done();
          aiter.Next()) {
       size_t pos = arcs.size();
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       arcs.push_back(arc);
       pair2arclist[std::make_pair(arc.ilabel, arc.nextstate)].push_back(pos);
     }
@@ -1015,7 +1015,7 @@ void RemoveUselessArcs(MutableFst<Arc> *fst) {
         iter = pair2arclist.begin(),
         end = pair2arclist.end();
     for (; iter != end; ++iter) {
-      const std::vector<size_t> &poslist = iter->second;
+      const std::vector<size_t>& poslist = iter->second;
       if (poslist.size() > 1) {  // >1 arc with same ilabel, dest-state
         size_t best_pos = poslist[0];
         Weight best_weight = arcs[best_pos].weight;
@@ -1034,7 +1034,7 @@ void RemoveUselessArcs(MutableFst<Arc> *fst) {
       } else {
         KALDI_ASSERT(poslist.size() == 1);
         size_t pos = poslist[0];
-        Arc &arc = arcs[pos];
+        Arc& arc = arcs[pos];
         if (arc.ilabel == 0 && arc.nextstate == state)
           arcs_to_delete.push_back(pos);
       }
@@ -1058,8 +1058,8 @@ void RemoveUselessArcs(MutableFst<Arc> *fst) {
 }
 
 template <class Arc>
-void PhiCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                typename Arc::Label phi_label, MutableFst<Arc> *ofst) {
+void PhiCompose(const Fst<Arc>& fst1, const Fst<Arc>& fst2,
+                typename Arc::Label phi_label, MutableFst<Arc>* ofst) {
   KALDI_ASSERT(phi_label !=
                kNoLabel);  // just use regular compose in this case.
   typedef Fst<Arc> F;
@@ -1074,8 +1074,8 @@ void PhiCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
   // fully understand, but I don't think we want it.
 
   // These pointers are taken ownership of, by ComposeFst.
-  PM *phi_matcher = new PM(fst2, MATCH_INPUT, phi_label, false);
-  SortedMatcher<F> *sorted_matcher =
+  PM* phi_matcher = new PM(fst2, MATCH_INPUT, phi_label, false);
+  SortedMatcher<F>* sorted_matcher =
       new SortedMatcher<F>(fst1, MATCH_NONE);  // tell it
   // not to use this matcher, as this would mean we would
   // not follow phi transitions.
@@ -1087,7 +1087,7 @@ void PhiCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
 
 template <class Arc>
 void PropagateFinalInternal(typename Arc::Label phi_label,
-                            typename Arc::StateId s, MutableFst<Arc> *fst) {
+                            typename Arc::StateId s, MutableFst<Arc>* fst) {
   typedef typename Arc::Weight Weight;
   if (fst->Final(s) == Weight::Zero()) {
     // search for phi transition.  We assume there
@@ -1095,7 +1095,7 @@ void PropagateFinalInternal(typename Arc::Label phi_label,
     // anyway.
     int num_phis = 0;
     for (ArcIterator<Fst<Arc> > aiter(*fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       if (arc.ilabel == phi_label) {
         num_phis++;
         if (arc.nextstate == s) continue;  // don't expect
@@ -1116,7 +1116,7 @@ void PropagateFinalInternal(typename Arc::Label phi_label,
 }
 
 template <class Arc>
-void PropagateFinal(typename Arc::Label phi_label, MutableFst<Arc> *fst) {
+void PropagateFinal(typename Arc::Label phi_label, MutableFst<Arc>* fst) {
   typedef typename Arc::StateId StateId;
   if (fst->Properties(kIEpsilons, true))  // just warn.
     KALDI_WARN << "PropagateFinal: this may not work as desired "
@@ -1127,8 +1127,8 @@ void PropagateFinal(typename Arc::Label phi_label, MutableFst<Arc> *fst) {
 }
 
 template <class Arc>
-void RhoCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
-                typename Arc::Label rho_label, MutableFst<Arc> *ofst) {
+void RhoCompose(const Fst<Arc>& fst1, const Fst<Arc>& fst2,
+                typename Arc::Label rho_label, MutableFst<Arc>* ofst) {
   KALDI_ASSERT(rho_label !=
                kNoLabel);  // just use regular compose in this case.
   typedef Fst<Arc> F;
@@ -1143,8 +1143,8 @@ void RhoCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
   // fully understand, but I don't think we want it.
 
   // These pointers are taken ownership of, by ComposeFst.
-  RM *rho_matcher = new RM(fst2, MATCH_INPUT, rho_label);
-  SortedMatcher<F> *sorted_matcher =
+  RM* rho_matcher = new RM(fst2, MATCH_INPUT, rho_label);
+  SortedMatcher<F>* sorted_matcher =
       new SortedMatcher<F>(fst1, MATCH_NONE);  // tell it
   // not to use this matcher, as this would mean we would
   // not follow rho transitions.
@@ -1156,14 +1156,14 @@ void RhoCompose(const Fst<Arc> &fst1, const Fst<Arc> &fst2,
 
 // Declare an override of the template below.
 template <>
-inline bool IsStochasticFst(const Fst<LogArc> &fst, float delta,
-                            LogArc::Weight *min_sum, LogArc::Weight *max_sum);
+inline bool IsStochasticFst(const Fst<LogArc>& fst, float delta,
+                            LogArc::Weight* min_sum, LogArc::Weight* max_sum);
 
 // Will override this for LogArc where NaturalLess will not work.
 template <class Arc>
-inline bool IsStochasticFst(const Fst<Arc> &fst, float delta,
-                            typename Arc::Weight *min_sum,
-                            typename Arc::Weight *max_sum) {
+inline bool IsStochasticFst(const Fst<Arc>& fst, float delta,
+                            typename Arc::Weight* min_sum,
+                            typename Arc::Weight* max_sum) {
   typedef typename Arc::StateId StateId;
   typedef typename Arc::Weight Weight;
   NaturalLess<Weight> nl;
@@ -1175,7 +1175,7 @@ inline bool IsStochasticFst(const Fst<Arc> &fst, float delta,
     StateId s = siter.Value();
     Weight sum = fst.Final(s);
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       sum = Plus(sum, arc.weight);
     }
     if (!ApproxEqual(Weight::One(), sum, delta)) ans = false;
@@ -1197,8 +1197,8 @@ inline bool IsStochasticFst(const Fst<Arc> &fst, float delta,
 
 // Overriding template for LogArc as NaturalLess does not work there.
 template <>
-inline bool IsStochasticFst(const Fst<LogArc> &fst, float delta,
-                            LogArc::Weight *min_sum, LogArc::Weight *max_sum) {
+inline bool IsStochasticFst(const Fst<LogArc>& fst, float delta,
+                            LogArc::Weight* min_sum, LogArc::Weight* max_sum) {
   typedef LogArc Arc;
   typedef Arc::StateId StateId;
   typedef Arc::Weight Weight;
@@ -1210,7 +1210,7 @@ inline bool IsStochasticFst(const Fst<LogArc> &fst, float delta,
     StateId s = siter.Value();
     Weight sum = fst.Final(s);
     for (ArcIterator<Fst<Arc> > aiter(fst, s); !aiter.Done(); aiter.Next()) {
-      const Arc &arc = aiter.Value();
+      const Arc& arc = aiter.Value();
       sum = Plus(sum, arc.weight);
     }
     if (!ApproxEqual(Weight::One(), sum, delta)) ans = false;
@@ -1237,19 +1237,19 @@ inline bool IsStochasticFst(const Fst<LogArc> &fst, float delta,
 // This function deals with the generic fst.
 // This version currently supports ConstFst<StdArc> or VectorFst<StdArc>.
 // Otherwise, it will be died with an error.
-inline bool IsStochasticFstInLog(const Fst<StdArc> &fst, float delta,
-                                 StdArc::Weight *min_sum,
-                                 StdArc::Weight *max_sum) {
+inline bool IsStochasticFstInLog(const Fst<StdArc>& fst, float delta,
+                                 StdArc::Weight* min_sum,
+                                 StdArc::Weight* max_sum) {
   bool ans = false;
   LogArc::Weight log_min = LogArc::Weight::One(),
                  log_max = LogArc::Weight::Zero();
   if (fst.Type() == "const") {
     ConstFst<LogArc> logfst;
-    Cast(dynamic_cast<const ConstFst<StdArc> &>(fst), &logfst);
+    Cast(dynamic_cast<const ConstFst<StdArc>&>(fst), &logfst);
     ans = IsStochasticFst(logfst, delta, &log_min, &log_max);
   } else if (fst.Type() == "vector") {
     VectorFst<LogArc> logfst;
-    Cast(dynamic_cast<const VectorFst<StdArc> &>(fst), &logfst);
+    Cast(dynamic_cast<const VectorFst<StdArc>&>(fst), &logfst);
     ans = IsStochasticFst(logfst, delta, &log_min, &log_max);
   } else {
     KALDI_ERR << "This version currently supports ConstFst<StdArc> "

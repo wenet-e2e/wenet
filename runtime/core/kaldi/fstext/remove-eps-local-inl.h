@@ -27,14 +27,14 @@ namespace fst {
 
 template <class Weight>
 struct ReweightPlusDefault {
-  inline Weight operator()(const Weight &a, const Weight &b) {
+  inline Weight operator()(const Weight& a, const Weight& b) {
     return Plus(a, b);
   }
 };
 
 struct ReweightPlusLogArc {
-  inline TropicalWeight operator()(const TropicalWeight &a,
-                                   const TropicalWeight &b) {
+  inline TropicalWeight operator()(const TropicalWeight& a,
+                                   const TropicalWeight& b) {
     LogWeight a_log(a.Value()), b_log(b.Value());
     return TropicalWeight(Plus(a_log, b_log).Value());
   }
@@ -48,7 +48,7 @@ class RemoveEpsLocalClass {
   typedef typename Arc::Weight Weight;
 
  public:
-  explicit RemoveEpsLocalClass(MutableFst<Arc> *fst) : fst_(fst) {
+  explicit RemoveEpsLocalClass(MutableFst<Arc>* fst) : fst_(fst) {
     if (fst_->Start() == kNoStateId) return;  // empty.
     non_coacc_state_ = fst_->AddState();
     InitNumArcs();
@@ -60,7 +60,7 @@ class RemoveEpsLocalClass {
   }
 
  private:
-  MutableFst<Arc> *fst_;
+  MutableFst<Arc>* fst_;
   StateId non_coacc_state_;  //  use this to delete arcs: make it nextstate
   std::vector<StateId> num_arcs_in_;  // The number of arcs into the state, plus
                                       // one if it's the start state.
@@ -68,7 +68,7 @@ class RemoveEpsLocalClass {
                                        // plus one if it's a final state.
   ReweightPlus reweight_plus_;
 
-  bool CanCombineArcs(const Arc &a, const Arc &b, Arc *c) {
+  bool CanCombineArcs(const Arc& a, const Arc& b, Arc* c) {
     if (a.ilabel != 0 && b.ilabel != 0) return false;
     if (a.olabel != 0 && b.olabel != 0) return false;
     c->weight = Times(a.weight, b.weight);
@@ -78,8 +78,8 @@ class RemoveEpsLocalClass {
     return true;
   }
 
-  static bool CanCombineFinal(const Arc &a, Weight final_prob,
-                              Weight *final_prob_out) {
+  static bool CanCombineFinal(const Arc& a, Weight final_prob,
+                              Weight* final_prob_out) {
     if (a.ilabel != 0 || a.olabel != 0) {
       return false;
     } else {
@@ -125,13 +125,13 @@ class RemoveEpsLocalClass {
     return true;  // always does this.  so we can assert it w/o warnings.
   }
 
-  inline void GetArc(StateId s, size_t pos, Arc *arc) const {
+  inline void GetArc(StateId s, size_t pos, Arc* arc) const {
     ArcIterator<MutableFst<Arc> > aiter(*fst_, s);
     aiter.Seek(pos);
     *arc = aiter.Value();
   }
 
-  inline void SetArc(StateId s, size_t pos, const Arc &arc) {
+  inline void SetArc(StateId s, size_t pos, const Arc& arc) {
     MutableArcIterator<MutableFst<Arc> > aiter(fst_, s);
     aiter.Seek(pos);
     aiter.SetValue(arc);
@@ -304,11 +304,11 @@ class RemoveEpsLocalClass {
 };
 
 template <class Arc>
-void RemoveEpsLocal(MutableFst<Arc> *fst) {
+void RemoveEpsLocal(MutableFst<Arc>* fst) {
   RemoveEpsLocalClass<Arc> c(fst);  // work gets done in initializer.
 }
 
-void RemoveEpsLocalSpecial(MutableFst<StdArc> *fst) {
+void RemoveEpsLocalSpecial(MutableFst<StdArc>* fst) {
   // work gets done in initializer.
   RemoveEpsLocalClass<StdArc, ReweightPlusLogArc> c(fst);
 }

@@ -1,5 +1,8 @@
 add_executable(decoder_main decoder_main.cc)
 target_link_libraries(decoder_main PUBLIC decoder)
+if(IPEX)
+  target_link_libraries(decoder_main PUBLIC "-Wl,--no-as-needed ${IPEX_CPU_CORE_LIBRARY}")
+endif()
 
 add_executable(label_checker_main label_checker_main.cc)
 target_link_libraries(label_checker_main PUBLIC decoder)

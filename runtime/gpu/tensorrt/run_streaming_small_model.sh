@@ -108,9 +108,6 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
    echo "prepare model repo for triton"
    python3 ../scripts/convert.py --config=$onnx_model_dir/train.yaml --vocab=$onnx_model_dir/words.txt \
         --model_repo=$model_repo_path --onnx_model_dir=$onnx_model_dir
-   # TODO: fix hard-coding path
-   mkdir -p /ws/onnx_model
-   cp $onnx_model_dir/words.txt /ws/onnx_model/units.txt
 
    cp $outputs_dir/encoder_fp16.plan $model_repo_path/encoder/1/
    cp $outputs_dir/LayerNorm.so $model_repo_path/../

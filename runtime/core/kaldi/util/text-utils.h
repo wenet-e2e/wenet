@@ -41,17 +41,17 @@ namespace kaldi {
 /// the output will contain n+1 strings if there are n characters
 /// in the set "delim" within the input string.  In this case
 /// the empty string is split to a single empty string.
-void SplitStringToVector(const std::string &full, const char *delim,
+void SplitStringToVector(const std::string& full, const char* delim,
                          bool omit_empty_strings,
-                         std::vector<std::string> *out);
+                         std::vector<std::string>* out);
 
 /// Joins the elements of a vector of strings into a single string using
 /// "delim" as the delimiter. If omit_empty_strings == true, any empty strings
 /// in the vector are skipped. A vector of empty strings results in an empty
 /// string on the output.
-void JoinVectorToString(const std::vector<std::string> &vec_in,
-                        const char *delim, bool omit_empty_strings,
-                        std::string *str_out);
+void JoinVectorToString(const std::vector<std::string>& vec_in,
+                        const char* delim, bool omit_empty_strings,
+                        std::string* str_out);
 
 /**
   \brief Split a string (e.g. 1:2:3) into a vector of integers.
@@ -67,11 +67,11 @@ void JoinVectorToString(const std::vector<std::string> &vec_in,
   \param [out] out   The output list of integers.
 */
 template <class I>
-bool SplitStringToIntegers(const std::string &full, const char *delim,
+bool SplitStringToIntegers(const std::string& full, const char* delim,
                            bool omit_empty_strings,  // typically false [but
                                                      // should probably be true
                                                      // if "delim" is spaces].
-                           std::vector<I> *out) {
+                           std::vector<I>* out) {
   KALDI_ASSERT(out != NULL);
   KALDI_ASSERT_IS_INTEGER_TYPE(I);
   if (*(full.c_str()) == '\0') {
@@ -82,8 +82,8 @@ bool SplitStringToIntegers(const std::string &full, const char *delim,
   SplitStringToVector(full, delim, omit_empty_strings, &split);
   out->resize(split.size());
   for (size_t i = 0; i < split.size(); i++) {
-    const char *this_str = split[i].c_str();
-    char *end = NULL;
+    const char* this_str = split[i].c_str();
+    char* end = NULL;
     int64 j = 0;
     j = KALDI_STRTOLL(this_str, &end);
     if (end == this_str || *end != '\0') {
@@ -104,9 +104,9 @@ bool SplitStringToIntegers(const std::string &full, const char *delim,
 
 // This is defined for F = float and double.
 template <class F>
-bool SplitStringToFloats(const std::string &full, const char *delim,
+bool SplitStringToFloats(const std::string& full, const char* delim,
                          bool omit_empty_strings,  // typically false
-                         std::vector<F> *out);
+                         std::vector<F>* out);
 
 /// Converts a string into an integer via strtoll and returns false if there was
 /// any kind of problem (i.e. the string was not an integer or contained extra
@@ -114,10 +114,10 @@ bool SplitStringToFloats(const std::string &full, const char *delim,
 /// being converted into).  Only sets *out if everything was OK and it returns
 /// true.
 template <class Int>
-bool ConvertStringToInteger(const std::string &str, Int *out) {
+bool ConvertStringToInteger(const std::string& str, Int* out) {
   KALDI_ASSERT_IS_INTEGER_TYPE(Int);
-  const char *this_str = str.c_str();
-  char *end = NULL;
+  const char* this_str = str.c_str();
+  char* end = NULL;
   errno = 0;
   int64 i = KALDI_STRTOLL(this_str, &end);
   if (end != this_str)
@@ -137,26 +137,26 @@ bool ConvertStringToInteger(const std::string &str, Int *out) {
 /// was not a floating point number or contained extra non-whitespace junk).
 /// Be careful- this function will successfully read inf's or nan's.
 template <typename T>
-bool ConvertStringToReal(const std::string &str, T *out);
+bool ConvertStringToReal(const std::string& str, T* out);
 
 /// Removes the beginning and trailing whitespaces from a string
-void Trim(std::string *str);
+void Trim(std::string* str);
 
 /// Removes leading and trailing white space from the string, then splits on the
 /// first section of whitespace found (if present), putting the part before the
 /// whitespace in "first" and the rest in "rest".  If there is no such space,
 /// everything that remains after removing leading and trailing whitespace goes
 /// in "first".
-void SplitStringOnFirstSpace(const std::string &line, std::string *first,
-                             std::string *rest);
+void SplitStringOnFirstSpace(const std::string& line, std::string* first,
+                             std::string* rest);
 
 /// Returns true if "token" is nonempty, and all characters are
 /// printable and whitespace-free.
-bool IsToken(const std::string &token);
+bool IsToken(const std::string& token);
 
 /// Returns true if "line" is free of \n characters and unprintable
 /// characters, and does not contain leading or trailing whitespace.
-bool IsLine(const std::string &line);
+bool IsLine(const std::string& line);
 
 /**
    This function returns true when two text strings are approximately equal, and
@@ -168,7 +168,7 @@ bool IsLine(const std::string &line);
    return false because there is a difference in the 2nd decimal, but with
    an argument of 1 it would return true.
  */
-bool StringsApproxEqual(const std::string &a, const std::string &b,
+bool StringsApproxEqual(const std::string& a, const std::string& b,
                         int32 decimal_places_check = 2);
 
 /**
@@ -195,25 +195,25 @@ class ConfigLine {
   // Tries to parse the line as a config-file line.  Returns false
   // if it could not for some reason, e.g. parsing failure.  In most cases
   // prints no warnings; the user should do this.  Does not expect comments.
-  bool ParseLine(const std::string &line);
+  bool ParseLine(const std::string& line);
 
   // the GetValue functions are overloaded for various types.  They return true
   // if the key exists with value that can be converted to that type, and false
   // otherwise.  They also mark the key-value pair as having been read.  It is
   // not an error to read values twice.
-  bool GetValue(const std::string &key, std::string *value);
-  bool GetValue(const std::string &key, BaseFloat *value);
-  bool GetValue(const std::string &key, int32 *value);
+  bool GetValue(const std::string& key, std::string* value);
+  bool GetValue(const std::string& key, BaseFloat* value);
+  bool GetValue(const std::string& key, int32* value);
   // Values may be separated by ":" or by ",".
-  bool GetValue(const std::string &key, std::vector<int32> *value);
-  bool GetValue(const std::string &key, bool *value);
+  bool GetValue(const std::string& key, std::vector<int32>* value);
+  bool GetValue(const std::string& key, bool* value);
 
   bool HasUnusedValues() const;
   /// returns e.g. foo=bar xxx=yyy if foo and xxx were not consumed by one
   /// of the GetValue() functions.
   std::string UnusedValues() const;
 
-  const std::string &FirstToken() const { return first_token_; }
+  const std::string& FirstToken() const { return first_token_; }
 
   const std::string WholeLine() { return whole_line_; }
   // use default assignment operator and copy constructor.
@@ -231,15 +231,15 @@ class ConfigLine {
 /// This function is like ExpectToken but for two tokens, and it will either
 /// accept token1 and then token2, or just token2.  This is useful in Read
 /// functions where the first token may already have been consumed.
-void ExpectOneOrTwoTokens(std::istream &is, bool binary,
-                          const std::string &token1, const std::string &token2);
+void ExpectOneOrTwoTokens(std::istream& is, bool binary,
+                          const std::string& token1, const std::string& token2);
 
 /**
    This function reads in a config file and *appends* its contents to a vector
    of lines; it is responsible for removing comments (anything after '#') and
    stripping out any lines that contain only whitespace after comment removal.
  */
-void ReadConfigLines(std::istream &is, std::vector<std::string> *lines);
+void ReadConfigLines(std::istream& is, std::vector<std::string>* lines);
 
 /**
    This function converts config-lines from a simple sequence of strings
@@ -250,14 +250,14 @@ void ReadConfigLines(std::istream &is, std::vector<std::string> *lines);
    documentation for class ConfigLine for details.
    This function will die if there was a parsing failure.
  */
-void ParseConfigLines(const std::vector<std::string> &lines,
-                      std::vector<ConfigLine> *config_lines);
+void ParseConfigLines(const std::vector<std::string>& lines,
+                      std::vector<ConfigLine>* config_lines);
 
 /// Returns true if 'name' would be a valid name for a component or node in a
 /// nnet3Nnet.  This is a nonempty string beginning with A-Za-z_, and containing
 /// only
 /// '-', '_', '.', A-Z, a-z, or 0-9.
-bool IsValidName(const std::string &name);
+bool IsValidName(const std::string& name);
 
 }  // namespace kaldi
 

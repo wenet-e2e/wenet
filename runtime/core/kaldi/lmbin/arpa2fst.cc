@@ -23,10 +23,10 @@
 #include "util/kaldi-io.h"
 #include "util/parse-options.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   using namespace kaldi;  // NOLINT
   try {
-    const char *usage =
+    const char* usage =
         "Convert an ARPA format language model into an FST\n"
         "Usage: arpa2fst [opts] <input-arpa> <output-fst>\n"
         " e.g.: arpa2fst --disambig-symbol=#0 --read-symbol-table="
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 
     int64 disambig_symbol_id = 0;
 
-    fst::SymbolTable *symbols;
+    fst::SymbolTable* symbols;
     if (!read_syms_filename.empty()) {
       // Use existing symbols. Required symbols must be in the table.
       kaldi::Input kisym(read_syms_filename);
@@ -138,7 +138,7 @@ int main(int argc, char *argv[]) {
     lm_compiler.Fst().Write(kofst.Stream(), wopts);
 
     delete symbols;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << e.what();
     return -1;
   }

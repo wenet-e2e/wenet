@@ -34,13 +34,13 @@
  fstcompile | fstaddselfloops in.list out.list | fstprint
 */
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   try {
     using namespace kaldi;  // NOLINT
-    using namespace fst;  // NOLINT
+    using namespace fst;    // NOLINT
     using kaldi::int32;
 
-    const char *usage =
+    const char* usage =
         "Adds self-loops to states of an FST to propagate disambiguation "
         "symbols through it\n"
         "They are added on each final state and each state with non-epsilon "
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
                 fst_in_filename = po.GetOptArg(3),
                 fst_out_filename = po.GetOptArg(4);
 
-    VectorFst<StdArc> *fst = ReadFstKaldi(fst_in_filename);
+    VectorFst<StdArc>* fst = ReadFstKaldi(fst_in_filename);
 
     std::vector<int32> disambig_in;
     if (!ReadIntegerVectorSimple(disambig_in_rxfilename, &disambig_in))
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     delete fst;
 
     return 0;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << e.what();
     return -1;
   }

@@ -36,10 +36,10 @@
 
 */
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   try {
     using namespace kaldi;  // NOLINT
-    using namespace fst;  // NOLINT
+    using namespace fst;    // NOLINT
     using kaldi::int32;
     /*
       fsttablecompose should always give equivalent results to compose,
@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
       is possible.
     */
 
-    const char *usage =
+    const char* usage =
         "Composition algorithm [between two FSTs of standard type, in "
         "tropical\n"
         "semiring] that is more efficient for certain cases-- in particular,\n"
@@ -105,9 +105,9 @@ int main(int argc, char *argv[]) {
     std::string fst1_in_str = po.GetArg(1), fst2_in_str = po.GetArg(2),
                 fst_out_str = po.GetOptArg(3);
 
-    VectorFst<StdArc> *fst1 = ReadFstKaldi(fst1_in_str);
+    VectorFst<StdArc>* fst1 = ReadFstKaldi(fst1_in_str);
 
-    VectorFst<StdArc> *fst2 = ReadFstKaldi(fst2_in_str);
+    VectorFst<StdArc>* fst2 = ReadFstKaldi(fst2_in_str);
 
     // Checks if <fst1> is olabel sorted and <fst2> is ilabel sorted.
     if (fst1->Properties(fst::kOLabelSorted, true) == 0) {
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
 
     WriteFstKaldi(composed_fst, fst_out_str);
     return 0;
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::cerr << e.what();
     return -1;
   }

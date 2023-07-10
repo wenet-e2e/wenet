@@ -29,9 +29,9 @@
 namespace kaldi {
 
 template <class F>
-bool SplitStringToFloats(const std::string &full, const char *delim,
+bool SplitStringToFloats(const std::string& full, const char* delim,
                          bool omit_empty_strings,  // typically false
-                         std::vector<F> *out) {
+                         std::vector<F>* out) {
   KALDI_ASSERT(out != NULL);
   if (*(full.c_str()) == '\0') {
     out->clear();
@@ -49,16 +49,16 @@ bool SplitStringToFloats(const std::string &full, const char *delim,
 }
 
 // Instantiate the template above for float and double.
-template bool SplitStringToFloats(const std::string &full, const char *delim,
+template bool SplitStringToFloats(const std::string& full, const char* delim,
                                   bool omit_empty_strings,
-                                  std::vector<float> *out);
-template bool SplitStringToFloats(const std::string &full, const char *delim,
+                                  std::vector<float>* out);
+template bool SplitStringToFloats(const std::string& full, const char* delim,
                                   bool omit_empty_strings,
-                                  std::vector<double> *out);
+                                  std::vector<double>* out);
 
-void SplitStringToVector(const std::string &full, const char *delim,
+void SplitStringToVector(const std::string& full, const char* delim,
                          bool omit_empty_strings,
-                         std::vector<std::string> *out) {
+                         std::vector<std::string>* out) {
   size_t start = 0, found = 0, end = full.size();
   out->clear();
   while (found != std::string::npos) {
@@ -70,9 +70,9 @@ void SplitStringToVector(const std::string &full, const char *delim,
   }
 }
 
-void JoinVectorToString(const std::vector<std::string> &vec_in,
-                        const char *delim, bool omit_empty_strings,
-                        std::string *str_out) {
+void JoinVectorToString(const std::vector<std::string>& vec_in,
+                        const char* delim, bool omit_empty_strings,
+                        std::string* str_out) {
   std::string tmp_str;
   for (size_t i = 0; i < vec_in.size(); i++) {
     if (!omit_empty_strings || !vec_in[i].empty()) {
@@ -85,8 +85,8 @@ void JoinVectorToString(const std::vector<std::string> &vec_in,
   str_out->swap(tmp_str);
 }
 
-void Trim(std::string *str) {
-  const char *white_chars = " \t\n\r\f\v";
+void Trim(std::string* str) {
+  const char* white_chars = " \t\n\r\f\v";
 
   std::string::size_type pos = str->find_last_not_of(white_chars);
   if (pos != std::string::npos) {
@@ -98,7 +98,7 @@ void Trim(std::string *str) {
   }
 }
 
-bool IsToken(const std::string &token) {
+bool IsToken(const std::string& token) {
   size_t l = token.length();
   if (l == 0) return false;
   for (size_t i = 0; i < l; i++) {
@@ -112,9 +112,9 @@ bool IsToken(const std::string &token) {
   return true;
 }
 
-void SplitStringOnFirstSpace(const std::string &str, std::string *first,
-                             std::string *rest) {
-  const char *white_chars = " \t\n\r\f\v";
+void SplitStringOnFirstSpace(const std::string& str, std::string* first,
+                             std::string* rest) {
+  const char* white_chars = " \t\n\r\f\v";
   typedef std::string::size_type I;
   const I npos = std::string::npos;
   I first_nonwhite = str.find_first_not_of(white_chars);
@@ -145,7 +145,7 @@ void SplitStringOnFirstSpace(const std::string &str, std::string *first,
   *rest = std::string(str, next_nonwhite, last_nonwhite + 1 - next_nonwhite);
 }
 
-bool IsLine(const std::string &line) {
+bool IsLine(const std::string& line) {
   if (line.find('\n') != std::string::npos) return false;
   if (line.empty()) return true;
   if (isspace(*(line.begin()))) return false;
@@ -159,9 +159,9 @@ bool IsLine(const std::string &line) {
 template <class T>
 class NumberIstream {
  public:
-  explicit NumberIstream(std::istream &i) : in_(i) {}
+  explicit NumberIstream(std::istream& i) : in_(i) {}
 
-  NumberIstream &operator>>(T &x) {
+  NumberIstream& operator>>(T& x) {
     if (!in_.good()) return *this;
     in_ >> x;
     if (!in_.fail() && RemainderIsOnlySpaces()) return *this;
@@ -169,7 +169,7 @@ class NumberIstream {
   }
 
  private:
-  std::istream &in_;
+  std::istream& in_;
 
   bool RemainderIsOnlySpaces() {
     if (in_.tellg() != std::istream::pos_type(-1)) {
@@ -186,7 +186,7 @@ class NumberIstream {
     return true;
   }
 
-  NumberIstream &ParseOnFail(T *x) {
+  NumberIstream& ParseOnFail(T* x) {
     std::string str;
     in_.clear();
     in_.seekg(0);
@@ -228,7 +228,7 @@ class NumberIstream {
 };
 
 template <typename T>
-bool ConvertStringToReal(const std::string &str, T *out) {
+bool ConvertStringToReal(const std::string& str, T* out) {
   std::istringstream iss(str);
 
   NumberIstream<T> i(iss);
@@ -243,8 +243,8 @@ bool ConvertStringToReal(const std::string &str, T *out) {
   return true;
 }
 
-template bool ConvertStringToReal(const std::string &str, float *out);
-template bool ConvertStringToReal(const std::string &str, double *out);
+template bool ConvertStringToReal(const std::string& str, float* out);
+template bool ConvertStringToReal(const std::string& str, double* out);
 
 /*
   This function is a helper function of StringsApproxEqual.  It should be
@@ -269,7 +269,7 @@ template bool ConvertStringToReal(const std::string &str, double *out);
 
 
  */
-bool StringsApproxEqualInternal(const char *a, const char *b,
+bool StringsApproxEqualInternal(const char* a, const char* b,
                                 int32 decimal_places_tolerance,
                                 int32 places_into_number) {
 start:
@@ -318,13 +318,13 @@ start:
   }
 }
 
-bool StringsApproxEqual(const std::string &a, const std::string &b,
+bool StringsApproxEqual(const std::string& a, const std::string& b,
                         int32 decimal_places_tolerance) {
   return StringsApproxEqualInternal(a.c_str(), b.c_str(),
                                     decimal_places_tolerance, -1);
 }
 
-bool ConfigLine::ParseLine(const std::string &line) {
+bool ConfigLine::ParseLine(const std::string& line) {
   data_.clear();
   whole_line_ = line;
   if (line.size() == 0) return false;  // Empty line
@@ -412,7 +412,7 @@ bool ConfigLine::ParseLine(const std::string &line) {
   return true;
 }
 
-bool ConfigLine::GetValue(const std::string &key, std::string *value) {
+bool ConfigLine::GetValue(const std::string& key, std::string* value) {
   KALDI_ASSERT(value != NULL);
   std::map<std::string, std::pair<std::string, bool> >::iterator it =
       data_.begin();
@@ -426,7 +426,7 @@ bool ConfigLine::GetValue(const std::string &key, std::string *value) {
   return false;
 }
 
-bool ConfigLine::GetValue(const std::string &key, BaseFloat *value) {
+bool ConfigLine::GetValue(const std::string& key, BaseFloat* value) {
   KALDI_ASSERT(value != NULL);
   std::map<std::string, std::pair<std::string, bool> >::iterator it =
       data_.begin();
@@ -440,7 +440,7 @@ bool ConfigLine::GetValue(const std::string &key, BaseFloat *value) {
   return false;
 }
 
-bool ConfigLine::GetValue(const std::string &key, int32 *value) {
+bool ConfigLine::GetValue(const std::string& key, int32* value) {
   KALDI_ASSERT(value != NULL);
   std::map<std::string, std::pair<std::string, bool> >::iterator it =
       data_.begin();
@@ -454,7 +454,7 @@ bool ConfigLine::GetValue(const std::string &key, int32 *value) {
   return false;
 }
 
-bool ConfigLine::GetValue(const std::string &key, std::vector<int32> *value) {
+bool ConfigLine::GetValue(const std::string& key, std::vector<int32>* value) {
   KALDI_ASSERT(value != NULL);
   value->clear();
   std::map<std::string, std::pair<std::string, bool> >::iterator it =
@@ -472,7 +472,7 @@ bool ConfigLine::GetValue(const std::string &key, std::vector<int32> *value) {
   return false;
 }
 
-bool ConfigLine::GetValue(const std::string &key, bool *value) {
+bool ConfigLine::GetValue(const std::string& key, bool* value) {
   KALDI_ASSERT(value != NULL);
   std::map<std::string, std::pair<std::string, bool> >::iterator it =
       data_.begin();
@@ -542,7 +542,7 @@ std::string ConfigLine::UnusedValues() const {
 //   }
 // }
 
-bool IsValidName(const std::string &name) {
+bool IsValidName(const std::string& name) {
   if (name.size() == 0) return false;
   for (size_t i = 0; i < name.size(); i++) {
     if (i == 0 && !isalpha(name[i]) && name[i] != '_') return false;
@@ -552,7 +552,7 @@ bool IsValidName(const std::string &name) {
   return true;
 }
 
-void ReadConfigLines(std::istream &is, std::vector<std::string> *lines) {
+void ReadConfigLines(std::istream& is, std::vector<std::string>* lines) {
   KALDI_ASSERT(lines != NULL);
   std::string line;
   while (std::getline(is, line)) {
@@ -566,8 +566,8 @@ void ReadConfigLines(std::istream &is, std::vector<std::string> *lines) {
   }
 }
 
-void ParseConfigLines(const std::vector<std::string> &lines,
-                      std::vector<ConfigLine> *config_lines) {
+void ParseConfigLines(const std::vector<std::string>& lines,
+                      std::vector<ConfigLine>* config_lines) {
   config_lines->resize(lines.size());
   for (size_t i = 0; i < lines.size(); i++) {
     bool ret = (*config_lines)[i].ParseLine(lines[i]);

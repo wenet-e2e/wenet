@@ -24,11 +24,11 @@
 namespace kaldi {
 // TYPEDEFS ..................................................................
 #if (KALDI_DOUBLEPRECISION != 0)
-typedef double  BaseFloat;
+typedef double BaseFloat;
 #else
-typedef float   BaseFloat;
+typedef float BaseFloat;
 #endif
-}
+}  // namespace kaldi
 
 #ifdef _MSC_VER
 #include <basetsd.h>
@@ -44,14 +44,14 @@ typedef float   BaseFloat;
 #include <fst/types.h>
 
 namespace kaldi {
-  using ::int16;
-  using ::int32;
-  using ::int64;
-  using ::uint16;
-  using ::uint32;
-  using ::uint64;
-  typedef float   float32;
-  typedef double double64;
+using ::int16;
+using ::int32;
+using ::int64;
+using ::uint16;
+using ::uint32;
+using ::uint64;
+typedef float float32;
+typedef double double64;
 }  // end namespace kaldi
 
 // In a theoretical case you decide compile Kaldi without the OpenFST

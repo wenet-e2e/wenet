@@ -14,13 +14,15 @@
 # limitations under the License.
 
 export CUDA_VISIBLE_DEVICES="0"
-stage=1
+stage=0
 stop_stage=2
 
+# aishell small offline model
 pretrained_model_link=https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20211025_conformer_exp.tar.gz
-#pretrained_model_link=https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20211025_conformer_exp.tar.gz
+# wenetspeech large offline model
+# pretrained_model_link=https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/20211025_conformer_exp.tar.gz
 # aishell2 small streaming u2pp model
-#pretrained_model_link=http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210618_u2pp_conformer_exp.tar.gz
+# pretrained_model_link=http://mobvoi-speech-public.ufile.ucloud.cn/public/wenet/aishell2/20210618_u2pp_conformer_exp.tar.gz
 pretrained_model_name=20211025_conformer_exp
 model_repo_path=$(pwd)/../model_repo
 

@@ -97,6 +97,9 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
      apt-get install git-lfs
      git-lfs install
      git clone https://huggingface.co/yuekai/aishell1_tlg_essentials.git
+     cd aishell1_tlg_essentials
+     git lfs pull
+     cd -
      tlg_dir=./aishell1_tlg_essentials/output
 
      # mv TLG files to model_repo_path

@@ -57,7 +57,7 @@ bool LatticeFasterOnlineDecoderTpl<FST>::TestGetBestPath(
 // Outputs an FST corresponding to the single best path through the lattice.
 template <typename FST>
 bool LatticeFasterOnlineDecoderTpl<FST>::GetBestPath(
-    Lattice *olat, bool use_final_probs) const {
+    Lattice* olat, bool use_final_probs) const {
   olat->DeleteStates();
   BaseFloat final_graph_cost;
   BestPathIterator iter = BestPathEnd(use_final_probs, &final_graph_cost);
@@ -79,16 +79,16 @@ bool LatticeFasterOnlineDecoderTpl<FST>::GetBestPath(
 template <typename FST>
 typename LatticeFasterOnlineDecoderTpl<FST>::BestPathIterator
 LatticeFasterOnlineDecoderTpl<FST>::BestPathEnd(
-    bool use_final_probs, BaseFloat *final_cost_out) const {
+    bool use_final_probs, BaseFloat* final_cost_out) const {
   if (this->decoding_finalized_ && !use_final_probs)
     KALDI_ERR << "You cannot call FinalizeDecoding() and then call "
               << "BestPathEnd() with use_final_probs == false";
   KALDI_ASSERT(this->NumFramesDecoded() > 0 &&
                "You cannot call BestPathEnd if no frames were decoded.");
 
-  unordered_map<Token *, BaseFloat> final_costs_local;
+  unordered_map<Token*, BaseFloat> final_costs_local;
 
-  const unordered_map<Token *, BaseFloat> &final_costs =
+  const unordered_map<Token*, BaseFloat>& final_costs =
       (this->decoding_finalized_ ? this->final_costs_ : final_costs_local);
   if (!this->decoding_finalized_ && use_final_probs)
     this->ComputeFinalCosts(&final_costs_local, NULL, NULL);
@@ -97,14 +97,14 @@ LatticeFasterOnlineDecoderTpl<FST>::BestPathEnd(
   // pointer).
   BaseFloat best_cost = std::numeric_limits<BaseFloat>::infinity();
   BaseFloat best_final_cost = 0;
-  Token *best_tok = NULL;
-  for (Token *tok = this->active_toks_.back().toks; tok != NULL;
+  Token* best_tok = NULL;
+  for (Token* tok = this->active_toks_.back().toks; tok != NULL;
        tok = tok->next) {
     BaseFloat cost = tok->tot_cost, final_cost = 0.0;
     if (use_final_probs && !final_costs.empty()) {
       // if we are instructed to use final-probs, and any final tokens were
       // active on final frame, include the final-prob in the cost of the token.
-      typename unordered_map<Token *, BaseFloat>::const_iterator iter =
+      typename unordered_map<Token*, BaseFloat>::const_iterator iter =
           final_costs.find(tok);
       if (iter != final_costs.end()) {
         final_cost = iter->second;
@@ -132,14 +132,14 @@ LatticeFasterOnlineDecoderTpl<FST>::BestPathEnd(
 template <typename FST>
 typename LatticeFasterOnlineDecoderTpl<FST>::BestPathIterator
 LatticeFasterOnlineDecoderTpl<FST>::TraceBackBestPath(BestPathIterator iter,
-                                                      LatticeArc *oarc) const {
+                                                      LatticeArc* oarc) const {
   KALDI_ASSERT(!iter.Done() && oarc != NULL);
-  Token *tok = static_cast<Token *>(iter.tok);
+  Token* tok = static_cast<Token*>(iter.tok);
   int32 cur_t = iter.frame, step_t = 0;
   if (tok->backpointer != NULL) {
     // retrieve the correct forward link(with the best link cost)
     BaseFloat best_cost = std::numeric_limits<BaseFloat>::infinity();
-    ForwardLinkT *link;
+    ForwardLinkT* link;
     for (link = tok->backpointer->links; link != NULL; link = link->next) {
       if (link->next_tok == tok) {  // this is a link to "tok"
         BaseFloat graph_cost = link->graph_cost,
@@ -178,7 +178,7 @@ LatticeFasterOnlineDecoderTpl<FST>::TraceBackBestPath(BestPathIterator iter,
 
 template <typename FST>
 bool LatticeFasterOnlineDecoderTpl<FST>::GetRawLatticePruned(
-    Lattice *ofst, bool use_final_probs, BaseFloat beam) const {
+    Lattice* ofst, bool use_final_probs, BaseFloat beam) const {
   typedef LatticeArc Arc;
   typedef Arc::StateId StateId;
   typedef Arc::Weight Weight;
@@ -191,9 +191,9 @@ bool LatticeFasterOnlineDecoderTpl<FST>::GetRawLatticePruned(
     KALDI_ERR << "You cannot call FinalizeDecoding() and then call "
               << "GetRawLattice() with use_final_probs == false";
 
-  unordered_map<Token *, BaseFloat> final_costs_local;
+  unordered_map<Token*, BaseFloat> final_costs_local;
 
-  const unordered_map<Token *, BaseFloat> &final_costs =
+  const unordered_map<Token*, BaseFloat>& final_costs =
       (this->decoding_finalized_ ? this->final_costs_ : final_costs_local);
   if (!this->decoding_finalized_ && use_final_probs)
     this->ComputeFinalCosts(&final_costs_local, NULL, NULL);
@@ -210,41 +210,41 @@ bool LatticeFasterOnlineDecoderTpl<FST>::GetRawLatticePruned(
       return false;
     }
   }
-  unordered_map<Token *, StateId> tok_map;
-  std::queue<std::pair<Token *, int32> > tok_queue;
+  unordered_map<Token*, StateId> tok_map;
+  std::queue<std::pair<Token*, int32> > tok_queue;
   // First initialize the queue and states.  Put the initial state on the queue;
   // this is the last token in the list active_toks_[0].toks.
-  for (Token *tok = this->active_toks_[0].toks; tok != NULL; tok = tok->next) {
+  for (Token* tok = this->active_toks_[0].toks; tok != NULL; tok = tok->next) {
     if (tok->next == NULL) {
       tok_map[tok] = ofst->AddState();
       ofst->SetStart(tok_map[tok]);
-      std::pair<Token *, int32> tok_pair(tok, 0);  // #frame = 0
+      std::pair<Token*, int32> tok_pair(tok, 0);  // #frame = 0
       tok_queue.push(tok_pair);
     }
   }
 
   // Next create states for "good" tokens
   while (!tok_queue.empty()) {
-    std::pair<Token *, int32> cur_tok_pair = tok_queue.front();
+    std::pair<Token*, int32> cur_tok_pair = tok_queue.front();
     tok_queue.pop();
-    Token *cur_tok = cur_tok_pair.first;
+    Token* cur_tok = cur_tok_pair.first;
     int32 cur_frame = cur_tok_pair.second;
     KALDI_ASSERT(cur_frame >= 0 && cur_frame <= this->cost_offsets_.size());
 
-    typename unordered_map<Token *, StateId>::const_iterator iter =
+    typename unordered_map<Token*, StateId>::const_iterator iter =
         tok_map.find(cur_tok);
     KALDI_ASSERT(iter != tok_map.end());
     StateId cur_state = iter->second;
 
-    for (ForwardLinkT *l = cur_tok->links; l != NULL; l = l->next) {
-      Token *next_tok = l->next_tok;
+    for (ForwardLinkT* l = cur_tok->links; l != NULL; l = l->next) {
+      Token* next_tok = l->next_tok;
       if (next_tok->extra_cost < beam) {
         // so both the current and the next token are good; create the arc
         int32 next_frame = l->ilabel == 0 ? cur_frame : cur_frame + 1;
         StateId nextstate;
         if (tok_map.find(next_tok) == tok_map.end()) {
           nextstate = tok_map[next_tok] = ofst->AddState();
-          tok_queue.push(std::pair<Token *, int32>(next_tok, next_frame));
+          tok_queue.push(std::pair<Token*, int32>(next_tok, next_frame));
         } else {
           nextstate = tok_map[next_tok];
         }
@@ -258,7 +258,7 @@ bool LatticeFasterOnlineDecoderTpl<FST>::GetRawLatticePruned(
     }
     if (cur_frame == num_frames) {
       if (use_final_probs && !final_costs.empty()) {
-        typename unordered_map<Token *, BaseFloat>::const_iterator iter =
+        typename unordered_map<Token*, BaseFloat>::const_iterator iter =
             final_costs.find(cur_tok);
         if (iter != final_costs.end())
           ofst->SetFinal(cur_state, LatticeWeight(iter->second, 0));

@@ -31,14 +31,13 @@ namespace kaldi {
 
 #define KALDI_ASSERT(condition) CHECK(condition)
 
-
 /***** PROGRAM NAME AND VERBOSITY LEVEL *****/
 
 /// Called by ParseOptions to set base name (no directory) of the executing
 /// program. The name is printed in logging code along with every message,
 /// because in our scripts, we often mix together the stderr of many programs.
 /// This function is very thread-unsafe.
-void SetProgramName(const char *basename);
+void SetProgramName(const char* basename);
 
 /// This is set by util/parse-options.{h,cc} if you set --verbose=? option.
 /// Do not use directly, prefer {Get,Set}VerboseLevel().
@@ -54,4 +53,3 @@ inline void SetVerboseLevel(int32 i) { g_kaldi_verbose_level = i; }
 }  // namespace kaldi
 
 #endif  // KALDI_BASE_KALDI_ERROR_H_
-

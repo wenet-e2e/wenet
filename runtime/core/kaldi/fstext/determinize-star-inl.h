@@ -50,7 +50,7 @@ class StringRepository {
  public:
   class VectorKey {  // Hash function object.
    public:
-    size_t operator()(const std::vector<Label> *vec) const {
+    size_t operator()(const std::vector<Label>* vec) const {
       assert(vec != NULL);
       size_t hash = 0, factor = 1;
       for (typename std::vector<Label>::const_iterator it = vec->begin();
@@ -63,13 +63,13 @@ class StringRepository {
   };
   class VectorEqual {  // Equality-operator function object.
    public:
-    size_t operator()(const std::vector<Label> *vec1,
-                      const std::vector<Label> *vec2) const {
+    size_t operator()(const std::vector<Label>* vec1,
+                      const std::vector<Label>* vec2) const {
       return (*vec1 == *vec2);
     }
   };
 
-  typedef unordered_map<const std::vector<Label> *, StringId, VectorKey,
+  typedef unordered_map<const std::vector<Label>*, StringId, VectorKey,
                         VectorEqual>
       MapType;
 
@@ -88,7 +88,7 @@ class StringRepository {
   }
 
   StringId IdOfSeq(
-      const std::vector<Label> &v) {  // also works for sizes 0 and 1.
+      const std::vector<Label>& v) {  // also works for sizes 0 and 1.
     size_t sz = v.size();
     if (sz == 0)
       return no_symbol;
@@ -99,7 +99,7 @@ class StringRepository {
   }
 
   inline bool IsEmptyString(StringId id) { return id == no_symbol; }
-  void SeqOfId(StringId id, std::vector<Label> *v) {
+  void SeqOfId(StringId id, std::vector<Label>* v) {
     if (id == no_symbol) {
       v->clear();
     } else if (id >= single_symbol_start) {
@@ -138,11 +138,11 @@ class StringRepository {
         std::numeric_limits<StringId>::max() - single_symbol_start;
   }
   void Destroy() {
-    for (typename std::vector<std::vector<Label> *>::iterator iter =
+    for (typename std::vector<std::vector<Label>*>::iterator iter =
              vec_.begin();
          iter != vec_.end(); ++iter)
       delete *iter;
-    std::vector<std::vector<Label> *> tmp_vec;
+    std::vector<std::vector<Label>*> tmp_vec;
     tmp_vec.swap(vec_);
     MapType tmp_map;
     tmp_map.swap(map_);
@@ -152,13 +152,13 @@ class StringRepository {
  private:
   KALDI_DISALLOW_COPY_AND_ASSIGN(StringRepository);
 
-  StringId IdOfSeqInternal(const std::vector<Label> &v) {
+  StringId IdOfSeqInternal(const std::vector<Label>& v) {
     typename MapType::iterator iter = map_.find(&v);
     if (iter != map_.end()) {
       return iter->second;
     } else {  // must add it to map.
       StringId this_id = (StringId)vec_.size();
-      std::vector<Label> *v_new = new std::vector<Label>(v);
+      std::vector<Label>* v_new = new std::vector<Label>(v);
       vec_.push_back(v_new);
       map_[v_new] = this_id;
       assert(this_id < string_end);  // or we used up the labels.
@@ -166,7 +166,7 @@ class StringRepository {
     }
   }
 
-  std::vector<std::vector<Label> *> vec_;
+  std::vector<std::vector<Label>*> vec_;
   MapType map_;
 
   static const StringId string_start =
@@ -189,17 +189,17 @@ class DeterminizerStar {
   // Output to Gallic acceptor (so the strings go on weights, and there is a 1-1
   // correspondence between our states and the states in ofst.  If destroy ==
   // true, release memory as we go (but we cannot output again).
-  void Output(MutableFst<GallicArc<Arc> > *ofst, bool destroy = true);
+  void Output(MutableFst<GallicArc<Arc> >* ofst, bool destroy = true);
 
   // Output to standard FST.  We will create extra states to handle sequences of
   // symbols on the output.  If destroy == true, release memory as we go (but we
   // cannot output again).
 
-  void Output(MutableFst<Arc> *ofst, bool destroy = true);
+  void Output(MutableFst<Arc>* ofst, bool destroy = true);
 
   // Initializer.  After initializing the object you will typically call
   // Determinize() and then one of the Output functions.
-  DeterminizerStar(const Fst<Arc> &ifst, float delta = kDelta,
+  DeterminizerStar(const Fst<Arc>& ifst, float delta = kDelta,
                    int max_states = -1, bool allow_partial = false)
       : ifst_(ifst.Copy()),
         delta_(delta),
@@ -209,7 +209,7 @@ class DeterminizerStar {
         is_partial_(false),
         equal_(delta),
         hash_(ifst.Properties(kExpanded, false)
-                  ? down_cast<const ExpandedFst<Arc> *, const Fst<Arc> >(&ifst)
+                  ? down_cast<const ExpandedFst<Arc>*, const Fst<Arc> >(&ifst)
                                 ->NumStates() /
                             2 +
                         3
@@ -217,7 +217,7 @@ class DeterminizerStar {
               hasher_, equal_),
         epsilon_closure_(ifst_, max_states, &repository_, delta) {}
 
-  void Determinize(bool *debug_ptr) {
+  void Determinize(bool* debug_ptr) {
     assert(!determinized_);
     // This determinizes the input fst but leaves it in the "special format"
     // in "output_arcs_".
@@ -236,7 +236,7 @@ class DeterminizerStar {
       assert(cur_id == 0 && "Do not call Determinize twice.");
     }
     while (!Q_.empty()) {
-      std::pair<std::vector<Element> *, OutputStateId> cur_pair = Q_.front();
+      std::pair<std::vector<Element>*, OutputStateId> cur_pair = Q_.front();
       Q_.pop_front();
       ProcessSubset(cur_pair);
       if (debug_ptr && *debug_ptr) Debug();  // will exit.
@@ -289,7 +289,7 @@ class DeterminizerStar {
     InputStateId state;
     StringId string;
     Weight weight;
-    bool operator!=(const Element &other) const {
+    bool operator!=(const Element& other) const {
       return (state != other.state || string != other.string ||
               weight != other.weight);
     }
@@ -321,7 +321,7 @@ class DeterminizerStar {
 
   class SubsetKey {
    public:
-    size_t operator()(const std::vector<Element> *subset)
+    size_t operator()(const std::vector<Element>* subset)
         const {  // hashes only the state and string.
       size_t hash = 0, factor = 1;
       for (typename std::vector<Element>::const_iterator iter = subset->begin();
@@ -338,8 +338,8 @@ class DeterminizerStar {
   // state-id and string, and approximate match on weights.
   class SubsetEqual {
    public:
-    bool operator()(const std::vector<Element> *s1,
-                    const std::vector<Element> *s2) const {
+    bool operator()(const std::vector<Element>* s1,
+                    const std::vector<Element>* s2) const {
       size_t sz = s1->size();
       assert(sz >= 0);
       if (sz != s2->size()) return false;
@@ -362,8 +362,8 @@ class DeterminizerStar {
   // Used only for debug.
   class SubsetEqualStates {
    public:
-    bool operator()(const std::vector<Element> *s1,
-                    const std::vector<Element> *s2) const {
+    bool operator()(const std::vector<Element>* s1,
+                    const std::vector<Element>* s2) const {
       size_t sz = s1->size();
       assert(sz >= 0);
       if (sz != s2->size()) return false;
@@ -378,14 +378,14 @@ class DeterminizerStar {
   };
 
   // Define the hash type we use to store subsets.
-  typedef unordered_map<const std::vector<Element> *, OutputStateId, SubsetKey,
+  typedef unordered_map<const std::vector<Element>*, OutputStateId, SubsetKey,
                         SubsetEqual>
       SubsetHash;
 
   class EpsilonClosure {
    public:
-    EpsilonClosure(const Fst<Arc> *ifst, int max_states,
-                   StringRepository<Label, StringId> *repository, float delta)
+    EpsilonClosure(const Fst<Arc>* ifst, int max_states,
+                   StringRepository<Label, StringId>* repository, float delta)
         : ifst_(ifst),
           max_states_(max_states),
           repository_(repository),
@@ -394,13 +394,13 @@ class DeterminizerStar {
     // This function computes epsilon closure of subset of states by following
     // epsilon links. Called by ProcessSubset. Has no side effects except on the
     // repository.
-    void GetEpsilonClosure(const std::vector<Element> &input_subset,
-                           std::vector<Element> *output_subset);
+    void GetEpsilonClosure(const std::vector<Element>& input_subset,
+                           std::vector<Element>* output_subset);
 
    private:
     struct EpsilonClosureInfo {
       EpsilonClosureInfo() {}
-      EpsilonClosureInfo(const Element &e, const Weight &w, bool i)
+      EpsilonClosureInfo(const Element& e, const Weight& w, bool i)
           : element(e), weight_to_process(w), in_queue(i) {}
       // the weight in the Element struct is the total current weight
       // that has been processed already
@@ -410,7 +410,7 @@ class DeterminizerStar {
       // whether "this" struct is in the queue
       // we store the info here so that we don't have to look it up every time
       bool in_queue;
-      bool operator<(const EpsilonClosureInfo &other) const {
+      bool operator<(const EpsilonClosureInfo& other) const {
         return this->element.state < other.element.state;
       }
     };
@@ -445,7 +445,7 @@ class DeterminizerStar {
 
     // Add one element (elem) into cur_subset
     // it also adds the necessary stuff to queue_, set the correct weight
-    void AddOneElement(const Element &elem, const Weight &unprocessed_weight);
+    void AddOneElement(const Element& elem, const Weight& unprocessed_weight);
 
     // Sub-routine that we call in EpsilonClosure()
     // It takes the current "unprocessed_weight" and propagate it to the
@@ -454,14 +454,14 @@ class DeterminizerStar {
     // save_to_queue_2 is set true when we iterate over the initial subset
     // - then we save it to queue_2 s.t. if it's empty, we directly return
     // the input set
-    void ExpandOneElement(const Element &elem, bool sorted,
-                          const Weight &unprocessed_weight,
+    void ExpandOneElement(const Element& elem, bool sorted,
+                          const Weight& unprocessed_weight,
                           bool save_to_queue_2 = false);
 
     // no pointers below would take the ownership
-    const Fst<Arc> *ifst_;
+    const Fst<Arc>* ifst_;
     int max_states_;
-    StringRepository<Label, StringId> *repository_;
+    StringRepository<Label, StringId>* repository_;
     float delta_;
   };
 
@@ -469,7 +469,7 @@ class DeterminizerStar {
   // called by ProcessSubset.
   // Has no side effects except on the variable repository_, and output_arcs_.
 
-  void ProcessFinal(const std::vector<Element> &closed_subset,
+  void ProcessFinal(const std::vector<Element>& closed_subset,
                     OutputStateId state) {
     // processes final-weights for this subset.
     bool is_final = false;
@@ -482,7 +482,7 @@ class DeterminizerStar {
     typename std::vector<Element>::const_iterator iter = closed_subset.begin(),
                                                   end = closed_subset.end();
     for (; iter != end; ++iter) {
-      const Element &elem = *iter;
+      const Element& elem = *iter;
       Weight this_final_weight = ifst_->Final(elem.state);
       if (this_final_weight != Weight::Zero()) {
         if (!is_final) {  // first final-weight
@@ -514,7 +514,7 @@ class DeterminizerStar {
   // clarity.  Has side effects on output_arcs_, and (via SubsetToStateId), Q_
   // and hash_.
   void ProcessTransition(OutputStateId state, Label ilabel,
-                         std::vector<Element> *subset);
+                         std::vector<Element>* subset);
 
   // "less than" operator for pair<Label, Element>.   Used in
   // ProcessTransitions. Lexicographical order, with comparing the state only
@@ -522,8 +522,8 @@ class DeterminizerStar {
 
   class PairComparator {
    public:
-    inline bool operator()(const std::pair<Label, Element> &p1,
-                           const std::pair<Label, Element> &p2) {
+    inline bool operator()(const std::pair<Label, Element>& p1,
+                           const std::pair<Label, Element>& p2) {
       if (p1.first < p2.first) {
         return true;
       } else if (p1.first > p2.first) {
@@ -542,7 +542,7 @@ class DeterminizerStar {
   // sorting them using a lexicographical ordering, and calling
   // ProcessTransition for each range with the same ilabel. Side effects on
   // repository, and (via ProcessTransition) on Q_, hash_, and output_arcs_.
-  void ProcessTransitions(const std::vector<Element> &closed_subset,
+  void ProcessTransitions(const std::vector<Element>& closed_subset,
                           OutputStateId state) {
     std::vector<std::pair<Label, Element> > all_elems;
     {  // Push back into "all_elems", elements corresponding to all
@@ -552,15 +552,15 @@ class DeterminizerStar {
                                                         closed_subset.begin(),
                                                     end = closed_subset.end();
       for (; iter != end; ++iter) {
-        const Element &elem = *iter;
+        const Element& elem = *iter;
         for (ArcIterator<Fst<Arc> > aiter(*ifst_, elem.state); !aiter.Done();
              aiter.Next()) {
-          const Arc &arc = aiter.Value();
+          const Arc& arc = aiter.Value();
           if (arc.ilabel !=
               0) {  // Non-epsilon transition -- ignore epsilons here.
             std::pair<Label, Element> this_pr;
             this_pr.first = arc.ilabel;
-            Element &next_elem(this_pr.second);
+            Element& next_elem(this_pr.second);
             next_elem.state = arc.nextstate;
             next_elem.weight = Times(elem.weight, arc.weight);
             if (arc.olabel == 0) {  // output epsilon-- this is simple case so
@@ -602,28 +602,28 @@ class DeterminizerStar {
   // state to the hash and adds a new pair to the queue. Side effects on hash_
   // and Q_, and on output_arcs_ [just affects the size].
   OutputStateId SubsetToStateId(
-      const std::vector<Element> &subset) {  // may add the subset to the queue.
+      const std::vector<Element>& subset) {  // may add the subset to the queue.
     typedef typename SubsetHash::iterator IterType;
     IterType iter = hash_.find(&subset);
     if (iter == hash_.end()) {  // was not there.
-      std::vector<Element> *new_subset = new std::vector<Element>(subset);
+      std::vector<Element>* new_subset = new std::vector<Element>(subset);
       OutputStateId new_state_id = (OutputStateId)output_arcs_.size();
       bool ans =
           hash_
-              .insert(std::pair<const std::vector<Element> *, OutputStateId>(
+              .insert(std::pair<const std::vector<Element>*, OutputStateId>(
                   new_subset, new_state_id))
               .second;
       assert(ans);
       output_arcs_.push_back(std::vector<TempArc>());
       if (allow_partial_ == false) {
         // If --allow-partial is not requested, we do the old way.
-        Q_.push_front(std::pair<std::vector<Element> *, OutputStateId>(
+        Q_.push_front(std::pair<std::vector<Element>*, OutputStateId>(
             new_subset, new_state_id));
       } else {
         // If --allow-partial is requested, we do breadth first search. This
         // ensures that when we return partial results, we return the states
         // that are reachable by the fewest steps from the start state.
-        Q_.push_back(std::pair<std::vector<Element> *, OutputStateId>(
+        Q_.push_back(std::pair<std::vector<Element>*, OutputStateId>(
             new_subset, new_state_id));
       }
       return new_state_id;
@@ -639,8 +639,8 @@ class DeterminizerStar {
   // We process the final-weight of the state, and then handle transitions out
   // (this may add more determinized states to the queue).
   void ProcessSubset(
-      const std::pair<std::vector<Element> *, OutputStateId> &pair) {
-    const std::vector<Element> *subset = pair.first;
+      const std::pair<std::vector<Element>*, OutputStateId>& pair) {
+    const std::vector<Element>* subset = pair.first;
     OutputStateId state = pair.second;
 
     std::vector<Element> closed_subset;  // subset after epsilon closure.
@@ -656,13 +656,13 @@ class DeterminizerStar {
   void Debug();
 
   KALDI_DISALLOW_COPY_AND_ASSIGN(DeterminizerStar);
-  std::deque<std::pair<std::vector<Element> *, OutputStateId> >
+  std::deque<std::pair<std::vector<Element>*, OutputStateId> >
       Q_;  // queue of subsets to be processed.
 
   std::vector<std::vector<TempArc> >
       output_arcs_;  // essentially an FST in our format.
 
-  const Fst<Arc> *ifst_;
+  const Fst<Arc>* ifst_;
   float delta_;
   int max_states_;
   bool determinized_;   // used to check usage.
@@ -679,9 +679,9 @@ class DeterminizerStar {
 };
 
 template <class F>
-bool DeterminizeStar(F &ifst,  // NOLINT
-                     MutableFst<typename F::Arc> *ofst, float delta,
-                     bool *debug_ptr, int max_states, bool allow_partial) {
+bool DeterminizeStar(F& ifst,  // NOLINT
+                     MutableFst<typename F::Arc>* ofst, float delta,
+                     bool* debug_ptr, int max_states, bool allow_partial) {
   ofst->SetOutputSymbols(ifst.OutputSymbols());
   ofst->SetInputSymbols(ifst.InputSymbols());
   DeterminizerStar<F> det(ifst, delta, max_states, allow_partial);
@@ -691,9 +691,9 @@ bool DeterminizeStar(F &ifst,  // NOLINT
 }
 
 template <class F>
-bool DeterminizeStar(F &ifst,  // NOLINT
-                     MutableFst<GallicArc<typename F::Arc> > *ofst, float delta,
-                     bool *debug_ptr, int max_states, bool allow_partial) {
+bool DeterminizeStar(F& ifst,  // NOLINT
+                     MutableFst<GallicArc<typename F::Arc> >* ofst, float delta,
+                     bool* debug_ptr, int max_states, bool allow_partial) {
   ofst->SetOutputSymbols(ifst.InputSymbols());
   ofst->SetInputSymbols(ifst.InputSymbols());
   DeterminizerStar<F> det(ifst, delta, max_states, allow_partial);
@@ -704,8 +704,8 @@ bool DeterminizeStar(F &ifst,  // NOLINT
 
 template <class F>
 void DeterminizerStar<F>::EpsilonClosure::GetEpsilonClosure(
-    const std::vector<Element> &input_subset,
-    std::vector<Element> *output_subset) {
+    const std::vector<Element>& input_subset,
+    std::vector<Element>* output_subset) {
   ecinfo_.resize(0);
   size_t size = input_subset.size();
   // find whether input fst is known to be sorted in input label.
@@ -755,8 +755,8 @@ void DeterminizerStar<F>::EpsilonClosure::GetEpsilonClosure(
     // no need to check validity of the index
     // since anything in the queue we are sure they're in the "virtual set"
     int index = id_to_index_[id];
-    EpsilonClosureInfo &info = ecinfo_[index];
-    Element &elem = info.element;
+    EpsilonClosureInfo& info = ecinfo_[index];
+    Element& elem = info.element;
     Weight unprocessed_weight = info.weight_to_process;
 
     elem.weight = Plus(elem.weight, unprocessed_weight);
@@ -786,7 +786,7 @@ void DeterminizerStar<F>::EpsilonClosure::GetEpsilonClosure(
     size = ecinfo_.size();
     output_subset->reserve(size);
     for (size_t i = 0; i < size; i++) {
-      EpsilonClosureInfo &info = ecinfo_[i];
+      EpsilonClosureInfo& info = ecinfo_[i];
       if (info.weight_to_process != Weight::Zero()) {
         info.element.weight = Plus(info.element.weight, info.weight_to_process);
       }
@@ -797,7 +797,7 @@ void DeterminizerStar<F>::EpsilonClosure::GetEpsilonClosure(
 
 template <class F>
 void DeterminizerStar<F>::EpsilonClosure::AddOneElement(
-    const Element &elem, const Weight &unprocessed_weight) {
+    const Element& elem, const Weight& unprocessed_weight) {
   // first we try to find the element info in the ecinfo_ vector
   int index = -1;
   if (elem.state < id_to_index_.size()) {
@@ -824,7 +824,7 @@ void DeterminizerStar<F>::EpsilonClosure::AddOneElement(
     queue_.push_back(elem.state);
 
   } else {  // one is already there.  Add weights.
-    EpsilonClosureInfo &info = ecinfo_[index];
+    EpsilonClosureInfo& info = ecinfo_[index];
     if (info.element.string != elem.string) {
       // Non-functional FST.
       std::ostringstream ss;
@@ -864,7 +864,7 @@ void DeterminizerStar<F>::EpsilonClosure::AddOneElement(
 
 template <class F>
 void DeterminizerStar<F>::EpsilonClosure::ExpandOneElement(
-    const Element &elem, bool sorted, const Weight &unprocessed_weight,
+    const Element& elem, bool sorted, const Weight& unprocessed_weight,
     bool save_to_queue_2) {
   StringId str =
       elem.string;  // copy it here because there is an iterator-
@@ -873,7 +873,7 @@ void DeterminizerStar<F>::EpsilonClosure::ExpandOneElement(
   // now we are going to propagate the "unprocessed_weight"
   for (ArcIterator<Fst<Arc> > aiter(*ifst_, elem.state); !aiter.Done();
        aiter.Next()) {
-    const Arc &arc = aiter.Value();
+    const Arc& arc = aiter.Value();
     if (sorted && arc.ilabel > 0) {
       break;
       // Break from the loop: due to sorting there will be no
@@ -906,7 +906,7 @@ void DeterminizerStar<F>::EpsilonClosure::ExpandOneElement(
 }
 
 template <class F>
-void DeterminizerStar<F>::Output(MutableFst<GallicArc<Arc> > *ofst,
+void DeterminizerStar<F>::Output(MutableFst<GallicArc<Arc> >* ofst,
                                  bool destroy) {
   assert(determinized_);
   if (destroy) determinized_ = false;
@@ -926,11 +926,11 @@ void DeterminizerStar<F>::Output(MutableFst<GallicArc<Arc> > *ofst,
   ofst->SetStart(0);
   // now process transitions.
   for (StateId this_state = 0; this_state < nStates; this_state++) {
-    std::vector<TempArc> &this_vec(output_arcs_[this_state]);
+    std::vector<TempArc>& this_vec(output_arcs_[this_state]);
     typename std::vector<TempArc>::const_iterator iter = this_vec.begin(),
                                                   end = this_vec.end();
     for (; iter != end; ++iter) {
-      const TempArc &temp_arc(*iter);
+      const TempArc& temp_arc(*iter);
       GallicArc<Arc> new_arc;
       std::vector<Label> seq;
       repository_.SeqOfId(temp_arc.ostring, &seq);
@@ -962,7 +962,7 @@ void DeterminizerStar<F>::Output(MutableFst<GallicArc<Arc> > *ofst,
 }
 
 template <class F>
-void DeterminizerStar<F>::Output(MutableFst<Arc> *ofst, bool destroy) {
+void DeterminizerStar<F>::Output(MutableFst<Arc>* ofst, bool destroy) {
   assert(determinized_);
   if (destroy) determinized_ = false;
   // Outputs to standard fst.
@@ -981,12 +981,12 @@ void DeterminizerStar<F>::Output(MutableFst<Arc> *ofst, bool destroy) {
   }
   ofst->SetStart(0);
   for (OutputStateId this_state = 0; this_state < num_states; this_state++) {
-    std::vector<TempArc> &this_vec(output_arcs_[this_state]);
+    std::vector<TempArc>& this_vec(output_arcs_[this_state]);
 
     typename std::vector<TempArc>::const_iterator iter = this_vec.begin(),
                                                   end = this_vec.end();
     for (; iter != end; ++iter) {
-      const TempArc &temp_arc(*iter);
+      const TempArc& temp_arc(*iter);
       std::vector<Label> seq;
       repository_.SeqOfId(temp_arc.ostring, &seq);
       if (temp_arc.nextstate == kNoStateId) {  // Really a final weight.
@@ -1047,7 +1047,7 @@ void DeterminizerStar<F>::Output(MutableFst<Arc> *ofst, bool destroy) {
 
 template <class F>
 void DeterminizerStar<F>::ProcessTransition(OutputStateId state, Label ilabel,
-                                            std::vector<Element> *subset) {
+                                            std::vector<Element>* subset) {
   // At input, "subset" may contain duplicates for a given dest state (but in
   // sorted order).  This function removes duplicates from "subset", normalizes
   // it, and adds a transition to the dest. state (possibly affecting Q_ and
