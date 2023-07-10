@@ -73,10 +73,10 @@ dataset_conf:
         max_t: 50
     shuffle: true
     shuffle_conf:
-        shuffle_size: 5000
+        shuffle_size: 10000
     sort: true
     sort_conf:
-        sort_size: 500  # sort_size should be less than shuffle_size
+        sort_size: 2000  # sort_size should be less than shuffle_size
     batch_conf:
         batch_type: 'static' # static or dynamic
         batch_size: 16
