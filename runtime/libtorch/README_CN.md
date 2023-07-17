@@ -7,12 +7,11 @@ Wenet 基于 pytorch 框架进行语音识别模型训练，而在使用训练�
 
 最简单的使用 Wenet 的方式是通过官方提供的 docker 镜像 `wenetorg/wenet:mini` 来启动服务。
 
-下面的命令先下载官方提供的预训练模型，并启动 docker 服务，加载模型，提供 websocket 协议的语音识别服务。
+下面的命令先下载官方提供的[预训练模型](../../docs/pretrained_models.md)，并启动 docker 服务，加载模型，提供 websocket 协议的语音识别服务。
+
 ``` sh
 cd wenet/runtime/libtorch
-wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
-tar -xf 20210601_u2++_conformer_libtorch.tar.gz
-model_dir=$PWD/20210601_u2++_conformer_libtorch
+model_dir=$PWD/aishell_u2pp_conformer_libtorch
 docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenetorg/wenet-mini:latest bash /home/run.sh
 ```
 
@@ -22,7 +21,7 @@ docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenetorg/wene
 
 使用浏览器打开文件`web/templates/index.html`，在 `WebSocket URL：`填入 `ws://127.0.0.1:10086`, 允许浏览器弹出的请求使用麦克风，即可通过麦克风进行实时语音识别。
 
-![Runtime web](../../../docs/images/runtime_web.png)
+![Runtime web](../../docs/images/runtime_web.png)
 
 ## 自行编译运行时程序
 
@@ -50,15 +49,6 @@ mkdir build && cd build && cmake -DGPU=ON .. && cmake --build .
 * websocket_server_main 基于websocket协议的识别服务端
 * websocket_client_main 基于websocket协议的识别客户端
 
-
-下载预训练模型
-
-``` sh
-# 当前目录为 wenet/runtime/libtorch
-wget https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
-tar -xf 20210601_u2++_conformer_libtorch.tar.gz
-```
-
 ## 本地wav文件识别
 
 本地文件识别，即程序每次运行时，给定一个语音文件或者一组语音文件列表，输出识别结果，然后结束程序。
@@ -67,13 +57,13 @@ tar -xf 20210601_u2++_conformer_libtorch.tar.gz
 
 ``` sh
 # 当前目录为 wenet/runtime/libtorch
-# 已经下载并解压20210602_unified_transformer_server.tar.gz到当前目录
+# 已经下载并解压模型到当前目录
 # 准备好一个16k采样率，单通道，16bits的音频文件test.wav
 
 export GLOG_logtostderr=1
 export GLOG_v=2
 wav_path=test.wav
-model_dir=./20210602_unified_transformer_server
+model_dir=aishell_u2pp_conformer_libtorch
 ./build/bin/decoder_main \
     --chunk_size -1 \
     --wav_path $wav_path \
@@ -100,7 +90,7 @@ model_dir=./20210602_unified_transformer_server
 ``` sh
 export GLOG_logtostderr=1
 export GLOG_v=2
-model_dir=./20210602_unified_transformer_server
+model_dir=aishell_u2pp_conformer_libtorch
 ./build/bin/websocket_server_main \
     --port 10086 \
     --chunk_size 16 \
@@ -129,7 +119,7 @@ wav_path=test.wav
 
 该程序会模拟语音数据的真实时间进行流式请求，即 10 秒的语音会按 10 秒时间发送完。可以在客户端和服务器端看到流式识别过程输出的信息。
 
-![Runtime server demo](../../../docs/images/runtime_server.gif)
+![Runtime server demo](../../docs/images/runtime_server.gif)
 
 注意 `--port` 需要设置为服务端使用的端口号。
 
