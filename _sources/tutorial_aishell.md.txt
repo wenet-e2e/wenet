@@ -4,7 +4,7 @@ If you meet any problems when going through this tutorial, please feel free to a
 
 ### Setup environment
 
-Please follow [Installation](https://github.com/wenet-e2e/wenet#installation) to install WeNet.
+Please follow [Installation](install.md) to install WeNet.
 
 ### First Experiment
 
