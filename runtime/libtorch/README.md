@@ -4,16 +4,12 @@
 
 ## Run with Prebuilt Docker
 
-* Step 1. Download pretrained model(see the following link) or prepare your trained model.
-
-[中文(WenetSpeech)](https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/wenetspeech/wenetspeech_u2pp_conformer_libtorch.tar.gz)
-| [English(GigaSpeech)](https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/gigaspeech/gigaspeech_u2pp_conformer_libtorch.tar.gz)
-
+* Step 1. Download the [pretrained models](../../docs/pretrained_models.en.md) or prepare your trained model.
 
 * Step 2. Start docker websocket server. Here is a demo.
 
 ``` sh
-model_dir=$PWD/20210602_u2++_conformer_libtorch  # absolute path
+model_dir=$PWD/aishell_u2pp_conformer_libtorch  # absolute path
 docker run --rm -it -p 10086:10086 -v $model_dir:/home/wenet/model wenetorg/wenet-mini:latest bash /home/run.sh
 ```
 
@@ -126,7 +122,7 @@ You can also start WebSocket client by web browser as described before.
 
 Here is a demo for command line based websocket server/client interaction.
 
-![Runtime server demo](../../../docs/images/runtime_server.gif)
+![Runtime server demo](../../docs/images/runtime_server.gif)
 
 ### gRPC
 
