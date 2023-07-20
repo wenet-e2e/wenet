@@ -116,6 +116,7 @@ class Transducer(ASRModel):
         loss_rnnt = compute_loss(
             self,
             encoder_out,
+            encoder_out_lens,
             encoder_mask,
             text,
             text_lengths,
@@ -471,6 +472,7 @@ class Transducer(ASRModel):
 
 def compute_loss(model: Transducer,
                  encoder_out: torch.Tensor,
+                 encoder_out_lens: torch.Tensor,
                  encoder_mask: torch.Tensor,
                  text: torch.Tensor,
                  text_lengths: torch.Tensor,
