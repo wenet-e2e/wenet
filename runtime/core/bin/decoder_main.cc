@@ -42,7 +42,7 @@ std::mutex g_mutex;
 int g_total_waves_dur = 0;
 int g_total_decode_time = 0;
 
-void decode(std::pair<std::string, std::string> wav, bool warmup = false) {
+void Decode(std::pair<std::string, std::string> wav, bool warmup = false) {
   wenet::WavReader wav_reader(wav.second);
   int num_samples = wav_reader.num_samples();
   CHECK_EQ(wav_reader.sample_rate(), FLAGS_sample_rate);
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
       ThreadPool pool(FLAGS_thread_num);
       auto wav = waves[0];
       for (int i = 0; i < FLAGS_warmup; i++) {
-        pool.enqueue(decode, wav, true);
+        pool.enqueue(Decode, wav, true);
       }
     }
     LOG(INFO) << "Warmup done.";
@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
   {
     ThreadPool pool(FLAGS_thread_num);
     for (auto& wav : waves) {
-      pool.enqueue(decode, wav, false);
+      pool.enqueue(Decode, wav, false);
     }
   }
 
