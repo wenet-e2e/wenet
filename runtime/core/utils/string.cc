@@ -148,13 +148,17 @@ std::string ProcessBlank(const std::string& str, bool lowercase) {
     }
     // NOTE: convert string to wstring
     //       see issue 745: https://github.com/wenet-e2e/wenet/issues/745
-    std::locale loc("");
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
-    std::wstring wsresult = converter.from_bytes(result);
-    for (auto& c : wsresult) {
-      c = lowercase ? tolower(c, loc) : toupper(c, loc);
+    try {
+      std::locale loc("");
+      std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+      std::wstring wsresult = converter.from_bytes(result);
+      for (auto& c : wsresult) {
+        c = lowercase ? tolower(c, loc) : toupper(c, loc);
+      }
+      result = converter.to_bytes(wsresult);
+    } catch (std::exception& e) {
+      LOG(ERROR) << "convert wstring error " << e.what();
     }
-    result = converter.to_bytes(wsresult);
   }
   return result;
 }
