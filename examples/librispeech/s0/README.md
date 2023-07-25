@@ -186,6 +186,28 @@ test other
 | ctc prefix beam search         | 8.29  | 10.60 |
 | attention rescoring            | 7.58  | 9.60  |
 
+## Branchformer U2++ Result
+
+* Feature info: using fbank feature, cmvn, online speed perturb, dither
+* Encoder info: layer num 24, cnn_kernel size 63, cgmlp linear units: 2048
+* Training info: train_u2++_branchformer.yaml lr 0.001, batch size 16, 8 gpu, acc_grad 1, 120 epochs, dither 1.0
+* Decoding info: ctc_weight 0.3,  reverse weight 0.5, average_num 30
+
+test clean
+
+| decoding mode                  | full | 16   |
+|--------------------------------|------|------|
+| ctc prefix beam search         | 3.78 | 4.60 |
+| attention rescoring            | 3.33 | 3.83 |
+
+test other
+
+| decoding mode                  | full  | 16    |
+|--------------------------------|-------|-------|
+| ctc prefix beam search         | 9.51  | 11.50 |
+| attention rescoring            | 8.76  | 10.34 |
+
+
 ## Conformer U2 Result
 
 * Feature info: using fbank feature, cmvn, speed perturb, dither
