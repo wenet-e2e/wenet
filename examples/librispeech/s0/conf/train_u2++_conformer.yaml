@@ -63,7 +63,6 @@ dataset_conf:
         num_f_mask: 2
         max_t: 50
         max_f: 10
-        warp_for_time: true
     spec_sub: true
     spec_sub_conf:
         num_t_sub: 3

@@ -61,7 +61,6 @@ dataset_conf:
         max_t: 100
         max_f: 27
         max_w: 80
-#        warp_for_time: true
     spec_sub: true
     spec_sub_conf:
         num_t_sub: 3
