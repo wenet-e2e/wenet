@@ -50,10 +50,21 @@ def write_tar_file(data_list,
             suffix = wav.split('.')[-1]
             assert suffix in AUDIO_FORMAT_SETS
             if no_segments:
+                # read & resample
                 ts = time.time()
-                with open(wav, 'rb') as fin:
-                    data = fin.read()
+                audio, sample_rate = sox.load(wav, normalize=False)
+                if sample_rate != resample:
+                    audio = torchaudio.transforms.Resample(
+                        sample_rate, resample)(audio)
                 read_time += (time.time() - ts)
+                # change format to wav
+                ts = time.time()
+                f = io.BytesIO()
+                sox.save(f, audio, resample, format="wav", bits_per_sample=16)
+                suffix = "wav"
+                f.seek(0)
+                data = f.read()
+                save_time += (time.time() - ts)
             else:
                 if wav != prev_wav:
                     ts = time.time()
