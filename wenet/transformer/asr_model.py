@@ -434,7 +434,7 @@ class ASRModel(torch.nn.Module):
         hyps = [(y[0], log_add([y[1][0], y[1][1]])) for y in cur_hyps]
         return hyps, encoder_out
 
-    def _ctc_prefix_beam_search_with_context_graph(
+    def _ctc_prefix_beam_search_with_bias(
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
@@ -442,9 +442,9 @@ class ASRModel(torch.nn.Module):
         decoding_chunk_size: int = -1,
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
-        context_graph = None,
+        context_graph: ContextGraph = None,
     ) -> Tuple[List[List[int]], torch.Tensor]:
-        """ CTC prefix beam search inner implementation, rescoring with 
+        """ CTC prefix beam search inner implementation, rescoring with
             context graph
 
         Args:
@@ -480,7 +480,8 @@ class ASRModel(torch.nn.Module):
             encoder_out)  # (1, maxlen, vocab_size)
         ctc_probs = ctc_probs.squeeze(0)
 
-        # cur_hyps: (prefix, (blank_ending_score, none_blank_ending_score, context_graph_state, context_score))
+        # cur_hyps: (prefix, (blank_ending_score, none_blank_ending_score,
+        # context_graph_state, context_score))
         cur_hyps = [(tuple(), (0.0, -float('inf'), 0, 0.0))]
         # 2. CTC beam search step by step
         for t in range(0, maxlen):
@@ -506,15 +507,19 @@ class ASRModel(torch.nn.Module):
                         # Update *s-s -> *ss, - is for blank
                         n_prefix = prefix + (s, )
                         n_pb, n_pnb, _, _ = next_hyps[n_prefix]
-                        new_c_state, new_c_score = context_graph.find_next_state(c_state, s)
+                        new_c_state, new_c_score = context_graph. \
+                            find_next_state(c_state, s)
                         n_pnb = log_add([n_pnb, pb + ps])
-                        next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state, c_score + new_c_score)
+                        next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state,
+                                               c_score + new_c_score)
                     else:
                         n_prefix = prefix + (s, )
                         n_pb, n_pnb, _, _ = next_hyps[n_prefix]
-                        new_c_state, new_c_score = context_graph.find_next_state(c_state, s)
+                        new_c_state, new_c_score = context_graph. \
+                            find_next_state(c_state, s)
                         n_pnb = log_add([n_pnb, pb + ps, pnb + ps])
-                        next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state, c_score + new_c_score)
+                        next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state,
+                                               c_score + new_c_score)
 
             # 2.2 Second beam prune
             next_hyps = sorted(next_hyps.items(),
@@ -551,17 +556,19 @@ class ASRModel(torch.nn.Module):
         Returns:
             List[int]: CTC prefix beam search nbest results
         """
-        if context_graph == None:
+        if context_graph is None:
             hyps, _ = self._ctc_prefix_beam_search(speech, speech_lengths,
                                                    beam_size, decoding_chunk_size,
                                                    num_decoding_left_chunks,
                                                    simulate_streaming)
         else:
-            hyps, _ = self._ctc_prefix_beam_search_with_context_graph(speech, speech_lengths,
-                                                                      beam_size, decoding_chunk_size,
-                                                                      num_decoding_left_chunks,
-                                                                      simulate_streaming,
-                                                                      context_graph)
+            hyps, _ = self._ctc_prefix_beam_search_with_bias(speech,
+                                                             speech_lengths,
+                                                             beam_size,
+                                                             decoding_chunk_size,
+                                                             num_decoding_left_chunks,
+                                                             simulate_streaming,
+                                                             context_graph)
         return hyps[0]
 
     def attention_rescoring(
@@ -607,12 +614,12 @@ class ASRModel(torch.nn.Module):
         # For attention rescoring we only support batch_size=1
         assert batch_size == 1
         # encoder_out: (1, maxlen, encoder_dim), len(hyps) = beam_size
-        if context_graph == None:
+        if context_graph is None:
             hyps, encoder_out = self._ctc_prefix_beam_search(
                 speech, speech_lengths, beam_size, decoding_chunk_size,
                 num_decoding_left_chunks, simulate_streaming)
         else:
-            hyps, encoder_out = self._ctc_prefix_beam_search_with_context_graph(
+            hyps, encoder_out = self._ctc_prefix_beam_search_with_bias(
                 speech, speech_lengths, beam_size, decoding_chunk_size,
                 num_decoding_left_chunks, simulate_streaming, context_graph)
 

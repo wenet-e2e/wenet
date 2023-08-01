@@ -4,7 +4,7 @@ from typing import Dict, List
 def tokenize(context_list_path,
              symbol_table,
              bpe_model=None):
-    """ Read biasing list from the biasing list address, tokenize and convert it 
+    """ Read biasing list from the biasing list address, tokenize and convert it
         into token id
     """
     if bpe_model is not None:
@@ -46,28 +46,28 @@ class ContextGraph:
             context_score(float): context score for each token
     """
     def __init__(self,
-                context_list_path: str,
-                symbol_table: Dict[str, int],
-                bpe_model: str = None,
-                context_score: float = 6):
-        self.context_score=context_score
+                 context_list_path: str,
+                 symbol_table: Dict[str, int],
+                 bpe_model: str = None,
+                 context_score: float = 6):
+        self.context_score = context_score
         self.context_list = tokenize(context_list_path, symbol_table, bpe_model)
-        self.graph = {0:{}}
+        self.graph = {0: {}}
         self.graph_size = 0
         self.state2token = {}
-        self.back_score = {0:0.0}
+        self.back_score = {0: 0.0}
         self.build_graph(self.context_list)
-    
+
     def build_graph(self, context_list: List[List[int]]):
-        """ Constructing the context decoding graph, add arcs with negative 
+        """ Constructing the context decoding graph, add arcs with negative
             scores returning to the starting state for each non-terminal tokens
-            of hotwords, and add arcs with scores of 0 returning to the starting 
+            of hotwords, and add arcs with scores of 0 returning to the starting
             state for terminal tokens.
         """
-        self.graph = {0:{}}
+        self.graph = {0: {}}
         self.graph_size = 0
         self.state2token = {}
-        self.back_score = {0:0.0}
+        self.back_score = {0: 0.0}
         for context_token in context_list:
             now_state = 0
             for i in range(len(context_token)):
@@ -86,12 +86,12 @@ class ContextGraph:
                         self.back_score[now_state] = 0
                     self.state2token[now_state] = context_token[i]
 
-    def find_next_state(self, 
-                        now_state: int, 
+    def find_next_state(self,
+                        now_state: int,
                         token: int):
-        """ Search for an arc with the input being a token from the current state, 
-            returning the score on the arc and the state it points to. If there is 
-            no match, return to the starting state and perform an additional search 
+        """ Search for an arc with the input being a token from the current state,
+            returning the score on the arc and the state it points to. If there is
+            no match, return to the starting state and perform an additional search
             from the starting state to avoid token consumption due to mismatches.
         """
         if token in self.graph[now_state]:

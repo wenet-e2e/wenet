@@ -166,9 +166,8 @@ def get_args():
     parser.add_argument('--context_graph_score',
                         type=float,
                         default=0.0,
-                        help='''The higher the score, the greater the degree of 
+                        help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
-    
 
     args = parser.parse_args()
     print(args)
