@@ -393,94 +393,58 @@ class ASRModel(torch.nn.Module):
         ctc_probs = self.ctc.log_softmax(
             encoder_out)  # (1, maxlen, vocab_size)
         ctc_probs = ctc_probs.squeeze(0)
-        # cur_hyps: (prefix, (blank_ending_score, none_blank_ending_score))
+        # cur_hyps: (prefix, (blank_ending_score, none_blank_ending_score,
+        #                       context_state, context_score))
+        cur_hyps = [(tuple(), (0.0, -float('inf'), 0, 0.0))]
         # 2. CTC beam search step by step
-        if context_graph is None:
-            cur_hyps = [(tuple(), (0.0, -float('inf')))]
-            for t in range(0, maxlen):
-                logp = ctc_probs[t]  # (vocab_size,)
-                # key: prefix, value (pb, pnb), default value(-inf, -inf)
-                next_hyps = defaultdict(lambda: (-float('inf'), -float('inf')))
-                # 2.1 First beam prune: select topk best
-                top_k_logp, top_k_index = logp.topk(beam_size)  # (beam_size,)
-                for s in top_k_index:
-                    s = s.item()
-                    ps = logp[s].item()
-                    for prefix, (pb, pnb) in cur_hyps:
-                        last = prefix[-1] if len(prefix) > 0 else None
-                        if s == 0:  # blank
-                            n_pb, n_pnb = next_hyps[prefix]
-                            n_pb = log_add([n_pb, pb + ps, pnb + ps])
-                            next_hyps[prefix] = (n_pb, n_pnb)
-                        elif s == last:
-                            #  Update *ss -> *s;
-                            n_pb, n_pnb = next_hyps[prefix]
-                            n_pnb = log_add([n_pnb, pnb + ps])
-                            next_hyps[prefix] = (n_pb, n_pnb)
-                            # Update *s-s -> *ss, - is for blank
-                            n_prefix = prefix + (s, )
-                            n_pb, n_pnb = next_hyps[n_prefix]
-                            n_pnb = log_add([n_pnb, pb + ps])
-                            next_hyps[n_prefix] = (n_pb, n_pnb)
-                        else:
-                            n_prefix = prefix + (s, )
-                            n_pb, n_pnb = next_hyps[n_prefix]
-                            n_pnb = log_add([n_pnb, pb + ps, pnb + ps])
-                            next_hyps[n_prefix] = (n_pb, n_pnb)
-
-                # 2.2 Second beam prune
-                next_hyps = sorted(next_hyps.items(),
-                                   key=lambda x: log_add(list(x[1])),
-                                   reverse=True)
-                cur_hyps = next_hyps[:beam_size]
-            hyps = [(y[0], log_add([y[1][0], y[1][1]])) for y in cur_hyps]
-        else:
-            cur_hyps = [(tuple(), (0.0, -float('inf'), 0, 0.0))]
-            # 2. CTC beam search step by step
-            for t in range(0, maxlen):
-                logp = ctc_probs[t]  # (vocab_size,)
-                # key: prefix, value (pb, pnb, context_state, context_score),
-                # default value(-inf, -inf, 0, 0.0)
-                next_hyps = defaultdict(lambda: (-float('inf'), -float('inf'), 0, 0.0))
-                # 2.1 First beam prune: select topk best
-                top_k_logp, top_k_index = logp.topk(beam_size)  # (beam_size,)
-                for s in top_k_index:
-                    s = s.item()
-                    ps = logp[s].item()
-                    for prefix, (pb, pnb, c_state, c_score) in cur_hyps:
-                        last = prefix[-1] if len(prefix) > 0 else None
-                        if s == 0:  # blank
-                            n_pb, n_pnb, _, _ = next_hyps[prefix]
-                            n_pb = log_add([n_pb, pb + ps, pnb + ps])
-                            next_hyps[prefix] = (n_pb, n_pnb, c_state, c_score)
-                        elif s == last:
-                            #  Update *ss -> *s;
-                            n_pb, n_pnb, _, _ = next_hyps[prefix]
-                            n_pnb = log_add([n_pnb, pnb + ps])
-                            next_hyps[prefix] = (n_pb, n_pnb, c_state, c_score)
-                            # Update *s-s -> *ss, - is for blank
-                            n_prefix = prefix + (s, )
-                            n_pb, n_pnb, _, _ = next_hyps[n_prefix]
+        for t in range(0, maxlen):
+            logp = ctc_probs[t]  # (vocab_size,)
+            # key: prefix, value (pb, pnb, context_state, context_score),
+            # default value(-inf, -inf, 0, 0.0)
+            next_hyps = defaultdict(lambda: (-float('inf'), -float('inf'), 0, 0.0))
+            # 2.1 First beam prune: select topk best
+            top_k_logp, top_k_index = logp.topk(beam_size)  # (beam_size,)
+            for s in top_k_index:
+                s = s.item()
+                ps = logp[s].item()
+                for prefix, (pb, pnb, c_state, c_score) in cur_hyps:
+                    last = prefix[-1] if len(prefix) > 0 else None
+                    if s == 0:  # blank
+                        n_pb, n_pnb, _, _ = next_hyps[prefix]
+                        n_pb = log_add([n_pb, pb + ps, pnb + ps])
+                        next_hyps[prefix] = (n_pb, n_pnb, c_state, c_score)
+                    elif s == last:
+                        #  Update *ss -> *s;
+                        n_pb, n_pnb, _, _ = next_hyps[prefix]
+                        n_pnb = log_add([n_pnb, pnb + ps])
+                        next_hyps[prefix] = (n_pb, n_pnb, c_state, c_score)
+                        # Update *s-s -> *ss, - is for blank
+                        n_prefix = prefix + (s, )
+                        n_pb, n_pnb, _, _ = next_hyps[n_prefix]
+                        new_c_state, new_c_score = 0, 0
+                        if context_graph is not None:
                             new_c_state, new_c_score = context_graph. \
                                 find_next_state(c_state, s)
-                            n_pnb = log_add([n_pnb, pb + ps])
-                            next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state,
-                                                   c_score + new_c_score)
-                        else:
-                            n_prefix = prefix + (s, )
-                            n_pb, n_pnb, _, _ = next_hyps[n_prefix]
+                        n_pnb = log_add([n_pnb, pb + ps])
+                        next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state,
+                                               c_score + new_c_score)
+                    else:
+                        n_prefix = prefix + (s, )
+                        n_pb, n_pnb, _, _ = next_hyps[n_prefix]
+                        new_c_state, new_c_score = 0, 0
+                        if context_graph is not None:
                             new_c_state, new_c_score = context_graph. \
                                 find_next_state(c_state, s)
-                            n_pnb = log_add([n_pnb, pb + ps, pnb + ps])
-                            next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state,
-                                                   c_score + new_c_score)
+                        n_pnb = log_add([n_pnb, pb + ps, pnb + ps])
+                        next_hyps[n_prefix] = (n_pb, n_pnb, new_c_state,
+                                               c_score + new_c_score)
 
-                # 2.2 Second beam prune
-                next_hyps = sorted(next_hyps.items(),
-                                   key=lambda x: log_add([x[1][0], x[1][1]]) + x[1][3],
-                                   reverse=True)
-                cur_hyps = next_hyps[:beam_size]
-            hyps = [(y[0], log_add([y[1][0], y[1][1]]) + y[1][3]) for y in cur_hyps]
+            # 2.2 Second beam prune
+            next_hyps = sorted(next_hyps.items(),
+                               key=lambda x: log_add([x[1][0], x[1][1]]) + x[1][3],
+                               reverse=True)
+            cur_hyps = next_hyps[:beam_size]
+        hyps = [(y[0], log_add([y[1][0], y[1][1]]) + y[1][3]) for y in cur_hyps]
         return hyps, encoder_out
 
     def ctc_prefix_beam_search(
