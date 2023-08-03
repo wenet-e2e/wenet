@@ -16,6 +16,7 @@ Submodules
    wenet.utils.cmvn
    wenet.utils.common
    wenet.utils.config
+   wenet.utils.context_graph
    wenet.utils.ctc_util
    wenet.utils.executor
    wenet.utils.file_utils
