@@ -117,7 +117,8 @@ class ASRModel(torch.nn.Module):
         # 2b. CTC branch or LF-MMI loss
         if self.ctc_weight != 0.0:
             if self.lfmmi_dir != '':
-                loss_ctc = self._calc_lfmmi_loss(encoder_out, encoder_mask, text)
+                loss_ctc = self._calc_lfmmi_loss(encoder_out, encoder_mask,
+                                                 text)
             else:
                 loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
                                     text_lengths)
@@ -270,7 +271,9 @@ class ASRModel(torch.nn.Module):
             base_cache_index = (torch.arange(batch_size, device=device).view(
                 -1, 1).repeat([1, beam_size]) * beam_size).view(-1)  # (B*N)
             cache_index = base_cache_index + cache_index
-            cache = [torch.index_select(c, dim=0, index=cache_index) for c in cache]
+            cache = [
+                torch.index_select(c, dim=0, index=cache_index) for c in cache
+            ]
             scores = scores.view(-1, 1)  # (B*N, 1)
             # 2.4. Compute base index in top_k_index,
             # regard top_k_index as (B*N*N),regard offset_k_index as (B*N),
@@ -401,7 +404,8 @@ class ASRModel(torch.nn.Module):
             logp = ctc_probs[t]  # (vocab_size,)
             # key: prefix, value (pb, pnb, context_state, context_score),
             # default value(-inf, -inf, 0, 0.0)
-            next_hyps = defaultdict(lambda: (-float('inf'), -float('inf'), 0, 0.0))
+            next_hyps = defaultdict(lambda:
+                                    (-float('inf'), -float('inf'), 0, 0.0))
             # 2.1 First beam prune: select topk best
             top_k_logp, top_k_index = logp.topk(beam_size)  # (beam_size,)
             for s in top_k_index:
@@ -440,11 +444,13 @@ class ASRModel(torch.nn.Module):
                                                c_score + new_c_score)
 
             # 2.2 Second beam prune
-            next_hyps = sorted(next_hyps.items(),
-                               key=lambda x: log_add([x[1][0], x[1][1]]) + x[1][3],
-                               reverse=True)
+            next_hyps = sorted(
+                next_hyps.items(),
+                key=lambda x: log_add([x[1][0], x[1][1]]) + x[1][3],
+                reverse=True)
             cur_hyps = next_hyps[:beam_size]
-        hyps = [(y[0], log_add([y[1][0], y[1][1]]) + y[1][3]) for y in cur_hyps]
+        hyps = [(y[0], log_add([y[1][0], y[1][1]]) + y[1][3])
+                for y in cur_hyps]
         return hyps, encoder_out
 
     def ctc_prefix_beam_search(
@@ -610,24 +616,27 @@ class ASRModel(torch.nn.Module):
     @torch.jit.ignore(drop=True)
     def _calc_lfmmi_loss(self, encoder_out, encoder_mask, text):
         ctc_probs = self.ctc.log_softmax(encoder_out)
-        supervision_segments = torch.stack(
-            (torch.arange(len(encoder_mask)),
-             torch.zeros(len(encoder_mask)),
-             encoder_mask.squeeze(dim=1).sum(dim=1).to('cpu'),), 1
-        ).to(torch.int32)
+        supervision_segments = torch.stack((
+            torch.arange(len(encoder_mask)),
+            torch.zeros(len(encoder_mask)),
+            encoder_mask.squeeze(dim=1).sum(dim=1).to('cpu'),
+        ), 1).to(torch.int32)
         dense_fsa_vec = k2.DenseFsaVec(
             ctc_probs,
             supervision_segments,
             allow_truncate=3,
         )
-        text = [' '.join([self.word_table[j.item()] for j in i if j != -1])
-                for i in text]
+        text = [
+            ' '.join([self.word_table[j.item()] for j in i if j != -1])
+            for i in text
+        ]
         loss = self.lfmmi(dense_fsa_vec=dense_fsa_vec, texts=text) / len(text)
         return loss
 
     def load_hlg_resource_if_necessary(self, hlg, word):
         if not hasattr(self, 'hlg'):
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            device = torch.device(
+                'cuda' if torch.cuda.is_available() else 'cpu')
             self.hlg = k2.Fsa.from_dict(torch.load(hlg, map_location=device))
         if not hasattr(self.hlg, "lm_scores"):
             self.hlg.lm_scores = self.hlg.scores.clone()
@@ -659,21 +668,22 @@ class ASRModel(torch.nn.Module):
         ctc_probs = self.ctc.log_softmax(
             encoder_out)  # (1, maxlen, vocab_size)
         supervision_segments = torch.stack(
-            (torch.arange(len(encoder_mask)),
-             torch.zeros(len(encoder_mask)),
-             encoder_mask.squeeze(dim=1).sum(dim=1).cpu()), 1,).to(torch.int32)
-        lattice = get_lattice(
-            nnet_output=ctc_probs,
-            decoding_graph=self.hlg,
-            supervision_segments=supervision_segments,
-            search_beam=20,
-            output_beam=7,
-            min_active_states=30,
-            max_active_states=10000,
-            subsampling_factor=4)
+            (torch.arange(len(encoder_mask)), torch.zeros(len(encoder_mask)),
+             encoder_mask.squeeze(dim=1).sum(dim=1).cpu()),
+            1,
+        ).to(torch.int32)
+        lattice = get_lattice(nnet_output=ctc_probs,
+                              decoding_graph=self.hlg,
+                              supervision_segments=supervision_segments,
+                              search_beam=20,
+                              output_beam=7,
+                              min_active_states=30,
+                              max_active_states=10000,
+                              subsampling_factor=4)
         best_path = one_best_decoding(lattice=lattice, use_double_scores=True)
         hyps = get_texts(best_path)
-        hyps = [[symbol_table[k] for j in i for k in self.word_table[j]] for i in hyps]
+        hyps = [[symbol_table[k] for j in i for k in self.word_table[j]]
+                for i in hyps]
         return hyps
 
     @torch.no_grad()
@@ -700,23 +710,24 @@ class ASRModel(torch.nn.Module):
         ctc_probs = self.ctc.log_softmax(
             encoder_out)  # (1, maxlen, vocab_size)
         supervision_segments = torch.stack(
-            (torch.arange(len(encoder_mask)),
-             torch.zeros(len(encoder_mask)),
-             encoder_mask.squeeze(dim=1).sum(dim=1).cpu()), 1,).to(torch.int32)
-        lattice = get_lattice(
-            nnet_output=ctc_probs,
-            decoding_graph=self.hlg,
-            supervision_segments=supervision_segments,
-            search_beam=20,
-            output_beam=7,
-            min_active_states=30,
-            max_active_states=10000,
-            subsampling_factor=4)
+            (torch.arange(len(encoder_mask)), torch.zeros(len(encoder_mask)),
+             encoder_mask.squeeze(dim=1).sum(dim=1).cpu()),
+            1,
+        ).to(torch.int32)
+        lattice = get_lattice(nnet_output=ctc_probs,
+                              decoding_graph=self.hlg,
+                              supervision_segments=supervision_segments,
+                              search_beam=20,
+                              output_beam=7,
+                              min_active_states=30,
+                              max_active_states=10000,
+                              subsampling_factor=4)
         nbest = Nbest.from_lattice(
             lattice=lattice,
             num_paths=100,
             use_double_scores=True,
-            nbest_scale=0.5,)
+            nbest_scale=0.5,
+        )
         nbest = nbest.intersect(lattice)
         assert hasattr(nbest.fsa, "lm_scores")
         assert hasattr(nbest.fsa, "tokens")
@@ -729,8 +740,7 @@ class ASRModel(torch.nn.Module):
 
         # cal attention_score
         hyps_pad = pad_sequence([
-            torch.tensor(hyp, device=device, dtype=torch.long)
-            for hyp in hyps
+            torch.tensor(hyp, device=device, dtype=torch.long) for hyp in hyps
         ], True, self.ignore_id)  # (beam_size, max_hyps_len)
         ori_hyps_pad = hyps_pad
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
@@ -742,7 +752,8 @@ class ASRModel(torch.nn.Module):
         tot_scores = nbest.tot_scores()
         repeats = [tot_scores[i].shape[0] for i in range(tot_scores.dim0)]
         for i in range(len(encoder_out)):
-            encoder_out_repeat.append(encoder_out[i: i + 1].repeat(repeats[i], 1, 1))
+            encoder_out_repeat.append(encoder_out[i:i + 1].repeat(
+                repeats[i], 1, 1))
         encoder_out = torch.concat(encoder_out_repeat, dim=0)
         encoder_mask = torch.ones(encoder_out.size(0),
                                   1,
@@ -764,9 +775,11 @@ class ASRModel(torch.nn.Module):
         r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
         r_decoder_out = r_decoder_out
 
-        decoder_scores = torch.tensor([sum([decoder_out[i, j, hyps[i][j]]
-                                            for j in range(len(hyps[i]))])
-                                       for i in range(len(hyps))], device=device)
+        decoder_scores = torch.tensor([
+            sum([decoder_out[i, j, hyps[i][j]] for j in range(len(hyps[i]))])
+            for i in range(len(hyps))
+        ],
+                                      device=device)  # noqa
         r_decoder_scores = []
         for i in range(len(hyps)):
             score = 0
@@ -784,7 +797,8 @@ class ASRModel(torch.nn.Module):
         max_indexes = ragged_tot_scores.argmax()
         best_path = k2.index_fsa(nbest.fsa, max_indexes)
         hyps = get_texts(best_path)
-        hyps = [[symbol_table[k] for j in i for k in self.word_table[j]] for i in hyps]
+        hyps = [[symbol_table[k] for j in i for k in self.word_table[j]]
+                for i in hyps]
         return hyps
 
     @torch.jit.export

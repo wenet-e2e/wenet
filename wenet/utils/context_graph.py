@@ -1,9 +1,8 @@
 from wenet.dataset.processor import __tokenize_by_bpe_model
 from typing import Dict, List
 
-def tokenize(context_list_path,
-             symbol_table,
-             bpe_model=None):
+
+def tokenize(context_list_path, symbol_table, bpe_model=None):
     """ Read biasing list from the biasing list address, tokenize and convert it
         into token id
     """
@@ -38,6 +37,7 @@ def tokenize(context_list_path,
         context_list.append(labels)
     return context_list
 
+
 class ContextGraph:
     """ Context decoding graph, constructing graph using dict instead of WFST
         Args:
@@ -51,7 +51,8 @@ class ContextGraph:
                  bpe_model: str = None,
                  context_score: float = 6):
         self.context_score = context_score
-        self.context_list = tokenize(context_list_path, symbol_table, bpe_model)
+        self.context_list = tokenize(context_list_path, symbol_table,
+                                     bpe_model)
         self.graph = {0: {}}
         self.graph_size = 0
         self.state2token = {}
@@ -81,14 +82,13 @@ class ContextGraph:
                     self.graph[now_state][context_token[i]] = self.graph_size
                     now_state = self.graph_size
                     if i != len(context_token) - 1:
-                        self.back_score[now_state] = -(i + 1) * self.context_score
+                        self.back_score[now_state] = -(i +
+                                                       1) * self.context_score
                     else:
                         self.back_score[now_state] = 0
                     self.state2token[now_state] = context_token[i]
 
-    def find_next_state(self,
-                        now_state: int,
-                        token: int):
+    def find_next_state(self, now_state: int, token: int):
         """ Search for an arc with the input being a token from the current state,
             returning the score on the arc and the state it points to. If there is
             no match, return to the starting state and perform an additional search
@@ -99,5 +99,6 @@ class ContextGraph:
         back_score = self.back_score[now_state]
         now_state = 0
         if token in self.graph[now_state]:
-            return self.graph[now_state][token], back_score + self.context_score
+            return self.graph[now_state][
+                token], back_score + self.context_score
         return 0, back_score
