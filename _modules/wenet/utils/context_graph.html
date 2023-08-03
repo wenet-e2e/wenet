@@ -76,9 +76,8 @@
 <span></span><span class="kn">from</span> <span class="nn">wenet.dataset.processor</span> <span class="kn">import</span> <span class="n">__tokenize_by_bpe_model</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span>
 
-<div class="viewcode-block" id="tokenize"><a class="viewcode-back" href="../../../python_api/wenet.utils.context_graph.html#wenet.utils.context_graph.tokenize">[docs]</a><span class="k">def</span> <span class="nf">tokenize</span><span class="p">(</span><span class="n">context_list_path</span><span class="p">,</span>
-             <span class="n">symbol_table</span><span class="p">,</span>
-             <span class="n">bpe_model</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+<div class="viewcode-block" id="tokenize"><a class="viewcode-back" href="../../../python_api/wenet.utils.context_graph.html#wenet.utils.context_graph.tokenize">[docs]</a><span class="k">def</span> <span class="nf">tokenize</span><span class="p">(</span><span class="n">context_list_path</span><span class="p">,</span> <span class="n">symbol_table</span><span class="p">,</span> <span class="n">bpe_model</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot; Read biasing list from the biasing list address, tokenize and convert it</span>
 <span class="sd">        into token id</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -113,6 +112,7 @@
         <span class="n">context_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">context_list</span></div>
 
+
 <div class="viewcode-block" id="ContextGraph"><a class="viewcode-back" href="../../../python_api/wenet.utils.context_graph.html#wenet.utils.context_graph.ContextGraph">[docs]</a><span class="k">class</span> <span class="nc">ContextGraph</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot; Context decoding graph, constructing graph using dict instead of WFST</span>
 <span class="sd">        Args:</span>
@@ -126,7 +126,8 @@
                  <span class="n">bpe_model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
                  <span class="n">context_score</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">6</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">context_score</span> <span class="o">=</span> <span class="n">context_score</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">context_list</span> <span class="o">=</span> <span class="n">tokenize</span><span class="p">(</span><span class="n">context_list_path</span><span class="p">,</span> <span class="n">symbol_table</span><span class="p">,</span> <span class="n">bpe_model</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_list</span> <span class="o">=</span> <span class="n">tokenize</span><span class="p">(</span><span class="n">context_list_path</span><span class="p">,</span> <span class="n">symbol_table</span><span class="p">,</span>
+                                     <span class="n">bpe_model</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graph</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="p">{}}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">graph_size</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">state2token</span> <span class="o">=</span> <span class="p">{}</span>
@@ -156,14 +157,13 @@
                     <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="n">now_state</span><span class="p">][</span><span class="n">context_token</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_size</span>
                     <span class="n">now_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_size</span>
                     <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">context_token</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">back_score</span><span class="p">[</span><span class="n">now_state</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_score</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">back_score</span><span class="p">[</span><span class="n">now_state</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span>
+                                                       <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_score</span>
                     <span class="k">else</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">back_score</span><span class="p">[</span><span class="n">now_state</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">state2token</span><span class="p">[</span><span class="n">now_state</span><span class="p">]</span> <span class="o">=</span> <span class="n">context_token</span><span class="p">[</span><span class="n">i</span><span class="p">]</span></div>
 
-<div class="viewcode-block" id="ContextGraph.find_next_state"><a class="viewcode-back" href="../../../python_api/wenet.utils.context_graph.html#wenet.utils.context_graph.ContextGraph.find_next_state">[docs]</a>    <span class="k">def</span> <span class="nf">find_next_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
-                        <span class="n">now_state</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-                        <span class="n">token</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<div class="viewcode-block" id="ContextGraph.find_next_state"><a class="viewcode-back" href="../../../python_api/wenet.utils.context_graph.html#wenet.utils.context_graph.ContextGraph.find_next_state">[docs]</a>    <span class="k">def</span> <span class="nf">find_next_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">now_state</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">token</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot; Search for an arc with the input being a token from the current state,</span>
 <span class="sd">            returning the score on the arc and the state it points to. If there is</span>
 <span class="sd">            no match, return to the starting state and perform an additional search</span>
@@ -174,7 +174,8 @@
         <span class="n">back_score</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_score</span><span class="p">[</span><span class="n">now_state</span><span class="p">]</span>
         <span class="n">now_state</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">if</span> <span class="n">token</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="n">now_state</span><span class="p">]:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="n">now_state</span><span class="p">][</span><span class="n">token</span><span class="p">],</span> <span class="n">back_score</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_score</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph</span><span class="p">[</span><span class="n">now_state</span><span class="p">][</span>
+                <span class="n">token</span><span class="p">],</span> <span class="n">back_score</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_score</span>
         <span class="k">return</span> <span class="mi">0</span><span class="p">,</span> <span class="n">back_score</span></div></div>
 </pre></div>
 
