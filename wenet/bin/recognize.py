@@ -47,8 +47,9 @@ def get_args():
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--dict', required=True, help='dict file')
-    parser.add_argument("--non_lang_syms",
-                        help="non-linguistic symbol file. One symbol per line.")
+    parser.add_argument(
+        "--non_lang_syms",
+        help="non-linguistic symbol file. One symbol per line.")
     parser.add_argument('--beam_size',
                         type=int,
                         default=10,
@@ -64,12 +65,17 @@ def get_args():
                         help='asr result file')
     parser.add_argument('--mode',
                         choices=[
-                            'attention', 'ctc_greedy_search',
-                            'ctc_prefix_beam_search', 'attention_rescoring',
-                            'rnnt_greedy_search', 'rnnt_beam_search',
+                            'attention',
+                            'ctc_greedy_search',
+                            'ctc_prefix_beam_search',
+                            'attention_rescoring',
+                            'rnnt_greedy_search',
+                            'rnnt_beam_search',
                             'rnnt_beam_attn_rescoring',
-                            'ctc_beam_td_attn_rescoring', 'hlg_onebest',
-                            'hlg_rescore', 'paraformer_greedy_search',
+                            'ctc_beam_td_attn_rescoring',
+                            'hlg_onebest',
+                            'hlg_rescore',
+                            'paraformer_greedy_search',
                             'paraformer_beam_search',
                         ],
                         default='attention',
@@ -95,12 +101,12 @@ def get_args():
                         type=float,
                         default=0.0,
                         help='transducer weight for rescoring weight in '
-                             'transducer attention rescore mode')
+                        'transducer attention rescore mode')
     parser.add_argument('--attn_weight',
                         type=float,
                         default=0.0,
                         help='attention weight for rescoring weight in '
-                             'transducer attention rescore mode')
+                        'transducer attention rescore mode')
     parser.add_argument('--decoding_chunk_size',
                         type=int,
                         default=-1,
@@ -154,10 +160,11 @@ def get_args():
                         default=0.0,
                         help='lm scale for hlg attention rescore decode')
 
-    parser.add_argument('--context_bias_mode',
-                        type=str,
-                        default='',
-                        help='''Context bias mode, selectable from the following
+    parser.add_argument(
+        '--context_bias_mode',
+        type=str,
+        default='',
+        help='''Context bias mode, selectable from the following
                                 option: decoding-graph、deep-biasing''')
     parser.add_argument('--context_list_path',
                         type=str,
@@ -180,8 +187,11 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-    if args.mode in ['ctc_prefix_beam_search', 'attention_rescoring',
-                     'paraformer_beam_search', ] and args.batch_size > 1:
+    if args.mode in [
+            'ctc_prefix_beam_search',
+            'attention_rescoring',
+            'paraformer_beam_search',
+    ] and args.batch_size > 1:
         logging.fatal(
             'decoding mode {} must be running with batch_size == 1'.format(
                 args.mode))
@@ -247,11 +257,8 @@ def main():
 
     context_graph = None
     if 'decoding-graph' in args.context_bias_mode:
-        context_graph = ContextGraph(args.context_list_path,
-                                     symbol_table,
-                                     args.bpe_model,
-                                     args.context_graph_score)
-
+        context_graph = ContextGraph(args.context_list_path, symbol_table,
+                                     args.bpe_model, args.context_graph_score)
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
@@ -401,10 +408,10 @@ def main():
                     if w == eos:
                         break
                     content.append(char_dict[w])
-                logging.info('{} {}'.format(key, args.connect_symbol
-                                            .join(content)))
-                fout.write('{} {}\n'.format(key, args.connect_symbol
-                                            .join(content)))
+                logging.info('{} {}'.format(key,
+                                            args.connect_symbol.join(content)))
+                fout.write('{} {}\n'.format(key,
+                                            args.connect_symbol.join(content)))
 
 
 if __name__ == '__main__':
