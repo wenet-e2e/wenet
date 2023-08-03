@@ -30,6 +30,7 @@ from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+from wenet.utils.context_graph import ContextGraph
 
 
 def get_args():
@@ -153,6 +154,21 @@ def get_args():
                         default=0.0,
                         help='lm scale for hlg attention rescore decode')
 
+    parser.add_argument('--context_bias_mode',
+                        type=str,
+                        default='',
+                        help='''Context bias mode, selectable from the following
+                                option: decoding-graph、deep-biasing''')
+    parser.add_argument('--context_list_path',
+                        type=str,
+                        default='',
+                        help='Context list path')
+    parser.add_argument('--context_graph_score',
+                        type=float,
+                        default=0.0,
+                        help='''The higher the score, the greater the degree of
+                                bias using decoding-graph for biasing''')
+
     args = parser.parse_args()
     print(args)
     return args
@@ -228,6 +244,14 @@ def main():
         paraformer_beam_search = build_beam_search(model, args, device)
     else:
         paraformer_beam_search = None
+
+    context_graph = None
+    if 'decoding-graph' in args.context_bias_mode:
+        context_graph = ContextGraph(args.context_list_path,
+                                     symbol_table,
+                                     args.bpe_model,
+                                     args.context_graph_score)
+
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
@@ -317,7 +341,8 @@ def main():
                     args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
-                    simulate_streaming=args.simulate_streaming)
+                    simulate_streaming=args.simulate_streaming,
+                    context_graph=context_graph)
                 hyps = [hyp]
             elif args.mode == 'attention_rescoring':
                 assert (feats.size(0) == 1)
@@ -329,7 +354,8 @@ def main():
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     ctc_weight=args.ctc_weight,
                     simulate_streaming=args.simulate_streaming,
-                    reverse_weight=args.reverse_weight)
+                    reverse_weight=args.reverse_weight,
+                    context_graph=context_graph)
                 hyps = [hyp]
             elif args.mode == 'hlg_onebest':
                 hyps = model.hlg_onebest(
