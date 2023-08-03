@@ -68,6 +68,9 @@ void ContextGraph::BuildContextGraph(
       float score =
           (i * config_.incremental_context_score + config_.context_score) *
           UTF8StringLength(words[i]);
+      if (IsAlpha(words[i]) || words[i][0] == kSpaceSymbol[0]) {
+        score = i * config_.incremental_context_score + config_.context_score;
+      }
       next_state = (i < words.size() - 1) ? ofst->AddState() : start_state;
       ofst->AddArc(prev_state,
                    fst::StdArc(word_id, word_id, score, next_state));
@@ -106,6 +109,24 @@ int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
       break;
     }
   }
+  if (next_state != 0) {
+    return next_state;
+  }
+  for (fst::ArcIterator<fst::StdFst> aiter(*graph_, 0); !aiter.Done();
+       aiter.Next()) {
+    const fst::StdArc& arc = aiter.Value();
+    if (arc.ilabel == word_id) {
+      next_state = arc.nextstate;
+      *score += arc.weight.Value();
+      if (cur_state == 0) {
+        *is_start_boundary = true;
+      }
+      if (graph_->Final(arc.nextstate) == fst::StdArc::Weight::One()) {
+        *is_end_boundary = true;
+      }
+      break;
+    }
+  }
   return next_state;
 }
 
@@ -117,6 +138,7 @@ bool ContextGraph::SplitUTF8StringToWords(
   SplitUTF8StringToChars(Trim(str), &chars);
 
   bool no_oov = true;
+  bool beginning = true;
   for (size_t start = 0; start < chars.size();) {
     for (size_t end = chars.size(); end > start; --end) {
       std::string word;
@@ -126,18 +148,28 @@ bool ContextGraph::SplitUTF8StringToWords(
       // Skip space.
       if (word == " ") {
         start = end;
+        beginning = true;
         continue;
       }
       // Add '▁' at the beginning of English word.
-      if (IsAlpha(word)) {
+      if (IsAlpha(word) && beginning == true) {
         word = kSpaceSymbol + word;
       }
 
       if (symbol_table->Find(word) != -1) {
         words->emplace_back(word);
         start = end;
+        beginning = false;
         continue;
       }
+
+      // Matching using '▁' separately for English
+      if (end == start + 1 && word[0] == kSpaceSymbol[0]) {
+        words->emplace_back(string(kSpaceSymbol));
+        beginning = false;
+        break;
+      }
+      
       if (end == start + 1) {
         ++start;
         no_oov = false;
