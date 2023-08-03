@@ -779,7 +779,7 @@ class ASRModel(torch.nn.Module):
             sum([decoder_out[i, j, hyps[i][j]] for j in range(len(hyps[i]))])
             for i in range(len(hyps))
         ],
-                                      device=device)
+                                      device=device)  # noqa
         r_decoder_scores = []
         for i in range(len(hyps)):
             score = 0
