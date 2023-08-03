@@ -169,7 +169,7 @@ bool ContextGraph::SplitUTF8StringToWords(
         beginning = false;
         break;
       }
-      
+
       if (end == start + 1) {
         ++start;
         no_oov = false;
