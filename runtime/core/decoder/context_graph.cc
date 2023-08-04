@@ -152,7 +152,7 @@ bool ContextGraph::SplitUTF8StringToWords(
         continue;
       }
       // Add '▁' at the beginning of English word.
-      if (IsAlpha(word) && beginning == true) {
+      if (IsAlpha(word) && beginning) {
         word = kSpaceSymbol + word;
       }
 
@@ -163,14 +163,13 @@ bool ContextGraph::SplitUTF8StringToWords(
         continue;
       }
 
-      // Matching using '▁' separately for English
-      if (end == start + 1 && word[0] == kSpaceSymbol[0]) {
-        words->emplace_back(string(kSpaceSymbol));
-        beginning = false;
-        break;
-      }
-
       if (end == start + 1) {
+        // Matching using '▁' separately for English
+        if (word[0] == kSpaceSymbol[0]) {
+          words->emplace_back(string(kSpaceSymbol));
+          beginning = false;
+          break;
+        }
         ++start;
         no_oov = false;
         LOG(WARNING) << word << " is oov.";
