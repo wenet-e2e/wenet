@@ -127,22 +127,17 @@ struct ForwardLink {
   Label olabel;          // olabel on arc
   BaseFloat graph_cost;  // graph cost of traversing arc (contains LM, etc.)
   BaseFloat acoustic_cost;  // acoustic cost (pre-scaled) of traversing arc
-  bool is_start_boundary;
-  bool is_end_boundary;
   float context_score;
-  ForwardLink* next;  // next in singly-linked list of forward arcs (arcs
-                      // in the state-level lattice) from a token.
+  ForwardLink* next;        // next in singly-linked list of forward arcs (arcs
+                            // in the state-level lattice) from a token.
   inline ForwardLink(Token* next_tok, Label ilabel, Label olabel,
                      BaseFloat graph_cost, BaseFloat acoustic_cost,
-                     bool is_start_boundary, bool is_end_boundary,
                      ForwardLink* next)
       : next_tok(next_tok),
         ilabel(ilabel),
         olabel(olabel),
         graph_cost(graph_cost),
         acoustic_cost(acoustic_cost),
-        is_start_boundary(is_start_boundary),
-        is_end_boundary(is_end_boundary),
         context_score(0),
         next(next) {}
 };
@@ -167,6 +162,7 @@ struct StdToken {
   // and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
 
+  int ilabel = -1;
   int context_state = 0;
 
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
@@ -215,6 +211,7 @@ struct BackpointerToken {
   // one by one and compute this difference, and then take the minimum).
   BaseFloat extra_cost;
 
+  int ilabel = -1;
   int context_state = 0;
 
   // 'links' is the head of singly-linked list of ForwardLinks, which is what we
@@ -277,7 +274,7 @@ class LatticeFasterDecoderTpl {
   // 'fst'.
   LatticeFasterDecoderTpl(
       const FST& fst, const LatticeFasterDecoderConfig& config,
-      const std::shared_ptr<wenet::ContextGraph>& context_graph);
+      const std::shared_ptr<wenet::ContextGraph>& context_graph = nullptr);
 
   // This version of the constructor takes ownership of the fst, and will delete
   // it when this object is destroyed.
@@ -545,6 +542,8 @@ class LatticeFasterDecoderTpl {
                             std::vector<Token*>* topsorted_list);
 
   void ClearActiveTokens();
+
+  void UpdateFinalContext();
 
   KALDI_DISALLOW_COPY_AND_ASSIGN(LatticeFasterDecoderTpl);
 };

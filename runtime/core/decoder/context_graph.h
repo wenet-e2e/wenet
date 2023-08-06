@@ -17,15 +17,24 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "fst/compose.h"
 #include "fst/fst.h"
+#include "fst/matcher.h"
 #include "fst/vector-fst.h"
 
 namespace wenet {
 
-using StateId = fst::StdArc::StateId;
+using ArcIterator = fst::ArcIterator<fst::StdFst>;
+using Matcher = fst::SortedMatcher<fst::StdFst>;
+using Weight = fst::StdArc::Weight;
+
+bool SplitContextToUnits(const std::string& context,
+                         const std::shared_ptr<fst::SymbolTable>& unit_table,
+                         std::vector<int>* units);
 
 struct ContextConfig {
   int max_contexts = 5000;
@@ -37,26 +46,22 @@ struct ContextConfig {
 class ContextGraph {
  public:
   explicit ContextGraph(ContextConfig config);
-  void BuildContextGraph(const std::vector<std::string>& query_context,
-                         const std::shared_ptr<fst::SymbolTable>& symbol_table);
-  int GetNextState(int cur_state, int word_id, float* score,
-                   bool* is_start_boundary, bool* is_end_boundary);
-
-  int start_tag_id() { return start_tag_id_; }
-  int end_tag_id() { return end_tag_id_; }
+  int TraceContext(int cur_state, int unit_id, int* final_state);
+  void BuildContextGraph(const std::vector<std::string>& context,
+                         const std::shared_ptr<fst::SymbolTable>& unit_table);
+  void ConvertToAC();
+  int GetNextState(int cur_state, int unit_id, float* score,
+                   std::unordered_set<std::string>* contexts = nullptr);
+  // check context state is the final state
+  bool IsFinalState(int state) {
+    return graph_->Final(state) != Weight::Zero();
+  }
 
  private:
-  bool SplitUTF8StringToWords(
-      const std::string& str,
-      const std::shared_ptr<fst::SymbolTable>& symbol_table,
-      std::vector<std::string>* words);
-
-  int start_tag_id_ = -1;
-  int end_tag_id_ = -1;
   ContextConfig config_;
-  std::shared_ptr<fst::SymbolTable> symbol_table_ = nullptr;
-  std::unique_ptr<fst::StdVectorFst> graph_ = nullptr;
-  DISALLOW_COPY_AND_ASSIGN(ContextGraph);
+  std::unique_ptr<fst::StdVectorFst> graph_;
+  std::unordered_map<int, int> fallback_finals_;  // States fallback to final
+  std::unordered_map<int, std::string> context_table_;  // Finals to context
 };
 
 }  // namespace wenet
