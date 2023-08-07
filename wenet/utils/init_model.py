@@ -22,6 +22,7 @@ from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
+from wenet.transformer.context_module import ContextModule
 from wenet.branchformer.encoder import BranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
@@ -79,6 +80,13 @@ def init_model(configs):
                                        **configs['decoder_conf'])
     ctc = CTC(vocab_size, encoder.output_size())
 
+    context_module_type = configs.get('context_module', '')
+    if context_module_type == 'cppn':
+        context_module = ContextModule(vocab_size,
+                                       **configs['context_module_conf'])
+    else:
+        context_module = None
+
     # Init joint CTC/Attention or Transducer model
     if 'predictor' in configs:
         predictor_type = configs.get('predictor', 'rnn')
@@ -122,6 +130,7 @@ def init_model(configs):
                          encoder=encoder,
                          decoder=decoder,
                          ctc=ctc,
+                         context_module=context_module,
                          lfmmi_dir=configs.get('lfmmi_dir', ''),
                          **configs['model_conf'])
     return model

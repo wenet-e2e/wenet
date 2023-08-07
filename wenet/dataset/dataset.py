@@ -189,5 +189,11 @@ def Dataset(data_type,
 
     batch_conf = conf.get('batch_conf', {})
     dataset = Processor(dataset, processor.batch, **batch_conf)
+
+    # context_conf = conf.get('context_conf', {})
+    # if len(context_conf) != 0:
+    #     dataset = Processor(dataset, processor.context_sampling,
+    #                         symbol_table, **context_conf)
+
     dataset = Processor(dataset, processor.padding)
     return dataset

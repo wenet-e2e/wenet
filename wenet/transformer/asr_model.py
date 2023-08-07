@@ -35,6 +35,7 @@ from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
+from wenet.transformer.context_module import ContextModule
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
                                 remove_duplicates_and_blank, th_accuracy,
                                 reverse_pad_list)
@@ -51,12 +52,14 @@ class ASRModel(torch.nn.Module):
         encoder: TransformerEncoder,
         decoder: TransformerDecoder,
         ctc: CTC,
+        context_module: ContextModule = None,
         ctc_weight: float = 0.5,
         ignore_id: int = IGNORE_ID,
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
         lfmmi_dir: str = '',
+        bias_weight: float = 0.03,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
 
@@ -68,10 +71,12 @@ class ASRModel(torch.nn.Module):
         self.ignore_id = ignore_id
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
+        self.bias_weight = bias_weight
 
         self.encoder = encoder
         self.decoder = decoder
         self.ctc = ctc
+        self.context_module = context_module
         self.criterion_att = LabelSmoothingLoss(
             size=vocab_size,
             padding_idx=ignore_id,
@@ -88,6 +93,10 @@ class ASRModel(torch.nn.Module):
         speech_lengths: torch.Tensor,
         text: torch.Tensor,
         text_lengths: torch.Tensor,
+        context_list: torch.Tensor = torch.tensor([0]),
+        context_list_lengths: torch.Tensor = torch.tensor([0]),
+        context_label: torch.Tensor = torch.tensor([0]),
+        context_label_lengths: torch.Tensor = torch.tensor([0]),
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
 
@@ -107,6 +116,18 @@ class ASRModel(torch.nn.Module):
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
+        # 1a. Context biasing branch
+        if self.context_module is not None:
+            context_emb = self.context_module. \
+                forward_context_emb(context_list, context_list_lengths)
+            encoder_out, bias_out = self.context_module(context_emb,
+                                                            encoder_out)
+            loss_bias = self.context_module.bias_loss(bias_out, context_label,
+                                                      encoder_out_lens,
+                                                      context_label_lengths)
+        else:
+            loss_bias = None
+
         # 2a. Attention-decoder branch
         if self.ctc_weight != 1.0:
             loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
@@ -125,14 +146,17 @@ class ASRModel(torch.nn.Module):
         else:
             loss_ctc = None
 
+        # TODO: 找出jit导出不成功的原因
         if loss_ctc is None:
             loss = loss_att
         elif loss_att is None:
             loss = loss_ctc
         else:
-            loss = self.ctc_weight * loss_ctc + (1 -
-                                                 self.ctc_weight) * loss_att
-        return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc}
+            loss = self.ctc_weight * loss_ctc + (1 - self.ctc_weight) * \
+                loss_att #+ self.bias_weight * loss_bias
+
+        return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc,
+                "loss_bias": loss_bias}
 
     def _calc_att_loss(
         self,
