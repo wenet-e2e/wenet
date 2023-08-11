@@ -73,7 +73,7 @@ class Transducer(ASRModel):
             self.simple_am_proj = torch.nn.Linear(
                 self.encoder.output_size(), vocab_size)
             self.simple_lm_proj = torch.nn.Linear(
-                self.predictor.embed_size, vocab_size)
+                self.predictor.output_size(), vocab_size)
 
         # Note(Mddct): decoder also means predictor in transducer,
         # but here decoder is attention decoder
@@ -512,7 +512,7 @@ def compute_loss(model: Transducer,
                                                reduction="mean")
     else:
         delay_penalty = model.delay_penalty
-        if steps > 2 * model.warmup_steps:
+        if steps < 2 * model.warmup_steps:
             delay_penalty = 0.00
         ys_in_pad = ys_in_pad.type(torch.int64)
         boundary = torch.zeros((encoder_out.size(0), 4),
