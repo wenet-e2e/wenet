@@ -33,6 +33,7 @@ bool SplitContextToUnits(const std::string& context,
   SplitUTF8StringToChars(context, &chars);
 
   bool no_oov = true;
+  bool beginning = true;
   for (size_t start = 0; start < chars.size();) {
     for (size_t end = chars.size(); end > start; --end) {
       std::string unit;
@@ -41,7 +42,7 @@ bool SplitContextToUnits(const std::string& context,
       }
       // Add '▁' at the beginning of English word.
       // TODO(zhendong.peng): Support bpe model
-      if (IsAlpha(unit)) {
+      if (IsAlpha(unit) && beginning) {
         unit = kSpaceSymbol + unit;
       }
 
@@ -49,12 +50,22 @@ bool SplitContextToUnits(const std::string& context,
       if (unit_id != -1) {
         units->emplace_back(unit_id);
         start = end;
+        beginning = false;
         continue;
       }
 
       if (end == start + 1) {
+        // Matching using '▁' separately for English
+        if (unit[0] == kSpaceSymbol[0]) {
+          units->emplace_back(unit_table->Find(kSpaceSymbol));
+          beginning = false;
+          break;
+        }
         ++start;
-        if (unit == " ") continue;
+        if (unit == " ") {
+          beginning = true;
+          continue;
+        }
         no_oov = false;
         LOG(WARNING) << unit << " is oov.";
       }
