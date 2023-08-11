@@ -148,7 +148,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">simple_am_proj</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">encoder</span><span class="o">.</span><span class="n">output_size</span><span class="p">(),</span> <span class="n">vocab_size</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">simple_lm_proj</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">predictor</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">predictor</span><span class="o">.</span><span class="n">output_size</span><span class="p">(),</span> <span class="n">vocab_size</span><span class="p">)</span>
 
         <span class="c1"># Note(Mddct): decoder also means predictor in transducer,</span>
         <span class="c1"># but here decoder is attention decoder</span>
@@ -587,7 +587,7 @@
                                                <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">delay_penalty</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">delay_penalty</span>
-        <span class="k">if</span> <span class="n">steps</span> <span class="o">&gt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">model</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">steps</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">model</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">:</span>
             <span class="n">delay_penalty</span> <span class="o">=</span> <span class="mf">0.00</span>
         <span class="n">ys_in_pad</span> <span class="o">=</span> <span class="n">ys_in_pad</span><span class="o">.</span><span class="n">type</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
         <span class="n">boundary</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">encoder_out</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="mi">4</span><span class="p">),</span>

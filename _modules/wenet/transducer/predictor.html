@@ -113,6 +113,9 @@
         <span class="n">_</span> <span class="o">=</span> <span class="n">cache</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;this is a base precictor&quot;</span><span class="p">)</span></div>
 
+<div class="viewcode-block" id="PredictorBase.output_size"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase.output_size">[docs]</a>    <span class="k">def</span> <span class="nf">output_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;this is a base precictor&quot;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="PredictorBase.forward"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.PredictorBase.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="nb">input</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
@@ -144,6 +147,7 @@
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_layers</span> <span class="o">=</span> <span class="n">num_layers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hidden_size</span> <span class="o">=</span> <span class="n">hidden_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span> <span class="o">=</span> <span class="n">output_size</span>
         <span class="c1"># disable rnn base out projection</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">embed</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Embedding</span><span class="p">(</span><span class="n">voca_size</span><span class="p">,</span> <span class="n">embed_size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">embed_dropout</span><span class="p">)</span>
@@ -157,6 +161,9 @@
                                               <span class="n">batch_first</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                                               <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">projection</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">hidden_size</span><span class="p">,</span> <span class="n">output_size</span><span class="p">)</span>
+
+<div class="viewcode-block" id="RNNPredictor.output_size"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor.output_size">[docs]</a>    <span class="k">def</span> <span class="nf">output_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_size</span></div>
 
 <div class="viewcode-block" id="RNNPredictor.forward"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.RNNPredictor.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -306,6 +313,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">ffn</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">layer_norm_epsilon</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span> <span class="o">=</span> <span class="n">get_activation</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
+
+<div class="viewcode-block" id="EmbeddingPredictor.output_size"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor.output_size">[docs]</a>    <span class="k">def</span> <span class="nf">output_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span></div>
 
 <div class="viewcode-block" id="EmbeddingPredictor.init_state"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.EmbeddingPredictor.init_state">[docs]</a>    <span class="k">def</span> <span class="nf">init_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -464,6 +474,9 @@
                               <span class="n">bias</span><span class="o">=</span><span class="n">bias</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">LayerNorm</span><span class="p">(</span><span class="n">embed_size</span><span class="p">,</span> <span class="n">eps</span><span class="o">=</span><span class="n">layer_norm_epsilon</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">activatoin</span> <span class="o">=</span> <span class="n">get_activation</span><span class="p">(</span><span class="n">activation</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ConvPredictor.output_size"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor.output_size">[docs]</a>    <span class="k">def</span> <span class="nf">output_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">embed_size</span></div>
 
 <div class="viewcode-block" id="ConvPredictor.init_state"><a class="viewcode-back" href="../../../python_api/wenet.transducer.predictor.html#wenet.transducer.predictor.ConvPredictor.init_state">[docs]</a>    <span class="k">def</span> <span class="nf">init_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
                    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
