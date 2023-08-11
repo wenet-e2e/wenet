@@ -38,6 +38,9 @@ class PredictorBase(torch.nn.Module):
         _ = cache
         raise NotImplementedError("this is a base precictor")
 
+    def output_size(self):
+        raise NotImplementedError("this is a base precictor")
+
     def forward(
         self,
         input: torch.Tensor,
@@ -69,6 +72,7 @@ class RNNPredictor(PredictorBase):
         super().__init__()
         self.n_layers = num_layers
         self.hidden_size = hidden_size
+        self._output_size = output_size
         # disable rnn base out projection
         self.embed = nn.Embedding(voca_size, embed_size)
         self.dropout = nn.Dropout(embed_dropout)
@@ -82,6 +86,9 @@ class RNNPredictor(PredictorBase):
                                               batch_first=True,
                                               dropout=dropout)
         self.projection = nn.Linear(hidden_size, output_size)
+
+    def output_size(self):
+        return self._output_size
 
     def forward(
         self,
@@ -231,6 +238,9 @@ class EmbeddingPredictor(PredictorBase):
         self.ffn = nn.Linear(self.embed_size, self.embed_size)
         self.norm = nn.LayerNorm(self.embed_size, eps=layer_norm_epsilon)
         self.activatoin = get_activation(activation)
+
+    def output_size(self):
+        return self.embed_size
 
     def init_state(self,
                    batch_size: int,
@@ -389,6 +399,9 @@ class ConvPredictor(PredictorBase):
                               bias=bias)
         self.norm = nn.LayerNorm(embed_size, eps=layer_norm_epsilon)
         self.activatoin = get_activation(activation)
+
+    def output_size(self):
+        return self.embed_size
 
     def init_state(self,
                    batch_size: int,
