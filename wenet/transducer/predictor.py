@@ -399,7 +399,7 @@ class ConvPredictor(PredictorBase):
                               bias=bias)
         self.norm = nn.LayerNorm(embed_size, eps=layer_norm_epsilon)
         self.activatoin = get_activation(activation)
-    
+
     def output_size(self):
         return self.embed_size
 
