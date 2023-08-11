@@ -33,6 +33,7 @@ AsrDecoder::AsrDecoder(std::shared_ptr<FeaturePipeline> feature_pipeline,
       // status of the model
       model_(resource->model->Copy()),
       post_processor_(resource->post_processor),
+      context_graph_(resource->context_graph),
       symbol_table_(resource->symbol_table),
       fst_(resource->fst),
       unit_table_(resource->unit_table),
@@ -197,6 +198,19 @@ void AsrDecoder::UpdateResult(bool finish) {
 
   if (DecodedSomething()) {
     VLOG(1) << "Partial CTC result " << result_[0].sentence;
+    if (context_graph_ != nullptr) {
+      int cur_state = 0;
+      float score = 0;
+      for (int ilabel : inputs[0]) {
+        cur_state = context_graph_->GetNextState(cur_state, ilabel, &score,
+                                                 &(result_[0].contexts));
+      }
+      std::string contexts;
+      for (const auto& context : result_[0].contexts) {
+        contexts += context + ", ";
+      }
+      VLOG(1) << "Contexts: " << contexts;
+    }
   }
 }
 
@@ -215,6 +229,7 @@ void AsrDecoder::AttentionRescoring() {
     return;
   }
 
+  // TODO(zhendong.peng): Do we need rescoring while context matching?
   std::vector<float> rescoring_score;
   model_->AttentionRescoring(hypotheses, opts_.reverse_weight,
                              &rescoring_score);

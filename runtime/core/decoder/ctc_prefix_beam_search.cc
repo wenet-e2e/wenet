@@ -38,12 +38,14 @@ void CtcPrefixBeamSearch::Reset() {
   viterbi_likelihood_.clear();
   times_.clear();
   outputs_.clear();
+
   abs_time_step_ = 0;
   PrefixScore prefix_score;
   prefix_score.s = 0.0;
   prefix_score.ns = -kFloatMax;
   prefix_score.v_s = 0.0;
   prefix_score.v_ns = 0.0;
+
   std::vector<int> empty;
   cur_hyps_[empty] = prefix_score;
   outputs_.emplace_back(empty);
@@ -58,29 +60,6 @@ static bool PrefixScoreCompare(
   return a.second.total_score() > b.second.total_score();
 }
 
-void CtcPrefixBeamSearch::UpdateOutputs(
-    const std::pair<std::vector<int>, PrefixScore>& prefix) {
-  const std::vector<int>& input = prefix.first;
-  const std::vector<int>& start_boundaries = prefix.second.start_boundaries;
-  const std::vector<int>& end_boundaries = prefix.second.end_boundaries;
-
-  std::vector<int> output;
-  int s = 0;
-  int e = 0;
-  for (int i = 0; i < input.size(); ++i) {
-    if (s < start_boundaries.size() && i == start_boundaries[s]) {
-      output.emplace_back(context_graph_->start_tag_id());
-      ++s;
-    }
-    output.emplace_back(input[i]);
-    if (e < end_boundaries.size() && i == end_boundaries[e]) {
-      output.emplace_back(context_graph_->end_tag_id());
-      ++e;
-    }
-  }
-  outputs_.emplace_back(output);
-}
-
 void CtcPrefixBeamSearch::UpdateHypotheses(
     const std::vector<std::pair<std::vector<int>, PrefixScore>>& hpys) {
   cur_hyps_.clear();
@@ -91,8 +70,8 @@ void CtcPrefixBeamSearch::UpdateHypotheses(
   times_.clear();
   for (auto& item : hpys) {
     cur_hyps_[item.first] = item.second;
-    UpdateOutputs(item);
-    hypotheses_.emplace_back(std::move(item.first));
+    hypotheses_.emplace_back(item.first);
+    outputs_.emplace_back(std::move(item.first));
     likelihood_.emplace_back(item.second.total_score());
     viterbi_likelihood_.emplace_back(item.second.viterbi_score());
     times_.emplace_back(item.second.times());
@@ -167,8 +146,7 @@ void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
           }
           if (context_graph_ && !next_score2.has_context) {
             // Prefix changed, calculate the context score.
-            next_score2.UpdateContext(context_graph_, prefix_score, id,
-                                      prefix.size());
+            next_score2.UpdateContext(context_graph_, prefix_score, id);
             next_score2.has_context = true;
           }
         } else {
@@ -185,8 +163,7 @@ void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
           }
           if (context_graph_ && !next_score.has_context) {
             // Calculate the context score.
-            next_score.UpdateContext(context_graph_, prefix_score, id,
-                                     prefix.size());
+            next_score.UpdateContext(context_graph_, prefix_score, id);
             next_score.has_context = true;
           }
         }
@@ -208,9 +185,7 @@ void CtcPrefixBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
   }
 }
 
-void CtcPrefixBeamSearch::FinalizeSearch() { UpdateFinalContext(); }
-
-void CtcPrefixBeamSearch::UpdateFinalContext() {
+void CtcPrefixBeamSearch::FinalizeSearch() {
   if (context_graph_ == nullptr) return;
   CHECK_EQ(hypotheses_.size(), cur_hyps_.size());
   CHECK_EQ(hypotheses_.size(), likelihood_.size());
@@ -219,8 +194,7 @@ void CtcPrefixBeamSearch::UpdateFinalContext() {
   for (const auto& prefix : hypotheses_) {
     PrefixScore& prefix_score = cur_hyps_[prefix];
     if (prefix_score.context_state != 0) {
-      prefix_score.UpdateContext(context_graph_, prefix_score, 0,
-                                 prefix.size());
+      prefix_score.UpdateContext(context_graph_, prefix_score, -1);
     }
   }
   std::vector<std::pair<std::vector<int>, PrefixScore>> arr(cur_hyps_.begin(),
