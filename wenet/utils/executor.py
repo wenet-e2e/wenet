@@ -58,11 +58,10 @@ class Executor:
         else:
             model_context = nullcontext
         num_seen_utts = 0
-        print("____ mark 0")
         with model_context():
             for batch_idx, batch in enumerate(data_loader):
-                key, feats, target, feats_lengths, target_lengths,
-                context_list, context_label, context_list_lengths,
+                key, feats, target, feats_lengths, target_lengths, \
+                context_list, context_label, context_list_lengths, \
                 context_label_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)
@@ -73,7 +72,6 @@ class Executor:
                 context_list_lengths = context_list_lengths.to(device)
                 context_label_lengths = context_label_lengths.to(device)
                 num_utts = target_lengths.size(0)
-                print("____ mark 1")
                 if num_utts == 0:
                     continue
                 context = None
@@ -184,8 +182,8 @@ class Executor:
         total_loss = 0.0
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
-                key, feats, target, feats_lengths, target_lengths,
-                context_list, context_label, context_list_lengths,
+                key, feats, target, feats_lengths, target_lengths, \
+                context_list, context_label, context_list_lengths, \
                 context_label_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)

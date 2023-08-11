@@ -628,26 +628,24 @@ def context_sampling(data,
     for token in symbol_table:
         rev_symbol_table[symbol_table[token]] = token
     context_list_over_all = []
-    print("@@@@@@@ start sampling")
     for sample in data:
-        print("11111111", sample)
         batch_label = [sample[i]['label'] for i in range(len(sample))]
-        print(batch_label)
         context_list = []
         for utt_label in batch_label:
             st_index_list = []
             for i in range(len(utt_label)):
-                if '▁' not in rev_symbol_table:
+                if '▁' not in symbol_table:
                     st_index_list.append(i)
-                elif rev_symbol_table[i][0] == '▁':
+                elif rev_symbol_table[utt_label[i]][0] == '▁':
                     st_index_list.append(i)
+            st_index_list.append(len(utt_label))
 
             st_select = []
             en_select = []
             num_context = 3
             for _ in range(0, num_context):
-                random_len = random.randint(min(len(st_index_list), len_min),
-                                            min(len(st_index_list), len_max))
+                random_len = random.randint(min(len(st_index_list) - 1, len_min),
+                                            min(len(st_index_list) - 1, len_max))
                 random_index = random.randint(0, len(st_index_list) -
                                               random_len - 1)
                 st_index = st_index_list[random_index]
@@ -673,13 +671,11 @@ def context_sampling(data,
             context_list_over_all = context_list_over_all[-batch_num_context:]
         else:
             context_list_over_all.extend(context_list)
-        context_list = context_list_over_all
-        context_list.insert(0, torch.tensor([0]))
-        for i in range(len(sample)):
-            print(sample[i]['label'])
-            print(context_list)
-            print("_______________")
-            sample[i]['context_list'] = context_list
+        context_list = context_list_over_all.copy()
+        context_list.insert(0, [0])
+        for i in range(len(context_list)):
+            context_list[i] = torch.tensor(context_list[i], dtype=torch.int64)
+        sample[0]['context_list'] = context_list
         yield sample
 
 
@@ -705,7 +701,6 @@ def context_label_generate(label=[], context_list=[]):
             if count > 0:
                 context_label.append(x[i])
                 count -= 1
-        context_length.append(len(context_label))
         context_label = torch.tensor(context_label, dtype=torch.int64)
         context_labels.append(context_label)
     return context_labels
@@ -747,22 +742,21 @@ def padding(data):
                    label_lengths, torch.tensor([0]), torch.tensor([0]),
                    torch.tensor([0]), torch.tensor([0]))
         
-        sorted_context_lists = [sample[i]['context_list'] for i in order]
+        context_lists = sample[0]['context_list']
         context_list_lengths = torch.tensor([x.size(0)
-            for x in sorted_context_lists], dtype=torch.int32)
-        padding_context_lists = pad_sequence(sorted_context_lists,
+            for x in context_lists], dtype=torch.int32)
+        padding_context_lists = pad_sequence(context_lists,
                                              batch_first=True,
                                              padding_value=-1)
         
         
         sorted_context_labels = context_label_generate(sorted_labels,
-                                                       sorted_context_lists)
+                                                       context_lists)
         context_label_lengths = torch.tensor([x.size(0)
             for x in sorted_context_labels], dtype=torch.int32)
         padding_context_labels = pad_sequence(sorted_context_labels,
                                              batch_first=True,
                                              padding_value=-1)
-
         yield (sorted_keys, padded_feats, padding_labels,
                feats_lengths, label_lengths, padding_context_lists, 
                padding_context_labels, context_list_lengths,

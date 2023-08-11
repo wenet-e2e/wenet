@@ -94,8 +94,8 @@ class ASRModel(torch.nn.Module):
         text: torch.Tensor,
         text_lengths: torch.Tensor,
         context_list: torch.Tensor = torch.tensor([0]),
-        context_list_lengths: torch.Tensor = torch.tensor([0]),
         context_label: torch.Tensor = torch.tensor([0]),
+        context_list_lengths: torch.Tensor = torch.tensor([0]),
         context_label_lengths: torch.Tensor = torch.tensor([0]),
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
@@ -122,6 +122,7 @@ class ASRModel(torch.nn.Module):
                 forward_context_emb(context_list, context_list_lengths)
             encoder_out, bias_out = self.context_module(context_emb,
                                                             encoder_out)
+            bias_out = bias_out.transpose(0, 1).log_softmax(2)
             loss_bias = self.context_module.bias_loss(bias_out, context_label,
                                                       encoder_out_lens,
                                                       context_label_lengths)
@@ -153,7 +154,7 @@ class ASRModel(torch.nn.Module):
             loss = loss_ctc
         else:
             loss = self.ctc_weight * loss_ctc + (1 - self.ctc_weight) * \
-                loss_att #+ self.bias_weight * loss_bias
+                loss_att + self.bias_weight * loss_bias
 
         return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc,
                 "loss_bias": loss_bias}
