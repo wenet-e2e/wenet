@@ -16,7 +16,6 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
-import copy
 import Levenshtein as L
 import torch
 
