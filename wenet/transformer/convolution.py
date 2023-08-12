@@ -118,7 +118,9 @@ class ConvolutionModule(nn.Module):
                 assert cache.size(1) == x.size(1)  # equal channel
                 x = torch.cat((cache, x), dim=2)
             assert (x.size(2) > self.lorder)
-            new_cache = x[:, :, -self.lorder:]
+            # NOTE(xcsong): We do cache slicing in encoder.forward_chunk to unify
+            #   zeroprompt_len > 0 & zeroprompt_len == 0.
+            new_cache = x
         else:
             # It's better we just return None if no cache is required,
             # However, for JIT export, here we just fake one tensor instead of

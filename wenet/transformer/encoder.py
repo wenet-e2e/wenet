@@ -179,6 +179,8 @@ class BaseEncoder(torch.nn.Module):
         att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
         cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
         att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        zeroprompt_len: int = 0,
+        zeroprompt_layer: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ Forward just one chunk
 
@@ -199,6 +201,8 @@ class BaseEncoder(torch.nn.Module):
             cnn_cache (torch.Tensor): cache tensor for cnn_module in conformer,
                 (elayers, b=1, hidden-dim, cache_t2), where
                 `cache_t2 == cnn.lorder - 1`
+            zeroprompt_len (int): length of zero padding.
+            zeroprompt_layer (int): start layer to apply zero padding.
 
         Returns:
             torch.Tensor: output of current input xs,
@@ -236,6 +240,19 @@ class BaseEncoder(torch.nn.Module):
         r_att_cache = []
         r_cnn_cache = []
         for i, layer in enumerate(self.encoders):
+            # NOTE(xcsong): Regenerate chunk,mask,pos on-the-fly if zeroprompt enabled
+            if zeroprompt_len > 0 and i == zeroprompt_layer:
+                pos_emb = self.embed.position_encoding(
+                    offset=offset - cache_t1, size=attention_key_size + zeroprompt_len)
+                padding = torch.zeros(
+                    xs.size(0), zeroprompt_len, xs.size(2),
+                    dtype=xs.dtype, device=xs.device)
+                xs = torch.cat([xs, padding], dim=1)
+                att_mask = torch.ones(
+                    xs.size(0), chunk_size + zeroprompt_len,
+                    attention_key_size + zeroprompt_len,
+                    dtype=torch.bool, device=xs.device)
+                att_mask[:, :chunk_size, -zeroprompt_len:] = 0
             # NOTE(xcsong): Before layer.forward
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
@@ -245,10 +262,24 @@ class BaseEncoder(torch.nn.Module):
                 cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
             )
             # NOTE(xcsong): After layer.forward
-            #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
-            #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
+            #   shape(new_att_cache) is (1, head, att_key_size + zp_len, d_k * 2),
+            #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2 + chunk + zp_len)
+            if zeroprompt_len > 0 and i >= zeroprompt_layer:
+                slice_end = new_att_cache.size(2) - zeroprompt_len
+                new_att_cache = new_att_cache[:, :, :slice_end, :]
+                slice_end = new_cnn_cache.size(2) - zeroprompt_len
+                new_cnn_cache = new_cnn_cache[:, :, :slice_end]
+            # NOTE(xcsong): After slice out zeroprompt
+            #   shape(new_att_cache) is (1, head, att_key_size, d_k * 2),
+            #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2 + chunk)
+            lorder = 0
+            if layer.conv_module is not None:
+                lorder = layer.conv_module.lorder
             r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
-            r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
+            r_cnn_cache.append(new_cnn_cache[:, :, -lorder:].unsqueeze(0))
+            # NOTE(xcsong): After slice out invalid cache
+            #   shape(new_att_cache) is (1, head, cache_t1, d_k * 2),
+            #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
         if self.normalize_before:
             xs = self.after_norm(xs)
 

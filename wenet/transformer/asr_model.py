@@ -16,6 +16,8 @@
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
+import copy
+import Levenshtein as L
 import torch
 
 from torch.nn.utils.rnn import pad_sequence
@@ -800,6 +802,176 @@ class ASRModel(torch.nn.Module):
         hyps = [[symbol_table[k] for j in i for k in self.word_table[j]]
                 for i in hyps]
         return hyps
+
+    @torch.no_grad()
+    def zeroprompt(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        key: str = "key",
+        char_dict: dict = None,
+        zeroprompt_len: int = 0,
+        zeroprompt_layer: int = 0,
+    ) -> Tuple[List[List[int]], dict]:
+        """ Forward input chunk by chunk with chunk_size like a streaming fasion,
+            1st run for standard inference, 2nd run for inference with zeroprompt.
+            NOTE(xcsong): This function serves as an illustrative example to showcase
+                          the efficiency of ZeroPrompt and calculate metrics used in
+                          paper ZeroPrompt[https://arxiv.org/pdf/2305.10649.pdf].
+
+        Args:
+            speech (torch.Tensor): (batch, max_len, feat_dim)
+            speech_length (torch.Tensor): (batch, )
+            beam_size (int): beam size for beam search
+            decoding_chunk_size (int): decoding chunk for dynamic chunk
+                trained model.
+                <0: for decoding, use full chunk.
+                >0: for decoding, use fixed chunk size as set.
+                0: used for training, it's prohibited here
+        Returns:
+            List[List[int]]: best path result
+        """
+        assert speech.shape[0] == speech_lengths.shape[0]
+        assert decoding_chunk_size > 0
+        # Let's assume B = batch_size
+        batch_size = speech.shape[0]
+        # The model is trained by static or dynamic chunk
+        assert self.encoder.static_chunk_size > 0 or self.encoder.use_dynamic_chunk
+        subsampling = self.encoder.embed.subsampling_rate
+        context = self.encoder.embed.right_context + 1  # Add current frame
+        stride = subsampling * decoding_chunk_size
+        decoding_window = (decoding_chunk_size - 1) * subsampling + context
+        num_frames = speech.size(1)
+        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0), device=speech.device)
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0), device=speech.device)
+        outputs = []
+        offset = 0
+        required_cache_size = decoding_chunk_size * num_decoding_left_chunks
+
+        def gettext(prob, dic):
+            maxlen = prob.size(1)
+            _, topk_index = prob.topk(1, dim=2)      # (B, maxlen, 1)
+            topk_index = topk_index.view(1, maxlen)  # (B, maxlen)
+            hyps = [hyp.tolist() for hyp in topk_index]
+            hyps = remove_duplicates_and_blank(hyps[0])
+            content = ''
+            if len(hyps) > 0:
+                for w in hyps:
+                    # if w == self.eos:
+                    #     print("chunk {} has eos".format(i))
+                    #     break
+                    content += char_dict[w]
+            return content, hyps
+
+        prob_original, prob_zeroprompt = [], []
+        result_original, result_zeroprompt = [], []
+        # 1. Feed input chunk by chunk
+        for i, cur in enumerate(range(0, num_frames - context + 1, stride)):
+            end = min(cur + decoding_window, num_frames)
+            chunk_xs = speech[:, cur:end, :]
+            if chunk_xs.size(1) < decoding_window:
+                pad_len = decoding_window - chunk_xs.size(1)
+                pad_tensor = torch.zeros(1, pad_len, chunk_xs.size(2))
+                chunk_xs = torch.cat(
+                    [chunk_xs, pad_tensor.to(chunk_xs.device)], dim=1)
+
+            # 1st-run: standard forward
+            (y_1, att_cache_1, cnn_cache_1) = self.encoder.forward_chunk(
+                chunk_xs, offset, required_cache_size, att_cache, cnn_cache)
+            ctc_probs = self.ctc.log_softmax(y_1)  # (B, maxlen, vocab_size)
+            prob_original.append(ctc_probs)
+            content, _ = gettext(ctc_probs, char_dict)
+            result_original.append(content)
+
+            # 2nd-run: forward with zeroprompt
+            (y, att_cache, cnn_cache) = self.encoder.forward_chunk(
+                chunk_xs, offset, required_cache_size,
+                att_cache, cnn_cache,
+                zeroprompt_len=zeroprompt_len,
+                zeroprompt_layer=zeroprompt_layer)
+            offset = offset + y.size(1) - zeroprompt_len
+            ctc_probs = self.ctc.log_softmax(y)  # (B, maxlen, vocab_size)
+            prob_zeroprompt.append(y)
+            content, _ = gettext(ctc_probs, char_dict)
+            result_zeroprompt.append(content)
+
+            # Assert allclose
+            assert torch.allclose(y_1, y[:, :-zeroprompt_len, :], 1e-03, 1e-04)
+            assert torch.allclose(att_cache_1, att_cache, 1e-3, 1e-4)
+            assert torch.allclose(cnn_cache, cnn_cache, 1e-3, 1e-4)
+
+        prob = torch.cat(prob_original, dim=1)
+        final_result, hyps = gettext(prob, char_dict)
+
+        # 2. Get first_token_display_time & last_token_display_time
+        first_token_display, last_token_display = 0, len(final_result) - 1
+        for i, z in enumerate(result_zeroprompt):
+            if (len(z) > 0):
+                first_token_display = i
+                break
+        prev_start = 0
+        for i, (z, o) in enumerate(zip(result_zeroprompt, result_original)):
+            start_idx = final_result.find(o, prev_start)
+            assert start_idx > -1
+            prev_start = start_idx
+            if (start_idx + len(z)) >= len(final_result):
+                last_token_display = i
+                break
+
+        # 3. Get chunk_diff, used to calculate Prompts Error Rate
+        chunk_diff = []
+        prev_start = 0
+        for i, (chunk_o, chunk_z) in enumerate(
+                zip(result_original, result_zeroprompt)):
+            # Align chunk_z with final_result, get start & end index
+            # NOTE(xcsong): start_idx = prev_start if chunk_o == ""
+            start_idx = final_result.find(chunk_o, prev_start)
+            prev_start = start_idx
+            # NOTE(xcsong): Special handling for chunk_o with empty result,
+            #   this usually happens when chunksize is small (i.e., 80ms)
+            if chunk_o == "" and len(chunk_z) > 0:
+                if chunk_z[0] == '▁':  # English BPE
+                    start_idx = final_result.find(chunk_z[:2], prev_start)
+                else:  # English BPE or Chinese character
+                    start_idx = final_result.find(chunk_z[0], prev_start)
+                # if not match, reset to prev_start
+                if start_idx == -1:
+                    start_idx = prev_start
+            end_idx = min(start_idx + len(chunk_z), len(final_result))
+            # NOTE(xcsong): example log
+            pad_token = '￥' if not final_result.replace("\'", "").replace("▁", "") \
+                .encode('utf-8').isalpha() else '$'
+            prefix = '' if start_idx == 0 else pad_token * start_idx
+            suffix_orig = '' if start_idx + len(chunk_o) == len(final_result) \
+                else pad_token * (len(final_result) - start_idx - len(chunk_o))
+            suffix_zeroprompt = '' if start_idx + len(chunk_z) == len(final_result) \
+                else pad_token * (len(final_result) - start_idx - len(chunk_z))
+            print('{} \033[31moriginal  \033[0m chunk-{}: {}\033[31m{}\033[0m{}'.format(
+                key, i, prefix, chunk_o, suffix_orig))
+            print('{} \033[32mzeroprompt\033[0m chunk-{}: {}\033[32m{}\033[0m{}'.format(
+                key, i, prefix, chunk_z, suffix_zeroprompt))
+            print('{} final      chunk-{}: {}\033[33m{}\033[0m{}'.format(
+                key, i, final_result[:start_idx],
+                final_result[start_idx:end_idx],
+                final_result[end_idx:]))
+            diff = L.distance(chunk_z, final_result[start_idx:end_idx])
+            print('{} distance   chunk-{}: {}'.format(key, i, diff))
+            chunk_diff.append(
+                diff if (len(chunk_o) > 0 or i == first_token_display) else 0)
+
+        # 4. Get chunk_prompt, used to calculate Prompts Per Chunk
+        chunk_prompt = [len(z) - len(o)
+                        for z, o in zip(result_zeroprompt, result_original)]
+
+        # 5. Return ALL data
+        data = {'final_result': final_result,
+                'chunk_prompt': chunk_prompt,
+                'chunk_diff': chunk_diff,
+                'first_token_display': first_token_display,
+                'last_token_display': last_token_display}
+        return [hyps], data
 
     @torch.jit.export
     def subsampling_rate(self) -> int:

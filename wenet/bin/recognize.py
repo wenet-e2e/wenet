@@ -77,6 +77,7 @@ def get_args():
                             'hlg_rescore',
                             'paraformer_greedy_search',
                             'paraformer_beam_search',
+                            'zeroprompt',
                         ],
                         default='attention',
                         help='decoding mode')
@@ -175,6 +176,14 @@ def get_args():
                         default=0.0,
                         help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
+    parser.add_argument('--zeroprompt_len',
+                        type=int,
+                        default=0,
+                        help='length of zeroprompt (after subsample)')
+    parser.add_argument('--zeroprompt_layer',
+                        type=int,
+                        default=0,
+                        help='start layer to apply zeroprompt (after subsample)')
 
     args = parser.parse_args()
     print(args)
@@ -402,6 +411,15 @@ def main():
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming)
+            elif args.mode == 'zeroprompt':
+                hyps, data = model.zeroprompt(
+                    feats,
+                    feats_lengths,
+                    decoding_chunk_size=args.decoding_chunk_size,
+                    num_decoding_left_chunks=args.num_decoding_left_chunks,
+                    key=keys[0], char_dict=char_dict,
+                    zeroprompt_len=args.zeroprompt_len,
+                    zeroprompt_layer=args.zeroprompt_layer)
             for i, key in enumerate(keys):
                 content = []
                 for w in hyps[i]:
