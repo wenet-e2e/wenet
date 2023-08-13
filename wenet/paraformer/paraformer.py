@@ -147,10 +147,9 @@ class Paraformer(ASRModel):
 
         return loss_att, acc_att, loss_pre
 
-    def calc_predictor(self, encoder_out, encoder_mask):
-
+    def calc_predictor(self, encoder_out, encoder_out_lens):
         encoder_mask = (~make_pad_mask(
-            encoder_mask, max_len=encoder_out.size(1))[:, None, :]).to(
+            encoder_out_lens, max_len=encoder_out.size(1))[:, None, :]).to(
                 encoder_out.device)
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
             self.predictor(
@@ -159,10 +158,9 @@ class Paraformer(ASRModel):
                 ignore_id=self.ignore_id)
         return pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index
 
-    def cal_decoder_with_predictor(self, encoder_out, encoder_out_lens,
+    def cal_decoder_with_predictor(self, encoder_out, encoder_mask,
                                    sematic_embeds, ys_pad_lens):
-
-        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_lens,
+        decoder_out, _, _ = self.decoder(encoder_out, encoder_mask,
                                          sematic_embeds, ys_pad_lens)
         decoder_out = torch.log_softmax(decoder_out, dim=-1)
         return decoder_out, ys_pad_lens
@@ -207,7 +205,7 @@ class Paraformer(ASRModel):
             simulate_streaming)  # (B, maxlen, encoder_dim)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         # 2. Predictor
-        predictor_outs = self.calc_predictor(encoder_out, encoder_mask)
+        predictor_outs = self.calc_predictor(encoder_out, encoder_out_lens)
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
             predictor_outs[0], predictor_outs[1], \
             predictor_outs[2], predictor_outs[3]
@@ -216,7 +214,7 @@ class Paraformer(ASRModel):
             return torch.tensor([]), torch.tensor([])
         # 2. Decoder forward
         decoder_outs = self.cal_decoder_with_predictor(encoder_out,
-                                                       encoder_out_lens,
+                                                       encoder_mask,
                                                        pre_acoustic_embeds,
                                                        pre_token_length)
         decoder_out, ys_pad_lens = decoder_outs[0], decoder_outs[1]
@@ -289,7 +287,7 @@ class Paraformer(ASRModel):
             simulate_streaming)  # (B, maxlen, encoder_dim)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         # 2. Predictor
-        predictor_outs = self.calc_predictor(encoder_out, encoder_mask)
+        predictor_outs = self.calc_predictor(encoder_out, encoder_out_lens)
         pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
             predictor_outs[0], predictor_outs[1], \
             predictor_outs[2], predictor_outs[3]
@@ -298,7 +296,7 @@ class Paraformer(ASRModel):
             return torch.tensor([]), torch.tensor([])
         # 2. Decoder forward
         decoder_outs = self.cal_decoder_with_predictor(encoder_out,
-                                                       encoder_out_lens,
+                                                       encoder_mask,
                                                        pre_acoustic_embeds,
                                                        pre_token_length)
         decoder_out, ys_pad_lens = decoder_outs[0], decoder_outs[1]
