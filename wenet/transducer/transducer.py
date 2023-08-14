@@ -497,19 +497,6 @@ def compute_loss(model: Transducer,
                                                rnnt_text_lengths,
                                                blank=model.blank,
                                                reduction="mean")
-        # NOTE(Mddct): some loss implementation require pad valid is zero
-        # torch.int32 rnnt_loss required
-        rnnt_text = text.to(torch.int64)
-        rnnt_text = torch.where(rnnt_text == model.ignore_id, 0,
-                                rnnt_text).to(torch.int32)
-        rnnt_text_lengths = text_lengths.to(torch.int32)
-        encoder_out_lens = encoder_out_lens.to(torch.int32)
-        loss = torchaudio.functional.rnnt_loss(joint_out,
-                                               rnnt_text,
-                                               encoder_out_lens,
-                                               rnnt_text_lengths,
-                                               blank=model.blank,
-                                               reduction="mean")
     else:
         delay_penalty = model.delay_penalty
         if steps < 2 * model.warmup_steps:
