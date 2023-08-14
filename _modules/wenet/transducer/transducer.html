@@ -572,19 +572,6 @@
                                                <span class="n">rnnt_text_lengths</span><span class="p">,</span>
                                                <span class="n">blank</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">blank</span><span class="p">,</span>
                                                <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
-        <span class="c1"># NOTE(Mddct): some loss implementation require pad valid is zero</span>
-        <span class="c1"># torch.int32 rnnt_loss required</span>
-        <span class="n">rnnt_text</span> <span class="o">=</span> <span class="n">text</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
-        <span class="n">rnnt_text</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">rnnt_text</span> <span class="o">==</span> <span class="n">model</span><span class="o">.</span><span class="n">ignore_id</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span>
-                                <span class="n">rnnt_text</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-        <span class="n">rnnt_text_lengths</span> <span class="o">=</span> <span class="n">text_lengths</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-        <span class="n">encoder_out_lens</span> <span class="o">=</span> <span class="n">encoder_out_lens</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
-        <span class="n">loss</span> <span class="o">=</span> <span class="n">torchaudio</span><span class="o">.</span><span class="n">functional</span><span class="o">.</span><span class="n">rnnt_loss</span><span class="p">(</span><span class="n">joint_out</span><span class="p">,</span>
-                                               <span class="n">rnnt_text</span><span class="p">,</span>
-                                               <span class="n">encoder_out_lens</span><span class="p">,</span>
-                                               <span class="n">rnnt_text_lengths</span><span class="p">,</span>
-                                               <span class="n">blank</span><span class="o">=</span><span class="n">model</span><span class="o">.</span><span class="n">blank</span><span class="p">,</span>
-                                               <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">delay_penalty</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">delay_penalty</span>
         <span class="k">if</span> <span class="n">steps</span> <span class="o">&lt;</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">model</span><span class="o">.</span><span class="n">warmup_steps</span><span class="p">:</span>
