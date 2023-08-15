@@ -112,7 +112,7 @@ void CtcWfstBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
     outputs_.resize(1);
     likelihood_.resize(1);
     kaldi::Lattice lat;
-    decoder_.GetBestPath(&lat, false);
+    decoder_.GetBestPath(&lat, true);
     std::vector<int> alignment;
     kaldi::LatticeWeight weight;
     fst::GetLinearSymbolSequence(lat, &alignment, &outputs_[0], &weight);
