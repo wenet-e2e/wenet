@@ -1,4 +1,35 @@
-# WeNet & Horizon BPU (Cross Compile)
+# WeNet & Horizon BPU (On Board Compile && Using pre-converted model)
+
+* Step 1. Build decoder_main. It requires cmake 3.14 or above.
+```sh
+git clone https://github.com/wenet-e2e/wenet.git
+cd wenet/runtime/horizonbpu
+cmake -B build -DBPU=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF
+cmake --build build
+```
+
+* Step 2. Download pre-converted encoder.bin/ctc.bin via this link: https://github.com/xingchensong/toolchain_pkg/releases
+```sh
+wget https://github.com/xingchensong/toolchain_pkg/releases/download/model_converted_chunksize8_leftchunk16/encoder.bin
+wget https://github.com/xingchensong/toolchain_pkg/releases/download/model_converted_chunksize8_leftchunk16/ctc.bin
+wget https://github.com/xingchensong/toolchain_pkg/releases/download/conformer_subsample8_110M/test_wav.wav
+wget https://github.com/xingchensong/toolchain_pkg/releases/download/conformer_subsample8_110M/units.txt
+```
+
+* Step 3. Testing on X3PI, the RTF(real time factor) is shown in Horizon X3PI's console.
+```sh
+sudo -E LD_LIBRARY_PATH=./fc_base/easy_dnn-src/easy_dnn/0.4.11_linux_aarch64-j5_hobot_gcc9.3.0/files/easy_dnn/lib:./fc_base/easy_dnn-src/dnn/1.7.0_linux_aarch64-j5_hobot_gcc9.3.0/files/dnn/lib:./fc_base/easy_dnn-src/hlog/0.4.7_linux_aarch64-j5_hobot_gcc9.3.0/files/hlog/lib:$LD_LIBRARY_PATH \
+  GLOG_logtostderr=1 GLOG_v=2 \
+  ./build/bin/decoder_main \
+      --chunk_size 8 \
+      --num_left_chunks 16 \
+      --rescoring_weight 0.0 \
+      --wav_path ./test_wav.wav \
+      --bpu_model_dir ./ \
+      --unit_path ./units.txt 2>&1 | tee log.txt
+```
+
+# WeNet & Horizon BPU (Cross Compile && Convert model from scratch)
 
 * Step 1. Setup environment (install horizon packages and cross compile tools) in the PC. (~10min)
 
@@ -78,7 +109,7 @@ scp ./model_subsample8_parameter110M/sample50_chunk8_leftchunk16/hb_makertbin_ou
 
 ``` sh
 cd /path/to/demo
-export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH \
+sudo -E LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH \
   GLOG_logtostderr=1 GLOG_v=2 \
   ./decoder_main \
       --chunk_size 8 \
