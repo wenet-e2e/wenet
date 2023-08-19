@@ -5,7 +5,7 @@
 git clone https://github.com/wenet-e2e/wenet.git
 cd wenet/runtime/horizonbpu
 cmake -B build -DBPU=ON -DONNX=OFF -DTORCH=OFF -DWEBSOCKET=OFF -DGRPC=OFF
-cmake --build build
+cmake --build build --config Release -j 4
 ```
 
 * Step 2. Download pre-converted encoder.bin/ctc.bin via this link: https://github.com/xingchensong/toolchain_pkg/releases
