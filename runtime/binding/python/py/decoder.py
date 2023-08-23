@@ -12,14 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+import sys
+from typing import List, Optional, Union
 
+import librosa
+import numpy as np
 # import torch to avoid libtorch.so not found error
 import torch  # noqa
 
 import _wenet
 
-from .hub import Hub
+from hub import Hub
 
 
 class Decoder:
@@ -87,30 +90,36 @@ class Decoder:
         flag = 1 if continuous_decoding else 0
         _wenet.wenet_set_continuous_decoding(self.d, flag)
 
-    def decode(self, pcm: bytes, last: bool = True) -> str:
-        """ Decode the input data
+    def decode(self,
+               audio: Union[str, bytes, np.ndarray],
+               last: bool = True) -> str:
+        """ Decode the input audio
 
         Args:
-            pcm: wav pcm
-            last: if it is the last package of the data
+            audio: string, bytes, or np.ndarray
+            last: if it is the last package of the data, only for streaming
         """
-        assert isinstance(pcm, bytes)
-        finish = 1 if last else 0
-        result = _wenet.wenet_decode(self.d, pcm, len(pcm), finish)
+        if isinstance(audio, str):
+            data, _ = librosa.load(audio, sr=16000)
+            data = data * (1 << 15)
+            data = data.astype(np.int16).tobytes()
+            finish = 1
+        elif isinstance(audio, np.ndarray):
+            finish = 1 if last else 0
+            if audio.max() < 1:  # the audio is normalized
+                data = data * (1 << 15)
+            data = data.astype(np.int16).tobytes()
+        elif isinstance(audio, bytes):
+            finish = 1 if last else 0
+            data = audio
+        else:
+            print('Unsupport audio type {}'.format(type(audio)))
+            sys.exit(-1)
+        result = _wenet.wenet_decode(self.d, data, len(data), finish)
         if last:  # Reset status for next decoding automatically
             self.reset()
         return result
 
     def decode_wav(self, wav_file: str) -> str:
-        """ Decode wav file, we only support:
-            1. 16k sample rate
-            2. mono channel
-            3. sample widths is 16 bits / 2 bytes
-        """
-        import wave
-        with wave.open(wav_file, 'rb') as fin:
-            assert fin.getnchannels() == 1
-            assert fin.getsampwidth() == 2
-            assert fin.getframerate() == 16000
-            wav = fin.readframes(fin.getnframes())
-        return self.decode(wav, True)
+        """ Deprecated, will remove soon """
+        return self.decode(wav_file)
