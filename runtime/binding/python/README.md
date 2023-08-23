@@ -30,7 +30,6 @@ Note:
 
 ``` python
 import sys
-import torch
 import wenetruntime as wenet
 
 wav_file = sys.argv[1]
@@ -72,7 +71,6 @@ decoder = wenet.Decoder(model_dir,
 
 ``` python
 import sys
-import torch
 import wave
 import wenetruntime as wenet
 
