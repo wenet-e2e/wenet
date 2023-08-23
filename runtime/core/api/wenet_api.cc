@@ -163,8 +163,8 @@ class Recognizer {
         for (const auto& word_piece : decoder_->result()[i].word_pieces) {
           json::JSON piece;
           piece["word"] = word_piece.word;
-          piece["start"] = word_piece.start;
-          piece["end"] = word_piece.end;
+          piece["start"] = static_cast<float>(word_piece.start) / 1000;
+          piece["end"] = static_cast<float>(word_piece.end) / 1000;
           one["word_pieces"].append(piece);
         }
       }
