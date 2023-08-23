@@ -79,8 +79,8 @@ setuptools.setup(
     cmdclass={"build_ext": BuildExtension},
     zip_safe=False,
     setup_requires=["tqdm"],
-    install_requires=["torch>=1.10.0", "librosa" "tqdm"] if "ONNX=ON" not in
-        os.environ.get("WENET_CMAKE_ARGS", "") else ["tqdm"],
+    install_requires=["torch>=1.10.0", "librosa", "tqdm"] if "ONNX=ON" not in
+        os.environ.get("WENET_CMAKE_ARGS", "") else ["librosa", "tqdm"],
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
