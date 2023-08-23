@@ -14,6 +14,9 @@
 
 from typing import List, Optional
 
+# import torch to avoid libtorch.so not found error
+import torch  # noqa
+
 import _wenet
 
 from .hub import Hub
