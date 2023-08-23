@@ -22,7 +22,7 @@ import torch  # noqa
 
 import _wenet
 
-from hub import Hub
+from .hub import Hub
 
 
 class Decoder:
