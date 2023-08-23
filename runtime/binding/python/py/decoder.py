@@ -96,8 +96,7 @@ class Decoder:
         """
         assert isinstance(pcm, bytes)
         finish = 1 if last else 0
-        _wenet.wenet_decode(self.d, pcm, len(pcm), finish)
-        result = _wenet.wenet_get_result(self.d)
+        result = _wenet.wenet_decode(self.d, pcm, len(pcm), finish)
         if last:  # Reset status for next decoding automatically
             self.reset()
         return result
