@@ -1,0 +1,59 @@
+name: Build Docker Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build the wenet docker image
+      run: |
+        cd runtime/libtorch/docker
+        docker build -t wenet:latest .
+        docker image tag wenet:latest ${{ secrets.DOCKERHUB_USERNAME }}/wenet:latest
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/wenet:latest
+
+    - name: Build the wenet-mini docker image
+      run: |
+        rm -rf wenet/*
+        mkdir wenet/lib
+        root_dir=/home/wenet/runtime/libtorch
+        torch_lib=$root_dir/fc_base/libtorch-src/lib
+        fst_lib=$root_dir/fc_base/openfst-build/src/lib/.libs
+        id=$(docker run -d -it ${{ secrets.DOCKERHUB_USERNAME }}/wenet:latest)
+        docker cp $id:$root_dir/build/bin/websocket_server_main wenet
+        docker cp $id:$torch_lib/libc10.so wenet/lib
+        docker cp $id:$torch_lib/libtorch.so wenet/lib
+        docker cp $id:$torch_lib/libtorch_cpu.so wenet/lib
+        docker cp $id:$(docker exec $id sh -c "ls ${torch_lib}/libgomp-*") wenet/lib
+
+        ls -al wenet/lib
+        cat << EOF > run.sh
+        #!/bin/bash
+        export LD_LIBRARY_PATH=/home/wenet/lib
+        export GLOG_logtostderr=1
+        export GLOG_v=2
+
+        model=/home/wenet/model
+        /home/wenet/websocket_server_main \
+          --port 10086 \
+          --chunk_size 16 \
+          --model_path \$model/final.zip \
+          --unit_path \$model/units.txt 2>&1 | tee server.log
+        EOF
+
+        id=$(docker create ubuntu:latest)
+        docker cp run.sh $id:/home
+        docker cp wenet $id:/home
+        docker commit $id wenet-mini:latest
+        docker rm -v $id
+        docker image tag wenet-mini:latest ${{ secrets.DOCKERHUB_USERNAME }}/wenet-mini:latest
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/wenet-mini:latest

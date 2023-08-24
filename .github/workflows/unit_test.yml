@@ -1,0 +1,49 @@
+name: UnitTest
+
+on:
+  pull_request:
+    paths:
+      - '**.py'
+
+jobs:
+  unit-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 20
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.8]
+    steps:
+      - name: Cache Python Packages
+        uses: actions/cache@v1
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/setup.py') }}
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+          architecture: x64
+      - name: Fetch Wenet
+        uses: actions/checkout@v1
+      - name: Checkout PR tip
+        run: |
+          set -eux
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            # We are on a PR, so actions/checkout leaves us on a merge commit.
+            # Check out the actual tip of the branch.
+            git checkout ${{ github.event.pull_request.head.sha }}
+          fi
+          echo ::set-output name=commit_sha::$(git rev-parse HEAD)
+        id: get_pr_tip
+      - name: Install Wenet Dependencies
+        run: |
+          set -eux
+          pip install -r requirements.txt
+      - name: Run Pytest
+        run: |
+          set -eux
+          pytest --version
+          PYTHONPATH="${PYTHONPATH:-}:$(pwd)" pytest -q
+          if [ $? != 0 ]; then exit 1; fi
+

@@ -1,0 +1,57 @@
+name: Build Wheels
+
+on:
+  workflow_dispatch:
+
+env:
+  BINDING_DIR: runtime/binding/python
+  FC_BASE_DIR: runtime/binding/python/fc_base
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      # Used to host cibuildwheel
+      - uses: actions/setup-python@v3
+        with:
+          python-version: '3.6'
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.11.2
+        env:
+          CIBW_BUILD_VERBOSITY: 1
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-*"
+          # Disable building PyPy wheels on all platforms
+          # Skip 32-bit builds
+          CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux_*"
+
+          CIBW_REPAIR_WHEEL_COMMAND_LINUX: >
+            auditwheel repair --exclude libc10.so --exclude libtorch.so --exclude libtorch_cpu.so -w {dest_dir} {wheel}
+          # For MacOS, please see: https://github.com/pypa/cibuildwheel/issues/816
+          CIBW_REPAIR_WHEEL_COMMAND_MACOS: >
+            REPAIR_LIBRARY_PATH=$FC_BASE_DIR/libtorch-src/lib &&
+            DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-listdeps {wheel} &&
+            DYLD_LIBRARY_PATH=$REPAIR_LIBRARY_PATH delocate-wheel --require-archs {delocate_archs} -w {dest_dir} {wheel}
+        with:
+          package-dir: ${{ env.BINDING_DIR }}
+          output-dir: wheelhouse
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
+
+      - name: Publish on pypi.org
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          python -m pip install -U twine
+          python -m twine upload --skip-existing ./wheelhouse/*
+

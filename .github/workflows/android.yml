@@ -1,0 +1,65 @@
+name: Build Android APK & Binary
+
+on:
+  workflow_dispatch:
+    inputs:
+      modelURL:
+        description: 'Model URL'
+        required: true
+        default: https://wenet-1256283475.cos.ap-shanghai.myqcloud.com/models/aishell/20210601_u2%2B%2B_conformer_libtorch.tar.gz
+
+env:
+  ANDROID_DIR: runtime/android
+  RELEASE_DIR: app/build/outputs/apk/release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: set up JDK 11
+      uses: actions/setup-java@v3
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Prepare model
+      run: |
+        wget ${{ github.event.inputs.modelURL}}
+        tar -xf *.tar.gz
+        find . \( -name "final.zip" -o -name "units.txt" \) |\
+          xargs -I  {} cp {} ${{ env.ANDROID_DIR }}/app/src/main/assets
+
+    - name: Build with Gradle
+      run: |
+        cd ${{ env.ANDROID_DIR }}
+        chmod +x gradlew
+        ./gradlew assembleRelease
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-apk
+        path: ${{ env.ANDROID_DIR }}/${{ env.RELEASE_DIR }}
+
+    - name: Prepare Release Binary
+      run: |
+        cd ${{ env.ANDROID_DIR }}
+        for arch in arm64-v8a x86_64; do
+          mkdir $arch
+          cp app/.cxx/cmake/release/$arch/decoder_main $arch
+          cp `find . -name "pytorch_android-*.aar"`/jni/$arch/* $arch
+        done
+
+    - name: Upload arm64-v8a Binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-arm64-v8a-binary
+        path: ${{ env.ANDROID_DIR }}/arm64-v8a
+
+    - name: Upload x86_64 Binary
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-x86_64-binary
+        path: ${{ env.ANDROID_DIR }}/x86_64

@@ -1,0 +1,55 @@
+name: "Check and Publish Docs"
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'docs/**'
+      - 'wenet/**.py'
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'wenet/**.py'
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        torch: ["1.13.1"]
+        python-version: ["3.8"]
+    steps:
+      - uses: actions/checkout@v1
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Build doc
+        shell: bash
+        run: |
+          cd docs
+          python3 -m pip install -r ./requirements.txt
+          make api
+          make html
+
+      # add .nojekyll to notice Pages use the _* dirs
+      - name: copy the generated site
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        run: |
+          mkdir public
+          touch public/.nojekyll
+          cp -r docs/_build/html/* public/
+
+      # push to gh-pages branch
+      - name: github pages deploy
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: peaceiris/actions-gh-pages@v2.3.1
+        env:
+          PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN  }}
+          PUBLISH_BRANCH: gh-pages
+          PUBLISH_DIR: public

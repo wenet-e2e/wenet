@@ -1,0 +1,68 @@
+# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "decoder"
+backend: "onnxruntime"
+default_model_filename: "decoder_fp16.onnx"
+
+max_batch_size: MAX_BATCH
+input [
+  {
+    name: "encoder_out"
+    data_type: TYPE_FP16
+    dims: [-1, D_MODEL]
+  },
+  {
+    name: "encoder_out_lens"
+    data_type: TYPE_INT32
+    dims: [1]
+    reshape: { shape: [ ] }
+  },
+  {
+    name: "hyps_pad_sos_eos"
+    data_type: TYPE_INT64
+    dims: [BEAM_SIZE, -1]
+  },
+ {
+    name: "hyps_lens_sos"
+    data_type: TYPE_INT32
+    dims: [BEAM_SIZE]
+  },
+  {
+    name: "ctc_score"
+    data_type: TYPE_FP16
+    dims: [BEAM_SIZE]
+  }
+]
+
+output [
+   {
+    name: "best_index"
+    data_type: TYPE_INT64
+    dims: [1]
+    reshape: { shape: [ ] }
+  }
+]
+
+dynamic_batching {
+  max_queue_delay_microseconds: MAX_DELAY
+  }
+
+instance_group [
+    {
+      count: INSTANCE_NUM
+      kind: KIND_GPU
+    }
+]
+

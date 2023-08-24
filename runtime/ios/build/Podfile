@@ -1,0 +1,2 @@
+platform :ios, '14.3'
+pod 'LibTorch', '~>1.11.0'

@@ -1,0 +1,37 @@
+name: Build Runtime
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'runtime/**'
+
+env:
+  RUNTIME_DIR: runtime/libtorch
+  FC_BASE_DIR: runtime/libtorch/fc_base
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Cache FC Base
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.FC_BASE_DIR }}
+          key: ${{ runner.os }}-fc-base
+
+      - uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-build
+
+      - name: Build
+        run: |
+          export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+          cd ${{ env.RUNTIME_DIR }}
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j$(nproc)

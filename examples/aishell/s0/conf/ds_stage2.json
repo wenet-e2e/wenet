@@ -1,0 +1,57 @@
+{
+  "train_micro_batch_size_per_gpu": 1,
+  "gradient_accumulation_steps": 1,
+  "steps_per_print": 100,
+  "gradient_clipping": 0.0001,
+  "fp16": {
+    "enabled": false,
+    "auto_cast": false,
+    "loss_scale": 0,
+    "initial_scale_power": 8,
+    "loss_scale_window": 1000,
+    "hysteresis": 2,
+    "min_loss_scale": 1
+  },
+  "bf16": {
+   "enabled": false
+  },
+  "zero_force_ds_cpu_optimizer": false,
+  "zero_optimization": {
+    "stage": 2,
+    "offload_optimizer": {
+      "device": "none",
+      "pin_memory": true
+    },
+    "offload_param": {
+      "device": "none",
+      "pin_memory": true
+    },
+    "allgather_partitions": true,
+    "allgather_bucket_size": 1e7,
+    "overlap_comm": true,
+    "reduce_scatter": true,
+    "reduce_bucket_size": 1e7,
+    "contiguous_gradients" : true
+  },
+  "activation_checkpointing": {
+    "partition_activations": false,
+    "cpu_checkpointing": false,
+    "contiguous_memory_optimization": false,
+    "number_checkpoints": null,
+    "synchronize_checkpoint_boundary": false,
+    "profile": true
+  },
+  "flops_profiler": {
+    "enabled": false,
+    "profile_step": 100,
+    "module_depth": -1,
+    "top_modules": 1,
+    "detailed": true,
+    "output_file": null
+  },
+  "tensorboard": {
+    "enabled": true,
+    "output_path": "tensorboard/ds_logs/",
+    "job_name": "deepspeed"
+  }
+}
