@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-import sys
 
 from .decoder import Decoder
 
