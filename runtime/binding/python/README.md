@@ -32,9 +32,9 @@ Note:
 import sys
 import wenetruntime as wenet
 
-wav_file = sys.argv[1]
+audio_file = sys.argv[1]  # support wav, mp3, flac, etc
 decoder = wenet.Decoder(lang='chs')
-ans = decoder.decode_wav(wav_file)
+ans = decoder.decode(audio_file)
 print(ans)
 ```
 
