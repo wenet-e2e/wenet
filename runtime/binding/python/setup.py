@@ -18,6 +18,7 @@ def cmake_extension(name, *args, **kwargs) -> setuptools.Extension:
 
 
 class BuildExtension(build_ext):
+
     def build_extension(self, ext: setuptools.extension.Extension):
         os.makedirs(self.build_temp, exist_ok=True)
         os.makedirs(self.build_lib, exist_ok=True)
@@ -79,8 +80,13 @@ setuptools.setup(
     cmdclass={"build_ext": BuildExtension},
     zip_safe=False,
     setup_requires=["tqdm"],
-    install_requires=["torch>=1.10.0", "librosa", "tqdm"] if "ONNX=ON" not in
-        os.environ.get("WENET_CMAKE_ARGS", "") else ["librosa", "tqdm"],
+    install_requires=["torch>=1.10.0", "librosa", "tqdm"] if "ONNX=ON"
+    not in os.environ.get("WENET_CMAKE_ARGS", "") else ["librosa", "tqdm"],
+    entry_points={
+        "console_scripts": [
+            "wenetruntime = wenetruntime.main:main",
+        ]
+    },
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
