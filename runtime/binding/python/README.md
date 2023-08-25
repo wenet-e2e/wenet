@@ -19,7 +19,18 @@ Python 3.6+ is required.
 pip3 install wenetruntime
 ```
 
-## Usage
+## Command-line usage
+
+```
+wenetruntime audio.wav
+```
+
+We support mainstream audio formats, such as wav, mp3, flac and so on.
+
+You can specify the language using the `--language` option,
+currently we support `en` (English) and `chs` (中文).
+
+## Programming usage
 
 Note:
 
