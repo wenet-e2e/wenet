@@ -126,8 +126,8 @@ if __name__ == '__main__':
             all_number += number
             wav_number += batch_size
 
-            if wav_number % args.log_interval == 0:
-                print(f'processed {wav_number} wavs, {all_number} frames',file=sys.stderr,flush=True)
+            # if wav_number % args.log_interval == 0:
+                # print(f'processed {wav_number} wavs, {all_number} frames',file=sys.stderr,flush=True)
 
     cmvn_info = {
         'mean_stat': list(all_mean_stat.tolist()),
