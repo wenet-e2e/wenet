@@ -67,6 +67,7 @@ if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
   echo "stage -1: Data Download"
   local/download_and_untar.sh ${data} ${data_url} data_aishell
   local/download_and_untar.sh ${data} ${data_url} resource_aishell
+  readlink -f $(which python)
 fi
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
