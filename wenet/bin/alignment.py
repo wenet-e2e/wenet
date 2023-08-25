@@ -110,7 +110,7 @@ def get_labformat(timestamp, subsample):
                                             char_dict[t[-1]]))
             labformat.append("{:.2f} {:.2f} {}\n".format(
                 begin, begin + duration, char_dict[t[-1]]))
-        else: # last token
+        else: #  last token
             non_blank = 0
             for i in t:
                 if i != 0:
