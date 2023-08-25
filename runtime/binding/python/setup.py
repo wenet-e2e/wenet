@@ -62,17 +62,12 @@ def read_long_description():
     return readme
 
 
-package_name = "wenetruntime"
-
 setuptools.setup(
-    name=package_name,
-    version='1.0.12',
+    name="wenetruntime",
+    version='1.0.13',
     author="Binbin Zhang",
     author_email="binbzha@qq.com",
-    package_dir={
-        package_name: "py",
-    },
-    packages=[package_name],
+    packages=setuptools.find_packages(),
     url="https://github.com/wenet-e2e/wenet",
     long_description=read_long_description(),
     long_description_content_type="text/markdown",
