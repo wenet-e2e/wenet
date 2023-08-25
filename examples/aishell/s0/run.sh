@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash /usr/bin/python
 
 # Copyright 2019 Mobvoi Inc. All Rights Reserved.
 . ./path.sh || exit 1;
