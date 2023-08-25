@@ -43,7 +43,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
         --result_file $ali_result \
         --thres $thres \
         --blank_thres $blank_thres \
-        --gen_praat 
+        --gen_praat
 
 fi
 
