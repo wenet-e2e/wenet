@@ -14,7 +14,7 @@
 
 import argparse
 
-from .decoder import Decoder
+from wenetruntime.decoder import Decoder
 
 
 def get_args():
