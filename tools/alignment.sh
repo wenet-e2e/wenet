@@ -12,6 +12,7 @@ dict=data/dict/lang_char.txt
 dir=exp/
 config=$dir/train.yaml
 # model trained with trim tail will get a better alignment result
+# (Todo) cif/attention/rnnt alignment
 checkpoint=$dir/final.pt
 
 set=test
