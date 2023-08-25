@@ -14,6 +14,7 @@
 
 ## News :fire:
 
+* 2023.8: context biasing with ac automaton, see https://github.com/wenet-e2e/wenet/pull/1937
 * 2022.12: Horizon X3 pi BPU, see https://github.com/wenet-e2e/wenet/pull/1597, Kunlun Core XPU, see https://github.com/wenet-e2e/wenet/pull/1455, Raspberry Pi, see https://github.com/wenet-e2e/wenet/pull/1477, IOS, see https://github.com/wenet-e2e/wenet/pull/1549.
 * 2022.11: TrimTail paper released, see https://arxiv.org/pdf/2211.00522.pdf
 
