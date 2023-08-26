@@ -118,6 +118,9 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   done
 fi
 
+export CUDA_VISIBLE_DEVICES="4,5,6,7"
+echo $CUDA_VISIBLE_DEVICES
+
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   mkdir -p $dir
   # You have to rm `INIT_FILE` manually when you resume or restart a
