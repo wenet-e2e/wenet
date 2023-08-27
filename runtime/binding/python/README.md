@@ -91,7 +91,7 @@ with wave.open(test_wav, 'rb') as fin:
     assert fin.getnchannels() == 1
     wav = fin.readframes(fin.getnframes())
 
-decoder = wenet.Decoder(lang='chs')
+decoder = wenet.Decoder(lang='chs', streaming=True)
 # We suppose the wav is 16k, 16bits, and decode every 0.5 seconds
 interval = int(0.5 * 16000) * 2
 for i in range(0, len(wav), interval):

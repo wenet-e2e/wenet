@@ -15,6 +15,7 @@
 import argparse
 
 from wenetruntime.decoder import Decoder
+from _wenet import wenet_set_log_level as set_log_level  # noqa
 
 
 def get_args():
@@ -23,6 +24,16 @@ def get_args():
                         default='chs',
                         choices=['chs', 'en'],
                         help='select language')
+    parser.add_argument('-c',
+                        '--chunk_size',
+                        default=-1,
+                        type=int,
+                        help='set decoding chunk size')
+    parser.add_argument('-v',
+                        '--verbose',
+                        default=0,
+                        type=int,
+                        help='set log(glog backend) level')
     parser.add_argument('audio', help='input audio file')
     args = parser.parse_args()
     return args
@@ -30,7 +41,9 @@ def get_args():
 
 def main():
     args = get_args()
+    set_log_level(args.verbose)
     decoder = Decoder(lang=args.language)
+    decoder.set_chunk_size(args.chunk_size)
     result = decoder.decode(args.audio)
     print(result)
 

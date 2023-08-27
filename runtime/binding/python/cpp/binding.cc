@@ -18,7 +18,6 @@
 
 namespace py = pybind11;
 
-
 PYBIND11_MODULE(_wenet, m) {
   m.doc() = "wenet pybind11 plugin";  // optional module docstring
   m.def("wenet_init", &wenet_init, py::return_value_policy::reference,
@@ -36,4 +35,6 @@ PYBIND11_MODULE(_wenet, m) {
   m.def("wenet_set_language", &wenet_set_language, "set language");
   m.def("wenet_set_continuous_decoding", &wenet_set_continuous_decoding,
         "enable continuous decoding or not");
+  m.def("wenet_set_chunk_size", &wenet_set_chunk_size,
+        "set decoding chunk size");
 }

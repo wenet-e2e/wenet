@@ -109,6 +109,8 @@ class Recognizer {
     }
     resource_->post_processor =
         std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+    // Init decode options
+    decode_options_->chunk_size = chunk_size_;
     // Init decoder
     decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_, resource_,
                                                    *decode_options_);
@@ -180,6 +182,7 @@ class Recognizer {
   void set_context_score(float score) { context_score_ = score; }
   void set_language(const char* lang) { language_ = lang; }
   void set_continuous_decoding(bool flag) { continuous_decoding_ = flag; }
+  void set_chunk_size(int chunk_size) { chunk_size_ = chunk_size; }
 
  private:
   // NOTE(Binbin Zhang): All use shared_ptr for clone in the future
@@ -197,6 +200,7 @@ class Recognizer {
   float context_score_;
   std::string language_ = "chs";
   bool continuous_decoding_ = false;
+  int chunk_size_ = 16;
 };
 
 void* wenet_init(const char* model_dir) {
@@ -254,4 +258,9 @@ void wenet_set_language(void* decoder, const char* lang) {
 void wenet_set_continuous_decoding(void* decoder, int flag) {
   Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_continuous_decoding(flag > 0);
+}
+
+void wenet_set_chunk_size(void* decoder, int chunk_size) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
+  recognizer->set_chunk_size(chunk_size);
 }
