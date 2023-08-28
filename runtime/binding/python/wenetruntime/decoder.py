@@ -34,7 +34,8 @@ class Decoder:
                  enable_timestamp: bool = False,
                  context: Optional[List[str]] = None,
                  context_score: float = 3.0,
-                 continuous_decoding: bool = False):
+                 continuous_decoding: bool = False,
+                 streaming: bool = False):
         """ Init WeNet decoder
         Args:
             lang: language type of the model
@@ -44,6 +45,7 @@ class Decoder:
             context: context words
             context_score: bonus score when the context is matched
             continuous_decoding: enable countinous decoding or not
+            streaming: streaming mode
         """
         if model_dir is None:
             model_dir = Hub.get_model_by_lang(lang)
@@ -57,6 +59,8 @@ class Decoder:
             self.add_context(context)
             self.set_context_score(context_score)
         self.set_continuous_decoding(continuous_decoding)
+        chunk_size = 16 if streaming else -1
+        self.set_chunk_size(chunk_size)
 
     def __del__(self):
         _wenet.wenet_free(self.d)
@@ -89,6 +93,9 @@ class Decoder:
     def set_continuous_decoding(self, continuous_decoding: bool):
         flag = 1 if continuous_decoding else 0
         _wenet.wenet_set_continuous_decoding(self.d, flag)
+
+    def set_chunk_size(self, chunk_size: int):
+        _wenet.wenet_set_chunk_size(self.d, chunk_size)
 
     def decode(self,
                audio: Union[str, bytes, np.ndarray],

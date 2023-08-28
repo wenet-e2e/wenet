@@ -103,6 +103,10 @@ void wenet_set_log_level(int level);
  */
 void wenet_set_continuous_decoding(void* decoder, int flag);
 
+/** Set chunk size for decoding, -1 for non-streaming decoding
+ */
+void wenet_set_chunk_size(void* decoder, int chunk_size);
+
 #ifdef __cplusplus
 }
 #endif
