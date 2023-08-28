@@ -75,9 +75,9 @@ def get_frames_timestamp(alignment,
             end += 1
         local_start = end - 1
         # find the possible front border for current token
-        while local_start >= start and prob[local_start][0] < math.log(
+        while local_start >= start and (prob[local_start][0] < math.log(
                 blank_thres) or prob[local_start][alignment[
-                    end - 1]] > math.log(thres):
+                    end - 1]] > math.log(thres)):
             alignment[local_start] = alignment[end - 1]
             local_start -= 1
         cur_alignment = alignment[start:end]
