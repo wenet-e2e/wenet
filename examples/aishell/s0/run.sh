@@ -47,7 +47,8 @@ train_set=train
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
-checkpoint=exp/conformer/1.pt
+#checkpoint=exp/conformer/1.pt
+checkpoint=
 num_workers=8
 prefetch=500
 
