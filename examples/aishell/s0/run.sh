@@ -47,8 +47,8 @@ train_set=train
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
-checkpoint=exp/conformer/9.pt
-#checkpoint=
+#checkpoint=exp/conformer/9.pt
+checkpoint=
 num_workers=8
 prefetch=500
 
@@ -119,7 +119,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   done
 fi
 
-export CUDA_VISIBLE_DEVICES="4,5,6,7"
+export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 echo $CUDA_VISIBLE_DEVICES
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
