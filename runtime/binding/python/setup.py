@@ -64,7 +64,7 @@ def read_long_description():
 
 setuptools.setup(
     name="wenetruntime",
-    version='1.0.13',
+    version='1.14.0',
     author="Binbin Zhang",
     author_email="binbzha@qq.com",
     packages=setuptools.find_packages(),
