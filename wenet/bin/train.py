@@ -272,30 +272,25 @@ def main():
 
     # Init asr model from configs
     model = init_model(configs)
-    # print(model) if local_rank == 0 else None
+    print(model) if local_rank == 0 else None
     num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {:,d}'.format(num_params)) if local_rank == 0 else None  # noqa
 
-    if 'context_conf' in configs:
-        for p in model.ctc.parameters():
+    # Freeze other parts of the model during training context bias module
+    if 'context_module_conf' in configs:
+        for p in model.parameters():
             p.requires_grad = False
-        if model.decoder is not None:
-            for p in model.decoder.parameters():
-                p.requires_grad = False
-        for p in model.encoder.embed.parameters():
+        for p in model.context_module.parameters():
+            p.requires_grad = True
+        for p in model.context_module.context_decoder_ctc_linear.parameters():
             p.requires_grad = False
-        for p in model.encoder.after_norm.parameters():
-            p.requires_grad = False
-        for layer in model.encoder.encoders:
-            for p in layer.parameters():
-                p.requires_grad = False
 
-    # !!!IMPORTANT!!!
-    # Try to export the model by script, if fails, we should refine
-    # the code to satisfy the script export requirements
-    if local_rank == 0:
-        script_model = torch.jit.script(model)
-        script_model.save(os.path.join(args.model_dir, 'init.zip'))
+    # # !!!IMPORTANT!!!
+    # # Try to export the model by script, if fails, we should refine
+    # # the code to satisfy the script export requirements
+    # if local_rank == 0:
+    #     script_model = torch.jit.script(model)
+    #     script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:

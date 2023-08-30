@@ -117,15 +117,17 @@ class ASRModel(torch.nn.Module):
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # 1a. Context biasing branch
+        loss_bias: Optional[torch.Tensor] = None
         if self.context_module is not None:
             context_emb = self.context_module. \
                 forward_context_emb(context_list, context_list_lengths)
             encoder_out, bias_out = self.context_module(context_emb,
-                                                            encoder_out)
+                                                        encoder_out)
             bias_out = bias_out.transpose(0, 1).log_softmax(2)
             loss_bias = self.context_module.bias_loss(bias_out, context_label,
                                                       encoder_out_lens,
                                                       context_label_lengths)
+            loss_bias /= bias_out.size(1)
         else:
             loss_bias = None
 
@@ -147,14 +149,15 @@ class ASRModel(torch.nn.Module):
         else:
             loss_ctc = None
 
-        # TODO: 找出jit导出不成功的原因
         if loss_ctc is None:
             loss = loss_att
         elif loss_att is None:
             loss = loss_ctc
         else:
             loss = self.ctc_weight * loss_ctc + (1 - self.ctc_weight) * \
-                loss_att + self.bias_weight * loss_bias
+                loss_att
+        if loss_bias is not None:
+            loss = loss + self.bias_weight * loss_bias
 
         return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc,
                 "loss_bias": loss_bias}
@@ -386,6 +389,7 @@ class ASRModel(torch.nn.Module):
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
         context_graph: ContextGraph = None,
+        context_filtering: bool = True,
     ) -> Tuple[List[List[int]], torch.Tensor]:
         """ CTC prefix beam search inner implementation
 
@@ -417,6 +421,24 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size,
             num_decoding_left_chunks,
             simulate_streaming)  # (B, maxlen, encoder_dim)
+
+        if context_graph is not None and context_graph.deep_biasing:
+            if context_filtering:
+                ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
+                filtered_context_list = \
+                    context_graph.tow_stage_filtering(context_graph.context_list,
+                                                      ctc_probs, -6)
+                context_list, context_list_lengths = \
+                    context_graph.get_context_list_tensor(filtered_context_list)
+            else:
+                context_list, context_list_lengths = \
+                    context_graph.get_context_list_tensor(context_graph.context_list)
+            context_emb = self.context_module. \
+                forward_context_emb(context_list, context_list_lengths)
+            encoder_out, _ = \
+                self.context_module(context_emb, encoder_out,
+                                    context_graph.deep_biasing_weight, True)
+
         maxlen = encoder_out.size(1)
         ctc_probs = self.ctc.log_softmax(
             encoder_out)  # (1, maxlen, vocab_size)
@@ -451,7 +473,7 @@ class ASRModel(torch.nn.Module):
                         n_prefix = prefix + (s, )
                         n_pb, n_pnb, _, _ = next_hyps[n_prefix]
                         new_c_state, new_c_score = 0, 0
-                        if context_graph is not None:
+                        if context_graph is not None and context_graph.graph_biasing:
                             new_c_state, new_c_score = context_graph. \
                                 find_next_state(c_state, s)
                         n_pnb = log_add([n_pnb, pb + ps])
@@ -461,7 +483,7 @@ class ASRModel(torch.nn.Module):
                         n_prefix = prefix + (s, )
                         n_pb, n_pnb, _, _ = next_hyps[n_prefix]
                         new_c_state, new_c_score = 0, 0
-                        if context_graph is not None:
+                        if context_graph is not None and context_graph.graph_biasing:
                             new_c_state, new_c_score = context_graph. \
                                 find_next_state(c_state, s)
                         n_pnb = log_add([n_pnb, pb + ps, pnb + ps])

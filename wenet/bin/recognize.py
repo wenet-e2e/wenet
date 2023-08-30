@@ -172,7 +172,7 @@ def get_args():
                         help='Context list path')
     parser.add_argument('--context_graph_score',
                         type=float,
-                        default=0.0,
+                        default=2.0,
                         help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
 
@@ -225,6 +225,9 @@ def main():
     test_conf['batch_conf']['batch_size'] = args.batch_size
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    if 'context_conf' in test_conf:
+        del test_conf['context_conf']
+
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            symbol_table,
@@ -256,17 +259,26 @@ def main():
         paraformer_beam_search = None
 
     context_graph = None
-    if 'decoding-graph' in args.context_bias_mode:
+    if args.context_bias_mode != '':
         context_graph = ContextGraph(args.context_list_path, symbol_table,
                                      args.bpe_model, args.context_graph_score)
+    if 'deep-biasing' in args.context_bias_mode:
+        context_graph.deep_biasing = True
+    if 'decoding-graph' in args.context_bias_mode:
+        context_graph.graph_biasing = True
+    if 'deep-biasing' in args.context_bias_mode and \
+       'decoding-graph' in args.context_bias_mode:
+        context_graph.deep_biasing_weight = 1.0
+        context_graph.graph_biasing_weight = 0.7
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
-            keys, feats, target, feats_lengths, target_lengths = batch
+            keys, feats, target, feats_lengths, target_lengths, _, _, _, _ = batch
             feats = feats.to(device)
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
+
             if args.mode == 'attention':
                 hyps, _ = model.recognize(
                     feats,

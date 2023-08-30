@@ -86,31 +86,35 @@ class ContextModule(torch.nn.Module):
             dropout_rate=self.dropout_rate
         )
 
-        self.combiner = nn.Sequential(
-            nn.Linear(self.embedding_size, self.embedding_size),
-            nn.LayerNorm(self.embedding_size)
-        )
+        self.combiner = nn.Linear(self.embedding_size, self.embedding_size)
         self.norm_aft_combiner = nn.LayerNorm(self.embedding_size)
 
         self.context_decoder = nn.Sequential(
             nn.Linear(self.embedding_size, self.embedding_size),
             nn.LayerNorm(self.embedding_size),
             nn.ReLU(inplace=True),
-            nn.Linear(self.embedding_size, self.vocab_size),
         )
+        self.context_decoder_ctc_linear = nn.Linear(self.embedding_size,
+                                                    self.vocab_size)
 
-        self.bias_loss = torch.nn.CTCLoss(reduction="sum")
+        self.bias_loss = torch.nn.CTCLoss(reduction="sum", zero_infinity=True)
 
     def forward_context_emb(self, context_list, context_lengths) -> torch.Tensor:
         context_emb = self.context_extractor(context_list, context_lengths)
         context_emb = self.context_encoder(context_emb.unsqueeze(0))
         return context_emb
 
-    def forward(self, context_emb, encoder_out) -> Tuple[torch.Tensor, torch.Tensor]:
-        context_emb = context_emb.expand(encoder_out.shape[0],-1,-1)
+    def forward(self, context_emb, encoder_out,
+                biasing_weight=1.0, recognize=False) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
+        context_emb = context_emb.expand(encoder_out.shape[0], -1, -1)
         context_emb, _ = self.biasing_layer(encoder_out, context_emb,
                                             context_emb)
+        encoder_bias_out = \
+            self.norm_aft_combiner(encoder_out +
+                                   self.combiner(context_emb) * biasing_weight)
+        if recognize:
+            return encoder_bias_out, torch.tensor(0.0)
         bias_out = self.context_decoder(context_emb)
-        encoder_bias_out = self.norm_aft_combiner(encoder_out +
-                                self.combiner(context_emb))
+        bias_out = self.context_decoder_ctc_linear(bias_out)
         return encoder_bias_out, bias_out

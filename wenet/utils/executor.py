@@ -61,8 +61,8 @@ class Executor:
         with model_context():
             for batch_idx, batch in enumerate(data_loader):
                 key, feats, target, feats_lengths, target_lengths, \
-                context_list, context_label, context_list_lengths, \
-                context_label_lengths = batch
+                    context_list, context_label, context_list_lengths, \
+                    context_label_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)
                 feats_lengths = feats_lengths.to(device)
@@ -91,10 +91,11 @@ class Executor:
                             dtype=ds_dtype, cache_enabled=False
                         ):
                             loss_dict = model(feats, feats_lengths, target,
-                                              target_lengths, context_list,
-                                              context_label,
-                                              context_list_lengths,
-                                              context_label_lengths)
+                                              target_lengths, 
+                                              context_list=context_list,
+                                              context_label=context_label,
+                                              context_list_lengths=context_list_lengths,
+                                              context_label_lengths=context_label_lengths)
                         loss = loss_dict['loss']
                         # NOTE(xcsong): Zeroing the gradients is handled automatically by DeepSpeed after the weights # noqa
                         #   have been updated using a mini-batch. DeepSpeed also performs gradient averaging automatically # noqa
@@ -108,10 +109,11 @@ class Executor:
                         # https://pytorch.org/docs/stable/notes/amp_examples.html
                         with torch.cuda.amp.autocast(scaler is not None):
                             loss_dict = model(feats, feats_lengths, target,
-                                              target_lengths, context_list,
-                                              context_label,
-                                              context_list_lengths,
-                                              context_label_lengths)
+                                              target_lengths, 
+                                              context_list=context_list,
+                                              context_label=context_label,
+                                              context_list_lengths=context_list_lengths,
+                                              context_label_lengths=context_label_lengths)
                             loss = loss_dict['loss'] / accum_grad
                         if use_amp:
                             scaler.scale(loss).backward()
@@ -183,8 +185,8 @@ class Executor:
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
                 key, feats, target, feats_lengths, target_lengths, \
-                context_list, context_label, context_list_lengths, \
-                context_label_lengths = batch
+                    context_list, context_label, context_list_lengths, \
+                    context_label_lengths = batch
                 feats = feats.to(device)
                 target = target.to(device)
                 feats_lengths = feats_lengths.to(device)
@@ -202,14 +204,18 @@ class Executor:
                         dtype=ds_dtype, cache_enabled=False
                     ):
                         loss_dict = model(feats, feats_lengths, target,
-                                          target_lengths, context_list,
-                                          context_label, context_list_lengths,
-                                          context_label_lengths)
+                                          target_lengths, 
+                                          context_list=context_list,
+                                          context_label=context_label,
+                                          context_list_lengths=context_list_lengths,
+                                          context_label_lengths=context_label_lengths)
                 else:
                     loss_dict = model(feats, feats_lengths, target,
-                                      target_lengths, context_list,
-                                      context_label, context_list_lengths,
-                                      context_label_lengths)
+                                      target_lengths, 
+                                      context_list=context_list,
+                                      context_label=context_label,
+                                      context_list_lengths=context_list_lengths,
+                                      context_label_lengths=context_label_lengths)
                 loss = loss_dict['loss']
                 if torch.isfinite(loss):
                     num_seen_utts += num_utts

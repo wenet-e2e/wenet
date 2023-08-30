@@ -674,12 +674,12 @@ def context_sampling(data,
         context_list = context_list_over_all.copy()
         context_list.insert(0, [0])
         for i in range(len(context_list)):
-            context_list[i] = torch.tensor(context_list[i], dtype=torch.int64)
+            context_list[i] = torch.tensor(context_list[i], dtype=torch.int32)
         sample[0]['context_list'] = context_list
         yield sample
 
 
-def context_label_generate(label=[], context_list=[]):
+def context_label_generate(label, context_list):
     """ generate context label
 
         Args:
@@ -687,7 +687,6 @@ def context_label_generate(label=[], context_list=[]):
         Returns
     """
     context_labels = []
-    context_label_length = []
     for x in label:
         cur_len = len(x)
         context_label = []
@@ -741,23 +740,23 @@ def padding(data):
             yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
                    label_lengths, torch.tensor([0]), torch.tensor([0]),
                    torch.tensor([0]), torch.tensor([0]))
-        
-        context_lists = sample[0]['context_list']
-        context_list_lengths = torch.tensor([x.size(0)
-            for x in context_lists], dtype=torch.int32)
-        padding_context_lists = pad_sequence(context_lists,
-                                             batch_first=True,
-                                             padding_value=-1)
-        
-        
-        sorted_context_labels = context_label_generate(sorted_labels,
-                                                       context_lists)
-        context_label_lengths = torch.tensor([x.size(0)
-            for x in sorted_context_labels], dtype=torch.int32)
-        padding_context_labels = pad_sequence(sorted_context_labels,
-                                             batch_first=True,
-                                             padding_value=-1)
-        yield (sorted_keys, padded_feats, padding_labels,
-               feats_lengths, label_lengths, padding_context_lists, 
-               padding_context_labels, context_list_lengths,
-               context_label_lengths)
+        else:
+            context_lists = sample[0]['context_list']
+            context_list_lengths = \
+                torch.tensor([x.size(0) for x in context_lists], dtype=torch.int32)
+            padding_context_lists = pad_sequence(context_lists,
+                                                 batch_first=True,
+                                                 padding_value=-1)
+
+            sorted_context_labels = context_label_generate(sorted_labels,
+                                                           context_lists)
+            context_label_lengths = \
+                torch.tensor([x.size(0) for x in sorted_context_labels],
+                             dtype=torch.int32)
+            padding_context_labels = pad_sequence(sorted_context_labels,
+                                                  batch_first=True,
+                                                  padding_value=-1)
+            yield (sorted_keys, padded_feats, padding_labels,
+                   feats_lengths, label_lengths, padding_context_lists, 
+                   padding_context_labels, context_list_lengths,
+                   context_label_lengths)

@@ -116,6 +116,7 @@ def init_model(configs):
                            attention_decoder=decoder,
                            joint=joint,
                            ctc=ctc,
+                           context_module=context_module,
                            **configs['model_conf'])
     elif 'paraformer' in configs:
         predictor = Predictor(**configs['cif_predictor_conf'])
