@@ -349,7 +349,7 @@ def tokenize(data,
              bpe_model=None,
              non_lang_syms=None,
              split_with_space=False,
-             special_tokens=['<unk>']):
+             special_tokens=('<unk>',)):
     """ Decode text to chars or BPE
         Inplace operation
 
