@@ -321,7 +321,7 @@ def compute_mfcc(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
-def __tokenize_by_bpe_model(sp, txt):
+def __tokenize_by_bpe_model(sp, txt, special_tokens):
     tokens = []
     # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
     # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
@@ -329,7 +329,7 @@ def __tokenize_by_bpe_model(sp, txt):
     # Example:
     #   txt   = "你好 ITS'S OKAY 的"
     #   chars = ["你", "好", " ITS'S OKAY ", "的"]
-    chars = pattern.split(txt.upper())
+    chars = pattern.split(get_upper_txt(txt, special_tokens))
     mix_chars = [w for w in chars if len(w.strip()) > 0]
     for ch_or_w in mix_chars:
         # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
@@ -348,7 +348,8 @@ def tokenize(data,
              symbol_table,
              bpe_model=None,
              non_lang_syms=None,
-             split_with_space=False):
+             split_with_space=False,
+             special_tokens=['<unk>']):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -375,7 +376,7 @@ def tokenize(data,
         assert 'txt' in sample
         txt = sample['txt'].strip()
         if non_lang_syms_pattern is not None:
-            parts = non_lang_syms_pattern.split(txt.upper())
+            parts = non_lang_syms_pattern.split(get_upper_txt(txt, special_tokens))
             parts = [w for w in parts if len(w.strip()) > 0]
         else:
             parts = [txt]
@@ -387,7 +388,7 @@ def tokenize(data,
                 tokens.append(part)
             else:
                 if bpe_model is not None:
-                    tokens.extend(__tokenize_by_bpe_model(sp, part))
+                    tokens.extend(__tokenize_by_bpe_model(sp, part, special_tokens))
                 else:
                     if split_with_space:
                         part = part.split(" ")
@@ -405,6 +406,22 @@ def tokenize(data,
         sample['tokens'] = tokens
         sample['label'] = label
         yield sample
+
+
+def get_upper_txt(txt, special_tokens):
+    """Capitalize except for special tokens
+
+    Args:
+        txt (str)
+        special_token (List[str])
+
+    Returns:
+        str
+    """
+    txt = txt.upper()
+    for token in special_tokens:
+        txt = re.subn(token.upper(), token, txt)
+    return txt
 
 
 def spec_aug(data, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
