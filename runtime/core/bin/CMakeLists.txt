@@ -1,7 +1,7 @@
 add_executable(decoder_main decoder_main.cc)
 target_link_libraries(decoder_main PUBLIC decoder)
 if(IPEX)
-  target_link_libraries(decoder_main PUBLIC "-Wl,--no-as-needed ${IPEX_CPU_CORE_LIBRARY}")
+  target_link_libraries(decoder_main PUBLIC "${TORCH_IPEX_LIBRARIES}")
 endif()
 
 add_executable(label_checker_main label_checker_main.cc)
