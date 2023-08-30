@@ -11,7 +11,9 @@ decoder = wenet.Decoder(lang='chs',
                         nbest=5,
                         enable_timestamp=True,
                         context=['宜享花','榕树','小辉贷'],
-                        context_score=3.0)
+                        context_score=3.0,
+                        model_dir='E:\\wenet\\pretrained\\runtime\\wenetspeech_u2pp_conformer_libtorch\\20220506_u2pp_conformer_libtorch')
+                        # model_dir='E:\\wenet\\pretrained\\runtime\\aishell_u2pp_conformer_libtorch\\aishell_u2pp_conformer_libtorch')
 
 def recognition(audio):
     sr, y = audio
@@ -27,7 +29,7 @@ def recognition(audio):
 
 print("\n===> Loading the ASR model ...")
 print("===> Warming up by 100 randomly-generated audios ... Please wait ...\n")
-for i in range(10):
+for i in range(100):
     audio_len = np.random.randint(16000 * 3, 16000 * 10)  # 3~10s
     audio = np.random.randint(-32768, 32768, size=audio_len, dtype=np.int16)
     ans = decoder.decode(audio.tobytes(), True)
