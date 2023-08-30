@@ -34,14 +34,7 @@ void wenet_free(void* decoder);
  */
 void wenet_reset(void* decoder);
 
-/** Decode the input wav data
- * @param data: pcm data, encoded as int16_t(16 bits)
- * @param len: data length
- * @param last: if it is the last package
- */
-void wenet_decode(void* decoder, const char* data, int len, int last);
-
-/** Get decode result in json format
+/** Decode the input wav data and get decode result in json format
  *  It returns partial result when last is 0
  *  It returns final result when last is 1
 
@@ -68,7 +61,13 @@ void wenet_decode(void* decoder, const char* data, int len, int last);
     "nbest": nbest is enabled when n > 1 in final_result
         "sentence": the ASR result
         "word_pieces": optional, output timestamp when enabled
+
+ * @param data: pcm data, encoded as int16_t(16 bits)
+ * @param len: data length
+ * @param last: if it is the last package
  */
+const char* wenet_decode(void* decoder, const char* data, int len, int last);
+
 const char* wenet_get_result(void* decoder);
 
 /** Set n-best, range 1~10
@@ -103,6 +102,10 @@ void wenet_set_log_level(int level);
  *  flag > 0: enable, otherwise disable
  */
 void wenet_set_continuous_decoding(void* decoder, int flag);
+
+/** Set chunk size for decoding, -1 for non-streaming decoding
+ */
+void wenet_set_chunk_size(void* decoder, int chunk_size);
 
 #ifdef __cplusplus
 }

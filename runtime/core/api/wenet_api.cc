@@ -89,7 +89,6 @@ class Recognizer {
     if (decoder_ != nullptr) {
       decoder_->Reset();
     }
-    result_.clear();
   }
 
   void InitDecoder() {
@@ -110,12 +109,14 @@ class Recognizer {
     }
     resource_->post_processor =
         std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+    // Init decode options
+    decode_options_->chunk_size = chunk_size_;
     // Init decoder
     decoder_ = std::make_shared<wenet::AsrDecoder>(feature_pipeline_, resource_,
                                                    *decode_options_);
   }
 
-  void Decode(const char* data, int len, int last) {
+  std::string Decode(const char* data, int len, int last) {
     using wenet::DecodeState;
     // Init decoder when it is called first time
     if (decoder_ == nullptr) {
@@ -129,25 +130,29 @@ class Recognizer {
       feature_pipeline_->set_input_finished();
     }
 
+    std::string result = "{}";  // empty json
     while (true) {
       DecodeState state = decoder_->Decode(false);
       if (state == DecodeState::kWaitFeats) {
+        result = UpdateResult(false);
         break;
       } else if (state == DecodeState::kEndFeats) {
         decoder_->Rescoring();
-        UpdateResult(true);
+        result = UpdateResult(true);
         break;
       } else if (state == DecodeState::kEndpoint && continuous_decoding_) {
         decoder_->Rescoring();
-        UpdateResult(true);
+        result = UpdateResult(true);
         decoder_->ResetContinuousDecoding();
+        break;
       } else {  // kEndBatch
-        UpdateResult(false);
+        result = UpdateResult(false);
       }
     }
+    return result;
   }
 
-  void UpdateResult(bool final_result) {
+  std::string UpdateResult(bool final_result) {
     json::JSON obj;
     obj["type"] = final_result ? "final_result" : "partial_result";
     int nbest = final_result ? nbest_ : 1;
@@ -160,18 +165,16 @@ class Recognizer {
         for (const auto& word_piece : decoder_->result()[i].word_pieces) {
           json::JSON piece;
           piece["word"] = word_piece.word;
-          piece["start"] = word_piece.start;
-          piece["end"] = word_piece.end;
+          piece["start"] = static_cast<float>(word_piece.start) / 1000;
+          piece["end"] = static_cast<float>(word_piece.end) / 1000;
           one["word_pieces"].append(piece);
         }
       }
       one["sentence"] = decoder_->result()[i].sentence;
       obj["nbest"].append(one);
     }
-    result_ = obj.dump();
+    return obj.dump();
   }
-
-  const char* GetResult() { return result_.c_str(); }
 
   void set_nbest(int n) { nbest_ = n; }
   void set_enable_timestamp(bool flag) { enable_timestamp_ = flag; }
@@ -179,6 +182,7 @@ class Recognizer {
   void set_context_score(float score) { context_score_ = score; }
   void set_language(const char* lang) { language_ = lang; }
   void set_continuous_decoding(bool flag) { continuous_decoding_ = flag; }
+  void set_chunk_size(int chunk_size) { chunk_size_ = chunk_size; }
 
  private:
   // NOTE(Binbin Zhang): All use shared_ptr for clone in the future
@@ -191,12 +195,12 @@ class Recognizer {
   std::shared_ptr<wenet::PostProcessOptions> post_process_opts_ = nullptr;
 
   int nbest_ = 1;
-  std::string result_;
   bool enable_timestamp_ = false;
   std::vector<std::string> context_;
   float context_score_;
   std::string language_ = "chs";
   bool continuous_decoding_ = false;
+  int chunk_size_ = 16;
 };
 
 void* wenet_init(const char* model_dir) {
@@ -213,14 +217,11 @@ void wenet_reset(void* decoder) {
   recognizer->Reset();
 }
 
-void wenet_decode(void* decoder, const char* data, int len, int last) {
+const char* wenet_decode(void* decoder, const char* data, int len, int last) {
+  static std::string result;
   Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
-  recognizer->Decode(data, len, last);
-}
-
-const char* wenet_get_result(void* decoder) {
-  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
-  return recognizer->GetResult();
+  result = recognizer->Decode(data, len, last);
+  return result.c_str();
 }
 
 void wenet_set_log_level(int level) {
@@ -257,4 +258,9 @@ void wenet_set_language(void* decoder, const char* lang) {
 void wenet_set_continuous_decoding(void* decoder, int flag) {
   Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_continuous_decoding(flag > 0);
+}
+
+void wenet_set_chunk_size(void* decoder, int chunk_size) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
+  recognizer->set_chunk_size(chunk_size);
 }

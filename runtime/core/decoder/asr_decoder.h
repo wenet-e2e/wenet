@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -71,6 +72,7 @@ struct WordPiece {
 struct DecodeResult {
   float score = -kFloatMax;
   std::string sentence;
+  std::unordered_set<std::string> contexts;
   std::vector<WordPiece> word_pieces;
 
   static bool CompareFunc(const DecodeResult& a, const DecodeResult& b) {
@@ -136,6 +138,7 @@ class AsrDecoder {
   std::shared_ptr<FeaturePipeline> feature_pipeline_;
   std::shared_ptr<AsrModel> model_;
   std::shared_ptr<PostProcessor> post_processor_;
+  std::shared_ptr<ContextGraph> context_graph_;
 
   std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
   // output symbol table

@@ -14,6 +14,8 @@
 
 #include "decoder/context_graph.h"
 
+#include <fstream>
+#include <queue>
 #include <utility>
 
 #include "fst/determinize.h"
@@ -23,141 +25,30 @@
 
 namespace wenet {
 
-ContextGraph::ContextGraph(ContextConfig config) : config_(config) {}
-
-void ContextGraph::BuildContextGraph(
-    const std::vector<std::string>& query_contexts,
-    const std::shared_ptr<fst::SymbolTable>& symbol_table) {
-  CHECK(symbol_table != nullptr) << "Symbols table should not be nullptr!";
-  start_tag_id_ = symbol_table->AddSymbol("<context>");
-  end_tag_id_ = symbol_table->AddSymbol("</context>");
-  symbol_table_ = symbol_table;
-  if (query_contexts.empty()) {
-    if (graph_ != nullptr) graph_.reset();
-    return;
-  }
-
-  std::unique_ptr<fst::StdVectorFst> ofst(new fst::StdVectorFst());
-  // State 0 is the start state and the final state.
-  int start_state = ofst->AddState();
-  ofst->SetStart(start_state);
-  ofst->SetFinal(start_state, fst::StdArc::Weight::One());
-
-  LOG(INFO) << "Contexts count size: " << query_contexts.size();
-  int count = 0;
-  for (const auto& context : query_contexts) {
-    if (context.size() > config_.max_context_length) {
-      LOG(INFO) << "Skip long context: " << context;
-      continue;
-    }
-    if (++count > config_.max_contexts) break;
-
-    std::vector<std::string> words;
-    // Split context to words by symbol table, and build the context graph.
-    bool no_oov = SplitUTF8StringToWords(Trim(context), symbol_table, &words);
-    if (!no_oov) {
-      LOG(WARNING) << "Ignore unknown word found during compilation.";
-      continue;
-    }
-
-    int prev_state = start_state;
-    int next_state = start_state;
-    float escape_score = 0;
-    for (size_t i = 0; i < words.size(); ++i) {
-      int word_id = symbol_table_->Find(words[i]);
-      float score =
-          (i * config_.incremental_context_score + config_.context_score) *
-          UTF8StringLength(words[i]);
-      if (IsAlpha(words[i]) || words[i][0] == kSpaceSymbol[0]) {
-        score = i * config_.incremental_context_score + config_.context_score;
-      }
-      next_state = (i < words.size() - 1) ? ofst->AddState() : start_state;
-      ofst->AddArc(prev_state,
-                   fst::StdArc(word_id, word_id, score, next_state));
-      // Add escape arc to clean the previous context score.
-      if (i > 0) {
-        // ilabel and olabel of the escape arc is 0 (<epsilon>).
-        ofst->AddArc(prev_state, fst::StdArc(0, 0, -escape_score, start_state));
-      }
-      prev_state = next_state;
-      escape_score += score;
-    }
-  }
-  std::unique_ptr<fst::StdVectorFst> det_fst(new fst::StdVectorFst());
-  fst::Determinize(*ofst, det_fst.get());
-  graph_ = std::move(det_fst);
-}
-
-int ContextGraph::GetNextState(int cur_state, int word_id, float* score,
-                               bool* is_start_boundary, bool* is_end_boundary) {
-  int next_state = 0;
-  for (fst::ArcIterator<fst::StdFst> aiter(*graph_, cur_state); !aiter.Done();
-       aiter.Next()) {
-    const fst::StdArc& arc = aiter.Value();
-    if (arc.ilabel == 0) {
-      // escape score, will be overwritten when ilabel equals to word id.
-      *score = arc.weight.Value();
-    } else if (arc.ilabel == word_id) {
-      next_state = arc.nextstate;
-      *score = arc.weight.Value();
-      if (cur_state == 0) {
-        *is_start_boundary = true;
-      }
-      if (graph_->Final(arc.nextstate) == fst::StdArc::Weight::One()) {
-        *is_end_boundary = true;
-      }
-      break;
-    }
-  }
-  if (next_state != 0) {
-    return next_state;
-  }
-  for (fst::ArcIterator<fst::StdFst> aiter(*graph_, 0); !aiter.Done();
-       aiter.Next()) {
-    const fst::StdArc& arc = aiter.Value();
-    if (arc.ilabel == word_id) {
-      next_state = arc.nextstate;
-      *score += arc.weight.Value();
-      if (cur_state == 0) {
-        *is_start_boundary = true;
-      }
-      if (graph_->Final(arc.nextstate) == fst::StdArc::Weight::One()) {
-        *is_end_boundary = true;
-      }
-      break;
-    }
-  }
-  return next_state;
-}
-
-bool ContextGraph::SplitUTF8StringToWords(
-    const std::string& str,
-    const std::shared_ptr<fst::SymbolTable>& symbol_table,
-    std::vector<std::string>* words) {
+// Split the UTF-8 string into unit ids according to unit_table
+bool SplitContextToUnits(const std::string& context,
+                         const std::shared_ptr<fst::SymbolTable>& unit_table,
+                         std::vector<int>* units) {
   std::vector<std::string> chars;
-  SplitUTF8StringToChars(Trim(str), &chars);
+  SplitUTF8StringToChars(context, &chars);
 
   bool no_oov = true;
   bool beginning = true;
   for (size_t start = 0; start < chars.size();) {
     for (size_t end = chars.size(); end > start; --end) {
-      std::string word;
+      std::string unit;
       for (size_t i = start; i < end; i++) {
-        word += chars[i];
-      }
-      // Skip space.
-      if (word == " ") {
-        start = end;
-        beginning = true;
-        continue;
+        unit += chars[i];
       }
       // Add '▁' at the beginning of English word.
-      if (IsAlpha(word) && beginning) {
-        word = kSpaceSymbol + word;
+      // TODO(zhendong.peng): Support bpe model
+      if (IsAlpha(unit) && beginning) {
+        unit = kSpaceSymbol + unit;
       }
 
-      if (symbol_table->Find(word) != -1) {
-        words->emplace_back(word);
+      int unit_id = unit_table->Find(unit);
+      if (unit_id != -1) {
+        units->emplace_back(unit_id);
         start = end;
         beginning = false;
         continue;
@@ -165,18 +56,197 @@ bool ContextGraph::SplitUTF8StringToWords(
 
       if (end == start + 1) {
         // Matching using '▁' separately for English
-        if (word[0] == kSpaceSymbol[0]) {
-          words->emplace_back(string(kSpaceSymbol));
+        if (unit[0] == kSpaceSymbol[0]) {
+          units->emplace_back(unit_table->Find(kSpaceSymbol));
           beginning = false;
           break;
         }
         ++start;
+        if (unit == " ") {
+          beginning = true;
+          continue;
+        }
         no_oov = false;
-        LOG(WARNING) << word << " is oov.";
+        LOG(WARNING) << unit << " is oov.";
       }
     }
   }
   return no_oov;
+}
+
+ContextGraph::ContextGraph(ContextConfig config) : config_(config) {}
+
+int ContextGraph::TraceContext(int cur_state, int unit_id, int* final_state) {
+  CHECK_GE(cur_state, 0);
+  int next_state = 0;
+  Matcher matcher(*graph_, fst::MATCH_INPUT);
+  matcher.SetState(cur_state);
+  if (matcher.Find(unit_id)) {
+    next_state = matcher.Value().nextstate;
+    if (graph_->Final(next_state) != Weight::Zero()) {
+      *final_state = next_state;
+    }
+    return next_state;
+  }
+  LOG(FATAL) << "Trace context failed.";
+}
+
+void ContextGraph::BuildContextGraph(
+    const std::vector<std::string>& contexts,
+    const std::shared_ptr<fst::SymbolTable>& unit_table) {
+  // Split context phrase into unit ids according to the `unit_table`
+  std::unordered_map<std::string, std::vector<int>> context_units;
+  for (const auto& context : contexts) {
+    std::vector<int> units;
+    bool no_oov = SplitContextToUnits(context, unit_table, &units);
+    if (!no_oov) {
+      LOG(WARNING) << "Ignore unknown unit found during compilation.";
+      continue;
+    }
+    context_units[context] = units;
+  }
+
+  // Build the context graph
+  std::unique_ptr<fst::StdVectorFst> ofst(new fst::StdVectorFst());
+  int start_state = ofst->AddState();
+  ofst->SetStart(start_state);
+  for (const auto& context : contexts) {
+    if (context_units.count(context) == 0) continue;
+    std::vector<int> units = context_units[context];
+    int state = start_state;
+    int next_state = state;
+    for (size_t i = 0; i < units.size(); ++i) {
+      next_state = ofst->AddState();
+      if (i == units.size() - 1) {
+        ofst->SetFinal(next_state, Weight::One());
+      }
+      float score =
+          i * config_.incremental_context_score + config_.context_score;
+      ofst->AddArc(state, fst::StdArc(units[i], units[i], score, next_state));
+      state = next_state;
+    }
+  }
+  graph_ = std::unique_ptr<fst::StdVectorFst>(new fst::StdVectorFst());
+  // input/output label are sorted after Determinize
+  fst::Determinize(*ofst, graph_.get());
+
+  // Determinize will change the final state id
+  for (const auto& context : contexts) {
+    if (context_units.count(context) == 0) continue;
+    std::vector<int> units = context_units[context];
+    int final_state = -1;
+    int cur_state = 0;
+    for (int unit : units) {
+      cur_state = TraceContext(cur_state, unit, &final_state);
+    }
+    CHECK_GT(final_state, 0);
+    context_table_[final_state] = context;
+  }
+
+  // Convert context graph to AC automaton
+  ConvertToAC();
+}
+
+void ContextGraph::ConvertToAC() {
+  CHECK(graph_ != nullptr) << "Context graph should not be nullptr!";
+  int num_states = graph_->NumStates();
+  std::vector<int> fail_states(num_states, 0);
+  std::vector<float> total_weights(num_states, 0);
+  Matcher matcher(*graph_, fst::MATCH_INPUT);
+  // start state
+  fail_states[0] = -1;
+  total_weights[0] = 0;
+
+  // Please see:
+  // https://web.stanford.edu/group/cslipublications/cslipublications/koskenniemi-festschrift/9-mohri.pdf
+  std::queue<int> states_queue;
+  states_queue.push(0);
+  while (!states_queue.empty()) {
+    int state = states_queue.front();
+    states_queue.pop();
+
+    for (ArcIterator aiter(*graph_, state); !aiter.Done(); aiter.Next()) {
+      const fst::StdArc& arc = aiter.Value();
+      int next_state = arc.nextstate;
+      total_weights[next_state] = total_weights[state] + arc.weight.Value();
+      // Backtracking the failure state for next_state
+      for (int fail_state = fail_states[state]; fail_state != -1;
+           fail_state = fail_states[fail_state]) {
+        matcher.SetState(fail_state);
+        if (matcher.Find(arc.ilabel)) {
+          fail_states[next_state] = matcher.Value().nextstate;
+          break;
+        }
+      }
+      states_queue.push(next_state);
+    }
+  }
+
+  // Compute fail weight, add fail arc
+  for (int state = 0; state < num_states; state++) {
+    int fail_state = fail_states[state];
+    if (fail_state < 0) continue;
+    if (graph_->Final(fail_state) != Weight::Zero()) {
+      fallback_finals_[state] = fail_state;
+      if (graph_->NumArcs(fail_state) == 0) continue;
+    }
+    if (graph_->Final(state) != Weight::Zero() && fail_state == 0) continue;
+
+    float fail_weight = total_weights[fail_state] - total_weights[state];
+    if (graph_->Final(state) != Weight::Zero()) {
+      fail_weight = 0;
+    }
+    graph_->AddArc(state, fst::StdArc(0, 0, fail_weight, fail_state));
+  }
+  // Sort arcs by ilabel, means move the fallback arc from last to first for the
+  // matcher
+  fst::ArcSort(graph_.get(), fst::ILabelCompare<fst::StdArc>());
+}
+
+int ContextGraph::GetNextState(int cur_state, int unit_id, float* score,
+                               std::unordered_set<std::string>* contexts) {
+  CHECK_GE(cur_state, 0);
+  // Find(0) matches any epsilons on the underlying FST explicitly
+  CHECK_NE(unit_id, 0);
+  int next_state = 0;
+
+  Matcher matcher(*graph_, fst::MATCH_INPUT);
+  matcher.SetState(cur_state);
+  if (matcher.Find(unit_id)) {
+    const fst::StdArc& arc = matcher.Value();
+    next_state = arc.nextstate;
+    *score += arc.weight.Value();
+    // Collect all contexts in the decode result
+    if (contexts != nullptr) {
+      if (graph_->Final(next_state) != Weight::Zero()) {
+        contexts->insert(context_table_[next_state]);
+      }
+      int fallback_final = next_state;
+      while (fallback_finals_.count(fallback_final) > 0) {
+        fallback_final = fallback_finals_[fallback_final];
+        contexts->insert(context_table_[fallback_final]);
+      }
+    }
+
+    // Leaves go back to the start state
+    if (graph_->NumArcs(next_state) == 0) {
+      return 0;
+    }
+    return next_state;
+  }
+
+  // Check whether the first arc is fallback arc
+  ArcIterator aiter(*graph_, cur_state);
+  const fst::StdArc& arc = aiter.Value();
+  // The start state has no fallback arc
+  if (arc.ilabel == 0) {
+    next_state = arc.nextstate;
+    *score += arc.weight.Value();
+    // fallback
+    return GetNextState(next_state, unit_id, score);
+  }
+
+  return 0;
 }
 
 }  // namespace wenet

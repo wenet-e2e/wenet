@@ -78,7 +78,7 @@ scp ./model_subsample8_parameter110M/sample50_chunk8_leftchunk16/hb_makertbin_ou
 
 ``` sh
 cd /path/to/demo
-sudo LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH \
+export LD_LIBRARY_PATH=.:$LD_LIBRARY_PATH \
   GLOG_logtostderr=1 GLOG_v=2 \
   ./decoder_main \
       --chunk_size 8 \

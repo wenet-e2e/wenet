@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+import sys
+from typing import List, Optional, Union
+
+import librosa
+import numpy as np
+# import torch to avoid libtorch.so not found error
+import torch  # noqa
 
 import _wenet
 
-from .hub import Hub
+from wenetruntime.hub import Hub
 
 
 class Decoder:
@@ -28,7 +34,8 @@ class Decoder:
                  enable_timestamp: bool = False,
                  context: Optional[List[str]] = None,
                  context_score: float = 3.0,
-                 continuous_decoding: bool = False):
+                 continuous_decoding: bool = False,
+                 streaming: bool = False):
         """ Init WeNet decoder
         Args:
             lang: language type of the model
@@ -38,6 +45,7 @@ class Decoder:
             context: context words
             context_score: bonus score when the context is matched
             continuous_decoding: enable countinous decoding or not
+            streaming: streaming mode
         """
         if model_dir is None:
             model_dir = Hub.get_model_by_lang(lang)
@@ -51,6 +59,8 @@ class Decoder:
             self.add_context(context)
             self.set_context_score(context_score)
         self.set_continuous_decoding(continuous_decoding)
+        chunk_size = 16 if streaming else -1
+        self.set_chunk_size(chunk_size)
 
     def __del__(self):
         _wenet.wenet_free(self.d)
@@ -84,31 +94,39 @@ class Decoder:
         flag = 1 if continuous_decoding else 0
         _wenet.wenet_set_continuous_decoding(self.d, flag)
 
-    def decode(self, pcm: bytes, last: bool = True) -> str:
-        """ Decode the input data
+    def set_chunk_size(self, chunk_size: int):
+        _wenet.wenet_set_chunk_size(self.d, chunk_size)
+
+    def decode(self,
+               audio: Union[str, bytes, np.ndarray],
+               last: bool = True) -> str:
+        """ Decode the input audio
 
         Args:
-            pcm: wav pcm
-            last: if it is the last package of the data
+            audio: string, bytes, or np.ndarray
+            last: if it is the last package of the data, only for streaming
         """
-        assert isinstance(pcm, bytes)
-        finish = 1 if last else 0
-        _wenet.wenet_decode(self.d, pcm, len(pcm), finish)
-        result = _wenet.wenet_get_result(self.d)
+        if isinstance(audio, str):
+            data, _ = librosa.load(audio, sr=16000)
+            data = data * (1 << 15)
+            data = data.astype(np.int16).tobytes()
+            finish = 1
+        elif isinstance(audio, np.ndarray):
+            finish = 1 if last else 0
+            if audio.max() < 1:  # the audio is normalized
+                data = data * (1 << 15)
+            data = data.astype(np.int16).tobytes()
+        elif isinstance(audio, bytes):
+            finish = 1 if last else 0
+            data = audio
+        else:
+            print('Unsupport audio type {}'.format(type(audio)))
+            sys.exit(-1)
+        result = _wenet.wenet_decode(self.d, data, len(data), finish)
         if last:  # Reset status for next decoding automatically
             self.reset()
         return result
 
     def decode_wav(self, wav_file: str) -> str:
-        """ Decode wav file, we only support:
-            1. 16k sample rate
-            2. mono channel
-            3. sample widths is 16 bits / 2 bytes
-        """
-        import wave
-        with wave.open(wav_file, 'rb') as fin:
-            assert fin.getnchannels() == 1
-            assert fin.getsampwidth() == 2
-            assert fin.getframerate() == 16000
-            wav = fin.readframes(fin.getnframes())
-        return self.decode(wav, True)
+        """ Deprecated, will remove soon """
+        return self.decode(wav_file)

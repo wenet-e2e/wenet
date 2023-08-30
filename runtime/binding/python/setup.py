@@ -18,6 +18,7 @@ def cmake_extension(name, *args, **kwargs) -> setuptools.Extension:
 
 
 class BuildExtension(build_ext):
+
     def build_extension(self, ext: setuptools.extension.Extension):
         os.makedirs(self.build_temp, exist_ok=True)
         os.makedirs(self.build_lib, exist_ok=True)
@@ -61,17 +62,12 @@ def read_long_description():
     return readme
 
 
-package_name = "wenetruntime"
-
 setuptools.setup(
-    name=package_name,
-    version='1.0.12',
+    name="wenetruntime",
+    version='1.14.0',
     author="Binbin Zhang",
     author_email="binbzha@qq.com",
-    package_dir={
-        package_name: "py",
-    },
-    packages=[package_name],
+    packages=setuptools.find_packages(),
     url="https://github.com/wenet-e2e/wenet",
     long_description=read_long_description(),
     long_description_content_type="text/markdown",
@@ -79,8 +75,13 @@ setuptools.setup(
     cmdclass={"build_ext": BuildExtension},
     zip_safe=False,
     setup_requires=["tqdm"],
-    install_requires=["torch", "tqdm"] if "ONNX=ON" not in
-        os.environ.get("WENET_CMAKE_ARGS", "") else ["tqdm"],
+    install_requires=["torch>=1.10.0", "librosa", "tqdm"] if "ONNX=ON"
+    not in os.environ.get("WENET_CMAKE_ARGS", "") else ["librosa", "tqdm"],
+    entry_points={
+        "console_scripts": [
+            "wenetruntime = wenetruntime.main:main",
+        ]
+    },
     classifiers=[
         "Programming Language :: C++",
         "Programming Language :: Python :: 3",
