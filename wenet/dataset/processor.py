@@ -420,7 +420,7 @@ def get_upper_txt(txt, special_tokens):
     """
     txt = txt.upper()
     for token in special_tokens:
-        txt = re.subn(token.upper(), token, txt)
+        txt = re.sub(token.upper(), token, txt)
     return txt
 
 
