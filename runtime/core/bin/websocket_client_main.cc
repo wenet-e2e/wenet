@@ -32,7 +32,7 @@ int main(int argc, char* argv[]) {
   client.SendStartSignal();
 
   wenet::WavReader wav_reader(FLAGS_wav_path);
-  const int sample_rate = 16000;
+  const int sample_rate = 8000;
   // Only support 16K
   CHECK_EQ(wav_reader.sample_rate(), sample_rate);
   const int num_samples = wav_reader.num_samples();
