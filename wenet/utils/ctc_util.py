@@ -37,7 +37,7 @@ def forced_align(ctc_probs: torch.Tensor,
         torch.Tensor: alignment result
     """
     ctc_probs=ctc_probs.cpu()
-    y=y.cpu()                 
+    y=y.cpu()
     y_insert_blank = insert_blank(y, blank_id)
 
     log_alpha = torch.zeros((ctc_probs.size(0), len(y_insert_blank)))
