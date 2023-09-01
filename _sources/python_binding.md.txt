@@ -19,7 +19,18 @@ Python 3.6+ is required.
 pip3 install wenetruntime
 ```
 
-## Usage
+## Command-line usage
+
+```
+wenetruntime audio.wav
+```
+
+We support mainstream audio formats, such as wav, mp3, flac and so on.
+
+You can specify the language using the `--language` option,
+currently we support `en` (English) and `chs` (中文).
+
+## Programming usage
 
 Note:
 
@@ -30,12 +41,11 @@ Note:
 
 ``` python
 import sys
-import torch
 import wenetruntime as wenet
 
-wav_file = sys.argv[1]
+audio_file = sys.argv[1]  # support wav, mp3, flac, etc
 decoder = wenet.Decoder(lang='chs')
-ans = decoder.decode_wav(wav_file)
+ans = decoder.decode(audio_file)
 print(ans)
 ```
 
@@ -72,7 +82,6 @@ decoder = wenet.Decoder(model_dir,
 
 ``` python
 import sys
-import torch
 import wave
 import wenetruntime as wenet
 
@@ -82,7 +91,7 @@ with wave.open(test_wav, 'rb') as fin:
     assert fin.getnchannels() == 1
     wav = fin.readframes(fin.getnframes())
 
-decoder = wenet.Decoder(lang='chs')
+decoder = wenet.Decoder(lang='chs', streaming=True)
 # We suppose the wav is 16k, 16bits, and decode every 0.5 seconds
 interval = int(0.5 * 16000) * 2
 for i in range(0, len(wav), interval):
