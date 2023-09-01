@@ -7,42 +7,44 @@ stage=0 # start from 0 if you need to start from data preparation
 stop_stage=0
 
 nj=16
-feat_dir=raw_wav
 dict=data/dict/lang_char.txt
 
 dir=exp/
 config=$dir/train.yaml
-checkpoint=
-checkpoint=/home/diwu/github/latest/wenet/examples/aishell/s0/exp/transformer/avg_20.pt
-config=/home/diwu/github/latest/wenet/examples/aishell/s0/exp/transformer/train.yaml
-set=
-ali_format=$feat_dir/$set/format.data
-ali_format=format.data
-ali_result=$dir/ali
+# model trained with trim tail will get a better alignment result
+# (Todo) cif/attention/rnnt alignment
+checkpoint=$dir/final.pt
 
+set=test
+ali_format=ali_format.data
+ali_result=ali.res
+blank_thres=0.9999
+thres=0.00001
 . tools/parse_options.sh || exit 1;
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    nj=32
     # Prepare required data for ctc alignment
     echo "Prepare data, prepare required format"
     for x in $set; do
-        tools/format_data.sh --nj ${nj} \
-            --feat-type wav --feat $feat_dir/$x/wav.scp \
-            $feat_dir/$x ${dict} > $feat_dir/$x/format.data.tmp
-
+        tools/make_raw_list.py data/$x/wav.scp data/$x/text \
+          ali_format
     done
 fi
 
+
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     # Test model, please specify the model you want to use by --checkpoint
-        python wenet/bin/alignment_deprecated.py --gpu -1 \
-            --config $config \
-            --input_file $ali_format \
-            --checkpoint $checkpoint \
-            --batch_size 1 \
-            --dict $dict \
-            --result_file $ali_result \
+    mkdir -p exp_${thres}
+    python wenet/bin/alignment.py --gpu -1 \
+        --config $config \
+        --input_file $ali_format \
+        --checkpoint $checkpoint \
+        --batch_size 1 \
+        --dict $dict \
+        --result_file $ali_result \
+        --thres $thres \
+        --blank_thres $blank_thres \
+        --gen_praat
 
 fi
 
