@@ -208,7 +208,8 @@ def export_encoder(asr_model, args):
     onnx_att_cache = to_numpy(att_cache)
     onnx_cnn_cache = to_numpy(cnn_cache)
     onnx_att_mask = to_numpy(att_mask)
-    ort_session = onnxruntime.InferenceSession(encoder_outpath)
+    ort_session = onnxruntime.InferenceSession(encoder_outpath,
+                                               providers=['CPUExecutionProvider'])
     input_names = [node.name for node in onnx_encoder.graph.input]
     for i in range(10):
         print("\t\tonnx  chunk-{}: {}, offset: {}, att_cache: {},"
@@ -279,7 +280,8 @@ def export_ctc(asr_model, args):
 
     print("\tStage-2.3: check onnx_ctc and torch_ctc")
     torch_output = ctc(hidden)
-    ort_session = onnxruntime.InferenceSession(ctc_outpath)
+    ort_session = onnxruntime.InferenceSession(ctc_outpath,
+                                               providers=['CPUExecutionProvider'])
     onnx_output = ort_session.run(None, {'hidden': to_numpy(hidden)})
 
     np.testing.assert_allclose(to_numpy(torch_output), onnx_output[0],
@@ -333,7 +335,8 @@ def export_decoder(asr_model, args):
     print("\tStage-3.3: check onnx_decoder and torch_decoder")
     torch_score, torch_r_score = decoder(
         hyps, hyps_lens, encoder_out, args['reverse_weight'])
-    ort_session = onnxruntime.InferenceSession(decoder_outpath)
+    ort_session = onnxruntime.InferenceSession(decoder_outpath,
+                                               providers=['CPUExecutionProvider'])
     input_names = [node.name for node in onnx_decoder.graph.input]
     ort_inputs = {
         'hyps': to_numpy(hyps),
