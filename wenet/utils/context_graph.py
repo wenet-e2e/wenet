@@ -49,14 +49,14 @@ class ContextGraph:
         Args:
             context_list_path(str): context list path
             bpe_model(str): model for english bpe part
-            context_score(float): context score for each token
+            context_graph_score(float): context score for each token
     """
     def __init__(self,
                  context_list_path: str,
                  symbol_table: Dict[str, int],
                  bpe_model: str = None,
-                 context_score: float = 6):
-        self.context_score = context_score
+                 context_graph_score: float = 2.0):
+        self.context_graph_score = context_graph_score
         self.context_list = tokenize(context_list_path, symbol_table,
                                      bpe_model)
         self.graph = {0: {}}
@@ -66,8 +66,8 @@ class ContextGraph:
         self.build_graph(self.context_list)
         self.graph_biasing = False
         self.deep_biasing = False
-        self.graph_biasing_weight = 1.0
-        self.deep_biasing_weight = 1.5
+        self.deep_biasing_score = 1.0
+        self.context_filtering = True
 
     def build_graph(self, context_list: List[List[int]]):
         """ Constructing the context decoding graph, add arcs with negative
@@ -92,8 +92,8 @@ class ContextGraph:
                     self.graph[now_state][context_token[i]] = self.graph_size
                     now_state = self.graph_size
                     if i != len(context_token) - 1:
-                        self.back_score[now_state] = -(i +
-                                                       1) * self.context_score
+                        self.back_score[now_state] = \
+                            -(i + 1) * self.context_graph_score
                     else:
                         self.back_score[now_state] = 0
                     self.state2token[now_state] = context_token[i]
@@ -105,14 +105,13 @@ class ContextGraph:
             from the starting state to avoid token consumption due to mismatches.
         """
         if token in self.graph[now_state]:
-            return self.graph[now_state][token], \
-                self.context_score * self.graph_biasing_weight
+            return self.graph[now_state][token], self.context_graph_score
         back_score = self.back_score[now_state]
         now_state = 0
         if token in self.graph[now_state]:
-            return self.graph[now_state][
-                token], (back_score + self.context_score) * self.graph_biasing_weight
-        return 0, back_score * self.graph_biasing_weight
+            return self.graph[now_state][token], \
+                back_score + self.context_graph_score
+        return 0, back_score
 
     def get_context_list_tensor(self, context_list: List[List[int]]):
         context_list_tensor = [torch.tensor([0], dtype=torch.int32)]
@@ -125,15 +124,13 @@ class ContextGraph:
                                            padding_value=-1)
         return context_list_tensor, context_list_lengths
 
-    def tow_stage_filtering(self,
+    def two_stage_filtering(self,
                             context_list: List[List[int]],
                             ctc_posterior: torch.Tensor,
-                            filter_threshold: float = -8,
+                            filter_threshold: float = -4,
                             filter_window_size: int = 64):
         if len(context_list) == 0:
             return context_list
-
-        # ctc_posterior = torch.clamp(ctc_posterior, min=2 * filter_threshold)
 
         SOC_score = {}
         for t in range(1, ctc_posterior.shape[0]):
@@ -195,37 +192,3 @@ class ContextGraph:
             if SOC_score.get(i, -float('inf')) > filter_threshold:
                 filtered_context_list.append(context_list[i])
         return filtered_context_list
-
-    # TODO: delete this method
-    def new_context_list(self, context_txts, symbol_table, bpe_model):
-        context_list = []
-        if bpe_model is not None:
-            import sentencepiece as spm
-            sp = spm.SentencePieceProcessor()
-            sp.load(bpe_model)
-        else:
-            sp = None
-        for context_txt in context_txts:
-            context_txt = context_txt.strip()
-
-            labels = []
-            tokens = []
-            if bpe_model is not None:
-                tokens = tbbm(sp, context_txt)
-            else:
-                for ch in context_txt:
-                    if ch == ' ':
-                        ch = "▁"
-                    tokens.append(ch)
-            for ch in tokens:
-                if ch in symbol_table:
-                    labels.append(symbol_table[ch])
-                elif '<unk>' in symbol_table:
-                    labels.append(symbol_table['<unk>'])
-            context_list.append(labels)
-        self.context_list = context_list
-        self.graph = {0: {}}
-        self.graph_size = 0
-        self.state2token = {}
-        self.back_score = {0: 0.0}
-        self.build_graph(self.context_list)

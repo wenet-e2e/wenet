@@ -738,8 +738,7 @@ def padding(data):
 
         if 'context_list' not in sample[0]:
             yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
-                   label_lengths, torch.tensor([0]), torch.tensor([0]),
-                   torch.tensor([0]), torch.tensor([0]))
+                   label_lengths, [])
         else:
             context_lists = sample[0]['context_list']
             context_list_lengths = \
@@ -757,6 +756,6 @@ def padding(data):
                                                   batch_first=True,
                                                   padding_value=-1)
             yield (sorted_keys, padded_feats, padding_labels,
-                   feats_lengths, label_lengths, padding_context_lists, 
-                   padding_context_labels, context_list_lengths,
-                   context_label_lengths)
+                   feats_lengths, label_lengths, 
+                   [padding_context_lists, padding_context_labels,
+                    context_list_lengths, context_label_lengths])

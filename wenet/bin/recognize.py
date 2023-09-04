@@ -160,12 +160,12 @@ def get_args():
                         default=0.0,
                         help='lm scale for hlg attention rescore decode')
 
-    parser.add_argument(
-        '--context_bias_mode',
-        type=str,
-        default='',
-        help='''Context bias mode, selectable from the following
-                                option: decoding-graph、deep-biasing''')
+    parser.add_argument('--context_bias_mode',
+                        type=str,
+                        default='',
+                        help='''Context bias mode, selectable from the
+                                following option: decoding_graph,
+                                deep_biasing''')
     parser.add_argument('--context_list_path',
                         type=str,
                         default='',
@@ -174,7 +174,17 @@ def get_args():
                         type=float,
                         default=2.0,
                         help='''The higher the score, the greater the degree of
-                                bias using decoding-graph for biasing''')
+                                bias using decoding_graph for biasing''')
+    parser.add_argument('--deep_biasing_score',
+                        type=float,
+                        default=1.5,
+                        help='''The higher the score, the greater the degree of
+                                bias using deep_biasing for biasing''')
+    parser.add_argument('--context_filtering',
+                        action='store_true',
+                        help='''Reduce the size of the context list through
+                                filtering to enhance the effect of context
+                                biasing''')
 
     args = parser.parse_args()
     print(args)
@@ -262,22 +272,23 @@ def main():
     if args.context_bias_mode != '':
         context_graph = ContextGraph(args.context_list_path, symbol_table,
                                      args.bpe_model, args.context_graph_score)
-    if 'deep-biasing' in args.context_bias_mode:
+        context_graph.context_filtering = args.context_filtering
+        context_list_all = context_graph.context_list
+    if 'deep_biasing' in args.context_bias_mode:
         context_graph.deep_biasing = True
-    if 'decoding-graph' in args.context_bias_mode:
+        context_graph.deep_biasing_score = args.deep_biasing_score
+    if 'decoding_graph' in args.context_bias_mode:
         context_graph.graph_biasing = True
-    if 'deep-biasing' in args.context_bias_mode and \
-       'decoding-graph' in args.context_bias_mode:
-        context_graph.deep_biasing_weight = 1.0
-        context_graph.graph_biasing_weight = 0.7
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for batch_idx, batch in enumerate(test_data_loader):
-            keys, feats, target, feats_lengths, target_lengths, _, _, _, _ = batch
+            keys, feats, target, feats_lengths, target_lengths, _ = batch
             feats = feats.to(device)
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
+            if context_graph is not None and args.context_filtering:
+                context_graph.context_list = context_list_all
 
             if args.mode == 'attention':
                 hyps, _ = model.recognize(
@@ -286,7 +297,7 @@ def main():
                     beam_size=args.beam_size,
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
-                    simulate_streaming=args.simulate_streaming)
+                    simulate_streaming=args.simulate_streaming,)
                 hyps = [hyp.tolist() for hyp in hyps]
             elif args.mode == 'ctc_greedy_search':
                 hyps, _ = model.ctc_greedy_search(
@@ -294,7 +305,8 @@ def main():
                     feats_lengths,
                     decoding_chunk_size=args.decoding_chunk_size,
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
-                    simulate_streaming=args.simulate_streaming)
+                    simulate_streaming=args.simulate_streaming,
+                    context_graph=context_graph)
             elif args.mode == 'rnnt_greedy_search':
                 assert (feats.size(0) == 1)
                 assert 'predictor' in configs

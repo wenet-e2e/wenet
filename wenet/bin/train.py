@@ -285,12 +285,12 @@ def main():
         for p in model.context_module.context_decoder_ctc_linear.parameters():
             p.requires_grad = False
 
-    # # !!!IMPORTANT!!!
-    # # Try to export the model by script, if fails, we should refine
-    # # the code to satisfy the script export requirements
-    # if local_rank == 0:
-    #     script_model = torch.jit.script(model)
-    #     script_model.save(os.path.join(args.model_dir, 'init.zip'))
+    # !!!IMPORTANT!!!
+    # Try to export the model by script, if fails, we should refine
+    # the code to satisfy the script export requirements
+    if local_rank == 0:
+        script_model = torch.jit.script(model)
+        script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:

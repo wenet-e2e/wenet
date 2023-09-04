@@ -10,7 +10,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
-# under the License. 
+# under the License.
 
 
 import torch
@@ -23,10 +23,10 @@ class BLSTM(torch.nn.Module):
     """
     """
 
-    def __init__(self, 
-                 vocab_size, 
-                 embedding_size, 
-                 num_layers, 
+    def __init__(self,
+                 vocab_size,
+                 embedding_size,
+                 num_layers,
                  dropout=0.0):
         super(BLSTM, self).__init__()
         self.vocab_size = vocab_size
@@ -56,8 +56,6 @@ class BLSTM(torch.nn.Module):
 
 
 class ContextModule(torch.nn.Module):
-    """
-    """
     def __init__(
         self,
         vocab_size: int,
@@ -104,15 +102,18 @@ class ContextModule(torch.nn.Module):
         context_emb = self.context_encoder(context_emb.unsqueeze(0))
         return context_emb
 
-    def forward(self, context_emb, encoder_out,
-                biasing_weight=1.0, recognize=False) \
+    def forward(self,
+                context_emb: torch.Tensor,
+                encoder_out: torch.Tensor,
+                biasing_score: float = 1.0,
+                recognize: bool = False) \
             -> Tuple[torch.Tensor, torch.Tensor]:
         context_emb = context_emb.expand(encoder_out.shape[0], -1, -1)
         context_emb, _ = self.biasing_layer(encoder_out, context_emb,
                                             context_emb)
         encoder_bias_out = \
             self.norm_aft_combiner(encoder_out +
-                                   self.combiner(context_emb) * biasing_weight)
+                                   self.combiner(context_emb) * biasing_score)
         if recognize:
             return encoder_bias_out, torch.tensor(0.0)
         bias_out = self.context_decoder(context_emb)

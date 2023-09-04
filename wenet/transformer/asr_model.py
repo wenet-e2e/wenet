@@ -93,10 +93,7 @@ class ASRModel(torch.nn.Module):
         speech_lengths: torch.Tensor,
         text: torch.Tensor,
         text_lengths: torch.Tensor,
-        context_list: torch.Tensor = torch.tensor([0]),
-        context_label: torch.Tensor = torch.tensor([0]),
-        context_list_lengths: torch.Tensor = torch.tensor([0]),
-        context_label_lengths: torch.Tensor = torch.tensor([0]),
+        context_data: List[torch.Tensor],
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
 
@@ -119,6 +116,11 @@ class ASRModel(torch.nn.Module):
         # 1a. Context biasing branch
         loss_bias: Optional[torch.Tensor] = None
         if self.context_module is not None:
+            assert len(context_data) == 4
+            context_list = context_data[0]
+            context_label = context_data[1]
+            context_list_lengths = context_data[2]
+            context_label_lengths = context_data[3]
             context_emb = self.context_module. \
                 forward_context_emb(context_list, context_list_lengths)
             encoder_out, bias_out = self.context_module(context_emb,
@@ -156,7 +158,7 @@ class ASRModel(torch.nn.Module):
         else:
             loss = self.ctc_weight * loss_ctc + (1 - self.ctc_weight) * \
                 loss_att
-        if loss_bias is not None:
+        if loss is not None and loss_bias is not None:
             loss = loss + self.bias_weight * loss_bias
 
         return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc,
@@ -342,6 +344,7 @@ class ASRModel(torch.nn.Module):
         decoding_chunk_size: int = -1,
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
+        context_graph: ContextGraph = None,
     ) -> List[List[int]]:
         """ Apply CTC greedy search
 
@@ -367,6 +370,22 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size,
             num_decoding_left_chunks,
             simulate_streaming)  # (B, maxlen, encoder_dim)
+
+        if context_graph is not None and context_graph.deep_biasing:
+            if context_graph.context_filtering:
+                ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
+                filtered_context_list = context_graph.two_stage_filtering(
+                    context_graph.context_list, ctc_probs)
+                context_graph.context_list = filtered_context_list
+            context_list, context_list_lengths = \
+                context_graph.get_context_list_tensor(context_graph.context_list)
+            context_list = context_list.to(encoder_out.device)
+            context_emb = self.context_module. \
+                forward_context_emb(context_list, context_list_lengths)
+            encoder_out, _ = \
+                self.context_module(context_emb, encoder_out,
+                                    context_graph.deep_biasing_score, True)
+
         maxlen = encoder_out.size(1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         ctc_probs = self.ctc.log_softmax(
@@ -389,7 +408,6 @@ class ASRModel(torch.nn.Module):
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
         context_graph: ContextGraph = None,
-        context_filtering: bool = True,
     ) -> Tuple[List[List[int]], torch.Tensor]:
         """ CTC prefix beam search inner implementation
 
@@ -423,21 +441,19 @@ class ASRModel(torch.nn.Module):
             simulate_streaming)  # (B, maxlen, encoder_dim)
 
         if context_graph is not None and context_graph.deep_biasing:
-            if context_filtering:
+            if context_graph.context_filtering:
                 ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
-                filtered_context_list = \
-                    context_graph.tow_stage_filtering(context_graph.context_list,
-                                                      ctc_probs, -6)
-                context_list, context_list_lengths = \
-                    context_graph.get_context_list_tensor(filtered_context_list)
-            else:
-                context_list, context_list_lengths = \
-                    context_graph.get_context_list_tensor(context_graph.context_list)
+                filtered_context_list = context_graph.two_stage_filtering(
+                    context_graph.context_list, ctc_probs)
+                context_graph.context_list = filtered_context_list
+            context_list, context_list_lengths = \
+                context_graph.get_context_list_tensor(context_graph.context_list)
+            context_list = context_list.to(encoder_out.device)
             context_emb = self.context_module. \
                 forward_context_emb(context_list, context_list_lengths)
             encoder_out, _ = \
                 self.context_module(context_emb, encoder_out,
-                                    context_graph.deep_biasing_weight, True)
+                                    context_graph.deep_biasing_score, True)
 
         maxlen = encoder_out.size(1)
         ctc_probs = self.ctc.log_softmax(
