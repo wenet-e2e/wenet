@@ -21,6 +21,7 @@ from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list)
 
+
 class Transducer(ASRModel):
     """Transducer-ctc-attention hybrid Encoder-Predictor-Decoder model"""
 
@@ -41,7 +42,6 @@ class Transducer(ASRModel):
         length_normalized_loss: bool = False,
         transducer_weight: float = 1.0,
         attention_weight: float = 0.0,
-
         enable_k2: float = False,
         delay_penalty: float = 0.0,
         warmup_steps: float = 25000,
@@ -72,10 +72,10 @@ class Transducer(ASRModel):
         self.simple_am_proj: Optional[nn.Linear] = None
         self.simple_lm_proj: Optional[nn.Linear] = None
         if self.enable_k2:
-            self.simple_am_proj = torch.nn.Linear(
-                self.encoder.output_size(), vocab_size)
-            self.simple_lm_proj = torch.nn.Linear(
-                self.predictor.output_size(), vocab_size)
+            self.simple_am_proj = torch.nn.Linear(self.encoder.output_size(),
+                                                  vocab_size)
+            self.simple_lm_proj = torch.nn.Linear(self.predictor.output_size(),
+                                                  vocab_size)
 
         # Note(Mddct): decoder also means predictor in transducer,
         # but here decoder is attention decoder
@@ -115,14 +115,12 @@ class Transducer(ASRModel):
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # compute_loss
-        loss_rnnt = self._compute_loss(
-            encoder_out,
-            encoder_out_lens,
-            encoder_mask,
-            text,
-            text_lengths,
-            steps=steps
-        )
+        loss_rnnt = self._compute_loss(encoder_out,
+                                       encoder_out_lens,
+                                       encoder_mask,
+                                       text,
+                                       text_lengths,
+                                       steps=steps)
 
         loss = self.transducer_weight * loss_rnnt
         # optional attention decoder
@@ -471,12 +469,12 @@ class Transducer(ASRModel):
         return self.predictor.init_state(1, device=torch.device("cpu"))
 
     def _compute_loss(self,
-                     encoder_out: torch.Tensor,
-                     encoder_out_lens: torch.Tensor,
-                     encoder_mask: torch.Tensor,
-                     text: torch.Tensor,
-                     text_lengths: torch.Tensor,
-                     steps: int = 0) -> torch.Tensor:
+                      encoder_out: torch.Tensor,
+                      encoder_out_lens: torch.Tensor,
+                      encoder_mask: torch.Tensor,
+                      text: torch.Tensor,
+                      text_lengths: torch.Tensor,
+                      steps: int = 0) -> torch.Tensor:
         ys_in_pad = add_blank(text, self.blank, self.ignore_id)
         # predictor
         predictor_out = self.predictor(ys_in_pad)
@@ -506,7 +504,7 @@ class Transducer(ASRModel):
                                    device=encoder_out.device)
             boundary[:, 3] = encoder_mask.squeeze(1).sum(1)
             boundary[:, 2] = text_lengths
-    
+
             rnnt_text = torch.where(text == self.ignore_id, 0, text)
             lm = self.simple_lm_proj(predictor_out)
             am = self.simple_am_proj(encoder_out)
@@ -552,12 +550,12 @@ class Transducer(ASRModel):
                 )
             simple_loss_scale = 0.5
             if steps < self.warmup_steps:
-                simple_loss_scale = (
-                    1.0 - (steps / self.warmup_steps) * (1.0 - simple_loss_scale))
+                simple_loss_scale = (1.0 - (steps / self.warmup_steps) *
+                                     (1.0 - simple_loss_scale))
             pruned_loss_scale = 1.0
             if steps < self.warmup_steps:
                 pruned_loss_scale = 0.1 + 0.9 * (steps / self.warmup_steps)
-            loss = (simple_loss_scale * simple_loss
-                    + pruned_loss_scale * pruned_loss)
+            loss = (simple_loss_scale * simple_loss +
+                    pruned_loss_scale * pruned_loss)
             loss = loss / encoder_out.size(0)
         return loss
