@@ -42,7 +42,7 @@ class Transducer(ASRModel):
         length_normalized_loss: bool = False,
         transducer_weight: float = 1.0,
         attention_weight: float = 0.0,
-        enable_k2: float = False,
+        enable_k2: bool = False,
         delay_penalty: float = 0.0,
         warmup_steps: float = 25000,
         lm_only_scale: float = 0.25,
