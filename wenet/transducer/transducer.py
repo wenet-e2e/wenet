@@ -69,6 +69,8 @@ class Transducer(ASRModel):
         self.lm_only_scale = lm_only_scale
         self.am_only_scale = am_only_scale
         self.warmup_steps = warmup_steps
+        self.simple_am_proj: Optional[nn.Linear] = None
+        self.simple_lm_proj: Optional[nn.Linear] = None
         if self.enable_k2:
             self.simple_am_proj = torch.nn.Linear(
                 self.encoder.output_size(), vocab_size)
@@ -113,15 +115,13 @@ class Transducer(ASRModel):
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # compute_loss
-        loss_rnnt = compute_loss(
-            self,
+        loss_rnnt = self._compute_loss(
             encoder_out,
             encoder_out_lens,
             encoder_mask,
             text,
             text_lengths,
-            steps=steps,
-            use_k2=self.enable_k2,
+            steps=steps
         )
 
         loss = self.transducer_weight * loss_rnnt
@@ -470,95 +470,94 @@ class Transducer(ASRModel):
     def forward_predictor_init_state(self) -> List[torch.Tensor]:
         return self.predictor.init_state(1, device=torch.device("cpu"))
 
-def compute_loss(model: Transducer,
-                 encoder_out: torch.Tensor,
-                 encoder_out_lens: torch.Tensor,
-                 encoder_mask: torch.Tensor,
-                 text: torch.Tensor,
-                 text_lengths: torch.Tensor,
-                 steps: int = 0,
-                 use_k2: bool = False) -> torch.Tensor:
-    ys_in_pad = add_blank(text, model.blank, model.ignore_id)
-    # predictor
-    predictor_out = model.predictor(ys_in_pad)
-    if not use_k2:
-        # joint
-        joint_out = model.joint(encoder_out, predictor_out)
-        # NOTE(Mddct): some loss implementation require pad valid is zero
-        # torch.int32 rnnt_loss required
-        rnnt_text = text.to(torch.int64)
-        rnnt_text = torch.where(rnnt_text == model.ignore_id, 0,
-                                rnnt_text).to(torch.int32)
-        rnnt_text_lengths = text_lengths.to(torch.int32)
-        encoder_out_lens = encoder_out_lens.to(torch.int32)
-        loss = torchaudio.functional.rnnt_loss(joint_out,
-                                               rnnt_text,
-                                               encoder_out_lens,
-                                               rnnt_text_lengths,
-                                               blank=model.blank,
-                                               reduction="mean")
-    else:
-        delay_penalty = model.delay_penalty
-        if steps < 2 * model.warmup_steps:
-            delay_penalty = 0.00
-        ys_in_pad = ys_in_pad.type(torch.int64)
-        boundary = torch.zeros((encoder_out.size(0), 4),
-                               dtype=torch.int64,
-                               device=encoder_out.device)
-        boundary[:, 3] = encoder_mask.squeeze(1).sum(1)
-        boundary[:, 2] = text_lengths
-
-        rnnt_text = torch.where(text == model.ignore_id, 0, text)
-        lm = model.simple_lm_proj(predictor_out)
-        am = model.simple_am_proj(encoder_out)
-        with torch.cuda.amp.autocast(enabled=False):
-            simple_loss, (px_grad, py_grad) = k2.rnnt_loss_smoothed(
-                lm=lm.float(),
-                am=am.float(),
-                symbols=rnnt_text,
-                termination_symbol=model.blank,
-                lm_only_scale=model.lm_only_scale,
-                am_only_scale=model.am_only_scale,
+    def _compute_loss(self,
+                     encoder_out: torch.Tensor,
+                     encoder_out_lens: torch.Tensor,
+                     encoder_mask: torch.Tensor,
+                     text: torch.Tensor,
+                     text_lengths: torch.Tensor,
+                     steps: int = 0) -> torch.Tensor:
+        ys_in_pad = add_blank(text, self.blank, self.ignore_id)
+        # predictor
+        predictor_out = self.predictor(ys_in_pad)
+        if self.simple_lm_proj is None and self.simple_am_proj is None:
+            # joint
+            joint_out = self.joint(encoder_out, predictor_out)
+            # NOTE(Mddct): some loss implementation require pad valid is zero
+            # torch.int32 rnnt_loss required
+            rnnt_text = text.to(torch.int64)
+            rnnt_text = torch.where(rnnt_text == self.ignore_id, 0,
+                                    rnnt_text).to(torch.int32)
+            rnnt_text_lengths = text_lengths.to(torch.int32)
+            encoder_out_lens = encoder_out_lens.to(torch.int32)
+            loss = torchaudio.functional.rnnt_loss(joint_out,
+                                                   rnnt_text,
+                                                   encoder_out_lens,
+                                                   rnnt_text_lengths,
+                                                   blank=self.blank,
+                                                   reduction="mean")
+        else:
+            delay_penalty = self.delay_penalty
+            if steps < 2 * self.warmup_steps:
+                delay_penalty = 0.00
+            ys_in_pad = ys_in_pad.type(torch.int64)
+            boundary = torch.zeros((encoder_out.size(0), 4),
+                                   dtype=torch.int64,
+                                   device=encoder_out.device)
+            boundary[:, 3] = encoder_mask.squeeze(1).sum(1)
+            boundary[:, 2] = text_lengths
+    
+            rnnt_text = torch.where(text == self.ignore_id, 0, text)
+            lm = self.simple_lm_proj(predictor_out)
+            am = self.simple_am_proj(encoder_out)
+            with torch.cuda.amp.autocast(enabled=False):
+                simple_loss, (px_grad, py_grad) = k2.rnnt_loss_smoothed(
+                    lm=lm.float(),
+                    am=am.float(),
+                    symbols=rnnt_text,
+                    termination_symbol=self.blank,
+                    lm_only_scale=self.lm_only_scale,
+                    am_only_scale=self.am_only_scale,
+                    boundary=boundary,
+                    reduction="sum",
+                    return_grad=True,
+                    delay_penalty=delay_penalty,
+                )
+            # ranges : [B, T, prune_range]
+            ranges = k2.get_rnnt_prune_ranges(
+                px_grad=px_grad,
+                py_grad=py_grad,
                 boundary=boundary,
-                reduction="sum",
-                return_grad=True,
-                delay_penalty=delay_penalty,
+                s_range=5,
             )
-        # ranges : [B, T, prune_range]
-        ranges = k2.get_rnnt_prune_ranges(
-            px_grad=px_grad,
-            py_grad=py_grad,
-            boundary=boundary,
-            s_range=5,
-        )
-        am_pruned, lm_pruned = k2.do_rnnt_pruning(
-            am=model.joint.enc_ffn(encoder_out),
-            lm=model.joint.pred_ffn(predictor_out),
-            ranges=ranges,
-        )
-        logits = model.joint(
-            am_pruned,
-            lm_pruned,
-            pre_project=False,
-        )
-        with torch.cuda.amp.autocast(enabled=False):
-            pruned_loss = k2.rnnt_loss_pruned(
-                logits=logits.float(),
-                symbols=rnnt_text,
+            am_pruned, lm_pruned = k2.do_rnnt_pruning(
+                am=self.joint.enc_ffn(encoder_out),
+                lm=self.joint.pred_ffn(predictor_out),
                 ranges=ranges,
-                termination_symbol=model.blank,
-                boundary=boundary,
-                reduction="sum",
-                delay_penalty=delay_penalty,
             )
-        simple_loss_scale = 0.5
-        if steps < model.warmup_steps:
-            simple_loss_scale = (
-                1.0 - (steps / model.warmup_steps) * (1.0 - simple_loss_scale))
-        pruned_loss_scale = 1.0
-        if steps < model.warmup_steps:
-            pruned_loss_scale = 0.1 + 0.9 * (steps / model.warmup_steps)
-        loss = (simple_loss_scale * simple_loss
-                + pruned_loss_scale * pruned_loss)
-        loss = loss / encoder_out.size(0)
-    return loss
+            logits = self.joint(
+                am_pruned,
+                lm_pruned,
+                pre_project=False,
+            )
+            with torch.cuda.amp.autocast(enabled=False):
+                pruned_loss = k2.rnnt_loss_pruned(
+                    logits=logits.float(),
+                    symbols=rnnt_text,
+                    ranges=ranges,
+                    termination_symbol=self.blank,
+                    boundary=boundary,
+                    reduction="sum",
+                    delay_penalty=delay_penalty,
+                )
+            simple_loss_scale = 0.5
+            if steps < self.warmup_steps:
+                simple_loss_scale = (
+                    1.0 - (steps / self.warmup_steps) * (1.0 - simple_loss_scale))
+            pruned_loss_scale = 1.0
+            if steps < self.warmup_steps:
+                pruned_loss_scale = 0.1 + 0.9 * (steps / self.warmup_steps)
+            loss = (simple_loss_scale * simple_loss
+                    + pruned_loss_scale * pruned_loss)
+            loss = loss / encoder_out.size(0)
+        return loss
