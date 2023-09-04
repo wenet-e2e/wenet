@@ -208,7 +208,7 @@ def export_encoder(asr_model, args):
     onnx_att_cache = to_numpy(att_cache)
     onnx_cnn_cache = to_numpy(cnn_cache)
     onnx_att_mask = to_numpy(att_mask)
-    ort_session = onnxruntime.InferenceSession(encoder_outpath, 
+    ort_session = onnxruntime.InferenceSession(encoder_outpath,
                                                providers=['CPUExecutionProvider'])
     input_names = [node.name for node in onnx_encoder.graph.input]
     for i in range(10):
@@ -335,7 +335,7 @@ def export_decoder(asr_model, args):
     print("\tStage-3.3: check onnx_decoder and torch_decoder")
     torch_score, torch_r_score = decoder(
         hyps, hyps_lens, encoder_out, args['reverse_weight'])
-    ort_session = onnxruntime.InferenceSession(decoder_outpath, 
+    ort_session = onnxruntime.InferenceSession(decoder_outpath,
                                                providers=['CPUExecutionProvider'])
     input_names = [node.name for node in onnx_decoder.graph.input]
     ort_inputs = {
