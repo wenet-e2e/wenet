@@ -164,7 +164,7 @@ def get_args():
                         type=str,
                         default='',
                         help='''Context bias mode, selectable from the
-                                following option: decoding_graph,
+                                following option: context_graph,
                                 deep_biasing''')
     parser.add_argument('--context_list_path',
                         type=str,
@@ -174,10 +174,10 @@ def get_args():
                         type=float,
                         default=2.0,
                         help='''The higher the score, the greater the degree of
-                                bias using decoding_graph for biasing''')
+                                bias using context_graph for biasing''')
     parser.add_argument('--deep_biasing_score',
                         type=float,
-                        default=1.5,
+                        default=1.0,
                         help='''The higher the score, the greater the degree of
                                 bias using deep_biasing for biasing''')
     parser.add_argument('--context_filtering',
@@ -185,6 +185,12 @@ def get_args():
                         help='''Reduce the size of the context list through
                                 filtering to enhance the effect of context
                                 biasing''')
+    parser.add_argument('--context_filtering_threshold',
+                        type=float,
+                        default=-4.0,
+                        help='''The threshold for context filtering, the larger
+                                the value, the closer it is to 0, and the fewer
+                                remaining context phrases are filtered''')
 
     args = parser.parse_args()
     print(args)
@@ -273,11 +279,11 @@ def main():
         context_graph = ContextGraph(args.context_list_path, symbol_table,
                                      args.bpe_model, args.context_graph_score)
         context_graph.context_filtering = args.context_filtering
-        context_list_all = context_graph.context_list
+        context_graph.filter_threshold = args.context_filtering_threshold
     if 'deep_biasing' in args.context_bias_mode:
         context_graph.deep_biasing = True
         context_graph.deep_biasing_score = args.deep_biasing_score
-    if 'decoding_graph' in args.context_bias_mode:
+    if 'context_graph' in args.context_bias_mode:
         context_graph.graph_biasing = True
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
@@ -287,8 +293,6 @@ def main():
             target = target.to(device)
             feats_lengths = feats_lengths.to(device)
             target_lengths = target_lengths.to(device)
-            if context_graph is not None and args.context_filtering:
-                context_graph.context_list = context_list_all
 
             if args.mode == 'attention':
                 hyps, _ = model.recognize(

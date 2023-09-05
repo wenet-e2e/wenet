@@ -20,7 +20,8 @@ from wenet.transformer.attention import MultiHeadedAttention
 
 
 class BLSTM(torch.nn.Module):
-    """
+    """Context encoder, encoding unequal-length context phrases
+       into equal-length embedding representations.
     """
 
     def __init__(self,
@@ -56,6 +57,17 @@ class BLSTM(torch.nn.Module):
 
 
 class ContextModule(torch.nn.Module):
+    """Context module, Using context information for deep contextual bias
+
+    During the training process, the original parameters of the ASR model
+    are frozen, and only the parameters of context module are trained.
+
+    Args:
+        vocab_size (int): vocabulary size
+        embedding_size (int): number of ASR encoder projection units
+        encoder_layers (int): number of context encoder layers
+        attention_heads (int): number of heads in the biasing layer
+    """
     def __init__(
         self,
         vocab_size: int,
@@ -97,7 +109,12 @@ class ContextModule(torch.nn.Module):
 
         self.bias_loss = torch.nn.CTCLoss(reduction="sum", zero_infinity=True)
 
-    def forward_context_emb(self, context_list, context_lengths) -> torch.Tensor:
+    def forward_context_emb(self,
+                            context_list: torch.Tensor,
+                            context_lengths: torch.Tensor
+                            ) -> torch.Tensor:
+        """Extracting context embeddings
+        """
         context_emb = self.context_extractor(context_list, context_lengths)
         context_emb = self.context_encoder(context_emb.unsqueeze(0))
         return context_emb
@@ -108,6 +125,12 @@ class ContextModule(torch.nn.Module):
                 biasing_score: float = 1.0,
                 recognize: bool = False) \
             -> Tuple[torch.Tensor, torch.Tensor]:
+        """Using context embeddings for deep biasing.
+
+        Args:
+            biasing_score (int): degree of context biasing
+            recognize (bool): no context decoder computation if True
+        """
         context_emb = context_emb.expand(encoder_out.shape[0], -1, -1)
         context_emb, _ = self.biasing_layer(encoder_out, context_emb,
                                             context_emb)

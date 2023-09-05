@@ -2,6 +2,8 @@ import torch
 from torch.nn.utils.rnn import pad_sequence
 
 from wenet.dataset.processor import __tokenize_by_bpe_model
+from wenet.transformer.context_module import ContextModule
+from wenet.transformer.ctc import CTC
 
 from typing import Dict, List
 
@@ -68,6 +70,7 @@ class ContextGraph:
         self.deep_biasing = False
         self.deep_biasing_score = 1.0
         self.context_filtering = True
+        self.filter_threshold = -4.0
 
     def build_graph(self, context_list: List[List[int]]):
         """ Constructing the context decoding graph, add arcs with negative
@@ -114,6 +117,9 @@ class ContextGraph:
         return 0, back_score
 
     def get_context_list_tensor(self, context_list: List[List[int]]):
+        """Add 0 as no-bias in the context list and obtain the tensor
+           form of the context list
+        """
         context_list_tensor = [torch.tensor([0], dtype=torch.int32)]
         for context_token in context_list:
             context_list_tensor.append(torch.tensor(context_token, dtype=torch.int32))
@@ -124,11 +130,36 @@ class ContextGraph:
                                            padding_value=-1)
         return context_list_tensor, context_list_lengths
 
+    def forward_deep_biasing(self,
+                             encoder_out: torch.Tensor,
+                             context_module: ContextModule,
+                             ctc: CTC):
+        """Apply deep biasing based on encoder output and context list
+        """
+        if self.context_filtering:
+            ctc_probs = ctc.log_softmax(encoder_out).squeeze(0)
+            filtered_context_list = self.two_stage_filtering(
+                self.context_list, ctc_probs)
+            context_list, context_list_lengths = self. \
+                get_context_list_tensor(filtered_context_list)
+        else:
+            context_list, context_list_lengths = self. \
+                get_context_list_tensor(self.context_list)
+        context_list = context_list.to(encoder_out.device)
+        context_emb = context_module. \
+            forward_context_emb(context_list, context_list_lengths)
+        encoder_out, _ = \
+            context_module(context_emb, encoder_out,
+                           self.deep_biasing_score, True)
+        return encoder_out
+
     def two_stage_filtering(self,
                             context_list: List[List[int]],
                             ctc_posterior: torch.Tensor,
-                            filter_threshold: float = -4,
                             filter_window_size: int = 64):
+        """Calculate PSC and SOC for context phrase filtering,
+           refer to: https://arxiv.org/abs/2301.06735
+        """
         if len(context_list) == 0:
             return context_list
 
@@ -148,7 +179,7 @@ class ContextGraph:
                 PSC_score[i] = max(SOC_score.get(i, -float('inf')), score)
             PSC_filtered_index = []
             for i in PSC_score:
-                if PSC_score[i] > filter_threshold:
+                if PSC_score[i] > self.filter_threshold:
                     PSC_filtered_index.append(i)
             if len(PSC_filtered_index) == 0:
                 continue
@@ -189,6 +220,6 @@ class ContextGraph:
                         / len(filtered_context_list[i]))
         filtered_context_list = []
         for i in range(len(context_list)):
-            if SOC_score.get(i, -float('inf')) > filter_threshold:
+            if SOC_score.get(i, -float('inf')) > self.filter_threshold:
                 filtered_context_list.append(context_list[i])
         return filtered_context_list

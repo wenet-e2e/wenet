@@ -614,9 +614,11 @@ def context_sampling(data,
                      symbol_table,
                      len_min,
                      len_max,
+                     utt_num_context,
                      batch_num_context,
                      ):
-    """context_sampling
+    """Perform context sampling by randomly selecting context phrases from the
+       utterance to obtain a context list for the entire batch
 
         Args:
             data: Iterable[List[{key, feat, label}]]
@@ -642,8 +644,7 @@ def context_sampling(data,
 
             st_select = []
             en_select = []
-            num_context = 3
-            for _ in range(0, num_context):
+            for _ in range(0, utt_num_context):
                 random_len = random.randint(min(len(st_index_list) - 1, len_min),
                                             min(len(st_index_list) - 1, len_max))
                 random_index = random.randint(0, len(st_index_list) -
@@ -680,11 +681,8 @@ def context_sampling(data,
 
 
 def context_label_generate(label, context_list):
-    """ generate context label
-
-        Args:
-
-        Returns
+    """ Generate context labels corresponding to the utterances based on
+        the context list
     """
     context_labels = []
     for x in label:

@@ -105,6 +105,8 @@ class Transducer(ASRModel):
             speech_lengths: (Batch, )
             text: (Batch, Length)
             text_lengths: (Batch,)
+            context_data: [context_list, context_label,
+                           context_list_lengths, context_label_lengths]
         """
         assert text_lengths.dim() == 1, text_lengths.shape
         # Check that batch_size is unified

@@ -102,6 +102,8 @@ class ASRModel(torch.nn.Module):
             speech_lengths: (Batch, )
             text: (Batch, Length)
             text_lengths: (Batch,)
+            context_data: [context_list, context_label,
+                           context_list_lengths, context_label_lengths]
         """
 
         assert text_lengths.dim() == 1, text_lengths.shape
@@ -372,19 +374,8 @@ class ASRModel(torch.nn.Module):
             simulate_streaming)  # (B, maxlen, encoder_dim)
 
         if context_graph is not None and context_graph.deep_biasing:
-            if context_graph.context_filtering:
-                ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
-                filtered_context_list = context_graph.two_stage_filtering(
-                    context_graph.context_list, ctc_probs)
-                context_graph.context_list = filtered_context_list
-            context_list, context_list_lengths = \
-                context_graph.get_context_list_tensor(context_graph.context_list)
-            context_list = context_list.to(encoder_out.device)
-            context_emb = self.context_module. \
-                forward_context_emb(context_list, context_list_lengths)
-            encoder_out, _ = \
-                self.context_module(context_emb, encoder_out,
-                                    context_graph.deep_biasing_score, True)
+            encoder_out = context_graph.forward_deep_biasing(
+                encoder_out, self.context_module, self.ctc)
 
         maxlen = encoder_out.size(1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
@@ -441,19 +432,8 @@ class ASRModel(torch.nn.Module):
             simulate_streaming)  # (B, maxlen, encoder_dim)
 
         if context_graph is not None and context_graph.deep_biasing:
-            if context_graph.context_filtering:
-                ctc_probs = self.ctc.log_softmax(encoder_out).squeeze(0)
-                filtered_context_list = context_graph.two_stage_filtering(
-                    context_graph.context_list, ctc_probs)
-                context_graph.context_list = filtered_context_list
-            context_list, context_list_lengths = \
-                context_graph.get_context_list_tensor(context_graph.context_list)
-            context_list = context_list.to(encoder_out.device)
-            context_emb = self.context_module. \
-                forward_context_emb(context_list, context_list_lengths)
-            encoder_out, _ = \
-                self.context_module(context_emb, encoder_out,
-                                    context_graph.deep_biasing_score, True)
+            encoder_out = context_graph.forward_deep_biasing(
+                encoder_out, self.context_module, self.ctc)
 
         maxlen = encoder_out.size(1)
         ctc_probs = self.ctc.log_softmax(
