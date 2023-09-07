@@ -21,6 +21,13 @@ from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list)
 
+def add_variational_noise(model, noise_std):
+    if noise_std == 0.0:
+        return
+    with torch.no_grad():
+        for param in model.parameters():
+            noise = torch.empty_like(x).normal_(mean=0.0, std=noise_std)
+            param.add_(noise)
 
 class Transducer(ASRModel):
     """Transducer-ctc-attention hybrid Encoder-Predictor-Decoder model"""
@@ -47,6 +54,8 @@ class Transducer(ASRModel):
         warmup_steps: float = 25000,
         lm_only_scale: float = 0.25,
         am_only_scale: float = 0.0,
+        noise_std: float = 0.0,
+        l2_weight: bool = 0.0,
     ) -> None:
         assert attention_weight + ctc_weight + transducer_weight == 1.0
         super().__init__(vocab_size, encoder, attention_decoder, ctc,
@@ -60,6 +69,9 @@ class Transducer(ASRModel):
         self.predictor = predictor
         self.joint = joint
         self.bs = None
+        # add_variational_noise
+        self.noise_std = noise_std
+        self.l2_weight = l2_weight
 
         # k2 rnnt loss
         self.enable_k2 = enable_k2
@@ -109,7 +121,8 @@ class Transducer(ASRModel):
         assert (speech.shape[0] == speech_lengths.shape[0] == text.shape[0] ==
                 text_lengths.shape[0]), (speech.shape, speech_lengths.shape,
                                          text.shape, text_lengths.shape)
-
+        
+        add_variational_noise(self, self.noise_std)
         # Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
@@ -141,11 +154,19 @@ class Transducer(ASRModel):
             loss = loss + self.ctc_weight * loss_ctc.sum()
         if loss_att is not None:
             loss = loss + self.attention_decoder_weight * loss_att.sum()
+        
+        loss_l2: Optional[torch.Tensor] = None
+        if self.l2_weight != 0.0:
+            loss_l2 = torch.tensor(0.0).detach()
+            for param in self.parameters():
+                loss_l2 += torch.norm(param, p=2) ** 2
+            loss = loss + self.l2_weight * loss_l2
         # NOTE: 'loss' must be in dict
         return {
             'loss': loss,
             'loss_att': loss_att,
             'loss_ctc': loss_ctc,
+            'loss_l2': loss_l2,
             'loss_rnnt': loss_rnnt,
         }
 
