@@ -1,5 +1,6 @@
 // Copyright (c) 2020 Mobvoi Inc (Binbin Zhang, Di Wu)
 //               2022 Binbin Zhang (binbzha@qq.com)
+//               2023 Jing Du (thuduj12@163.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,6 +65,10 @@ DEFINE_int32(sample_rate, 16000, "sample rate for audio");
 
 // TLG fst
 DEFINE_string(fst_path, "", "TLG fst path");
+
+// ITN fst
+DEFINE_string(itn_model_path, "", "fst based ITN model path, "
+              "should contain itn_tagger.fst and itn_verbalizer.fst");
 
 // DecodeOptions flags
 DEFINE_int32(chunk_size, 16, "decoding chunk size");
@@ -203,8 +208,8 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   if (!FLAGS_fst_path.empty()) {  // With LM
     CHECK(!FLAGS_dict_path.empty());
     LOG(INFO) << "Reading fst " << FLAGS_fst_path;
-    auto fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
-        fst::Fst<fst::StdArc>::Read(FLAGS_fst_path));
+    auto fst = std::shared_ptr<fst::VectorFst<fst::StdArc>>(
+        fst::VectorFst<fst::StdArc>::Read(FLAGS_fst_path));
     CHECK(fst != nullptr);
     resource->fst = fst;
 
@@ -237,6 +242,17 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   post_process_opts.lowercase = FLAGS_lowercase;
   resource->post_processor =
       std::make_shared<PostProcessor>(std::move(post_process_opts));
+
+  if (!FLAGS_itn_model_path.empty()) {  // With ITN
+    LOG(INFO) << "Reading ITN fst " << FLAGS_itn_model_path;
+    std::string itn_tagger_path = wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_tagger.fst");
+    std::string itn_verbalizer_path = wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_verbalizer.fst");
+    post_process_opts.itn = true;
+    auto postprocessor = std::make_shared<wenet::PostProcessor>(post_process_opts);
+    postprocessor->InitITNResource(itn_tagger_path, itn_verbalizer_path);
+    resource->post_processor = postprocessor;
+  } 
+  
   return resource;
 }
 

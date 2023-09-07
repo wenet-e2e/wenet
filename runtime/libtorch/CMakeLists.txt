@@ -4,16 +4,19 @@ project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
 option(GRAPH_TOOLS "whether to build TLG graph tools" OFF)
-option(BUILD_TESTING "whether to build unit test" ON)
+option(BUILD_TESTING "whether to build unit test" OFF)
 
 option(GRPC "whether to build with gRPC" OFF)
 # TODO(Binbin Zhang): Change websocket to OFF since it depends on boost
 #                     which is a very big library
-option(WEBSOCKET "whether to build with websocket" ON)
+option(WEBSOCKET "whether to build with websocket" OFF)
 option(HTTP "whether to build with http" OFF)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
+
+#SET(CMAKE_BUILD_TYPE "Debug")    # Debug OR Release, you can set it in command window: cmake -DCMAKE_BUILD_TYPE=Debug 
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -g")
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 

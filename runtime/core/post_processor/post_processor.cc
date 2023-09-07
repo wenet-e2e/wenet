@@ -1,4 +1,5 @@
 // Copyright (c) 2021 Xingchen Song sxc19@mails.tsinghua.edu.cn
+//               2023 Jing Du thuduj12@163.com
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +14,16 @@
 // limitations under the License
 
 #include "post_processor/post_processor.h"
-
 #include <sstream>
 #include <vector>
 
 #include "utils/string.h"
 
 namespace wenet {
+void PostProcessor::InitITNResource(const std::string& tagger_path, const std::string& verbalizer_path){
+    auto itn_processor = std::make_shared<wenet::Processor>(tagger_path, verbalizer_path);
+    itn_resource = itn_processor;
+};
 
 std::string PostProcessor::ProcessSpace(const std::string& str) {
   std::string result = str;
@@ -56,10 +60,32 @@ std::string PostProcessor::ProcessSpace(const std::string& str) {
   return result;
 }
 
+void del_substr(std::string& str, const std::string& sub){
+	int pos = 0;
+	while (string::npos != (pos = str.find(sub)) )
+	{
+		str.erase(pos, sub.size());
+	}
+}
+
+std::string PostProcessor::ProcessSymbols(const std::string& str) {
+  std::string result = str;
+  del_substr(result, "<unk>");
+  del_substr(result, "<context>");
+  del_substr(result, "</context>");
+  return result;
+}
+
 std::string PostProcessor::Process(const std::string& str, bool finish) {
   std::string result;
-  result = ProcessSpace(str);
+  result = ProcessSymbols(str); //remove symbols with "<>" first
+  result = ProcessSpace(result);
   // TODO(xcsong): do itn/punctuation if finish == true
+  if (finish == true and opts_.itn){
+    if (nullptr != itn_resource){
+      result = itn_resource->normalize(result);
+    }
+  }
   return result;
 }
 
