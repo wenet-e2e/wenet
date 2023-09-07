@@ -121,7 +121,7 @@ class Transducer(ASRModel):
         assert (speech.shape[0] == speech_lengths.shape[0] == text.shape[0] ==
                 text_lengths.shape[0]), (speech.shape, speech_lengths.shape,
                                          text.shape, text_lengths.shape)
-        
+
         add_variational_noise(self, self.noise_std)
         # Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
@@ -154,7 +154,7 @@ class Transducer(ASRModel):
             loss = loss + self.ctc_weight * loss_ctc.sum()
         if loss_att is not None:
             loss = loss + self.attention_decoder_weight * loss_att.sum()
-        
+
         loss_l2: Optional[torch.Tensor] = None
         if self.l2_weight != 0.0:
             loss_l2 = torch.tensor(0.0).detach()
