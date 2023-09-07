@@ -121,8 +121,8 @@ class Transducer(ASRModel):
         assert (speech.shape[0] == speech_lengths.shape[0] == text.shape[0] ==
                 text_lengths.shape[0]), (speech.shape, speech_lengths.shape,
                                          text.shape, text_lengths.shape)
-
-        add_variational_noise(self, self.noise_std)
+        if step > self.warmup_steps:
+            add_variational_noise(self, self.noise_std)
         # Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
