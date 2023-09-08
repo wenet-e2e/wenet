@@ -19,7 +19,7 @@
 #include "utils/string.h"
 
 namespace wenet {
-const std::string EOS = "<EOS>";
+const char EOS[] = "<EOS>";
 const std::set<std::string> UTF8_WHITESPACE = {" ", "\t", "\n", "\r",
                                                "\x0b\x0c"};
 const std::set<std::string> ASCII_LETTERS = {

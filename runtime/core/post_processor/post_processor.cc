@@ -1,5 +1,5 @@
 // Copyright (c) 2021 Xingchen Song sxc19@mails.tsinghua.edu.cn
-//               2023 Jing Du thuduj12@163.com
+//               2023 Jing Du (thuduj12@163.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.

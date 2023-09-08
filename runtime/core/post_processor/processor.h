@@ -1,4 +1,5 @@
 // Copyright (c) 2022 Zhendong Peng (pzd17@tsinghua.org.cn)
+//               2023 Jing Du (thuduj12@163.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +16,9 @@
 #ifndef POST_PROCESSOR_PROCESSOR_H_
 #define POST_PROCESSOR_PROCESSOR_H_
 
+#include <string>
+#include <memory>
 #include "fst/fstlib.h"
-
 #include "post_processor/token_parser.h"
 
 using fst::StdArc;

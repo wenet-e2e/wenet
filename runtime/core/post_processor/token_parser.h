@@ -1,4 +1,5 @@
 // Copyright (c) 2022 Zhendong Peng (pzd17@tsinghua.org.cn)
+//               2023 Jing Du (thuduj12@163.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,20 +23,12 @@
 
 namespace wenet {
 
-extern const std::string EOS;
-extern const std::set<std::string> UTF8_WHITESPACE;
-extern const std::set<std::string> ASCII_LETTERS;
-extern const std::unordered_map<std::string, std::vector<std::string>>
-    TN_ORDERS;
-extern const std::unordered_map<std::string, std::vector<std::string>>
-    ITN_ORDERS;
-
 struct Token {
   std::string name;
   std::vector<std::string> order;
   std::unordered_map<std::string, std::string> members;
 
-  Token(const std::string& name) : name(name) {}
+  explicit Token(const std::string& name) : name(name) {}
 
   void append(const std::string& key, const std::string& value) {
     order.emplace_back(key);
@@ -66,7 +59,7 @@ enum ParseType {
 
 class TokenParser {
  public:
-  TokenParser(ParseType type);
+  explicit TokenParser(ParseType type);
   std::string reorder(const std::string& input);
 
  private:
