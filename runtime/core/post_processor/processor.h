@@ -16,8 +16,8 @@
 #ifndef POST_PROCESSOR_PROCESSOR_H_
 #define POST_PROCESSOR_PROCESSOR_H_
 
-#include <string>
 #include <memory>
+#include <string>
 #include "fst/fstlib.h"
 #include "post_processor/token_parser.h"
 

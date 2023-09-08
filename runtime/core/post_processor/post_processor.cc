@@ -20,11 +20,11 @@
 #include "utils/string.h"
 
 namespace wenet {
-void PostProcessor::InitITNResource(
-  const std::string& tagger_path, const std::string& verbalizer_path) {
-    auto itn_processor =
+void PostProcessor::InitITNResource(const std::string& tagger_path,
+                                    const std::string& verbalizer_path) {
+  auto itn_processor =
       std::make_shared<wenet::Processor>(tagger_path, verbalizer_path);
-    itn_resource = itn_processor;
+  itn_resource = itn_processor;
 }
 
 std::string PostProcessor::ProcessSpace(const std::string& str) {
