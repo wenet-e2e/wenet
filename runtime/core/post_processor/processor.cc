@@ -70,4 +70,4 @@ std::string Processor::normalize(const std::string& input) {
   return verbalize(tag(input));
 }
 
-}  // namespace wetext
+}  // namespace wenet

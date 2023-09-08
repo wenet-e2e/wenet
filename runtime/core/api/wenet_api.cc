@@ -90,14 +90,18 @@ class Recognizer {
       post_process_opts_->language_type = wenet::kIndoEuropean;
     }
     resource_->post_processor =
-        std::make_shared<wenet::PostProcessor>(*post_process_opts_);  
-    //Optional: ITN 
-    std::string itn_tagger_path = wenet::JoinPath(model_dir, "zh_itn_tagger.fst");
-    std::string itn_verbalizer_path = wenet::JoinPath(model_dir, "zh_itn_verbalizer.fst");
-    if (wenet::FileExists(itn_tagger_path) && wenet::FileExists(itn_verbalizer_path)){
+      std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+    // Optional: ITN
+    std::string itn_tagger_path =
+      wenet::JoinPath(model_dir, "zh_itn_tagger.fst");
+    std::string itn_verbalizer_path =
+      wenet::JoinPath(model_dir, "zh_itn_verbalizer.fst");
+    if (wenet::FileExists(itn_tagger_path)
+        && wenet::FileExists(itn_verbalizer_path)) {
       LOG(INFO) << "Reading ITN fst";
       post_process_opts_->itn = true;
-      auto postprocessor = std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+      auto postprocessor =
+        std::make_shared<wenet::PostProcessor>(*post_process_opts_);
       postprocessor->InitITNResource(itn_tagger_path, itn_verbalizer_path);
       resource_->post_processor = postprocessor;
     }

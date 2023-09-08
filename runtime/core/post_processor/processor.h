@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PROCESSOR_PROCESSOR_H_
-#define PROCESSOR_PROCESSOR_H_
+#ifndef POST_PROCESSOR_PROCESSOR_H_
+#define POST_PROCESSOR_PROCESSOR_H_
 
 #include "fst/fstlib.h"
 
@@ -43,6 +43,6 @@ class Processor {
   std::shared_ptr<StringPrinter<StdArc>> printer_ = nullptr;
 };
 
-}  // namespace wetext
+}  // namespace wenet
 
-#endif  // PROCESSOR_PROCESSOR_H_
+#endif  // POST_PROCESSOR_PROCESSOR_H_

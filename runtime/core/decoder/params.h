@@ -245,14 +245,17 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
 
   if (!FLAGS_itn_model_path.empty()) {  // With ITN
     LOG(INFO) << "Reading ITN fst " << FLAGS_itn_model_path;
-    std::string itn_tagger_path = wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_tagger.fst");
-    std::string itn_verbalizer_path = wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_verbalizer.fst");
+    std::string itn_tagger_path =
+      wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_tagger.fst");
+    std::string itn_verbalizer_path =
+      wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_verbalizer.fst");
     post_process_opts.itn = true;
-    auto postprocessor = std::make_shared<wenet::PostProcessor>(post_process_opts);
+    auto postprocessor =
+      std::make_shared<wenet::PostProcessor>(post_process_opts);
     postprocessor->InitITNResource(itn_tagger_path, itn_verbalizer_path);
     resource->post_processor = postprocessor;
-  } 
-  
+  }
+
   return resource;
 }
 

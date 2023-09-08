@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef PROCESSOR_TOKEN_PARSER_H_
-#define PROCESSOR_TOKEN_PARSER_H_
+#ifndef POST_PROCESSOR_TOKEN_PARSER_H_
+#define POST_PROCESSOR_TOKEN_PARSER_H_
 
 #include <set>
 #include <string>
@@ -86,6 +86,6 @@ class TokenParser {
   std::unordered_map<std::string, std::vector<std::string>> orders;
 };
 
-}  // wetext
+}  // namespace wenet
 
-#endif  // PROCESSOR_TOKEN_PARSER_H_
+#endif  // POST_PROCESSOR_TOKEN_PARSER_H_

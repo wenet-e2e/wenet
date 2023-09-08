@@ -151,4 +151,4 @@ std::string TokenParser::reorder(const std::string& input) {
   return Trim(output);
 }
 
-}  // namespace wetext
+}  // namespace wenet

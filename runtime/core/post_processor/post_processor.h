@@ -63,7 +63,8 @@ class PostProcessor {
   // TODO(xcsong): add punctuation
   // void Punctuate(const std::string& str);
 
-  void InitITNResource(const std::string& tagger_path, const std::string& verbalizer_path);
+  void InitITNResource(const std::string& tagger_path,
+    const std::string& verbalizer_path);
 
  private:
   std::shared_ptr<wenet::Processor> itn_resource = nullptr;
