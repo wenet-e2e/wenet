@@ -86,7 +86,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     sampling_size=$((full_size / cmvn_sampling_divisor))
     shuf -n $sampling_size data/$train_set/wav.scp \
       > data/$train_set/wav.scp.sampled
-    python3 tools/compute_cmvn_stats.py \
+    python tools/compute_cmvn_stats.py \
     --num_workers 16 \
     --train_config $train_config \
     --in_scp data/$train_set/wav.scp.sampled \
