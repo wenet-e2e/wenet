@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python
 
 # Copyright (c) 2021 Mobvoi Inc. (authors: Binbin Zhang)
 #
