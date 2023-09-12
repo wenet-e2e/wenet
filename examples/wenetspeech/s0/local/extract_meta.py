@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Copyright 2021  Xiaomi Corporation (Author: Yongqing Wang)
 #                 Mobvoi Inc(Author: Di Wu, Binbin Zhang)
 
