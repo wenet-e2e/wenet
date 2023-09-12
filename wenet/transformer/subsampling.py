@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
-
 """Subsampling layer definition."""
 
 from typing import Tuple, Union
@@ -22,6 +20,7 @@ import torch
 
 
 class BaseSubsampling(torch.nn.Module):
+
     def __init__(self):
         super().__init__()
         self.right_context = 0
@@ -30,6 +29,40 @@ class BaseSubsampling(torch.nn.Module):
     def position_encoding(self, offset: Union[int, torch.Tensor],
                           size: int) -> torch.Tensor:
         return self.pos_enc.position_encoding(offset, size)
+
+
+class EmbedinigNoSubsampling(BaseSubsampling):
+    """Embedding input without subsampling
+    """
+
+    def __init__(self, idim: int, odim: int, dropout_rate: float,
+                 pos_enc_class: torch.nn.Module):
+        super().__init__()
+        self.embed = torch.nn.Embedding(idim, odim)
+        self.pos_enc = pos_enc_class
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Input x.
+
+        Args:
+            x (torch.Tensor): Input tensor (#batch, time, idim).
+            x_mask (torch.Tensor): Input mask (#batch, 1, time).
+
+        Returns:
+            torch.Tensor: linear input tensor (#batch, time', odim),
+                where time' = time .
+            torch.Tensor: linear input mask (#batch, 1, time'),
+                where time' = time .
+
+        """
+        x = self.embed(x)
+        x, pos_emb = self.pos_enc(x, offset)
+        return x, pos_emb, x_mask
 
 
 class LinearNoSubsampling(BaseSubsampling):
@@ -41,6 +74,7 @@ class LinearNoSubsampling(BaseSubsampling):
         dropout_rate (float): Dropout rate.
 
     """
+
     def __init__(self, idim: int, odim: int, dropout_rate: float,
                  pos_enc_class: torch.nn.Module):
         """Construct an linear object."""
@@ -55,10 +89,10 @@ class LinearNoSubsampling(BaseSubsampling):
         self.subsampling_rate = 1
 
     def forward(
-            self,
-            x: torch.Tensor,
-            x_mask: torch.Tensor,
-            offset: Union[int, torch.Tensor] = 0
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Input x.
 
@@ -87,6 +121,7 @@ class Conv2dSubsampling4(BaseSubsampling):
         dropout_rate (float): Dropout rate.
 
     """
+
     def __init__(self, idim: int, odim: int, dropout_rate: float,
                  pos_enc_class: torch.nn.Module):
         """Construct an Conv2dSubsampling4 object."""
@@ -107,10 +142,10 @@ class Conv2dSubsampling4(BaseSubsampling):
         self.right_context = 6
 
     def forward(
-            self,
-            x: torch.Tensor,
-            x_mask: torch.Tensor,
-            offset: Union[int, torch.Tensor] = 0
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
 
@@ -142,6 +177,7 @@ class Conv2dSubsampling6(BaseSubsampling):
         dropout_rate (float): Dropout rate.
         pos_enc (torch.nn.Module): Custom position encoding layer.
     """
+
     def __init__(self, idim: int, odim: int, dropout_rate: float,
                  pos_enc_class: torch.nn.Module):
         """Construct an Conv2dSubsampling6 object."""
@@ -160,10 +196,10 @@ class Conv2dSubsampling6(BaseSubsampling):
         self.right_context = 10
 
     def forward(
-            self,
-            x: torch.Tensor,
-            x_mask: torch.Tensor,
-            offset: Union[int, torch.Tensor] = 0
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
         Args:
@@ -194,6 +230,7 @@ class Conv2dSubsampling8(BaseSubsampling):
         dropout_rate (float): Dropout rate.
 
     """
+
     def __init__(self, idim: int, odim: int, dropout_rate: float,
                  pos_enc_class: torch.nn.Module):
         """Construct an Conv2dSubsampling8 object."""
@@ -214,10 +251,10 @@ class Conv2dSubsampling8(BaseSubsampling):
         self.right_context = 14
 
     def forward(
-            self,
-            x: torch.Tensor,
-            x_mask: torch.Tensor,
-            offset: Union[int, torch.Tensor] = 0
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
 

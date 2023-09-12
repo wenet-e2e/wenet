@@ -31,6 +31,7 @@ from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.transformer.subsampling import Conv2dSubsampling4
 from wenet.transformer.subsampling import Conv2dSubsampling6
 from wenet.transformer.subsampling import Conv2dSubsampling8
+from wenet.transformer.subsampling import EmbedinigNoSubsampling
 from wenet.transformer.subsampling import LinearNoSubsampling
 from wenet.utils.common import get_activation
 from wenet.utils.mask import make_pad_mask
@@ -104,6 +105,8 @@ class BaseEncoder(torch.nn.Module):
             subsampling_class = Conv2dSubsampling6
         elif input_layer == "conv2d8":
             subsampling_class = Conv2dSubsampling8
+        elif input_layer == "embed":
+            subsampling_class = EmbedinigNoSubsampling
         else:
             raise ValueError("unknown input_layer: " + input_layer)
 
