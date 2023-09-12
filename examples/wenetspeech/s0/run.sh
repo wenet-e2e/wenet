@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash /usr/bin/python
 
 # Copyright 2021  Mobvoi Inc(Author: Di Wu, Binbin Zhang)
 #                 NPU, ASLP Group (Author: Qijie Shao)
