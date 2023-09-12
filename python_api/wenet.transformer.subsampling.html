@@ -251,6 +251,44 @@
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="wenet.transformer.subsampling.EmbedinigNoSubsampling">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.transformer.subsampling.</span></span><span class="sig-name descname"><span class="pre">EmbedinigNoSubsampling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos_enc_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/transformer/subsampling.html#EmbedinigNoSubsampling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.subsampling.EmbedinigNoSubsampling" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#wenet.transformer.subsampling.BaseSubsampling" title="wenet.transformer.subsampling.BaseSubsampling"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseSubsampling</span></code></a></p>
+<p>Embedding input without subsampling</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="wenet.transformer.subsampling.EmbedinigNoSubsampling.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">offset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/wenet/transformer/subsampling.html#EmbedinigNoSubsampling.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.subsampling.EmbedinigNoSubsampling.forward" title="Permalink to this definition"></a></dt>
+<dd><p>Input x.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>torch.Tensor</em>) – Input tensor (#batch, time, idim).</p></li>
+<li><p><strong>x_mask</strong> (<em>torch.Tensor</em>) – Input mask (#batch, 1, time).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>linear input tensor (#batch, time’, odim),</dt><dd><p>where time’ = time .</p>
+</dd>
+<dt>torch.Tensor: linear input mask (#batch, 1, time’),</dt><dd><p>where time’ = time .</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="wenet.transformer.subsampling.EmbedinigNoSubsampling.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.transformer.subsampling.EmbedinigNoSubsampling.training" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="wenet.transformer.subsampling.LinearNoSubsampling">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.transformer.subsampling.</span></span><span class="sig-name descname"><span class="pre">LinearNoSubsampling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">odim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos_enc_class</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/transformer/subsampling.html#LinearNoSubsampling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.subsampling.LinearNoSubsampling" title="Permalink to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#wenet.transformer.subsampling.BaseSubsampling" title="wenet.transformer.subsampling.BaseSubsampling"><code class="xref py py-class docutils literal notranslate"><span class="pre">BaseSubsampling</span></code></a></p>
