@@ -110,7 +110,7 @@ if [ $stage -le 1 ]; then
 
   # Files to be created:
   # wav.scp text segments utt2dur
-  python3 local/extract_meta.py \
+  python local/extract_meta.py \
     $wenetspeech_dir/WenetSpeech.json $corpus_dir || exit 1;
 fi
 
