@@ -45,8 +45,8 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
     """
     max_len = max([len(item) for item in xs])
     batchs = len(xs)
-    pad_res = torch.zeros(batchs, max_len, *(xs[0].shape[1:]), dtype=xs[0].dtype,
-                          device=xs[0].device)
+    pad_res = torch.zeros(batchs, max_len, *(xs[0].shape[1:]),
+                          dtype=xs[0].dtype, device=xs[0].device)
     pad_res.fill_(pad_value)
     for i in range(batchs):
         pad_res[i, :len(xs[i])] = xs[i]
