@@ -14,6 +14,7 @@ option(HTTP "whether to build with http" OFF)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
+option(ITN "whether to use WeTextProcessing" ON)
 
 SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -g")
 
@@ -55,6 +56,10 @@ add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
 add_subdirectory(api)
+
+if(ITN)
+  include(wetextprocessing)
+endif()
 
 # Optionally, you can build with websocket
 if(WEBSOCKET)
