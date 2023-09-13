@@ -43,14 +43,14 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
                 [1., 0., 0., 0.]])
 
     """
-    n_batch = len(xs)
-    max_len = max([x.size(0) for x in xs])
-    pad = torch.zeros(n_batch, max_len, dtype=xs[0].dtype, device=xs[0].device)
-    pad = pad.fill_(pad_value)
-    for i in range(n_batch):
-        pad[i, :xs[i].size(0)] = xs[i]
-
-    return pad
+    max_len = max([len(item) for item in xs])
+    batchs = len(xs)
+    pad_res = torch.zeros(batchs, max_len, *(xs[0].shape[1:]), dtype=xs[0].dtype,
+                          device=xs[0].device)
+    pad_res.fill_(pad_value)
+    for i in range(batchs):
+        pad_res[i, :len(xs[i])] = xs[i]
+    return pad_res
 
 
 def add_blank(ys_pad: torch.Tensor, blank: int,
