@@ -203,4 +203,19 @@
 | attention rescoring       | 4.81  |
 | LM + attention rescoring  | 4.46  |
 
+## E-Branchformer Result
 
+* Feature info: using fbank feature, dither=1.0, cmvn, online speed perturb
+* * Model info:
+    * Model Params: 47,570,132
+    * Num Encoder Layer: 17
+    * CNN Kernel Size: 31
+* Training info: lr 0.001, weight_decay: 0.000001, batch size 16, 4 gpu, acc_grad 1, 240 epochs
+* Decoding info: ctc_weight 0.3, average_num 30
+
+| decoding mode          | CER  |
+| ---------------------- | ---- |
+| attention decoder      | 4.70 |
+| ctc greedy search      | 4.78 |
+| ctc prefix beam search | 4.78 |
+| attention rescoring    | 4.41 |
