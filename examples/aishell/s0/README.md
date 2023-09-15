@@ -212,10 +212,12 @@
     * CNN Kernel Size: 31
 * Training info: lr 0.001, weight_decay: 0.000001, batch size 16, 4 gpu, acc_grad 1, 240 epochs
 * Decoding info: ctc_weight 0.3, average_num 30
+* Git hash: 89962d1dcae18dd3a281782a40e74dd2721ae8fe
 
 | decoding mode          | CER  |
 | ---------------------- | ---- |
-| attention decoder      | 4.70 |
-| ctc greedy search      | 4.78 |
-| ctc prefix beam search | 4.78 |
-| attention rescoring    | 4.41 |
+| attention decoder      | 4.73 |
+| ctc greedy search      | 4.77 |
+| ctc prefix beam search | 4.77 |
+| attention rescoring    | 4.39 |
+| LM + attention rescoring  | 4.22  |
