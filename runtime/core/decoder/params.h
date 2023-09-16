@@ -66,8 +66,8 @@ DEFINE_int32(sample_rate, 16000, "sample rate for audio");
 DEFINE_string(fst_path, "", "TLG fst path");
 
 // ITN fst
-DEFINE_string(itn_model_path, "",
-              "fst based ITN model path, "
+DEFINE_string(itn_model_dir, "",
+              "fst based ITN model dir, "
               "should contain itn_tagger.fst and itn_verbalizer.fst");
 
 // DecodeOptions flags
@@ -243,17 +243,20 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
   resource->post_processor =
       std::make_shared<PostProcessor>(std::move(post_process_opts));
 
-  if (!FLAGS_itn_model_path.empty()) {  // With ITN
-    LOG(INFO) << "Reading ITN fst " << FLAGS_itn_model_path;
+  if (!FLAGS_itn_model_dir.empty()) {  // With ITN
     std::string itn_tagger_path =
-        wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_tagger.fst");
+        wenet::JoinPath(FLAGS_itn_model_dir, "zh_itn_tagger.fst");
     std::string itn_verbalizer_path =
-        wenet::JoinPath(FLAGS_itn_model_path, "zh_itn_verbalizer.fst");
-    post_process_opts.itn = true;
-    auto postprocessor =
-        std::make_shared<wenet::PostProcessor>(post_process_opts);
-    postprocessor->InitITNResource(itn_tagger_path, itn_verbalizer_path);
-    resource->post_processor = postprocessor;
+        wenet::JoinPath(FLAGS_itn_model_dir, "zh_itn_verbalizer.fst");
+    if (wenet::FileExists(itn_tagger_path) &&
+        wenet::FileExists(itn_verbalizer_path)) {
+      LOG(INFO) << "Reading ITN fst" << FLAGS_itn_model_dir;
+      post_process_opts.itn = true;
+      auto postprocessor =
+          std::make_shared<wenet::PostProcessor>(std::move(post_process_opts));
+      postprocessor->InitITNResource(itn_tagger_path, itn_verbalizer_path);
+      resource->post_processor = postprocessor;
+    }
   }
 
   return resource;
