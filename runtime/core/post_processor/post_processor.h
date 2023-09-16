@@ -19,8 +19,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-
-#include "post_processor/processor.h"
+#include "processor/wetext_processor.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -67,7 +66,7 @@ class PostProcessor {
                        const std::string& verbalizer_path);
 
  private:
-  std::shared_ptr<wenet::Processor> itn_resource = nullptr;
+  std::shared_ptr<wetext::Processor> itn_resource = nullptr;
   const PostProcessOptions opts_;
 
  public:

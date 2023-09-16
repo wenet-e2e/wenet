@@ -16,8 +16,7 @@ option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
 option(ITN "whether to use WeTextProcessing" ON)
 
-SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -g")
-
+set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -g")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
@@ -49,6 +48,10 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
 
+if(ITN)
+  include(wetextprocessing)
+endif()
+
 # Build all libraries
 add_subdirectory(utils)
 add_subdirectory(frontend)
@@ -56,10 +59,6 @@ add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
 add_subdirectory(api)
-
-if(ITN)
-  include(wetextprocessing)
-endif()
 
 # Optionally, you can build with websocket
 if(WEBSOCKET)

@@ -16,14 +16,14 @@
 #include "post_processor/post_processor.h"
 #include <sstream>
 #include <vector>
-
+#include "processor/wetext_processor.h"
 #include "utils/string.h"
 
 namespace wenet {
 void PostProcessor::InitITNResource(const std::string& tagger_path,
                                     const std::string& verbalizer_path) {
   auto itn_processor =
-      std::make_shared<wenet::Processor>(tagger_path, verbalizer_path);
+      std::make_shared<wetext::Processor>(tagger_path, verbalizer_path);
   itn_resource = itn_processor;
 }
 
@@ -84,10 +84,10 @@ std::string PostProcessor::Process(const std::string& str, bool finish) {
   // remove symbols with "<>" first
   result = ProcessSymbols(str);
   result = ProcessSpace(result);
-  // TODO(xcsong): do itn/punctuation if finish == true
+  // TODO(xcsong): do punctuation if finish == true
   if (finish == true && opts_.itn) {
     if (nullptr != itn_resource) {
-      result = itn_resource->normalize(result);
+      result = itn_resource->Normalize(result);
     }
   }
   return result;

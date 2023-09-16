@@ -92,7 +92,6 @@ enum DecodeState {
 struct DecodeResource {
   std::shared_ptr<AsrModel> model = nullptr;
   std::shared_ptr<fst::SymbolTable> symbol_table = nullptr;
-  // std::shared_ptr<fst::Fst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::VectorFst<fst::StdArc>> fst = nullptr;
   std::shared_ptr<fst::SymbolTable> unit_table = nullptr;
   std::shared_ptr<ContextGraph> context_graph = nullptr;
@@ -141,7 +140,6 @@ class AsrDecoder {
   std::shared_ptr<PostProcessor> post_processor_;
   std::shared_ptr<ContextGraph> context_graph_;
 
-  // std::shared_ptr<fst::Fst<fst::StdArc>> fst_ = nullptr;
   std::shared_ptr<fst::VectorFst<fst::StdArc>> fst_ = nullptr;
   // output symbol table
   std::shared_ptr<fst::SymbolTable> symbol_table_;

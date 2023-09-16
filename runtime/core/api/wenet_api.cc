@@ -1,5 +1,4 @@
 // Copyright (c) 2022  Binbin Zhang (binbzha@qq.com)
-//               2023  Jing Du (thuduj12@163.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -66,8 +65,6 @@ class Recognizer {
 
     std::string fst_path = wenet::JoinPath(model_dir, "TLG.fst");
     if (wenet::FileExists(fst_path)) {  // With LM
-      // resource_->fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
-      //     fst::Fst<fst::StdArc>::Read(fst_path));
       resource_->fst = std::shared_ptr<fst::VectorFst<fst::StdArc>>(
           fst::VectorFst<fst::StdArc>::Read(fst_path));
 
