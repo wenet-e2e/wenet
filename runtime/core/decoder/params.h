@@ -39,6 +39,7 @@
 #endif
 #include "frontend/feature_pipeline.h"
 #include "post_processor/post_processor.h"
+#include "utils/file.h"
 #include "utils/flags.h"
 #include "utils/string.h"
 
