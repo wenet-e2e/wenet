@@ -218,6 +218,7 @@
         <span class="n">dropout_rate</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">use_linear_after_conv</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
         <span class="n">gate_activation</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">causal</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
 
@@ -230,6 +231,7 @@
             <span class="n">dropout_rate</span><span class="o">=</span><span class="n">dropout_rate</span><span class="p">,</span>
             <span class="n">use_linear_after_conv</span><span class="o">=</span><span class="n">use_linear_after_conv</span><span class="p">,</span>
             <span class="n">gate_activation</span><span class="o">=</span><span class="n">gate_activation</span><span class="p">,</span>
+            <span class="n">causal</span><span class="o">=</span><span class="n">causal</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">channel_proj2</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">linear_units</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
 
