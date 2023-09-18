@@ -143,6 +143,7 @@ class ConvolutionalGatingMLP(torch.nn.Module):
         dropout_rate: float,
         use_linear_after_conv: bool,
         gate_activation: str,
+        causal: bool = True,
     ):
         super().__init__()
 
@@ -155,6 +156,7 @@ class ConvolutionalGatingMLP(torch.nn.Module):
             dropout_rate=dropout_rate,
             use_linear_after_conv=use_linear_after_conv,
             gate_activation=gate_activation,
+            causal=causal,
         )
         self.channel_proj2 = torch.nn.Linear(linear_units // 2, size)
 
