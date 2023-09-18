@@ -1,4 +1,5 @@
 // Copyright (c) 2021 Xingchen Song sxc19@mails.tsinghua.edu.cn
+//               2023 Jing Du (thuduj12@163.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +14,18 @@
 // limitations under the License
 
 #include "post_processor/post_processor.h"
-
 #include <sstream>
 #include <vector>
-
+#include "processor/wetext_processor.h"
 #include "utils/string.h"
 
 namespace wenet {
+void PostProcessor::InitITNResource(const std::string& tagger_path,
+                                    const std::string& verbalizer_path) {
+  auto itn_processor =
+      std::make_shared<wetext::Processor>(tagger_path, verbalizer_path);
+  itn_resource = itn_processor;
+}
 
 std::string PostProcessor::ProcessSpace(const std::string& str) {
   std::string result = str;
@@ -56,10 +62,34 @@ std::string PostProcessor::ProcessSpace(const std::string& str) {
   return result;
 }
 
+std::string del_substr(const std::string& str, const std::string& sub) {
+  std::string result = str;
+  int pos = 0;
+  while (string::npos != (pos = result.find(sub))) {
+    result.erase(pos, sub.size());
+  }
+  return result;
+}
+
+std::string PostProcessor::ProcessSymbols(const std::string& str) {
+  std::string result = str;
+  result = del_substr(result, "<unk>");
+  result = del_substr(result, "<context>");
+  result = del_substr(result, "</context>");
+  return result;
+}
+
 std::string PostProcessor::Process(const std::string& str, bool finish) {
   std::string result;
-  result = ProcessSpace(str);
-  // TODO(xcsong): do itn/punctuation if finish == true
+  // remove symbols with "<>" first
+  result = ProcessSymbols(str);
+  result = ProcessSpace(result);
+  // TODO(xcsong): do punctuation if finish == true
+  if (finish == true && opts_.itn) {
+    if (nullptr != itn_resource) {
+      result = itn_resource->Normalize(result);
+    }
+  }
   return result;
 }
 

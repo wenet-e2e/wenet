@@ -65,8 +65,8 @@ class Recognizer {
 
     std::string fst_path = wenet::JoinPath(model_dir, "TLG.fst");
     if (wenet::FileExists(fst_path)) {  // With LM
-      resource_->fst = std::shared_ptr<fst::Fst<fst::StdArc>>(
-          fst::Fst<fst::StdArc>::Read(fst_path));
+      resource_->fst = std::shared_ptr<fst::VectorFst<fst::StdArc>>(
+          fst::VectorFst<fst::StdArc>::Read(fst_path));
 
       std::string symbol_path = wenet::JoinPath(model_dir, "words.txt");
       CHECK(wenet::FileExists(symbol_path));
@@ -79,7 +79,30 @@ class Recognizer {
     // Context config init
     context_config_ = std::make_shared<wenet::ContextConfig>();
     decode_options_ = std::make_shared<wenet::DecodeOptions>();
+
+    // PostProcessor
     post_process_opts_ = std::make_shared<wenet::PostProcessOptions>();
+    if (language_ == "chs") {  // TODO(Binbin Zhang): CJK(chs, jp, kr)
+      post_process_opts_->language_type = wenet::kMandarinEnglish;
+    } else {
+      post_process_opts_->language_type = wenet::kIndoEuropean;
+    }
+    resource_->post_processor =
+        std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+    // Optional: ITN
+    std::string itn_tagger_path =
+        wenet::JoinPath(model_dir, "zh_itn_tagger.fst");
+    std::string itn_verbalizer_path =
+        wenet::JoinPath(model_dir, "zh_itn_verbalizer.fst");
+    if (wenet::FileExists(itn_tagger_path) &&
+        wenet::FileExists(itn_verbalizer_path)) {
+      LOG(INFO) << "Reading ITN fst";
+      post_process_opts_->itn = true;
+      auto postprocessor =
+          std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+      postprocessor->InitITNResource(itn_tagger_path, itn_verbalizer_path);
+      resource_->post_processor = postprocessor;
+    }
   }
 
   void Reset() {
@@ -101,14 +124,7 @@ class Recognizer {
       context_graph->BuildContextGraph(context_, resource_->symbol_table);
       resource_->context_graph = context_graph;
     }
-    // PostProcessor
-    if (language_ == "chs") {  // TODO(Binbin Zhang): CJK(chs, jp, kr)
-      post_process_opts_->language_type = wenet::kMandarinEnglish;
-    } else {
-      post_process_opts_->language_type = wenet::kIndoEuropean;
-    }
-    resource_->post_processor =
-        std::make_shared<wenet::PostProcessor>(*post_process_opts_);
+
     // Init decode options
     decode_options_->chunk_size = chunk_size_;
     // Init decoder

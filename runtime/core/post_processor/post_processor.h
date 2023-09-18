@@ -1,4 +1,5 @@
 // Copyright (c) 2021 Xingchen Song sxc19@mails.tsinghua.edu.cn
+//               2023 Jing Du (thuduj12@163.com)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +19,7 @@
 #include <memory>
 #include <string>
 #include <utility>
-
+#include "processor/wetext_processor.h"
 #include "utils/utils.h"
 
 namespace wenet {
@@ -43,10 +44,10 @@ struct PostProcessOptions {
   LanguageType language_type = kMandarinEnglish;
   // whether lowercase letters are required
   bool lowercase = true;
+  bool itn = false;
 };
 
-// TODO(xcsong): add itn/punctuation related resource
-struct PostProcessResource {};
+// TODO(xcsong): add punctuation related resource
 
 // Post Processor
 class PostProcessor {
@@ -57,11 +58,15 @@ class PostProcessor {
   std::string Process(const std::string& str, bool finish);
   // process spaces according to configurations
   std::string ProcessSpace(const std::string& str);
-  // TODO(xcsong): add itn/punctuation
-  // void InverseTN(const std::string& str);
+  std::string ProcessSymbols(const std::string& str);
+  // TODO(xcsong): add punctuation
   // void Punctuate(const std::string& str);
 
+  void InitITNResource(const std::string& tagger_path,
+                       const std::string& verbalizer_path);
+
  private:
+  std::shared_ptr<wetext::Processor> itn_resource = nullptr;
   const PostProcessOptions opts_;
 
  public:
