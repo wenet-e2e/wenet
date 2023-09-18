@@ -57,7 +57,7 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
                               xs[0].shape[2], dtype=xs[0].dtype,
                               device=xs[0].device)
     else:
-        raise ValueError(f"Unsupported ndim: {ndim}")
+        raise ValueError(f" Unsupported ndim: {ndim}")
     pad_res.fill_(pad_value)
     for i in range(batchs):
         pad_res[i, :len(xs[i])] = xs[i]
