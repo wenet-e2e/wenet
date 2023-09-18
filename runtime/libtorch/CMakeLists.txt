@@ -4,7 +4,7 @@ project(wenet VERSION 0.1)
 
 option(CXX11_ABI "whether to use CXX11_ABI libtorch" OFF)
 option(GRAPH_TOOLS "whether to build TLG graph tools" OFF)
-option(BUILD_TESTING "whether to build unit test" ON)
+option(BUILD_TESTING "whether to build unit test" OFF)
 
 option(GRPC "whether to build with gRPC" OFF)
 # TODO(Binbin Zhang): Change websocket to OFF since it depends on boost
@@ -14,7 +14,9 @@ option(HTTP "whether to build with http" OFF)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
+option(ITN "whether to use WeTextProcessing" ON)
 
+set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -g")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 
 include(FetchContent)
@@ -45,6 +47,10 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
+
+if(ITN)
+  include(wetextprocessing)
+endif()
 
 # Build all libraries
 add_subdirectory(utils)
