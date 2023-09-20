@@ -69,7 +69,6 @@ fi
 if [ $end -ge 4 ] && [ $beg -le 4 ]; then
   mkdir -p $exp_dir && cp $data_dir/train/global_cmvn $exp_dir
   python wenet/bin/train.py \
-    --gpu 0 \
     --config $train_config \
     --train_data $data_dir/train/data.list \
     --cv_data $data_dir/dev/data.list \

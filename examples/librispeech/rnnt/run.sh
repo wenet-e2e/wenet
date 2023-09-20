@@ -9,6 +9,12 @@
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 stage=-1 # start from 0 if you need to start from data preparation
 stop_stage=7
+
+# You should change the following two parameters for multiple machine training,
+# see https://pytorch.org/docs/stable/elastic/run.html
+HOST_NODE_ADDR="localhost:0"
+num_nodes=1
+
 # data
 data_url=www.openslr.org/resources/12
 # data_url=https://us.openslr.org/resources/12
@@ -138,10 +144,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
-  for ((i = 0; i < $num_gpus; ++i)); do
-  {
-    gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$i+1])
-    python3 wenet/bin/train.py --gpu $gpu_id \
+  torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+    python3 wenet/bin/train.py \
       --config $train_config \
       --data_type raw \
       --symbol_table $dict \
@@ -150,16 +154,11 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
-      --ddp.init_method $init_method \
-      --ddp.world_size $num_gpus \
       --ddp.rank $i \
       --ddp.dist_backend $dist_backend \
       --num_workers 4 \
       $cmvn_opts \
       --pin_memory
-  } &
-  done
-  wait
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
