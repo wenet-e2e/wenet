@@ -10,12 +10,12 @@ export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
 
-# The aishell dataset location, please change this to your own path
 # You should change the following two parameters for multiple machine training,
 # see https://pytorch.org/docs/stable/elastic/run.html
 HOST_NODE_ADDR="localhost:0"
 num_nodes=1
 
+# The aishell dataset location, please change this to your own path
 # make sure of using absolute path. DO-NOT-USE relatvie path!
 data=/export/data/asr-data/OpenSLR/33/
 data_url=www.openslr.org/resources/33
