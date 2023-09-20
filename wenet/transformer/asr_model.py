@@ -27,9 +27,7 @@ try:
     from icefall.mmi import LFMMILoss
     from icefall.mmi_graph_compiler import MmiTrainingGraphCompiler
 except ImportError:
-    print('Failed to import k2 and icefall. \
-        Notice that they are necessary for \
-        hlg_onebest/hlg_rescore decoding and LF-MMI training')
+    print('Warning: Failed to import k2 & icefall, which are for LF-MMI/hlg')
 
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
