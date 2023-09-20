@@ -156,7 +156,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --pin_memory
   else
     echo "using torch ddp"
-    torchrun --standalone --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+    torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
       wenet/bin/train.py \
         --config $train_config \
         --data_type $data_type \
