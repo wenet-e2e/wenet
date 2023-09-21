@@ -102,9 +102,7 @@
     <span class="kn">from</span> <span class="nn">icefall.mmi</span> <span class="kn">import</span> <span class="n">LFMMILoss</span>
     <span class="kn">from</span> <span class="nn">icefall.mmi_graph_compiler</span> <span class="kn">import</span> <span class="n">MmiTrainingGraphCompiler</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Failed to import k2 and icefall. </span><span class="se">\</span>
-<span class="s1">        Notice that they are necessary for </span><span class="se">\</span>
-<span class="s1">        hlg_onebest/hlg_rescore decoding and LF-MMI training&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Warning: Failed to import k2 &amp; icefall, which are for LF-MMI/hlg&#39;</span><span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">wenet.transformer.ctc</span> <span class="kn">import</span> <span class="n">CTC</span>
 <span class="kn">from</span> <span class="nn">wenet.transformer.decoder</span> <span class="kn">import</span> <span class="n">TransformerDecoder</span>
