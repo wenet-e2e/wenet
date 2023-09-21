@@ -206,6 +206,6 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
   echo "Export the best model you want"
   python wenet/bin/export_jit.py \
     --config $dir/train.yaml \
-    --checkpoint $dir/avg_${average_num}.pt \
+    --checkpoint $dir/avg${average_num}.pt \
     --output_file $dir/final.zip
 fi
