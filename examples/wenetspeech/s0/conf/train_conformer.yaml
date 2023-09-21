@@ -42,7 +42,7 @@ dataset_conf:
         token_max_length: 100
         token_min_length: 1
     resample_conf:
-        resample_rate: 16000
+        resample_rate: 8000
     speed_perturb: false
     fbank_conf:
         num_mel_bins: 80
