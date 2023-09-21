@@ -109,7 +109,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # and output dimension, train.yaml will be used for inference or model
   # export later
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
-    python wenet/bin/train.py --gpu $gpu_id \
+    wenet/bin/train.py --gpu $gpu_id \
       --config $train_config \
       --data_type shard \
       --symbol_table $dict \

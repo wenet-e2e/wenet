@@ -123,7 +123,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   # and export.
   echo "checkpoint is "  ${checkpoint}
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
-    python wenet/bin/train.py \
+    wenet/bin/train.py \
       --config $train_config \
       --data_type $data_type \
       --symbol_table $dict \
