@@ -51,8 +51,8 @@ class BLSTM(torch.nn.Module):
         _, last_state = self.sen_rnn(pack_seq)
         laste_h = last_state[0]
         laste_c = last_state[1]
-        state = torch.cat([laste_h[-1, :, :], laste_h[0, :, :],
-                          laste_c[-1, :, :], laste_c[0, :, :]], dim=-1)
+        state = torch.cat([laste_h[-1, :, :], laste_h[-2, :, :],
+                          laste_c[-1, :, :], laste_c[-2, :, :]], dim=-1)
         return state
 
 
