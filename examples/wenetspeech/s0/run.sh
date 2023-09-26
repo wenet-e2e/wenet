@@ -38,7 +38,7 @@ dir=exp/conformer
 
 decode_checkpoint=
 average_checkpoint=true
-average_num=6
+average_num=7
 decode_modes="attention_rescoring ctc_greedy_search"
 
 . tools/parse_options.sh || exit 1;
