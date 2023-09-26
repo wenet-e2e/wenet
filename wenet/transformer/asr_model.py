@@ -80,6 +80,7 @@ class ASRModel(torch.nn.Module):
         if self.lfmmi_dir != '':
             self.load_lfmmi_resource()
 
+    @torch.jit.ignore(drop=True)
     def forward(
         self,
         speech: torch.Tensor,
