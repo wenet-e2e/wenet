@@ -155,7 +155,8 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lfmmi_dir</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">load_lfmmi_resource</span><span class="p">()</span>
 
-<div class="viewcode-block" id="ASRModel.forward"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
+<div class="viewcode-block" id="ASRModel.forward"><a class="viewcode-back" href="../../../python_api/wenet.transformer.asr_model.html#wenet.transformer.asr_model.ASRModel.forward">[docs]</a>    <span class="nd">@torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">ignore</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">speech</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
         <span class="n">speech_lengths</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
