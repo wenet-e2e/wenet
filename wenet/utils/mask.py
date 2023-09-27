@@ -296,3 +296,71 @@ def mask_finished_preds(pred: torch.Tensor, flag: torch.Tensor,
     beam_size = pred.size(-1)
     finished = flag.repeat([1, beam_size])
     return pred.masked_fill_(finished, eos)
+
+def causal_or_lookahead_mask(
+    mask: torch.Tensor,
+    right_context: int,
+    left_context: int,
+    left_t_valid: int = 0,
+) -> torch.Tensor:
+    """Create mask (B, T, T) with history or future or both,
+       this is for causal or noncausal streaming encoder
+
+    Args:
+        mask (torch.Tensor): size of mask shape (B, 1, T)
+        right_context (int): future context size
+        left_context (int): history context size
+        left_t_valid (int): valid start offset
+
+    Returns:
+        torch.Tensor: mask shape (B, T, T)
+
+    Examples:
+        >>> seq_len  = torch.tensor([2,3,4])
+        >>> seq_mask = make_non_pad_mask(seq_len)
+        [[1, 1, 0, 0],
+        [1, 1, 1, 0],
+        [1, 1, 1, 1]]
+        >>> causal_or_lookahead_mask(seq_mask.unsqueeze(1), 0, 2)
+        [[[1, 0, 0, 0],
+         [1, 1, 0, 0],
+         [0, 0, 0, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 0, 0, 0],
+         [1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 0, 0, 0],
+         [1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [0, 1, 1, 1]]]
+        >>> causal_or_lookahead_mask(seq_mask.unsqueeze(1), 1, 2)
+        [[[1, 1, 0, 0],
+         [1, 1, 0, 0],
+         [0, 0, 0, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [1, 1, 1, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [1, 1, 1, 1],
+         [0, 1, 1, 1]]]
+    """
+    _, _, T = mask.size()
+    indices = torch.arange(T, device=mask.device)
+    start = torch.where(indices > left_context, indices - left_context, 0)
+    start = torch.where(indices < left_t_valid, indices, start).unsqueeze(1)
+
+    end = indices + right_context + 1
+    end = end.unsqueeze(1)
+    indices_expand = indices.unsqueeze(0)
+    gt = (indices_expand >= start)
+    lt = (indices_expand < end)
+
+    return (gt & lt) * mask.transpose(1, 2) * mask
