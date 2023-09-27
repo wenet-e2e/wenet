@@ -298,19 +298,15 @@ def mask_finished_preds(pred: torch.Tensor, flag: torch.Tensor,
     return pred.masked_fill_(finished, eos)
 
 def causal_or_lookahead_mask(
-        mask: torch.Tensor,
-        right_context: int,
-        left_context: int,
-        left_t_valid:  int = 0,
-    ) -> torch.Tensor:
+    mask: torch.Tensor,
+    right_context: int,
+    left_context: int,
+    left_t_valid: int = 0,
+) -> torch.Tensor:
     _, _, T = mask.size()
     indices = torch.arange(T, device=mask.device)
-    start = torch.where(indices > left_context, 
-                        indices - left_context,
-                        0)
-    start = torch.where(indices < left_t_valid, 
-                        indices, 
-                        start).unsqueeze(1)
+    start = torch.where(indices > left_context, indices - left_context, 0)
+    start = torch.where(indices < left_t_valid, indices, start).unsqueeze(1)
 
     end = indices + right_context + 1
     end = end.unsqueeze(1)
@@ -318,4 +314,4 @@ def causal_or_lookahead_mask(
     gt = (indices_expand >= start)
     lt = (indices_expand < end)
 
-    return (gt & lt) * mask.transpose(1,2) * mask
+    return (gt & lt) * mask.transpose(1, 2) * mask
