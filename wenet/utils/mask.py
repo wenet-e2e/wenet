@@ -303,6 +303,40 @@ def causal_or_lookahead_mask(
     left_context: int,
     left_t_valid: int = 0,
 ) -> torch.Tensor:
+    """Create mask (B, T, T) with history or future or both,
+       this is for causal or noncausal streaming encoder
+
+    Args:
+        mask (torch.Tensor): size of mask shape (B, 1, T)
+        right_context (int): future context size
+        left_context (int): history context size
+        left_t_valid (int): valid start offset
+
+    Returns:
+        torch.Tensor: mask shape (B, T, T)
+
+    Examples:
+        >>> seq_len  = torch.tensor([2,3,4])
+        >>> seq_mask = make_non_pad_mask(seq_len)
+        [[1, 1, 0, 0],
+        [1, 1, 1, 0],
+        [1, 1, 1, 1]]
+        >>> causal_or_lookahead_mask(seq_mask.unsqueeze(1), 0)
+        [[1, 0, 0, 0],
+         [1, 1, 0, 0],
+         [0, 0, 0, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 0, 0, 0],
+         [1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 0, 0, 0],
+         [1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [0, 1, 1, 1]]
+    """
     _, _, T = mask.size()
     indices = torch.arange(T, device=mask.device)
     start = torch.where(indices > left_context, indices - left_context, 0)
