@@ -322,7 +322,7 @@ def causal_or_lookahead_mask(
         [1, 1, 1, 0],
         [1, 1, 1, 1]]
         >>> causal_or_lookahead_mask(seq_mask.unsqueeze(1), 0, 2)
-        [[1, 0, 0, 0],
+        [[[1, 0, 0, 0],
          [1, 1, 0, 0],
          [0, 0, 0, 0],
          [0, 0, 0, 0]],
@@ -335,7 +335,22 @@ def causal_or_lookahead_mask(
         [[1, 0, 0, 0],
          [1, 1, 0, 0],
          [1, 1, 1, 0],
-         [0, 1, 1, 1]]
+         [0, 1, 1, 1]]]
+        >>> causal_or_lookahead_mask(seq_mask.unsqueeze(1), 1, 2)
+        [[[1, 1, 0, 0],
+         [1, 1, 0, 0],
+         [0, 0, 0, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [1, 1, 1, 0],
+         [0, 0, 0, 0]],
+
+        [[1, 1, 0, 0],
+         [1, 1, 1, 0],
+         [1, 1, 1, 1],
+         [0, 1, 1, 1]]]
     """
     _, _, T = mask.size()
     indices = torch.arange(T, device=mask.device)
