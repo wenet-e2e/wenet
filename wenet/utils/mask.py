@@ -305,9 +305,12 @@ def causal_or_lookahead_mask(
     ) -> torch.Tensor:
     _, _, T = mask.size()
     indices = torch.arange(T, device=mask.device)
-    start = torch.where(indices > left_context, indices - left_context,
+    start = torch.where(indices > left_context, 
+                        indices - left_context,
                         0)
-    start = torch.where(indices < left_t_valid, indices, start).unsqueeze(1)
+    start = torch.where(indices < left_t_valid, 
+                        indices, 
+                        start).unsqueeze(1)
 
     end = indices + right_context + 1
     end = end.unsqueeze(1)
