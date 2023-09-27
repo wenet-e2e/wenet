@@ -371,6 +371,74 @@
     <span class="n">beam_size</span> <span class="o">=</span> <span class="n">pred</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">finished</span> <span class="o">=</span> <span class="n">flag</span><span class="o">.</span><span class="n">repeat</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="n">beam_size</span><span class="p">])</span>
     <span class="k">return</span> <span class="n">pred</span><span class="o">.</span><span class="n">masked_fill_</span><span class="p">(</span><span class="n">finished</span><span class="p">,</span> <span class="n">eos</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="causal_or_lookahead_mask"><a class="viewcode-back" href="../../../python_api/wenet.utils.mask.html#wenet.utils.mask.causal_or_lookahead_mask">[docs]</a><span class="k">def</span> <span class="nf">causal_or_lookahead_mask</span><span class="p">(</span>
+    <span class="n">mask</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">right_context</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">left_context</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">left_t_valid</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create mask (B, T, T) with history or future or both,</span>
+<span class="sd">       this is for causal or noncausal streaming encoder</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mask (torch.Tensor): size of mask shape (B, 1, T)</span>
+<span class="sd">        right_context (int): future context size</span>
+<span class="sd">        left_context (int): history context size</span>
+<span class="sd">        left_t_valid (int): valid start offset</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        torch.Tensor: mask shape (B, T, T)</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        &gt;&gt;&gt; seq_len  = torch.tensor([2,3,4])</span>
+<span class="sd">        &gt;&gt;&gt; seq_mask = make_non_pad_mask(seq_len)</span>
+<span class="sd">        [[1, 1, 0, 0],</span>
+<span class="sd">        [1, 1, 1, 0],</span>
+<span class="sd">        [1, 1, 1, 1]]</span>
+<span class="sd">        &gt;&gt;&gt; causal_or_lookahead_mask(seq_mask.unsqueeze(1), 0, 2)</span>
+<span class="sd">        [[[1, 0, 0, 0],</span>
+<span class="sd">         [1, 1, 0, 0],</span>
+<span class="sd">         [0, 0, 0, 0],</span>
+<span class="sd">         [0, 0, 0, 0]],</span>
+
+<span class="sd">        [[1, 0, 0, 0],</span>
+<span class="sd">         [1, 1, 0, 0],</span>
+<span class="sd">         [1, 1, 1, 0],</span>
+<span class="sd">         [0, 0, 0, 0]],</span>
+
+<span class="sd">        [[1, 0, 0, 0],</span>
+<span class="sd">         [1, 1, 0, 0],</span>
+<span class="sd">         [1, 1, 1, 0],</span>
+<span class="sd">         [0, 1, 1, 1]]]</span>
+<span class="sd">        &gt;&gt;&gt; causal_or_lookahead_mask(seq_mask.unsqueeze(1), 1, 2)</span>
+<span class="sd">        [[[1, 1, 0, 0],</span>
+<span class="sd">         [1, 1, 0, 0],</span>
+<span class="sd">         [0, 0, 0, 0],</span>
+<span class="sd">         [0, 0, 0, 0]],</span>
+
+<span class="sd">        [[1, 1, 0, 0],</span>
+<span class="sd">         [1, 1, 1, 0],</span>
+<span class="sd">         [1, 1, 1, 0],</span>
+<span class="sd">         [0, 0, 0, 0]],</span>
+
+<span class="sd">        [[1, 1, 0, 0],</span>
+<span class="sd">         [1, 1, 1, 0],</span>
+<span class="sd">         [1, 1, 1, 1],</span>
+<span class="sd">         [0, 1, 1, 1]]]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">T</span> <span class="o">=</span> <span class="n">mask</span><span class="o">.</span><span class="n">size</span><span class="p">()</span>
+    <span class="n">indices</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">mask</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">indices</span> <span class="o">&gt;</span> <span class="n">left_context</span><span class="p">,</span> <span class="n">indices</span> <span class="o">-</span> <span class="n">left_context</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">indices</span> <span class="o">&lt;</span> <span class="n">left_t_valid</span><span class="p">,</span> <span class="n">indices</span><span class="p">,</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">end</span> <span class="o">=</span> <span class="n">indices</span> <span class="o">+</span> <span class="n">right_context</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">end</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">indices_expand</span> <span class="o">=</span> <span class="n">indices</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">gt</span> <span class="o">=</span> <span class="p">(</span><span class="n">indices_expand</span> <span class="o">&gt;=</span> <span class="n">start</span><span class="p">)</span>
+    <span class="n">lt</span> <span class="o">=</span> <span class="p">(</span><span class="n">indices_expand</span> <span class="o">&lt;</span> <span class="n">end</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">gt</span> <span class="o">&amp;</span> <span class="n">lt</span><span class="p">)</span> <span class="o">*</span> <span class="n">mask</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">mask</span></div>
 </pre></div>
 
            </div>

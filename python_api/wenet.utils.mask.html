@@ -127,6 +127,71 @@ the chunk size is decoding_chunk_size.
 </dd></dl>
 
 <dl class="py function">
+<dt class="sig sig-object py" id="wenet.utils.mask.causal_or_lookahead_mask">
+<span class="sig-prename descclassname"><span class="pre">wenet.utils.mask.</span></span><span class="sig-name descname"><span class="pre">causal_or_lookahead_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right_context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left_t_valid</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/wenet/utils/mask.html#causal_or_lookahead_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.mask.causal_or_lookahead_mask" title="Permalink to this definition"></a></dt>
+<dd><dl class="simple">
+<dt>Create mask (B, T, T) with history or future or both,</dt><dd><p>this is for causal or noncausal streaming encoder</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mask</strong> (<em>torch.Tensor</em>) – size of mask shape (B, 1, T)</p></li>
+<li><p><strong>right_context</strong> (<em>int</em>) – future context size</p></li>
+<li><p><strong>left_context</strong> (<em>int</em>) – history context size</p></li>
+<li><p><strong>left_t_valid</strong> (<em>int</em>) – valid start offset</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>mask shape (B, T, T)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>torch.Tensor</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">seq_len</span>  <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">,</span><span class="mi">4</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">seq_mask</span> <span class="o">=</span> <span class="n">make_non_pad_mask</span><span class="p">(</span><span class="n">seq_len</span><span class="p">)</span>
+<span class="go">[[1, 1, 0, 0],</span>
+<span class="go">[1, 1, 1, 0],</span>
+<span class="go">[1, 1, 1, 1]]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">causal_or_lookahead_mask</span><span class="p">(</span><span class="n">seq_mask</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="go">[[[1, 0, 0, 0],</span>
+<span class="go"> [1, 1, 0, 0],</span>
+<span class="go"> [0, 0, 0, 0],</span>
+<span class="go"> [0, 0, 0, 0]],</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>[[1, 0, 0, 0],</dt><dd><p>[1, 1, 0, 0],
+[1, 1, 1, 0],
+[0, 0, 0, 0]],</p>
+</dd>
+<dt>[[1, 0, 0, 0],</dt><dd><p>[1, 1, 0, 0],
+[1, 1, 1, 0],
+[0, 1, 1, 1]]]</p>
+</dd>
+</dl>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">causal_or_lookahead_mask</span><span class="p">(</span><span class="n">seq_mask</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+<span class="go">[[[1, 1, 0, 0],</span>
+<span class="go"> [1, 1, 0, 0],</span>
+<span class="go"> [0, 0, 0, 0],</span>
+<span class="go"> [0, 0, 0, 0]],</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>[[1, 1, 0, 0],</dt><dd><p>[1, 1, 1, 0],
+[1, 1, 1, 0],
+[0, 0, 0, 0]],</p>
+</dd>
+<dt>[[1, 1, 0, 0],</dt><dd><p>[1, 1, 1, 0],
+[1, 1, 1, 1],
+[0, 1, 1, 1]]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
 <dt class="sig sig-object py" id="wenet.utils.mask.make_non_pad_mask">
 <span class="sig-prename descclassname"><span class="pre">wenet.utils.mask.</span></span><span class="sig-name descname"><span class="pre">make_non_pad_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lengths</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/wenet/utils/mask.html#make_non_pad_mask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.mask.make_non_pad_mask" title="Permalink to this definition"></a></dt>
 <dd><p>Make mask tensor containing indices of non-padded part.</p>
