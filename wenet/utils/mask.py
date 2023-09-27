@@ -321,7 +321,7 @@ def causal_or_lookahead_mask(
         [[1, 1, 0, 0],
         [1, 1, 1, 0],
         [1, 1, 1, 1]]
-        >>> causal_or_lookahead_mask(seq_mask.unsqueeze(1), 0)
+        >>> causal_or_lookahead_mask(seq_mask.unsqueeze(1), 0, 2)
         [[1, 0, 0, 0],
          [1, 1, 0, 0],
          [0, 0, 0, 0],
