@@ -121,7 +121,8 @@ class BestRQModel(torch.nn.Module):
         torch.nn.init.xavier_uniform_(self.projection)
 
         # codebooks
-        # [num_codebooks, embedding_dim, num_embeddings]
+        # [num_embeddings, num_codebooks, num_embeddings] means
+        # [C, G, D] see quantize_vector
         self.embeddings = torch.nn.parameter.Parameter(
             torch.empty(num_embeddings, self.num_codebooks, embedding_dim),
             requires_grad=False,
