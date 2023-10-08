@@ -90,46 +90,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-wenet.utils.context_graph">
-<span id="wenet-utils-context-graph-module"></span><h1>wenet.utils.context_graph module<a class="headerlink" href="#module-wenet.utils.context_graph" title="Permalink to this heading"></a></h1>
-<dl class="py class">
-<dt class="sig sig-object py" id="wenet.utils.context_graph.ContextGraph">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.utils.context_graph.</span></span><span class="sig-name descname"><span class="pre">ContextGraph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_list_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol_table</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bpe_model</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">context_score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">6</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/context_graph.html#ContextGraph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.context_graph.ContextGraph" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
-<p>Context decoding graph, constructing graph using dict instead of WFST
-:param context_list_path: context list path
-:type context_list_path: str
-:param bpe_model: model for english bpe part
-:type bpe_model: str
-:param context_score: context score for each token
-:type context_score: float</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.utils.context_graph.ContextGraph.build_graph">
-<span class="sig-name descname"><span class="pre">build_graph</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_list</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/context_graph.html#ContextGraph.build_graph"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.context_graph.ContextGraph.build_graph" title="Permalink to this definition"></a></dt>
-<dd><p>Constructing the context decoding graph, add arcs with negative
-scores returning to the starting state for each non-terminal tokens
-of hotwords, and add arcs with scores of 0 returning to the starting
-state for terminal tokens.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.utils.context_graph.ContextGraph.find_next_state">
-<span class="sig-name descname"><span class="pre">find_next_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">now_state</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">token</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/context_graph.html#ContextGraph.find_next_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.context_graph.ContextGraph.find_next_state" title="Permalink to this definition"></a></dt>
-<dd><p>Search for an arc with the input being a token from the current state,
-returning the score on the arc and the state it points to. If there is
-no match, return to the starting state and perform an additional search
-from the starting state to avoid token consumption due to mismatches.</p>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="wenet.utils.context_graph.tokenize">
-<span class="sig-prename descclassname"><span class="pre">wenet.utils.context_graph.</span></span><span class="sig-name descname"><span class="pre">tokenize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_list_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">symbol_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bpe_model</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/utils/context_graph.html#tokenize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.utils.context_graph.tokenize" title="Permalink to this definition"></a></dt>
-<dd><p>Read biasing list from the biasing list address, tokenize and convert it
-into token id</p>
-</dd></dl>
-
+  <section id="wenet-utils-context-graph-module">
+<h1>wenet.utils.context_graph module<a class="headerlink" href="#wenet-utils-context-graph-module" title="Permalink to this heading"></a></h1>
 </section>
 
 
