@@ -248,13 +248,20 @@ class Wav2vec2Model(torch.nn.Module):
             self.contrastive_logits_temp, self.num_negatives)
         loss = loss_contrastive
 
+        # scale by sample size
+        # make sure that diversity loss is multiplied by `sample_size`
+        # since contrastive_loss is `sum`-reduced instead of averaged
+        sample_size = masked_masks.sum()
+        # higher codevector_perplexity leads to lower diversity loss
         loss_diversity: Optional[torch.Tensor] = None
         if self.diversity_weight != 0.0:
             loss_diversity = (
                 self.num_codevector_groups * self.num_codevectors_per_group -
                 codevector_perplexity) / (self.num_codevectors_per_group *
                                           self.num_codevector_groups)
+            loss_diversity = loss_diversity * sample_size
             loss = loss + self.diversity_weight * loss_diversity
+        loss = loss / sample_size
 
         features_pen: Optional[torch.Tensor] = None
         if self.features_regularization_weight != 0.0:
@@ -262,8 +269,10 @@ class Wav2vec2Model(torch.nn.Module):
             loss = loss + self.features_regularization_weight * features_pen
 
         return {
+            "code_ppl": codevector_perplexity.detach(),
             "features_l2": features_pen,
             "loss": loss,
+            "losss_constrastive": loss_contrastive / sample_size,
             "loss_diversity": loss_diversity,
         }
 
