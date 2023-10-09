@@ -224,7 +224,6 @@ class W2VBERTModel(torch.nn.Module):
                            top_n_out)  # [B, num_codebooks, T', num_embeddings]
         if self.bias:
             out = out + self.encoder_top_n_out_bias.unsqueeze(0).unsqueeze(2)
-        out = out + self.encoder_top_n_out_bias.unsqueeze(0).unsqueeze(2)
 
         num_codes = masked_masks.sum() * self.num_codebooks
         loss_mlm = self._compute_mlm_loss(out,
