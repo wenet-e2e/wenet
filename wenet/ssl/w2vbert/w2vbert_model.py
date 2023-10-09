@@ -244,7 +244,7 @@ class W2VBERTModel(torch.nn.Module):
             "features_l2": features_pen,
             "codes_acc": codes_acc.detach(),
             "loss": loss,
-            "losss_constrastive": loss_contrastive / sample_size,
+            "loss_contrastive": loss_contrastive / sample_size,
             "loss_diversity": loss_diversity,
             "loss_mlm": loss_mlm,
         }

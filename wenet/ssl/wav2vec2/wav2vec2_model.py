@@ -279,7 +279,7 @@ class Wav2vec2Model(torch.nn.Module):
             "code_ppl": codevector_perplexity.detach(),
             "features_l2": features_pen,
             "loss": loss,
-            "losss_constrastive": loss_contrastive / sample_size,
+            "loss_contrastive": loss_contrastive / sample_size,
             "loss_diversity": loss_diversity,
         }
 
