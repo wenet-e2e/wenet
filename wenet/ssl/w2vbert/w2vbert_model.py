@@ -36,6 +36,7 @@ class W2VBERTModel(torch.nn.Module):
         masked_blocks: int = 6,
         contrastive_weight: float = 1.0,
         mlm_weight: float = 1.0,
+        warmup_steps: int = 25000,
     ) -> None:
         """ Wrap encoder to train using W2V-BERT's style
 
@@ -77,6 +78,7 @@ class W2VBERTModel(torch.nn.Module):
 
         self.contrastive_weight = contrastive_weight
         self.mlm_weight = mlm_weight
+        self.warmup_steps = warmup_steps
         # encoder
         self.encoder = encoder
 
@@ -224,7 +226,6 @@ class W2VBERTModel(torch.nn.Module):
                            top_n_out)  # [B, num_codebooks, T', num_embeddings]
         if self.bias:
             out = out + self.encoder_top_n_out_bias.unsqueeze(0).unsqueeze(2)
-
         num_codes = masked_masks.sum() * self.num_codebooks
         loss_mlm = self._compute_mlm_loss(out,
                                           targets_ids,
@@ -237,7 +238,9 @@ class W2VBERTModel(torch.nn.Module):
         # used in batch like bestrq
 
         # 6 final loss
-        loss = self.contrastive_weight * loss + self.mlm_weight * loss_mlm
+        mlm_weight = (self.mlm_weight if steps >= self.warmup_steps else 0.1 +
+                      0.9 * (steps / self.warmup_steps))
+        loss = self.contrastive_weight * loss + mlm_weight * loss_mlm
         return {
             "code_ppl": codevector_perplexity.detach(),
             "features_l2": features_pen,
