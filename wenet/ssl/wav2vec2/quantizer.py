@@ -1,3 +1,4 @@
+from typing import Tuple
 import torch
 
 
@@ -66,10 +67,12 @@ class Wav2vecGumbelVectorQuantizer(torch.nn.Module):
             marginal_probs * torch.log(marginal_probs + 1e-7), dim=-1)).sum()
         return perplexity
 
-    def forward(self,
-                input: torch.Tensor,
-                input_mask: torch.Tensor,
-                temperature: float = 1.):
+    def forward(
+        self,
+        input: torch.Tensor,
+        input_mask: torch.Tensor,
+        temperature: float = 1.
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         b, t, _ = input.size()
 
@@ -98,6 +101,7 @@ class Wav2vecGumbelVectorQuantizer(torch.nn.Module):
                 b * t, self.num_groups, -1)
             perplexity = self._compute_perplexity(codevector_probs, input_mask)
 
+        targets_idx = codevector_probs.argmax(-1).reshape(b, t, -1)
         codevector_probs = codevector_probs.reshape(b * t, -1)
         # use probs to retrieve codevectors
         codevectors_per_group = codevector_probs.unsqueeze(
@@ -106,4 +110,4 @@ class Wav2vecGumbelVectorQuantizer(torch.nn.Module):
             b * t, self.num_groups, self.num_codevectors_per_group, -1)
 
         codevectors = codevectors.sum(-2).reshape(b, t, -1)
-        return codevectors, perplexity
+        return codevectors, perplexity, targets_idx
