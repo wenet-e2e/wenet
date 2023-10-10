@@ -51,7 +51,7 @@ class W2VBERTModel(torch.nn.Module):
             num_codebooks: numbers of codebooks i.e groups of codebook
             mask_prob: probs of mask
             mask_length: spans of masks
-            min_maks: min masks for each audio
+            min_masks: min masks for each audio
             num_negatives: numbers of negatives of each masks
             features_regularization_weight: l2 regularization weight
             max_gumbel_temperature: maximum temperature for gumbel softmax
