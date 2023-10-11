@@ -4,6 +4,8 @@ project(wenet VERSION 0.1)
 
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
+option(ITN "whether to use WeTextProcessing" ON)
+
 set(CXX11_ABI OFF)
 set(FST_HAVE_BIN OFF)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
@@ -38,6 +40,10 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
+
+if(ITN)
+  include(wetextprocessing)
+endif()
 
 add_subdirectory(utils)
 add_subdirectory(frontend)
