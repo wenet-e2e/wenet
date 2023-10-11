@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """Encoder definition."""
 from typing import Tuple
 
@@ -27,6 +26,7 @@ from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.embedding import NoPositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
+from wenet.transformer.layer_dropout import LayerDropModuleList
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.transformer.subsampling import Conv2dSubsampling4
 from wenet.transformer.subsampling import Conv2dSubsampling6
@@ -39,6 +39,7 @@ from wenet.utils.mask import add_optional_chunk_mask
 
 
 class BaseEncoder(torch.nn.Module):
+
     def __init__(
         self,
         input_size: int,
@@ -228,8 +229,8 @@ class BaseEncoder(torch.nn.Module):
         elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
         chunk_size = xs.size(1)
         attention_key_size = cache_t1 + chunk_size
-        pos_emb = self.embed.position_encoding(
-            offset=offset - cache_t1, size=attention_key_size)
+        pos_emb = self.embed.position_encoding(offset=offset - cache_t1,
+                                               size=attention_key_size)
         if required_cache_size < 0:
             next_cache_start = 0
         elif required_cache_size == 0:
@@ -243,10 +244,11 @@ class BaseEncoder(torch.nn.Module):
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
             xs, _, new_att_cache, new_cnn_cache = layer(
-                xs, att_mask, pos_emb,
+                xs,
+                att_mask,
+                pos_emb,
                 att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
-                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
-            )
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache)
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
@@ -313,17 +315,22 @@ class BaseEncoder(torch.nn.Module):
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            (y, att_cache, cnn_cache) = self.forward_chunk(
-                chunk_xs, offset, required_cache_size, att_cache, cnn_cache)
+            (y, att_cache,
+             cnn_cache) = self.forward_chunk(chunk_xs, offset,
+                                             required_cache_size, att_cache,
+                                             cnn_cache)
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)
-        masks = torch.ones((1, 1, ys.size(1)), device=ys.device, dtype=torch.bool)
+        masks = torch.ones((1, 1, ys.size(1)),
+                           device=ys.device,
+                           dtype=torch.bool)
         return ys, masks
 
 
 class TransformerEncoder(BaseEncoder):
     """Transformer encoder module."""
+
     def __init__(
         self,
         input_size: int,
@@ -341,6 +348,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        layer_dropout_rate: float = 0.0,
     ):
         """ Construct TransformerEncoder
 
@@ -350,9 +358,14 @@ class TransformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
-        self.encoders = torch.nn.ModuleList([
+                         static_chunk_size, use_dynamic_chunk, global_cmvn,
+                         use_dynamic_left_chunk)
+        if layer_dropout_rate == 0.0:
+            self.encoders = torch.nn.ModuleList([])
+        else:
+            self.encoders = LayerDropModuleList(p=dropout_rate)
+
+        self.encoders.extend([
             TransformerEncoderLayer(
                 output_size,
                 MultiHeadedAttention(attention_heads, output_size,
@@ -365,6 +378,7 @@ class TransformerEncoder(BaseEncoder):
 
 class ConformerEncoder(BaseEncoder):
     """Conformer encoder module."""
+
     def __init__(
         self,
         input_size: int,
@@ -390,6 +404,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        layer_dropout_rate: float = 0.0,
     ):
         """Construct ConformerEncoder
 
@@ -411,8 +426,8 @@ class ConformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         static_chunk_size, use_dynamic_chunk, global_cmvn,
+                         use_dynamic_left_chunk)
         activation = get_activation(activation_type)
 
         # self-attention module definition
@@ -438,7 +453,11 @@ class ConformerEncoder(BaseEncoder):
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
                                   cnn_module_norm, causal)
 
-        self.encoders = torch.nn.ModuleList([
+        if layer_dropout_rate == 0.0:
+            self.encoders = torch.nn.ModuleList([])
+        else:
+            self.encoders = LayerDropModuleList(p=dropout_rate)
+        self.encoders.extend([
             ConformerEncoderLayer(
                 output_size,
                 encoder_selfattn_layer(*encoder_selfattn_layer_args),
