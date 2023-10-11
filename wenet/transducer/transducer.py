@@ -3,9 +3,8 @@ from typing import Dict, List, Optional, Tuple, Union
 try:
     import k2
 except ImportError:
-    print('Failed to import k2 \
-        Notice that they are necessary for \
-        k2 rnnt loss training')
+    print('Warning: Failed to import k2 which is requried for k2 rnnt train')
+
 import torch
 import torchaudio
 from torch import nn
