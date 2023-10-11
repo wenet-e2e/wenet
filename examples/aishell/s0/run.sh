@@ -119,7 +119,7 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   done
 fi
 
-export CUDA_VISIBLE_DEVICES="7"
+export CUDA_VISIBLE_DEVICES="0"
 echo $CUDA_VISIBLE_DEVICES
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
