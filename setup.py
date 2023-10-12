@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    "torch==1.10.0",
-    "torchaudio==0.10.0"
+    "tqdm",
+    "torch==1.13.0",
+    "torchaudio==0.13.0"
 ]
 
 setup(
