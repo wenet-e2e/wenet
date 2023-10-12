@@ -1,0 +1,7 @@
+wenet.cli.transcribe module
+===========================
+
+.. automodule:: wenet.cli.transcribe
+   :members:
+   :undoc-members:
+   :show-inheritance:
