@@ -1,0 +1,42 @@
+# network architecture
+# encoder related
+encoder: SanEncoder
+encoder_conf:
+    output_size: 512    # dimension of attention
+    attention_heads: 4
+    linear_units: 2048  # the number of units of position-wise feed forward
+    num_blocks: 50      # the number of encoder blocks
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    attention_dropout_rate: 0.1
+    input_layer: 'conv2d' # encoder input type, you can chose conv2d, conv2d6 and conv2d8
+    normalize_before: true
+    kernel_size: 11
+    sanm_shfit: 0
+
+# decoder related
+decoder: transformer
+decoder_conf:
+    attention_heads: 4
+    linear_units: 2048
+    num_blocks: 16
+    dropout_rate: 0.1
+    positional_dropout_rate: 0.1
+    self_attention_dropout_rate: 0.1
+    src_attention_dropout_rate: 0.1
+    att_layer_num: 16
+    kernel_size: 11
+    sanm_shfit: 0
+
+predictor_conf:
+    idim: 512
+    threshold: 1.0
+    l_order: 1
+    r_order: 1
+    tail_threshold: 0.45
+    cnn_groups: 1
+    # smooth_factor2: 0.25
+    # noise_threshold2: 0.01
+    # upsample_times: 3
+    # use_cif1_cnn: false  # TODO: support in the future, has no effect on model wer (timestamp related)
+    # upsample_type: cnn_blstm # TODO: support in the future, has no effect on model wer (timestamp related)
