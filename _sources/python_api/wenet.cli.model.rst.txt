@@ -1,0 +1,7 @@
+wenet.cli.model module
+======================
+
+.. automodule:: wenet.cli.model
+   :members:
+   :undoc-members:
+   :show-inheritance:

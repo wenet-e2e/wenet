@@ -13,4 +13,5 @@ Submodules
    :maxdepth: 2
 
    wenet.cli.hub
+   wenet.cli.model
    wenet.cli.transcribe
