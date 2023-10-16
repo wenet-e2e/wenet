@@ -50,7 +50,8 @@ decode_checkpoint=$dir/final.pt
 average_num=30
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
-deepspeed=false
+train_engine=torch_ddp
+
 deepspeed_config=conf/ds_stage2.json
 deepspeed_save_states="model_only"
 
@@ -120,6 +121,8 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
+  # NOTE(xcsong): deepspeed fails with gloo, see
+  #   https://github.com/microsoft/DeepSpeed/issues/2818
   dist_backend="nccl"
   cmvn_opts=
   $cmvn && cp data/${train_set}/global_cmvn $dir
@@ -128,50 +131,35 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
   # and export.
-  if [ ${deepspeed} == true ]; then
+  if [ ${train_engine} == "deepspeed" ]; then
     echo "using deepspeed"
-    # NOTE(xcsong): deepspeed fails with gloo, see
-    #   https://github.com/microsoft/DeepSpeed/issues/2818
-    dist_backend="nccl"
+    # TODO(xcsong): manully impl model.join for deepspeed
     [ ! -f data/$train_set/data.list.filter ] && \
       python tools/filter_uneven_data.py data/$train_set/data.list \
         $data_type $num_gpus $num_utts_per_shard data/$train_set/data.list.filter
-    deepspeed --include localhost:$CUDA_VISIBLE_DEVICES \
-      wenet/bin/train.py \
-        --deepspeed \
-        --deepspeed_config ${deepspeed_config} \
-        --deepspeed.save_states ${deepspeed_save_states} \
-        --ddp.dist_backend $dist_backend \
-        --ddp.init_method $init_method \
-        --data_type  $data_type \
-        --config $train_config \
-        --symbol_table  data/dict/lang_char.txt \
-        --train_data data/$train_set/data.list.filter \
-        --cv_data data/dev/data.list \
-        ${checkpoint:+--checkpoint $checkpoint} \
-        --model_dir $dir \
-        --num_workers ${num_workers} \
-        --prefetch ${prefetch} \
-        $cmvn_opts \
-        --pin_memory
   else
     echo "using torch ddp"
-    torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
-      wenet/bin/train.py \
-        --config $train_config \
-        --data_type $data_type \
-        --symbol_table $dict \
-        --train_data data/$train_set/data.list \
-        --cv_data data/dev/data.list \
-        ${checkpoint:+--checkpoint $checkpoint} \
-        --model_dir $dir \
-        --ddp.init_method $init_method \
-        --ddp.dist_backend $dist_backend \
-        --num_workers ${num_workers} \
-        --prefetch ${prefetch} \
-        $cmvn_opts \
-        --pin_memory
   fi
+
+  # NOTE(xcsong): both ddp & deepspeed can be launched by torchrun
+  torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+    wenet/bin/train.py \
+      --train_engine ${train_engine} \
+      --config $train_config \
+      --data_type  $data_type \
+      --symbol_table  data/dict/lang_char.txt \
+      --train_data data/$train_set/data.list.filter \
+      --cv_data data/dev/data.list \
+      ${checkpoint:+--checkpoint $checkpoint} \
+      --model_dir $dir \
+      --ddp.init_method $init_method \
+      --ddp.dist_backend $dist_backend \
+      --num_workers ${num_workers} \
+      --prefetch ${prefetch} \
+      $cmvn_opts \
+      --pin_memory \
+      --deepspeed_config ${deepspeed_config} \
+      --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then

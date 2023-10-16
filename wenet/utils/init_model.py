@@ -29,9 +29,10 @@ from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.paraformer.paraformer import Paraformer
 from wenet.cif.predictor import Predictor
 from wenet.utils.cmvn import load_cmvn
+from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 
 
-def init_model(configs):
+def init_model(args, configs):
     if configs['cmvn_file'] is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
@@ -129,4 +130,12 @@ def init_model(configs):
                          ctc=ctc,
                          lfmmi_dir=configs.get('lfmmi_dir', ''),
                          **configs['model_conf'])
-    return model
+    # If specify checkpoint, load some info from checkpoint
+    if args.checkpoint is not None:
+        infos = load_checkpoint(model, args.checkpoint)
+    elif args.enc_init is not None:
+        logging.info('load pretrained encoders: {}'.format(args.enc_init))
+        infos = load_trained_modules(model, args)
+    else:
+        infos = {}
+    return infos, model
