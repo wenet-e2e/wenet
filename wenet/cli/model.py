@@ -51,4 +51,3 @@ class Model:
         hyp = [self.char_dict[x] for x in hyp]
         result = ''.join(hyp)
         return result
-
