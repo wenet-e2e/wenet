@@ -253,6 +253,17 @@ def main():
     num_params = sum(p.numel() for p in model.parameters())
     print('the number of model params: {:,d}'.format(num_params)) if local_rank == 0 else None  # noqa
 
+    if 'context_module_conf' in configs:
+        # Freeze other parts of the model during training context bias module
+        for p in model.parameters():
+            p.requires_grad = False
+        for p in model.context_module.parameters():
+            p.requires_grad = True
+        for p in model.context_module.context_decoder_ctc_linear.parameters():
+            p.requires_grad = False
+        # Turn off dynamic chunk because it will affect the training of bias
+        model.encoder.use_dynamic_chunk = False
+
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements

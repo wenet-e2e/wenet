@@ -1,4 +1,10 @@
+import torch
+from torch.nn.utils.rnn import pad_sequence
+
 from wenet.dataset.processor import __tokenize_by_bpe_model
+from wenet.transformer.context_module import ContextModule
+from wenet.transformer.ctc import CTC
+
 from typing import Dict, List
 
 
@@ -37,20 +43,22 @@ def tokenize(context_list_path, symbol_table, bpe_model=None):
         context_list.append(labels)
     return context_list
 
+def tbbm(sp, context_txt):
+    return __tokenize_by_bpe_model(sp, context_txt)
 
 class ContextGraph:
     """ Context decoding graph, constructing graph using dict instead of WFST
         Args:
             context_list_path(str): context list path
             bpe_model(str): model for english bpe part
-            context_score(float): context score for each token
+            context_graph_score(float): context score for each token
     """
     def __init__(self,
                  context_list_path: str,
                  symbol_table: Dict[str, int],
                  bpe_model: str = None,
-                 context_score: float = 6):
-        self.context_score = context_score
+                 context_graph_score: float = 2.0):
+        self.context_graph_score = context_graph_score
         self.context_list = tokenize(context_list_path, symbol_table,
                                      bpe_model)
         self.graph = {0: {}}
@@ -58,6 +66,11 @@ class ContextGraph:
         self.state2token = {}
         self.back_score = {0: 0.0}
         self.build_graph(self.context_list)
+        self.graph_biasing = False
+        self.deep_biasing = False
+        self.deep_biasing_score = 1.0
+        self.context_filtering = True
+        self.filter_threshold = -4.0
 
     def build_graph(self, context_list: List[List[int]]):
         """ Constructing the context decoding graph, add arcs with negative
@@ -82,8 +95,8 @@ class ContextGraph:
                     self.graph[now_state][context_token[i]] = self.graph_size
                     now_state = self.graph_size
                     if i != len(context_token) - 1:
-                        self.back_score[now_state] = -(i +
-                                                       1) * self.context_score
+                        self.back_score[now_state] = \
+                            -(i + 1) * self.context_graph_score
                     else:
                         self.back_score[now_state] = 0
                     self.state2token[now_state] = context_token[i]
@@ -95,10 +108,118 @@ class ContextGraph:
             from the starting state to avoid token consumption due to mismatches.
         """
         if token in self.graph[now_state]:
-            return self.graph[now_state][token], self.context_score
+            return self.graph[now_state][token], self.context_graph_score
         back_score = self.back_score[now_state]
         now_state = 0
         if token in self.graph[now_state]:
-            return self.graph[now_state][
-                token], back_score + self.context_score
+            return self.graph[now_state][token], \
+                back_score + self.context_graph_score
         return 0, back_score
+
+    def get_context_list_tensor(self, context_list: List[List[int]]):
+        """Add 0 as no-bias in the context list and obtain the tensor
+           form of the context list
+        """
+        context_list_tensor = [torch.tensor([0], dtype=torch.int32)]
+        for context_token in context_list:
+            context_list_tensor.append(torch.tensor(context_token, dtype=torch.int32))
+        context_list_lengths = torch.tensor([x.size(0) for x in context_list_tensor],
+                                            dtype=torch.int32)
+        context_list_tensor = pad_sequence(context_list_tensor,
+                                           batch_first=True,
+                                           padding_value=-1)
+        return context_list_tensor, context_list_lengths
+
+    def forward_deep_biasing(self,
+                             encoder_out: torch.Tensor,
+                             context_module: ContextModule,
+                             ctc: CTC):
+        """Apply deep biasing based on encoder output and context list
+        """
+        if self.context_filtering:
+            ctc_probs = ctc.log_softmax(encoder_out).squeeze(0)
+            filtered_context_list = self.two_stage_filtering(
+                self.context_list, ctc_probs)
+            context_list, context_list_lengths = self. \
+                get_context_list_tensor(filtered_context_list)
+        else:
+            context_list, context_list_lengths = self. \
+                get_context_list_tensor(self.context_list)
+        context_list = context_list.to(encoder_out.device)
+        context_emb = context_module. \
+            forward_context_emb(context_list, context_list_lengths)
+        encoder_out, _ = \
+            context_module(context_emb, encoder_out,
+                           self.deep_biasing_score, True)
+        return encoder_out
+
+    def two_stage_filtering(self,
+                            context_list: List[List[int]],
+                            ctc_posterior: torch.Tensor,
+                            filter_window_size: int = 64):
+        """Calculate PSC and SOC for context phrase filtering,
+           refer to: https://arxiv.org/abs/2301.06735
+        """
+        if len(context_list) == 0:
+            return context_list
+
+        SOC_score = {}
+        for t in range(1, ctc_posterior.shape[0]):
+            if t % (filter_window_size // 2) != 0 and t != ctc_posterior.shape[0] - 1:
+                continue
+            # calculate PSC
+            PSC_score = {}
+            max_posterior, _ = torch.max(ctc_posterior[max(0,
+                                         t - filter_window_size):t, :],
+                                         dim=0, keepdim=False)
+            max_posterior = max_posterior.tolist()
+            for i in range(len(context_list)):
+                score = sum(max_posterior[j] for j in context_list[i]) \
+                    / len(context_list[i])
+                PSC_score[i] = max(SOC_score.get(i, -float('inf')), score)
+            PSC_filtered_index = []
+            for i in PSC_score:
+                if PSC_score[i] > self.filter_threshold:
+                    PSC_filtered_index.append(i)
+            if len(PSC_filtered_index) == 0:
+                continue
+            filtered_context_list = []
+            for i in PSC_filtered_index:
+                filtered_context_list.append(context_list[i])
+
+            # calculate SOC
+            win_posterior = ctc_posterior[max(0, t - filter_window_size):t, :]
+            win_posterior = win_posterior.unsqueeze(0) \
+                .expand(len(filtered_context_list), -1, -1)
+            select_win_posterior = []
+            for i in range(len(filtered_context_list)):
+                select_win_posterior.append(torch.index_select(
+                    win_posterior[0], 1,
+                    torch.tensor(filtered_context_list[i],
+                                 device=ctc_posterior.device)).transpose(0, 1))
+            select_win_posterior = \
+                pad_sequence(select_win_posterior,
+                             batch_first=True).transpose(1, 2).contiguous()
+            dp = torch.full((select_win_posterior.shape[0],
+                             select_win_posterior.shape[2]),
+                            -10000.0, dtype=torch.float32,
+                            device=select_win_posterior.device)
+            dp[:, 0] = select_win_posterior[:, 0, 0]
+            for win_t in range(1, select_win_posterior.shape[1]):
+                temp = dp[:, :-1] + select_win_posterior[:, win_t, 1:]
+                idx = torch.where(temp > dp[:, 1:])
+                idx_ = (idx[0], idx[1] + 1)
+                dp[idx_] = temp[idx]
+                dp[:, 0] = \
+                    torch.where(select_win_posterior[:, win_t, 0] > dp[:, 0],
+                                select_win_posterior[:, win_t, 0], dp[:, 0])
+            for i in range(len(filtered_context_list)):
+                SOC_score[PSC_filtered_index[i]] = \
+                    max(SOC_score.get(PSC_filtered_index[i], -float('inf')),
+                        dp[i][len(filtered_context_list[i]) - 1]
+                        / len(filtered_context_list[i]))
+        filtered_context_list = []
+        for i in range(len(context_list)):
+            if SOC_score.get(i, -float('inf')) > self.filter_threshold:
+                filtered_context_list.append(context_list[i])
+        return filtered_context_list

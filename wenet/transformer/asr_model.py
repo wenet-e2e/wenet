@@ -33,6 +33,7 @@ from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
+from wenet.transformer.context_module import ContextModule
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, log_add,
                                 remove_duplicates_and_blank, th_accuracy,
                                 reverse_pad_list)
@@ -49,12 +50,14 @@ class ASRModel(torch.nn.Module):
         encoder: TransformerEncoder,
         decoder: TransformerDecoder,
         ctc: CTC,
+        context_module: ContextModule = None,
         ctc_weight: float = 0.5,
         ignore_id: int = IGNORE_ID,
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
         lfmmi_dir: str = '',
+        bias_weight: float = 0.03,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
 
@@ -66,10 +69,12 @@ class ASRModel(torch.nn.Module):
         self.ignore_id = ignore_id
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
+        self.bias_weight = bias_weight
 
         self.encoder = encoder
         self.decoder = decoder
         self.ctc = ctc
+        self.context_module = context_module
         self.criterion_att = LabelSmoothingLoss(
             size=vocab_size,
             padding_idx=ignore_id,
@@ -87,6 +92,7 @@ class ASRModel(torch.nn.Module):
         speech_lengths: torch.Tensor,
         text: torch.Tensor,
         text_lengths: torch.Tensor,
+        context_data: List[torch.Tensor],
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
 
@@ -95,6 +101,8 @@ class ASRModel(torch.nn.Module):
             speech_lengths: (Batch, )
             text: (Batch, Length)
             text_lengths: (Batch,)
+            context_data: [context_list, context_label,
+                           context_list_lengths, context_label_lengths]
         """
 
         assert text_lengths.dim() == 1, text_lengths.shape
@@ -105,6 +113,26 @@ class ASRModel(torch.nn.Module):
         # 1. Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
+
+        # 1a. Context biasing branch
+        loss_bias: Optional[torch.Tensor] = None
+        if self.context_module is not None:
+            assert len(context_data) == 4
+            context_list = context_data[0]
+            context_label = context_data[1]
+            context_list_lengths = context_data[2]
+            context_label_lengths = context_data[3]
+            context_emb = self.context_module. \
+                forward_context_emb(context_list, context_list_lengths)
+            encoder_out, bias_out = self.context_module(context_emb,
+                                                        encoder_out)
+            bias_out = bias_out.transpose(0, 1).log_softmax(2)
+            loss_bias = self.context_module.bias_loss(bias_out, context_label,
+                                                      encoder_out_lens,
+                                                      context_label_lengths)
+            loss_bias /= bias_out.size(1)
+        else:
+            loss_bias = None
 
         # 2a. Attention-decoder branch
         if self.ctc_weight != 1.0:
@@ -129,9 +157,13 @@ class ASRModel(torch.nn.Module):
         elif loss_att is None:
             loss = loss_ctc
         else:
-            loss = self.ctc_weight * loss_ctc + (1 -
-                                                 self.ctc_weight) * loss_att
-        return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc}
+            loss = self.ctc_weight * loss_ctc + (1 - self.ctc_weight) * \
+                loss_att
+        if loss is not None and loss_bias is not None:
+            loss = loss + self.bias_weight * loss_bias
+
+        return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc,
+                "loss_bias": loss_bias}
 
     def _calc_att_loss(
         self,
@@ -313,6 +345,7 @@ class ASRModel(torch.nn.Module):
         decoding_chunk_size: int = -1,
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
+        context_graph: ContextGraph = None,
     ) -> List[List[int]]:
         """ Apply CTC greedy search
 
@@ -338,6 +371,11 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size,
             num_decoding_left_chunks,
             simulate_streaming)  # (B, maxlen, encoder_dim)
+
+        if context_graph is not None and context_graph.deep_biasing:
+            encoder_out = context_graph.forward_deep_biasing(
+                encoder_out, self.context_module, self.ctc)
+
         maxlen = encoder_out.size(1)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
         ctc_probs = self.ctc.log_softmax(
@@ -391,6 +429,11 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size,
             num_decoding_left_chunks,
             simulate_streaming)  # (B, maxlen, encoder_dim)
+
+        if context_graph is not None and context_graph.deep_biasing:
+            encoder_out = context_graph.forward_deep_biasing(
+                encoder_out, self.context_module, self.ctc)
+
         maxlen = encoder_out.size(1)
         ctc_probs = self.ctc.log_softmax(
             encoder_out)  # (1, maxlen, vocab_size)
@@ -425,7 +468,7 @@ class ASRModel(torch.nn.Module):
                         n_prefix = prefix + (s, )
                         n_pb, n_pnb, _, _ = next_hyps[n_prefix]
                         new_c_state, new_c_score = 0, 0
-                        if context_graph is not None:
+                        if context_graph is not None and context_graph.graph_biasing:
                             new_c_state, new_c_score = context_graph. \
                                 find_next_state(c_state, s)
                         n_pnb = log_add([n_pnb, pb + ps])
@@ -435,7 +478,7 @@ class ASRModel(torch.nn.Module):
                         n_prefix = prefix + (s, )
                         n_pb, n_pnb, _, _ = next_hyps[n_prefix]
                         new_c_state, new_c_score = 0, 0
-                        if context_graph is not None:
+                        if context_graph is not None and context_graph.graph_biasing:
                             new_c_state, new_c_score = context_graph. \
                                 find_next_state(c_state, s)
                         n_pnb = log_add([n_pnb, pb + ps, pnb + ps])

@@ -17,6 +17,7 @@ from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
+from wenet.transformer.context_module import ContextModule
 from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
                                 reverse_pad_list)
 
@@ -35,6 +36,8 @@ class Transducer(ASRModel):
                                           BiTransformerDecoder]] = None,
         ctc: Optional[CTC] = None,
         ctc_weight: float = 0,
+        context_module: ContextModule = None,
+        bias_weight: float = 0,
         ignore_id: int = IGNORE_ID,
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
@@ -49,8 +52,8 @@ class Transducer(ASRModel):
     ) -> None:
         assert attention_weight + ctc_weight + transducer_weight == 1.0
         super().__init__(vocab_size, encoder, attention_decoder, ctc,
-                         ctc_weight, ignore_id, reverse_weight, lsm_weight,
-                         length_normalized_loss)
+                         context_module, ctc_weight, ignore_id, reverse_weight,
+                         lsm_weight, length_normalized_loss, '', bias_weight)
 
         self.blank = blank
         self.transducer_weight = transducer_weight
@@ -94,6 +97,7 @@ class Transducer(ASRModel):
         text: torch.Tensor,
         text_lengths: torch.Tensor,
         steps: int = 0,
+        context_data: List[torch.Tensor] = None,
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + predictor + joint + loss
 
@@ -102,6 +106,8 @@ class Transducer(ASRModel):
             speech_lengths: (Batch, )
             text: (Batch, Length)
             text_lengths: (Batch,)
+            context_data: [context_list, context_label,
+                           context_list_lengths, context_label_lengths]
         """
         assert text_lengths.dim() == 1, text_lengths.shape
         # Check that batch_size is unified
@@ -112,6 +118,27 @@ class Transducer(ASRModel):
         # Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
+
+        # Context biasing branch
+        loss_bias: Optional[torch.Tensor] = None
+        if self.context_module is not None:
+            assert len(context_data) == 4
+            context_list = context_data[0]
+            context_label = context_data[1]
+            context_list_lengths = context_data[2]
+            context_label_lengths = context_data[3]
+            context_emb = self.context_module. \
+                forward_context_emb(context_list, context_list_lengths)
+            encoder_out, bias_out = self.context_module(context_emb,
+                                                        encoder_out)
+            bias_out = bias_out.transpose(0, 1).log_softmax(2)
+            loss_bias = self.context_module.bias_loss(bias_out,
+                                                      context_label,
+                                                      encoder_out_lens,
+                                                      context_label_lengths
+                                                      ) / bias_out.size(1)
+        else:
+            loss_bias = None
 
         # compute_loss
         loss_rnnt = self._compute_loss(encoder_out,
@@ -140,12 +167,15 @@ class Transducer(ASRModel):
             loss = loss + self.ctc_weight * loss_ctc.sum()
         if loss_att is not None:
             loss = loss + self.attention_decoder_weight * loss_att.sum()
+        if loss_bias is not None:
+            loss = loss + self.bias_weight * loss_bias.sum()
         # NOTE: 'loss' must be in dict
         return {
             'loss': loss,
             'loss_att': loss_att,
             'loss_ctc': loss_ctc,
             'loss_rnnt': loss_rnnt,
+            'loss_bias': loss_bias,
         }
 
     def init_bs(self):

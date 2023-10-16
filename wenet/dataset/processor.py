@@ -610,6 +610,99 @@ def batch(data, batch_type='static', batch_size=16, max_frames_in_batch=12000):
         logging.fatal('Unsupported batch type {}'.format(batch_type))
 
 
+def context_sampling(data,
+                     symbol_table,
+                     len_min,
+                     len_max,
+                     utt_num_context,
+                     batch_num_context,
+                     ):
+    """Perform context sampling by randomly selecting context phrases from the
+       utterance to obtain a context list for the entire batch
+
+        Args:
+            data: Iterable[List[{key, feat, label}]]
+
+        Returns:
+            Iterable[List[{key, feat, label, context_list}]]
+    """
+    rev_symbol_table = {}
+    for token in symbol_table:
+        rev_symbol_table[symbol_table[token]] = token
+    context_list_over_all = []
+    for sample in data:
+        batch_label = [sample[i]['label'] for i in range(len(sample))]
+        context_list = []
+        for utt_label in batch_label:
+            st_index_list = []
+            for i in range(len(utt_label)):
+                if '▁' not in symbol_table:
+                    st_index_list.append(i)
+                elif rev_symbol_table[utt_label[i]][0] == '▁':
+                    st_index_list.append(i)
+            st_index_list.append(len(utt_label))
+
+            st_select = []
+            en_select = []
+            for _ in range(0, utt_num_context):
+                random_len = random.randint(min(len(st_index_list) - 1, len_min),
+                                            min(len(st_index_list) - 1, len_max))
+                random_index = random.randint(0, len(st_index_list) -
+                                              random_len - 1)
+                st_index = st_index_list[random_index]
+                en_index = st_index_list[random_index + random_len]
+                context_label = utt_label[st_index: en_index]
+                cross_flag = True
+                for i in range(len(st_select)):
+                    if st_index >= st_select[i] and st_index < en_select[i]:
+                        cross_flag = False
+                    elif en_index > st_select[i] and en_index <= en_select[i]:
+                        cross_flag = False
+                    elif st_index < st_select[i] and en_index > en_select[i]:
+                        cross_flag = False
+                if cross_flag:
+                    context_list.append(context_label)
+                    st_select.append(st_index)
+                    en_select.append(en_index)
+
+        if len(context_list) > batch_num_context:
+            context_list_over_all = context_list
+        elif len(context_list) + len(context_list_over_all) > batch_num_context:
+            context_list_over_all.extend(context_list)
+            context_list_over_all = context_list_over_all[-batch_num_context:]
+        else:
+            context_list_over_all.extend(context_list)
+        context_list = context_list_over_all.copy()
+        context_list.insert(0, [0])
+        for i in range(len(context_list)):
+            context_list[i] = torch.tensor(context_list[i], dtype=torch.int32)
+        sample[0]['context_list'] = context_list
+        yield sample
+
+
+def context_label_generate(label, context_list):
+    """ Generate context labels corresponding to the utterances based on
+        the context list
+    """
+    context_labels = []
+    for x in label:
+        cur_len = len(x)
+        context_label = []
+        count = 0
+        for i in range(cur_len):
+            for j in range(1, len(context_list)):
+                if i + len(context_list[j]) > cur_len:
+                    continue
+                if x[i:i + len(context_list[j])].equal(context_list[j]):
+                    count = max(count, len(context_list[j]))
+            if count > 0:
+                context_label.append(x[i])
+                count -= 1
+        context_label = torch.tensor(context_label, dtype=torch.int64)
+        context_labels.append(context_label)
+    return context_labels
+
+
 def padding(data):
     """ Padding the data into training data
 
@@ -641,5 +734,26 @@ def padding(data):
                                       batch_first=True,
                                       padding_value=-1)
 
-        yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
-               label_lengths)
+        if 'context_list' not in sample[0]:
+            yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
+                   label_lengths, [])
+        else:
+            context_lists = sample[0]['context_list']
+            context_list_lengths = \
+                torch.tensor([x.size(0) for x in context_lists], dtype=torch.int32)
+            padding_context_lists = pad_sequence(context_lists,
+                                                 batch_first=True,
+                                                 padding_value=-1)
+
+            sorted_context_labels = context_label_generate(sorted_labels,
+                                                           context_lists)
+            context_label_lengths = \
+                torch.tensor([x.size(0) for x in sorted_context_labels],
+                             dtype=torch.int32)
+            padding_context_labels = pad_sequence(sorted_context_labels,
+                                                  batch_first=True,
+                                                  padding_value=-1)
+            yield (sorted_keys, padded_feats, padding_labels,
+                   feats_lengths, label_lengths,
+                   [padding_context_lists, padding_context_labels,
+                    context_list_lengths, context_label_lengths])
