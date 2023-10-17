@@ -331,6 +331,7 @@ def init_optimizer_and_scheduler(args, infos, configs, model):
         model, optimizer, _, scheduler = deepspeed.initialize(
             args=args, model=model, optimizer=optimizer,
             lr_scheduler=scheduler, model_parameters=model.parameters())
+
     step = infos.get('step', -1)
     scheduler.set_step(step)
     return model, optimizer, scheduler

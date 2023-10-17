@@ -22,6 +22,8 @@ import os
 import torch
 import yaml
 
+from torch.distributed.elastic.multiprocessing.errors import record
+
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.train_utils import (add_model_args, add_dataset_args,
@@ -51,6 +53,7 @@ def get_args():
     elif args.train_engine == "deepspeed":
         args.torch_ddp = False
         args.deepspeed = True
+        assert args.deepspeed_config is not None
     elif args.train_engine == "torch_cpu":
         args.torch_ddp = False
         args.deepspeed = False
@@ -60,6 +63,8 @@ def get_args():
     return args
 
 
+# On worker errors, this tool will summarize the details of the error (e.g. time, rank, host, pid, traceback, etc).  # noqa
+@record
 def main():
     args = get_args()
     logging.basicConfig(level=logging.DEBUG,
@@ -77,18 +82,18 @@ def main():
     # Init env for ddp OR deepspeed
     world_size, local_rank, rank = init_distributed(args)
 
-    # Do some sanity checks and save config to arsg.model_dir
-    configs = check_modify_and_save_config(args, configs)
-
     # Get dataset & dataloader
     train_dataset, cv_dataset, train_data_loader, cv_data_loader = \
         init_dataset_and_dataloader(args, configs)
+
+    # Do some sanity checks and save config to arsg.model_dir
+    configs = check_modify_and_save_config(args, configs)
 
     # Init asr model from configs
     infos, model = init_model(args, configs)
 
     # Check model is jitable & print model archtectures
-    trace_and_print_model(model, enable_trace=True)
+    trace_and_print_model(model, enable_trace=True, enable_print=True)
 
     # Tensorboard summary
     writer = init_summarywriter(args)

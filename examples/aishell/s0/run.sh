@@ -133,7 +133,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # and export.
   if [ ${train_engine} == "deepspeed" ]; then
     echo "using deepspeed"
-    # TODO(xcsong): manully impl model.join for deepspeed
+    # TODO(xcsong): remove filter and impl model.join for deepspeed
     [ ! -f data/$train_set/data.list.filter ] && \
       python tools/filter_uneven_data.py data/$train_set/data.list \
         $data_type $num_gpus $num_utts_per_shard data/$train_set/data.list.filter
@@ -141,8 +141,16 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "using torch ddp"
   fi
 
-  # NOTE(xcsong): both ddp & deepspeed can be launched by torchrun
-  torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+  # NOTE(xcsong): Both ddp & deepspeed can be launched by torchrun
+  # NOTE(xcsong): To unify single-node & multi-node training, we add
+  #               all `rdzv` related args. You should change `nnodes` &
+  #               `rdzv_endpoint` for multi-node, see
+  #               https://pytorch.org/docs/stable/elastic/run.html#usage
+  #               `rdzv_id` - A user-defined id that uniquely identifies the worker group for a job.
+  #                           This id is used by each node to join as a member of a particular worker group.
+  #               `rdzv_endpoint` - The rendezvous backend endpoint; usually in form <host>:<port>.
+  torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus \
+           --rdzv-id="2023" --rdzv-backend="c10d" --rdzv_endpoint=$HOST_NODE_ADDR \
     wenet/bin/train.py \
       --train_engine ${train_engine} \
       --config $train_config \
