@@ -97,10 +97,6 @@ def add_dataset_args(parser):
 
 
 def add_ddp_args(parser):
-    parser.add_argument('--torch_ddp',
-                        action='store_true',
-                        default=False,
-                        help='Use distributed data parallel')
     parser.add_argument('--ddp.dist_backend',
                         dest='dist_backend',
                         default='nccl',
@@ -138,14 +134,14 @@ def init_distributed(args):
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     local_rank = int(os.environ.get('LOCAL_RANK', 0))
     rank = int(os.environ.get('RANK', 0))
-    if args.torch_ddp:
+    if args.train_engine == "torch_ddp":
         logging.info('training on multiple gpus, this gpu {}'.format(local_rank))
         torch.cuda.set_device(local_rank)
         dist.init_process_group(args.dist_backend,
                                 init_method=args.init_method,
                                 world_size=world_size,
                                 rank=rank)
-    elif args.deepspeed:
+    elif args.train_engine == "deepspeed":
         deepspeed.init_distributed(dist_backend=args.dist_backend,
                                    init_method=args.init_method,
                                    world_size=world_size,
@@ -156,12 +152,12 @@ def init_distributed(args):
 
 
 def check_modify_and_save_config(args, configs):
-    if args.torch_ddp or args.torch_cpu:
+    if args.train_engine == "torch_ddp":
         if args.use_amp:
             configs["dtype"] = "fp16"
         else:
             configs["dtype"] = "fp32"
-    elif args.deepspeed:
+    elif args.train_engine == "deepspeed":
         # NOTE(xcsong): DeepSpeed does not support uneven data. When using custom
         #   dataset, we need to manually ensure that the data is evenly distributed
         #   across all processe. we impl `tools/filter_uneven_data.py` for this func
@@ -260,8 +256,10 @@ def init_dataset_and_dataloader(args, configs):
 
 
 def wrap_cuda_model(args, model):
+    local_world_size = int(os.environ.get('LOCAL_WORLD_SIZE', 1))
+    world_size = int(os.environ.get('WORLD_SIZE', 1))
     # TODO(xcsong): could one GPU use ddp? and int(os.environ.get('WORLD_SIZE', 1)) > 1
-    if args.torch_ddp:  # native pytorch ddp
+    if args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
         # cuda model is required for nn.parallel.DistributedDataParallel
         model.cuda()
@@ -275,16 +273,18 @@ def wrap_cuda_model(args, model):
             model.register_comm_hook(
                 state=None, hook=comm_hooks.fp16_compress_hook
             )
-    elif args.deepspeed:  # deepspeed
+    elif args.train_engine == "deepspeed":  # deepspeed
         # NOTE(xcsong): look in detail how the memory estimator API works:
         #   https://deepspeed.readthedocs.io/en/latest/memory.html#discussion
         if int(os.environ.get('RANK', 0)) == 0:
             logging.info("Estimating model states memory needs (zero2)...")
             estimate_zero2_model_states_mem_needs_all_live(
-                model, num_gpus_per_node=world_size, num_nodes=1)
+                model, num_gpus_per_node=local_world_size,
+                num_nodes=world_size // local_world_size)
             logging.info("Estimating model states memory needs (zero3)...")
             estimate_zero3_model_states_mem_needs_all_live(
-                model, num_gpus_per_node=world_size, num_nodes=1)
+                model, num_gpus_per_node=local_world_size,
+                num_nodes=world_size // local_world_size)
         device = None     # Init device later
         pass              # Init DeepSpeed later
     else:
@@ -317,6 +317,8 @@ def init_optimizer_and_scheduler(args, infos, configs, model):
     #   please set optimizer in ds_config.json, see:
     #   (https://www.deepspeed.ai/docs/config-json/#optimizer-parameters)
     if args.deepspeed:
+        with open(args.deepspeed_config, 'r') as fin:
+            ds_configs = json.load(fin)
         if "optimizer" in ds_configs:
             # NOTE(xcsong): Disable custom optimizer if it is set in ds_config,
             # extremely useful when enable cpu_offload, DeepspeedCpuAdam
@@ -380,11 +382,11 @@ def save_model(args, model, tag, infos):
         save_checkpoint(model, save_model_path, infos)
 
 
-def batch_forward(args, model, batch, scaler):
-    train_engine = args.get("train_engine", "torch_ddp")
-    accum_grad = args.get('accum_grad', 1)
+def batch_forward(configs, model, batch, scaler):
+    train_engine = configs.get('train_engine', "torch_ddp")
+    accum_grad = configs.get('accum_grad', 1)
 
-    dtype = args.get("dtype", "fp32")
+    dtype = configs.get("dtype", "fp32")
     if dtype == "fp16":
         dtype = torch.float16
     elif dtype == "bf16":
@@ -410,9 +412,9 @@ def batch_forward(args, model, batch, scaler):
     return loss_dict
 
 
-def batch_backward(args, model, loss_dict, scaler):
-    train_engine = args.get("train_engine", "torch_ddp")
-    use_amp = args.get('use_amp', False)
+def batch_backward(configs, model, loss_dict, scaler):
+    train_engine = configs.get("train_engine", "torch_ddp")
+    use_amp = configs.get('use_amp', False)
     if use_amp:
         assert scaler is not None
     loss = loss_dict['loss']
@@ -431,11 +433,11 @@ def batch_backward(args, model, loss_dict, scaler):
             loss.backward()
 
 
-def update_parameter_and_lr(args, model, optimizer, scheduler, scaler, info_dict):  # noqa
-    train_engine = args.get("train_engine", "torch_ddp")
-    accum_grad = args.get('accum_grad', 1)
-    use_amp = args.get('use_amp', False)
-    clip = args.get('grad_clip', 50.0)
+def update_parameter_and_lr(configs, model, optimizer, scheduler, scaler, info_dict):  # noqa
+    train_engine = configs.get("train_engine", "torch_ddp")
+    accum_grad = configs.get('accum_grad', 1)
+    use_amp = configs.get('use_amp', False)
+    clip = configs.get('grad_clip', 50.0)
     rank = int(os.environ.get('RANK', 0))
     batch_idx = info_dict["batch_idx"]
     if use_amp:
@@ -446,6 +448,8 @@ def update_parameter_and_lr(args, model, optimizer, scheduler, scaler, info_dict
         #   no need to manually perform scheduler.step(). In other words: `ds_model.step() = optimizer.step() + scheduler.step()` # noqa
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
         model.step()
+        info_dict["is_gradient_accumulation_boundary"] = \
+            model.is_gradient_accumulation_boundary()
     elif batch_idx % accum_grad == 0:
         # Use mixed precision training
         if use_amp:
@@ -467,14 +471,16 @@ def update_parameter_and_lr(args, model, optimizer, scheduler, scaler, info_dict
         optimizer.zero_grad()
         scheduler.step()
 
-    return optimizer.param_groups[0]['lr']
+    info_dict["lr"] = optimizer.param_groups[0]['lr']
+
+    return info_dict
 
 
-def log_per_step(args, loss_dict, info_dict, writer, tag):
-    epoch = args.get('epoch', 0)
-    train_engine = args.get("train_engine", "torch_ddp")
-    accum_grad = args.get('accum_grad', 1) if tag == "TRAIN" else 1
-    log_interval = args.get('log_interval', 10)
+def log_per_step(configs, loss_dict, info_dict, writer, tag):
+    epoch = configs.get('epoch', 0)
+    train_engine = configs.get("train_engine", "torch_ddp")
+    accum_grad = configs.get('accum_grad', 1) if tag == "TRAIN" else 1
+    log_interval = configs.get('log_interval', 10)
 
     loss = loss_dict['loss']
     rank = int(os.environ.get('RANK', 0))
@@ -483,11 +489,13 @@ def log_per_step(args, loss_dict, info_dict, writer, tag):
     lr = info_dict.get("lr", 0.0)
     history_loss = info_dict.get("history_loss", 0.0)
     step = info_dict.get("step", -1)
+    is_gradient_accumulation_boundary = info_dict.get(
+        "is_gradient_accumulation_boundary", False)
 
     if tag == "TRAIN":
         if train_engine == "deepspeed":
             if rank == 0 and writer is not None \
-                    and model.is_gradient_accumulation_boundary():
+                    and is_gradient_accumulation_boundary:
                 writer.add_scalar('train_loss', loss.item(), step)
         elif batch_idx % accum_grad == 0:
             if rank == 0 and writer is not None:

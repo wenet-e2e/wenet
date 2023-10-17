@@ -134,9 +134,9 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   if [ ${train_engine} == "deepspeed" ]; then
     echo "using deepspeed"
     # TODO(xcsong): remove filter and impl model.join for deepspeed
-    [ ! -f data/$train_set/data.list.filter ] && \
-      python tools/filter_uneven_data.py data/$train_set/data.list \
-        $data_type $num_gpus $num_utts_per_shard data/$train_set/data.list.filter
+    # [ ! -f data/$train_set/data.list.filter ] && \
+    #   python tools/filter_uneven_data.py data/$train_set/data.list \
+    #     $data_type $num_gpus $num_utts_per_shard data/$train_set/data.list.filter
   else
     echo "using torch ddp"
   fi

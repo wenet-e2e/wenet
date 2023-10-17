@@ -47,20 +47,9 @@ def get_args():
     parser = add_ddp_args(parser)
     parser = add_deepspeed_args(parser)
     args = parser.parse_args()
-    if args.train_engine == "torch_ddp":
-        args.torch_ddp = True
-        args.deepspeed = False
-        args.deepspeed_config = None
-    elif args.train_engine == "deepspeed":
-        args.torch_ddp = False
+    if args.train_engine == "deepspeed":
         args.deepspeed = True
         assert args.deepspeed_config is not None
-    elif args.train_engine == "torch_cpu":
-        args.torch_ddp = False
-        args.deepspeed = False
-        args.deepspeed_config = None
-    else:
-        raise NotImplementedError("engine not supported.")
     return args
 
 
@@ -107,7 +96,8 @@ def main():
         args, infos, configs, model)
 
     # Save checkpoints
-    save_model(args, model, tag="init", infos=None)
+    save_model(args, model, tag="init",
+               infos={"save_time": datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')})  # noqa
 
     # Get executor
     executor = Executor()

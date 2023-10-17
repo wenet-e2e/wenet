@@ -76,7 +76,7 @@ class Executor:
 
                 info_dict = {"batch_idx": batch_idx, "step": self.step}
 
-                info_dict["lr"] = update_parameter_and_lr(
+                info_dict = update_parameter_and_lr(
                     args, model, optimizer, scheduler,
                     scaler, info_dict
                 )
@@ -114,5 +114,5 @@ class Executor:
                     total_loss += loss.item() * num_utts
 
                 info_dict = {"batch_idx": batch_idx, "history_loss": total_loss / num_seen_utts}  # noqa
-                log_per_step(args, loss_dict, info_dict, writer, tag="CV")
+                log_per_step(args, loss_dict, info_dict, writer=None, tag="CV")
         return total_loss, num_seen_utts
