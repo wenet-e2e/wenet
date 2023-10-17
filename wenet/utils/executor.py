@@ -73,9 +73,9 @@ class Executor:
                     loss_dict = batch_forward(args, model, batch_dict, scaler)
                     batch_backward(args, model, loss_dict, scaler)
 
-                info_dict = {"lr": lr, "batch_idx": batch_idx, "step": self.step}
+                info_dict = {"batch_idx": batch_idx, "step": self.step}
 
-                lr = update_parameter_and_lr(
+                info_dict["lr"] = update_parameter_and_lr(
                     args, model, optimizer, scheduler,
                     scaler, info_dict
                 )
