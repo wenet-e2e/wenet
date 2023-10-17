@@ -24,6 +24,7 @@ import yaml
 
 from torch.distributed.elastic.multiprocessing.errors import record
 
+from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.train_utils import (add_model_args, add_dataset_args,
@@ -32,7 +33,7 @@ from wenet.utils.train_utils import (add_model_args, add_dataset_args,
                                      check_modify_and_save_config,
                                      init_optimizer_and_scheduler,
                                      trace_and_print_model, wrap_cuda_model,
-                                     init_summarywriter, init_executor, save_model,
+                                     init_summarywriter, save_model,
                                      log_per_epoch)
 
 def get_args():
@@ -93,7 +94,7 @@ def main():
     infos, model = init_model(args, configs)
 
     # Check model is jitable & print model archtectures
-    trace_and_print_model(model, enable_trace=True, enable_print=True)
+    trace_and_print_model(args, model, enable_trace=True, enable_print=True)
 
     # Tensorboard summary
     writer = init_summarywriter(args)
@@ -109,7 +110,8 @@ def main():
     save_model(args, model, tag="init", infos=None)
 
     # Get executor
-    executor = init_executor(infos)
+    executor = Executor()
+    executor.step = infos.get('step', -1)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = None

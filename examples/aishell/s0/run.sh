@@ -150,13 +150,13 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   #                           This id is used by each node to join as a member of a particular worker group.
   #               `rdzv_endpoint` - The rendezvous backend endpoint; usually in form <host>:<port>.
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus \
-           --rdzv-id="2023" --rdzv-backend="c10d" --rdzv_endpoint=$HOST_NODE_ADDR \
+           --rdzv_id=2023 --rdzv_backend="c10d" --rdzv_endpoint=$HOST_NODE_ADDR \
     wenet/bin/train.py \
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type  $data_type \
       --symbol_table  data/dict/lang_char.txt \
-      --train_data data/$train_set/data.list.filter \
+      --train_data data/$train_set/data.list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \

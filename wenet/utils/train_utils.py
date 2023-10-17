@@ -32,7 +32,6 @@ from deepspeed.runtime.zero.stage3 import estimate_zero3_model_states_mem_needs_
 from deepspeed.utils.zero_to_fp32 import convert_zero_checkpoint_to_fp32_state_dict
 
 from wenet.dataset.dataset import Dataset
-from wenet.utils.executor import Executor
 from wenet.utils.checkpoint import save_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
@@ -337,7 +336,7 @@ def init_optimizer_and_scheduler(args, infos, configs, model):
     return model, optimizer, scheduler
 
 
-def trace_and_print_model(model, enable_trace=True, enable_print=True):
+def trace_and_print_model(args, model, enable_trace=True, enable_print=True):
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements
@@ -354,17 +353,10 @@ def trace_and_print_model(model, enable_trace=True, enable_print=True):
 def init_summarywriter(args):
     writer = None
     if int(os.environ.get('RANK', 0)) == 0:
-        os.makedirs(model_dir, exist_ok=True)
-        exp_id = os.path.basename(model_dir)
+        os.makedirs(args.model_dir, exist_ok=True)
+        exp_id = os.path.basename(args.model_dir)
         writer = SummaryWriter(os.path.join(args.tensorboard_dir, exp_id))
     return writer
-
-
-def init_executor(infos):
-    step = infos.get('step', -1)
-    executor = Executor()
-    executor.step = step
-    return executor
 
 
 def save_model(args, model, tag, infos):
@@ -384,7 +376,7 @@ def save_model(args, model, tag, infos):
     elif rank == 0:
         # NOTE(xcsong): For torch_ddp & torch_cpu,
         #   only rank-0 should call this.
-        save_model_path = os.path.join(model_dir, '{}.pt'.format(tag))
+        save_model_path = os.path.join(args.model_dir, '{}.pt'.format(tag))
         save_checkpoint(model, save_model_path, infos)
 
 

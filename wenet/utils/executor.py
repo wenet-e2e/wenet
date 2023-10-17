@@ -33,8 +33,9 @@ class Executor:
         ''' Train one epoch
         '''
         model.train()
+        accum_grad = args.get('accum_grad', 1)
         logging.info('using accumulate grad, new batch size is {} times'
-                     ' larger than before'.format(args.get('accum_grad', 1)))
+                     ' larger than before'.format(accum_grad))
 
         # A context manager to be used in conjunction with an instance of
         # torch.nn.parallel.DistributedDataParallel to be able to train
