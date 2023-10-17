@@ -192,7 +192,9 @@ def check_modify_and_save_config(args, configs):
             configs["dtype"] = "fp32"
         assert configs['dataset_conf']['batch_conf']['batch_type'] == "static"  # noqa
         assert ds_configs["train_micro_batch_size_per_gpu"] == 1
-        configs['accum_grad'] = ds_configs["gradient_accumulation_steps"]
+        ds_configs["gradient_accumulation_steps"] = configs['accum_grad']
+        with open(args.deepspeed_config, 'w', encoding='utf-8') as fout:
+            json.dump(ds_configs, fout, ensure_ascii=False, indent=4)
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
@@ -316,7 +318,7 @@ def init_optimizer_and_scheduler(args, infos, configs, model):
     #   zero-offload is enabled, if you do want to offload optimizer to CPU,
     #   please set optimizer in ds_config.json, see:
     #   (https://www.deepspeed.ai/docs/config-json/#optimizer-parameters)
-    if args.deepspeed:
+    if args.train_engine == "deepspeed":
         with open(args.deepspeed_config, 'r') as fin:
             ds_configs = json.load(fin)
         if "optimizer" in ds_configs:
@@ -363,7 +365,7 @@ def init_summarywriter(args):
 
 def save_model(args, model, tag, infos):
     rank = int(os.environ.get('RANK', 0))
-    if args.deepspeed:
+    if args.train_engine == "deepspeed":
         # NOTE(xcsong): All ranks should call this API, but only rank 0
         #   save the general model params. see:
         #   https://github.com/microsoft/DeepSpeed/issues/2993
@@ -394,20 +396,22 @@ def batch_forward(configs, model, batch, scaler):
     else:  # fp32
         dtype = None
 
-    if train_engine == "deepspeed":  # deepspeed
+    if train_engine == "deepspeed":
+        # deepspeed
         with torch.cuda.amp.autocast(
             enabled=dtype is not None, dtype=dtype, cache_enabled=False
         ):
             loss_dict = model(batch["feats"], batch["feats_lengths"],
                               batch["target"], batch["target_lengths"])
-    else:                            # torch_ddp or torch_cpu
+    else:
+        # torch_ddp or torch_cpu
         # autocast context
         # The more details about amp can be found in
         # https://pytorch.org/docs/stable/notes/amp_examples.html
         with torch.cuda.amp.autocast(scaler is not None):
             loss_dict = model(batch["feats"], batch["feats_lengths"],
                               batch["target"], batch["target_lengths"])
-            loss_dict['loss'] = loss_dict['loss'] / accum_grad
+    loss_dict['loss'] = loss_dict['loss'] / accum_grad
 
     return loss_dict
 
