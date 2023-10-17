@@ -1,0 +1,7 @@
+wenet.transformer.search module
+===============================
+
+.. automodule:: wenet.transformer.search
+   :members:
+   :undoc-members:
+   :show-inheritance:
