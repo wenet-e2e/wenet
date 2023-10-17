@@ -307,30 +307,6 @@
         <span class="k">return</span> <span class="mi">8</span></div>
 
 
-<div class="viewcode-block" id="remove_duplicates_and_blank"><a class="viewcode-back" href="../../../python_api/wenet.utils.common.html#wenet.utils.common.remove_duplicates_and_blank">[docs]</a><span class="k">def</span> <span class="nf">remove_duplicates_and_blank</span><span class="p">(</span><span class="n">hyp</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="n">new_hyp</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">cur</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">while</span> <span class="n">cur</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">hyp</span><span class="p">[</span><span class="n">cur</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">new_hyp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="n">cur</span><span class="p">])</span>
-        <span class="n">prev</span> <span class="o">=</span> <span class="n">cur</span>
-        <span class="k">while</span> <span class="n">cur</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">)</span> <span class="ow">and</span> <span class="n">hyp</span><span class="p">[</span><span class="n">cur</span><span class="p">]</span> <span class="o">==</span> <span class="n">hyp</span><span class="p">[</span><span class="n">prev</span><span class="p">]:</span>
-            <span class="n">cur</span> <span class="o">+=</span> <span class="mi">1</span>
-    <span class="k">return</span> <span class="n">new_hyp</span></div>
-
-
-<div class="viewcode-block" id="replace_duplicates_with_blank"><a class="viewcode-back" href="../../../python_api/wenet.utils.common.html#wenet.utils.common.replace_duplicates_with_blank">[docs]</a><span class="k">def</span> <span class="nf">replace_duplicates_with_blank</span><span class="p">(</span><span class="n">hyp</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
-    <span class="n">new_hyp</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="n">cur</span> <span class="o">=</span> <span class="mi">0</span>
-    <span class="k">while</span> <span class="n">cur</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">):</span>
-        <span class="n">new_hyp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hyp</span><span class="p">[</span><span class="n">cur</span><span class="p">])</span>
-        <span class="n">prev</span> <span class="o">=</span> <span class="n">cur</span>
-        <span class="n">cur</span> <span class="o">+=</span> <span class="mi">1</span>
-        <span class="k">while</span> <span class="n">cur</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyp</span><span class="p">)</span> <span class="ow">and</span> <span class="n">hyp</span><span class="p">[</span><span class="n">cur</span><span class="p">]</span> <span class="o">==</span> <span class="n">hyp</span><span class="p">[</span><span class="n">prev</span><span class="p">]</span> <span class="ow">and</span> <span class="n">hyp</span><span class="p">[</span><span class="n">cur</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">new_hyp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
-            <span class="n">cur</span> <span class="o">+=</span> <span class="mi">1</span>
-    <span class="k">return</span> <span class="n">new_hyp</span></div>
-
 
 <div class="viewcode-block" id="log_add"><a class="viewcode-back" href="../../../python_api/wenet.utils.common.html#wenet.utils.common.log_add">[docs]</a><span class="k">def</span> <span class="nf">log_add</span><span class="p">(</span><span class="n">args</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
