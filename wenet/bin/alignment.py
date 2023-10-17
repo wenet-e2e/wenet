@@ -30,7 +30,7 @@ import math
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
-from wenet.utils.ctc_util import forced_align
+from wenet.utils.ctc_utils import forced_align
 from wenet.utils.common import get_subsample
 from wenet.utils.init_model import init_model
 

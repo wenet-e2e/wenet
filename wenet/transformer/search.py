@@ -20,8 +20,8 @@ from torch.nn.utils.rnn import pad_sequence
 
 from wenet.utils.common import (add_sos_eos,
                                 log_add,
-                                remove_duplicates_and_blank,
                                 reverse_pad_list)
+from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
 

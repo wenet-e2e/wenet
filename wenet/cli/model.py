@@ -19,7 +19,7 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
 from wenet.cli.hub import Hub
-from wenet.utils.common import remove_duplicates_and_blank
+from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.file_utils import read_symbol_table
 
 
