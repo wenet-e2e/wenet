@@ -1,0 +1,15 @@
+wenet.k2 package
+================
+
+.. automodule:: wenet.k2
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.k2.model
