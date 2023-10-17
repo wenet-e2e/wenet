@@ -40,6 +40,7 @@ train_set=train
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
+tensorboard_dir=tensorboard
 checkpoint=
 num_workers=8
 prefetch=500
@@ -160,6 +161,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
+      --tensorboard_dir ${tensorboard_dir} \
       --ddp.init_method $init_method \
       --ddp.dist_backend $dist_backend \
       --num_workers ${num_workers} \

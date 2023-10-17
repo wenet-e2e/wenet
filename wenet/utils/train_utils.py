@@ -454,7 +454,7 @@ def update_parameter_and_lr(configs, model, optimizer, scheduler, scaler, info_d
         model.step()
         info_dict["is_gradient_accumulation_boundary"] = \
             model.is_gradient_accumulation_boundary()
-    elif batch_idx % accum_grad == 0:
+    elif batch_idx % accum_grad == 0 and batch_idx != 0:
         # Use mixed precision training
         if use_amp:
             scaler.unscale_(optimizer)
@@ -501,7 +501,7 @@ def log_per_step(configs, loss_dict, info_dict, writer, tag):
             if rank == 0 and writer is not None \
                     and is_gradient_accumulation_boundary:
                 writer.add_scalar('train_loss', loss.item(), step)
-        elif batch_idx % accum_grad == 0:
+        elif batch_idx % accum_grad == 0 and batch_idx != 0:
             if rank == 0 and writer is not None:
                 writer.add_scalar('train_loss', loss.item(), step)
 
