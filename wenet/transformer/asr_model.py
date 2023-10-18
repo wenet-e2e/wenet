@@ -293,11 +293,11 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size,
             num_decoding_left_chunks,
             simulate_streaming)  # (B, maxlen, encoder_dim)
-        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
+        encoder_lens = encoder_mask.squeeze(1).sum(1)
         ctc_probs = self.ctc.log_softmax(
             encoder_out)  # (1, maxlen, vocab_size)
-        return ctc_prefix_beam_search(ctc_probs, encoder_out_lens,
-                                      beam_size), encoder_out
+        return (ctc_prefix_beam_search(ctc_probs, encoder_lens,
+                                       beam_size), encoder_out, encoder_mask)
 
     def ctc_prefix_beam_search(
         self,
@@ -326,12 +326,10 @@ class ASRModel(torch.nn.Module):
         Returns:
             List[int]: CTC prefix beam search nbest results
         """
-        hyps, _ = self._ctc_prefix_beam_search(speech, speech_lengths,
-                                               beam_size, decoding_chunk_size,
-                                               num_decoding_left_chunks,
-                                               simulate_streaming,
-                                               context_graph)
-        return hyps[0]
+        hyps, _, _ = self._ctc_prefix_beam_search(
+            speech, speech_lengths, beam_size, decoding_chunk_size,
+            num_decoding_left_chunks, simulate_streaming, context_graph)
+        return [y[0][0] for y in hyps]
 
     def attention_rescoring(
         self,
@@ -373,15 +371,12 @@ class ASRModel(torch.nn.Module):
             assert hasattr(self.decoder, 'right_decoder')
         device = speech.device
         batch_size = speech.shape[0]
-        # For attention rescoring we only support batch_size=1
-        assert batch_size == 1
-        # encoder_out: (1, maxlen, encoder_dim), len(hyps) = beam_size
-        hyps, encoder_out = self._ctc_prefix_beam_search(
+        hyps, encoder_out, encoder_mask = self._ctc_prefix_beam_search(
             speech, speech_lengths, beam_size, decoding_chunk_size,
             num_decoding_left_chunks, simulate_streaming, context_graph)
-
-        return attention_rescoring(self, hyps, encoder_out, ctc_weight,
-                                   reverse_weight)
+        encoder_lens = encoder_mask.squeeze(1).sum(1)
+        return attention_rescoring(self, hyps, encoder_out, encoder_lens,
+                                   ctc_weight, reverse_weight)
 
     @torch.jit.export
     def subsampling_rate(self) -> int:

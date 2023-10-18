@@ -18,7 +18,6 @@ import argparse
 import copy
 import logging
 import os
-import sys
 
 import torch
 import yaml
@@ -187,16 +186,6 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
-    if args.mode in [
-            'ctc_prefix_beam_search',
-            'attention_rescoring',
-            'paraformer_beam_search',
-    ] and args.batch_size > 1:
-        logging.fatal(
-            'decoding mode {} must be running with batch_size == 1'.format(
-                args.mode))
-        sys.exit(1)
-
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
     if len(args.override_config) > 0:
@@ -337,12 +326,8 @@ def main():
                     search_ctc_weight=args.search_ctc_weight,
                     search_transducer_weight=args.search_transducer_weight,
                     beam_search_type='ctc')
-            # ctc_prefix_beam_search and attention_rescoring only return one
-            # result in List[int], change it to List[List[int]] for compatible
-            # with other batch decoding mode
             elif args.mode == 'ctc_prefix_beam_search':
-                assert (feats.size(0) == 1)
-                hyp, _ = model.ctc_prefix_beam_search(
+                hyps = model.ctc_prefix_beam_search(
                     feats,
                     feats_lengths,
                     args.beam_size,
@@ -350,10 +335,8 @@ def main():
                     num_decoding_left_chunks=args.num_decoding_left_chunks,
                     simulate_streaming=args.simulate_streaming,
                     context_graph=context_graph)
-                hyps = [hyp]
             elif args.mode == 'attention_rescoring':
-                assert (feats.size(0) == 1)
-                hyp, _ = model.attention_rescoring(
+                hyps = model.attention_rescoring(
                     feats,
                     feats_lengths,
                     args.beam_size,
@@ -363,7 +346,6 @@ def main():
                     simulate_streaming=args.simulate_streaming,
                     reverse_weight=args.reverse_weight,
                     context_graph=context_graph)
-                hyps = [hyp]
             elif args.mode == 'hlg_onebest':
                 hyps = model.hlg_onebest(
                     feats,
