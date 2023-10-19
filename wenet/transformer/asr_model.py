@@ -192,7 +192,7 @@ class ASRModel(torch.nn.Module):
         ctc_weight: float = 0.0,
         simulate_streaming: bool = False,
         reverse_weight: float = 0.0,
-    ) -> List[DecodeResult]:
+    ) -> Dict[str, List[DecodeResult]]:
         """ Decode input speech
 
         Args:
@@ -216,8 +216,7 @@ class ASRModel(torch.nn.Module):
             reverse_weight (float): right to left decoder weight
             ctc_weight (float): ctc score weight
 
-        Returns:
-            List[int]: decoding result
+        Returns: dict results of all decoding methods
         """
         assert speech.shape[0] == speech_lengths.shape[0]
         assert decoding_chunk_size != 0
