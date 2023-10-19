@@ -140,31 +140,25 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             --val_best \
             2>&1 | tee -a $dir/average.log || exit 1;
     fi
-
+    python wenet/bin/recognize.py --gpu 0 \
+        --modes $decode_modes \
+        --config $dir/train.yaml \
+        --data_type raw \
+        --test_data data/test/data.list \
+        --checkpoint $decode_checkpoint \
+        --beam_size 10 \
+        --batch_size 1 \
+        --penalty 0.0 \
+        --dict $dict \
+        --ctc_weight $rescore_ctc_weight \
+        --transducer_weight $rescore_transducer_weight \
+        --attn_weight $rescore_attn_weight \
+        --search_ctc_weight $search_ctc_weight \
+        --search_transducer_weight $search_transducer_weight \
+        --result_dir $dir \
+        ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
     for mode in ${decode_modes}; do
-    {
-        test_dir=$dir/test_${mode}_chunk_${decoding_chunk_size}
-        mkdir -p $test_dir
-        python wenet/bin/recognize.py --gpu 0 \
-            --mode $mode \
-            --config $dir/train.yaml \
-            --data_type raw \
-            --test_data data/test/data.list \
-            --checkpoint $decode_checkpoint \
-            --beam_size 10 \
-            --batch_size 1 \
-            --penalty 0.0 \
-            --dict $dict \
-            --ctc_weight $rescore_ctc_weight \
-            --transducer_weight $rescore_transducer_weight \
-            --attn_weight $rescore_attn_weight \
-            --search_ctc_weight $search_ctc_weight \
-            --search_transducer_weight $search_transducer_weight \
-            --result_file $test_dir/text \
-            ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
-         python tools/compute-wer.py --char=1 --v=1 \
-            data/test/text $test_dir/text > $test_dir/wer
-    } &
+        python tools/compute-wer.py --char=1 --v=1 \
+            data/test/text $dir/$mode/text > $dir/$mode/wer
     done
-    wait
 fi

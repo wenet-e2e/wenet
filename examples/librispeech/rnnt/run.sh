@@ -180,50 +180,36 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # -1 for full chunk
   decoding_chunk_size=
   ctc_weight=0.5
-  # Polling GPU id begin with index 0
-  num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
-  idx=0
   for test in $recog_set; do
-    for mode in ${decode_modes}; do
-    {
-      {
-        test_dir=$dir/${test}_${mode}
-        mkdir -p $test_dir
-        gpu_id=$(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f$[$idx+1])
-        python wenet/bin/recognize.py --gpu $gpu_id \
-          --mode $mode \
-          --config $dir/train.yaml \
-          --data_type raw \
-          --dict $dict \
-          --bpe_model ${bpemodel}.model \
-          --test_data $wave_data/$test/data.list \
-          --checkpoint $decode_checkpoint \
-          --beam_size 10 \
-          --batch_size 1 \
-          --penalty 0.0 \
-          --result_file $test_dir/text_bpe \
-          --ctc_weight $ctc_weight \
-          ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+    result_dir=$dir/${test}
+    mkdir -p $test_dir
+    python wenet/bin/recognize.py --gpu 0 \
+      --modes $decode_modes \
+      --config $dir/train.yaml \
+      --data_type raw \
+      --dict $dict \
+      --bpe_model ${bpemodel}.model \
+      --test_data $wave_data/$test/data.list \
+      --checkpoint $decode_checkpoint \
+      --beam_size 10 \
+      --batch_size 1 \
+      --penalty 0.0 \
+      --result_dir $result_dir \
+      --ctc_weight $ctc_weight \
+      ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
 
-        cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
-        cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
-        tools/spm_decode --model=${bpemodel}.model --input_format=piece \
-          < $test_dir/text_bpe_value_tmp | sed -e "s/▁/ /g" > $test_dir/text_value_tmp
-        paste -d " " $test_dir/text_bpe_key_tmp $test_dir/text_value_tmp > $test_dir/text
-
-        python tools/compute-wer.py --char=1 --v=1 \
-          $wave_data/$test/text $test_dir/text > $test_dir/wer
-      } &
-
-      ((idx+=1))
-      if [ $idx -eq $num_gpus ]; then
-        idx=0
-      fi
-    }
+    for mode in $decode_modes; do
+      test_dir=$result_dir/$mode
+      cp $test_dir/text $test_dir/text_bpe
+      cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
+      cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
+      tools/spm_decode --model=${bpemodel}.model --input_format=piece \
+        < $test_dir/text_bpe_value_tmp | sed -e "s/▁/ /g" > $test_dir/text_value_tmp
+      paste -d " " $test_dir/text_bpe_key_tmp $test_dir/text_value_tmp > $test_dir/text
+      python tools/compute-wer.py --char=1 --v=1 \
+        $wave_data/$test/text $test_dir/text > $test_dir/wer
     done
   done
-  wait
-
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
