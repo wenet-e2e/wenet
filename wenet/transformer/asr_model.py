@@ -24,7 +24,7 @@ from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.transformer.search import (ctc_greedy_search,
                                       ctc_prefix_beam_search,
                                       attention_beam_search,
-                                      attention_rescoring)
+                                      attention_rescoring, DecodeResult)
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, th_accuracy,
                                 reverse_pad_list)
 
@@ -192,7 +192,7 @@ class ASRModel(torch.nn.Module):
         ctc_weight: float = 0.0,
         simulate_streaming: bool = False,
         reverse_weight: float = 0.0,
-    ) -> List[List[int]]:
+    ) -> List[DecodeResult]:
         """ Decode input speech
 
         Args:
@@ -227,7 +227,6 @@ class ASRModel(torch.nn.Module):
         encoder_lens = encoder_mask.squeeze(1).sum(1)
         ctc_probs = self.ctc.log_softmax(encoder_out)
         results = {}
-        ctc_nbests = None
         if 'attention' in methods:
             results['attention'] = attention_beam_search(
                 self, encoder_out, encoder_mask, beam_size)
@@ -235,16 +234,18 @@ class ASRModel(torch.nn.Module):
             results['ctc_greedy_search'] = ctc_greedy_search(
                 ctc_probs, encoder_lens)
         if 'ctc_prefix_beam_search' in methods:
-            ctc_nbests = ctc_prefix_beam_search(ctc_probs, encoder_lens,
-                                                beam_size)
-            results['ctc_prefix_beam_search'] = [y[0][0] for y in ctc_nbests]
+            ctc_prefix_result = ctc_prefix_beam_search(ctc_probs, encoder_lens,
+                                                       beam_size)
+            results['ctc_prefix_beam_search'] = ctc_prefix_result
         if 'attention_rescoring' in methods:
             # attention_rescoring depends on ctc_prefix_beam_search nbest
-            if ctc_nbests is None:
-                ctc_nbests = ctc_prefix_beam_search(ctc_probs, encoder_lens,
-                                                    beam_size)
+            if 'ctc_prefix_beam_search' in results:
+                ctc_prefix_result = results['ctc_prefix_beam_search']
+            else:
+                ctc_prefix_result = ctc_prefix_beam_search(
+                    ctc_probs, encoder_lens, beam_size)
             results['attention_rescoring'] = attention_rescoring(
-                self, ctc_nbests, encoder_out, encoder_lens, ctc_weight,
+                self, ctc_prefix_result, encoder_out, encoder_lens, ctc_weight,
                 reverse_weight)
         return results
 
