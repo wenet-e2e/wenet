@@ -34,7 +34,7 @@ def ctc_greedy_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor):
     hyps = [hyp.tolist() for hyp in topk_index]
     scores = topk_prob.max(1)
     hyps = [remove_duplicates_and_blank(hyp) for hyp in hyps]
-    return hyps, scores
+    return hyps
 
 
 def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
@@ -190,7 +190,13 @@ def attention_beam_search(
         batch_size, dtype=torch.long, device=device) * beam_size
     best_hyps = torch.index_select(hyps, dim=0, index=best_hyps_index)
     best_hyps = best_hyps[:, 1:]
-    return best_hyps, best_scores
+
+    results = []
+    for i in range(batch_size):
+        hyp = best_hyps[i]
+        hyp = hyp[hyp != model.eos]
+        results.append(hyp.tolist())
+    return results
 
 
 def attention_rescoring(
