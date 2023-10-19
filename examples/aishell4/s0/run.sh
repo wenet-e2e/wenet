@@ -137,33 +137,28 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # -1 for full chunk
   decoding_chunk_size=
   ctc_weight=0.5
-  for mode in ${decode_modes}; do
+  for test_set in ${test_sets}; do
   {
-    for test_set in ${test_sets}; do
-    {
-      test_dir=$dir/test_${mode}
-      mkdir -p $test_dir
-      python wenet/bin/recognize.py --gpu $(echo $CUDA_VISIBLE_DEVICES | cut -d',' -f1) \
-        --mode $mode \
-        --config $dir/train.yaml \
-        --data_type shard \
-        --test_data data/${test_set}/data.list \
-        --checkpoint $decode_checkpoint \
-        --beam_size 10 \
-        --batch_size 1 \
-        --penalty 0.0 \
-        --dict $dict \
-        --ctc_weight $ctc_weight \
-        --result_file $test_dir/text \
-        ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+    test_dir=$dir/${test_set}
+    mkdir -p $test_dir
+    python wenet/bin/recognize.py --gpu 0 \
+      --modes $decode_modes \
+      --config $dir/train.yaml \
+      --data_type shard \
+      --test_data data/${test_set}/data.list \
+      --checkpoint $decode_checkpoint \
+      --beam_size 10 \
+      --batch_size 32 \
+      --penalty 0.0 \
+      --dict $dict \
+      --ctc_weight $ctc_weight \
+      --result_dir $test_dir \
+      ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
+    for mode in ${decode_modes}; do
       python tools/compute-wer.py --char=1 --v=1 \
-        data/${test_set}/text $test_dir/text > $test_dir/wer
-    } &
+        data/${test_set}/text $test_dir/$mode/text > $test_dir/$mode/wer
     done
   }
-  done
-  wait
-
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
