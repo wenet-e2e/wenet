@@ -6,12 +6,14 @@ from typing import Optional, Tuple
 import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
-from torch.nn import TransformerDecoder
 import yaml
 from wenet.cif.predictor import Predictor, cif
-from wenet.paraformer.experiment.attention import DummyMultiHeadSANM, MultiHeadAttentionCross, MultiHeadedAttentionSANM
+from wenet.paraformer.experiment.attention import (DummyMultiHeadSANM,
+                                                   MultiHeadAttentionCross,
+                                                   MultiHeadedAttentionSANM)
 from wenet.paraformer.experiment.lfr import LFR
-from wenet.paraformer.experiment.positionwise_feed_forward import PositionwiseFeedForwardDecoderSANM
+from wenet.paraformer.experiment.positionwise_feed_forward import \
+    PositionwiseFeedForwardDecoderSANM
 from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.decoder import TransformerDecoder

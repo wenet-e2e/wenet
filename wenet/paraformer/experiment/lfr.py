@@ -54,9 +54,8 @@ class LFR(torch.nn.Module):
                              device=input.device,
                              dtype=input_lens.dtype).unsqueeze(0).repeat(
                                  B, 1)  # [B, T_all_max]
-        index_mask = (index <
-                      (self.left_padding_nums + input_lens).unsqueeze(1)
-                      )  #[B, T_all_max]
+        # [B, T_all_max]
+        index_mask = index < (self.left_padding_nums + input_lens).unsqueeze(1)
 
         tail_index_mask = torch.logical_not(
             index >= (T_all.unsqueeze(1))) & index_mask
