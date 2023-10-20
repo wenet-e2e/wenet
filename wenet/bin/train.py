@@ -41,7 +41,7 @@ def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--train_engine',
                         default='torch_ddp',
-                        choices=['torch_ddp', 'deepspeed', 'torch_cpu'],
+                        choices=['torch_ddp', 'deepspeed'],
                         help='Engine for paralleled training')
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)

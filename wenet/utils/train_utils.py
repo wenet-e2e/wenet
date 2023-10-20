@@ -154,7 +154,7 @@ def init_distributed(args):
                                    world_size=world_size,
                                    rank=rank)
     else:
-        logging.info("Do nothing for cpu training")
+        logging.error("not supported engine: {}".format(args.train_engine))
     return world_size, local_rank, rank
 
 
@@ -268,7 +268,6 @@ def wrap_cuda_model(args, model):
     # TODO(xcsong): could one GPU use ddp? and int(os.environ.get('WORLD_SIZE', 1)) > 1
     if args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
-        # cuda model is required for nn.parallel.DistributedDataParallel
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=True)
@@ -295,8 +294,7 @@ def wrap_cuda_model(args, model):
         device = None     # Init device later
         pass              # Init DeepSpeed later
     else:
-        device = torch.device('cpu')
-        model = model.to(device)
+        logging.error("not supported engine: {}".format(args.train_engine))
 
     return model, device
 
@@ -383,8 +381,7 @@ def save_model(args, model, tag, infos):
                     tag=tag)
                 os.system("rm -rf {}/{}".format(args.model_dir, tag))
     elif rank == 0:
-        # NOTE(xcsong): For torch_ddp & torch_cpu,
-        #   only rank-0 should call this.
+        # NOTE(xcsong): For torch_ddp, only rank-0 should call this.
         save_model_path = os.path.join(args.model_dir, '{}.pt'.format(tag))
         save_checkpoint(model, save_model_path, infos)
 
@@ -436,7 +433,7 @@ def batch_forward(configs, model, batch, scaler):
             loss_dict = model(batch["feats"], batch["feats_lengths"],
                               batch["target"], batch["target_lengths"])
     else:
-        # torch_ddp or torch_cpu
+        # torch_ddp
         # autocast context
         # The more details about amp can be found in
         # https://pytorch.org/docs/stable/notes/amp_examples.html
@@ -455,7 +452,7 @@ def batch_backward(configs, model, loss_dict, scaler):
         assert scaler is not None
     loss = loss_dict['loss']
 
-    if train_engine == "deepspeed":  # deepspeed
+    if train_engine == "deepspeed":
         # NOTE(xcsong): Zeroing the gradients is handled automatically by
         #   DeepSpeed after the weights have been updated using a mini-batch.
         #   DeepSpeed also performs gradient averaging automatically at the
@@ -465,7 +462,7 @@ def batch_backward(configs, model, loss_dict, scaler):
         #                    + optimizer.zero_grad() + accum_grad`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         model.backward(loss)
-    else:             # torch_ddp or torch_cpu
+    elif train_engine == "torch_ddp":
         if use_amp:
             scaler.scale(loss).backward()
         else:
