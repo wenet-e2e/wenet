@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -24,7 +24,37 @@ from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
 
 
-def ctc_greedy_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor):
+class DecodeResult:
+
+    def __init__(self,
+                 tokens: List[int],
+                 score: float = 0.0,
+                 confidence: float = 0.0,
+                 tokens_confidence: List[float] = None,
+                 times: List[Tuple[float, float]] = None,
+                 nbest: List[List[int]] = None,
+                 nbest_scores: List[float] = None):
+        """
+        Args:
+            tokens: decode token list
+            score: the total decode score of this result
+            confidence: the total confidence of this result, it's in 0~1
+            tokens_confidence: confidence of each token
+            times: timestamp of each token, list of (start, end)
+            nbest: nbest result
+            nbest_scores: score of each nbest
+        """
+        self.tokens = tokens
+        self.score = score
+        self.confidence = confidence
+        self.tokens_confidence = tokens_confidence
+        self.times = times
+        self.nbest = nbest
+        self.nbest_scores = nbest_scores
+
+
+def ctc_greedy_search(ctc_probs: torch.Tensor,
+                      ctc_lens: torch.Tensor) -> List[DecodeResult]:
     batch_size = ctc_probs.shape[0]
     maxlen = ctc_probs.size(1)
     topk_prob, topk_index = ctc_probs.topk(1, dim=2)  # (B, maxlen, 1)
@@ -33,12 +63,15 @@ def ctc_greedy_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor):
     topk_index = topk_index.masked_fill_(mask, 0)  # (B, maxlen)
     hyps = [hyp.tolist() for hyp in topk_index]
     scores = topk_prob.max(1)
-    hyps = [remove_duplicates_and_blank(hyp) for hyp in hyps]
-    return hyps
+    results = []
+    for hyp in hyps:
+        r = DecodeResult(remove_duplicates_and_blank(hyp))
+        results.append(r)
+    return results
 
 
 def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
-                           beam_size: int) -> List[List[List[int]]]:
+                           beam_size: int) -> List[DecodeResult]:
     """
         Returns:
             List[List[List[int]]]: nbest result for each utterance
@@ -102,8 +135,18 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                 key=lambda x: log_add([x[1][0], x[1][1]]) + x[1][3],
                 reverse=True)
             cur_hyps = next_hyps[:beam_size]
-        results.append([(y[0], log_add([y[1][0], y[1][1]]) + y[1][3])
-                        for y in cur_hyps])
+
+        nbest = [y[0] for y in cur_hyps]
+        nbest_scores = [
+            log_add([y[1][0], y[1][1]]) + y[1][3] for y in cur_hyps
+        ]
+        best = nbest[0]
+        best_score = nbest_scores[0]
+        results.append(
+            DecodeResult(tokens=best,
+                         score=best_score,
+                         nbest=nbest,
+                         nbest_scores=nbest_scores))
     return results
 
 
@@ -112,7 +155,7 @@ def attention_beam_search(
     encoder_out: torch.Tensor,
     encoder_mask: torch.Tensor,
     beam_size: int = 10,
-) -> torch.Tensor:
+) -> List[DecodeResult]:
     device = encoder_out.device
     batch_size = encoder_out.shape[0]
     # Let's assume B = batch_size and N = beam_size
@@ -195,39 +238,39 @@ def attention_beam_search(
     for i in range(batch_size):
         hyp = best_hyps[i]
         hyp = hyp[hyp != model.eos]
-        results.append(hyp.tolist())
+        results.append(DecodeResult(hyp.tolist()))
     return results
 
 
 def attention_rescoring(
     model,
-    nbests: List[List[List[int]]],
+    ctc_prefix_results: List[DecodeResult],
     encoder_outs: torch.Tensor,
     encoder_lens: torch.Tensor,
     ctc_weight: float = 0.0,
     reverse_weight: float = 0.0,
-) -> List[List[int]]:
+) -> List[DecodeResult]:
     """
         Args:
-            nbests(List[List[List[int]]]): ctc prefix beam search nbests
+            ctc_prefix_results(List[DecodeResult]): ctc prefix beam search results
     """
     if reverse_weight > 0.0:
         # decoder should be a bitransformer decoder if reverse_weight > 0.0
         assert hasattr(model.decoder, 'right_decoder')
     device = encoder_outs.device
-    assert encoder_outs.shape[0] == len(nbests)
+    assert encoder_outs.shape[0] == len(ctc_prefix_results)
     batch_size = encoder_outs.shape[0]
     results = []
     for b in range(batch_size):
         encoder_out = encoder_outs[b, :encoder_lens[b], :].unsqueeze(0)
-        hyps = nbests[b]
+        hyps = ctc_prefix_results[b].nbest
+        ctc_scores = ctc_prefix_results[b].nbest_scores
         beam_size = len(hyps)
         hyps_pad = pad_sequence([
-            torch.tensor(hyp[0], device=device, dtype=torch.long)
-            for hyp in hyps
+            torch.tensor(hyp, device=device, dtype=torch.long) for hyp in hyps
         ], True, model.ignore_id)  # (beam_size, max_hyps_len)
         ori_hyps_pad = hyps_pad
-        hyps_lens = torch.tensor([len(hyp[0]) for hyp in hyps],
+        hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
         hyps_pad, _ = add_sos_eos(hyps_pad, model.sos, model.eos,
@@ -257,20 +300,20 @@ def attention_rescoring(
         best_index = 0
         for i, hyp in enumerate(hyps):
             score = 0.0
-            for j, w in enumerate(hyp[0]):
+            for j, w in enumerate(hyp):
                 score += decoder_out[i][j][w]
-            score += decoder_out[i][len(hyp[0])][model.eos]
+            score += decoder_out[i][len(hyp)][model.eos]
             # add right to left decoder score
             if reverse_weight > 0:
                 r_score = 0.0
-                for j, w in enumerate(hyp[0]):
-                    r_score += r_decoder_out[i][len(hyp[0]) - j - 1][w]
-                r_score += r_decoder_out[i][len(hyp[0])][model.eos]
+                for j, w in enumerate(hyp):
+                    r_score += r_decoder_out[i][len(hyp) - j - 1][w]
+                r_score += r_decoder_out[i][len(hyp)][model.eos]
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
             # add ctc score
-            score += hyp[1] * ctc_weight
+            score += ctc_scores[i] * ctc_weight
             if score > best_score:
                 best_score = score
                 best_index = i
-        results.append(hyps[best_index][0])
+        results.append(DecodeResult(hyps[best_index], best_score))
     return results

@@ -246,6 +246,7 @@ def main():
         os.makedirs(dir_name, exist_ok=True)
         file_name = os.path.join(dir_name, 'text')
         files[mode] = open(file_name, 'w')
+    max_format_len = max([len(mode) for mode in args.modes])
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_data_loader):
             keys, feats, target, feats_lengths, target_lengths = batch
@@ -263,14 +264,13 @@ def main():
                 ctc_weight=args.ctc_weight,
                 simulate_streaming=args.simulate_streaming,
                 reverse_weight=args.reverse_weight)
-            for mode, hyps in results.items():
-                for i, key in enumerate(keys):
-                    content = []
-                    for w in hyps[i]:
-                        content.append(char_dict[w])
+            for i, key in enumerate(keys):
+                for mode, hyps in results.items():
+                    content = [char_dict[w] for w in hyps[i].tokens]
                     line = '{} {}'.format(key,
                                           args.connect_symbol.join(content))
-                    logging.info('{} {}'.format(mode, line))
+                    logging.info('{} {}'.format(mode.ljust(max_format_len),
+                                                line))
                     files[mode].write(line + '\n')
     for mode, f in files.items():
         f.close()
