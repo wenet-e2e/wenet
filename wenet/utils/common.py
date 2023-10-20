@@ -233,7 +233,7 @@ def get_subsample(config):
 
 
 
-def log_add(args: List[int]) -> float:
+def log_add(*args) -> float:
     """
     Stable log add
     """
