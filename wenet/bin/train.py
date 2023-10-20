@@ -18,9 +18,10 @@ import argparse
 import datetime
 import logging
 import os
-
 import torch
 import yaml
+
+import torch.distributed as dist
 
 from torch.distributed.elastic.multiprocessing.errors import record
 
@@ -120,8 +121,12 @@ def main():
 
         device = model.local_rank if args.deepspeed else device
 
+        # NOTE(xcsong): monitored barrier requires gloo process group to perform host-side sync.  # noqa
+        # this group is used to join workers for deepspeed, more infos see `train_utils.py`  # noqa
+        group_join = dist.new_group(backend="gloo")
+
         executor.train(model, optimizer, scheduler, train_data_loader, device,
-                       writer, configs, scaler)
+                       writer, configs, scaler, group_join)
 
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
                                                 configs)

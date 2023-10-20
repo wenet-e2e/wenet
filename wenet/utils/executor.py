@@ -19,7 +19,7 @@ from contextlib import nullcontext
 # from contextlib import suppress as nullcontext
 import torch
 
-from wenet.utils.train_utils import (batch_forward, batch_backward,
+from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
                                      update_parameter_and_lr, log_per_step)
 
 
@@ -29,7 +29,7 @@ class Executor:
         self.step = 0
 
     def train(self, model, optimizer, scheduler, data_loader, device, writer,
-              args, scaler):
+              args, scaler, group_join):
         ''' Train one epoch
         '''
         model.train()
@@ -47,6 +47,9 @@ class Executor:
 
         with model_context():
             for batch_idx, batch in enumerate(data_loader):
+                if wenet_join(args, device, group_join):
+                    break
+
                 key, feats, target, feats_lengths, target_lengths = batch
 
                 batch_dict = {}

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import copy
+import datetime
 import deepspeed
 import json
 import logging
@@ -192,9 +193,7 @@ def check_modify_and_save_config(args, configs):
             configs["dtype"] = "fp32"
         assert configs['dataset_conf']['batch_conf']['batch_type'] == "static"  # noqa
         assert ds_configs["train_micro_batch_size_per_gpu"] == 1
-        ds_configs["gradient_accumulation_steps"] = configs['accum_grad']
-        with open(args.deepspeed_config, 'w', encoding='utf-8') as fout:
-            json.dump(ds_configs, fout, ensure_ascii=False, indent=4)
+        assert ds_configs["gradient_accumulation_steps"] == configs['accum_grad']  # noqa
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
@@ -382,6 +381,33 @@ def save_model(args, model, tag, infos):
         #   only rank-0 should call this.
         save_model_path = os.path.join(args.model_dir, '{}.pt'.format(tag))
         save_checkpoint(model, save_model_path, infos)
+
+
+def wenet_join(configs, device, group_join):
+    world_size = int(os.environ.get('WORLD_SIZE', 1))
+    local_rank = int(os.environ.get('LOCAL_RANK', 0))
+    rank = int(os.environ.get('RANK', 0))
+    train_engine = configs.get('train_engine', "torch_ddp")
+
+    if train_engine != "deepspeed":
+        return False
+
+    try:
+        # NOTE(xcsong): Why we need a new group?
+        #   Because Deepspeed has its own group where all the relevant communication
+        #   operations are executed. If we add a communication operation that is not
+        #   managed by Deepspeed in this group, it's highly likely to cause
+        #   communication chaos, resulting in hard-to-troubleshoot hangs.
+        dist.monitored_barrier(group=group_join,
+                               timeout=datetime.timedelta(seconds=30))
+    except RuntimeError as e:
+        logging.info("Detected uneven workload distribution: {}\n".format(e) +
+                     "Break current worker to manually join all workers, " +
+                     "world_size {}, current rank {}, current local_rank {}".format(
+                         world_size, rank, local_rank))
+        return True
+
+    return False
 
 
 def batch_forward(configs, model, batch, scaler):
