@@ -116,6 +116,7 @@ class Executor:
                     num_seen_utts += num_utts
                     total_loss += loss.item() * num_utts
 
-                info_dict = {"batch_idx": batch_idx, "history_loss": total_loss / num_seen_utts}  # noqa
+                info_dict = {"batch_idx": batch_idx,
+                             "history_loss": total_loss / num_seen_utts}
                 log_per_step(args, loss_dict, info_dict, writer=None, tag="CV")
         return total_loss, num_seen_utts

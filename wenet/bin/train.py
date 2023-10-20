@@ -54,7 +54,8 @@ def get_args():
     return args
 
 
-# On worker errors, this tool will summarize the details of the error (e.g. time, rank, host, pid, traceback, etc).  # noqa
+# On worker errors, this tool will summarize the details of the error
+#   (e.g. time, rank, host, pid, traceback, etc).
 @record
 def main():
     args = get_args()
@@ -98,7 +99,8 @@ def main():
 
     # Save checkpoints
     save_model(args, model, tag="init",
-               infos={"save_time": datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')})  # noqa
+               infos={"save_time": datetime.datetime.now()
+                      .strftime('%d/%m/%Y %H:%M:%S')})
 
     # Get executor
     executor = Executor()
@@ -112,7 +114,7 @@ def main():
     # Start training loop
     start_epoch = infos.get('epoch', -1) + 1
     final_epoch = None
-    for epoch in range(start_epoch, configs.get('max_epoch', 100)):  # noqa
+    for epoch in range(start_epoch, configs.get('max_epoch', 100)):
         train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch
 
@@ -121,8 +123,9 @@ def main():
 
         device = model.local_rank if args.deepspeed else device
 
-        # NOTE(xcsong): monitored barrier requires gloo process group to perform host-side sync.  # noqa
-        # this group is used to join workers for deepspeed, more infos see `train_utils.py`  # noqa
+        # NOTE(xcsong): monitored barrier requires gloo process group to
+        #   perform host-side sync. this group is used to join workers for
+        #   deepspeed, more infos see `train_utils.py`
         group_join = dist.new_group(backend="gloo")
 
         executor.train(model, optimizer, scheduler, train_data_loader, device,

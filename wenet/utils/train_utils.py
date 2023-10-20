@@ -28,9 +28,15 @@ import torch.distributed as dist
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
-from deepspeed.runtime.zero.stage_1_and_2 import estimate_zero2_model_states_mem_needs_all_live  # noqa
-from deepspeed.runtime.zero.stage3 import estimate_zero3_model_states_mem_needs_all_live  # noqa
-from deepspeed.utils.zero_to_fp32 import convert_zero_checkpoint_to_fp32_state_dict
+from deepspeed.runtime.zero.stage_1_and_2 import (
+    estimate_zero2_model_states_mem_needs_all_live
+)
+from deepspeed.runtime.zero.stage3 import (
+    estimate_zero3_model_states_mem_needs_all_live
+)
+from deepspeed.utils.zero_to_fp32 import (
+    convert_zero_checkpoint_to_fp32_state_dict
+)
 
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
@@ -191,9 +197,9 @@ def check_modify_and_save_config(args, configs):
             configs["dtype"] = "bf16"
         else:
             configs["dtype"] = "fp32"
-        assert configs['dataset_conf']['batch_conf']['batch_type'] == "static"  # noqa
+        assert configs['dataset_conf']['batch_conf']['batch_type'] == "static"
         assert ds_configs["train_micro_batch_size_per_gpu"] == 1
-        assert ds_configs["gradient_accumulation_steps"] == configs['accum_grad']  # noqa
+        assert ds_configs["gradient_accumulation_steps"] == configs['accum_grad']
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
@@ -450,11 +456,14 @@ def batch_backward(configs, model, loss_dict, scaler):
     loss = loss_dict['loss']
 
     if train_engine == "deepspeed":  # deepspeed
-        # NOTE(xcsong): Zeroing the gradients is handled automatically by DeepSpeed after the weights # noqa
-        #   have been updated using a mini-batch. DeepSpeed also performs gradient averaging automatically # noqa
-        #   at the gradient accumulation boundaries and addresses clip_grad_norm internally. In other words # noqa
-        #   `model.backward(loss)` is equivalent to `loss.backward() + clip_grad_norm_() + optimizer.zero_grad() + accum_grad` # noqa
-        #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
+        # NOTE(xcsong): Zeroing the gradients is handled automatically by
+        #   DeepSpeed after the weights have been updated using a mini-batch.
+        #   DeepSpeed also performs gradient averaging automatically at the
+        #   gradient accumulation boundaries and addresses clip_grad_norm
+        #   internally. In other words, `model.backward(loss)` is equivalent to
+        #   `loss.backward() + clip_grad_norm_()
+        #                    + optimizer.zero_grad() + accum_grad`
+        #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         model.backward(loss)
     else:             # torch_ddp or torch_cpu
         if use_amp:
@@ -463,7 +472,10 @@ def batch_backward(configs, model, loss_dict, scaler):
             loss.backward()
 
 
-def update_parameter_and_lr(configs, model, optimizer, scheduler, scaler, info_dict):  # noqa
+def update_parameter_and_lr(
+    configs, model, optimizer,
+    scheduler, scaler, info_dict
+):
     train_engine = configs.get("train_engine", "torch_ddp")
     accum_grad = configs.get('accum_grad', 1)
     use_amp = configs.get('use_amp', False)
@@ -474,9 +486,11 @@ def update_parameter_and_lr(configs, model, optimizer, scheduler, scaler, info_d
         assert scaler is not None
 
     if train_engine == "deepspeed":
-        # NOTE(xcsong): The step() function in DeepSpeed engine updates the model parameters as well as the learning rate. There is # noqa
-        #   no need to manually perform scheduler.step(). In other words: `ds_model.step() = optimizer.step() + scheduler.step()` # noqa
-        #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api  # noqa
+        # NOTE(xcsong): The step() function in DeepSpeed engine updates the
+        #   model parameters as well as the learning rate. There is no need
+        #   to manually perform scheduler.step(). In other words:
+        #   `ds_model.step() = optimizer.step() + scheduler.step()`
+        #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         model.step()
         info_dict["is_gradient_accumulation_boundary"] = \
             model.is_gradient_accumulation_boundary()
@@ -541,7 +555,7 @@ def log_per_step(configs, loss_dict, info_dict, writer, tag):
         if tag == "TRAIN":
             log_str += 'lr {:.8f} rank {}'.format(lr, rank)
         elif tag == "CV":
-            log_str += 'history loss {:.6f} rank {}'.format(history_loss, rank)  # noqa
+            log_str += 'history loss {:.6f} rank {}'.format(history_loss, rank)
         logging.debug(log_str)
 
 
