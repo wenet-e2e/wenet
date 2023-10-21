@@ -141,8 +141,9 @@ def init_distributed(args):
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     local_rank = int(os.environ.get('LOCAL_RANK', 0))
     rank = int(os.environ.get('RANK', 0))
+    logging.info('training on multiple gpus, this gpu {}'.format(local_rank) +
+                 ', rank {}, world_size {}'.format(rank, world_size))
     if args.train_engine == "torch_ddp":
-        logging.info('training on multiple gpus, this gpu {}'.format(local_rank))
         torch.cuda.set_device(local_rank)
         dist.init_process_group(args.dist_backend,
                                 init_method=args.init_method,
