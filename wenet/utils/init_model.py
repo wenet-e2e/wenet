@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import torch
+
+from wenet.k2.model import K2Model
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -56,13 +58,12 @@ def init_model(args, configs):
                                        global_cmvn=global_cmvn,
                                        **configs['encoder_conf'])
     elif encoder_type == 'efficientConformer':
-        encoder = EfficientConformerEncoder(input_dim,
-                                            global_cmvn=global_cmvn,
-                                            **configs['encoder_conf'],
-                                            **configs['encoder_conf']
-                                            ['efficient_conf']
-                                            if 'efficient_conf' in
-                                               configs['encoder_conf'] else {})
+        encoder = EfficientConformerEncoder(
+            input_dim,
+            global_cmvn=global_cmvn,
+            **configs['encoder_conf'],
+            **configs['encoder_conf']['efficient_conf']
+            if 'efficient_conf' in configs['encoder_conf'] else {})
     elif encoder_type == 'branchformer':
         encoder = BranchformerEncoder(input_dim,
                                       global_cmvn=global_cmvn,
@@ -124,12 +125,20 @@ def init_model(args, configs):
                            predictor=predictor,
                            **configs['model_conf'])
     else:
-        model = ASRModel(vocab_size=vocab_size,
-                         encoder=encoder,
-                         decoder=decoder,
-                         ctc=ctc,
-                         lfmmi_dir=configs.get('lfmmi_dir', ''),
-                         **configs['model_conf'])
+        print(configs)
+        if configs.get('lfmmi_dir', '') != '':
+            model = K2Model(vocab_size=vocab_size,
+                            encoder=encoder,
+                            decoder=decoder,
+                            ctc=ctc,
+                            lfmmi_dir=configs['lfmmi_dir'],
+                            **configs['model_conf'])
+        else:
+            model = ASRModel(vocab_size=vocab_size,
+                             encoder=encoder,
+                             decoder=decoder,
+                             ctc=ctc,
+                             **configs['model_conf'])
     # If specify checkpoint, load some info from checkpoint
     if args.checkpoint is not None:
         infos = load_checkpoint(model, args.checkpoint)
