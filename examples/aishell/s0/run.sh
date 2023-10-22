@@ -145,6 +145,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   #               all related args. You should change `nnodes` &
   #               `rdzv_endpoint` for multi-node, see
   #               https://pytorch.org/docs/stable/elastic/run.html#usage
+  #               https://github.com/wenet-e2e/wenet/pull/2055#issuecomment-1766055406
   #               `rdzv_id` - A user-defined id that uniquely identifies the worker group for a job.
   #                           This id is used by each node to join as a member of a particular worker group.
   #               `rdzv_endpoint` - The rendezvous backend endpoint; usually in form <host>:<port>.
