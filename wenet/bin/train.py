@@ -126,7 +126,8 @@ def main():
         # NOTE(xcsong): monitored barrier requires gloo process group to
         #   perform host-side sync. this group is used to join workers for
         #   deepspeed, more infos see `train_utils.py`
-        group_join = dist.new_group(backend="gloo")
+        group_join = dist.new_group(backend="gloo",
+                                    timeout=datetime.timedelta(seconds=30))
 
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler, group_join)
