@@ -1,28 +1,21 @@
 """ NOTE(Mddct): This file is experimental and is used to export paraformer
 """
 
-import argparse
 from typing import Optional, Tuple
 import torch
-import torchaudio
-import torchaudio.compliance.kaldi as kaldi
-import yaml
-from wenet.cif.predictor import Predictor, cif
-from wenet.paraformer.experiment.attention import (DummyMultiHeadSANM,
-                                                   MultiHeadAttentionCross,
-                                                   MultiHeadedAttentionSANM)
-from wenet.paraformer.experiment.lfr import LFR
-from wenet.paraformer.experiment.positionwise_feed_forward import \
+from wenet.cif.predictor import Predictor
+from wenet.paraformer.ali_paraformer.attention import (DummyMultiHeadSANM,
+                                                       MultiHeadAttentionCross,
+                                                       MultiHeadedAttentionSANM
+                                                       )
+from wenet.paraformer.ali_paraformer.lfr import LFR
+from wenet.paraformer.ali_paraformer.positionwise_feed_forward import \
     PositionwiseFeedForwardDecoderSANM
 from wenet.transformer.encoder import BaseEncoder
-from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.utils.checkpoint import load_checkpoint
-from wenet.utils.cmvn import load_cmvn
-from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.mask import make_non_pad_mask
 
 
@@ -34,9 +27,9 @@ class SinusoidalPositionEncoder(torch.nn.Module):
         pass
 
     def encode(self,
-               positions: torch.Tensor = None,
-               depth: int = None,
-               dtype: torch.dtype = torch.float32):
+               positions: torch.Tensor,
+               depth: int,
+               dtype: torch.dtype = torch.float32) -> torch.Tensor:
         batch_size = positions.size(0)
         positions = positions.type(dtype)
         device = positions.device
@@ -52,7 +45,7 @@ class SinusoidalPositionEncoder(torch.nn.Module):
         encoding = torch.cat([torch.sin(scaled_time),
                               torch.cos(scaled_time)],
                              dim=2)
-        return encoding.type(dtype)
+        return encoding.to(dtype)
 
     def forward(self, x):
         _, timesteps, input_dim = x.size()
@@ -63,7 +56,7 @@ class SinusoidalPositionEncoder(torch.nn.Module):
         return x + position_encoding
 
 
-class EncoderLayerSANM(TransformerEncoderLayer):
+class AliParaformerEncoderLayer(TransformerEncoderLayer):
 
     def __init__(self,
                  size: int,
@@ -72,6 +65,8 @@ class EncoderLayerSANM(TransformerEncoderLayer):
                  dropout_rate: float,
                  normalize_before: bool = True,
                  in_size: int = 256):
+        """ Resize input in_size to size
+        """
         super().__init__(size, self_attn, feed_forward, dropout_rate,
                          normalize_before)
         self.in_size = in_size
@@ -158,7 +153,7 @@ class SanmEncoder(BaseEncoder):
             sanm_shfit,
         )
         self.encoders0 = torch.nn.ModuleList([
-            EncoderLayerSANM(
+            AliParaformerEncoderLayer(
                 output_size,
                 encoder_selfattn_layer(*encoder_selfattn_layer_args0),
                 PositionwiseFeedForward(output_size, linear_units,
@@ -169,7 +164,7 @@ class SanmEncoder(BaseEncoder):
             )
         ])
         self.encoders = torch.nn.ModuleList([
-            EncoderLayerSANM(
+            AliParaformerEncoderLayer(
                 output_size,
                 encoder_selfattn_layer(*encoder_selfattn_layer_args),
                 PositionwiseFeedForward(
@@ -218,7 +213,7 @@ class _Decoders3(torch.nn.Module):
         return self.feed_forward(self.norm1(x))
 
 
-class DecoderLayerSANM(DecoderLayer):
+class SANMDecoderLayer(DecoderLayer):
 
     def __init__(self,
                  size: int,
@@ -262,7 +257,7 @@ class DecoderLayerSANM(DecoderLayer):
             tgt_q_mask = tgt_mask[:, -1:, :]
 
         x = tgt
-        if self.self_attn:
+        if self.self_attn is not None:
             if self.normalize_before:
                 tgt = self.norm2(tgt)
             tgt_q = tgt
@@ -309,7 +304,7 @@ class SanmDecoer(TransformerDecoder):
         del self.embed
         del self.decoders
         self.decoders = torch.nn.ModuleList([
-            DecoderLayerSANM(
+            SANMDecoderLayer(
                 encoder_output_size,
                 DummyMultiHeadSANM(attention_heads, encoder_output_size,
                                    encoder_output_size, dropout_rate,
@@ -351,7 +346,6 @@ class SanmDecoer(TransformerDecoder):
             x, _, _, _ = layer(x, ys_pad_mask, encoder_out, encoder_out_mask)
 
         for layer in self.decoders3:
-            # x, _, _, _ = layer(x, ys_pad_mask, encoder_out, encoder_out_mask)
             x = layer(x)
         if self.normalize_before:
             x = self.after_norm(x)
@@ -360,82 +354,15 @@ class SanmDecoer(TransformerDecoder):
         return x
 
 
-class PredictorV3(Predictor):
-
-    def __init__(self,
-                 idim,
-                 l_order,
-                 r_order,
-                 threshold=1,
-                 dropout=0.1,
-                 smooth_factor=1,
-                 noise_threshold=0,
-                 tail_threshold=0.45,
-                 cnn_groups: int = 1):
-        super().__init__(idim, l_order, r_order, threshold, dropout,
-                         smooth_factor, noise_threshold, tail_threshold)
-
-        self.cif_conv1d = torch.nn.Conv1d(idim,
-                                          idim,
-                                          l_order + r_order + 1,
-                                          groups=cnn_groups)
-
-    def forward(self,
-                hidden,
-                target_label: Optional[torch.Tensor] = None,
-                mask: torch.Tensor = ...,
-                ignore_id: int = -1,
-                mask_chunk_predictor: Optional[torch.Tensor] = None,
-                target_label_length: Optional[torch.Tensor] = None):
-        h = hidden
-        context = h.transpose(1, 2)
-        queries = self.pad(context)
-        output = torch.relu(self.cif_conv1d(queries))
-        output = output.transpose(1, 2)
-
-        output = self.cif_output(output)
-        alphas = torch.sigmoid(output)
-        alphas = torch.nn.functional.relu(alphas * self.smooth_factor -
-                                          self.noise_threshold)
-        if mask is not None:
-            mask = mask.transpose(-1, -2).float()
-            alphas = alphas * mask
-        if mask_chunk_predictor is not None:
-            alphas = alphas * mask_chunk_predictor
-        alphas = alphas.squeeze(-1)
-        mask = mask.squeeze(-1)
-        if target_label_length is not None:
-            target_length = target_label_length
-        elif target_label is not None:
-            target_length = (target_label != ignore_id).float().sum(-1)
-        else:
-            target_length = None
-        token_num = alphas.sum(-1)
-
-        if target_length is not None:
-            alphas *= (target_length / token_num)[:, None].repeat(
-                1, alphas.size(1))
-        elif self.tail_threshold > 0.0:
-            hidden, alphas, token_num = self.tail_process_fn(hidden,
-                                                             alphas,
-                                                             token_num,
-                                                             mask=mask)
-        acoustic_embeds, cif_peak = cif(hidden, alphas, self.threshold)
-        if target_length is None and self.tail_threshold > 0.0:
-            token_num_int = torch.max(token_num).type(torch.int32).item()
-            acoustic_embeds = acoustic_embeds[:, :token_num_int, :]
-        return acoustic_embeds, token_num, alphas, cif_peak
-
-
-class Paraformer(torch.nn.Module):
+class AliParaformer(torch.nn.Module):
 
     def __init__(self, encoder: SanmEncoder, decoder: SanmDecoer,
                  predictor: Predictor) -> None:
         super().__init__()
+
         self.encoder = encoder
         self.decoder = decoder
         self.predictor = predictor
-
         self.lfr = LFR()
 
     def forward(
@@ -457,66 +384,3 @@ class Paraformer(torch.nn.Module):
                                    acoustic_embed, token_num)
         # decoder_out = decoder_out.log_softmax(dim=-1)
         return decoder_out, token_num
-
-
-def get_args():
-    parser = argparse.ArgumentParser(description='load ali-paraformer')
-    parser.add_argument('--ali_paraformer',
-                        required=True,
-                        help='ali released Paraformer model path')
-    parser.add_argument('--config', required=True, help='config of paraformer')
-    parser.add_argument('--cmvn',
-                        required=True,
-                        help='cmvn file of paraformer in wenet style')
-    parser.add_argument('--dict', required=True, help='dict file')
-    parser.add_argument('--wav', required=True, help='wav file')
-    args = parser.parse_args()
-    return args
-
-
-def main():
-
-    args = get_args()
-
-    symbol_table = read_symbol_table(args.dict)
-    char_dict = {v: k for k, v in symbol_table.items()}
-    with open(args.config, 'r') as fin:
-        configs = yaml.load(fin, Loader=yaml.FullLoader)
-
-    mean, istd = load_cmvn(args.cmvn, is_json=True)
-    global_cmvn = GlobalCMVN(
-        torch.from_numpy(mean).float(),
-        torch.from_numpy(istd).float())
-    configs['encoder_conf']['input_size'] = 80 * 7
-    encoder = SanmEncoder(global_cmvn=global_cmvn, **configs['encoder_conf'])
-    configs['decoder_conf']['vocab_size'] = len(char_dict)
-    configs['decoder_conf']['encoder_output_size'] = encoder.output_size()
-    decoder = SanmDecoer(**configs['decoder_conf'])
-
-    predictor = PredictorV3(**configs['predictor_conf'])
-
-    model = Paraformer(encoder, decoder, predictor)
-    load_checkpoint(model, args.ali_paraformer)
-    model.eval()
-
-    waveform, sample_rate = torchaudio.load(args.wav)
-    assert sample_rate == 16000
-    waveform = waveform * (1 << 15)
-    waveform = waveform.to(torch.float)
-    feats = kaldi.fbank(waveform,
-                        num_mel_bins=80,
-                        frame_length=25,
-                        frame_shift=10,
-                        energy_floor=0.0,
-                        sample_frequency=sample_rate)
-    feats = feats.unsqueeze(0)
-    feats_lens = torch.tensor([feats.size(1)], dtype=torch.int64)
-
-    out, token_nums = model(feats, feats_lens)
-    print("".join([char_dict[id] for id in out.argmax(-1)[0].numpy()]))
-    print(token_nums)
-
-
-if __name__ == "__main__":
-
-    main()

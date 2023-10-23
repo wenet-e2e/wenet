@@ -64,7 +64,7 @@ class MultiHeadedAttentionSANM(MultiHeadedAttention):
     def forward_fsmn(self,
                      inputs: torch.Tensor,
                      mask: torch.Tensor,
-                     mask_shfit_chunk=None):
+                     mask_shfit_chunk: Optional[torch.Tensor] = None):
         b, _, t, _ = inputs.size()
         inputs = inputs.transpose(1, 2).view(b, t, -1)
         if mask.size(2) > 0:  # time2 > 0
@@ -136,14 +136,14 @@ class DummyMultiHeadSANM(MultiHeadedAttentionSANM):
         pos_emb: torch.Tensor = torch.empty(0),
         cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         mask_shfit_chunk: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
 
         inputs = query
 
         x = inputs.transpose(1, 2)
         x = self.pad_fn(x)
         # TODO(Mddct): cache here for future streaming
-        cache: torch.Tensor
+        cache: Optional[torch.Tensor] = None
         x = self.fsmn_block(x)
         x = x.transpose(1, 2)
         if x.size(1) != inputs.size(1):
@@ -204,11 +204,11 @@ class MultiHeadAttentionCross(MultiHeadedAttentionSANM):
         pos_emb: torch.Tensor = torch.empty(0),
         cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         mask_shfit_chunk: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
         q, k, v = self.forward_qkv(query, key, key)
         q = q * self.d_k**(-0.5)
         scores = torch.matmul(q, k.transpose(-2, -1))
 
         # TODO(Mddct): support future streaming paraformer
-        cache: torch.Tensor
+        cache: Optional[torch.Tensor] = None
         return self.forward_attention(v, scores, mask), cache

@@ -35,6 +35,8 @@ predictor_conf:
     r_order: 1
     tail_threshold: 0.45
     cnn_groups: 1
+    residual: false
+
     # smooth_factor2: 0.25
     # noise_threshold2: 0.01
     # upsample_times: 3
