@@ -43,24 +43,8 @@ def main():
     char_dict = {v: k for k, v in symbol_table.items()}
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-
-    # mean, istd = load_cmvn(args.cmvn, is_json=True)
-    # global_cmvn = GlobalCMVN(
-    #     torch.from_numpy(mean).float(),
-    #     torch.from_numpy(istd).float())
-    # configs['encoder_conf']['input_size'] = 80 * 7
-    # encoder = SanmEncoder(global_cmvn=global_cmvn, **configs['encoder_conf'])
-    # configs['decoder_conf']['vocab_size'] = len(char_dict)
-    # configs['decoder_conf']['encoder_output_size'] = encoder.output_size()
-    # decoder = SanmDecoer(**configs['decoder_conf'])
-
-    # # predictor = PredictorV3(**configs['predictor_conf'])
-    # predictor = Predictor(**configs['predictor_conf'])
-    # model = AliParaformer(encoder, decoder, predictor)
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
-    configs['input_dim'] = 80
-    configs['output_dim'] = len(char_dict)
     model = init_model(configs)
     load_checkpoint(model, args.ali_paraformer)
     model.eval()
