@@ -12,8 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List
+
 import numpy as np
+
 import torch
+
+def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
+    new_hyp: List[int] = []
+    cur = 0
+    while cur < len(hyp):
+        if hyp[cur] != 0:
+            new_hyp.append(hyp[cur])
+        prev = cur
+        while cur < len(hyp) and hyp[cur] == hyp[prev]:
+            cur += 1
+    return new_hyp
+
+
+def replace_duplicates_with_blank(hyp: List[int]) -> List[int]:
+    new_hyp: List[int] = []
+    cur = 0
+    while cur < len(hyp):
+        new_hyp.append(hyp[cur])
+        prev = cur
+        cur += 1
+        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != 0:
+            new_hyp.append(0)
+            cur += 1
+    return new_hyp
+
 
 def insert_blank(label, blank_id=0):
     """Insert blank token between every two label token."""

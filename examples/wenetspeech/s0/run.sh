@@ -159,32 +159,27 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   reverse_weight=0.0
   for testset in ${test_sets} ${dev_set}; do
   {
+    base=$(basename $decode_checkpoint)
+    result_dir=$dir/${testset}_${base}
+    python wenet/bin/recognize.py --gpu 0 \
+      --modes $decode_modes \
+      --config $dir/train.yaml \
+      --data_type "shard" \
+      --test_data data/$testset/data.list \
+      --checkpoint $decode_checkpoint \
+      --beam_size 10 \
+      --batch_size 1 \
+      --penalty 0.0 \
+      --dict $dict \
+      --ctc_weight $ctc_weight \
+      --reverse_weight $reverse_weight \
+      --result_dir $result_dir \
+      ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
     for mode in ${decode_modes}; do
-    {
-      base=$(basename $decode_checkpoint)
-      result_dir=$dir/${testset}_${mode}_${base}
-      mkdir -p $result_dir
-      python wenet/bin/recognize.py --gpu 0 \
-        --mode $mode \
-        --config $dir/train.yaml \
-        --data_type "shard" \
-        --test_data data/$testset/data.list \
-        --checkpoint $decode_checkpoint \
-        --beam_size 10 \
-        --batch_size 1 \
-        --penalty 0.0 \
-        --dict $dict \
-        --ctc_weight $ctc_weight \
-        --reverse_weight $reverse_weight \
-        --result_file $result_dir/text \
-        ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
       python tools/compute-wer.py --char=1 --v=1 \
-        data/$testset/text $result_dir/text > $result_dir/wer
-    }
+        data/$testset/text $result_dir/$mode/text > $result_dir/$mode/wer
     done
-    wait
   }
-  done
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then

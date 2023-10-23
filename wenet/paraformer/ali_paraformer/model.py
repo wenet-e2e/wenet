@@ -1,7 +1,7 @@
 """ NOTE(Mddct): This file is experimental and is used to export paraformer
 """
 
-from typing import Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 import torch
 from wenet.cif.predictor import Predictor
 from wenet.paraformer.ali_paraformer.attention import (DummyMultiHeadSANM,
@@ -11,6 +11,7 @@ from wenet.paraformer.ali_paraformer.attention import (DummyMultiHeadSANM,
 from wenet.paraformer.ali_paraformer.lfr import LFR
 from wenet.paraformer.ali_paraformer.positionwise_feed_forward import \
     PositionwiseFeedForwardDecoderSANM
+from wenet.transformer.search import DecodeResult
 from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.decoder_layer import DecoderLayer
@@ -384,3 +385,16 @@ class AliParaformer(torch.nn.Module):
                                    acoustic_embed, token_num)
         # decoder_out = decoder_out.log_softmax(dim=-1)
         return decoder_out, token_num
+
+    def decode(self, methods: List[str], speech: torch.Tensor,
+               speech_lens: torch.Tensor,
+               **kwrgs) -> Dict[str, List[DecodeResult]]:
+        assert 'paraformer_greedy_search' in methods
+        results_dict = {}
+        results = []
+        out, out_lens = self.forward(speech, speech_lens)
+        for (i, value) in enumerate(out.argmax(-1).numpy()):
+            results.append(DecodeResult(value.numpy()[:out_lens[i]]))
+
+        results_dict['paraformer_greedy_search'] = results
+        return results_dict

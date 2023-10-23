@@ -13,7 +13,10 @@
 # limitations under the License.
 
 import torch
+
 from wenet.paraformer.ali_paraformer.model import SanmDecoer, SanmEncoder
+from wenet.k2.model import K2Model
+
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -140,10 +143,18 @@ def init_model(configs):
                                predictor=predictor,
                                **configs['model_conf'])
     else:
-        model = ASRModel(vocab_size=vocab_size,
-                         encoder=encoder,
-                         decoder=decoder,
-                         ctc=ctc,
-                         lfmmi_dir=configs.get('lfmmi_dir', ''),
-                         **configs['model_conf'])
+        print(configs)
+        if configs.get('lfmmi_dir', '') != '':
+            model = K2Model(vocab_size=vocab_size,
+                            encoder=encoder,
+                            decoder=decoder,
+                            ctc=ctc,
+                            lfmmi_dir=configs['lfmmi_dir'],
+                            **configs['model_conf'])
+        else:
+            model = ASRModel(vocab_size=vocab_size,
+                             encoder=encoder,
+                             decoder=decoder,
+                             ctc=ctc,
+                             **configs['model_conf'])
     return model
