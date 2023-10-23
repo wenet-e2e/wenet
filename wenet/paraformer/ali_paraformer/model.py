@@ -394,7 +394,7 @@ class AliParaformer(torch.nn.Module):
         results = []
         out, out_lens = self.forward(speech, speech_lens)
         for (i, value) in enumerate(out.argmax(-1).numpy()):
-            results.append(DecodeResult(value.numpy()[:out_lens[i]]))
+            results.append(DecodeResult(value[:out_lens[i]]))
 
         results_dict['paraformer_greedy_search'] = results
         return results_dict

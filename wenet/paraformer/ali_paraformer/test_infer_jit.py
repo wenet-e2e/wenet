@@ -6,15 +6,7 @@ import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 import yaml
-from wenet.cif.predictor import Predictor
-from wenet.paraformer.ali_paraformer.model import (
-    AliParaformer,
-    SanmDecoer,
-    SanmEncoder,
-)
-from wenet.transformer.cmvn import GlobalCMVN
 from wenet.utils.checkpoint import load_checkpoint
-from wenet.utils.cmvn import load_cmvn
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.init_model import init_model
 
@@ -62,9 +54,12 @@ def main():
     feats = feats.unsqueeze(0)
     feats_lens = torch.tensor([feats.size(1)], dtype=torch.int64)
 
-    out, token_nums = model(feats, feats_lens)
-    print("".join([char_dict[id] for id in out.argmax(-1)[0].numpy()]))
-    print(token_nums)
+    decode_results = model.decode(['paraformer_greedy_search'], feats,
+                                  feats_lens)
+    print("".join([
+        char_dict[id]
+        for id in decode_results['paraformer_greedy_search'][0].tokens
+    ]))
 
     if args.output_file:
         script_model = torch.jit.script(model)
