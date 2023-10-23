@@ -19,12 +19,12 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
 from wenet.cli.hub import Hub
-from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.file_utils import read_symbol_table
+from wenet.transformer.search import (attention_rescoring,
+                                      ctc_prefix_beam_search)
 
 
 class Model:
-
     def __init__(self, language: str):
         model_dir = Hub.get_model_by_lang(language)
         model_path = os.path.join(model_dir, 'final.zip')
@@ -44,10 +44,12 @@ class Model:
                             sample_frequency=16000)
         feats = feats.unsqueeze(0)
         encoder_out, _, _ = self.model.forward_encoder_chunk(feats, 0, -1)
+        encoder_lens = torch.tensor([encoder_out.size(1)], dtype=torch.long)
         ctc_probs = self.model.ctc_activation(encoder_out)
-        topk_prob, topk_index = ctc_probs.topk(1, dim=2)
-        topk_index = topk_index.squeeze().tolist()
-        hyp = remove_duplicates_and_blank(topk_index)
-        hyp = [self.char_dict[x] for x in hyp]
+        ctc_prefix_results = ctc_prefix_beam_search(ctc_probs, encoder_lens,
+                                                    10)
+        results = attention_rescoring(self.model, ctc_prefix_results,
+                                      encoder_out, encoder_lens, 0.3, 0.5)
+        hyp = [self.char_dict[x] for x in results[0].tokens]
         result = ''.join(hyp)
         return result
