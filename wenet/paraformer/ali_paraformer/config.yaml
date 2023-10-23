@@ -1,6 +1,6 @@
 # network architecture
 # encoder related
-encoder: SanEncoder
+encoder: SanmEncoder
 encoder_conf:
     output_size: 512    # dimension of attention
     attention_heads: 4
@@ -14,8 +14,9 @@ encoder_conf:
     kernel_size: 11
     sanm_shfit: 0
 
+paraformer: true
 # decoder related
-decoder: transformer
+decoder: SanmDecoder
 decoder_conf:
     attention_heads: 4
     linear_units: 2048
@@ -28,7 +29,11 @@ decoder_conf:
     kernel_size: 11
     sanm_shfit: 0
 
-predictor_conf:
+lfr_conf:
+    lfr_m: 7
+    lfr_n: 6
+
+cif_predictor_conf:
     idim: 512
     threshold: 1.0
     l_order: 1

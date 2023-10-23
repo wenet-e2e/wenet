@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import torch
+from wenet.paraformer.ali_paraformer.model import SanmDecoer, SanmEncoder
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -27,6 +28,7 @@ from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.paraformer.paraformer import Paraformer
+from wenet.paraformer.ali_paraformer.model import AliParaformer
 from wenet.cif.predictor import Predictor
 from wenet.utils.cmvn import load_cmvn
 
@@ -55,13 +57,12 @@ def init_model(configs):
                                        global_cmvn=global_cmvn,
                                        **configs['encoder_conf'])
     elif encoder_type == 'efficientConformer':
-        encoder = EfficientConformerEncoder(input_dim,
-                                            global_cmvn=global_cmvn,
-                                            **configs['encoder_conf'],
-                                            **configs['encoder_conf']
-                                            ['efficient_conf']
-                                            if 'efficient_conf' in
-                                               configs['encoder_conf'] else {})
+        encoder = EfficientConformerEncoder(
+            input_dim,
+            global_cmvn=global_cmvn,
+            **configs['encoder_conf'],
+            **configs['encoder_conf']['efficient_conf']
+            if 'efficient_conf' in configs['encoder_conf'] else {})
     elif encoder_type == 'branchformer':
         encoder = BranchformerEncoder(input_dim,
                                       global_cmvn=global_cmvn,
@@ -70,6 +71,12 @@ def init_model(configs):
         encoder = EBranchformerEncoder(input_dim,
                                        global_cmvn=global_cmvn,
                                        **configs['encoder_conf'])
+    elif encoder_type == 'SanmEncoder':
+        assert 'lfr_conf' in configs
+        encoder = SanmEncoder(global_cmvn=global_cmvn,
+                              input_size=configs['lfr_conf']['lfr_m'] *
+                              input_dim,
+                              **configs['encoder_conf'])
     else:
         encoder = TransformerEncoder(input_dim,
                                      global_cmvn=global_cmvn,
@@ -77,6 +84,11 @@ def init_model(configs):
     if decoder_type == 'transformer':
         decoder = TransformerDecoder(vocab_size, encoder.output_size(),
                                      **configs['decoder_conf'])
+    elif decoder_type == 'SanmDecoder':
+        assert isinstance(encoder, SanmEncoder)
+        decoder = SanmDecoer(vocab_size=vocab_size,
+                             encoder_output_size=encoder.output_size(),
+                             **configs['decoder_conf'])
     else:
         assert 0.0 < configs['model_conf']['reverse_weight'] < 1.0
         assert configs['decoder_conf']['r_num_blocks'] > 0
@@ -116,12 +128,18 @@ def init_model(configs):
                            **configs['model_conf'])
     elif 'paraformer' in configs:
         predictor = Predictor(**configs['cif_predictor_conf'])
-        model = Paraformer(vocab_size=vocab_size,
-                           encoder=encoder,
-                           decoder=decoder,
-                           ctc=ctc,
-                           predictor=predictor,
-                           **configs['model_conf'])
+        if isinstance(encoder, SanmEncoder):
+            assert isinstance(decoder, SanmDecoer)
+            # NOTE(Mddct): only support inference for now
+            print('hello world')
+            model = AliParaformer(encoder, decoder, predictor)
+        else:
+            model = Paraformer(vocab_size=vocab_size,
+                               encoder=encoder,
+                               decoder=decoder,
+                               ctc=ctc,
+                               predictor=predictor,
+                               **configs['model_conf'])
     else:
         model = ASRModel(vocab_size=vocab_size,
                          encoder=encoder,
