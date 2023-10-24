@@ -306,7 +306,7 @@ class Paraformer(ASRModel):
             assert decoder_out is not None
             assert decoder_out_lens is not None
             paraformer_beam_result = self.paraformer_beam_search(
-                decoder_out, decoder_out_lens)
+                decoder_out, decoder_out_lens, beam_size=beam_size)
             results['paraformer_beam_search'] = paraformer_beam_result
 
         return results
