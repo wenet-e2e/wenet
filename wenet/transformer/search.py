@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -30,9 +30,10 @@ class DecodeResult:
                  score: float = 0.0,
                  confidence: float = 0.0,
                  tokens_confidence: List[float] = None,
-                 times: List[Tuple[float, float]] = None,
+                 times: List[int] = None,
                  nbest: List[List[int]] = None,
-                 nbest_scores: List[float] = None):
+                 nbest_scores: List[float] = None,
+                 nbest_times: List[List[int]] = None):
         """
         Args:
             tokens: decode token list
@@ -42,6 +43,7 @@ class DecodeResult:
             times: timestamp of each token, list of (start, end)
             nbest: nbest result
             nbest_scores: score of each nbest
+            nbest_times:
         """
         self.tokens = tokens
         self.score = score
@@ -50,17 +52,32 @@ class DecodeResult:
         self.times = times
         self.nbest = nbest
         self.nbest_scores = nbest_scores
+        self.nbest_times = nbest_times
 
 
 class PrefixScore:
     """ For CTC prefix beam search """
-    def __init__(self, s=float('-inf'), ns=float('-inf')):
-
+    def __init__(self,
+                 s: float = float('-inf'),
+                 ns: float = float('-inf'),
+                 v_s: float = float('-inf'),
+                 v_ns: float = float('-inf')):
         self.s = s  # blank_ending_score
         self.ns = ns  # none_blank_ending_score
+        self.v_s = v_s  # viterbi blank ending score
+        self.v_ns = v_ns  # viterbi none blank ending score
+        self.cur_token_prob = float('-inf')  # prob of current token
+        self.times_s = []  # times of viterbi blank path
+        self.times_ns = []  # times of viterbi none blank path
 
     def score(self):
         return log_add(self.s, self.ns)
+
+    def viterbi_score(self):
+        return self.v_s if self.v_s > self.v_ns else self.v_ns
+
+    def times(self):
+        return self.times_s if self.v_s > self.v_ns else self.times_ns
 
 
 def ctc_greedy_search(ctc_probs: torch.Tensor,
@@ -92,7 +109,7 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
     for i in range(batch_size):
         ctc_prob = ctc_probs[i]
         num_t = ctc_lens[i]
-        cur_hyps = [(tuple(), PrefixScore(0.0, -float('inf')))]
+        cur_hyps = [(tuple(), PrefixScore(0.0, -float('inf'), 0.0, 0.0))]
         # 2. CTC beam search step by step
         for t in range(0, num_t):
             logp = ctc_prob[t]  # (vocab_size,)
@@ -106,22 +123,46 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                 for prefix, prefix_score in cur_hyps:
                     last = prefix[-1] if len(prefix) > 0 else None
                     if u == 0:  # blank
-                        next_hyps[prefix].s = log_add(
-                            next_hyps[prefix].s,
-                            prefix_score.score() + prob)
+                        next_score = next_hyps[prefix]
+                        next_score.s = log_add(next_score.s,
+                                               prefix_score.score() + prob)
+                        next_score.v_s = prefix_score.viterbi_score() + prob
+                        next_score.times_s = prefix_score.times().copy()
                     elif u == last:
                         #  Update *uu -> *u;
-                        next_hyps[prefix].ns = log_add(next_hyps[prefix].ns,
-                                                       prefix_score.ns + prob)
+                        next_score1 = next_hyps[prefix]
+                        next_score1.ns = log_add(next_score1.ns,
+                                                 prefix_score.ns + prob)
+                        if next_score1.v_ns < prefix_score.v_ns + prob:
+                            next_score1.vs_ns = prefix_score.v_ns + prob
+                            if next_score1.cur_token_prob < prob:
+                                next_score1.cur_token_prob = prob
+                                next_score1.times_ns = prefix_score.times_ns.copy(
+                                )
+                                next_score1.times_ns[-1] = t
+
                         # Update *u-u -> *uu, - is for blank
                         n_prefix = prefix + (u, )
-                        next_hyps[n_prefix].ns = log_add(
-                            next_hyps[n_prefix].ns, prefix_score.s + prob)
+                        next_score2 = next_hyps[n_prefix]
+                        next_score2.ns = log_add(next_score2.ns,
+                                                 prefix_score.s + prob)
+                        if next_score2.v_ns < prefix_score.v_s + prob:
+                            next_score2.v_ns = prefix_score.v_s + prob
+                            next_score2.cur_token_prob = prob
+                            next_score2.times_ns = prefix_score.times_s.copy()
+                            next_score2.times_ns.append(t)
                     else:
                         n_prefix = prefix + (u, )
-                        next_hyps[n_prefix].ns = log_add(
-                            next_hyps[n_prefix].ns,
-                            prefix_score.score() + prob)
+                        next_score = next_hyps[n_prefix]
+                        next_score.ns = log_add(next_score.ns,
+                                                prefix_score.score() + prob)
+                        if next_score.v_ns < prefix_score.viterbi_score(
+                        ) + prob:
+                            next_score.v_ns = prefix_score.viterbi_score(
+                            ) + prob
+                            next_score.cur_token_prob = prob
+                            next_score.times_ns = prefix_score.times().copy()
+                            next_score.times_ns.append(t)
             # 2.2 Second beam prune
             next_hyps = sorted(next_hyps.items(),
                                key=lambda x: x[1].score(),
@@ -130,13 +171,17 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
 
         nbest = [y[0] for y in cur_hyps]
         nbest_scores = [y[1].score() for y in cur_hyps]
+        nbest_times = [y[1].times() for y in cur_hyps]
         best = nbest[0]
         best_score = nbest_scores[0]
+        best_time = nbest_times[0]
         results.append(
             DecodeResult(tokens=best,
                          score=best_score,
+                         times=best_time,
                          nbest=nbest,
-                         nbest_scores=nbest_scores))
+                         nbest_scores=nbest_scores,
+                         nbest_times=nbest_times))
     return results
 
 
@@ -283,5 +328,8 @@ def attention_rescoring(
             if score > best_score:
                 best_score = score
                 best_index = i
-        results.append(DecodeResult(hyps[best_index], best_score))
+        results.append(
+            DecodeResult(hyps[best_index],
+                         best_score,
+                         times=ctc_prefix_results[b].nbest_times[best_index]))
     return results
