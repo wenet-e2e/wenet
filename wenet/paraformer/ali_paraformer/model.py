@@ -461,21 +461,15 @@ class SanmDecoer(TransformerDecoder):
 
 class AliParaformer(torch.nn.Module):
 
-    def __init__(self,
-                 encoder: SanmEncoder,
-                 decoder: SanmDecoer,
-                 predictor: Predictor,
-                 sos: int = -1,
-                 eos: int = -1):
+    def __init__(self, encoder: SanmEncoder, decoder: SanmDecoer,
+                 predictor: Predictor):
         super().__init__()
         self.encoder = encoder
         self.decoder = decoder
         self.predictor = predictor
         self.lfr = LFR()
-        if eos != -1:
-            self.eos = eos
-        if sos != -1:
-            self.sos = sos
+        self.sos = 1
+        self.eos = 2
 
     @torch.jit.ignore(drop=True)
     def forward(
@@ -530,7 +524,10 @@ class AliParaformer(torch.nn.Module):
             assert decoder_out is not None
             assert decoder_out_lens is not None
             paraformer_beam_result = paraformer_beam_search(
-                decoder_out, decoder_out_lens, beam_size=beam_size)
+                decoder_out,
+                decoder_out_lens,
+                beam_size=beam_size,
+                eos=self.eos)
             results['paraformer_beam_search'] = paraformer_beam_result
 
         return results

@@ -17,6 +17,7 @@ encoder_conf:
 input_dim: 80
 output_dim: 8404
 paraformer: true
+is_json_cmvn: True
 # decoder related
 decoder: SanmDecoder
 decoder_conf:
@@ -43,9 +44,3 @@ cif_predictor_conf:
     tail_threshold: 0.45
     cnn_groups: 1
     residual: false
-
-    # smooth_factor2: 0.25
-    # noise_threshold2: 0.01
-    # upsample_times: 3
-    # use_cif1_cnn: false  # TODO: support in the future, has no effect on model wer (timestamp related)
-    # upsample_type: cnn_blstm # TODO: support in the future, has no effect on model wer (timestamp related)

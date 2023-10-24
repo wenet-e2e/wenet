@@ -22,9 +22,13 @@ def paraformer_greedy_search(
 
 def paraformer_beam_search(decoder_out: torch.Tensor,
                            decoder_out_lens: torch.Tensor,
-                           beam_size: int = 10) -> List[DecodeResult]:
+                           beam_size: int = 10,
+                           eos: int = -1) -> List[DecodeResult]:
     mask = make_non_pad_mask(decoder_out_lens)
-    indices, _ = _batch_beam_search(decoder_out, mask, beam_size=beam_size)
+    indices, _ = _batch_beam_search(decoder_out,
+                                    mask,
+                                    beam_size=beam_size,
+                                    eos=eos)
 
     best_hyps = indices[:, 0, :]
     results = []

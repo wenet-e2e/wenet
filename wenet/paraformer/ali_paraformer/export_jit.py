@@ -21,7 +21,6 @@ def get_args():
                         required=True,
                         help='cmvn file of paraformer in wenet style')
     parser.add_argument('--dict', required=True, help='dict file')
-    parser.add_argument('--wav', required=True, help='wav file')
     parser.add_argument('--output_file', default=None, help='output file')
     args = parser.parse_args()
     return args
@@ -41,36 +40,9 @@ def main():
     load_checkpoint(model, args.ali_paraformer)
     model.eval()
 
-    waveform, sample_rate = torchaudio.load(args.wav)
-    assert sample_rate == 16000
-    waveform = waveform * (1 << 15)
-    waveform = waveform.to(torch.float)
-    feats = kaldi.fbank(waveform,
-                        num_mel_bins=80,
-                        frame_length=25,
-                        frame_shift=10,
-                        energy_floor=0.0,
-                        sample_frequency=sample_rate)
-    feats = feats.unsqueeze(0)
-    feats_lens = torch.tensor([feats.size(1)], dtype=torch.int64)
-
-    decode_results = model.decode(['paraformer_greedy_search'],
-                                  feats,
-                                  feats_lens,
-                                  beam_size=10)
-    print("".join([
-        char_dict[id]
-        for id in decode_results['paraformer_greedy_search'][0].tokens
-    ]))
-
     if args.output_file:
         script_model = torch.jit.script(model)
         script_model.save(args.output_file)
-
-    model = torch.jit.load(args.output_file)
-    out, token_nums = model.forward_paraformer(feats, feats_lens)
-    print("".join([char_dict[id] for id in out.argmax(-1)[0].numpy()]))
-    print(token_nums)
 
 
 if __name__ == "__main__":
