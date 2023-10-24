@@ -16,6 +16,7 @@ import argparse
 
 from wenet.cli.model import Model
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('audio_file', help='audio file to transcribe')
@@ -26,7 +27,10 @@ def get_args():
                         ],
                         default='chinese',
                         help='language type')
-
+    parser.add_argument('-t',
+                        '--gen_token_times',
+                        action='store_true',
+                        help='whether to generate token times')
     args = parser.parse_args()
     return args
 
@@ -34,7 +38,7 @@ def get_args():
 def main():
     args = get_args()
     model = Model(args.language)
-    result = model.transcribe(args.audio_file)
+    result = model.transcribe(args.audio_file, args.gen_token_times)
     print(result)
 
 

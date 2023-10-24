@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import os
 
 import torch
@@ -19,6 +20,7 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
 from wenet.cli.hub import Hub
+from wenet.utils.ctc_utils import gen_timestamps_from_peak
 from wenet.utils.file_utils import read_symbol_table
 from wenet.transformer.search import (attention_rescoring,
                                       ctc_prefix_beam_search)
@@ -33,7 +35,7 @@ class Model:
         symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in symbol_table.items()}
 
-    def transcribe(self, audio_file: str):
+    def transcribe(self, audio_file: str, token_times: bool = False):
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
         waveform = waveform.to(torch.float)
         feats = kaldi.fbank(waveform,
@@ -46,10 +48,26 @@ class Model:
         encoder_out, _, _ = self.model.forward_encoder_chunk(feats, 0, -1)
         encoder_lens = torch.tensor([encoder_out.size(1)], dtype=torch.long)
         ctc_probs = self.model.ctc_activation(encoder_out)
-        ctc_prefix_results = ctc_prefix_beam_search(ctc_probs, encoder_lens,
-                                                    10)
-        results = attention_rescoring(self.model, ctc_prefix_results,
-                                      encoder_out, encoder_lens, 0.3, 0.5)
-        hyp = [self.char_dict[x] for x in results[0].tokens]
-        result = ''.join(hyp)
+        ctc_prefix_results = ctc_prefix_beam_search(ctc_probs, encoder_lens, 2)
+        rescoring_results = attention_rescoring(self.model, ctc_prefix_results,
+                                                encoder_out, encoder_lens, 0.3,
+                                                0.5)
+        res = rescoring_results[0]
+        result = {}
+        result['rec'] = ''.join([self.char_dict[x] for x in res.tokens])
+
+        if token_times:
+            frame_rate = self.model.subsampling_rate(
+            ) * 0.01  # 0.01 seconds per frame
+            max_duration = encoder_out.size(1) * frame_rate
+            times = gen_timestamps_from_peak(res.times, max_duration,
+                                             frame_rate, 1.0)
+            times_info = []
+            for i, x in enumerate(res.tokens):
+                times_info.append({
+                    'token': self.char_dict[x],
+                    'start': times[i][0],
+                    'end': times[i][1]
+                })
+            result['times'] = times_info
         return result
