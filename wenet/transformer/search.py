@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from collections import defaultdict
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import torch
 from torch.nn.utils.rnn import pad_sequence

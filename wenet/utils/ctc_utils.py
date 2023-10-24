@@ -103,9 +103,8 @@ def forced_align(ctc_probs: torch.Tensor, y: torch.Tensor, blank_id=0) -> list:
 
     log_alpha = torch.zeros((ctc_probs.size(0), len(y_insert_blank)))
     log_alpha = log_alpha - float('inf')  # log of zero
-    state_path = (torch.zeros(
-        (ctc_probs.size(0), len(y_insert_blank)), dtype=torch.int16) - 1
-                  )  # state path
+    state_path = torch.zeros((ctc_probs.size(0), len(y_insert_blank)),
+                             dtype=torch.int16) - 1  # state path
 
     # init start state
     log_alpha[0, 0] = ctc_probs[0][y_insert_blank[0]]
