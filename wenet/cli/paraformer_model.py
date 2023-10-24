@@ -4,7 +4,7 @@ import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
-from wenet.paraformer.search import paraformer_beam_search, paraformer_greedy_search
+from wenet.paraformer.search import paraformer_greedy_search
 from wenet.utils.file_utils import read_symbol_table
 
 
@@ -37,6 +37,6 @@ class Paraformer:
         results = paraformer_greedy_search(decoder_out, token_num)
         hyp = [self.char_dict[x] for x in results[0].tokens]
 
-        # TODO(Mddct): deal with '@@'
+        # TODO(Mddct): deal with '@@' and 'eos'
         result = ''.join(hyp)
         return result

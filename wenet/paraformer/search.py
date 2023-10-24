@@ -2,7 +2,8 @@ from typing import List, Tuple
 import torch
 
 from wenet.transformer.search import DecodeResult
-from wenet.utils.mask import make_non_pad_mask, mask_finished_preds, mask_finished_scores
+from wenet.utils.mask import (make_non_pad_mask, mask_finished_preds,
+                              mask_finished_scores)
 
 
 def paraformer_greedy_search(
