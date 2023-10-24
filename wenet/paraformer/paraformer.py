@@ -20,7 +20,6 @@ from typing import Dict, List, Optional, Tuple
 import torch
 
 from wenet.cif.predictor import MAELoss
-from wenet.paraformer.search_deprecated.beam_search import Hypothesis
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
@@ -52,8 +51,6 @@ class Paraformer(ASRModel):
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
-        sos: int = -1,
-        eos: int = -1,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
         assert 0.0 <= predictor_weight <= 1.0, predictor_weight
@@ -65,11 +62,6 @@ class Paraformer(ASRModel):
         self.predictor_weight = predictor_weight
         self.predictor_bias = predictor_bias
         self.criterion_pre = MAELoss(normalize_length=length_normalized_loss)
-
-        if sos != self.sos and sos != -1:
-            self.sos = sos
-        if eos != self.eos and sos != -1:
-            self.eos = eos
 
     def forward(
         self,
@@ -174,176 +166,6 @@ class Paraformer(ASRModel):
                                          sematic_embeds, ys_pad_lens)
         decoder_out = torch.log_softmax(decoder_out, dim=-1)
         return decoder_out, ys_pad_lens
-
-    def recognize(self):
-        raise NotImplementedError
-
-    def paraformer_greedy_search_deprecated(
-        self,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
-        decoding_chunk_size: int = -1,
-        num_decoding_left_chunks: int = -1,
-        simulate_streaming: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """ Apply beam search on attention decoder
-
-        Args:
-            speech (torch.Tensor): (batch, max_len, feat_dim)
-            speech_length (torch.Tensor): (batch, )
-            decoding_chunk_size (int): decoding chunk for dynamic chunk
-                trained model.
-                <0: for decoding, use full chunk.
-                >0: for decoding, use fixed chunk size as set.
-                0: used for training, it's prohibited here
-            simulate_streaming (bool): whether do encoder forward in a
-                streaming fashion
-
-        Returns:
-            torch.Tensor: decoding result, (batch, max_result_len)
-        """
-        assert speech.shape[0] == speech_lengths.shape[0]
-        assert decoding_chunk_size != 0
-        device = speech.device
-        batch_size = speech.shape[0]
-
-        # Let's assume B = batch_size and N = beam_size
-        # 1. Encoder
-        encoder_out, encoder_mask = self._forward_encoder(
-            speech, speech_lengths, decoding_chunk_size,
-            num_decoding_left_chunks,
-            simulate_streaming)  # (B, maxlen, encoder_dim)
-        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-        # 2. Predictor
-        predictor_outs = self.calc_predictor(encoder_out, encoder_out_lens)
-        pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
-            predictor_outs[0], predictor_outs[1], \
-            predictor_outs[2], predictor_outs[3]
-        pre_token_length = pre_token_length.round().long()
-        if torch.max(pre_token_length) < 1:
-            return torch.tensor([]), torch.tensor([])
-        # 2. Decoder forward
-        decoder_outs = self.cal_decoder_with_predictor(encoder_out,
-                                                       encoder_mask,
-                                                       pre_acoustic_embeds,
-                                                       pre_token_length)
-        decoder_out, ys_pad_lens = decoder_outs[0], decoder_outs[1]
-        hyps = []
-        b, n, d = decoder_out.size()
-        for i in range(b):
-            x = encoder_out[i, :encoder_out_lens[i], :]
-            am_scores = decoder_out[i, :pre_token_length[i], :]
-            yseq = am_scores.argmax(dim=-1)
-            score = am_scores.max(dim=-1)[0]
-            score = torch.sum(score, dim=-1)
-            # pad with mask tokens to ensure compatibility with sos/eos tokens
-            yseq = torch.tensor([self.sos] + yseq.tolist() + [self.eos],
-                                device=yseq.device)
-            nbest_hyps = [Hypothesis(yseq=yseq, score=score)]
-
-            for hyp in nbest_hyps:
-                assert isinstance(hyp, (Hypothesis)), type(hyp)
-
-                # remove sos/eos and get hyps
-                last_pos = -1
-                if isinstance(hyp.yseq, list):
-                    token_int = hyp.yseq[1:last_pos]
-                else:
-                    token_int = hyp.yseq[1:last_pos].tolist()
-
-                # remove blank symbol id and unk id, which is assumed to be 0
-                # and 1
-                token_int = list(filter(lambda x: x != 0 and x != 1,
-                                        token_int))
-                hyps.append(token_int)
-        return hyps
-
-    def paraformer_beam_search_deprecated(
-        self,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
-        beam_search: torch.nn.Module = None,
-        decoding_chunk_size: int = -1,
-        num_decoding_left_chunks: int = -1,
-        simulate_streaming: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """ Apply beam search on attention decoder
-
-        Args:
-            speech (torch.Tensor): (batch, max_len, feat_dim)
-            speech_lengths (torch.Tensor): (batch, )
-            beam_search (torch.nn.Moudle): beam search module
-            decoding_chunk_size (int): decoding chunk for dynamic chunk
-                trained model.
-                <0: for decoding, use full chunk.
-                >0: for decoding, use fixed chunk size as set.
-                0: used for training, it's prohibited here
-            simulate_streaming (bool): whether do encoder forward in a
-                streaming fashion
-
-        Returns:
-            torch.Tensor: decoding result, (batch, max_result_len)
-        """
-        assert speech.shape[0] == speech_lengths.shape[0]
-        assert decoding_chunk_size != 0
-        device = speech.device
-        batch_size = speech.shape[0]
-
-        # Let's assume B = batch_size and N = beam_size
-        # 1. Encoder
-        encoder_out, encoder_mask = self._forward_encoder(
-            speech, speech_lengths, decoding_chunk_size,
-            num_decoding_left_chunks,
-            simulate_streaming)  # (B, maxlen, encoder_dim)
-        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-        # 2. Predictor
-        predictor_outs = self.calc_predictor(encoder_out, encoder_out_lens)
-        pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
-            predictor_outs[0], predictor_outs[1], \
-            predictor_outs[2], predictor_outs[3]
-        pre_token_length = pre_token_length.round().long()
-        if torch.max(pre_token_length) < 1:
-            return torch.tensor([]), torch.tensor([])
-        # 2. Decoder forward
-        decoder_outs = self.cal_decoder_with_predictor(encoder_out,
-                                                       encoder_mask,
-                                                       pre_acoustic_embeds,
-                                                       pre_token_length)
-        decoder_out, ys_pad_lens = decoder_outs[0], decoder_outs[1]
-        hyps = []
-        b, n, d = decoder_out.size()
-        for i in range(b):
-            x = encoder_out[i, :encoder_out_lens[i], :]
-            am_scores = decoder_out[i, :pre_token_length[i], :]
-            if beam_search is not None:
-                nbest_hyps = beam_search(x=x, am_scores=am_scores)
-                nbest_hyps = nbest_hyps[:1]
-            else:
-                yseq = am_scores.argmax(dim=-1)
-                score = am_scores.max(dim=-1)[0]
-                score = torch.sum(score, dim=-1)
-                # pad with mask tokens to ensure compatibility with sos/eos
-                # tokens
-                yseq = torch.tensor([self.sos] + yseq.tolist() + [self.eos],
-                                    device=yseq.device)
-                nbest_hyps = [Hypothesis(yseq=yseq, score=score)]
-
-            for hyp in nbest_hyps:
-                assert isinstance(hyp, (Hypothesis)), type(hyp)
-
-                # remove sos/eos and get hyps
-                last_pos = -1
-                if isinstance(hyp.yseq, list):
-                    token_int = hyp.yseq[1:last_pos]
-                else:
-                    token_int = hyp.yseq[1:last_pos].tolist()
-
-                # remove blank symbol id and unk id, which is assumed to be 0
-                # and 1
-                token_int = list(filter(lambda x: x != 0 and x != 1,
-                                        token_int))
-                hyps.append(token_int)
-        return hyps
 
     def paraformer_greedy_search(
             self, decoder_out: torch.Tensor,
