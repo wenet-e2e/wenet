@@ -18,14 +18,13 @@ from typing import List, Optional, Tuple
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from wenet.utils.common import (add_sos_eos, log_add, reverse_pad_list)
+from wenet.utils.common import (add_sos_eos, log_add)
 from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
 
 
 class DecodeResult:
-
     def __init__(self,
                  tokens: List[int],
                  score: float = 0.0,
@@ -55,7 +54,6 @@ class DecodeResult:
 
 class PrefixScore:
     """ For CTC prefix beam search """
-
     def __init__(self, s=float('-inf'), ns=float('-inf')):
 
         self.s = s  # blank_ending_score
@@ -246,9 +244,7 @@ def attention_rescoring(
         Args:
             ctc_prefix_results(List[DecodeResult]): ctc prefix beam search results
     """
-    if reverse_weight > 0.0:
-        # decoder should be a bitransformer decoder if reverse_weight > 0.0
-        assert hasattr(model.decoder, 'right_decoder')
+    sos, eos = model.sos_symbol(), model.eos_symbol()
     device = encoder_outs.device
     assert encoder_outs.shape[0] == len(ctc_prefix_results)
     batch_size = encoder_outs.shape[0]
@@ -257,36 +253,16 @@ def attention_rescoring(
         encoder_out = encoder_outs[b, :encoder_lens[b], :].unsqueeze(0)
         hyps = ctc_prefix_results[b].nbest
         ctc_scores = ctc_prefix_results[b].nbest_scores
-        beam_size = len(hyps)
         hyps_pad = pad_sequence([
             torch.tensor(hyp, device=device, dtype=torch.long) for hyp in hyps
         ], True, model.ignore_id)  # (beam_size, max_hyps_len)
-        ori_hyps_pad = hyps_pad
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
-        hyps_pad, _ = add_sos_eos(hyps_pad, model.sos, model.eos,
-                                  model.ignore_id)
+        hyps_pad, _ = add_sos_eos(hyps_pad, sos, eos, model.ignore_id)
         hyps_lens = hyps_lens + 1  # Add <sos> at begining
-        encoder_out = encoder_out.repeat(beam_size, 1, 1)
-        encoder_mask = torch.ones(beam_size,
-                                  1,
-                                  encoder_out.size(1),
-                                  dtype=torch.bool,
-                                  device=device)
-        # used for right to left decoder
-        r_hyps_pad = reverse_pad_list(ori_hyps_pad, hyps_lens, model.ignore_id)
-        r_hyps_pad, _ = add_sos_eos(r_hyps_pad, model.sos, model.eos,
-                                    model.ignore_id)
-        decoder_out, r_decoder_out, _ = model.decoder(
-            encoder_out, encoder_mask, hyps_pad, hyps_lens, r_hyps_pad,
-            reverse_weight)  # (beam_size, max_hyps_len, vocab_size)
-        decoder_out = torch.nn.functional.log_softmax(decoder_out, dim=-1)
-        decoder_out = decoder_out.cpu().numpy()
-        # r_decoder_out will be 0.0, if reverse_weight is 0.0 or decoder is a
-        # conventional transformer decoder.
-        r_decoder_out = torch.nn.functional.log_softmax(r_decoder_out, dim=-1)
-        r_decoder_out = r_decoder_out.cpu().numpy()
+        decoder_out, r_decoder_out = model.forward_attention_decoder(
+            hyps_pad, hyps_lens, encoder_out, reverse_weight)
         # Only use decoder score for rescoring
         best_score = -float('inf')
         best_index = 0
@@ -294,13 +270,13 @@ def attention_rescoring(
             score = 0.0
             for j, w in enumerate(hyp):
                 score += decoder_out[i][j][w]
-            score += decoder_out[i][len(hyp)][model.eos]
+            score += decoder_out[i][len(hyp)][eos]
             # add right to left decoder score
             if reverse_weight > 0:
                 r_score = 0.0
                 for j, w in enumerate(hyp):
                     r_score += r_decoder_out[i][len(hyp) - j - 1][w]
-                r_score += r_decoder_out[i][len(hyp)][model.eos]
+                r_score += r_decoder_out[i][len(hyp)][eos]
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
             # add ctc score
             score += ctc_scores[i] * ctc_weight
