@@ -134,7 +134,9 @@ def init_model(configs):
         if isinstance(encoder, SanmEncoder):
             assert isinstance(decoder, SanmDecoer)
             # NOTE(Mddct): only support inference for now
-            model = AliParaformer(encoder, decoder, predictor)
+            model = AliParaformer(encoder=encoder,
+                                  decoder=decoder,
+                                  predictor=predictor)
         else:
             model = Paraformer(vocab_size=vocab_size,
                                encoder=encoder,

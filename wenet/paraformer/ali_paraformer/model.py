@@ -9,8 +9,12 @@ from wenet.paraformer.ali_paraformer.attention import (DummyMultiHeadSANM,
                                                        MultiHeadAttentionCross,
                                                        MultiHeadedAttentionSANM
                                                        )
+from wenet.paraformer.paraformer import Paraformer
+from wenet.paraformer.search import paraformer_beam_search, paraformer_greedy_search
+from wenet.transducer.predictor import PredictorBase
+from wenet.transformer.ctc import CTC
 from wenet.transformer.search import DecodeResult
-from wenet.transformer.encoder import BaseEncoder
+from wenet.transformer.encoder import BaseEncoder, TransformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
@@ -435,7 +439,9 @@ class SanmDecoer(TransformerDecoder):
         encoder_out_mask: torch.Tensor,
         sematic_embeds: torch.Tensor,
         ys_pad_lens: torch.Tensor,
-    ) -> torch.Tensor:
+        r_ys_in_pad: torch.Tensor = torch.empty(0),
+        reverse_weight: float = 0.0,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """ only for inference now
         """
         ys_pad_mask = make_non_pad_mask(ys_pad_lens).unsqueeze(1)
@@ -450,49 +456,81 @@ class SanmDecoer(TransformerDecoder):
             x = self.after_norm(x)
         if self.output_layer is not None:
             x = self.output_layer(x)
-        return x
+        return x, torch.tensor(0.0), ys_pad_lens
 
 
 class AliParaformer(torch.nn.Module):
 
-    def __init__(self, encoder: SanmEncoder, decoder: SanmDecoer,
-                 predictor: Predictor) -> None:
+    def __init__(self,
+                 encoder: SanmEncoder,
+                 decoder: SanmDecoer,
+                 predictor: Predictor,
+                 sos: int = -1,
+                 eos: int = -1):
         super().__init__()
-
         self.encoder = encoder
         self.decoder = decoder
         self.predictor = predictor
         self.lfr = LFR()
+        if eos != -1:
+            self.eos = eos
+        if sos != -1:
+            self.sos = sos
 
+    @torch.jit.ignore(drop=True)
     def forward(
-            self, speech: torch.Tensor,
-            speech_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+            self, speech: torch.Tensor, speech_lengths: torch.Tensor,
+            text: torch.Tensor,
+            text_lengths: torch.Tensor) -> Dict[str, Optional[torch.Tensor]]:
+        raise NotImplementedError
 
-        features, features_lens = self.lfr(speech, speech_lens)
-        features_lens = features_lens.to(speech_lens.dtype)
+    @torch.jit.export
+    def forward_paraformer(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        features, features_lens = self.lfr(speech, speech_lengths)
+        features_lens = features_lens.to(speech_lengths.dtype)
         # encoder
         encoder_out, encoder_out_mask = self.encoder(features, features_lens)
 
         # cif predictor
         acoustic_embed, token_num, _, _ = self.predictor(encoder_out,
                                                          mask=encoder_out_mask)
-        token_num = token_num.floor().to(speech_lens.dtype)
+        token_num = token_num.floor().to(speech_lengths.dtype)
 
         # decoder
-        decoder_out = self.decoder(encoder_out, encoder_out_mask,
-                                   acoustic_embed, token_num)
+        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
+                                         acoustic_embed, token_num)
         # decoder_out = decoder_out.log_softmax(dim=-1)
         return decoder_out, token_num
 
-    def decode(self, methods: List[str], speech: torch.Tensor,
-               speech_lens: torch.Tensor,
-               **kwrgs) -> Dict[str, List[DecodeResult]]:
-        assert 'paraformer_greedy_search' in methods
-        results_dict = {}
-        results = []
-        out, out_lens = self.forward(speech, speech_lens)
-        for (i, value) in enumerate(out.argmax(-1).numpy()):
-            results.append(DecodeResult(value[:out_lens[i]]))
+    def decode(self,
+               methods: List[str],
+               speech: torch.Tensor,
+               speech_lengths: torch.Tensor,
+               beam_size: int,
+               decoding_chunk_size: int = -1,
+               num_decoding_left_chunks: int = -1,
+               ctc_weight: float = 0,
+               simulate_streaming: bool = False,
+               reverse_weight: float = 0) -> Dict[str, List[DecodeResult]]:
+        decoder_out, decoder_out_lens = self.forward_paraformer(
+            speech, speech_lengths)
 
-        results_dict['paraformer_greedy_search'] = results
-        return results_dict
+        results = {}
+        if 'paraformer_greedy_search' in methods:
+            assert decoder_out is not None
+            assert decoder_out_lens is not None
+            paraformer_greedy_result = paraformer_greedy_search(
+                decoder_out, decoder_out_lens)
+            results['paraformer_greedy_search'] = paraformer_greedy_result
+        if 'paraformer_beam_search' in methods:
+            assert decoder_out is not None
+            assert decoder_out_lens is not None
+            paraformer_beam_result = paraformer_beam_search(
+                decoder_out, decoder_out_lens, beam_size=beam_size)
+            results['paraformer_beam_search'] = paraformer_beam_result
+
+        return results

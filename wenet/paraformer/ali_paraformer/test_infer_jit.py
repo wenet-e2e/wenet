@@ -54,8 +54,10 @@ def main():
     feats = feats.unsqueeze(0)
     feats_lens = torch.tensor([feats.size(1)], dtype=torch.int64)
 
-    decode_results = model.decode(['paraformer_greedy_search'], feats,
-                                  feats_lens)
+    decode_results = model.decode(['paraformer_greedy_search'],
+                                  feats,
+                                  feats_lens,
+                                  beam_size=10)
     print("".join([
         char_dict[id]
         for id in decode_results['paraformer_greedy_search'][0].tokens
@@ -66,7 +68,7 @@ def main():
         script_model.save(args.output_file)
 
     model = torch.jit.load(args.output_file)
-    out, token_nums = model.forward(feats, feats_lens)
+    out, token_nums = model.forward_paraformer(feats, feats_lens)
     print("".join([char_dict[id] for id in out.argmax(-1)[0].numpy()]))
     print(token_nums)
 
