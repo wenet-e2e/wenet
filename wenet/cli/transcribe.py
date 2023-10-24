@@ -15,6 +15,8 @@
 import argparse
 
 from wenet.cli.model import Model
+from wenet.cli.paraformer_model import Paraformer
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='')
@@ -23,9 +25,11 @@ def get_args():
                         choices=[
                             'chinese',
                             'english',
+                            'chinese-paraformer',
                         ],
                         default='chinese',
                         help='language type')
+    parser.add_argument('--model_dir', default='', help='wenet jit model dirs')
 
     args = parser.parse_args()
     return args
@@ -33,7 +37,10 @@ def get_args():
 
 def main():
     args = get_args()
-    model = Model(args.language)
+    if args.language == 'chinese-paraformer':
+        model = Paraformer(args.model_dir)
+    else:
+        model = Model(args.language)
     result = model.transcribe(args.audio_file)
     print(result)
 

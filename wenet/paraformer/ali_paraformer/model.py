@@ -9,12 +9,9 @@ from wenet.paraformer.ali_paraformer.attention import (DummyMultiHeadSANM,
                                                        MultiHeadAttentionCross,
                                                        MultiHeadedAttentionSANM
                                                        )
-from wenet.paraformer.paraformer import Paraformer
 from wenet.paraformer.search import paraformer_beam_search, paraformer_greedy_search
-from wenet.transducer.predictor import PredictorBase
-from wenet.transformer.ctc import CTC
 from wenet.transformer.search import DecodeResult
-from wenet.transformer.encoder import BaseEncoder, TransformerEncoder
+from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.encoder_layer import TransformerEncoderLayer

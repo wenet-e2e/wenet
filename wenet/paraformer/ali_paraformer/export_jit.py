@@ -3,8 +3,6 @@
 
 import argparse
 import torch
-import torchaudio
-import torchaudio.compliance.kaldi as kaldi
 import yaml
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
