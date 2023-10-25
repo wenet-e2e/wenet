@@ -28,9 +28,10 @@ def get_args():
                         default='chinese',
                         help='language type')
     parser.add_argument('-t',
-                        '--gen_token_times',
+                        '--show_tokens_info',
                         action='store_true',
-                        help='whether to generate token times')
+                        help='whether to output token(word) level information'
+                        ', such times/confidence')
     args = parser.parse_args()
     return args
 
@@ -38,7 +39,7 @@ def get_args():
 def main():
     args = get_args()
     model = Model(args.language)
-    result = model.transcribe(args.audio_file, args.gen_token_times)
+    result = model.transcribe(args.audio_file, args.show_tokens_info)
     print(result)
 
 
