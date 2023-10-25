@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import math
 from collections import defaultdict
 from typing import List, Optional
 
@@ -311,25 +312,36 @@ def attention_rescoring(
         # Only use decoder score for rescoring
         best_score = -float('inf')
         best_index = 0
+        confidences = []
+        tokens_confidences = []
         for i, hyp in enumerate(hyps):
             score = 0.0
+            tc = []  # tokens confidences
             for j, w in enumerate(hyp):
-                score += decoder_out[i][j][w]
+                s = decoder_out[i][j][w]
+                score += s
+                tc.append(math.exp(s))
             score += decoder_out[i][len(hyp)][eos]
             # add right to left decoder score
             if reverse_weight > 0:
                 r_score = 0.0
                 for j, w in enumerate(hyp):
-                    r_score += r_decoder_out[i][len(hyp) - j - 1][w]
+                    s = r_decoder_out[i][len(hyp) - j - 1][w]
+                    r_score += s
+                    tc[j] = (tc[j] + math.exp(s)) / 2
                 r_score += r_decoder_out[i][len(hyp)][eos]
                 score = score * (1 - reverse_weight) + r_score * reverse_weight
+            confidences.append(math.exp(score / (len(hyp) + 1)))
             # add ctc score
             score += ctc_scores[i] * ctc_weight
             if score > best_score:
                 best_score = score
                 best_index = i
+            tokens_confidences.append(tc)
         results.append(
             DecodeResult(hyps[best_index],
                          best_score,
-                         times=ctc_prefix_results[b].nbest_times[best_index]))
+                         confidence=confidences[best_index],
+                         times=ctc_prefix_results[b].nbest_times[best_index],
+                         tokens_confidence=tokens_confidences[best_index]))
     return results

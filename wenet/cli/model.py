@@ -34,7 +34,7 @@ class Model:
         symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in symbol_table.items()}
 
-    def transcribe(self, audio_file: str, token_times: bool = False):
+    def transcribe(self, audio_file: str, tokens_info: bool = False):
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
         waveform = waveform.to(torch.float)
         feats = kaldi.fbank(waveform,
@@ -54,19 +54,21 @@ class Model:
         res = rescoring_results[0]
         result = {}
         result['rec'] = ''.join([self.char_dict[x] for x in res.tokens])
+        result['confidence'] = res.confidence
 
-        if token_times:
+        if tokens_info:
             frame_rate = self.model.subsampling_rate(
             ) * 0.01  # 0.01 seconds per frame
             max_duration = encoder_out.size(1) * frame_rate
             times = gen_timestamps_from_peak(res.times, max_duration,
                                              frame_rate, 1.0)
-            times_info = []
+            tokens_info = []
             for i, x in enumerate(res.tokens):
-                times_info.append({
+                tokens_info.append({
                     'token': self.char_dict[x],
                     'start': times[i][0],
-                    'end': times[i][1]
+                    'end': times[i][1],
+                    'confidence': res.tokens_confidence[i]
                 })
-            result['times'] = times_info
+            result['tokens'] = tokens_info
         return result
