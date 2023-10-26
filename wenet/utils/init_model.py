@@ -125,7 +125,6 @@ def init_model(args, configs):
                            predictor=predictor,
                            **configs['model_conf'])
     else:
-        print(configs)
         if configs.get('lfmmi_dir', '') != '':
             model = K2Model(vocab_size=vocab_size,
                             encoder=encoder,
@@ -147,4 +146,6 @@ def init_model(args, configs):
         infos = load_trained_modules(model, args)
     else:
         infos = {}
-    return infos, model
+    configs["init_infos"] = infos
+    print(configs)
+    return model, configs

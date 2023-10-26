@@ -168,28 +168,28 @@ def check_modify_and_save_config(args, configs):
     elif args.train_engine == "deepspeed":
         # NOTE(xcsong): DeepSpeed does not support uneven data. When using custom
         #   dataset, we need to manually ensure that the data is evenly distributed
-        #   across all processe. we impl `tools/filter_uneven_data.py` for this func
+        #   across all processe. we impl `train_utils.py::wenet_join` for this func
         #   ref: https://github.com/microsoft/DeepSpeed/issues/2223
         #
-        # NOTE(xsong):  We also need to keep
-        #       `train_micro_batch_size_per_gpu == 1`
-        #   and
-        #       `accum_grad (in train_confomrer.yaml)
-        #           == gradient_accumulation_steps (in ds_config.json)`
-        #   The reason for such consistence checking lies in that deepspeed's
+        # NOTE(xsong):  We also need to keep:
+        #       1. `train_micro_batch_size_per_gpu == 1`
+        #       2. `accum_grad (in train_confomrer.yaml)
+        #               == gradient_accumulation_steps (in ds_config.json)`
+        #       3. `grad_clip (in train_confomrer.yaml)
+        #               == gradient_clipping (in ds_config.json)`
+        #   The reason for such consistence checking lies in that deepspeed's native
         #   dataloader uses PyTorch's torch.utils.data.DistributedSampler which does
         #   not support IterableDataset, IterableDataset is extremly useful in large
         #   scale training because it lets you stream the data without having to
         #   download the complete dataset.
-        #   ref: https://github.com/microsoft/DeepSpeed/issues/1371
-        #        https://github.com/microsoft/DeepSpeed/issues/285
-        #
+        #       ref: https://github.com/microsoft/DeepSpeed/issues/1371
+        #           https://github.com/microsoft/DeepSpeed/issues/285
         #   To make deepspeed training compatible with IterableDataset, we have to
         #   use custom dataloader instead of deepspeed's native loader and thus we
         #   should configure batchsize in train_confomrer.yaml instead of
-        #   ds_config.json. On the contrary, gradient accumulation steps should be
-        #   configured in ds_config.json since it will be handled by deepspeed.
-        #   ref: https://github.com/microsoft/DeepSpeed/issues/62
+        #   ds_config.json. On the contrary, gradient accumulation / clipping should be
+        #   configured in ds_config.json since they will be handled by ds automatically.
+        #       ref: https://github.com/microsoft/DeepSpeed/issues/62
         with open(args.deepspeed_config, 'r') as fin:
             ds_configs = json.load(fin)
         if "fp16" in ds_configs and ds_configs["fp16"]["enabled"]:
@@ -198,9 +198,10 @@ def check_modify_and_save_config(args, configs):
             configs["dtype"] = "bf16"
         else:
             configs["dtype"] = "fp32"
-        assert configs['dataset_conf']['batch_conf']['batch_type'] == "static"
         assert ds_configs["train_micro_batch_size_per_gpu"] == 1
         assert ds_configs["gradient_accumulation_steps"] == configs['accum_grad']
+        assert ds_configs["gradient_clipping"] == configs['grad_clip']
+        assert ds_configs["steps_per_print"] == configs['log_interval']
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
@@ -217,6 +218,8 @@ def check_modify_and_save_config(args, configs):
 
     configs['train_engine'] = args.train_engine
     configs['use_amp'] = args.use_amp
+    configs['model_dir'] = args.model_dir
+    configs['save_states'] = args.save_states
 
     # Save configs to model_dir/train.yaml for inference and export
     if int(os.environ.get('RANK', 0)) == 0:
@@ -254,11 +257,13 @@ def init_dataset_and_dataloader(args, configs):
                                    batch_size=None,
                                    pin_memory=args.pin_memory,
                                    num_workers=args.num_workers,
+                                   persistent_workers=True,
                                    prefetch_factor=args.prefetch)
     cv_data_loader = DataLoader(cv_dataset,
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
                                 num_workers=args.num_workers,
+                                persistent_workers=True,
                                 prefetch_factor=args.prefetch)
     return train_dataset, cv_dataset, train_data_loader, cv_data_loader
 
@@ -300,7 +305,7 @@ def wrap_cuda_model(args, model):
     return model, device
 
 
-def init_optimizer_and_scheduler(args, infos, configs, model):
+def init_optimizer_and_scheduler(args, configs, model):
     if configs['optim'] == 'adam':
         optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
     elif configs['optim'] == 'adamw':
@@ -339,7 +344,7 @@ def init_optimizer_and_scheduler(args, infos, configs, model):
             args=args, model=model, optimizer=optimizer,
             lr_scheduler=scheduler, model_parameters=model.parameters())
 
-    step = infos.get('step', -1)
+    step = configs["init_infos"].get("step", -1)
     scheduler.set_step(step)
     return model, optimizer, scheduler
 
@@ -367,33 +372,36 @@ def init_summarywriter(args):
     return writer
 
 
-def save_model(args, model, tag, infos):
+def save_model(model, info_dict):
     rank = int(os.environ.get('RANK', 0))
-    if args.train_engine == "deepspeed":
+    tag = info_dict["tag"]
+    model_dir = info_dict["model_dir"]
+    if info_dict["train_engine"] == "deepspeed":
         # NOTE(xcsong): All ranks should call this API, but only rank 0
         #   save the general model params. see:
         #   https://github.com/microsoft/DeepSpeed/issues/2993
         with torch.no_grad():
-            model.save_checkpoint(save_dir=args.model_dir,
-                                  tag=tag, client_state=infos)
-            if args.save_states == "model_only" and rank == 0:
+            model.save_checkpoint(save_dir=model_dir,
+                                  tag=tag, client_state=info_dict)
+            if info_dict["save_states"] == "model_only" and rank == 0:
                 convert_zero_checkpoint_to_fp32_state_dict(
-                    args.model_dir, "{}/{}.pt".format(args.model_dir, tag),
-                    tag=tag)
-                os.system("rm -rf {}/{}".format(args.model_dir, tag))
+                    model_dir, "{}/{}.pt".format(model_dir, tag), tag=tag)
+                os.system("rm -rf {}/{}".format(model_dir, tag))
     elif rank == 0:
         # NOTE(xcsong): For torch_ddp, only rank-0 should call this.
-        save_model_path = os.path.join(args.model_dir, '{}.pt'.format(tag))
-        save_checkpoint(model, save_model_path, infos)
+        save_model_path = os.path.join(model_dir, '{}.pt'.format(tag))
+        save_checkpoint(model, save_model_path, info_dict)
 
 
-def wenet_join(configs, device, group_join):
+def wenet_join(group_join, info_dict):
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     local_rank = int(os.environ.get('LOCAL_RANK', 0))
     rank = int(os.environ.get('RANK', 0))
-    train_engine = configs.get('train_engine', "torch_ddp")
+    train_engine = info_dict.get('train_engine', "torch_ddp")
 
-    if train_engine != "deepspeed":
+    if train_engine != "deepspeed" or info_dict["step"] == 0:
+        # NOTE(xcsong): skip first batch because its processing time includes
+        #   dataloader initialization time, which may exceed 30 seconds
         return False
 
     try:
@@ -407,18 +415,18 @@ def wenet_join(configs, device, group_join):
     except RuntimeError as e:
         logging.info("Detected uneven workload distribution: {}\n".format(e) +
                      "Break current worker to manually join all workers, " +
-                     "world_size {}, current rank {}, current local_rank {}".format(
+                     "world_size {}, current rank {}, current local_rank {}\n".format(
                          world_size, rank, local_rank))
         return True
 
     return False
 
 
-def batch_forward(configs, model, batch, scaler):
-    train_engine = configs.get('train_engine', "torch_ddp")
-    accum_grad = configs.get('accum_grad', 1)
+def batch_forward(model, batch, scaler, info_dict):
+    train_engine = info_dict.get('train_engine', "torch_ddp")
+    accum_grad = info_dict.get('accum_grad', 1)
 
-    dtype = configs.get("dtype", "fp32")
+    dtype = info_dict.get("dtype", "fp32")
     if dtype == "fp16":
         dtype = torch.float16
     elif dtype == "bf16":
@@ -441,58 +449,61 @@ def batch_forward(configs, model, batch, scaler):
         with torch.cuda.amp.autocast(scaler is not None):
             loss_dict = model(batch["feats"], batch["feats_lengths"],
                               batch["target"], batch["target_lengths"])
-    loss_dict['loss'] = loss_dict['loss'] / accum_grad
+    info_dict['loss_dict'] = loss_dict
 
-    return loss_dict
+    return info_dict
 
 
-def batch_backward(configs, model, loss_dict, scaler):
-    train_engine = configs.get("train_engine", "torch_ddp")
-    use_amp = configs.get('use_amp', False)
+def batch_backward(model, scaler, info_dict):
+    train_engine = info_dict.get("train_engine", "torch_ddp")
+    accum_grad = info_dict.get('accum_grad', 1)
+    use_amp = info_dict.get('use_amp', False)
     if use_amp:
         assert scaler is not None
-    loss = loss_dict['loss']
+    loss = info_dict['loss_dict']['loss']
 
     if train_engine == "deepspeed":
-        # NOTE(xcsong): Zeroing the gradients is handled automatically by
-        #   DeepSpeed after the weights have been updated using a mini-batch.
-        #   DeepSpeed also performs gradient averaging automatically at the
-        #   gradient accumulation boundaries and addresses clip_grad_norm
-        #   internally. In other words, `model.backward(loss)` is equivalent to
-        #   `loss.backward() + clip_grad_norm_()
-        #                    + optimizer.zero_grad() + accum_grad`
+        # NOTE(xcsong): `model.backward(loss)` is equivalent to
+        #               `scale_loss_wrt_accum_grad + loss.backward()`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         model.backward(loss)
     elif train_engine == "torch_ddp":
+        loss = loss / accum_grad
         if use_amp:
             scaler.scale(loss).backward()
         else:
             loss.backward()
 
+    return info_dict
+
 
 def update_parameter_and_lr(
-    configs, model, optimizer,
+    model, optimizer,
     scheduler, scaler, info_dict
 ):
-    train_engine = configs.get("train_engine", "torch_ddp")
-    accum_grad = configs.get('accum_grad', 1)
-    use_amp = configs.get('use_amp', False)
-    clip = configs.get('grad_clip', 50.0)
     rank = int(os.environ.get('RANK', 0))
-    batch_idx = info_dict["batch_idx"]
+    train_engine = info_dict.get("train_engine", "torch_ddp")
+    accum_grad = info_dict.get('accum_grad', 1)
+    use_amp = info_dict.get('use_amp', False)
+    clip = info_dict.get('grad_clip', 50.0)
+    step = info_dict["step"]
     if use_amp:
         assert scaler is not None
 
     if train_engine == "deepspeed":
         # NOTE(xcsong): The step() function in DeepSpeed engine updates the
-        #   model parameters as well as the learning rate. There is no need
-        #   to manually perform scheduler.step(). In other words:
-        #   `ds_model.step() = optimizer.step() + scheduler.step()`
+        #   model parameters as well as the learning rate.
+        #   Zeroing the gradients is handled automatically by
+        #   DeepSpeed after the weights have been updated using a mini-batch.
+        #   DeepSpeed also performs gradient averaging automatically at the
+        #   gradient accumulation boundaries and addresses clip_grad_norm internally.
+        #   `ds_model.step() =  clip_grad_norm_() + optimizer.step()
+        #                       + optimizer.zero_grad() + scheduler.step()`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
-        model.step()
         info_dict["is_gradient_accumulation_boundary"] = \
             model.is_gradient_accumulation_boundary()
-    elif batch_idx % accum_grad == 0 and batch_idx != 0:
+        model.step()
+    elif (step + 1) % accum_grad == 0:
         # Use mixed precision training
         if use_amp:
             scaler.unscale_(optimizer)
@@ -518,35 +529,32 @@ def update_parameter_and_lr(
     return info_dict
 
 
-def log_per_step(configs, loss_dict, info_dict, writer, tag):
-    epoch = configs.get('epoch', 0)
-    train_engine = configs.get("train_engine", "torch_ddp")
-    accum_grad = configs.get('accum_grad', 1) if tag == "TRAIN" else 1
-    log_interval = configs.get('log_interval', 10)
-
-    loss = loss_dict['loss']
-    rank = int(os.environ.get('RANK', 0))
-
-    batch_idx = info_dict["batch_idx"]
+def log_per_step(writer, info_dict):
+    tag = info_dict["tag"]
+    step = info_dict["step"]
+    loss_dict = info_dict['loss_dict']
+    epoch = info_dict.get('epoch', 0)
+    train_engine = info_dict.get("train_engine", "torch_ddp")
+    accum_grad = info_dict.get('accum_grad', 1)
+    log_interval = info_dict.get('log_interval', 10)
     lr = info_dict.get("lr", 0.0)
     history_loss = info_dict.get("history_loss", 0.0)
-    step = info_dict.get("step", -1)
     is_gradient_accumulation_boundary = info_dict.get(
         "is_gradient_accumulation_boundary", False)
 
-    if tag == "TRAIN":
-        if train_engine == "deepspeed":
-            if rank == 0 and writer is not None \
-                    and is_gradient_accumulation_boundary:
-                writer.add_scalar('train_loss', loss.item(), step)
-        elif batch_idx % accum_grad == 0 and batch_idx != 0:
-            if rank == 0 and writer is not None:
-                writer.add_scalar('train_loss', loss.item(), step)
+    rank = int(os.environ.get('RANK', 0))
 
-    if batch_idx % log_interval == 0:
+    if tag == "TRAIN":
+        if train_engine == "deepspeed" and is_gradient_accumulation_boundary:
+            if rank == 0 and writer is not None:
+                writer.add_scalar('train_loss', loss_dict['loss'].item(), step)
+        elif train_engine == "torch_ddp" and (step + 1) % accum_grad == 0:
+            if rank == 0 and writer is not None:
+                writer.add_scalar('train_loss', loss_dict['loss'].item(), step)
+
+    if (step + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
-            tag, epoch, batch_idx,
-            loss.item() * accum_grad)
+            tag, epoch, step, loss_dict['loss'].item())
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value.item())
@@ -557,11 +565,11 @@ def log_per_step(configs, loss_dict, info_dict, writer, tag):
         logging.debug(log_str)
 
 
-def log_per_epoch(args, info_dict, writer, tag):
+def log_per_epoch(writer, info_dict):
     epoch = info_dict["epoch"]
     if int(os.environ.get('RANK', 0)) == 0:
         writer.add_scalar('epoch/cv_loss', info_dict["cv_loss"], epoch)
         writer.add_scalar('epoch/lr', info_dict["lr"], epoch)
-        with open("{}/{}.yaml".format(args.model_dir, epoch), 'w') as fout:
+        with open("{}/{}.yaml".format(info_dict["model_dir"], epoch), 'w') as fout:
             data = yaml.dump(info_dict)
             fout.write(data)

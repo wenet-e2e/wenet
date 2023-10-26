@@ -54,8 +54,8 @@ def get_args():
     return args
 
 
-# On worker errors, this tool will summarize the details of the error
-#   (e.g. time, rank, host, pid, traceback, etc).
+# NOTE(xcsong): On worker errors, this recod tool will summarize the
+#   details of the error (e.g. time, rank, host, pid, traceback, etc).
 @record
 def main():
     args = get_args()
@@ -82,7 +82,7 @@ def main():
     configs = check_modify_and_save_config(args, configs)
 
     # Init asr model from configs
-    infos, model = init_model(args, configs)
+    model, configs = init_model(args, configs)
 
     # Check model is jitable & print model archtectures
     trace_and_print_model(args, model, enable_trace=True, enable_print=True)
@@ -95,16 +95,17 @@ def main():
 
     # Get optimizer & scheduler
     model, optimizer, scheduler = init_optimizer_and_scheduler(
-        args, infos, configs, model)
+        args, configs, model)
 
     # Save checkpoints
-    save_model(args, model, tag="init",
-               infos={"save_time": datetime.datetime.now()
-                      .strftime('%d/%m/%Y %H:%M:%S')})
+    save_model(model, info_dict={
+        "save_time": datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+        "tag": "init", **configs
+    })
 
     # Get executor
     executor = Executor()
-    executor.step = infos.get('step', -1)
+    executor.step = configs["init_infos"].get('step', -1)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = None
@@ -112,38 +113,38 @@ def main():
         scaler = torch.cuda.amp.GradScaler()
 
     # Start training loop
-    start_epoch = infos.get('epoch', -1) + 1
+    start_epoch = configs["init_infos"].get('epoch', -1) + 1
     final_epoch = None
     for epoch in range(start_epoch, configs.get('max_epoch', 100)):
         train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch
 
         lr = optimizer.param_groups[0]['lr']
-        logging.info('Epoch {} TRAIN info lr {}'.format(epoch, lr))
+        logging.info('Epoch {} TRAIN info lr {} rank {}'.format(epoch, lr, rank))
 
         device = model.local_rank if args.deepspeed else device
 
-        # NOTE(xcsong): monitored barrier requires gloo process group to
-        #   perform host-side sync. this group is used to join workers for
-        #   deepspeed, more infos see `train_utils.py`
+        # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
         group_join = dist.new_group(backend="gloo",
                                     timeout=datetime.timedelta(seconds=30))
 
+        dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         executor.train(model, optimizer, scheduler, train_data_loader, device,
                        writer, configs, scaler, group_join)
 
+        dist.barrier()  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
                                                 configs)
         cv_loss = total_loss / num_seen_utts
 
-        logging.info('Epoch {} CV info cv_loss {}'.format(epoch, cv_loss))
-        infos = {
+        logging.info('Epoch {} CV info cv_loss {} rank {}'.format(epoch, cv_loss, rank))
+        info_dict = {
             'epoch': epoch, 'lr': lr, 'cv_loss': cv_loss, 'step': executor.step,
-            'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+            'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+            'tag': str(epoch), **configs
         }
-        log_per_epoch(args, infos, writer, tag="")
-
-        save_model(args, model, tag=str(epoch), infos=infos)
+        log_per_epoch(writer, info_dict=info_dict)
+        save_model(model, info_dict=info_dict)
 
         final_epoch = epoch
 

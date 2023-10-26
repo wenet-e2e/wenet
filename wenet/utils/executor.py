@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import logging
 from contextlib import nullcontext
 
@@ -29,13 +30,14 @@ class Executor:
         self.step = 0
 
     def train(self, model, optimizer, scheduler, data_loader, device, writer,
-              args, scaler, group_join):
+              configs, scaler, group_join):
         ''' Train one epoch
         '''
         model.train()
-        accum_grad = args.get('accum_grad', 1)
+        info_dict = copy.deepcopy(configs)
+        info_dict["tag"] = "TRAIN"
         logging.info('using accumulate grad, new batch size is {} times'
-                     ' larger than before'.format(accum_grad))
+                     ' larger than before'.format(info_dict['accum_grad']))
 
         # A context manager to be used in conjunction with an instance of
         # torch.nn.parallel.DistributedDataParallel to be able to train
@@ -47,7 +49,8 @@ class Executor:
 
         with model_context():
             for batch_idx, batch in enumerate(data_loader):
-                if wenet_join(args, device, group_join):
+                info_dict["step"] = batch_idx
+                if wenet_join(group_join, info_dict):
                     break
 
                 key, feats, target, feats_lengths, target_lengths = batch
@@ -65,8 +68,8 @@ class Executor:
                 # Disable gradient synchronizations across DDP processes.
                 # Within this context, gradients will be accumulated on module
                 # variables, which will later be synchronized.
-                if args.get("train_engine", "torch_ddp") == "torch_ddp" and \
-                        batch_idx % accum_grad != 0:
+                if info_dict.get("train_engine", "torch_ddp") == "torch_ddp" and \
+                        (batch_idx + 1) % info_dict["accum_grad"] != 0:
                     context = model.no_sync
                 # Used for single gpu training and DDP gradient synchronization
                 # processes.
@@ -74,29 +77,26 @@ class Executor:
                     context = nullcontext
 
                 with context():
-                    loss_dict = batch_forward(args, model, batch_dict, scaler)
-                    batch_backward(args, model, loss_dict, scaler)
-
-                info_dict = {"batch_idx": batch_idx, "step": self.step}
+                    info_dict = batch_forward(model, batch_dict, scaler, info_dict)
+                    info_dict = batch_backward(model, scaler, info_dict)
 
                 info_dict = update_parameter_and_lr(
-                    args, model, optimizer, scheduler,
+                    model, optimizer, scheduler,
                     scaler, info_dict
                 )
-
-                log_per_step(args, loss_dict, info_dict, writer, tag="TRAIN")
-
+                log_per_step(writer, info_dict)
                 self.step += 1
 
-    def cv(self, model, data_loader, device, args):
+    def cv(self, model, data_loader, device, configs):
         ''' Cross validation on
         '''
         model.eval()
-        # in order to avoid division by 0
-        num_seen_utts = 1
-        total_loss = 0.0
+        info_dict = copy.deepcopy(configs)
+        info_dict["tag"] = "CV"
+        num_seen_utts, total_loss = 1, 0.0  # in order to avoid division by 0
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
+                info_dict["step"] = batch_idx
                 key, feats, target, feats_lengths, target_lengths = batch
 
                 batch_dict = {}
@@ -109,14 +109,13 @@ class Executor:
                 if num_utts == 0:
                     continue
 
-                loss_dict = batch_forward(args, model, batch_dict, None)
-                loss = loss_dict['loss']
+                info_dict = batch_forward(model, batch_dict, None, info_dict)
+                loss = info_dict['loss_dict']['loss']
 
                 if torch.isfinite(loss):
                     num_seen_utts += num_utts
                     total_loss += loss.item() * num_utts
 
-                info_dict = {"batch_idx": batch_idx,
-                             "history_loss": total_loss / num_seen_utts}
-                log_per_step(args, loss_dict, info_dict, writer=None, tag="CV")
+                info_dict["history_loss"] = total_loss / num_seen_utts
+                log_per_step(writer=None, info_dict=info_dict)
         return total_loss, num_seen_utts
