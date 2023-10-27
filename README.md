@@ -12,11 +12,6 @@
 
 **We** share **Net** together.
 
-## News :fire:
-
-* 2022.12: Horizon X3 pi BPU, see https://github.com/wenet-e2e/wenet/pull/1597, Kunlun Core XPU, see https://github.com/wenet-e2e/wenet/pull/1455, Raspberry Pi, see https://github.com/wenet-e2e/wenet/pull/1477, IOS, see https://github.com/wenet-e2e/wenet/pull/1549.
-* 2022.11: TrimTail paper released, see https://arxiv.org/pdf/2211.00522.pdf
-
 ## Highlights
 
 * **Production first and production ready**: The core design principle, WeNet provides full stack production solutions for speech recognition.
@@ -25,7 +20,58 @@
 
 
 ## Install
-please refer [doc](docs/install.md) for install.
+
+### Install python package
+
+``` sh
+pip install git+https://github.com/wenet-e2e/wenet.git
+```
+
+Command-line usage(use `-h` for parameters):
+
+``` sh
+wenet --language chinese test.audio
+```
+
+Python programming usage:
+
+``` python
+import wenet
+
+model = wenet.load_model('chinese')
+result = model.transcribe('audio.wav')
+print(result['text'])
+```
+
+### Install for training & deployment
+
+- Clone the repo
+``` sh
+git clone https://github.com/wenet-e2e/wenet.git
+```
+
+- Install Conda: please see https://docs.conda.io/en/latest/miniconda.html
+- Create Conda env:
+
+``` sh
+conda create -n wenet python=3.8
+conda activate wenet
+pip install -r requirements.txt
+```
+
+**Build for deployment**
+
+Optionally, if you want to use x86 runtime or language model(LM),
+you have to build the runtime as follows. Otherwise, you can just ignore this step.
+
+``` sh
+# runtime build requires cmake 3.14 or above
+cd runtime/libtorch
+mkdir build && cd build && cmake -DGRAPH_TOOLS=ON .. && cmake --build .
+```
+
+Please see [doc](https://github.com/wenet-e2e/wenet/tree/main/runtime) for building
+runtime on more platforms and OS.
 
 
 ## Discussion & Communication
