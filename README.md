@@ -30,7 +30,7 @@ pip install git+https://github.com/wenet-e2e/wenet.git
 Command-line usage(use `-h` for parameters):
 
 ``` sh
-wenet --language chinese test.audio
+wenet --language chinese audio.wav
 ```
 
 Python programming usage:
