@@ -90,77 +90,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-wenet.transformer.label_smoothing_loss">
-<span id="wenet-transformer-label-smoothing-loss-module"></span><h1>wenet.transformer.label_smoothing_loss module<a class="headerlink" href="#module-wenet.transformer.label_smoothing_loss" title="Permalink to this heading"></a></h1>
-<p>Label smoothing module.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="wenet.transformer.label_smoothing_loss.LabelSmoothingLoss">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.transformer.label_smoothing_loss.</span></span><span class="sig-name descname"><span class="pre">LabelSmoothingLoss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">padding_idx</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/transformer/label_smoothing_loss.html#LabelSmoothingLoss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.label_smoothing_loss.LabelSmoothingLoss" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
-<p>Label-smoothing loss.</p>
-<p>In a standard CE loss, the label’s data distribution is:
-[0,1,2] -&gt;
-[</p>
-<blockquote>
-<div><p>[1.0, 0.0, 0.0],
-[0.0, 1.0, 0.0],
-[0.0, 0.0, 1.0],</p>
-</div></blockquote>
-<p>]</p>
-<p>In the smoothing version CE Loss,some probabilities
-are taken from the true label prob (1.0) and are divided
-among other labels.</p>
-<p>e.g.
-smoothing=0.1
-[0,1,2] -&gt;
-[</p>
-<blockquote>
-<div><p>[0.9, 0.05, 0.05],
-[0.05, 0.9, 0.05],
-[0.05, 0.05, 0.9],</p>
-</div></blockquote>
-<p>]</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<em>int</em>) – the number of class</p></li>
-<li><p><strong>padding_idx</strong> (<em>int</em>) – padding class id which will be ignored for loss</p></li>
-<li><p><strong>smoothing</strong> (<em>float</em>) – smoothing rate (0.0 means the conventional CE)</p></li>
-<li><p><strong>normalize_length</strong> (<em>bool</em>) – normalize loss by sequence length if True
-normalize loss by batch size if False</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.transformer.label_smoothing_loss.LabelSmoothingLoss.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/wenet/transformer/label_smoothing_loss.html#LabelSmoothingLoss.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.label_smoothing_loss.LabelSmoothingLoss.forward" title="Permalink to this definition"></a></dt>
-<dd><p>Compute loss between x and target.</p>
-<p>The model outputs and data labels tensors are flatten to
-(batch*seqlen, class) shape and a mask is applied to the
-padding part which should not be calculated for loss.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>x</strong> (<em>torch.Tensor</em>) – prediction (batch, seqlen, class)</p></li>
-<li><p><strong>target</strong> (<em>torch.Tensor</em>) – target signal masked with self.padding_id (batch, seqlen)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The KL loss, scalar float value</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>loss (torch.Tensor)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="wenet.transformer.label_smoothing_loss.LabelSmoothingLoss.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.transformer.label_smoothing_loss.LabelSmoothingLoss.training" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+  <section id="wenet-transformer-label-smoothing-loss-module">
+<h1>wenet.transformer.label_smoothing_loss module<a class="headerlink" href="#wenet-transformer-label-smoothing-loss-module" title="Permalink to this heading"></a></h1>
 </section>
 
 

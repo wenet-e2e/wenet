@@ -90,69 +90,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-wenet.transformer.decoder_layer">
-<span id="wenet-transformer-decoder-layer-module"></span><h1>wenet.transformer.decoder_layer module<a class="headerlink" href="#module-wenet.transformer.decoder_layer" title="Permalink to this heading"></a></h1>
-<p>Decoder self-attention layer definition.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="wenet.transformer.decoder_layer.DecoderLayer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.transformer.decoder_layer.</span></span><span class="sig-name descname"><span class="pre">DecoderLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">self_attn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_attn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feed_forward</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_before</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/transformer/decoder_layer.html#DecoderLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.decoder_layer.DecoderLayer" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
-<p>Single decoder layer module.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>size</strong> (<em>int</em>) – Input dimension.</p></li>
-<li><p><strong>self_attn</strong> (<em>torch.nn.Module</em>) – Self-attention module instance.
-<cite>MultiHeadedAttention</cite> instance can be used as the argument.</p></li>
-<li><p><strong>src_attn</strong> (<em>torch.nn.Module</em>) – Inter-attention module instance.
-<cite>MultiHeadedAttention</cite> instance can be used as the argument.
-If <cite>None</cite> is passed, Inter-attention is not used, such as
-CIF, GPT, and other decoder only model.</p></li>
-<li><p><strong>feed_forward</strong> (<em>torch.nn.Module</em>) – Feed-forward module instance.
-<cite>PositionwiseFeedForward</cite> instance can be used as the argument.</p></li>
-<li><p><strong>dropout_rate</strong> (<em>float</em>) – Dropout rate.</p></li>
-<li><p><strong>normalize_before</strong> (<em>bool</em>) – True: use layer_norm before each sub-block.
-False: to use layer_norm after each sub-block.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.transformer.decoder_layer.DecoderLayer.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tgt</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tgt_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memory</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">memory_mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/wenet/transformer/decoder_layer.html#DecoderLayer.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.decoder_layer.DecoderLayer.forward" title="Permalink to this definition"></a></dt>
-<dd><p>Compute decoded features.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>tgt</strong> (<em>torch.Tensor</em>) – Input tensor (#batch, maxlen_out, size).</p></li>
-<li><p><strong>tgt_mask</strong> (<em>torch.Tensor</em>) – Mask for input tensor
-(#batch, maxlen_out).</p></li>
-<li><p><strong>memory</strong> (<em>torch.Tensor</em>) – Encoded memory
-(#batch, maxlen_in, size).</p></li>
-<li><p><strong>memory_mask</strong> (<em>torch.Tensor</em>) – Encoded memory mask
-(#batch, maxlen_in).</p></li>
-<li><p><strong>cache</strong> (<em>torch.Tensor</em>) – cached tensors.
-(#batch, maxlen_out - 1, size).</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Output tensor (#batch, maxlen_out, size).
-torch.Tensor: Mask for output tensor (#batch, maxlen_out).
-torch.Tensor: Encoded memory (#batch, maxlen_in, size).
-torch.Tensor: Encoded memory mask (#batch, maxlen_in).</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>torch.Tensor</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="wenet.transformer.decoder_layer.DecoderLayer.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.transformer.decoder_layer.DecoderLayer.training" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+  <section id="wenet-transformer-decoder-layer-module">
+<h1>wenet.transformer.decoder_layer module<a class="headerlink" href="#wenet-transformer-decoder-layer-module" title="Permalink to this heading"></a></h1>
 </section>
 
 

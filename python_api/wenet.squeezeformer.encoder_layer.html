@@ -90,57 +90,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-wenet.squeezeformer.encoder_layer">
-<span id="wenet-squeezeformer-encoder-layer-module"></span><h1>wenet.squeezeformer.encoder_layer module<a class="headerlink" href="#module-wenet.squeezeformer.encoder_layer" title="Permalink to this heading"></a></h1>
-<p>SqueezeformerEncoderLayer definition.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="wenet.squeezeformer.encoder_layer.SqueezeformerEncoderLayer">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.squeezeformer.encoder_layer.</span></span><span class="sig-name descname"><span class="pre">SqueezeformerEncoderLayer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">self_attn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feed_forward1</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conv_module</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feed_forward2</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">normalize_before</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">concat_after</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/squeezeformer/encoder_layer.html#SqueezeformerEncoderLayer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.squeezeformer.encoder_layer.SqueezeformerEncoderLayer" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
-<p>Encoder layer module.
-:param size: Input dimension.
-:type size: int
-:param self_attn: Self-attention module instance.</p>
-<blockquote>
-<div><p><cite>MultiHeadedAttention</cite> or <cite>RelPositionMultiHeadedAttention</cite>
-instance can be used as the argument.</p>
-</div></blockquote>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>feed_forward1</strong> (<em>torch.nn.Module</em>) – Feed-forward module instance.
-<cite>PositionwiseFeedForward</cite> instance can be used as the argument.</p></li>
-<li><p><strong>conv_module</strong> (<em>torch.nn.Module</em>) – Convolution module instance.
-<cite>ConvlutionModule</cite> instance can be used as the argument.</p></li>
-<li><p><strong>feed_forward2</strong> (<em>torch.nn.Module</em>) – Feed-forward module instance.
-<cite>PositionwiseFeedForward</cite> instance can be used as the argument.</p></li>
-<li><p><strong>dropout_rate</strong> (<em>float</em>) – Dropout rate.</p></li>
-<li><p><strong>normalize_before</strong> (<em>bool</em>) – True: use layer_norm before each sub-block.
-False: use layer_norm after each sub-block.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.squeezeformer.encoder_layer.SqueezeformerEncoderLayer.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos_emb</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_pad</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor([],</span> <span class="pre">size=(0,</span> <span class="pre">0,</span> <span class="pre">0),</span> <span class="pre">dtype=torch.bool)</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">att_cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor([],</span> <span class="pre">size=(0,</span> <span class="pre">0,</span> <span class="pre">0,</span> <span class="pre">0))</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cnn_cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor([],</span> <span class="pre">size=(0,</span> <span class="pre">0,</span> <span class="pre">0,</span> <span class="pre">0))</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/wenet/squeezeformer/encoder_layer.html#SqueezeformerEncoderLayer.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.squeezeformer.encoder_layer.SqueezeformerEncoderLayer.forward" title="Permalink to this definition"></a></dt>
-<dd><p>Defines the computation performed at every call.</p>
-<p>Should be overridden by all subclasses.</p>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>Although the recipe for forward pass needs to be defined within
-this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
-instead of this since the former takes care of running the
-registered hooks while the latter silently ignores them.</p>
-</div>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="wenet.squeezeformer.encoder_layer.SqueezeformerEncoderLayer.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.squeezeformer.encoder_layer.SqueezeformerEncoderLayer.training" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+  <section id="wenet-squeezeformer-encoder-layer-module">
+<h1>wenet.squeezeformer.encoder_layer module<a class="headerlink" href="#wenet-squeezeformer-encoder-layer-module" title="Permalink to this heading"></a></h1>
 </section>
 
 

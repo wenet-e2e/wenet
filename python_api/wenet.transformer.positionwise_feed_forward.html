@@ -90,47 +90,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-wenet.transformer.positionwise_feed_forward">
-<span id="wenet-transformer-positionwise-feed-forward-module"></span><h1>wenet.transformer.positionwise_feed_forward module<a class="headerlink" href="#module-wenet.transformer.positionwise_feed_forward" title="Permalink to this heading"></a></h1>
-<p>Positionwise feed forward layer definition.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="wenet.transformer.positionwise_feed_forward.PositionwiseFeedForward">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.transformer.positionwise_feed_forward.</span></span><span class="sig-name descname"><span class="pre">PositionwiseFeedForward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">idim</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hidden_units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">activation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Module</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">ReLU()</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/transformer/positionwise_feed_forward.html#PositionwiseFeedForward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.positionwise_feed_forward.PositionwiseFeedForward" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
-<p>Positionwise feed forward layer.</p>
-<p>FeedForward are appied on each position of the sequence.
-The output dim is same with the input dim.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>idim</strong> (<em>int</em>) – Input dimenstion.</p></li>
-<li><p><strong>hidden_units</strong> (<em>int</em>) – The number of hidden units.</p></li>
-<li><p><strong>dropout_rate</strong> (<em>float</em>) – Dropout rate.</p></li>
-<li><p><strong>activation</strong> (<em>torch.nn.Module</em>) – Activation function</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.transformer.positionwise_feed_forward.PositionwiseFeedForward.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tensor</span></span></span><a class="reference internal" href="../_modules/wenet/transformer/positionwise_feed_forward.html#PositionwiseFeedForward.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.transformer.positionwise_feed_forward.PositionwiseFeedForward.forward" title="Permalink to this definition"></a></dt>
-<dd><p>Forward function.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>xs</strong> – input tensor (B, L, D)</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>output tensor, (B, L, D)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="wenet.transformer.positionwise_feed_forward.PositionwiseFeedForward.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.transformer.positionwise_feed_forward.PositionwiseFeedForward.training" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+  <section id="wenet-transformer-positionwise-feed-forward-module">
+<h1>wenet.transformer.positionwise_feed_forward module<a class="headerlink" href="#wenet-transformer-positionwise-feed-forward-module" title="Permalink to this heading"></a></h1>
 </section>
 
 

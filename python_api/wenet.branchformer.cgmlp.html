@@ -90,87 +90,8 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <section id="module-wenet.branchformer.cgmlp">
-<span id="wenet-branchformer-cgmlp-module"></span><h1>wenet.branchformer.cgmlp module<a class="headerlink" href="#module-wenet.branchformer.cgmlp" title="Permalink to this heading"></a></h1>
-<p>MLP with convolutional gating (cgMLP) definition.</p>
-<p class="rubric">References</p>
-<p><a class="reference external" href="https://openreview.net/forum?id=RA-zVvZLYIy">https://openreview.net/forum?id=RA-zVvZLYIy</a>
-<a class="reference external" href="https://arxiv.org/abs/2105.08050">https://arxiv.org/abs/2105.08050</a></p>
-<dl class="py class">
-<dt class="sig sig-object py" id="wenet.branchformer.cgmlp.ConvolutionalGatingMLP">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.branchformer.cgmlp.</span></span><span class="sig-name descname"><span class="pre">ConvolutionalGatingMLP</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">linear_units</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_linear_after_conv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gate_activation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">causal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/branchformer/cgmlp.html#ConvolutionalGatingMLP"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.branchformer.cgmlp.ConvolutionalGatingMLP" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
-<p>Convolutional Gating MLP (cgMLP).</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.branchformer.cgmlp.ConvolutionalGatingMLP.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor([],</span> <span class="pre">size=(0,</span> <span class="pre">0,</span> <span class="pre">0))</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/wenet/branchformer/cgmlp.html#ConvolutionalGatingMLP.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.branchformer.cgmlp.ConvolutionalGatingMLP.forward" title="Permalink to this definition"></a></dt>
-<dd><p>Forward method</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>x</strong> (<em>torch.Tensor</em>) – (batch, time, channels)</p></li>
-<li><p><strong>mask_pad</strong> (<em>torch.Tensor</em>) – used for batch padding (#batch, 1, time),
-(0, 0, 0) means fake mask. Not used yet</p></li>
-<li><p><strong>cache</strong> (<em>torch.Tensor</em>) – left context cache, it is only
-used in causal convolution (#batch, channels, cache_t),
-(0, 0, 0) meas fake cache.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>(batch, time, channels/2)</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>out (torch.Tensor)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="wenet.branchformer.cgmlp.ConvolutionalGatingMLP.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.branchformer.cgmlp.ConvolutionalGatingMLP.training" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">wenet.branchformer.cgmlp.</span></span><span class="sig-name descname"><span class="pre">ConvolutionalSpatialGatingUnit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dropout_rate</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_linear_after_conv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gate_activation</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">causal</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/branchformer/cgmlp.html#ConvolutionalSpatialGatingUnit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit" title="Permalink to this definition"></a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
-<p>Convolutional Spatial Gating Unit (CSGU).</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit.espnet_initialization_fn">
-<span class="sig-name descname"><span class="pre">espnet_initialization_fn</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/wenet/branchformer/cgmlp.html#ConvolutionalSpatialGatingUnit.espnet_initialization_fn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit.espnet_initialization_fn" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit.forward">
-<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Tensor</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">tensor([],</span> <span class="pre">size=(0,</span> <span class="pre">0,</span> <span class="pre">0))</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Tuple</span><span class="p"><span class="pre">[</span></span><span class="pre">Tensor</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Tensor</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/wenet/branchformer/cgmlp.html#ConvolutionalSpatialGatingUnit.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit.forward" title="Permalink to this definition"></a></dt>
-<dd><p>Forward method</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>x</strong> (<em>torch.Tensor</em>) – (batch, time, channels)</p></li>
-<li><p><strong>cache</strong> (<em>torch.Tensor</em>) – left context cache, it is only
-used in causal convolution (#batch, channels, cache_t),
-(0, 0, 0) meas fake cache.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>(batch, time, channels/2)</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>out (torch.Tensor)</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit.training">
-<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#wenet.branchformer.cgmlp.ConvolutionalSpatialGatingUnit.training" title="Permalink to this definition"></a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+  <section id="wenet-branchformer-cgmlp-module">
+<h1>wenet.branchformer.cgmlp module<a class="headerlink" href="#wenet-branchformer-cgmlp-module" title="Permalink to this heading"></a></h1>
 </section>
 
 
