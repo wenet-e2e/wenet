@@ -105,7 +105,7 @@ def main():
 
     # Get executor
     executor = Executor()
-    executor.step = configs["init_infos"].get('step', -1)
+    executor.step = configs["init_infos"].get('step', 0)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = None

@@ -109,10 +109,6 @@ def add_ddp_args(parser):
                         default='nccl',
                         choices=['nccl', 'gloo'],
                         help='distributed backend')
-    parser.add_argument('--ddp.init_method',
-                        dest='init_method',
-                        default=None,
-                        help='ddp init method')
     parser.add_argument('--use_amp',
                         action='store_true',
                         default=False,
@@ -145,15 +141,9 @@ def init_distributed(args):
                  ', rank {}, world_size {}'.format(rank, world_size))
     if args.train_engine == "torch_ddp":
         torch.cuda.set_device(local_rank)
-        dist.init_process_group(args.dist_backend,
-                                init_method=args.init_method,
-                                world_size=world_size,
-                                rank=rank)
+        dist.init_process_group(args.dist_backend)
     elif args.train_engine == "deepspeed":
-        deepspeed.init_distributed(dist_backend=args.dist_backend,
-                                   init_method=args.init_method,
-                                   world_size=world_size,
-                                   rank=rank)
+        deepspeed.init_distributed(dist_backend=args.dist_backend)
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
     return world_size, local_rank, rank
@@ -344,7 +334,7 @@ def init_optimizer_and_scheduler(args, configs, model):
             args=args, model=model, optimizer=optimizer,
             lr_scheduler=scheduler, model_parameters=model.parameters())
 
-    step = configs["init_infos"].get("step", -1)
+    step = configs["init_infos"].get("step", 0)
     scheduler.set_step(step)
     return model, optimizer, scheduler
 
@@ -399,7 +389,8 @@ def wenet_join(group_join, info_dict):
     rank = int(os.environ.get('RANK', 0))
     train_engine = info_dict.get('train_engine', "torch_ddp")
 
-    if train_engine != "deepspeed" or info_dict["step"] == 0:
+    # TODO(xcsong): ignore torch_ddp?
+    if info_dict["batch_idx"] == 0:
         # NOTE(xcsong): skip first batch because its processing time includes
         #   dataloader initialization time, which may exceed 30 seconds
         return False
@@ -486,7 +477,7 @@ def update_parameter_and_lr(
     accum_grad = info_dict.get('accum_grad', 1)
     use_amp = info_dict.get('use_amp', False)
     clip = info_dict.get('grad_clip', 50.0)
-    step = info_dict["step"]
+    batch_idx = info_dict["batch_idx"]
     if use_amp:
         assert scaler is not None
 
@@ -503,7 +494,7 @@ def update_parameter_and_lr(
         info_dict["is_gradient_accumulation_boundary"] = \
             model.is_gradient_accumulation_boundary()
         model.step()
-    elif (step + 1) % accum_grad == 0:
+    elif (batch_idx + 1) % accum_grad == 0:
         # Use mixed precision training
         if use_amp:
             scaler.unscale_(optimizer)
@@ -532,6 +523,7 @@ def update_parameter_and_lr(
 def log_per_step(writer, info_dict):
     tag = info_dict["tag"]
     step = info_dict["step"]
+    batch_idx = info_dict["batch_idx"]
     loss_dict = info_dict['loss_dict']
     epoch = info_dict.get('epoch', 0)
     train_engine = info_dict.get("train_engine", "torch_ddp")
@@ -547,14 +539,14 @@ def log_per_step(writer, info_dict):
     if tag == "TRAIN":
         if train_engine == "deepspeed" and is_gradient_accumulation_boundary:
             if rank == 0 and writer is not None:
-                writer.add_scalar('train_loss', loss_dict['loss'].item(), step)
-        elif train_engine == "torch_ddp" and (step + 1) % accum_grad == 0:
+                writer.add_scalar('train_loss', loss_dict['loss'].item(), step + 1)
+        elif train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0:
             if rank == 0 and writer is not None:
-                writer.add_scalar('train_loss', loss_dict['loss'].item(), step)
+                writer.add_scalar('train_loss', loss_dict['loss'].item(), step + 1)
 
-    if (step + 1) % log_interval == 0:
+    if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
-            tag, epoch, step, loss_dict['loss'].item())
+            tag, epoch, batch_idx + 1, loss_dict['loss'].item())
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value.item())

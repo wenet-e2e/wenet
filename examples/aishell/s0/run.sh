@@ -115,13 +115,6 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   mkdir -p $dir
-  init_method=tcp://$HOST_NODE_ADDR  # multi-node multi-gpu, tcp is recommended
-  if [ ${num_nodes} -le 1  ]; then
-    INIT_FILE=$dir/ddp_init
-    rm -f ${INIT_FILE}  # remove previous INIT_FILE
-    init_method=file://$(readlink -f $INIT_FILE)  # single-node single-gpu, file is recommended
-  fi
-  echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
   # NOTE(xcsong): deepspeed fails with gloo, see
@@ -169,7 +162,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --tensorboard_dir ${tensorboard_dir} \
-      --ddp.init_method $init_method \
       --ddp.dist_backend $dist_backend \
       --num_workers ${num_workers} \
       --prefetch ${prefetch} \

@@ -49,7 +49,8 @@ class Executor:
 
         with model_context():
             for batch_idx, batch in enumerate(data_loader):
-                info_dict["step"] = batch_idx
+                info_dict["step"] = self.step
+                info_dict["batch_idx"] = batch_idx
                 if wenet_join(group_join, info_dict):
                     break
 
@@ -96,7 +97,8 @@ class Executor:
         num_seen_utts, total_loss = 1, 0.0  # in order to avoid division by 0
         with torch.no_grad():
             for batch_idx, batch in enumerate(data_loader):
-                info_dict["step"] = batch_idx
+                info_dict["step"] = self.step
+                info_dict["batch_idx"] = batch_idx
                 key, feats, target, feats_lengths, target_lengths = batch
 
                 batch_dict = {}
