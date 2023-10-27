@@ -2,9 +2,6 @@
 
 If you meet any problems when going through this tutorial, please feel free to ask in github [issues](https://github.com/mobvoi/wenet/issues). Thanks for any kind of feedback.
 
-### Setup environment
-
-Please follow [Installation](install.md) to install WeNet.
 
 ### First Experiment
 
