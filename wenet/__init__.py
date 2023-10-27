@@ -1,1 +1,1 @@
-from wenet.cli.model import load_model
+from wenet.cli.model import load_model  # noqa
