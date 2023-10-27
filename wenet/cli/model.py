@@ -53,7 +53,7 @@ class Model:
                                                 0.5)
         res = rescoring_results[0]
         result = {}
-        result['rec'] = ''.join([self.char_dict[x] for x in res.tokens])
+        result['text'] = ''.join([self.char_dict[x] for x in res.tokens])
         result['confidence'] = res.confidence
 
         if tokens_info:
@@ -72,3 +72,7 @@ class Model:
                 })
             result['tokens'] = tokens_info
         return result
+
+
+def load_model(language: str) -> Model:
+    return Model(language)
