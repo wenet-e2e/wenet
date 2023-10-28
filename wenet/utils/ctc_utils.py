@@ -44,6 +44,18 @@ def replace_duplicates_with_blank(hyp: List[int]) -> List[int]:
     return new_hyp
 
 
+def gen_ctc_peak_time(hyp: List[int]) -> List[int]:
+    times = []
+    cur = 0
+    while cur < len(hyp):
+        if hyp[cur] != 0:
+            times.append(cur)
+        prev = cur
+        while cur < len(hyp) and hyp[cur] == hyp[prev]:
+            cur += 1
+    return times
+
+
 def gen_timestamps_from_peak(
     peaks: List[int],
     max_duration: float,
@@ -87,7 +99,7 @@ def insert_blank(label, blank_id=0):
     return label
 
 
-def forced_align(ctc_probs: torch.Tensor, y: torch.Tensor, blank_id=0) -> list:
+def force_align(ctc_probs: torch.Tensor, y: torch.Tensor, blank_id=0) -> list:
     """ctc forced alignment.
 
     Args:

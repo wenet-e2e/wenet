@@ -37,6 +37,10 @@ def get_args():
                         action='store_true',
                         help='whether to output token(word) level information'
                         ', such times/confidence')
+    parser.add_argument('--align',
+                        action='store_true',
+                        help='force align the input audio and transcript')
+    parser.add_argument('--label', type=str, help='the input label to align')
     args = parser.parse_args()
     return args
 
@@ -44,7 +48,10 @@ def get_args():
 def main():
     args = get_args()
     model = load_model(args.language, args.model_dir)
-    result = model.transcribe(args.audio_file, args.show_tokens_info)
+    if args.align:
+        result = model.align(args.audio_file, args.label)
+    else:
+        result = model.transcribe(args.audio_file, args.show_tokens_info)
     print(result)
 
 
