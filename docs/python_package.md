@@ -25,7 +25,7 @@ You can specify the following parameters.
 ``` python
 import wenet
 
-model = wenet.load_model('chinese') 
+model = wenet.load_model('chinese')
 # or model = wenet.load_model(model_dir='xxx')
 result = model.transcribe('audio.wav')
 print(result['text'])
