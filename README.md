@@ -27,13 +27,13 @@
 pip install git+https://github.com/wenet-e2e/wenet.git
 ```
 
-Command-line usage(use `-h` for parameters):
+**Command-line usage** (use `-h` for parameters):
 
 ``` sh
 wenet --language chinese audio.wav
 ```
 
-Python programming usage:
+**Python programming usage**:
 
 ``` python
 import wenet
@@ -42,6 +42,8 @@ model = wenet.load_model('chinese')
 result = model.transcribe('audio.wav')
 print(result['text'])
 ```
+
+Please refer [python usage](docs/python_package.md) for more command line and python programming usage.
 
 ### Install for training & deployment
 

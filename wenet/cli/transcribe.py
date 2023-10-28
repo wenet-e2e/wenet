@@ -14,19 +14,24 @@
 
 import argparse
 
-from wenet.cli.model import Model
+from wenet.cli.model import load_model
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('audio_file', help='audio file to transcribe')
-    parser.add_argument('--language',
+    parser.add_argument('-l',
+                        '--language',
                         choices=[
                             'chinese',
                             'english',
                         ],
                         default='chinese',
                         help='language type')
+    parser.add_argument('-m',
+                        '--model_dir',
+                        default=None,
+                        help='specify your own model dir')
     parser.add_argument('-t',
                         '--show_tokens_info',
                         action='store_true',
@@ -38,7 +43,7 @@ def get_args():
 
 def main():
     args = get_args()
-    model = Model(args.language)
+    model = load_model(args.language, args.model_dir)
     result = model.transcribe(args.audio_file, args.show_tokens_info)
     print(result)
 

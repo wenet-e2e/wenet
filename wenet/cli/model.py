@@ -26,8 +26,7 @@ from wenet.transformer.search import (attention_rescoring,
 
 
 class Model:
-    def __init__(self, language: str):
-        model_dir = Hub.get_model_by_lang(language)
+    def __init__(self, model_dir: str):
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
@@ -74,5 +73,7 @@ class Model:
         return result
 
 
-def load_model(language: str) -> Model:
-    return Model(language)
+def load_model(language: str = None, model_dir: str = None) -> Model:
+    if model_dir is None:
+        model_dir = Hub.get_model_by_lang(language)
+    return Model(model_dir)
