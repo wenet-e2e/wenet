@@ -35,12 +35,6 @@ class Model:
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
 
     def compute_feats(self, audio_file: str) -> torch.Tensor:
-        return feats
-
-    def _decode(self,
-                audio_file: str,
-                tokens_info: bool = False,
-                label: str = None) -> dict:
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
         waveform = waveform.to(torch.float)
         feats = kaldi.fbank(waveform,
@@ -50,6 +44,13 @@ class Model:
                             energy_floor=0.0,
                             sample_frequency=16000)
         feats = feats.unsqueeze(0)
+        return feats
+
+    def _decode(self,
+                audio_file: str,
+                tokens_info: bool = False,
+                label: str = None) -> dict:
+        feats = self.compute_feats(audio_file)
         encoder_out, _, _ = self.model.forward_encoder_chunk(feats, 0, -1)
         encoder_lens = torch.tensor([encoder_out.size(1)], dtype=torch.long)
         ctc_probs = self.model.ctc_activation(encoder_out)
