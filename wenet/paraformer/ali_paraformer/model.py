@@ -39,9 +39,10 @@ class LFR(torch.nn.Module):
 
     def forward(self, input: torch.Tensor,
                 input_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        orign_type = input_lens.dtype
+        input_lens = input_lens.to(torch.int64)
         B, _, D = input.size()
         n_lfr = torch.ceil(input_lens / self.n).to(input_lens.dtype)
-        # print(n_lfr)
         # right_padding_nums >= 0
         prepad_nums = input_lens + self.left_padding_nums
 
@@ -85,6 +86,7 @@ class LFR(torch.nn.Module):
 
         input = input.unfold(1, self.m, step=self.n).transpose(2, 3)
         # new len
+        new_len = new_len.to(orign_type)
         return input.reshape(B, -1, D * self.m), new_len
 
 
