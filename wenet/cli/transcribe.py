@@ -41,10 +41,7 @@ def get_args():
     parser.add_argument('--align',
                         action='store_true',
                         help='force align the input audio and transcript')
-    parser.add_argument('--label',
-                        type=bool,
-                        default=False,
-                        help='the input label to align')
+    parser.add_argument('--label', type=str, help='the input label to align')
     parser.add_argument('--paraformer',
                         action='store_true',
                         help='whether to use the best chinese model')
