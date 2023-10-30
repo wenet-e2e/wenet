@@ -40,7 +40,7 @@ class LFR(torch.nn.Module):
     def forward(self, input: torch.Tensor,
                 input_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         B, _, D = input.size()
-        n_lfr = torch.ceil(input_lens / self.n)
+        n_lfr = torch.ceil(input_lens / self.n).to(input_lens.dtype)
         # print(n_lfr)
         # right_padding_nums >= 0
         prepad_nums = input_lens + self.left_padding_nums
@@ -289,7 +289,6 @@ class SanmEncoder(BaseEncoder):
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
         masks_pad = make_non_pad_mask(xs_lens).unsqueeze(1)  # [B,1,T]
-        # masks = masks_pad * masks_pad.transpose(1, 2)  #[B,T,T]
         xs = xs * self.output_size()**0.5
         xs = self.embed(xs)
         for layer in self.encoders0:

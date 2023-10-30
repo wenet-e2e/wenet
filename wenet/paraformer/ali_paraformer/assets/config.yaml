@@ -44,3 +44,6 @@ cif_predictor_conf:
     tail_threshold: 0.45
     cnn_groups: 1
     residual: false
+
+model_conf:
+  ctc_weight: 0.0

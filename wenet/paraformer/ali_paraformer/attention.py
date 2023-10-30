@@ -137,9 +137,9 @@ class DummyMultiHeadSANM(MultiHeadedAttentionSANM):
         cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         mask_shfit_chunk: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-
+        if mask is not None:
+            query = query * mask.transpose(1, 2)
         inputs = query
-
         x = inputs.transpose(1, 2)
         x = self.pad_fn(x)
         # TODO(Mddct): cache here for future streaming

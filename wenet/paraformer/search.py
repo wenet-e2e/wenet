@@ -14,6 +14,8 @@ def paraformer_greedy_search(
     topk_prob, topk_index = decoder_out.topk(1, dim=2)
     topk_index = topk_index.view(batch_size, maxlen)  # (B, maxlen)
     results = []
+    topk_index = topk_index.cpu()
+    decoder_out_lens = decoder_out_lens.cpu()
     # TODO(Mddct): scores, times etc
     for (i, hyp) in enumerate(topk_index.tolist()):
         r = DecodeResult(hyp[:decoder_out_lens.numpy()[i]])
@@ -31,7 +33,8 @@ def paraformer_beam_search(decoder_out: torch.Tensor,
                                     beam_size=beam_size,
                                     eos=eos)
 
-    best_hyps = indices[:, 0, :]
+    best_hyps = indices[:, 0, :].cpu()
+    decoder_out_lens = decoder_out_lens.cpu()
     results = []
     # TODO(Mddct): scores, times etc
     for (i, hyp) in enumerate(best_hyps.tolist()):
