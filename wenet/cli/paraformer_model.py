@@ -19,7 +19,7 @@ class Paraformer:
         self.char_dict = {v: k for k, v in symbol_table.items()}
         self.eos = 2
 
-    def transcribe(self, audio_file: str):
+    def transcribe(self, audio_file: str, tokens_info: bool = False) -> dict:
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
         waveform = waveform.to(torch.float)
         feats = kaldi.fbank(waveform,
@@ -36,7 +36,6 @@ class Paraformer:
 
         res = paraformer_greedy_search(decoder_out, token_num)[0]
 
-        tokens_info = True
         result = {}
         result['confidence'] = res.confidence
         # # TODO(Mddct): deal with '@@' and 'eos'
@@ -56,3 +55,12 @@ class Paraformer:
 
         # result = ''.join(hyp)
         return result
+
+    def align(self, audio_file: str, label: str) -> dict:
+        raise NotImplementedError
+
+
+def load_model(language: str = None, model_dir: str = None) -> Paraformer:
+    if model_dir is None:
+        model_dir = Hub.get_model_by_lang(language)
+    return Paraformer(model_dir)
