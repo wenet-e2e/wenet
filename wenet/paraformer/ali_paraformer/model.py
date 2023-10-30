@@ -312,7 +312,7 @@ class _Decoders3(torch.nn.Module):
         return self.feed_forward(self.norm1(x))
 
 
-class SANMDecoderLayer(DecoderLayer):
+class SanmDecoderLayer(DecoderLayer):
 
     def __init__(self,
                  size: int,
@@ -403,7 +403,7 @@ class SanmDecoer(TransformerDecoder):
         del self.embed
         del self.decoders
         self.decoders = torch.nn.ModuleList([
-            SANMDecoderLayer(
+            SanmDecoderLayer(
                 encoder_output_size,
                 DummyMultiHeadSANM(attention_heads, encoder_output_size,
                                    encoder_output_size, dropout_rate,
@@ -493,7 +493,7 @@ class AliParaformer(torch.nn.Module):
         # decoder
         decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
                                          acoustic_embed, token_num)
-        # decoder_out = decoder_out.log_softmax(dim=-1)
+        decoder_out = decoder_out.log_softmax(dim=-1)
         return decoder_out, token_num
 
     def decode(self,

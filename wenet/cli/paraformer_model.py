@@ -34,9 +34,25 @@ class Paraformer:
         decoder_out, token_num = self.model.forward_paraformer(
             feats, feats_lens)
 
-        results = paraformer_greedy_search(decoder_out, token_num)
-        hyp = [self.char_dict[x] for x in results[0].tokens]
+        res = paraformer_greedy_search(decoder_out, token_num)[0]
 
-        # TODO(Mddct): deal with '@@' and 'eos'
-        result = ''.join(hyp)
+        tokens_info = True
+        result = {}
+        result['confidence'] = res.confidence
+        # # TODO(Mddct): deal with '@@' and 'eos'
+        result['rec'] = "".join([self.char_dict[x] for x in res.tokens])
+
+        if tokens_info:
+            tokens_info = []
+            for i, x in enumerate(res.tokens):
+                tokens_info.append({
+                    'token': self.char_dict[x],
+                    # TODO(Mddct): support times
+                    # 'start': 0,
+                    # 'end': 0,
+                    'confidence': res.tokens_confidence[i]
+                })
+            result['tokens'] = tokens_info
+
+        # result = ''.join(hyp)
         return result

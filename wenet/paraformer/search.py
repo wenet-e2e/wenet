@@ -1,3 +1,4 @@
+import math
 from typing import List, Tuple
 import torch
 
@@ -13,12 +14,22 @@ def paraformer_greedy_search(
     maxlen = decoder_out.size(1)
     topk_prob, topk_index = decoder_out.topk(1, dim=2)
     topk_index = topk_index.view(batch_size, maxlen)  # (B, maxlen)
+    topk_prob = topk_prob.view(batch_size, maxlen)
     results = []
-    topk_index = topk_index.cpu()
-    decoder_out_lens = decoder_out_lens.cpu()
-    # TODO(Mddct): scores, times etc
-    for (i, hyp) in enumerate(topk_index.tolist()):
-        r = DecodeResult(hyp[:decoder_out_lens.numpy()[i]])
+    topk_index = topk_index.cpu().tolist()
+    topk_prob = topk_prob.cpu().tolist()
+    decoder_out_lens = decoder_out_lens.cpu().numpy()
+    # TODO(Mddct) times
+    for (i, hyp) in enumerate(topk_index):
+        confidence = 0.0
+        tokens_confidence = []
+        lens = decoder_out_lens[i]
+        for logp in topk_prob[i][:lens]:
+            tokens_confidence.append(math.exp(logp))
+            confidence += logp
+        r = DecodeResult(hyp[:lens],
+                         tokens_confidence=tokens_confidence,
+                         confidence=math.exp(confidence / lens))
         results.append(r)
     return results
 
