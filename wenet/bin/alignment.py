@@ -30,7 +30,7 @@ import math
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
-from wenet.utils.ctc_utils import forced_align
+from wenet.utils.ctc_utils import force_align
 from wenet.utils.common import get_subsample
 from wenet.utils.init_model import init_model
 
@@ -244,7 +244,7 @@ if __name__ == '__main__':
             # print(ctc_probs.size(1))
             ctc_probs = ctc_probs.squeeze(0)
             target = target.squeeze(0)
-            alignment = forced_align(ctc_probs, target)
+            alignment = force_align(ctc_probs, target)
             fout.write('{} {}\n'.format(key[0], alignment))
 
             if args.gen_praat:

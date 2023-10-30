@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
 import torch
+
 
 def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
     new_hyp: List[int] = []
@@ -43,6 +44,51 @@ def replace_duplicates_with_blank(hyp: List[int]) -> List[int]:
     return new_hyp
 
 
+def gen_ctc_peak_time(hyp: List[int]) -> List[int]:
+    times = []
+    cur = 0
+    while cur < len(hyp):
+        if hyp[cur] != 0:
+            times.append(cur)
+        prev = cur
+        while cur < len(hyp) and hyp[cur] == hyp[prev]:
+            cur += 1
+    return times
+
+
+def gen_timestamps_from_peak(
+    peaks: List[int],
+    max_duration: float,
+    frame_rate: float = 0.04,
+    max_token_duration: float = 1.0,
+) -> List[Tuple[float, float]]:
+    """
+    Args:
+        peaks: ctc peaks time stamp
+        max_duration: max_duration of the sentence
+        frame_rate: frame rate of every time stamp, in seconds
+        max_token_duration: max duration of the token, in seconds
+    Returns:
+        list(start, end) of each token
+    """
+    times = []
+    half_max = max_token_duration / 2
+    for i in range(len(peaks)):
+        if i == 0:
+            start = max(0, peaks[0] * frame_rate - half_max)
+        else:
+            start = max((peaks[i - 1] + peaks[i]) / 2 * frame_rate,
+                        peaks[i] * frame_rate - half_max)
+
+        if i == len(peaks) - 1:
+            end = min(max_duration, peaks[-1] * frame_rate + half_max)
+        else:
+            end = min((peaks[i] + peaks[i + 1]) / 2 * frame_rate,
+                      peaks[i] * frame_rate + half_max)
+        times.append((start, end))
+    return times
+
+
 def insert_blank(label, blank_id=0):
     """Insert blank token between every two label token."""
     label = np.expand_dims(label, 1)
@@ -52,9 +98,8 @@ def insert_blank(label, blank_id=0):
     label = np.append(label, label[0])
     return label
 
-def forced_align(ctc_probs: torch.Tensor,
-                 y: torch.Tensor,
-                 blank_id=0) -> list:
+
+def force_align(ctc_probs: torch.Tensor, y: torch.Tensor, blank_id=0) -> list:
     """ctc forced alignment.
 
     Args:
@@ -70,9 +115,8 @@ def forced_align(ctc_probs: torch.Tensor,
 
     log_alpha = torch.zeros((ctc_probs.size(0), len(y_insert_blank)))
     log_alpha = log_alpha - float('inf')  # log of zero
-    state_path = (torch.zeros(
-        (ctc_probs.size(0), len(y_insert_blank)), dtype=torch.int16) - 1
-    )  # state path
+    state_path = torch.zeros((ctc_probs.size(0), len(y_insert_blank)),
+                             dtype=torch.int16) - 1  # state path
 
     # init start state
     log_alpha[0, 0] = ctc_probs[0][y_insert_blank[0]]
@@ -92,7 +136,8 @@ def forced_align(ctc_probs: torch.Tensor,
                     log_alpha[t - 1, s - 2],
                 ])
                 prev_state = [s, s - 1, s - 2]
-            log_alpha[t, s] = torch.max(candidates) + ctc_probs[t][y_insert_blank[s]]
+            log_alpha[
+                t, s] = torch.max(candidates) + ctc_probs[t][y_insert_blank[s]]
             state_path[t, s] = prev_state[torch.argmax(candidates)]
 
     state_seq = -1 * torch.ones((ctc_probs.size(0), 1), dtype=torch.int16)

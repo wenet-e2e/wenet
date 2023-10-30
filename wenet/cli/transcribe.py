@@ -14,14 +14,14 @@
 
 import argparse
 
-from wenet.cli.model import Model
-from wenet.cli.paraformer_model import Paraformer
+from wenet.cli.model import load_model
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('audio_file', help='audio file to transcribe')
-    parser.add_argument('--language',
+    parser.add_argument('-l',
+                        '--language',
                         choices=[
                             'chinese',
                             'english',
@@ -29,19 +29,30 @@ def get_args():
                         ],
                         default='chinese',
                         help='language type')
-    parser.add_argument('--model_dir', default='', help='wenet jit model dirs')
-
+    parser.add_argument('-m',
+                        '--model_dir',
+                        default=None,
+                        help='specify your own model dir')
+    parser.add_argument('-t',
+                        '--show_tokens_info',
+                        action='store_true',
+                        help='whether to output token(word) level information'
+                        ', such times/confidence')
+    parser.add_argument('--align',
+                        action='store_true',
+                        help='force align the input audio and transcript')
+    parser.add_argument('--label', type=str, help='the input label to align')
     args = parser.parse_args()
     return args
 
 
 def main():
     args = get_args()
-    if args.language == 'chinese-paraformer':
-        model = Paraformer(args.model_dir)
+    model = load_model(args.language, args.model_dir)
+    if args.align:
+        result = model.align(args.audio_file, args.label)
     else:
-        model = Model(args.language)
-    result = model.transcribe(args.audio_file)
+        result = model.transcribe(args.audio_file, args.show_tokens_info)
     print(result)
 
 
