@@ -14,6 +14,7 @@
 
 import argparse
 
+from wenet.cli.paraformer_model import load_model as load_paraformer
 from wenet.cli.model import load_model
 
 
@@ -41,13 +42,20 @@ def get_args():
                         action='store_true',
                         help='force align the input audio and transcript')
     parser.add_argument('--label', type=str, help='the input label to align')
+    parser.add_argument('--paraformer',
+                        action='store_true',
+                        help='whether to use the best chinese model')
     args = parser.parse_args()
     return args
 
 
 def main():
     args = get_args()
-    model = load_model(args.language, args.model_dir)
+
+    if args.paraformer:
+        model = load_paraformer(args.language, args.model_dir)
+    else:
+        model = load_model(args.language, args.model_dir)
     if args.align:
         result = model.align(args.audio_file, args.label)
     else:

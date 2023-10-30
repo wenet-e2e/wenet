@@ -17,23 +17,38 @@ from typing import Optional
 
 import torch
 from torch import nn
+from torchaudio.compliance.kaldi import Tuple
 from wenet.utils.mask import make_pad_mask
 
 
 class Predictor(nn.Module):
-    def __init__(self, idim, l_order, r_order, threshold=1.0, dropout=0.1,
-                 smooth_factor=1.0, noise_threshold=0, tail_threshold=0.45):
+
+    def __init__(self,
+                 idim,
+                 l_order,
+                 r_order,
+                 threshold=1.0,
+                 dropout=0.1,
+                 smooth_factor=1.0,
+                 noise_threshold=0,
+                 tail_threshold=0.45,
+                 residual=True,
+                 cnn_groups=0):
         super().__init__()
 
         self.pad = nn.ConstantPad1d((l_order, r_order), 0.0)
-        self.cif_conv1d = nn.Conv1d(idim, idim, l_order + r_order + 1,
-                                    groups=idim)
+        self.cif_conv1d = nn.Conv1d(
+            idim,
+            idim,
+            l_order + r_order + 1,
+            groups=idim if cnn_groups == 0 else cnn_groups)
         self.cif_output = nn.Linear(idim, 1)
         self.dropout = torch.nn.Dropout(p=dropout)
         self.threshold = threshold
         self.smooth_factor = smooth_factor
         self.noise_threshold = noise_threshold
         self.tail_threshold = tail_threshold
+        self.residual = residual
 
     def forward(self,
                 hidden,
@@ -46,7 +61,10 @@ class Predictor(nn.Module):
         context = h.transpose(1, 2)
         queries = self.pad(context)
         memory = self.cif_conv1d(queries)
-        output = memory + context
+        if self.residual:
+            output = memory + context
+        else:
+            output = memory
         output = self.dropout(output)
         output = output.transpose(1, 2)
         output = torch.relu(output)
@@ -55,7 +73,7 @@ class Predictor(nn.Module):
         alphas = torch.nn.functional.relu(alphas * self.smooth_factor -
                                           self.noise_threshold)
         if mask is not None:
-            mask = mask.transpose(-1, -2).float()
+            mask = mask.transpose(-1, -2)
             alphas = alphas * mask
         if mask_chunk_predictor is not None:
             alphas = alphas * mask_chunk_predictor
@@ -72,10 +90,10 @@ class Predictor(nn.Module):
             alphas *= (target_length / token_num)[:, None] \
                 .repeat(1, alphas.size(1))
         elif self.tail_threshold > 0.0:
-            hidden, alphas, token_num = self.tail_process_fn(hidden, alphas,
+            hidden, alphas, token_num = self.tail_process_fn(hidden,
+                                                             alphas,
                                                              token_num,
                                                              mask=mask)
-
         acoustic_embeds, cif_peak = cif(hidden, alphas, self.threshold)
 
         if target_length is None and self.tail_threshold > 0.0:
@@ -84,26 +102,32 @@ class Predictor(nn.Module):
 
         return acoustic_embeds, token_num, alphas, cif_peak
 
-    def tail_process_fn(self, hidden, alphas,
-                        token_num: Optional[torch.Tensor] = None,
-                        mask: Optional[torch.Tensor] = None):
-        b, t, d = hidden.size()
-        tail_threshold = self.tail_threshold
+    def tail_process_fn(
+        self,
+        hidden: torch.Tensor,
+        alphas: torch.Tensor,
+        token_num: Optional[torch.Tensor] = None,
+        mask: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        b, _, d = hidden.size()
         if mask is not None:
-            zeros_t = torch.zeros((b, 1), dtype=torch.float32,
+            zeros_t = torch.zeros((b, 1),
+                                  dtype=torch.float32,
                                   device=alphas.device)
+            mask = mask.to(zeros_t.dtype)
             ones_t = torch.ones_like(zeros_t)
             mask_1 = torch.cat([mask, zeros_t], dim=1)
             mask_2 = torch.cat([ones_t, mask], dim=1)
             mask = mask_2 - mask_1
-            tail_threshold = mask * tail_threshold
+            tail_threshold = mask * self.tail_threshold
             alphas = torch.cat([alphas, zeros_t], dim=1)
             alphas = torch.add(alphas, tail_threshold)
         else:
-            tail_threshold_tensor = torch.tensor([tail_threshold],
+            tail_threshold_tensor = torch.tensor([self.tail_threshold],
                                                  dtype=alphas.dtype).to(
-                alphas.device)
-            tail_threshold_tensor = torch.reshape(tail_threshold_tensor, (1, 1))
+                                                     alphas.device)
+            tail_threshold_tensor = torch.reshape(tail_threshold_tensor,
+                                                  (1, 1))
             alphas = torch.cat([alphas, tail_threshold_tensor], dim=1)
         zeros = torch.zeros((b, 1, d), dtype=hidden.dtype).to(hidden.device)
         hidden = torch.cat([hidden, zeros], dim=1)
@@ -132,13 +156,15 @@ class Predictor(nn.Module):
 
         index = torch.ones([batch_size, max_token_num], dtype=int_type)
         index = torch.cumsum(index, dim=1)
-        index = index[:, :, None].repeat(1, 1, maximum_length).to(
-            alphas_cumsum.device)
+        index = index[:, :,
+                      None].repeat(1, 1,
+                                   maximum_length).to(alphas_cumsum.device)
 
-        index_div = torch.floor(torch.true_divide(alphas_cumsum, index)).type(
-            int_type)
+        index_div = torch.floor(torch.true_divide(alphas_cumsum,
+                                                  index)).type(int_type)
         index_div_bool_zeros = index_div.eq(0)
-        index_div_bool_zeros_count = torch.sum(index_div_bool_zeros, dim=-1) + 1
+        index_div_bool_zeros_count = torch.sum(index_div_bool_zeros,
+                                               dim=-1) + 1
         index_div_bool_zeros_count = torch.clamp(index_div_bool_zeros_count, 0,
                                                  encoder_sequence_length.max())
         token_num_mask = (~make_pad_mask(token_num, max_len=max_token_num)).to(
@@ -210,19 +236,17 @@ def cif(hidden: torch.Tensor, alphas: torch.Tensor, threshold: float):
         list_fires.append(integrate)
 
         fire_place = integrate >= threshold
-        integrate = torch.where(fire_place, integrate -
-                                torch.ones([batch_size], device=hidden.device),
-                                integrate)
-        cur = torch.where(fire_place,
-                          distribution_completion,
-                          alpha)
+        integrate = torch.where(
+            fire_place,
+            integrate - torch.ones([batch_size], device=hidden.device),
+            integrate)
+        cur = torch.where(fire_place, distribution_completion, alpha)
         remainds = alpha - cur
 
         frame += cur[:, None] * hidden[:, t, :]
         list_frames.append(frame)
         frame = torch.where(fire_place[:, None].repeat(1, hidden_size),
-                            remainds[:, None] * hidden[:, t, :],
-                            frame)
+                            remainds[:, None] * hidden[:, t, :], frame)
 
     fires = torch.stack(list_fires, 1)
     frames = torch.stack(list_frames, 1)
