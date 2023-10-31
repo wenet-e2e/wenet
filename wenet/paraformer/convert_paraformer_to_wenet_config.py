@@ -98,13 +98,9 @@ def get_args():
     parser.add_argument('--paraformer_config',
                         required=True,
                         help='ali released Paraformer model\'s config')
-    # parser.add_argument('--paraformer_model_path',
-    #                     required=True,
-    #                     help='ali released Paraformer model\'s path')
     parser.add_argument('--paraformer_cmvn',
                         required=True,
                         help='ali released Paraformer model\'s cmvn')
-    # parser.add_argument('--dict', required=True, help='dict file')
     parser.add_argument(
         '--output_dir',
         default='.',
