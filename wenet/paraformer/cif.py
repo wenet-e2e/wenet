@@ -21,7 +21,7 @@ from torchaudio.compliance.kaldi import Tuple
 from wenet.utils.mask import make_pad_mask
 
 
-class Predictor(nn.Module):
+class Cif(nn.Module):
 
     def __init__(self,
                  idim,
