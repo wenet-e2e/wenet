@@ -2,14 +2,11 @@
 """
 
 import math
-from typing import Dict, List, Optional, Tuple
+from typing import Optional, Tuple
 import torch
-from wenet.cif.predictor import Predictor
 from wenet.paraformer.attention import (DummyMultiHeadSANM,
                                         MultiHeadAttentionCross,
                                         MultiHeadedAttentionSANM)
-from wenet.paraformer.search import paraformer_beam_search, paraformer_greedy_search
-from wenet.transformer.search import DecodeResult
 from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.decoder_layer import DecoderLayer

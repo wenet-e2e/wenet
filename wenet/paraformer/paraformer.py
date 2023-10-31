@@ -65,7 +65,7 @@ class Paraformer(torch.nn.Module):
             text: (Batch, Length)
             text_lengths: (Batch,)
         """
-        raise NotImplementedError
+        raise NotImplementedError("Training is currently not supported")
 
     def calc_predictor(self, encoder_out, encoder_out_lens):
         encoder_mask = (~make_pad_mask(

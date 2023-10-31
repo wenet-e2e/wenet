@@ -28,7 +28,6 @@ from wenet.branchformer.encoder import BranchformerEncoder
 from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
-from wenet.cif.predictor import Predictor
 from wenet.utils.cmvn import load_cmvn
 
 
