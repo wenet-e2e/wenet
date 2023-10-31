@@ -5,14 +5,8 @@ import json
 import math
 import os
 from typing import List, Tuple
-from numpy import mat, mean
 
 import yaml
-
-# def convert_paraformer_to_wenet_config(paraformer_config_path,
-#                                        paraformer_model_path
-#                                        wenet_path):
-#     pass
 
 
 def _load_paraformer_cmvn(cmvn_file) -> Tuple[List, List]:
@@ -114,8 +108,8 @@ def get_args():
     parser.add_argument(
         '--output_dir',
         default='.',
-        help=
-        'output file in wenet\'s style: global_cmvn, units.txt, train.yaml ')
+        help='output file in wenet\'s style: global_cmvn, units.txt, train.yaml'
+    )
     args = parser.parse_args()
     return args
 

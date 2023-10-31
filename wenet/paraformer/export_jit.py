@@ -2,8 +2,6 @@
 """
 
 import argparse
-import json
-import numpy as np
 import torch
 import yaml
 from wenet.paraformer.cif import Cif
