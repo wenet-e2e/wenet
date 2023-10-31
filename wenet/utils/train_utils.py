@@ -389,8 +389,7 @@ def wenet_join(group_join, info_dict):
     rank = int(os.environ.get('RANK', 0))
     train_engine = info_dict.get('train_engine', "torch_ddp")
 
-    # TODO(xcsong): ignore torch_ddp?
-    if info_dict["batch_idx"] == 0:
+    if info_dict["batch_idx"] == 0 or train_engine == "torch_ddp":
         # NOTE(xcsong): skip first batch because its processing time includes
         #   dataloader initialization time, which may exceed 30 seconds
         return False
@@ -457,13 +456,14 @@ def batch_backward(model, scaler, info_dict):
         # NOTE(xcsong): `model.backward(loss)` is equivalent to
         #               `scale_loss_wrt_accum_grad + loss.backward()`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
-        model.backward(loss)
+        scaled_loss = model.backward(loss)
     elif train_engine == "torch_ddp":
-        loss = loss / accum_grad
+        scaled_loss = loss / accum_grad
         if use_amp:
-            scaler.scale(loss).backward()
+            scaler.scale(scaled_loss).backward()
         else:
-            loss.backward()
+            scaled_loss.backward()
+    info_dict['loss_dict']['loss'] = scaled_loss
 
     return info_dict
 
