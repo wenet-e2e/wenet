@@ -243,6 +243,8 @@ def init_dataset_and_dataloader(args, configs):
                          non_lang_syms,
                          partition=False)
 
+    # NOTE(xcsong): Why we prefer persistent_workers=True ?
+    #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110
     train_data_loader = DataLoader(train_dataset,
                                    batch_size=None,
                                    pin_memory=args.pin_memory,
@@ -494,6 +496,7 @@ def update_parameter_and_lr(
         info_dict["is_gradient_accumulation_boundary"] = \
             model.is_gradient_accumulation_boundary()
         model.step()
+        grad_norm = model.get_global_grad_norm()
     elif (batch_idx + 1) % accum_grad == 0:
         # Use mixed precision training
         if use_amp:
@@ -516,6 +519,7 @@ def update_parameter_and_lr(
         scheduler.step()
 
     info_dict["lr"] = optimizer.param_groups[0]['lr']
+    info_dict["grad_norm"] = grad_norm
 
     return info_dict
 
@@ -536,13 +540,11 @@ def log_per_step(writer, info_dict):
 
     rank = int(os.environ.get('RANK', 0))
 
-    if tag == "TRAIN":
-        if train_engine == "deepspeed" and is_gradient_accumulation_boundary:
-            if rank == 0 and writer is not None:
-                writer.add_scalar('train_loss', loss_dict['loss'].item(), step + 1)
-        elif train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0:
-            if rank == 0 and writer is not None:
-                writer.add_scalar('train_loss', loss_dict['loss'].item(), step + 1)
+    if tag == "TRAIN" and rank == 0 and writer is not None:
+        if (train_engine == "deepspeed" and is_gradient_accumulation_boundary) or \
+           (train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0):
+            writer.add_scalar('train/train_loss', loss_dict['loss'].item(), step + 1)
+            writer.add_scalar('train/grad_norm', info_dict['grad_norm'], step + 1)
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
@@ -551,7 +553,8 @@ def log_per_step(writer, info_dict):
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value.item())
         if tag == "TRAIN":
-            log_str += 'lr {:.8f} rank {}'.format(lr, rank)
+            log_str += 'lr {:.8f} grad_norm {:.6f} rank {}'.format(
+                lr, info_dict['grad_norm'], rank)
         elif tag == "CV":
             log_str += 'history loss {:.6f} rank {}'.format(history_loss, rank)
         logging.debug(log_str)
