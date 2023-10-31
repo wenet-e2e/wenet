@@ -5,8 +5,8 @@ import argparse
 import torch
 import yaml
 from wenet.cif.predictor import Predictor
-from wenet.paraformer.ali_paraformer.model import (AliParaformer, SanmDecoer,
-                                                   SanmEncoder)
+from wenet.paraformer.layers import (SanmDecoer, SanmEncoder)
+from wenet.paraformer.paraformer import Paraformer
 from wenet.transformer.cmvn import GlobalCMVN
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.cmvn import load_cmvn
@@ -41,7 +41,7 @@ def init_model(configs):
                                    encoder_output_size=encoder.output_size(),
                                    **configs['decoder_conf'])
     predictor = Predictor(**configs['cif_predictor_conf'])
-    model = AliParaformer(
+    model = Paraformer(
         encoder=encoder,
         decoder=decoder,
         predictor=predictor,

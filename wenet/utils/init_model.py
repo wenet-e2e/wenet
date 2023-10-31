@@ -28,7 +28,6 @@ from wenet.branchformer.encoder import BranchformerEncoder
 from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
-from wenet.paraformer.paraformer import Paraformer
 from wenet.cif.predictor import Predictor
 from wenet.utils.cmvn import load_cmvn
 
@@ -114,14 +113,6 @@ def init_model(configs):
                            attention_decoder=decoder,
                            joint=joint,
                            ctc=ctc,
-                           **configs['model_conf'])
-    elif 'paraformer' in configs:
-        predictor = Predictor(**configs['cif_predictor_conf'])
-        model = Paraformer(vocab_size=vocab_size,
-                           encoder=encoder,
-                           decoder=decoder,
-                           ctc=ctc,
-                           predictor=predictor,
                            **configs['model_conf'])
     else:
         print(configs)

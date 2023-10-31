@@ -5,10 +5,9 @@ import math
 from typing import Dict, List, Optional, Tuple
 import torch
 from wenet.cif.predictor import Predictor
-from wenet.paraformer.ali_paraformer.attention import (DummyMultiHeadSANM,
-                                                       MultiHeadAttentionCross,
-                                                       MultiHeadedAttentionSANM
-                                                       )
+from wenet.paraformer.attention import (DummyMultiHeadSANM,
+                                        MultiHeadAttentionCross,
+                                        MultiHeadedAttentionSANM)
 from wenet.paraformer.search import paraformer_beam_search, paraformer_greedy_search
 from wenet.transformer.search import DecodeResult
 from wenet.transformer.encoder import BaseEncoder
@@ -455,77 +454,3 @@ class SanmDecoer(TransformerDecoder):
         if self.output_layer is not None:
             x = self.output_layer(x)
         return x, torch.tensor(0.0), ys_pad_lens
-
-
-class AliParaformer(torch.nn.Module):
-
-    def __init__(self, encoder: SanmEncoder, decoder: SanmDecoer,
-                 predictor: Predictor):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-        self.predictor = predictor
-        self.lfr = LFR()
-        self.sos = 1
-        self.eos = 2
-
-    @torch.jit.ignore(drop=True)
-    def forward(
-            self, speech: torch.Tensor, speech_lengths: torch.Tensor,
-            text: torch.Tensor,
-            text_lengths: torch.Tensor) -> Dict[str, Optional[torch.Tensor]]:
-        raise NotImplementedError
-
-    @torch.jit.export
-    def forward_paraformer(
-        self,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        features, features_lens = self.lfr(speech, speech_lengths)
-        features_lens = features_lens.to(speech_lengths.dtype)
-        # encoder
-        encoder_out, encoder_out_mask = self.encoder(features, features_lens)
-
-        # cif predictor
-        acoustic_embed, token_num, _, _ = self.predictor(encoder_out,
-                                                         mask=encoder_out_mask)
-        token_num = token_num.floor().to(speech_lengths.dtype)
-
-        # decoder
-        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
-                                         acoustic_embed, token_num)
-        decoder_out = decoder_out.log_softmax(dim=-1)
-        return decoder_out, token_num
-
-    def decode(self,
-               methods: List[str],
-               speech: torch.Tensor,
-               speech_lengths: torch.Tensor,
-               beam_size: int,
-               decoding_chunk_size: int = -1,
-               num_decoding_left_chunks: int = -1,
-               ctc_weight: float = 0,
-               simulate_streaming: bool = False,
-               reverse_weight: float = 0) -> Dict[str, List[DecodeResult]]:
-        decoder_out, decoder_out_lens = self.forward_paraformer(
-            speech, speech_lengths)
-
-        results = {}
-        if 'paraformer_greedy_search' in methods:
-            assert decoder_out is not None
-            assert decoder_out_lens is not None
-            paraformer_greedy_result = paraformer_greedy_search(
-                decoder_out, decoder_out_lens)
-            results['paraformer_greedy_search'] = paraformer_greedy_result
-        if 'paraformer_beam_search' in methods:
-            assert decoder_out is not None
-            assert decoder_out_lens is not None
-            paraformer_beam_result = paraformer_beam_search(
-                decoder_out,
-                decoder_out_lens,
-                beam_size=beam_size,
-                eos=self.eos)
-            results['paraformer_beam_search'] = paraformer_beam_result
-
-        return results
