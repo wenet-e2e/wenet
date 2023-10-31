@@ -57,7 +57,7 @@ class Paraformer:
         return result
 
     def align(self, audio_file: str, label: str) -> dict:
-        raise NotImplementedError
+        raise NotImplementedError("Align is currently not supported")
 
 
 def load_model(language: str = None, model_dir: str = None) -> Paraformer:
