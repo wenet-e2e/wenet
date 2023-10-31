@@ -20,8 +20,8 @@
 from typing import Dict, List, Optional, Tuple
 
 import torch
+from wenet.paraformer.cif import Cif
 
-from wenet.cif.predictor import Predictor
 from wenet.paraformer.layers import SanmDecoer, SanmEncoder
 from wenet.paraformer.layers import LFR
 from wenet.paraformer.search import (paraformer_beam_search,
@@ -38,7 +38,7 @@ class Paraformer(torch.nn.Module):
     """
 
     def __init__(self, encoder: SanmEncoder, decoder: SanmDecoer,
-                 predictor: Predictor):
+                 predictor: Cif):
 
         super().__init__()
         self.lfr = LFR()
