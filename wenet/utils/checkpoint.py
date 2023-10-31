@@ -24,12 +24,8 @@ import datetime
 
 
 def load_checkpoint(model: torch.nn.Module, path: str) -> dict:
-    if torch.cuda.is_available():
-        logging.info('Checkpoint: loading from checkpoint %s for GPU' % path)
-        checkpoint = torch.load(path)
-    else:
-        logging.info('Checkpoint: loading from checkpoint %s for CPU' % path)
-        checkpoint = torch.load(path, map_location='cpu')
+    logging.info('Checkpoint: loading from checkpoint %s' % path)
+    checkpoint = torch.load(path, map_location='cpu')
     model.load_state_dict(checkpoint, strict=False)
     info_path = re.sub('.pt$', '.yaml', path)
     configs = {}
