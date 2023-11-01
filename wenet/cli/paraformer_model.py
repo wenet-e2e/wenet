@@ -5,11 +5,12 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
 from wenet.cli.hub import Hub
-from wenet.paraformer.search import paraformer_greedy_search
+from wenet.paraformer.search import paraformer_beautify_result, paraformer_greedy_search
 from wenet.utils.file_utils import read_symbol_table
 
 
 class Paraformer:
+
     def __init__(self, model_dir: str) -> None:
 
         model_path = os.path.join(model_dir, 'final.zip')
@@ -39,7 +40,8 @@ class Paraformer:
         result = {}
         result['confidence'] = res.confidence
         # # TODO(Mddct): deal with '@@' and 'eos'
-        result['rec'] = "".join([self.char_dict[x] for x in res.tokens])
+        result['rec'] = paraformer_beautify_result(
+            [self.char_dict[x] for x in res.tokens])
 
         if tokens_info:
             tokens_info = []
