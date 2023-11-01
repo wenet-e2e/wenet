@@ -4,12 +4,12 @@ import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
+from wenet.cli.hub import Hub
 from wenet.paraformer.search import paraformer_greedy_search
 from wenet.utils.file_utils import read_symbol_table
 
 
 class Paraformer:
-
     def __init__(self, model_dir: str) -> None:
 
         model_path = os.path.join(model_dir, 'final.zip')
@@ -60,7 +60,7 @@ class Paraformer:
         raise NotImplementedError("Align is currently not supported")
 
 
-def load_model(language: str = None, model_dir: str = None) -> Paraformer:
+def load_model(model_dir: str = None) -> Paraformer:
     if model_dir is None:
-        model_dir = Hub.get_model_by_lang(language)
+        model_dir = Hub.get_model_by_lang('paraformer')
     return Paraformer(model_dir)

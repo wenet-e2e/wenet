@@ -53,7 +53,7 @@ def main():
     args = get_args()
 
     if args.paraformer:
-        model = load_paraformer(args.language, args.model_dir)
+        model = load_paraformer(args.model_dir)
     else:
         model = load_model(args.language, args.model_dir)
     if args.align:
