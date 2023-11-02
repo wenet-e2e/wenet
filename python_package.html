@@ -47,6 +47,7 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Python Package</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#install">Install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#development-install">Development Install</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#command-line-usage">Command line Usage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#python-programming-usage">Python Programming Usage</a></li>
 </ul>
@@ -88,6 +89,14 @@
 </pre></div>
 </div>
 </section>
+<section id="development-install">
+<h2>Development Install<a class="headerlink" href="#development-install" title="Permalink to this heading"></a></h2>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/wenet-e2e/wenet.git
+<span class="nb">cd</span><span class="w"> </span>wenet
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
 <section id="command-line-usage">
 <h2>Command line Usage<a class="headerlink" href="#command-line-usage" title="Permalink to this heading"></a></h2>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>wenet<span class="w"> </span>--language<span class="w"> </span>chinese<span class="w"> </span>audio.wav
@@ -97,6 +106,7 @@
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">-l</span></code> or <code class="docutils literal notranslate"><span class="pre">--language</span></code>: chinese/english are supported now.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">-m</span></code> or <code class="docutils literal notranslate"><span class="pre">--model_dir</span></code>: your own model dir</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">-g</span></code> or <code class="docutils literal notranslate"><span class="pre">--gpu</span></code>: the device id of gpu, default value -1 represents for cpu.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">-t</span></code> or <code class="docutils literal notranslate"><span class="pre">--show_tokens_info</span></code>: show the token level information such as timestamp, confidence, etc.</p></li>
 </ul>
 </section>
