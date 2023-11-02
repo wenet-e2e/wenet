@@ -122,19 +122,16 @@ def main():
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {} rank {}'.format(epoch, lr, rank))
 
-        device = model.local_rank if args.deepspeed else device
-
         # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
         group_join = dist.new_group(backend="gloo",
                                     timeout=datetime.timedelta(seconds=30))
 
         dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
-        executor.train(model, optimizer, scheduler, train_data_loader, device,
+        executor.train(model, optimizer, scheduler, train_data_loader,
                        writer, configs, scaler, group_join)
 
         dist.barrier()  # NOTE(xcsong): Ensure all ranks start CV at the same time.
-        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, device,
-                                                configs)
+        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)
         cv_loss = total_loss / num_seen_utts
 
         logging.info('Epoch {} CV info cv_loss {} rank {}'.format(epoch, cv_loss, rank))

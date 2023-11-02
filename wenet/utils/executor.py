@@ -29,7 +29,7 @@ class Executor:
     def __init__(self):
         self.step = 0
 
-    def train(self, model, optimizer, scheduler, data_loader, device, writer,
+    def train(self, model, optimizer, scheduler, data_loader, writer,
               configs, scaler, group_join):
         ''' Train one epoch
         '''
@@ -48,21 +48,13 @@ class Executor:
             model_context = nullcontext
 
         with model_context():
-            for batch_idx, batch in enumerate(data_loader):
+            for batch_idx, batch_dict in enumerate(data_loader):
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
                 if wenet_join(group_join, info_dict):
                     break
 
-                key, feats, target, feats_lengths, target_lengths = batch
-
-                batch_dict = {}
-                batch_dict["feats"] = feats.to(device)
-                batch_dict["target"] = target.to(device)
-                batch_dict["feats_lengths"] = feats_lengths.to(device)
-                batch_dict["target_lengths"] = target_lengths.to(device)
-
-                if target_lengths.size(0) == 0:
+                if batch_dict["target_lengths"].size(0) == 0:
                     continue
 
                 context = None
@@ -88,7 +80,7 @@ class Executor:
                 log_per_step(writer, info_dict)
                 self.step += 1
 
-    def cv(self, model, data_loader, device, configs):
+    def cv(self, model, data_loader, configs):
         ''' Cross validation on
         '''
         model.eval()
@@ -96,18 +88,11 @@ class Executor:
         info_dict["tag"] = "CV"
         num_seen_utts, total_loss = 1, 0.0  # in order to avoid division by 0
         with torch.no_grad():
-            for batch_idx, batch in enumerate(data_loader):
+            for batch_idx, batch_dict in enumerate(data_loader):
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
-                key, feats, target, feats_lengths, target_lengths = batch
 
-                batch_dict = {}
-                batch_dict["feats"] = feats.to(device)
-                batch_dict["target"] = target.to(device)
-                batch_dict["feats_lengths"] = feats_lengths.to(device)
-                batch_dict["target_lengths"] = target_lengths.to(device)
-
-                num_utts = target_lengths.size(0)
+                num_utts = batch_dict["target_lengths"].size(0)
                 if num_utts == 0:
                     continue
 
