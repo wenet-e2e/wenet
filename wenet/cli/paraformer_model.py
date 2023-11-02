@@ -49,7 +49,7 @@ class Paraformer:
         result = {}
         result['confidence'] = res.confidence
         # # TODO(Mddct): deal with '@@' and 'eos'
-        result['rec'] = paraformer_beautify_result(
+        result['text'] = paraformer_beautify_result(
             [self.char_dict[x] for x in res.tokens])
 
         if tokens_info:
