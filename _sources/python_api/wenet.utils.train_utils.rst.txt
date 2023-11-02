@@ -1,0 +1,7 @@
+wenet.utils.train\_utils module
+===============================
+
+.. automodule:: wenet.utils.train_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
