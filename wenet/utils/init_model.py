@@ -28,6 +28,7 @@ from wenet.branchformer.encoder import BranchformerEncoder
 from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
+from wenet.ctl_model.asr_model_ctl import CTLModel
 from wenet.utils.cmvn import load_cmvn
 
 
@@ -46,6 +47,11 @@ def init_model(configs):
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')
 
+    if 'ctlmodel' in configs:
+        from wenet.ctl_model.encoder import ConformerEncoder, TransformerEncoder
+    else:
+        from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
+    
     if encoder_type == 'conformer':
         encoder = ConformerEncoder(input_dim,
                                    global_cmvn=global_cmvn,
@@ -113,6 +119,12 @@ def init_model(configs):
                            joint=joint,
                            ctc=ctc,
                            **configs['model_conf'])
+    elif 'ctlmodel' in configs:
+        model = CTLModel(vocab_size=vocab_size,
+                         encoder=encoder,
+                         decoder=decoder,
+                         ctc=ctc,
+                         **configs['model_conf'])
     else:
         print(configs)
         if configs.get('lfmmi_dir', '') != '':

@@ -256,7 +256,7 @@ def main():
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements
-    if rank == 0:
+    if rank == 0 and 'ctlmodel' not in configs:
         script_model = torch.jit.script(model)
         script_model.save(os.path.join(args.model_dir, 'init.zip'))
     executor = Executor()
