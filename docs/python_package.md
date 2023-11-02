@@ -7,6 +7,15 @@
 pip install git+https://github.com/wenet-e2e/wenet.git
 ```
 
+## Development Install
+
+``` sh
+git clone https://github.com/wenet-e2e/wenet.git
+cd wenet
+pip install -e .
+```
+
+
 ## Command line Usage
 
 ``` sh
@@ -17,6 +26,7 @@ You can specify the following parameters.
 
 * `-l` or `--language`: chinese/english are supported now.
 * `-m` or `--model_dir`: your own model dir
+* `-g` or `--device`: a torch device type
 * `-t` or `--show_tokens_info`: show the token level information such as timestamp, confidence, etc.
 
 

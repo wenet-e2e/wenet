@@ -27,16 +27,19 @@ from wenet.transformer.search import (attention_rescoring,
 
 
 class Model:
-    def __init__(self, model_dir: str):
+    def __init__(self, model_dir: str, device: str = 'cpu'):
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
+        self.device = torch.device(device)
+        self.model = self.model.to(self.device)
         self.symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
 
     def compute_feats(self, audio_file: str) -> torch.Tensor:
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
         waveform = waveform.to(torch.float)
+        waveform = waveform.to(self.device)
         feats = kaldi.fbank(waveform,
                             num_mel_bins=80,
                             frame_length=25,
@@ -52,7 +55,10 @@ class Model:
                 label: str = None) -> dict:
         feats = self.compute_feats(audio_file)
         encoder_out, _, _ = self.model.forward_encoder_chunk(feats, 0, -1)
-        encoder_lens = torch.tensor([encoder_out.size(1)], dtype=torch.long)
+        encoder_lens = torch.tensor([
+            encoder_out.size(1)],
+            dtype=torch.long,
+            device=encoder_out.device)
         ctc_probs = self.model.ctc_activation(encoder_out)
         if label is None:
             ctc_prefix_results = ctc_prefix_beam_search(
@@ -117,7 +123,9 @@ class Model:
         return self._decode(audio_file, True, label)
 
 
-def load_model(language: str = None, model_dir: str = None) -> Model:
+def load_model(language: str = None,
+               model_dir: str = None,
+               device: str = 'cpu') -> Model:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang(language)
-    return Model(model_dir)
+    return Model(model_dir, device)
