@@ -33,6 +33,11 @@ def get_args():
                         '--model_dir',
                         default=None,
                         help='specify your own model dir')
+    parser.add_argument('-g',
+                        '--gpu',
+                        type=int,
+                        default='-1',
+                        help='gpu id to decode, default is cpu.')
     parser.add_argument('-t',
                         '--show_tokens_info',
                         action='store_true',
@@ -53,9 +58,9 @@ def main():
     args = get_args()
 
     if args.paraformer:
-        model = load_paraformer(args.model_dir)
+        model = load_paraformer(args.model_dir, args.gpu)
     else:
-        model = load_model(args.language, args.model_dir)
+        model = load_model(args.language, args.model_dir, args.gpu)
     if args.align:
         result = model.align(args.audio_file, args.label)
     else:
