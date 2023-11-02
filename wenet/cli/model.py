@@ -27,10 +27,14 @@ from wenet.transformer.search import (attention_rescoring,
 
 
 class Model:
-    def __init__(self, model_dir: str, device: str = 'cpu'):
+    def __init__(self, model_dir: str, gpu: int = -1):
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
+        if gpu >= 0:
+            device = 'cuda:{}'.format(gpu)
+        else:
+            device = 'cpu'
         self.device = torch.device(device)
         self.model = self.model.to(self.device)
         self.symbol_table = read_symbol_table(units_path)
@@ -125,7 +129,7 @@ class Model:
 
 def load_model(language: str = None,
                model_dir: str = None,
-               device: str = 'cpu') -> Model:
+               gpu: int = -1) -> Model:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang(language)
-    return Model(model_dir, device)
+    return Model(model_dir, gpu)

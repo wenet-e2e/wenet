@@ -11,11 +11,15 @@ from wenet.utils.file_utils import read_symbol_table
 
 class Paraformer:
 
-    def __init__(self, model_dir: str, device: str = 'cpu') -> None:
+    def __init__(self, model_dir: str, device: int = -1) -> None:
 
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
+        if device >= 0:
+            device = 'cuda:{}'.format(device)
+        else:
+            device = 'cpu'
         self.device = torch.device(device)
         self.model = self.model.to(self.device)
         symbol_table = read_symbol_table(units_path)
@@ -67,7 +71,7 @@ class Paraformer:
         raise NotImplementedError("Align is currently not supported")
 
 
-def load_model(model_dir: str = None, device: str = 'cpu') -> Paraformer:
+def load_model(model_dir: str = None, gpu: int = -1) -> Paraformer:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang('paraformer')
-    return Paraformer(model_dir, device)
+    return Paraformer(model_dir, gpu)

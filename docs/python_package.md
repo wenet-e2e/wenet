@@ -26,7 +26,7 @@ You can specify the following parameters.
 
 * `-l` or `--language`: chinese/english are supported now.
 * `-m` or `--model_dir`: your own model dir
-* `-g` or `--device`: a torch device type
+* `-g` or `--gpu`: the device id of gpu, default value -1 represents for cpu.
 * `-t` or `--show_tokens_info`: show the token level information such as timestamp, confidence, etc.
 
 
