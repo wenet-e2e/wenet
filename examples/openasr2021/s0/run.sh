@@ -65,6 +65,11 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=35
 
+train_engine=torch_ddp
+
+deepspeed_config=../../aishell/s0/conf/ds_stage2.json
+deepspeed_save_states="model_only"
+
 . utils/parse_options.sh || exit 1;
 
 #Babel style data preparation
@@ -136,10 +141,6 @@ fi
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # Training
     mkdir -p $dir
-    INIT_FILE=$dir/ddp_init
-    rm -f $INIT_FILE # delete old one before starting
-    init_method=file://$(readlink -f $INIT_FILE)
-    echo "$0: init method is $init_method"
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
@@ -148,8 +149,16 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
     # export later
+    if [ ${train_engine} == "deepspeed" ]; then
+      echo "$0: using deepspeed"
+    else
+      echo "$0: using torch ddp"
+    fi
+    echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
     torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+             --rdzv_id=2023 --rdzv_backend="c10d" \
         wenet/bin/train.py \
+            --train_engine ${train_engine} \
             --config $train_config \
             --data_type $data_type \
             --symbol_table $dict \
@@ -160,10 +169,12 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             ${enc_init:+--enc_init $enc_init} \
             --enc_init_mods $enc_init_mods \
             --model_dir $dir \
-            --ddp.init_method $init_method \
             --ddp.dist_backend $dist_backend \
             --num_workers 6 \
-            $cmvn_opts
+            $cmvn_opts \
+            --pin_memory \
+            --deepspeed_config ${deepspeed_config} \
+            --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 
