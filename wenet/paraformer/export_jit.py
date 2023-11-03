@@ -5,7 +5,7 @@ import argparse
 import torch
 import yaml
 from wenet.paraformer.cif import Cif
-from wenet.paraformer.layers import (SanmDecoer, SanmEncoder)
+from wenet.paraformer.layers import (SanmDecoder, SanmEncoder)
 from wenet.paraformer.paraformer import Paraformer
 from wenet.transformer.cmvn import GlobalCMVN
 from wenet.utils.checkpoint import load_checkpoint
@@ -33,7 +33,7 @@ def init_model(configs):
     encoder = SanmEncoder(global_cmvn=global_cmvn,
                           input_size=configs['lfr_conf']['lfr_m'] * input_dim,
                           **configs['encoder_conf'])
-    decoder = decoder = SanmDecoer(vocab_size=vocab_size,
+    decoder = decoder = SanmDecoder(vocab_size=vocab_size,
                                    encoder_output_size=encoder.output_size(),
                                    **configs['decoder_conf'])
     predictor = Cif(**configs['cif_predictor_conf'])
