@@ -34,8 +34,8 @@ def init_model(configs):
                           input_size=configs['lfr_conf']['lfr_m'] * input_dim,
                           **configs['encoder_conf'])
     decoder = decoder = SanmDecoder(vocab_size=vocab_size,
-                                   encoder_output_size=encoder.output_size(),
-                                   **configs['decoder_conf'])
+                                    encoder_output_size=encoder.output_size(),
+                                    **configs['decoder_conf'])
     predictor = Cif(**configs['cif_predictor_conf'])
     model = Paraformer(
         encoder=encoder,
