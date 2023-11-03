@@ -372,7 +372,7 @@ class SanmDecoderLayer(DecoderLayer):
         return x, tgt_mask, memory, memory_mask
 
 
-class SanmDecoer(TransformerDecoder):
+class SanmDecoder(TransformerDecoder):
 
     def __init__(
         self,
