@@ -249,11 +249,11 @@ def main():
     max_format_len = max([len(mode) for mode in args.modes])
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_data_loader):
-            keys, feats, target, feats_lengths, target_lengths = batch
-            feats = feats.to(device)
-            target = target.to(device)
-            feats_lengths = feats_lengths.to(device)
-            target_lengths = target_lengths.to(device)
+            keys = batch["keys"]
+            feats = batch["feats"].to(device)
+            target = batch["target"].to(device)
+            feats_lengths = batch["feats_lengths"].to(device)
+            target_lengths = batch["target_lengths"].to(device)
             results = model.decode(
                 args.modes,
                 feats,
