@@ -28,7 +28,9 @@ You can specify the following parameters.
 * `-m` or `--model_dir`: your own model dir
 * `-g` or `--gpu`: the device id of gpu, default value -1 represents for cpu.
 * `-t` or `--show_tokens_info`: show the token level information such as timestamp, confidence, etc.
-
+* `--align`: force align the input audio and transcript
+* `--label`: the input label to align 
+* `--paraformer`: use the best Chinese model
 
 ## Python Programming Usage
 
