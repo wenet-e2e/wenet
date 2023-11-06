@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 requirements = [
-    "requests",
+    "numpy",
     "requests",
     "tqdm",
     "torch>=1.13.0",
