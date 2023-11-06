@@ -1,10 +1,113 @@
 import math
-from typing import List, Tuple
+from typing import Any, List, Tuple, Union
 import torch
 
 from wenet.transformer.search import DecodeResult
 from wenet.utils.mask import (make_non_pad_mask, mask_finished_preds,
                               mask_finished_scores)
+
+
+def _isChinese(ch: str):
+    if '\u4e00' <= ch <= '\u9fff' or '\u0030' <= ch <= '\u0039' or ch == '@':
+        return True
+    return False
+
+
+def _isAllChinese(word: Union[List[Any], str]):
+    word_lists = []
+    for i in word:
+        cur = i.replace(' ', '')
+        cur = cur.replace('</s>', '')
+        cur = cur.replace('<s>', '')
+        cur = cur.replace('<unk>', '')
+        cur = cur.replace('<OOV>', '')
+        word_lists.append(cur)
+
+    if len(word_lists) == 0:
+        return False
+
+    for ch in word_lists:
+        if _isChinese(ch) is False:
+            return False
+    return True
+
+
+def _isAllAlpha(word: Union[List[Any], str]):
+    word_lists = []
+    for i in word:
+        cur = i.replace(' ', '')
+        cur = cur.replace('</s>', '')
+        cur = cur.replace('<s>', '')
+        cur = cur.replace('<unk>', '')
+        cur = cur.replace('<OOV>', '')
+        word_lists.append(cur)
+
+    if len(word_lists) == 0:
+        return False
+
+    for ch in word_lists:
+        if ch.isalpha() is False and ch != "'":
+            return False
+        elif ch.isalpha() is True and _isChinese(ch) is True:
+            return False
+
+    return True
+
+
+def paraformer_beautify_result(tokens: List[str]) -> str:
+    middle_lists = []
+    word_lists = []
+    word_item = ''
+
+    # wash words lists
+    for token in tokens:
+        if token in ['<sos>', '<eos>', '<blank>']:
+            continue
+        else:
+            middle_lists.append(token)
+
+    # all chinese characters
+    if _isAllChinese(middle_lists):
+        for i, ch in enumerate(middle_lists):
+            word_lists.append(ch.replace(' ', ''))
+
+    # all alpha characters
+    elif _isAllAlpha(middle_lists):
+        for i, ch in enumerate(middle_lists):
+            word = ''
+            if '@@' in ch:
+                word = ch.replace('@@', '')
+                word_item += word
+            else:
+                word_item += ch
+                word_lists.append(word_item)
+                word_lists.append(' ')
+                word_item = ''
+
+    # mix characters
+    else:
+        alpha_blank = False
+        for i, ch in enumerate(middle_lists):
+            word = ''
+            if _isAllChinese(ch):
+                if alpha_blank is True:
+                    word_lists.pop()
+                word_lists.append(ch)
+                alpha_blank = False
+            elif '@@' in ch:
+                word = ch.replace('@@', '')
+                word_item += word
+                alpha_blank = False
+            elif _isAllAlpha(ch):
+                word_item += ch
+                word_lists.append(word_item)
+                word_lists.append(' ')
+                word_item = ''
+                alpha_blank = True
+            else:
+                word_lists.append(ch)
+
+    return ''.join(word_lists).strip()
 
 
 def paraformer_greedy_search(

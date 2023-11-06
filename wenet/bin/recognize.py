@@ -221,7 +221,7 @@ def main():
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
-    model = init_model(configs)
+    model, configs = init_model(args, configs)
 
     # Load dict
     char_dict = {v: k for k, v in symbol_table.items()}

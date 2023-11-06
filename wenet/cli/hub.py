@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import os
+import requests
 import sys
 import tarfile
 from pathlib import Path
@@ -72,11 +73,11 @@ class Hub(object):
     # TODO(Mddct): make assets class to support other language
     Assets = {
         # wenetspeech
-        "chinese":
-        "https://github.com/wenet-e2e/wenet/releases/download/v2.0.1/chs.tar.gz",
+        "chinese": "wenetspeech_u2pp_conformer_libtorch.tar.gz",
         # gigaspeech
-        "english":
-        "https://github.com/wenet-e2e/wenet/releases/download/v2.0.1/en.tar.gz"
+        "english": "gigaspeech_u2pp_conformer_libtorch.tar.gz",
+        # paraformer
+        "paraformer": "paraformer.tar.gz"
     }
 
     def __init__(self) -> None:
@@ -89,14 +90,14 @@ class Hub(object):
             sys.exit(1)
 
         # NOTE(Mddct): model_dir structure
-        # Path.Home()/.went
+        # Path.Home()/.wenet
         # - chs
         #    - units.txt
         #    - final.zip
         # - en
         #    - units.txt
         #    - final.zip
-        model_url = Hub.Assets[lang]
+        model = Hub.Assets[lang]
         model_dir = os.path.join(Path.home(), ".wenet", lang)
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
@@ -104,5 +105,12 @@ class Hub(object):
         if set(["final.zip",
                 "units.txt"]).issubset(set(os.listdir(model_dir))):
             return model_dir
+        # If not exist, download
+        response = requests.get(
+            "https://modelscope.cn/api/v1/datasets/wenet/wenet_pretrained_models/oss/tree"  # noqa
+        )
+        model_info = next(data for data in response.json()["Data"]
+                          if data["Key"] == model)
+        model_url = model_info['Url']
         download(model_url, model_dir, only_child=True)
         return model_dir

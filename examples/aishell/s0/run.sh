@@ -14,6 +14,7 @@ stop_stage=5
 # see https://pytorch.org/docs/stable/elastic/run.html
 HOST_NODE_ADDR="localhost:0"
 num_nodes=1
+job_id=2023
 
 # The aishell dataset location, please change this to your own path
 # make sure of using absolute path. DO-NOT-USE relatvie path!
@@ -40,6 +41,7 @@ train_set=train
 train_config=conf/train_conformer.yaml
 cmvn=true
 dir=exp/conformer
+tensorboard_dir=tensorboard
 checkpoint=
 num_workers=8
 prefetch=500
@@ -50,7 +52,8 @@ decode_checkpoint=$dir/final.pt
 average_num=30
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
-deepspeed=false
+train_engine=torch_ddp
+
 deepspeed_config=conf/ds_stage2.json
 deepspeed_save_states="model_only"
 
@@ -112,14 +115,10 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   mkdir -p $dir
-  # You have to rm `INIT_FILE` manually when you resume or restart a
-  # multi-machine training.
-  INIT_FILE=$dir/ddp_init
-  rm -f ${INIT_FILE}  # remove previous INIT_FILE
-  init_method=file://$(readlink -f $INIT_FILE)
-  echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
+  # NOTE(xcsong): deepspeed fails with gloo, see
+  #   https://github.com/microsoft/DeepSpeed/issues/2818
   dist_backend="nccl"
   cmvn_opts=
   $cmvn && cp data/${train_set}/global_cmvn $dir
@@ -128,50 +127,48 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
   # and export.
-  if [ ${deepspeed} == true ]; then
-    echo "using deepspeed"
-    # NOTE(xcsong): deepspeed fails with gloo, see
-    #   https://github.com/microsoft/DeepSpeed/issues/2818
-    dist_backend="nccl"
-    [ ! -f data/$train_set/data.list.filter ] && \
-      python tools/filter_uneven_data.py data/$train_set/data.list \
-        $data_type $num_gpus $num_utts_per_shard data/$train_set/data.list.filter
-    deepspeed --include localhost:$CUDA_VISIBLE_DEVICES \
-      wenet/bin/train.py \
-        --deepspeed \
-        --deepspeed_config ${deepspeed_config} \
-        --deepspeed.save_states ${deepspeed_save_states} \
-        --ddp.dist_backend $dist_backend \
-        --ddp.init_method $init_method \
-        --data_type  $data_type \
-        --config $train_config \
-        --symbol_table  data/dict/lang_char.txt \
-        --train_data data/$train_set/data.list.filter \
-        --cv_data data/dev/data.list \
-        ${checkpoint:+--checkpoint $checkpoint} \
-        --model_dir $dir \
-        --num_workers ${num_workers} \
-        --prefetch ${prefetch} \
-        $cmvn_opts \
-        --pin_memory
+  if [ ${train_engine} == "deepspeed" ]; then
+    echo "$0: using deepspeed"
   else
-    echo "using torch ddp"
-    torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
-      wenet/bin/train.py \
-        --config $train_config \
-        --data_type $data_type \
-        --symbol_table $dict \
-        --train_data data/$train_set/data.list \
-        --cv_data data/dev/data.list \
-        ${checkpoint:+--checkpoint $checkpoint} \
-        --model_dir $dir \
-        --ddp.init_method $init_method \
-        --ddp.dist_backend $dist_backend \
-        --num_workers ${num_workers} \
-        --prefetch ${prefetch} \
-        $cmvn_opts \
-        --pin_memory
+    echo "$0: using torch ddp"
   fi
+
+  # NOTE(xcsong): Both ddp & deepspeed can be launched by torchrun
+  # NOTE(xcsong): To unify single-node & multi-node training, we add
+  #               all related args. You should change `nnodes` &
+  #               `rdzv_endpoint` for multi-node, see
+  #               https://pytorch.org/docs/stable/elastic/run.html#usage
+  #               https://github.com/wenet-e2e/wenet/pull/2055#issuecomment-1766055406
+  #               `rdzv_id` - A user-defined id that uniquely identifies the worker group for a job.
+  #                           This id is used by each node to join as a member of a particular worker group.
+  #               `rdzv_endpoint` - The rendezvous backend endpoint; usually in form <host>:<port>.
+  # NOTE(xcsong): In multi-node training, some clusters require special NCCL variables to set prior to training.
+  #               For example: `NCCL_IB_DISABLE=1` + `NCCL_SOCKET_IFNAME=enp` + `NCCL_DEBUG=INFO`
+  #               without NCCL_IB_DISABLE=1
+  #                   RuntimeError: NCCL error in: ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:1269, internal error, NCCL Version xxx
+  #               without NCCL_SOCKET_IFNAME=enp  (IFNAME could be get by `ifconfig`)
+  #                   RuntimeError: The server socket has failed to listen on any local network address. The server socket has failed to bind to [::]:xxx
+  #               ref: https://github.com/google/jax/issues/13559#issuecomment-1343573764
+  echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
+  torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus \
+           --rdzv_id=$job_id --rdzv_backend="c10d" --rdzv_endpoint=$HOST_NODE_ADDR \
+    wenet/bin/train.py \
+      --train_engine ${train_engine} \
+      --config $train_config \
+      --data_type  $data_type \
+      --symbol_table  data/dict/lang_char.txt \
+      --train_data data/$train_set/data.list \
+      --cv_data data/dev/data.list \
+      ${checkpoint:+--checkpoint $checkpoint} \
+      --model_dir $dir \
+      --tensorboard_dir ${tensorboard_dir} \
+      --ddp.dist_backend $dist_backend \
+      --num_workers ${num_workers} \
+      --prefetch ${prefetch} \
+      $cmvn_opts \
+      --pin_memory \
+      --deepspeed_config ${deepspeed_config} \
+      --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then

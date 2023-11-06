@@ -30,9 +30,10 @@ from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.ctl_model.asr_model_ctl import CTLModel
 from wenet.utils.cmvn import load_cmvn
+from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 
 
-def init_model(configs):
+def init_model(args, configs):
     if configs['cmvn_file'] is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
@@ -126,7 +127,6 @@ def init_model(configs):
                          ctc=ctc,
                          **configs['model_conf'])
     else:
-        print(configs)
         if configs.get('lfmmi_dir', '') != '':
             model = K2Model(vocab_size=vocab_size,
                             encoder=encoder,
@@ -140,4 +140,14 @@ def init_model(configs):
                              decoder=decoder,
                              ctc=ctc,
                              **configs['model_conf'])
-    return model
+    # If specify checkpoint, load some info from checkpoint
+    if args.checkpoint is not None:
+        infos = load_checkpoint(model, args.checkpoint)
+    elif args.enc_init is not None:
+        logging.info('load pretrained encoders: {}'.format(args.enc_init))
+        infos = load_trained_modules(model, args)
+    else:
+        infos = {}
+    configs["init_infos"] = infos
+    print(configs)
+    return model, configs

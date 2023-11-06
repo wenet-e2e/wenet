@@ -641,5 +641,5 @@ def padding(data):
                                       batch_first=True,
                                       padding_value=-1)
 
-        yield (sorted_keys, padded_feats, padding_labels, feats_lengths,
-               label_lengths)
+        yield {"keys": sorted_keys, "feats": padded_feats, "target": padding_labels,
+               "feats_lengths": feats_lengths, "target_lengths": label_lengths}
