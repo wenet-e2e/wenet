@@ -131,6 +131,9 @@ def add_ddp_args(parser):
 
 
 def add_deepspeed_args(parser):
+    parser.add_argument('--timeout', default=30, type=int,
+                        help='timeout (in seconds) of wenet_join. ' +
+                             '30s for aishell & 300s for wenetspeech')
     parser.add_argument('--local_rank', type=int, default=-1,
                         help='local rank passed from distributed launcher')
     parser.add_argument('--deepspeed.save_states',
