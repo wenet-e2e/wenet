@@ -77,16 +77,16 @@ def main():
         path_list = sorted(path_list, key=os.path.getmtime)
         path_list = path_list[-args.num:]
     print(path_list)
-    avg = None
+    avg = {}
     num = args.num
     assert num == len(path_list)
     for path in path_list:
         print('Processing {}'.format(path))
         states = torch.load(path, map_location=torch.device('cpu'))
-        if avg is None:
-            avg = states
-        else:
-            for k in avg.keys():
+        for k in states.keys():
+            if k not in avg.keys():
+                avg[k] = states[k].clone()
+            else:
                 avg[k] += states[k]
     # average
     for k in avg.keys():
