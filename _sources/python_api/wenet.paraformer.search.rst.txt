@@ -1,0 +1,7 @@
+wenet.paraformer.search module
+==============================
+
+.. automodule:: wenet.paraformer.search
+   :members:
+   :undoc-members:
+   :show-inheritance:

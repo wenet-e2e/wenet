@@ -1,0 +1,21 @@
+wenet.paraformer package
+========================
+
+.. automodule:: wenet.paraformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.paraformer.attention
+   wenet.paraformer.cif
+   wenet.paraformer.convert_paraformer_to_wenet_config
+   wenet.paraformer.export_jit
+   wenet.paraformer.layers
+   wenet.paraformer.paraformer
+   wenet.paraformer.search

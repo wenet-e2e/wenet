@@ -1,0 +1,7 @@
+wenet.paraformer.export\_jit module
+===================================
+
+.. automodule:: wenet.paraformer.export_jit
+   :members:
+   :undoc-members:
+   :show-inheritance:

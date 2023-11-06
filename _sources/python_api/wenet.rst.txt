@@ -17,6 +17,7 @@ Subpackages
    wenet.dataset
    wenet.efficient_conformer
    wenet.k2
+   wenet.paraformer
    wenet.squeezeformer
    wenet.transducer
    wenet.transformer

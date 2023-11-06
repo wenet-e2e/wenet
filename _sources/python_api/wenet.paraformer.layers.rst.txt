@@ -1,0 +1,7 @@
+wenet.paraformer.layers module
+==============================
+
+.. automodule:: wenet.paraformer.layers
+   :members:
+   :undoc-members:
+   :show-inheritance:
