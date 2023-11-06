@@ -488,6 +488,7 @@ def update_parameter_and_lr(
     if use_amp:
         assert scaler is not None
 
+    grad_norm = 0.0
     if train_engine == "deepspeed":
         # NOTE(xcsong): The step() function in DeepSpeed engine updates the
         #   model parameters as well as the learning rate.
