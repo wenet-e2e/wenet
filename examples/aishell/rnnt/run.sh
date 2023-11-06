@@ -166,7 +166,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
 
   reverse_weight=0.0
   python wenet/bin/recognize.py --gpu 0 \
-    --modes $mode \
+    --modes $decode_modes \
     --config $dir/train.yaml \
     --data_type $data_type \
     --test_data data/test/data.list \
