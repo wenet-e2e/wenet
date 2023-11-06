@@ -126,7 +126,7 @@ def main():
 
         # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
         group_join = dist.new_group(backend="gloo",
-                                    timeout=datetime.timedelta(seconds=30))
+                                    timeout=datetime.timedelta(seconds=args.timeout))
 
         dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         executor.train(model, optimizer, scheduler, train_data_loader,
