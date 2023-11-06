@@ -4,12 +4,12 @@
 from __future__ import print_function
 
 import argparse
+import logging
 import os
 
 import torch
 import yaml
 
-from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.init_model import init_model
 import intel_extension_for_pytorch as ipex
 from intel_extension_for_pytorch.quantization import prepare, convert
@@ -46,15 +46,15 @@ def scripting(model):
 
 def main():
     args = get_args()
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s')
     # No need gpu for model export
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-    model = init_model(configs)
+    model, configs = init_model(args, configs)
     print(model)
-
-    load_checkpoint(model, args.checkpoint)
 
     # Apply IPEX optimization
     model.eval()

@@ -49,7 +49,6 @@ import torch
 import numpy as np
 
 from wenet.transformer.embedding import NoPositionalEncoding
-from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.init_model import init_model
 from wenet.bin.export_onnx_cpu import (get_args, to_numpy,
                                        print_input_output_info)
@@ -1003,8 +1002,7 @@ if __name__ == '__main__':
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
 
-    model = init_model(configs)
-    load_checkpoint(model, args.checkpoint)
+    model, configs = init_model(args, configs)
     model.eval()
     print(model)
 

@@ -28,7 +28,6 @@ from textgrid import TextGrid, IntervalTier
 import math
 
 from wenet.dataset.dataset import Dataset
-from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.ctc_utils import force_align
 from wenet.utils.common import get_subsample
@@ -216,9 +215,8 @@ if __name__ == '__main__':
     ali_data_loader = DataLoader(ali_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
-    model = init_model(configs)
+    model, configs = init_model(args, configs)
 
-    load_checkpoint(model, args.checkpoint)
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
     model = model.to(device)

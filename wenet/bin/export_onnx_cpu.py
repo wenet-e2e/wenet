@@ -15,6 +15,7 @@
 from __future__ import print_function
 
 import argparse
+import logging
 import os
 import copy
 import sys
@@ -23,7 +24,6 @@ import torch
 import yaml
 import numpy as np
 
-from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.init_model import init_model
 
 try:
@@ -360,6 +360,8 @@ def export_decoder(asr_model, args):
 def main():
     torch.manual_seed(777)
     args = get_args()
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s')
     output_dir = args.output_dir
     os.system("mkdir -p " + output_dir)
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
@@ -367,8 +369,7 @@ def main():
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
 
-    model = init_model(configs)
-    load_checkpoint(model, args.checkpoint)
+    model, configs = init_model(args, configs)
     model.eval()
     print(model)
 
