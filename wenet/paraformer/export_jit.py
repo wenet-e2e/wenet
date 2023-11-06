@@ -24,7 +24,7 @@ def get_args():
     return args
 
 
-def init_model(configs):
+def init_model(args, configs):
     mean, istd = load_cmvn(configs['cmvn_file'], True)
     global_cmvn = GlobalCMVN(
         torch.from_numpy(mean).float(),
@@ -43,6 +43,8 @@ def init_model(configs):
         decoder=decoder,
         predictor=predictor,
     )
+
+    load_checkpoint(model, args.ali_paraformer)
     return model
 
 
@@ -53,8 +55,7 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-    model = init_model(configs)
-    load_checkpoint(model, args.ali_paraformer)
+    model = init_model(args, configs)
     model.eval()
 
     if args.output_file:
