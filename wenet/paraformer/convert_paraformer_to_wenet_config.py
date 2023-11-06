@@ -88,6 +88,15 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str, fields_to_keep: List):
     del configs['encoder_conf']['selfattention_layer_type'], configs[
         'encoder_conf']['pos_enc_class']
 
+    configs['dataset_conf'] = {}
+    configs['dataset_conf']['filte_conf'] = {}
+    configs['dataset_conf']['speed_perturn'] = False
+    configs['dataset_conf']['spec_aug'] = False
+    configs['dataset_conf']['spec_sub'] = False
+    configs['dataset_conf']['spec_trim'] = False
+    configs['dataset_conf']['shuffle'] = False
+    configs['dataset_conf']['sort'] = False
+
     with open(wenet_yaml_path, '+w') as f:
         f.write(json.dumps(configs))
         f.flush()
