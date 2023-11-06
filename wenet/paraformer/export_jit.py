@@ -2,6 +2,7 @@
 """
 
 import argparse
+import logging
 import torch
 import yaml
 from wenet.paraformer.cif import Cif
@@ -48,6 +49,8 @@ def init_model(configs):
 def main():
 
     args = get_args()
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s')
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
     model = init_model(configs)

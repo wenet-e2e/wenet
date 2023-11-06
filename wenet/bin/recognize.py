@@ -24,7 +24,6 @@ import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
-from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
@@ -226,7 +225,6 @@ def main():
     # Load dict
     char_dict = {v: k for k, v in symbol_table.items()}
 
-    load_checkpoint(model, args.checkpoint)
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
     model = model.to(device)
