@@ -31,6 +31,7 @@ class Model:
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
+        self.model.eval()
         if gpu >= 0:
             device = 'cuda:{}'.format(gpu)
         else:
@@ -53,6 +54,7 @@ class Model:
         feats = feats.unsqueeze(0)
         return feats
 
+    @torch.no_grad()
     def _decode(self,
                 audio_file: str,
                 tokens_info: bool = False,
