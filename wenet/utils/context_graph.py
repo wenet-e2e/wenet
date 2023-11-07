@@ -17,7 +17,7 @@
 # limitations under the License.
 
 from wenet.dataset.processor import __tokenize_by_bpe_model
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 from collections import deque
 
 
@@ -107,7 +107,7 @@ class ContextGraph:
     of Aho-Corasick algorithm.
 
     A ContextGraph contains some words / phrases that we expect to boost their
-    scores during decoding. If the substring of a decoded sequence matches the word / phrase
+    scores during decoding. If the substring of a decoded sequence matches the word / phrase  # noqa
     in the ContextGraph, we will give the decoded sequence a bonus to make it survive
     beam search.
     """
@@ -123,7 +123,7 @@ class ContextGraph:
 
         Args:
           context_score:
-            The bonus score for each token(note: NOT for each word/phrase, it means longer
+            The bonus score for each token(note: NOT for each word/phrase, it means longer  # noqa
             word/phrase will have larger bonus score, they have to be matched though).
         """
         self.context_score = context_score
