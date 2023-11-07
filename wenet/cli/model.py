@@ -24,10 +24,12 @@ from wenet.utils.ctc_utils import (force_align, gen_ctc_peak_time,
 from wenet.utils.file_utils import read_symbol_table
 from wenet.transformer.search import (attention_rescoring,
                                       ctc_prefix_beam_search, DecodeResult)
+from wenet.utils.context_graph import ContextGraph
 
 
 class Model:
-    def __init__(self, model_dir: str, gpu: int = -1):
+    def __init__(self, model_dir: str, gpu: int = -1, beam: int = 5,
+                 context_path: str = None, context_score: float = 6.0):
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
@@ -40,6 +42,12 @@ class Model:
         self.model = self.model.to(self.device)
         self.symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
+        self.beam = beam
+        if context_path is not None:
+            self.context_graph = ContextGraph(context_path, self.symbol_table,
+                                              context_score=context_score)
+        else:
+            self.context_graph = None
 
     def compute_feats(self, audio_file: str) -> torch.Tensor:
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
@@ -68,7 +76,8 @@ class Model:
         ctc_probs = self.model.ctc_activation(encoder_out)
         if label is None:
             ctc_prefix_results = ctc_prefix_beam_search(
-                ctc_probs, encoder_lens, 2)
+                ctc_probs, encoder_lens, self.beam,
+                context_graph=self.context_graph)
         else:  # force align mode, construct ctc prefix result from alignment
             label_t = self.tokenize(label)
             alignment = force_align(ctc_probs.squeeze(0),
@@ -131,7 +140,10 @@ class Model:
 
 def load_model(language: str = None,
                model_dir: str = None,
-               gpu: int = -1) -> Model:
+               gpu: int = -1,
+               beam: int = 5,
+               context_path: str = None,
+               context_score: float = 6.0) -> Model:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang(language)
-    return Model(model_dir, gpu)
+    return Model(model_dir, gpu, beam, context_path, context_score)
