@@ -46,6 +46,7 @@ def main():
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
     model, configs = init_model(args, configs)
+    model.eval()
     print(model)
     # Export jit torch script model
 
