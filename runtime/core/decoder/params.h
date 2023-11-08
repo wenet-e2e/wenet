@@ -58,6 +58,7 @@ DEFINE_string(bpu_model_dir, "",
 // OVAsrModel flags
 DEFINE_string(openvino_dir, "", "directory where the OV model is saved");
 DEFINE_int32(core_number, 1, "Core number of process");
+DEFINE_string(openvino_device, "CPU", "set OpenVINO Device for ASR model");
 
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
@@ -191,6 +192,7 @@ std::shared_ptr<DecodeResource> InitDecodeResourceFromFlags() {
     LOG(INFO) << "Read OpenVINO model ";
     auto model = std::make_shared<OVAsrModel>();
     model->InitEngineThreads(FLAGS_core_number);
+    model->SetDeviceName(FLAGS_openvino_device);
     model->Read(FLAGS_openvino_dir);
     resource->model = model;
 #else
