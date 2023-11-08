@@ -66,9 +66,14 @@ static void PrintPerformanceCounts(
 
 OVAsrModel::~OVAsrModel() {}
 
+void OVAsrModel::SetDeviceName(const std::string& device_name){
+  device_name_=device_name;
+}
+
 void OVAsrModel::InitEngineThreads(int core_number) {
   core_ = std::make_shared<ov::Core>();
-  if (core_) {
+  if (core_ && device_name_ == "CPU") {
+    std::cout << "OV device d " << device_name_ << std::endl;
     core_->set_property("CPU", ov::num_streams(core_number));
     core_->set_property("CPU", ov::affinity(ov::Affinity::NONE));
     core_->set_property("CPU", ov::inference_num_threads(1));
@@ -87,11 +92,11 @@ void OVAsrModel::Read(const std::string& model_dir) {
     std::shared_ptr<ov::Model> encoder_model =
         core_->read_model(encoder_ir_path);
     std::map<std::string, ov::AnyMap> config;
-    config["CPU"] = {};
+    config[device_name_] = {};
     if (getenv("OPENVINO_PROFILE")) {
-      config["CPU"].emplace(ov::enable_profiling(true));
+      config[device_name_].emplace(ov::enable_profiling(true));
     }
-    config["CPU"].emplace(
+    config[device_name_].emplace(
         ov::hint::performance_mode(ov::hint::PerformanceMode::THROUGHPUT));
     // set some configurations if any
     for (auto&& item : config) {
@@ -130,7 +135,7 @@ void OVAsrModel::Read(const std::string& model_dir) {
       }
 
       encoder_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
-          core_->compile_model(encoder_model, "CPU")));
+          core_->compile_model(encoder_model, device_name_)));
                                // {{"PERF_COUNT", "NO"} /* YES for profile */
                               // })));
 
@@ -145,7 +150,7 @@ void OVAsrModel::Read(const std::string& model_dir) {
     std::shared_ptr<ov::Model> ctc_model = core_->read_model(ctc_ir_path);
     if (ctc_model) {
       ctc_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
-          core_->compile_model(ctc_model, "CPU")));
+          core_->compile_model(ctc_model, device_name_)));
                                // {{"PERFORMANCE_HINT", "THROUGHPUT"},
                                // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
 
@@ -161,7 +166,7 @@ void OVAsrModel::Read(const std::string& model_dir) {
         core_->read_model(rescore_ir_path);
     if (rescore_model) {
       rescore_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
-          core_->compile_model(rescore_model, "CPU")));
+          core_->compile_model(rescore_model, device_name_)));
                                // {{"PERFORMANCE_HINT", "THROUGHPUT"},
                                // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
 
