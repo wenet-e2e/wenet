@@ -31,6 +31,7 @@ class OVAsrModel : public AsrModel {
                           float reverse_weight,
                           std::vector<float>* rescoring_score) override;
   std::shared_ptr<AsrModel> Copy() const override;
+  void SetDeviceName(const std::string& device_name);
 
  protected:
   void ForwardEncoderFunc(const std::vector<std::vector<float>>& chunk_feats,
@@ -44,6 +45,7 @@ class OVAsrModel : public AsrModel {
   int num_blocks_ = 0;
   int cnn_module_kernel_ = 0;
   int head_ = 0;
+  std::string device_name_;
 
   std::shared_ptr<ov::Core> core_;
 
