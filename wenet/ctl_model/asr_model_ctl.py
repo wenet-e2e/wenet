@@ -81,7 +81,7 @@ class CTLModel(ASRModel):
             ctl_loss = self.CTL(src, targets, negs, encoder_mask)
 
         loss = loss_full + loss_chunk + self.ctl_weight * ctl_loss
-        return {"loss": loss, "loss_full": loss_full, 
+        return {"loss": loss, "loss_full": loss_full,
                 "loss_chunk": loss_chunk, "loss_ctl": ctl_loss}
 
     def forward_full(
