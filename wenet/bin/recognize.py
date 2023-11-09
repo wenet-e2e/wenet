@@ -24,11 +24,11 @@ import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
-from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.context_graph import ContextGraph
+from wenet.paraformer.export_jit import init_model as init_paraformer_model
 
 
 def get_args():
@@ -170,7 +170,9 @@ def get_args():
                         default=0.0,
                         help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
-
+    parser.add_argument('--paraformer',
+                        action='store_true',
+                        help='whether to use paraformer model')
     args = parser.parse_args()
     print(args)
     return args
@@ -221,12 +223,15 @@ def main():
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
-    model, configs = init_model(args, configs)
+    if args.paraformer:
+        model = init_paraformer_model(args, configs)
+
+    else:
+        model, configs = init_model(args, configs)
 
     # Load dict
     char_dict = {v: k for k, v in symbol_table.items()}
 
-    load_checkpoint(model, args.checkpoint)
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
     model = model.to(device)
@@ -249,11 +254,11 @@ def main():
     max_format_len = max([len(mode) for mode in args.modes])
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_data_loader):
-            keys, feats, target, feats_lengths, target_lengths = batch
-            feats = feats.to(device)
-            target = target.to(device)
-            feats_lengths = feats_lengths.to(device)
-            target_lengths = target_lengths.to(device)
+            keys = batch["keys"]
+            feats = batch["feats"].to(device)
+            target = batch["target"].to(device)
+            feats_lengths = batch["feats_lengths"].to(device)
+            target_lengths = batch["target_lengths"].to(device)
             results = model.decode(
                 args.modes,
                 feats,

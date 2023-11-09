@@ -80,6 +80,16 @@ def add_model_args(parser):
                         help='LF-MMI dir')
     return parser
 
+def add_trace_args(parser):
+    parser.add_argument('--jit',
+                        action='store_true',
+                        default=False,
+                        help='if use jit to trace model while training stage')
+    parser.add_argument('--print_model',
+                        action='store_true',
+                        default=False,
+                        help='print model')
+    return parser
 
 def add_dataset_args(parser):
     parser.add_argument('--data_type',
@@ -121,6 +131,9 @@ def add_ddp_args(parser):
 
 
 def add_deepspeed_args(parser):
+    parser.add_argument('--timeout', default=30, type=int,
+                        help='timeout (in seconds) of wenet_join. ' +
+                             '30s for aishell & 300s for wenetspeech')
     parser.add_argument('--local_rank', type=int, default=-1,
                         help='local rank passed from distributed launcher')
     parser.add_argument('--deepspeed.save_states',
@@ -341,15 +354,15 @@ def init_optimizer_and_scheduler(args, configs, model):
     return model, optimizer, scheduler
 
 
-def trace_and_print_model(args, model, enable_trace=True, enable_print=True):
+def trace_and_print_model(args, model):
     # !!!IMPORTANT!!!
     # Try to export the model by script, if fails, we should refine
     # the code to satisfy the script export requirements
     if int(os.environ.get('RANK', 0)) == 0:
-        if enable_trace:
+        if args.jit:
             script_model = torch.jit.script(model)
             script_model.save(os.path.join(args.model_dir, 'init.zip'))
-        if enable_print:
+        if args.print_model:
             print(model)
             num_params = sum(p.numel() for p in model.parameters())
             print('the number of model params: {:,d}'.format(num_params))
@@ -488,6 +501,7 @@ def update_parameter_and_lr(
     if use_amp:
         assert scaler is not None
 
+    grad_norm = 0.0
     if train_engine == "deepspeed":
         # NOTE(xcsong): The step() function in DeepSpeed engine updates the
         #   model parameters as well as the learning rate.

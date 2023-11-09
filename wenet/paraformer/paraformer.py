@@ -22,7 +22,7 @@ from typing import Dict, List, Optional, Tuple
 import torch
 from wenet.paraformer.cif import Cif
 
-from wenet.paraformer.layers import SanmDecoer, SanmEncoder
+from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.layers import LFR
 from wenet.paraformer.search import (paraformer_beam_search,
                                      paraformer_greedy_search)
@@ -37,7 +37,7 @@ class Paraformer(torch.nn.Module):
 
     """
 
-    def __init__(self, encoder: SanmEncoder, decoder: SanmDecoer,
+    def __init__(self, encoder: SanmEncoder, decoder: SanmDecoder,
                  predictor: Cif):
 
         super().__init__()

@@ -14,7 +14,7 @@ stop_stage=5
 # see https://pytorch.org/docs/stable/elastic/run.html
 HOST_NODE_ADDR="localhost:0"
 num_nodes=1
-
+job_id=2023
 
 # data
 data_url=www.openslr.org/resources/12
@@ -22,14 +22,17 @@ data_url=www.openslr.org/resources/12
 datadir=/export/data/en-asr-data/OpenSLR
 # wav data dir
 wave_data=data
+data_type=raw
 # Optional train_config
 # 1. conf/train_transformer_large.yaml: Standard transformer
 train_config=conf/train_conformer.yaml
 checkpoint=
+num_workers=1
 cmvn=true
 do_delta=false
 
 dir=exp/sp_spec_aug
+tensorboard_dir=tensorboard
 
 # use average_checkpoint will get better result
 average_checkpoint=true
@@ -37,8 +40,6 @@ decode_checkpoint=$dir/final.pt
 # maybe you can try to adjust it if you can not get close results as README.md
 average_num=10
 decode_modes="attention_rescoring ctc_greedy_search ctc_prefix_beam_search attention"
-
-. tools/parse_options.sh || exit 1;
 
 # bpemode (unigram or bpe)
 nbpe=5000
@@ -51,6 +52,13 @@ set -o pipefail
 train_set=train_960
 dev_set=dev
 recog_set="test_clean test_other dev_clean dev_other"
+
+train_engine=torch_ddp
+
+deepspeed_config=../../aishell/s0/conf/ds_stage2.json
+deepspeed_save_states="model_only"
+
+. tools/parse_options.sh || exit 1;
 
 if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
   echo "stage -1: Data Download"
@@ -129,33 +137,39 @@ fi
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # Training
   mkdir -p $dir
-  INIT_FILE=$dir/ddp_init
-  rm -f $INIT_FILE # delete old one before starting
-  init_method=file://$(readlink -f $INIT_FILE)
-  echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
-  dist_backend="gloo"
+  dist_backend="nccl"
   cmvn_opts=
   $cmvn && cmvn_opts="--cmvn $wave_data/${train_set}/global_cmvn"
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
+  if [ ${train_engine} == "deepspeed" ]; then
+    echo "$0: using deepspeed"
+  else
+    echo "$0: using torch ddp"
+  fi
+  echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+           --rdzv_id=$job_id --rdzv_backend="c10d" \
     wenet/bin/train.py \
+      --train_engine ${train_engine} \
       --config $train_config \
-      --data_type raw \
+      --data_type ${data_type} \
       --symbol_table $dict \
       --bpe_model ${bpemodel}.model \
       --train_data $wave_data/$train_set/data.list \
       --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
-      --ddp.init_method $init_method \
+      --tensorboard_dir ${tensorboard_dir} \
       --ddp.dist_backend $dist_backend \
-      --num_workers 1 \
+      --num_workers ${num_workers} \
       $cmvn_opts \
-      --pin_memory
+      --pin_memory \
+      --deepspeed_config ${deepspeed_config} \
+      --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then

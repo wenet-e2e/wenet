@@ -59,6 +59,11 @@ average_num=30
 decode_modes="ctc_greedy_search ctc_prefix_beam_search"
 decode_modes="$decode_modes attention attention_rescoring"
 
+train_engine=torch_ddp
+
+deepspeed_config=../../aishell/s0/conf/ds_stage2.json
+deepspeed_save_states="model_only"
+
 . tools/parse_options.sh || exit 1;
 
 test_sets="aishell aidatatang magicdata thchs"
@@ -234,11 +239,6 @@ fi
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Training
   mkdir -p $dir
-  INIT_FILE=$dir/ddp_init
-  # You had better rm it manually before you start run.sh on first node.
-  # rm -f $INIT_FILE # delete old one before starting
-  init_method=file://$(readlink -f $INIT_FILE)
-  echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
   dist_backend="nccl"
@@ -248,8 +248,16 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
+  if [ ${train_engine} == "deepspeed" ]; then
+    echo "$0: using deepspeed"
+  else
+    echo "$0: using torch ddp"
+  fi
+  echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+           --rdzv_id=2023 --rdzv_backend="c10d" \
     wenet/bin/train.py \
+      --train_engine ${train_engine} \
       --config $train_config \
       --data_type $data_type \
       --symbol_table $dict \
@@ -257,12 +265,13 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --cv_data data_${en_modeling_unit}/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
-      --ddp.init_method $init_method \
       --ddp.dist_backend $dist_backend \
       --num_workers 4 \
       ${enable_bpe:+--bpe_model $bpecode} \
       $cmvn_opts \
-      --pin_memory
+      --pin_memory \
+      --deepspeed_config ${deepspeed_config} \
+      --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then

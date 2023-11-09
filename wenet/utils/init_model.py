@@ -144,7 +144,6 @@ def init_model(args, configs):
     if args.checkpoint is not None:
         infos = load_checkpoint(model, args.checkpoint)
     elif args.enc_init is not None:
-        logging.info('load pretrained encoders: {}'.format(args.enc_init))
         infos = load_trained_modules(model, args)
     else:
         infos = {}

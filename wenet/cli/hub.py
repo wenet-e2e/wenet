@@ -41,7 +41,7 @@ def download(url: str, dest: str, only_child=True):
         return update_to
 
     # *.tar.gz
-    name = url.split("/")[-1]
+    name = url.split('?')[0].split('/')[-1]
     tar_path = os.path.join(dest, name)
     with tqdm.tqdm(unit='B',
                    unit_scale=True,
@@ -54,17 +54,17 @@ def download(url: str, dest: str, only_child=True):
                     data=None)
         t.total = t.n
 
-        with tarfile.open(tar_path) as f:
-            if not only_child:
-                f.extractall(dest)
-            else:
-                for tarinfo in f:
-                    if "/" not in tarinfo.name:
-                        continue
-                    name = os.path.basename(tarinfo.name)
-                    fileobj = f.extractfile(tarinfo)
-                    with open(os.path.join(dest, name), "wb") as writer:
-                        writer.write(fileobj.read())
+    with tarfile.open(tar_path) as f:
+        if not only_child:
+            f.extractall(dest)
+        else:
+            for tarinfo in f:
+                if "/" not in tarinfo.name:
+                    continue
+                name = os.path.basename(tarinfo.name)
+                fileobj = f.extractfile(tarinfo)
+                with open(os.path.join(dest, name), "wb") as writer:
+                    writer.write(fileobj.read())
 
 
 class Hub(object):

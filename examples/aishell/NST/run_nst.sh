@@ -80,6 +80,11 @@ decode_checkpoint=$dir/$target_pt.pt
 # here we only use attention_rescoring for NST
 decode_modes="attention_rescoring"
 
+train_engine=torch_ddp
+
+deepspeed_config=../../aishell/s0/conf/ds_stage2.json
+deepspeed_save_states="model_only"
+
 . tools/parse_options.sh || exit 1;
 
 # print the settings
@@ -103,15 +108,9 @@ echo "enable_nst is ${enable_nst} "
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   echo "********step 1 start time : $now ********"
   mkdir -p $dir
-  # You have to rm `INIT_FILE` manually when you resume or restart a
-  # multi-machine training.
-  rm $dir/ddp_init
-  INIT_FILE=$dir/ddp_init
-  init_method=file://$(readlink -f $INIT_FILE)
-  echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
-  dist_backend="gloo"
+  dist_backend="nccl"
   # the global_cmvn file need to be calculated by combining both supervised/unsupervised datasets,
   # and it should be positioned at data/${train_set}/global_cmvn .
   cmvn_opts=
@@ -121,9 +120,17 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
   # and export.
+  if [ ${train_engine} == "deepspeed" ]; then
+    echo "$0: using deepspeed"
+  else
+    echo "$0: using torch ddp"
+  fi
+  echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
   echo "checkpoint is "  ${checkpoint}
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+           --rdzv_id=2023 --rdzv_backend="c10d" \
     wenet/bin/train.py \
+      --train_engine ${train_engine} \
       --config $train_config \
       --data_type $data_type \
       --symbol_table $dict \
@@ -131,11 +138,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
-      --ddp.init_method $init_method \
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
       $cmvn_opts \
-      --pin_memory
+      --pin_memory \
+      --deepspeed_config ${deepspeed_config} \
+      --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 # In stage 2, we get the averaged final checkpoint and calculate the test and dev accuracy

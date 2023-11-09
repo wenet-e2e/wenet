@@ -30,7 +30,8 @@ from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.train_utils import (add_model_args, add_dataset_args,
                                      add_ddp_args, add_deepspeed_args,
-                                     init_distributed, init_dataset_and_dataloader,
+                                     add_trace_args, init_distributed,
+                                     init_dataset_and_dataloader,
                                      check_modify_and_save_config,
                                      init_optimizer_and_scheduler,
                                      trace_and_print_model, wrap_cuda_model,
@@ -47,6 +48,7 @@ def get_args():
     parser = add_dataset_args(parser)
     parser = add_ddp_args(parser)
     parser = add_deepspeed_args(parser)
+    parser = add_trace_args(parser)
     args = parser.parse_args()
     if args.train_engine == "deepspeed":
         args.deepspeed = True
@@ -85,7 +87,7 @@ def main():
     model, configs = init_model(args, configs)
 
     # Check model is jitable & print model archtectures
-    trace_and_print_model(args, model, enable_trace=True, enable_print=True)
+    trace_and_print_model(args, model)
 
     # Tensorboard summary
     writer = init_summarywriter(args)
@@ -124,7 +126,7 @@ def main():
 
         # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
         group_join = dist.new_group(backend="gloo",
-                                    timeout=datetime.timedelta(seconds=30))
+                                    timeout=datetime.timedelta(seconds=args.timeout))
 
         dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         executor.train(model, optimizer, scheduler, train_data_loader,

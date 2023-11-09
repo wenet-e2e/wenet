@@ -23,6 +23,7 @@ from wenet.utils.common import (add_sos_eos, log_add)
 from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
+from wenet.utils.context_graph import ContextGraph, ContextState
 
 
 class DecodeResult:
@@ -62,7 +63,9 @@ class PrefixScore:
                  s: float = float('-inf'),
                  ns: float = float('-inf'),
                  v_s: float = float('-inf'),
-                 v_ns: float = float('-inf')):
+                 v_ns: float = float('-inf'),
+                 context_state: ContextState = None,
+                 context_score: float = 0.0):
         self.s = s  # blank_ending_score
         self.ns = ns  # none_blank_ending_score
         self.v_s = v_s  # viterbi blank ending score
@@ -70,6 +73,9 @@ class PrefixScore:
         self.cur_token_prob = float('-inf')  # prob of current token
         self.times_s = []  # times of viterbi blank path
         self.times_ns = []  # times of viterbi none blank path
+        self.context_state = context_state
+        self.context_score = context_score
+        self.has_context = False
 
     def score(self):
         return log_add(self.s, self.ns)
@@ -79,6 +85,20 @@ class PrefixScore:
 
     def times(self):
         return self.times_s if self.v_s > self.v_ns else self.times_ns
+
+    def total_score(self):
+        return self.score() + self.context_score
+
+    def copy_context(self, prefix_score):
+        self.context_score = prefix_score.context_score
+        self.context_state = prefix_score.context_state
+
+    def update_context(self, context_graph, prefix_score, word_id):
+        self.copy_context(prefix_score)
+        (score, context_state) = context_graph.forward_one_step(
+            prefix_score.context_state, word_id)
+        self.context_score += score
+        self.context_state = context_state
 
 
 def ctc_greedy_search(ctc_probs: torch.Tensor,
@@ -99,7 +119,8 @@ def ctc_greedy_search(ctc_probs: torch.Tensor,
 
 
 def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
-                           beam_size: int) -> List[DecodeResult]:
+                           beam_size: int, context_graph: ContextGraph = None,
+                           ) -> List[DecodeResult]:
     """
         Returns:
             List[List[List[int]]]: nbest result for each utterance
@@ -110,7 +131,14 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
     for i in range(batch_size):
         ctc_prob = ctc_probs[i]
         num_t = ctc_lens[i]
-        cur_hyps = [(tuple(), PrefixScore(0.0, -float('inf'), 0.0, 0.0))]
+        cur_hyps = [(tuple(),
+                     PrefixScore(s=0.0,
+                                 ns=-float('inf'),
+                                 v_s=0.0,
+                                 v_ns=0.0,
+                                 context_state=None if context_graph is None
+                                 else context_graph.root,
+                                 context_score=0.0))]
         # 2. CTC beam search step by step
         for t in range(0, num_t):
             logp = ctc_prob[t]  # (vocab_size,)
@@ -129,6 +157,10 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                                                prefix_score.score() + prob)
                         next_score.v_s = prefix_score.viterbi_score() + prob
                         next_score.times_s = prefix_score.times().copy()
+                        # perfix not changed, copy the context from prefix
+                        if context_graph and not next_score.has_context:
+                            next_score.copy_context(prefix_score)
+                            next_score.has_context = True
                     elif u == last:
                         #  Update *uu -> *u;
                         next_score1 = next_hyps[prefix]
@@ -141,6 +173,9 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                                 next_score1.times_ns = prefix_score.times_ns.copy(
                                 )
                                 next_score1.times_ns[-1] = t
+                        if context_graph and not next_score1.has_context:
+                            next_score1.copy_context(prefix_score)
+                            next_score1.has_context = True
 
                         # Update *u-u -> *uu, - is for blank
                         n_prefix = prefix + (u, )
@@ -152,6 +187,10 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                             next_score2.cur_token_prob = prob
                             next_score2.times_ns = prefix_score.times_s.copy()
                             next_score2.times_ns.append(t)
+                        if context_graph and not next_score2.has_context:
+                            next_score2.update_context(context_graph,
+                                                       prefix_score, u)
+                            next_score2.has_context = True
                     else:
                         n_prefix = prefix + (u, )
                         next_score = next_hyps[n_prefix]
@@ -164,14 +203,28 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                             next_score.cur_token_prob = prob
                             next_score.times_ns = prefix_score.times().copy()
                             next_score.times_ns.append(t)
+                        if context_graph and not next_score.has_context:
+                            next_score.update_context(context_graph,
+                                                      prefix_score, u)
+                            next_score.has_context = True
+
             # 2.2 Second beam prune
             next_hyps = sorted(next_hyps.items(),
-                               key=lambda x: x[1].score(),
+                               key=lambda x: x[1].total_score(),
                                reverse=True)
             cur_hyps = next_hyps[:beam_size]
 
+        # We should backoff the context score/state when the context is
+        # not fully matched at the last time.
+        if context_graph is not None:
+            for i, hyp in enumerate(cur_hyps):
+                context_score, new_context_state = context_graph.finalize(
+                    hyp[1].context_state)
+                cur_hyps[i][1].context_score = context_score
+                cur_hyps[i][1].context_state = new_context_state
+
         nbest = [y[0] for y in cur_hyps]
-        nbest_scores = [y[1].score() for y in cur_hyps]
+        nbest_scores = [y[1].total_score() for y in cur_hyps]
         nbest_times = [y[1].times() for y in cur_hyps]
         best = nbest[0]
         best_score = nbest_scores[0]
