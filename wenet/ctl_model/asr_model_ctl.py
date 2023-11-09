@@ -15,22 +15,21 @@
 # Modified from ESPnet(https://github.com/espnet/espnet) and
 # fairseq(https://github.com/facebookresearch/fairseq)
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 import torch
 import torch.nn.functional as F
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
-from wenet.ctl_model.encoder import TransformerEncoder, ConformerEncoder
-from wenet.utils.common import IGNORE_ID
+from wenet.ctl_model.encoder import TransformerEncoder
 from wenet.transformer.asr_model import ASRModel
-from wenet.utils.common import (IGNORE_ID, add_sos_eos, th_accuracy,
-                                reverse_pad_list)
+from wenet.utils.common import IGNORE_ID
 
 class CTLModel(ASRModel):
     """
         Implementation of Interspeecch 2023 paper:
-        Enhancing the Unified Streaming and Non-streaming Model with Contrastive Learning
+        'Enhancing the Unified Streaming and Non-streaming Model
+         with Contrastive Learning'
         https://arxiv.org/abs/2306.00755
     """
     def __init__(
@@ -58,6 +57,7 @@ class CTLModel(ASRModel):
         self.ctl_weight = ctl_weight
         self.logit_temp = logit_temp
 
+    @torch.jit.ignore(drop=True)
     def forward(
         self,
         speech: torch.Tensor,
@@ -66,20 +66,23 @@ class CTLModel(ASRModel):
         text_lengths: torch.Tensor,
     ) -> Dict[str, Optional[torch.Tensor]]:
 
-        loss_full, encoder_out_full, lens_full, _ = self.forward_full(speech, speech_lengths, text, text_lengths)
-        loss_chunk, encoder_out, lens_chunk, encoder_mask = self.forward_chunk(speech, speech_lengths, text, text_lengths)
+        loss_full, encoder_out_full, _, _ = self.forward_full(
+            speech, speech_lengths, text, text_lengths)
+        loss_chunk, encoder_out, lens_chunk, encoder_mask = self.forward_chunk(
+            speech, speech_lengths, text, text_lengths)
 
         ctl_loss = 0.0
-        if self.ctl_weight > 0 and self.n_negatives > 0: 
-            num =  encoder_out_full.size(1)
+        if self.ctl_weight > 0 and self.n_negatives > 0:
+            num = encoder_out_full.size(1)
             targets = encoder_out_full
             src = encoder_out
-            negs, negs_idxs = self.sample_negatives(targets, targets.size(1), speech_lengths=lens_chunk)
+            negs, negs_idxs = self.sample_negatives(
+                targets, targets.size(1), speech_lengths=lens_chunk)
             ctl_loss = self.CTL(src, targets, negs, encoder_mask)
 
         loss = loss_full + loss_chunk + self.ctl_weight * ctl_loss
-        # print("totally loss: {}, loss_full: {}, loss_chunk: {}, CTLoss: {}".format(loss, loss_full, loss_chunk, self.ctl_weight * ctl_loss))
-        return {"loss": loss, "loss_full": loss_full, "loss_chunk": loss_chunk, "loss_ctl": ctl_loss}
+        return {"loss": loss, "loss_full": loss_full, 
+                "loss_chunk": loss_chunk, "loss_ctl": ctl_loss}
 
     def forward_full(
         self,
@@ -114,7 +117,7 @@ class CTLModel(ASRModel):
         else:
             loss_att = None
 
-        # 2b. CTC branch 
+        # 2b. CTC branch
         if self.ctc_weight != 0.0:
             loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
                                 text_lengths)
@@ -163,10 +166,10 @@ class CTLModel(ASRModel):
         else:
             loss_att = None
 
-        # 2b. CTC branch 
+        # 2b. CTC branch
         if self.ctc_weight != 0.0:
             loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
-                                 text_lengths)
+                                text_lengths)
         else:
             loss_ctc = None
 
@@ -198,9 +201,10 @@ class CTLModel(ASRModel):
                     .flatten()
                 )
                 if speech_lengths is not None:
-                    neg_idxs =[torch.randint(
-                        low=0, high=speech_lengths[i].item() - 1, size=(1, self.n_negatives * tsz)
-                        ) for i in range(len(speech_lengths))]
+                    neg_idxs = [torch.randint(
+                        low=0, high=speech_lengths[i].item() - 1,
+                        size=(1, self.n_negatives * tsz))
+                        for i in range(len(speech_lengths))]
                     neg_idxs = torch.cat(neg_idxs).reshape(bsz, self.n_negatives * tsz)
                 else:
                     neg_idxs = torch.randint(
@@ -242,7 +246,7 @@ class CTLModel(ASRModel):
         # Step1: compute cosine similarity, shape [B*T, n_negatives+1]
         logits = self.compute_preds(x, y, negs)
 
-        # Step2: target shape [B*T] 
+        # Step2: target shape [B*T]
         target = x.new_zeros(x.size(0) * x.size(1), dtype=torch.long)
 
         # Step3: compute CTL loss
@@ -250,7 +254,8 @@ class CTLModel(ASRModel):
             normalize_length = mask.sum()
             bz, sz = mask.size(0), mask.size(-1)
             mask = mask.squeeze(1).reshape(bz * sz).eq(0)
-            loss = F.cross_entropy(logits, target, reduction='none').masked_fill(mask, 0).sum() / normalize_length
+            ce = F.cross_entropy(logits, target, reduction='none')
+            loss = ce.masked_fill(mask, 0).sum() / normalize_length
         else:
             loss = F.cross_entropy(logits, target)
 
