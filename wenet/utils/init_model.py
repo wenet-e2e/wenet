@@ -23,11 +23,11 @@ from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
-from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.branchformer.encoder import BranchformerEncoder
 from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
+from wenet.ctl_model.asr_model_ctl import CTLModel
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 
@@ -46,6 +46,12 @@ def init_model(args, configs):
 
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')
+
+    if 'ctlmodel' in configs:
+        from wenet.ctl_model.encoder import DualConformerEncoder as ConformerEncoder
+        from wenet.ctl_model.encoder import DualTransformerEncoder as TransformerEncoder
+    else:
+        from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 
     if encoder_type == 'conformer':
         encoder = ConformerEncoder(input_dim,
@@ -114,6 +120,12 @@ def init_model(args, configs):
                            joint=joint,
                            ctc=ctc,
                            **configs['model_conf'])
+    elif 'ctlmodel' in configs:
+        model = CTLModel(vocab_size=vocab_size,
+                         encoder=encoder,
+                         decoder=decoder,
+                         ctc=ctc,
+                         **configs['model_conf'])
     else:
         if configs.get('lfmmi_dir', '') != '':
             model = K2Model(vocab_size=vocab_size,
