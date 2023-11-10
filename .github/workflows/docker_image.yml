@@ -46,6 +46,13 @@ jobs:
         /home/wenet/websocket_server_main \
           --port 10086 \
           --chunk_size 16 \
+          --sample_rate 8000 \
+          --num_left_chunks -1 \
+          --attn_weight 0.0 \
+          --batch_size 1 \
+          --beam 10 \
+          --ctc_weight 0.5 \
+          --penalty 0.0 \
           --model_path \$model/final.zip \
           --unit_path \$model/units.txt 2>&1 | tee server.log
         EOF
