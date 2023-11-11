@@ -55,7 +55,8 @@ def write_tar_file(data_list,
                 audio, sample_rate = sox.load(wav, normalize=False)
                 if sample_rate != resample:
                     audio = torchaudio.transforms.Resample(
-                        sample_rate, resample)(audio)
+                        sample_rate, resample)(audio.float())
+                    audio = audio.to(torch.int16)
                 read_time += (time.time() - ts)
                 # change format to wav
                 ts = time.time()
