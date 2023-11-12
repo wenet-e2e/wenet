@@ -23,4 +23,5 @@ Submodules
    wenet.utils.init_model
    wenet.utils.mask
    wenet.utils.scheduler
+   wenet.utils.tokenize_utils
    wenet.utils.train_utils
