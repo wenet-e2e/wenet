@@ -268,7 +268,8 @@ def main():
                 num_decoding_left_chunks=args.num_decoding_left_chunks,
                 ctc_weight=args.ctc_weight,
                 simulate_streaming=args.simulate_streaming,
-                reverse_weight=args.reverse_weight)
+                reverse_weight=args.reverse_weight,
+                context_graph=context_graph)
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     content = [char_dict[w] for w in hyps[i].tokens]

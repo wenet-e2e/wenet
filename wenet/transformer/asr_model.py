@@ -27,6 +27,7 @@ from wenet.transformer.search import (ctc_greedy_search,
                                       attention_rescoring, DecodeResult)
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, th_accuracy,
                                 reverse_pad_list)
+from wenet.utils.context_graph import ContextGraph
 
 
 class ASRModel(torch.nn.Module):
@@ -192,6 +193,7 @@ class ASRModel(torch.nn.Module):
         ctc_weight: float = 0.0,
         simulate_streaming: bool = False,
         reverse_weight: float = 0.0,
+        context_graph: ContextGraph = None,
     ) -> Dict[str, List[DecodeResult]]:
         """ Decode input speech
 
@@ -234,7 +236,7 @@ class ASRModel(torch.nn.Module):
                 ctc_probs, encoder_lens)
         if 'ctc_prefix_beam_search' in methods:
             ctc_prefix_result = ctc_prefix_beam_search(ctc_probs, encoder_lens,
-                                                       beam_size)
+                                                       beam_size, context_graph)
             results['ctc_prefix_beam_search'] = ctc_prefix_result
         if 'attention_rescoring' in methods:
             # attention_rescoring depends on ctc_prefix_beam_search nbest
@@ -242,7 +244,7 @@ class ASRModel(torch.nn.Module):
                 ctc_prefix_result = results['ctc_prefix_beam_search']
             else:
                 ctc_prefix_result = ctc_prefix_beam_search(
-                    ctc_probs, encoder_lens, beam_size)
+                    ctc_probs, encoder_lens, beam_size, context_graph)
             results['attention_rescoring'] = attention_rescoring(
                 self, ctc_prefix_result, encoder_out, encoder_lens, ctc_weight,
                 reverse_weight)
