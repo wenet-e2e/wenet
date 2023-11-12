@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from wenet.dataset.processor import __tokenize_by_bpe_model
+from wenet.utils.tokenize_utils import tokenize_by_bpe_model
 from typing import Dict, List, Tuple
 from collections import deque
 
@@ -42,7 +42,7 @@ def tokenize(context_list_path, symbol_table, bpe_model=None):
         labels = []
         tokens = []
         if bpe_model is not None:
-            tokens = __tokenize_by_bpe_model(sp, context_txt)
+            tokens = tokenize_by_bpe_model(sp, context_txt)
         else:
             for ch in context_txt:
                 if ch == ' ':
