@@ -15,7 +15,6 @@ Submodules
    wenet.paraformer.attention
    wenet.paraformer.cif
    wenet.paraformer.convert_paraformer_to_wenet_config
-   wenet.paraformer.export_jit
    wenet.paraformer.layers
    wenet.paraformer.paraformer
    wenet.paraformer.search
