@@ -13,10 +13,18 @@
 # limitations under the License.
 
 import argparse
+import os
+import torch
+import yaml
 
 
 def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
-    configs['encoder'] = 'TransformerEncoder'
+    configs = {}
+    configs['whisper'] = True
+    configs['input_dim'] = 128
+    configs['output_dim'] = dims['n_vocab']
+
+    configs['encoder'] = 'transformer'
     configs['encoder_conf'] = {}
     configs['encoder_conf']['input_layer'] = 'conv1d2'
     configs['encoder_conf']['output_size'] = dims['n_audio_state']
@@ -32,7 +40,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['encoder_conf']['pos_enc_layer_type'] = "abs_pos"
     configs['encoder_conf']['static_chunk_size'] = -1
 
-    configs['decoder'] = 'TransformerDecoder'
+    configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
     configs['decoder_conf']['attention_heads'] = dims['n_text_head']
     configs['decoder_conf']['linear_units'] = dims['n_text_state'] * 4
@@ -62,7 +70,8 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
 
 
 def extract_dict(whisper_units, units_txt_path):
-    raise NotImplementedError
+    pass
+    # raise NotImplementedError
 
 
 def get_args():
@@ -83,14 +92,12 @@ def main():
     checkpoint = torch.load(args.whisper_ckpt, map_location="cpu")
     dims = checkpoint["dims"]
     state_dict = checkpoint["model_state_dict"]
+    for name in state_dict.keys():
+        weight = state_dict[name]
+        print(name, weight.dtype, weight.shape)
 
-    with open(args.paraformer_config, 'r') as fin:
-        configs = yaml.load(fin, Loader=yaml.FullLoader)
     vocab_size = extract_dict(args.whisper_units,
                               os.path.join(args.output_dir, 'units.txt'))
-    configs['whisper'] = True
-    configs['input_dim'] = 128
-    configs['output_dim'] = vocab_size
     convert_to_wenet_yaml(dims, os.path.join(args.output_dir, 'train.yaml'))
 
 
