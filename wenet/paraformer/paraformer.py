@@ -142,7 +142,7 @@ class Paraformer(torch.nn.Module):
         loss_decoder = self.criterion_att(decoder_out, ys_pad)
         loss = loss_decoder
         if loss_ctc is not None:
-            loss = self.ctc_weight * loss_ctc
+            loss = loss + self.ctc_weight * loss_ctc
         return {
             "loss": loss,
             "loss_ctc": loss_ctc,
