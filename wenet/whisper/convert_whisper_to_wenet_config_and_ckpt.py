@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import copy
 import os
 import torch
 import yaml
@@ -69,9 +70,37 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
         f.flush()
 
 
+def convert_to_wenet_state_dict(whisper_state_dict):
+    wenet_state_dict = {}
+    for name in whisper_state_dict.keys():
+        original_name = copy.deepcopy(name)
+        name.replace("encoder.blocks", "encoder.encoders")
+        name.replace("decoder.blocks", "decoder.decoders")
+        name.replace("attn.query", "self_attn.linear_q")
+        name.replace("attn.key", "self_attn.linear_k")
+        name.replace("attn.value", "self_attn.linear_v")
+        name.replace("attn.out", "self_attn.linear_out")
+        name.replace("mlp.0", "feed_forward.w_1")
+        name.replace("mlp.2", "feed_forward.w_2")
+        name.replace("cross_attn.query", "src_attn.linear_q")
+        name.replace("cross_attn.key", "src_attn.linear_k")
+        name.replace("cross_attn.value", "src_attn.linear_v")
+        name.replace("cross_attn.out", "src_attn.linear_out")
+        name.replace("attn_ln", "norm1")
+        if "decoder" in name:
+            name.replace("cross_attn_ln", "norm2")
+            name.replace("mlp_ln", "norm3")
+        else:
+            name.replace("mlp_ln", "norm2")
+        print("name {} ==> {}".format(original_name, name))
+        print("type {} ==> torch.float32\n".format(
+            whisper_state_dict[original_name].dtype))
+        wenet_state_dict[name] = whisper_state_dict[original_name].float()
+    return wenet_state_dict
+
+
 def extract_dict(whisper_units, units_txt_path):
     pass
-    # raise NotImplementedError
 
 
 def get_args():
@@ -91,10 +120,8 @@ def main():
     args = get_args()
     checkpoint = torch.load(args.whisper_ckpt, map_location="cpu")
     dims = checkpoint["dims"]
-    state_dict = checkpoint["model_state_dict"]
-    for name in state_dict.keys():
-        weight = state_dict[name]
-        print(name, weight.dtype, weight.shape)
+    whisper_state_dict = checkpoint["model_state_dict"]
+    wenet_state_dict = convert_to_wenet_state_dict(whisper_state_dict)
 
     vocab_size = extract_dict(args.whisper_units,
                               os.path.join(args.output_dir, 'units.txt'))
