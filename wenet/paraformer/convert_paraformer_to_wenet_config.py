@@ -100,7 +100,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str, fields_to_keep: List):
     configs['dataset_conf']['sort'] = False
 
     with open(wenet_yaml_path, '+w') as f:
-        f.write(json.dumps(configs))
+        f.write(yaml.dump(configs))
         f.flush()
 
 

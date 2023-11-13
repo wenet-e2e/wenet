@@ -46,8 +46,8 @@ def init_model(args, configs):
         **configs['model_conf'],
     )
 
-    infos = load_checkpoint(model, args.ali_paraformer)
-    return model, infos
+    load_checkpoint(model, args.ali_paraformer)
+    return model, configs
 
 
 def main():
