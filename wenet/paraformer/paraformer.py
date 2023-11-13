@@ -87,8 +87,8 @@ class Paraformer(torch.nn.Module):
             del self.decoder.embed
         # NOTE(Mddct): add eos in tail of labels for predictor
         # eg:
-        #.    gt:         你 好 we@@ net
-        #.    labels:     你 好 we@@ net eos
+        #    gt:         你 好 we@@ net
+        #    labels:     你 好 we@@ net eos
         self.add_eos = add_eos
 
     @torch.jit.ignore(drop=True)
@@ -165,7 +165,6 @@ class Paraformer(torch.nn.Module):
         device = encoder_out.device
         B, _ = ys_pad.size()
 
-        # update from: https://github.com/alibaba-damo-academy/FunASR/blob/main/funasr/models/e2e_asr_paraformer.py#L526
         tgt_mask = make_non_pad_mask(ys_pad_lens)
         ys_pad_embed = self.embed(ys_pad)  # [B, T, L]
         with torch.no_grad():
@@ -180,9 +179,9 @@ class Paraformer(torch.nn.Module):
                 dtype=tgt_mask.dtype,
             )
             for li in range(B):
-                target_num = ((
-                    (ys_pad_lens[li] - same_num[li].sum()).float()) *
-                              self.sampling_ratio).long()
+                target_num = (ys_pad_lens[li] -
+                              same_num[li].sum()).float() * self.sampling_ratio
+                target_num = target_num.long()
                 if target_num > 0:
                     input_mask[li].scatter_(
                         dim=0,
@@ -193,8 +192,8 @@ class Paraformer(torch.nn.Module):
             input_mask = input_mask * tgt_mask
             input_mask_expand = input_mask.unsqueeze(2)  # [B, T, 1]
 
-        sematic_embeds = torch.where(input_mask_expand == 1, ys_pad_embed,
-                                     pre_acoustic_embeds)
+        sematic_embeds = torch.where(input_mask_expand == 1,
+                                     pre_acoustic_embeds, ys_pad_embed)
         # zero out the paddings
         return sematic_embeds * tgt_mask.unsqueeze(2)
 
