@@ -99,6 +99,11 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str, fields_to_keep: List):
     configs['dataset_conf']['shuffle'] = False
     configs['dataset_conf']['sort'] = False
 
+    configs['grad_clip'] = 5
+    configs['accum_grad'] = 1
+    configs['max_epoch'] = 100
+    configs['log_interval'] = 100
+
     with open(wenet_yaml_path, '+w') as f:
         f.write(yaml.dump(configs))
         f.flush()

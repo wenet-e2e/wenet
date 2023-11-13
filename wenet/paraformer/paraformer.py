@@ -183,7 +183,8 @@ class Paraformer(torch.nn.Module):
                 if target_num > 0:
                     input_mask[li].scatter_(
                         dim=0,
-                        index=torch.randperm(ys_pad_lens[li])[:target_num],
+                        index=torch.randperm(ys_pad_lens[li],
+                                             device=device)[:target_num],
                         value=0,
                     )
             input_mask = torch.where(input_mask > 0, 1, 0)
