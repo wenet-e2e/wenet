@@ -11,11 +11,13 @@ from wenet.utils.file_utils import read_symbol_table
 
 class Paraformer:
 
-    def __init__(self, model_dir: str, device: int = -1) -> None:
+    def __init__(self, model_dir: str, device: int = -1,
+                 resample_rate: int = 16000) -> None:
 
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
+        self.resample_rate = resample_rate
         if device >= 0:
             device = 'cuda:{}'.format(device)
         else:
@@ -29,12 +31,15 @@ class Paraformer:
     def transcribe(self, audio_file: str, tokens_info: bool = False) -> dict:
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
         waveform = waveform.to(torch.float).to(self.device)
+        if sample_rate != self.resample_rate:
+            waveform = torchaudio.transforms.Resample(
+                orig_freq=sample_rate, new_freq=self.resample_rate)(waveform)
         feats = kaldi.fbank(waveform,
                             num_mel_bins=80,
                             frame_length=25,
                             frame_shift=10,
                             energy_floor=0.0,
-                            sample_frequency=16000)
+                            sample_frequency=self.resample_rate)
         feats = feats.unsqueeze(0)
         feats_lens = torch.tensor([
             feats.size(1)],

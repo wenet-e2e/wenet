@@ -29,10 +29,12 @@ from wenet.utils.context_graph import ContextGraph
 
 class Model:
     def __init__(self, model_dir: str, gpu: int = -1, beam: int = 5,
-                 context_path: str = None, context_score: float = 6.0):
+                 context_path: str = None, context_score: float = 6.0,
+                 resample_rate: int = 16000):
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
+        self.resample_rate = resample_rate
         self.model.eval()
         if gpu >= 0:
             device = 'cuda:{}'.format(gpu)
@@ -52,13 +54,16 @@ class Model:
     def compute_feats(self, audio_file: str) -> torch.Tensor:
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
         waveform = waveform.to(torch.float)
+        if sample_rate != self.resample_rate:
+            waveform = torchaudio.transforms.Resample(
+                orig_freq=sample_rate, new_freq=self.resample_rate)(waveform)
         waveform = waveform.to(self.device)
         feats = kaldi.fbank(waveform,
                             num_mel_bins=80,
                             frame_length=25,
                             frame_shift=10,
                             energy_floor=0.0,
-                            sample_frequency=16000)
+                            sample_frequency=self.resample_rate)
         feats = feats.unsqueeze(0)
         return feats
 
