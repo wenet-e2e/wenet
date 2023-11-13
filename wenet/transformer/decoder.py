@@ -72,13 +72,22 @@ class TransformerDecoder(torch.nn.Module):
         elif input_layer == 'none':
             self.embed = NoPositionalEncoding(attention_dim,
                                               positional_dropout_rate)
+        elif input_layer == 'embed_nope':
+            self.embed = torch.nn.Sequential(
+                torch.nn.Embedding(vocab_size, attention_dim),
+                NoPositionalEncoding(attention_dim,
+                                     positional_dropout_rate)
+            )
         else:
             raise ValueError(f"only 'embed' is supported: {input_layer}")
 
         self.normalize_before = normalize_before
         self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
         self.use_output_layer = use_output_layer
-        self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
+        if use_output_layer:
+            self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
+        else:
+            self.output_layer = torch.nn.Identity()
         self.num_blocks = num_blocks
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
