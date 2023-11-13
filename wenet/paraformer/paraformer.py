@@ -15,8 +15,6 @@
 # Modified from ESPnet(https://github.com/espnet/espnet) and
 # FunASR(https://github.com/alibaba-damo-academy/FunASR)
 
-# NOTE: This file is only for loading ali-paraformer-large-model and inference
-
 from typing import Dict, List, Optional, Tuple
 
 import torch
@@ -26,8 +24,13 @@ from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.layers import LFR
 from wenet.paraformer.search import (paraformer_beam_search,
                                      paraformer_greedy_search)
+from wenet.transformer.ctc import CTC
+from wenet.transformer.decoder import TransformerDecoder
+from wenet.transformer.encoder import BaseEncoder
+from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.transformer.search import DecodeResult
-from wenet.utils.mask import make_pad_mask
+from wenet.utils.common import add_sos_eos
+from wenet.utils.mask import make_non_pad_mask
 
 
 class Paraformer(torch.nn.Module):
@@ -37,17 +40,54 @@ class Paraformer(torch.nn.Module):
 
     """
 
-    def __init__(self, encoder: SanmEncoder, decoder: SanmDecoder,
-                 predictor: Cif):
-
+    def __init__(self,
+                 vocab_size: int,
+                 encoder: BaseEncoder,
+                 decoder: TransformerDecoder,
+                 predictor: Cif,
+                 ctc: Optional[CTC] = None,
+                 ctc_weight: float = 0.5,
+                 ignore_id: int = -1,
+                 lsm_weight: float = 0,
+                 length_normalized_loss: bool = False,
+                 sampler: bool = True,
+                 sampling_ratio: float = 0.75,
+                 add_eos: bool = True,
+                 **kwargs):
+        assert isinstance(encoder,
+                          SanmEncoder), isinstance(decoder, SanmDecoder)
         super().__init__()
-        self.lfr = LFR()
+        self.ctc_weight = ctc_weight
+        self.ctc = ctc
+        if ctc_weight == 0.0:
+            del ctc
         self.encoder = encoder
         self.decoder = decoder
         self.predictor = predictor
 
+        self.lfr = LFR()
+
         self.sos = 1
         self.eos = 2
+        self.ignore_id = ignore_id
+
+        self.criterion_att = LabelSmoothingLoss(
+            size=vocab_size,
+            padding_idx=ignore_id,
+            smoothing=lsm_weight,
+            normalize_length=length_normalized_loss)
+
+        self.sampler = sampler
+        self.sampling_ratio = sampling_ratio
+        if sampler:
+            self.embed = self.decoder.embed
+        else:
+            del self.decoder.embed
+        # NOTE(Mddct): add eos in tail of labels for predictor
+        # eg:
+        #    gt:         你 好 we@@ net
+        #    labels:     你 好 we@@ net eos
+        self.add_eos = add_eos
 
     @torch.jit.ignore(drop=True)
     def forward(
@@ -65,24 +105,96 @@ class Paraformer(torch.nn.Module):
             text: (Batch, Length)
             text_lengths: (Batch,)
         """
-        raise NotImplementedError("Training is currently not supported")
+        features, features_lens = self.lfr(speech, speech_lengths)
+        features_lens = features_lens.to(speech_lengths.dtype)
 
-    def calc_predictor(self, encoder_out, encoder_out_lens):
-        encoder_mask = (~make_pad_mask(
-            encoder_out_lens, max_len=encoder_out.size(1))[:, None, :]).to(
-                encoder_out.device)
-        pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index = \
-            self.predictor(
-                encoder_out, None,
-                encoder_mask,
-                ignore_id=self.ignore_id)
-        return pre_acoustic_embeds, pre_token_length, alphas, pre_peak_index
+        # 0 encoder
+        encoder_out, encoder_out_mask = self.encoder(features, features_lens)
 
-    def cal_decoder_with_predictor(self, encoder_out, encoder_mask,
-                                   sematic_embeds, ys_pad_lens):
-        decoder_out, _, _ = self.decoder(encoder_out, encoder_mask,
-                                         sematic_embeds, ys_pad_lens)
-        return decoder_out, ys_pad_lens
+        # 1 predictor
+        ys_pad, ys_pad_lens = text, text_lengths
+        if self.add_eos:
+            _, ys_pad = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
+            ys_pad_lens = text_lengths + 1
+        acoustic_embd, _, _, _ = self.predictor(encoder_out, ys_pad,
+                                                encoder_out_mask,
+                                                self.ignore_id)
+
+        # 2 decoder with sampler
+        # TODO(Mddct): support mwer here
+        acoustic_embd = self._sampler(
+            encoder_out,
+            encoder_out_mask,
+            ys_pad,
+            ys_pad_lens,
+            acoustic_embd,
+        )
+        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
+                                         acoustic_embd, ys_pad_lens)
+
+        # 3 loss
+        # 3.1 ctc branhch
+        loss_ctc: Optional[torch.Tensor] = None
+        if self.ctc_weight != 0.0:
+            loss_ctc = self._forward_ctc(encoder_out, encoder_out_mask, text,
+                                         text_lengths)
+        # TODO(Mddc): thu acc
+        loss_decoder = self.criterion_att(decoder_out, ys_pad)
+        loss = loss_decoder
+        if loss_ctc is not None:
+            loss = self.ctc_weight * loss_ctc
+        return {
+            "loss": loss,
+            "loss_ctc": loss_ctc,
+            "loss_decoder": loss_decoder
+        }
+
+    @torch.jit.ignore(drop=True)
+    def _forward_ctc(self, encoder_out: torch.Tensor,
+                     encoder_mask: torch.Tensor, text: torch.Tensor,
+                     text_lengths: torch.Tensor) -> torch.Tensor:
+        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
+        loss_ctc = self.ctc(encoder_out, encoder_out_lens, text, text_lengths)
+        return loss_ctc
+
+    @torch.jit.ignore(drop=True)
+    def _sampler(self, encoder_out, encoder_out_mask, ys_pad, ys_pad_lens,
+                 pre_acoustic_embeds):
+        device = encoder_out.device
+        B, _ = ys_pad.size()
+
+        tgt_mask = make_non_pad_mask(ys_pad_lens)
+        ys_pad_embed = self.embed(ys_pad)  # [B, T, L]
+        with torch.no_grad():
+            decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
+                                             pre_acoustic_embeds, ys_pad_lens)
+            pred_tokens = decoder_out.argmax(-1)
+            nonpad_positions = tgt_mask
+            same_num = ((pred_tokens == ys_pad) * nonpad_positions).sum(1)
+            input_mask = torch.ones_like(
+                nonpad_positions,
+                device=device,
+                dtype=tgt_mask.dtype,
+            )
+            for li in range(B):
+                target_num = (ys_pad_lens[li] -
+                              same_num[li].sum()).float() * self.sampling_ratio
+                target_num = target_num.long()
+                if target_num > 0:
+                    input_mask[li].scatter_(
+                        dim=0,
+                        index=torch.randperm(ys_pad_lens[li],
+                                             device=device)[:target_num],
+                        value=0,
+                    )
+            input_mask = torch.where(input_mask > 0, 1, 0)
+            input_mask = input_mask * tgt_mask
+            input_mask_expand = input_mask.unsqueeze(2)  # [B, T, 1]
+
+        sematic_embeds = torch.where(input_mask_expand == 1,
+                                     pre_acoustic_embeds, ys_pad_embed)
+        # zero out the paddings
+        return sematic_embeds * tgt_mask.unsqueeze(2)
 
     @torch.jit.export
     def forward_paraformer(

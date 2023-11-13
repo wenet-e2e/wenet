@@ -28,7 +28,6 @@ from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.context_graph import ContextGraph
-from wenet.paraformer.export_jit import init_model as init_paraformer_model
 
 
 def get_args():
@@ -170,9 +169,6 @@ def get_args():
                         default=0.0,
                         help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
-    parser.add_argument('--paraformer',
-                        action='store_true',
-                        help='whether to use paraformer model')
     args = parser.parse_args()
     print(args)
     return args
@@ -223,11 +219,7 @@ def main():
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
-    if args.paraformer:
-        model = init_paraformer_model(args, configs)
-
-    else:
-        model, configs = init_model(args, configs)
+    model, configs = init_model(args, configs)
 
     # Load dict
     char_dict = {v: k for k, v in symbol_table.items()}
