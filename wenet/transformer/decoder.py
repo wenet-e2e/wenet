@@ -43,6 +43,7 @@ class TransformerDecoder(torch.nn.Module):
             False: use layer_norm after each sub-block of a layer.
         src_attention: if false, encoder-decoder cross attention is not
                        applied, such as CIF model
+        key_bias: whether use bias in attention.linear_k, False for whisper models.
     """
 
     def __init__(
@@ -60,6 +61,7 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         src_attention: bool = True,
+        key_bias: bool = True,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -93,9 +95,9 @@ class TransformerDecoder(torch.nn.Module):
             DecoderLayer(
                 attention_dim,
                 MultiHeadedAttention(attention_heads, attention_dim,
-                                     self_attention_dropout_rate),
+                                     self_attention_dropout_rate, key_bias),
                 MultiHeadedAttention(attention_heads, attention_dim,
-                                     src_attention_dropout_rate)
+                                     src_attention_dropout_rate, key_bias)
                 if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
                                         dropout_rate),
@@ -212,6 +214,7 @@ class BiTransformerDecoder(torch.nn.Module):
         normalize_before:
             True: use layer_norm before each sub-block of a layer.
             False: use layer_norm after each sub-block of a layer.
+        key_bias: whether use bias in attention.linear_k, False for whisper models.
     """
 
     def __init__(

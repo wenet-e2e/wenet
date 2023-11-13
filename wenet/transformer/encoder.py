@@ -85,6 +85,7 @@ class BaseEncoder(torch.nn.Module):
             global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
+            key_bias: whether use bias in attention.linear_k, False for whisper models.
         """
         super().__init__()
         self._output_size = output_size
@@ -344,6 +345,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        key_bias: bool = True,
     ):
         """ Construct TransformerEncoder
 
@@ -359,7 +361,7 @@ class TransformerEncoder(BaseEncoder):
             TransformerEncoderLayer(
                 output_size,
                 MultiHeadedAttention(attention_heads, output_size,
-                                     attention_dropout_rate),
+                                     attention_dropout_rate, key_bias),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate), dropout_rate,
                 normalize_before) for _ in range(num_blocks)
@@ -393,6 +395,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        key_bias: bool = True,
     ):
         """Construct ConformerEncoder
 
@@ -409,6 +412,7 @@ class ConformerEncoder(BaseEncoder):
             use_cnn_module (bool): Whether to use convolution module.
             cnn_module_kernel (int): Kernel size of convolution module.
             causal (bool): whether to use causal convolution or not.
+            key_bias: whether use bias in attention.linear_k, False for whisper models.
         """
         super().__init__(input_size, output_size, attention_heads,
                          linear_units, num_blocks, dropout_rate,
@@ -427,6 +431,7 @@ class ConformerEncoder(BaseEncoder):
             attention_heads,
             output_size,
             attention_dropout_rate,
+            key_bias,
         )
         # feed-forward module definition
         positionwise_layer = PositionwiseFeedForward
