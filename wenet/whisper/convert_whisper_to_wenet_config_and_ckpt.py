@@ -40,6 +40,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['encoder_conf']['use_dynamic_left_chunk'] = False
     configs['encoder_conf']['pos_enc_layer_type'] = "abs_pos"
     configs['encoder_conf']['static_chunk_size'] = -1
+    configs['encoder_conf']['key_bias'] = False
 
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
@@ -50,6 +51,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['decoder_conf']['positional_dropout_rate'] = 0.0
     configs['decoder_conf']['self_attention_dropout_rate'] = 0.0
     configs['decoder_conf']['src_attention_dropout_rate'] = 0.0
+    configs['decoder_conf']['key_bias'] = False
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filte_conf'] = {}
