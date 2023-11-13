@@ -399,6 +399,9 @@ class SanmDecoder(TransformerDecoder):
                          src_attention_dropout_rate, input_layer,
                          use_output_layer, normalize_before, src_attention)
         del self.embed
+        self.embed = torch.nn.Sequential(
+            torch.nn.Embedding(vocab_size, encoder_output_size))
+
         del self.decoders
         self.decoders = torch.nn.ModuleList([
             SanmDecoderLayer(

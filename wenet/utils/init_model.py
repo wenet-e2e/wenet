@@ -33,6 +33,16 @@ from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 
 
 def init_model(args, configs):
+    if 'paraformer' in configs:
+        """ NOTE(Mddct): support fintune  paraformer, if there is a need for
+                sanmencoder/decoder in the future, simplify here.
+        """
+        from wenet.paraformer.export_jit import (init_model as
+                                                 init_ali_paraformer_model)
+        model, configs = init_ali_paraformer_model(args, configs)
+        print(configs)
+        return model, configs
+
     if configs['cmvn_file'] is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(

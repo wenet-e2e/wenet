@@ -39,13 +39,15 @@ def init_model(args, configs):
                                     **configs['decoder_conf'])
     predictor = Cif(**configs['cif_predictor_conf'])
     model = Paraformer(
+        vocab_size=vocab_size,
         encoder=encoder,
         decoder=decoder,
         predictor=predictor,
+        **configs['model_conf'],
     )
 
-    load_checkpoint(model, args.ali_paraformer)
-    return model
+    infos = load_checkpoint(model, args.ali_paraformer)
+    return model, infos
 
 
 def main():
@@ -55,7 +57,8 @@ def main():
                         format='%(asctime)s %(levelname)s %(message)s')
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-    model = init_model(args, configs)
+
+    model, _ = init_model(args, configs)
     model.eval()
 
     if args.output_file:
