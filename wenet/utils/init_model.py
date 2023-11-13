@@ -37,9 +37,9 @@ def init_model(args, configs):
         """ NOTE(Mddct): support fintune  paraformer, if there is a need for
                 sanmencoder/decoder in the future, simplify here.
         """
-        from wenet.paraformer.export_jit import (init_model as
-                                                 init_ali_paraformer_model)
-        model, configs = init_ali_paraformer_model(args, configs)
+        from wenet.utils.init_ali_paraformer import (init_model as
+                                                     init_ali_paraformer_model)
+        model, configs = init_ali_paraformer_model(configs, args.checkpoint)
         print(configs)
         return model, configs
 

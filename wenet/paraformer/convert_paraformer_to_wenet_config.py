@@ -138,7 +138,8 @@ def main():
     configs['output_dim'] = vocab_size
     fields_to_keep = [
         'encoder_conf', 'decoder_conf', 'predictor_conf', 'input_dim',
-        'output_dim', 'cmvn_file', 'is_json_cmvn', 'model_conf', 'paraformer'
+        'output_dim', 'cmvn_file', 'is_json_cmvn', 'model_conf', 'paraformer',
+        'optim', 'optim_conf', 'scheduler', 'scheduler_conf'
     ]
     convert_to_wenet_yaml(configs, os.path.join(args.output_dir, 'train.yaml'),
                           fields_to_keep)

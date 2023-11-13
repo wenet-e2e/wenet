@@ -15,8 +15,6 @@
 # Modified from ESPnet(https://github.com/espnet/espnet) and
 # FunASR(https://github.com/alibaba-damo-academy/FunASR)
 
-# NOTE: This file is only for loading ali-paraformer-large-model and inference
-
 from typing import Dict, List, Optional, Tuple
 
 import torch
