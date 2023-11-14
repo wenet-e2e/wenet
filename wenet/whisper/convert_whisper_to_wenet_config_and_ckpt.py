@@ -64,7 +64,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filte_conf'] = {}
-    configs['dataset_conf']['filte_conf']['max_length'] = dims['n_audio_ctx'] * 2  # 1/2 subsample, noqa
+    configs['dataset_conf']['filte_conf']['max_length'] = dims['n_audio_ctx'] * 2  # 1/2 subsample # noqa
     configs['dataset_conf']['filte_conf']['min_length'] = 0
     configs['dataset_conf']['filte_conf']['token_max_length'] = dims['n_text_ctx']
     configs['dataset_conf']['filte_conf']['token_min_length'] = 1
@@ -95,7 +95,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
 def convert_to_wenet_state_dict(whisper_state_dict):
     wenet_state_dict = {}
     unused = []
-    print("========================== start CKPT Conversion ==============================")
+    print("===================== start CKPT Conversion =========================")
     for name in whisper_state_dict.keys():
         original_name = copy.deepcopy(name)
         name = name.replace("encoder.conv1", "encoder.embed.conv.0")
@@ -129,7 +129,7 @@ def convert_to_wenet_state_dict(whisper_state_dict):
             unused.append(name)
         else:
             wenet_state_dict[name] = whisper_state_dict[original_name].float()
-    print("========================== End CKPT Conversion ==============================\n")
+    print("===================== End CKPT Conversion =========================\n")
     for name in unused:
         print("NOTE!!! drop {}".format(name))
     return wenet_state_dict
