@@ -22,7 +22,7 @@ import yaml
 def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs = {}
     configs['whisper'] = True
-    configs['input_dim'] = 128
+    configs['input_dim'] = dims['n_mels']
     configs['output_dim'] = dims['n_vocab']
 
     configs['encoder'] = 'transformer'
