@@ -74,30 +74,44 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
 
 def convert_to_wenet_state_dict(whisper_state_dict):
     wenet_state_dict = {}
+    unused = []
+    print("========================== start Conversion ==============================")
     for name in whisper_state_dict.keys():
         original_name = copy.deepcopy(name)
-        name.replace("encoder.blocks", "encoder.encoders")
-        name.replace("decoder.blocks", "decoder.decoders")
-        name.replace("attn.query", "self_attn.linear_q")
-        name.replace("attn.key", "self_attn.linear_k")
-        name.replace("attn.value", "self_attn.linear_v")
-        name.replace("attn.out", "self_attn.linear_out")
-        name.replace("mlp.0", "feed_forward.w_1")
-        name.replace("mlp.2", "feed_forward.w_2")
-        name.replace("cross_attn.query", "src_attn.linear_q")
-        name.replace("cross_attn.key", "src_attn.linear_k")
-        name.replace("cross_attn.value", "src_attn.linear_v")
-        name.replace("cross_attn.out", "src_attn.linear_out")
-        name.replace("attn_ln", "norm1")
+        name = name.replace("encoder.conv1", "encoder.embed.conv.0")
+        name = name.replace("encoder.conv2", "encoder.embed.conv.2")
+        name = name.replace("decoder.token_embedding", "decoder.embed.0")
+        name = name.replace("encoder.blocks", "encoder.encoders")
+        name = name.replace("decoder.blocks", "decoder.decoders")
+        name = name.replace("cross_attn.query", "src_attn.linear_q")
+        name = name.replace("cross_attn.key", "src_attn.linear_k")
+        name = name.replace("cross_attn.value", "src_attn.linear_v")
+        name = name.replace("cross_attn.out", "src_attn.linear_out")
+        name = name.replace("attn.query", "self_attn.linear_q")
+        name = name.replace("attn.key", "self_attn.linear_k")
+        name = name.replace("attn.value", "self_attn.linear_v")
+        name = name.replace("attn.out", "self_attn.linear_out")
+        name = name.replace("mlp.0", "feed_forward.w_1")
+        name = name.replace("mlp.2", "feed_forward.w_2")
         if "decoder" in name:
-            name.replace("cross_attn_ln", "norm2")
-            name.replace("mlp_ln", "norm3")
+            name = name.replace("cross_attn_ln", "norm2")
+            name = name.replace("mlp_ln", "norm3")
         else:
-            name.replace("mlp_ln", "norm2")
-        print("name {} ==> {}".format(original_name, name))
-        print("type {} ==> torch.float32\n".format(
+            name = name.replace("mlp_ln", "norm2")
+        name = name.replace("attn_ln", "norm1")
+        name = name.replace("encoder.ln_post", "encoder.after_norm")
+        name = name.replace("decoder.ln", "decoder.after_norm")
+        print("name  {} ==> {}".format(original_name, name))
+        print("type  {} ==> torch.float32".format(
             whisper_state_dict[original_name].dtype))
-        wenet_state_dict[name] = whisper_state_dict[original_name].float()
+        print("shape {}\n".format(whisper_state_dict[original_name].shape))
+        if (original_name == name):
+            unused.append(name)
+        else:
+            wenet_state_dict[name] = whisper_state_dict[original_name].float()
+    print("========================== End Conversion ==============================\n")
+    for name in unused:
+        print("NOTE!!! drop {}".format(name))
     return wenet_state_dict
 
 
