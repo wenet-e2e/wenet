@@ -1,10 +1,5 @@
 from typing import Dict, List, Optional, Tuple, Union
 
-try:
-    import k2
-except ImportError:
-    print('Warning: Failed to import k2 which is requried for k2 rnnt train')
-
 import torch
 import torchaudio
 from torch import nn
@@ -494,6 +489,10 @@ class Transducer(ASRModel):
                                                    blank=self.blank,
                                                    reduction="mean")
         else:
+            try:
+                import k2
+            except ImportError:
+                print('Error: k2 is not installed')
             delay_penalty = self.delay_penalty
             if steps < 2 * self.warmup_steps:
                 delay_penalty = 0.00
