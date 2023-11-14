@@ -17,15 +17,6 @@ from typing import Dict, List
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-try:
-    import k2
-    from icefall.utils import get_texts
-    from icefall.decode import get_lattice, Nbest, one_best_decoding
-    from icefall.mmi import LFMMILoss
-    from icefall.mmi_graph_compiler import MmiTrainingGraphCompiler
-except ImportError:
-    print('Warning: Failed to import k2 & icefall, which are for LF-MMI/hlg')
-
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
@@ -34,7 +25,6 @@ from wenet.utils.common import (IGNORE_ID, add_sos_eos, reverse_pad_list)
 
 
 class K2Model(ASRModel):
-
     def __init__(
         self,
         vocab_size: int,
@@ -64,20 +54,24 @@ class K2Model(ASRModel):
 
     @torch.jit.ignore(drop=True)
     def load_lfmmi_resource(self):
+        try:
+            import icefall
+        except ImportError:
+            print('Error: Failed to import icefall')
         with open('{}/tokens.txt'.format(self.lfmmi_dir), 'r') as fin:
             for line in fin:
                 arr = line.strip().split()
                 if arr[0] == '<sos/eos>':
                     self.sos_eos_id = int(arr[1])
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.graph_compiler = MmiTrainingGraphCompiler(
+        self.graph_compiler = icefall.mmi_graph_compiler.MmiTrainingGraphCompiler(
             self.lfmmi_dir,
             device=device,
             oov="<UNK>",
             sos_id=self.sos_eos_id,
             eos_id=self.sos_eos_id,
         )
-        self.lfmmi = LFMMILoss(
+        self.lfmmi = icefall.mmi.LFMMILoss(
             graph_compiler=self.graph_compiler,
             den_scale=1,
             use_pruned_intersect=False,
@@ -91,6 +85,10 @@ class K2Model(ASRModel):
 
     @torch.jit.ignore(drop=True)
     def _calc_lfmmi_loss(self, encoder_out, encoder_mask, text):
+        try:
+            import k2
+        except ImportError:
+            print('Error: Failed to import k2')
         ctc_probs = self.ctc.log_softmax(encoder_out)
         supervision_segments = torch.stack((
             torch.arange(len(encoder_mask)),
@@ -110,6 +108,10 @@ class K2Model(ASRModel):
         return loss
 
     def load_hlg_resource_if_necessary(self, hlg, word):
+        try:
+            import k2
+        except ImportError:
+            print('Error: Failed to import k2')
         if not hasattr(self, 'hlg'):
             device = torch.device(
                 'cuda' if torch.cuda.is_available() else 'cpu')
@@ -136,6 +138,10 @@ class K2Model(ASRModel):
         word: str = '',
         symbol_table: Dict[str, int] = None,
     ) -> List[int]:
+        try:
+            import icefall
+        except ImportError:
+            print('Error: Failed to import icefall')
         self.load_hlg_resource_if_necessary(hlg, word)
         encoder_out, encoder_mask = self._forward_encoder(
             speech, speech_lengths, decoding_chunk_size,
@@ -148,16 +154,18 @@ class K2Model(ASRModel):
              encoder_mask.squeeze(dim=1).sum(dim=1).cpu()),
             1,
         ).to(torch.int32)
-        lattice = get_lattice(nnet_output=ctc_probs,
-                              decoding_graph=self.hlg,
-                              supervision_segments=supervision_segments,
-                              search_beam=20,
-                              output_beam=7,
-                              min_active_states=30,
-                              max_active_states=10000,
-                              subsampling_factor=4)
-        best_path = one_best_decoding(lattice=lattice, use_double_scores=True)
-        hyps = get_texts(best_path)
+        lattice = icefall.decode.get_lattice(
+            nnet_output=ctc_probs,
+            decoding_graph=self.hlg,
+            supervision_segments=supervision_segments,
+            search_beam=20,
+            output_beam=7,
+            min_active_states=30,
+            max_active_states=10000,
+            subsampling_factor=4)
+        best_path = icefall.decode.one_best_decoding(lattice=lattice,
+                                                     use_double_scores=True)
+        hyps = icefall.utils.get_texts(best_path)
         hyps = [[symbol_table[k] for j in i for k in self.word_table[j]]
                 for i in hyps]
         return hyps
@@ -177,6 +185,11 @@ class K2Model(ASRModel):
         word: str = '',
         symbol_table: Dict[str, int] = None,
     ) -> List[int]:
+        try:
+            import k2
+            import icefall
+        except ImportError:
+            print('Error: Failed to import k2 & icefall')
         self.load_hlg_resource_if_necessary(hlg, word)
         device = speech.device
         encoder_out, encoder_mask = self._forward_encoder(
@@ -190,15 +203,16 @@ class K2Model(ASRModel):
              encoder_mask.squeeze(dim=1).sum(dim=1).cpu()),
             1,
         ).to(torch.int32)
-        lattice = get_lattice(nnet_output=ctc_probs,
-                              decoding_graph=self.hlg,
-                              supervision_segments=supervision_segments,
-                              search_beam=20,
-                              output_beam=7,
-                              min_active_states=30,
-                              max_active_states=10000,
-                              subsampling_factor=4)
-        nbest = Nbest.from_lattice(
+        lattice = icefall.decode.get_lattice(
+            nnet_output=ctc_probs,
+            decoding_graph=self.hlg,
+            supervision_segments=supervision_segments,
+            search_beam=20,
+            output_beam=7,
+            min_active_states=30,
+            max_active_states=10000,
+            subsampling_factor=4)
+        nbest = icefall.decode.Nbest.from_lattice(
             lattice=lattice,
             num_paths=100,
             use_double_scores=True,
@@ -272,7 +286,7 @@ class K2Model(ASRModel):
         ragged_tot_scores = k2.RaggedTensor(nbest.shape, tot_scores)
         max_indexes = ragged_tot_scores.argmax()
         best_path = k2.index_fsa(nbest.fsa, max_indexes)
-        hyps = get_texts(best_path)
+        hyps = icefall.utils.get_texts(best_path)
         hyps = [[symbol_table[k] for j in i for k in self.word_table[j]]
                 for i in hyps]
         return hyps
