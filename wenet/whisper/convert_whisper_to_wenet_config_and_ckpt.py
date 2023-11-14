@@ -32,8 +32,8 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['encoder_conf']['attention_heads'] = dims['n_audio_head']
     configs['encoder_conf']['linear_units'] = dims['n_audio_state'] * 4
     configs['encoder_conf']['num_blocks'] = dims['n_audio_layer']
-    configs['encoder_conf']['dropout_rate'] = 0.0
-    configs['encoder_conf']['positional_dropout_rate'] = 0.0
+    configs['encoder_conf']['dropout_rate'] = 0.1
+    configs['encoder_conf']['positional_dropout_rate'] = 0.1
     configs['encoder_conf']['attention_dropout_rate'] = 0.0
     configs['encoder_conf']['normalize_before'] = True
     configs['encoder_conf']['use_dynamic_chunk'] = False
@@ -47,14 +47,27 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['decoder_conf']['attention_heads'] = dims['n_text_head']
     configs['decoder_conf']['linear_units'] = dims['n_text_state'] * 4
     configs['decoder_conf']['num_blocks'] = dims['n_text_layer']
-    configs['decoder_conf']['dropout_rate'] = 0.0
-    configs['decoder_conf']['positional_dropout_rate'] = 0.0
+    configs['decoder_conf']['dropout_rate'] = 0.1
+    configs['decoder_conf']['positional_dropout_rate'] = 0.1
     configs['decoder_conf']['self_attention_dropout_rate'] = 0.0
     configs['decoder_conf']['src_attention_dropout_rate'] = 0.0
+    configs['decoder_conf']['input_layer'] = "embed_nope"
+    configs['decoder_conf']['use_output_layer'] = False
+    configs['decoder_conf']['normalize_before'] = True
+    configs['decoder_conf']['src_attention'] = True
     configs['decoder_conf']['key_bias'] = False
+
+    configs['model_conf'] = {}
+    configs['model_conf']['ctc_weight'] = 0.3
+    configs['model_conf']['lsm_weight'] = 0.1
+    configs['model_conf']['length_normalized_loss'] = False
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filte_conf'] = {}
+    configs['dataset_conf']['filte_conf']['max_length'] = dims['n_audio_ctx'] * 2  # 1/2 subsample, noqa
+    configs['dataset_conf']['filte_conf']['min_length'] = 0
+    configs['dataset_conf']['filte_conf']['token_max_length'] = dims['n_text_ctx']
+    configs['dataset_conf']['filte_conf']['token_min_length'] = 1
     configs['dataset_conf']['speed_perturn'] = False
     configs['dataset_conf']['spec_aug'] = False
     configs['dataset_conf']['spec_sub'] = False
@@ -67,6 +80,13 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['max_epoch'] = 100
     configs['log_interval'] = 100
 
+    configs['optim'] = "adam"
+    configs['optim_conf'] = {}
+    configs['optim_conf']['lr'] = 0.002
+    configs['scheduler'] = "warmuplr"
+    configs['scheduler_conf'] = {}
+    configs['scheduler_conf']['warmup_steps'] = 25000
+
     with open(wenet_yaml_path, '+w') as f:
         f.write(yaml.dump(configs))
         f.flush()
@@ -75,7 +95,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
 def convert_to_wenet_state_dict(whisper_state_dict):
     wenet_state_dict = {}
     unused = []
-    print("========================== start Conversion ==============================")
+    print("========================== start CKPT Conversion ==============================")
     for name in whisper_state_dict.keys():
         original_name = copy.deepcopy(name)
         name = name.replace("encoder.conv1", "encoder.embed.conv.0")
@@ -109,7 +129,7 @@ def convert_to_wenet_state_dict(whisper_state_dict):
             unused.append(name)
         else:
             wenet_state_dict[name] = whisper_state_dict[original_name].float()
-    print("========================== End Conversion ==============================\n")
+    print("========================== End CKPT Conversion ==============================\n")
     for name in unused:
         print("NOTE!!! drop {}".format(name))
     return wenet_state_dict
