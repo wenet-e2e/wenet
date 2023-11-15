@@ -14,9 +14,6 @@
 #
 # Modified from [Whisper](https://github.com/openai/whisper)
 
-import base64
-import gzip
-
 import numpy as np
 import torch
 
@@ -46,22 +43,10 @@ class Whisper(ASRModel):
         self.sos = vocab_size - 1
         self.eos = vocab_size - 1
         self.n_vocab = vocab_size
-        # use the last half among the decoder layers for time alignment by default;
-        # to use a specific set of heads, see `set_alignment_heads()` below.
-        all_heads = torch.zeros(
-            len(decoder.decoders), decoder.decoders[0].self_attn.h, dtype=torch.bool
-        )
-        all_heads[len(decoder.decoders) // 2 :] = True
-        self.register_buffer("alignment_heads", all_heads.to_sparse(), persistent=False)
 
+    # TODO(xcsong): time align
     def set_alignment_heads(self, dump: bytes):
-        array = np.frombuffer(
-            gzip.decompress(base64.b85decode(dump)), dtype=bool
-        ).copy()
-        mask = torch.from_numpy(array).reshape(
-            len(decoder.decoders), decoder.decoders[0].self_attn.h
-        )
-        self.register_buffer("alignment_heads", mask.to_sparse(), persistent=False)
+        raise NotImplementedError
 
     @property
     def device(self):
