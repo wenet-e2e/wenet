@@ -14,10 +14,10 @@
 #
 # Modified from [Whisper](https://github.com/openai/whisper)
 
-import numpy as np
 import torch
 
 from wenet.transformer.asr_model import ASRModel
+from wenet.transformer.ctc import CTC
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
 
@@ -42,7 +42,6 @@ class Whisper(ASRModel):
         # FIXME(xcsong): rewrite sos & eos
         self.sos = vocab_size - 1
         self.eos = vocab_size - 1
-        self.n_vocab = vocab_size
 
     # TODO(xcsong): time align
     def set_alignment_heads(self, dump: bytes):
@@ -52,12 +51,10 @@ class Whisper(ASRModel):
     def device(self):
         return next(self.parameters()).device
 
-    @torch.jit.export
     @property
     def is_multilingual(self):
         return self.n_vocab >= 51865
 
-    @torch.jit.export
     @property
     def num_languages(self):
         return self.n_vocab - 51765 - int(self.is_multilingual)

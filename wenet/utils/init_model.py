@@ -28,6 +28,7 @@ from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.ctl_model.asr_model_ctl import CTLModel
+from wenet.whisper.whisper import Whisper
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 
@@ -136,6 +137,12 @@ def init_model(args, configs):
                          decoder=decoder,
                          ctc=ctc,
                          **configs['model_conf'])
+    elif 'whisper' in configs:
+        model = Whisper(vocab_size=vocab_size,
+                        encoder=encoder,
+                        decoder=decoder,
+                        ctc=ctc,
+                        **configs['model_conf'])
     else:
         if configs.get('lfmmi_dir', '') != '':
             model = K2Model(vocab_size=vocab_size,
