@@ -85,6 +85,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['dataset_conf']['sort'] = True
     configs['dataset_conf']['sort_conf'] = {}
     configs['dataset_conf']['sort_conf']['sort_size'] = 500
+    configs['dataset_conf']['feats_type'] = "log_mel_spectrogram"
     configs['dataset_conf']['log_mel_spectrogram_conf'] = {}
     configs['dataset_conf']['log_mel_spectrogram_conf']['n_fft'] = 400
     configs['dataset_conf']['log_mel_spectrogram_conf']['hop_length'] = 160
@@ -95,7 +96,6 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['dataset_conf']['batch_conf']['batch_size'] = 26
     configs['dataset_conf']['batch_conf']['max_frames_in_batch'] = 12000
 
-    configs['feats_type'] = "log_mel_spectrogram"
     configs['grad_clip'] = 5
     configs['accum_grad'] = 1
     configs['max_epoch'] = 100
