@@ -64,11 +64,11 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['model_conf']['length_normalized_loss'] = False
 
     configs['dataset_conf'] = {}
-    configs['dataset_conf']['filte_conf'] = {}
-    configs['dataset_conf']['filte_conf']['max_length'] = dims['n_audio_ctx'] * 2  # 1/2 subsample # noqa
-    configs['dataset_conf']['filte_conf']['min_length'] = 0
-    configs['dataset_conf']['filte_conf']['token_max_length'] = dims['n_text_ctx']
-    configs['dataset_conf']['filte_conf']['token_min_length'] = 1
+    configs['dataset_conf']['filter_conf'] = {}
+    configs['dataset_conf']['filter_conf']['max_length'] = dims['n_audio_ctx'] * 2  # 1/2 subsample # noqa
+    configs['dataset_conf']['filter_conf']['min_length'] = 0
+    configs['dataset_conf']['filter_conf']['token_max_length'] = dims['n_text_ctx']
+    configs['dataset_conf']['filter_conf']['token_min_length'] = 1
     configs['dataset_conf']['resample_conf'] = {}
     configs['dataset_conf']['resample_conf']['resample_rate'] = 16000
     configs['dataset_conf']['speed_perturb'] = True
