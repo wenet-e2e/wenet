@@ -39,7 +39,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['encoder_conf']['normalize_before'] = True
     configs['encoder_conf']['use_dynamic_chunk'] = False
     configs['encoder_conf']['use_dynamic_left_chunk'] = False
-    configs['encoder_conf']['pos_enc_layer_type'] = "abs_pos"
+    configs['encoder_conf']['pos_enc_layer_type'] = "abs_pos_whisper"
     configs['encoder_conf']['static_chunk_size'] = -1
     configs['encoder_conf']['key_bias'] = False
 

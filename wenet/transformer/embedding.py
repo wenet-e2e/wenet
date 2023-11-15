@@ -20,6 +20,7 @@ from typing import Tuple, Union
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 class PositionalEncoding(torch.nn.Module):
     """Positional encoding.
@@ -140,13 +141,28 @@ class RelPositionalEncoding(PositionalEncoding):
         return self.dropout(x), self.dropout(pos_emb)
 
 
+class WhisperPositionalEncoding(PositionalEncoding):
+    """ Sinusoids position encoding used in openai-whisper.encoder
+    """
+    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 1500):
+        super().__init__(d_model, dropout_rate, max_len)
+        # NOTE(xcsong): overwrite self.pe & self.xscale
+        self.xscale = 1.0
+        log_timescale_increment = np.log(10000) / (d_model // 2 - 1)
+        inv_timescales = torch.exp(-log_timescale_increment * torch.arange(d_model // 2))
+        scaled_time = torch.arange(max_len)[:, np.newaxis] * inv_timescales[np.newaxis, :]
+        self.pe = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)], dim=1)
+        self.pe = self.pe.unsqueeze(0)
+
+
 class LearnablePositionalEncoding(PositionalEncoding):
-    """ Learnable position encoding, used in openai-whisper
+    """ Learnable position encoding used in openai-whisper.decoder
     """
     def __init__(self, d_model: int, dropout_rate: float, max_len: int = 448):
         super().__init__(d_model, dropout_rate, max_len)
-        # NOTE(xcsong): overwrite self.pe
+        # NOTE(xcsong): overwrite self.pe & self.xscale
         self.pe = torch.nn.Parameter(torch.empty(1, max_len, d_model))
+        self.xscale = 1.0
 
 
 class NoPositionalEncoding(torch.nn.Module):

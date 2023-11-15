@@ -23,6 +23,7 @@ from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.embedding import PositionalEncoding
+from wenet.transformer.embedding import WhisperPositionalEncoding
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.embedding import NoPositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
@@ -92,6 +93,8 @@ class BaseEncoder(torch.nn.Module):
 
         if pos_enc_layer_type == "abs_pos":
             pos_enc_class = PositionalEncoding
+        elif pos_enc_layer_type == "abs_pos_whisper":
+            pos_enc_class = WhisperPositionalEncoding
         elif pos_enc_layer_type == "rel_pos":
             pos_enc_class = RelPositionalEncoding
         elif pos_enc_layer_type == "no_pos":
