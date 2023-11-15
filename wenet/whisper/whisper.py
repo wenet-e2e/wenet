@@ -14,13 +14,10 @@
 #
 # Modified from [Whisper](https://github.com/openai/whisper)
 
-import torch
-
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
-
 from wenet.utils.common import IGNORE_ID
 
 
