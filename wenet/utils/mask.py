@@ -378,10 +378,8 @@ def time_mask(batch_size: int,
               max_ratio: float = 1.0,
               dtype=torch.float32,
               multiplicity: int = 1,
-              fix_length: bool = False,
-              device: torch.device = torch.device('cpu')):
+              fix_length: bool = False):
     """Create random mask (B, T) with spans
-
     Args:
         batch_size (int): batch size
         choose_range (torch.Tensor): range within which the masked entries must
@@ -395,39 +393,36 @@ def time_mask(batch_size: int,
             masked.
         multiplicity (int): maximum number of total masks.
         fix_length (bool): if spans is fix length or < rand(max_length)
-
     Returns:
         torch.Tensor: mask shape (B, T)
-
     Examples:
+
     """
+
     if max_length is not None:
         assert max_length > 0
         max_length = torch.broadcast_to(max_length.to(dtype), (batch_size, ))
     else:
         max_length = choose_range.to(dtype) * max_ratio
-    if fix_length:
-        length = max_length.repeat(1, multiplicity)
-    else:
-        masked_portion = torch.rand(batch_size,
-                                    multiplicity,
-                                    dtype=dtype,
-                                    device=device)
-        masked_frame_size = max_length.unsqueeze(1) * masked_portion
-        masked_frame_size = masked_frame_size.to(torch.int32)
 
-        # Make sure the sampled length was sampler than max_ratio * length_bound.
-        choose_range = choose_range.unsqueeze(-1)
-        choose_range = torch.tile(choose_range, [1, multiplicity])
-        length_bound = choose_range.to(dtype) * max_ratio
-        length_bound = length_bound.to(torch.int32)
-        length = torch.minimum(
-            masked_frame_size,
-            torch.maximum(length_bound,
-                          torch.tensor(1, device=length_bound.device)))
+    masked_portion = torch.rand(batch_size, multiplicity, dtype=dtype)
+    masked_frame_size = max_length.unsqueeze(1) * masked_portion
+    masked_frame_size = masked_frame_size.to(torch.int32)
+
+    # Make sure the sampled length was sampler than max_ratio * length_bound.
+    choose_range = choose_range.unsqueeze(-1)
+    choose_range = torch.tile(choose_range, [1, multiplicity])
+    length_bound = choose_range.to(dtype) * max_ratio
+    length_bound = length_bound.to(torch.int32)
+    length = torch.minimum(
+        masked_frame_size,
+        torch.maximum(length_bound, torch.tensor(1,
+                                                 device=length_bound.device)))
+    if fix_length:
+        length = max_length.unsqueeze(1).repeat(1, multiplicity) - 1
 
     # Choose random starting point
-    random_start = torch.rand(batch_size, multiplicity, device=device)
+    random_start = torch.rand(batch_size, multiplicity)
     start_with_in_valid_range = random_start * (choose_range - length + 1)
     start = start_with_in_valid_range.to(torch.int32)
     end = start + length - 1
@@ -440,16 +435,15 @@ def time_mask(batch_size: int,
     end = torch.tile(end, [1, 1, mask_size])
 
     # Construct pre-mask of size (batch_size, multiplicity, mask_size)
-    diagonal = torch.arange(end=mask_size, dtype=dtype,
-                            device=device).unsqueeze(0).unsqueeze(0)
+    diagonal = torch.arange(end=mask_size,
+                            dtype=dtype).unsqueeze(0).unsqueeze(0)
     diagonal = torch.tile(diagonal, [batch_size, multiplicity, 1])
     pre_mask = torch.logical_and(diagonal < end, diagonal > start).to(dtype)
 
     # Sum masks with ppropriate multiplicity.
     if masks_per_frame > 0:
         multiplicity_weights = torch.arange(end=multiplicity.to(torch.int32),
-                                            dtype=torch.int32,
-                                            device=device).to(dtype)
+                                            dtype=torch.int32).to(dtype)
         multiplicity_weights = multiplicity_weights.unsqueeze(0)
         multiplicity_weights = torch.tile(multiplicity_weights,
                                           [batch_size, 1])
