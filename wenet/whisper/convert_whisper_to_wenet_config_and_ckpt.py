@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import base64
 import copy
 import os
 import torch
@@ -113,7 +114,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
         f.flush()
 
 
-def convert_to_wenet_state_dict(whisper_state_dict):
+def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
     wenet_state_dict = {}
     unused = []
     print("===================== start CKPT Conversion =========================")
@@ -150,14 +151,30 @@ def convert_to_wenet_state_dict(whisper_state_dict):
             unused.append(name)
         else:
             wenet_state_dict[name] = whisper_state_dict[original_name].float()
-    print("===================== End CKPT Conversion =========================\n")
     for name in unused:
         print("NOTE!!! drop {}".format(name))
-    return wenet_state_dict
+    print("Saving fp32 ckpt to {}...".format(wenet_state_dict_path))
+    torch.save(wenet_state_dict, wenet_state_dict_path)
+    print("DONE\n===================== End CKPT Conversion =========================\n")
 
 
-def extract_dict(whisper_units, units_txt_path):
-    pass
+def convert_to_wenet_units(whisper_units, units_txt_path):
+    with open(whisper_units, "rb") as f:
+        contents = f.read()
+        tokens = {token: int(rank) for token, rank in
+                  (line.split() for line in contents.splitlines() if line)}
+        tokens_decoded = {base64.b64decode(token): int(rank) for token, rank in
+                          (line.split() for line in contents.splitlines() if line)}
+
+    with open(units_txt_path, "+w") as f:
+        for t, i in tokens.items():
+            f.write(f"{t} {i}\n")
+            f.flush()
+
+    with open("{}.decoded".format(units_txt_path), "+w") as f:
+        for t, i in tokens_decoded.items():
+            f.write(f"{t} {i}\n")
+            f.flush()
 
 
 def get_args():
@@ -176,13 +193,19 @@ def get_args():
 def main():
     args = get_args()
     checkpoint = torch.load(args.whisper_ckpt, map_location="cpu")
-    dims = checkpoint["dims"]
-    whisper_state_dict = checkpoint["model_state_dict"]
-    wenet_state_dict = convert_to_wenet_state_dict(whisper_state_dict)
 
-    vocab_size = extract_dict(args.whisper_units,
-                              os.path.join(args.output_dir, 'units.txt'))
-    convert_to_wenet_yaml(dims, os.path.join(args.output_dir, 'train.yaml'))
+    convert_to_wenet_state_dict(
+        checkpoint["model_state_dict"],
+        os.path.join(args.output_dir, 'wenet_whisper.pt')
+    )
+    convert_to_wenet_units(
+        args.whisper_units,
+        os.path.join(args.output_dir, 'units.txt')
+    )
+    convert_to_wenet_yaml(
+        checkpoint["dims"],
+        os.path.join(args.output_dir, 'train.yaml')
+    )
 
 
 if __name__ == "__main__":
