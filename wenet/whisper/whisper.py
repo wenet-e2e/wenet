@@ -50,8 +50,8 @@ class Whisper(ASRModel):
 
     @property
     def is_multilingual(self):
-        return self.n_vocab >= 51865
+        return self.vocab_size >= 51865
 
     @property
     def num_languages(self):
-        return self.n_vocab - 51765 - int(self.is_multilingual)
+        return self.vocab_size - 51765 - int(self.is_multilingual)
