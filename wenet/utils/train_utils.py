@@ -208,13 +208,15 @@ def check_modify_and_save_config(args, configs):
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
+    elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
+        input_dim = configs['dataset_conf']['log_mel_spectrogram_conf']['num_mel_bins']
     else:
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
     symbol_table = read_symbol_table(args.symbol_table)
     vocab_size = len(symbol_table)
 
     configs['input_dim'] = input_dim
-    configs['output_dim'] = vocab_size
+    configs['output_dim'] = configs.get('output_dim', vocab_size)
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
     configs['lfmmi_dir'] = args.lfmmi_dir
