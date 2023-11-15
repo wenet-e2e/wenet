@@ -52,7 +52,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['decoder_conf']['positional_dropout_rate'] = 0.1
     configs['decoder_conf']['self_attention_dropout_rate'] = 0.0
     configs['decoder_conf']['src_attention_dropout_rate'] = 0.0
-    configs['decoder_conf']['input_layer'] = "embed_nope"
+    configs['decoder_conf']['input_layer'] = "embed_leranable_pe"
     configs['decoder_conf']['use_output_layer'] = False
     configs['decoder_conf']['normalize_before'] = True
     configs['decoder_conf']['src_attention'] = True
@@ -143,6 +143,9 @@ def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
         name = name.replace("attn_ln", "norm1")
         name = name.replace("encoder.ln_post", "encoder.after_norm")
         name = name.replace("decoder.ln", "decoder.after_norm")
+        if original_name == "decoder.positional_embedding":
+            whisper_state_dict[name] = whisper_state_dict[name].unsqueeze(0)
+            name = "decoder.embed.1.pe"
         print("name  {} ==> {}".format(original_name, name))
         print("type  {} ==> torch.float32".format(
             whisper_state_dict[original_name].dtype))

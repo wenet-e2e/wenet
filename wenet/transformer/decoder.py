@@ -21,6 +21,7 @@ from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.embedding import NoPositionalEncoding
+from wenet.transformer.embedding import LearnablePositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
 
@@ -74,11 +75,11 @@ class TransformerDecoder(torch.nn.Module):
         elif input_layer == 'none':
             self.embed = NoPositionalEncoding(attention_dim,
                                               positional_dropout_rate)
-        elif input_layer == 'embed_nope':
+        elif input_layer == 'embed_learnable_pe':
             self.embed = torch.nn.Sequential(
                 torch.nn.Embedding(vocab_size, attention_dim),
-                NoPositionalEncoding(attention_dim,
-                                     positional_dropout_rate)
+                LearnablePositionalEncoding(attention_dim,
+                                            positional_dropout_rate),
             )
         else:
             raise ValueError(f"only 'embed' is supported: {input_layer}")

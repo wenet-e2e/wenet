@@ -140,6 +140,15 @@ class RelPositionalEncoding(PositionalEncoding):
         return self.dropout(x), self.dropout(pos_emb)
 
 
+class LearnablePositionalEncoding(PositionalEncoding):
+    """ Learnable position encoding, used in openai-whisper
+    """
+    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 448):
+        super().__init__(d_model, dropout_rate, max_len)
+        # NOTE(xcsong): overwrite self.pe
+        self.pe = torch.nn.Parameter(torch.empty(1, max_len, d_model))
+
+
 class NoPositionalEncoding(torch.nn.Module):
     """ No position encoding
     """
