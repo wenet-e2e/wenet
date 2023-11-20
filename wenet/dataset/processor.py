@@ -349,7 +349,8 @@ def compute_log_mel_spectrogram(data,
         if padding > 0:
             audio = F.pad(waveform, (0, padding))
         window = torch.hann_window(n_fft)
-        stft = torch.stft(waveform, n_fft, hop_length, window=window, return_complex=True)
+        stft = torch.stft(waveform, n_fft, hop_length,
+                          window=window, return_complex=True)
         magnitudes = stft[..., :-1].abs() ** 2
 
         filters = torch.from_numpy(
