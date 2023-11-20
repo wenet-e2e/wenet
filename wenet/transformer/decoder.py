@@ -16,6 +16,7 @@
 from typing import Tuple, List, Optional
 
 import torch
+import logging
 
 from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
@@ -203,8 +204,10 @@ class TransformerDecoder(torch.nn.Module):
         if not self.use_output_layer:
             return
         if jit_mode:
+            logging.info("clone emb.weight to output.weight")
             self.output_layer.weight = torch.nn.Parameter(self.embed[0].weight.clone())
         else:
+            logging.info("tie emb.weight with output.weight")
             self.output_layer.weight = self.embed[0].weight
 
         if getattr(self.output_layer, "bias", None) is not None:
