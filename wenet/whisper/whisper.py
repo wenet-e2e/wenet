@@ -14,13 +14,17 @@
 #
 # Modified from [Whisper](https://github.com/openai/whisper)
 
+import torch
+
+from typing import Tuple
 from whisper.tokenizer import get_tokenizer
 
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
-from wenet.utils.common import IGNORE_ID
+from wenet.utils.common import (IGNORE_ID, add_whisper_tokens,
+                                reverse_pad_list, th_accuracy)
 
 
 class Whisper(ASRModel):
@@ -60,3 +64,44 @@ class Whisper(ASRModel):
     @property
     def num_languages(self):
         return self.vocab_size - 51765 - int(self.is_multilingual)
+
+    def _calc_att_loss(
+        self,
+        encoder_out: torch.Tensor,
+        encoder_mask: torch.Tensor,
+        ys_pad: torch.Tensor,
+        ys_pad_lens: torch.Tensor,
+    ) -> Tuple[torch.Tensor, float]:
+        # TODO(xcsong): add args for no_timestamp, language, etc
+        prev_len = ys_pad.size(1)
+        ys_in_pad, ys_out_pad = add_whisper_tokens(
+            self.tokenizer, ys_pad, self.ignore_id, task_id=self.tokenizer.transcribe,
+            no_timestamp=True, language="zh", use_prev=False
+        )
+        cur_len = ys_in_pad.size(1)
+        ys_in_lens = ys_pad_lens + cur_len - prev_len
+
+        # reverse the seq, used for right to left decoder
+        r_ys_pad = reverse_pad_list(ys_pad, ys_pad_lens, float(self.ignore_id))
+        r_ys_in_pad, r_ys_out_pad = add_whisper_tokens(
+            self.tokenizer, r_ys_pad, self.ignore_id, task_id=self.tokenizer.transcribe,
+            no_timestamp=True, language="zh", use_prev=False
+        )
+        # 1. Forward decoder
+        decoder_out, r_decoder_out, _ = self.decoder(encoder_out, encoder_mask,
+                                                     ys_in_pad, ys_in_lens,
+                                                     r_ys_in_pad,
+                                                     self.reverse_weight)
+        # 2. Compute attention loss
+        loss_att = self.criterion_att(decoder_out, ys_out_pad)
+        r_loss_att = torch.tensor(0.0)
+        if self.reverse_weight > 0.0:
+            r_loss_att = self.criterion_att(r_decoder_out, r_ys_out_pad)
+        loss_att = loss_att * (
+            1 - self.reverse_weight) + r_loss_att * self.reverse_weight
+        acc_att = th_accuracy(
+            decoder_out.view(-1, self.vocab_size),
+            ys_out_pad,
+            ignore_label=self.ignore_id,
+        )
+        return loss_att, acc_att

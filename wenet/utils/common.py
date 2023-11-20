@@ -20,6 +20,9 @@ from typing import List, Tuple
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
+from whisper.tokenizer import LANGUAGES as WhiserLanguages
+
+WHISPER_LANGS = tuple(WhiserLanguages.keys())
 IGNORE_ID = -1
 
 
@@ -144,6 +147,72 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
     return pad_list(ys_in, eos), pad_list(ys_out, ignore_id)
 
 
+def add_whisper_tokens(
+    tokenizer, ys_pad: torch.Tensor,
+    ignore_id: int, task_id: int, no_timestamp: bool,
+    language: str, use_prev: bool
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Add whisper-style tokens.
+
+    ([PREV] -> [previous text tokens or hotwords]).optional --
+      ┌------------------------------------------------------↲
+      ↓
+    [sot] -> [language id] -> [transcribe] -> [begin time] -> [text tokens] -> [end time] -> ... -> [eot]    # noqa
+        |          |                |-------> [no timestamps] -> [text tokens] ----------------------↑       # noqa
+        |          |                                                                                 |       # noqa
+        |          |--------> [translate]  -> [begin time] -> [text tokens] -> [end time] -> ... --->|       # noqa
+        |                           |-------> [no timestamps] -> [text tokens] --------------------->|       # noqa
+        |                                                                                            |       # noqa
+        |--> [no speech(VAD)] ---------------------------------------------------------------------->|       # noqa
+
+    Args:
+        tokenizer: get IDs of special tokens
+        ignore_id (int): index of padding
+        no_timestamp (bool): whether to add timestamps tokens
+        language (str): language tag
+
+    Returns:
+        ys_in (torch.Tensor) : (B, Lmax + ?)
+        ys_out (torch.Tensor) : (B, Lmax + ?)
+
+    """
+    if use_prev:
+        # i.e., hotword list
+        _prev = [tokenizer.sot_prev]
+        # append hotword list to _prev
+        # ...
+        raise NotImplementedError
+    else:
+        _prev = []
+
+    language_id = tokenizer.sot + 1 + WHISPER_LANGS.index(language)
+    _sot = _prev + [tokenizer.sot, language_id, task_id]
+    _eot = torch.tensor([tokenizer.eot],
+                        dtype=torch.long,
+                        requires_grad=False,
+                        device=ys_pad.device)
+    ys = [y[y != ignore_id] for y in ys_pad]  # parse padded ys
+
+    if task_id == tokenizer.transcribe or task_id == tokenizer.translate:
+        if no_timestamp:
+            _sot.append(tokenizer.no_timestamps)
+        else:
+            _sot.append(tokenizer.timestamp_begin)
+            # add subsequent tokens
+            # ...
+            raise NotImplementedError
+    elif task_id == tokenizer.no_speech:
+        _sot.append(tokenizer.no_speech)
+    else:
+        raise NotImplementedError
+
+    _sot = torch.tensor(_sot, dtype=torch.long,
+                        requires_grad=False, device=ys_pad.device)
+    ys_in = [torch.cat([_sot, y], dim=0) for y in ys]
+    ys_out = [torch.cat([_sot[1:], y, _eot], dim=0) for y in ys]
+    return pad_list(ys_in, tokenizer.eot), pad_list(ys_out, ignore_id)
+
+
 def reverse_pad_list(ys_pad: torch.Tensor,
                      ys_lens: torch.Tensor,
                      pad_value: float = -1.0) -> torch.Tensor:
@@ -230,7 +299,6 @@ def get_subsample(config):
         return 6
     elif input_layer == "conv2d8":
         return 8
-
 
 
 def log_add(*args) -> float:
