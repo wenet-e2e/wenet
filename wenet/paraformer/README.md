@@ -26,6 +26,7 @@ python3 wenet/bin/export_jit.py \
         --output_file ${OUTPUT_DIR}/final.zip
 ```
 ## 5 fintune 
-```bash
-## run train.py , set train.yaml as config, and set model.pt as checkpoint
-```
+We need run train.py:
+- set train.yaml as config
+- set model.pt as checkpoint
+- set global_cmvn as cmvn
