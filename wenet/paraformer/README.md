@@ -25,7 +25,7 @@ python3 wenet/bin/export_jit.py \
         --checkpoint model.pt \
         --output_file ${OUTPUT_DIR}/final.zip
 ```
-## 5 fintune 
+## 5 fintune
 We need run train.py:
 - set train.yaml as config
 - set model.pt as checkpoint
