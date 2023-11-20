@@ -17,3 +17,4 @@ torch==1.13.0
 torchaudio==0.13.0
 deepspeed
 librosa
+openai-whisper

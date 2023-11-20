@@ -14,6 +14,8 @@
 #
 # Modified from [Whisper](https://github.com/openai/whisper)
 
+from whisper.tokenizer import get_tokenizer
+
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.encoder import TransformerEncoder
@@ -36,9 +38,12 @@ class Whisper(ASRModel):
     ):
         super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight, ignore_id,
                          reverse_weight, lsm_weight, length_normalized_loss)
-        # FIXME(xcsong): rewrite sos & eos
-        self.sos = vocab_size - 1
-        self.eos = vocab_size - 1
+        self.tokenizer = get_tokenizer(multilingual=self.is_multilingual,
+                                       num_languages=self.num_languages)
+        assert vocab_size == self.tokenizer.encoding.n_vocab, "{} v.s. {}".format(
+            vocab_size, self.tokenizer.encoding.n_vocab)
+        self.sos = self.tokenizer.sot
+        self.eos = self.tokenizer.eot
 
     # TODO(xcsong): time align
     def set_alignment_heads(self, dump: bytes):

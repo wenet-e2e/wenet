@@ -122,7 +122,8 @@ def Dataset(data_type,
             conf,
             bpe_model=None,
             non_lang_syms=None,
-            partition=True):
+            partition=True,
+            whisper_tokenizer=None):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -145,7 +146,8 @@ def Dataset(data_type,
         dataset = Processor(dataset, processor.parse_raw)
 
     dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model,
-                        non_lang_syms, conf.get('split_with_space', False))
+                        non_lang_syms, conf.get('split_with_space', False),
+                        whisper_tokenizer)
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 

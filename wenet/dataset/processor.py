@@ -349,7 +349,7 @@ def compute_log_mel_spectrogram(data,
         if padding > 0:
             audio = F.pad(waveform, (0, padding))
         window = torch.hann_window(n_fft)
-        stft = torch.stft(audio, n_fft, hop_length, window=window, return_complex=True)
+        stft = torch.stft(waveform, n_fft, hop_length, window=window, return_complex=True)
         magnitudes = stft[..., :-1].abs() ** 2
 
         filters = torch.from_numpy(
@@ -361,14 +361,16 @@ def compute_log_mel_spectrogram(data,
         log_spec = torch.clamp(mel_spec, min=1e-10).log10().squeeze(0)
         log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
         log_spec = (log_spec + 4.0) / 4.0
-        yield dict(key=sample['key'], label=sample['label'], feat=log_spec)
+        yield dict(key=sample['key'], label=sample['label'],
+                   feat=log_spec.transpose(0, 1))
 
 
 def tokenize(data,
              symbol_table,
              bpe_model=None,
              non_lang_syms=None,
-             split_with_space=False):
+             split_with_space=False,
+             whisper_tokenizer=None):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -394,6 +396,11 @@ def tokenize(data,
     for sample in data:
         assert 'txt' in sample
         txt = sample['txt'].strip()
+        # TODO(xcsong): This is a dirty workaround for whisper tokernizer,
+        #   refine it in the future
+        if whisper_tokenizer is not None:
+            sample['label'] = whisper_tokenizer.encode(txt)
+            yield sample
         if non_lang_syms_pattern is not None:
             parts = non_lang_syms_pattern.split(txt.upper())
             parts = [w for w in parts if len(w.strip()) > 0]

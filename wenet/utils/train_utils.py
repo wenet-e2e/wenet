@@ -37,6 +37,7 @@ from deepspeed.runtime.zero.stage3 import (
 from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict
 )
+from whisper.tokenizer import get_tokenizer
 
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
@@ -248,15 +249,26 @@ def init_dataset_and_dataloader(args, configs):
     symbol_table = read_symbol_table(args.symbol_table)
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    # TODO(xcsong): This is a dirty workaround for whisper tokenizer,
+    #   refine it in the future
+    if configs.get("whisper", False):
+        logging.info("using whisper tokenizer")
+        whisper_tok = get_tokenizer(
+            multilingual=configs['whisper_conf']['is_multilingual'],
+            num_languages=configs['whisper_conf']['num_languages'])
+    else:
+        whisper_tok = None
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
-                            train_conf, args.bpe_model, non_lang_syms, True)
+                            train_conf, args.bpe_model, non_lang_syms, True,
+                            whisper_tok)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
                          cv_conf,
                          args.bpe_model,
                          non_lang_syms,
-                         partition=False)
+                         partition=False,
+                         whisper_tokenizer=whisper_tok)
 
     # NOTE(xcsong): Why we prefer persistent_workers=True ?
     #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110

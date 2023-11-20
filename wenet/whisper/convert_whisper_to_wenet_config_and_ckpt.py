@@ -12,19 +12,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""
+Requirements:
+
+```bash
+pip install -U openai-whisper
+```
+
+Example:
+
+```bash
+# Converts the model from OpenAI to WeNet format:
+python convert_whisper_to_wenet_config_and_ckpt.py \
+    --whisper_ckpt large-v3.pt \
+    --output_dir exp/whisper/large-v3
+```
+"""
+
+
 import argparse
-import base64
 import copy
 import os
+import sys
 import torch
 import yaml
 
+_cpath_ = sys.path[0]
+sys.path.remove(_cpath_)
+from whisper.tokenizer import get_tokenizer
+sys.path.insert(0, _cpath_)
 
-def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
+
+def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs = {}
     configs['whisper'] = True
+    configs['whisper_conf'] = {}
+    configs['whisper_conf']['is_multilingual'] = dims['n_vocab'] >= 51865
+    configs['whisper_conf']['num_languages'] = dims['n_vocab'] - 51765 - \
+        int(configs['whisper_conf']['is_multilingual'])
     configs['input_dim'] = dims['n_mels']
     configs['output_dim'] = dims['n_vocab']
+    assert dims['n_vocab'] == tokenizer.encoding.n_vocab, "{} v.s. {}".format(
+        dims['n_vocab'], tokenizer.encoding.n_vocab)
 
     configs['encoder'] = 'transformer'
     configs['encoder_conf'] = {}
@@ -53,7 +82,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['decoder_conf']['self_attention_dropout_rate'] = 0.0
     configs['decoder_conf']['src_attention_dropout_rate'] = 0.0
     configs['decoder_conf']['input_layer'] = "embed_learnable_pe"
-    configs['decoder_conf']['use_output_layer'] = False
+    configs['decoder_conf']['use_output_layer'] = True
     configs['decoder_conf']['normalize_before'] = True
     configs['decoder_conf']['src_attention'] = True
     configs['decoder_conf']['key_bias'] = False
@@ -101,6 +130,7 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     configs['accum_grad'] = 1
     configs['max_epoch'] = 100
     configs['log_interval'] = 100
+    configs['tie_word_embedding'] = True
 
     configs['optim'] = "adam"
     configs['optim_conf'] = {}
@@ -112,6 +142,8 @@ def convert_to_wenet_yaml(dims, wenet_yaml_path: str):
     with open(wenet_yaml_path, '+w') as f:
         f.write(yaml.dump(configs))
         f.flush()
+
+    print(configs)
 
 
 def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
@@ -125,14 +157,14 @@ def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
         name = name.replace("decoder.token_embedding", "decoder.embed.0")
         name = name.replace("encoder.blocks", "encoder.encoders")
         name = name.replace("decoder.blocks", "decoder.decoders")
-        name = name.replace("cross_attn.query", "src_attn.linear_q")
-        name = name.replace("cross_attn.key", "src_attn.linear_k")
-        name = name.replace("cross_attn.value", "src_attn.linear_v")
-        name = name.replace("cross_attn.out", "src_attn.linear_out")
-        name = name.replace("attn.query", "self_attn.linear_q")
-        name = name.replace("attn.key", "self_attn.linear_k")
-        name = name.replace("attn.value", "self_attn.linear_v")
-        name = name.replace("attn.out", "self_attn.linear_out")
+        name = name.replace(".cross_attn.query", ".src_attn.linear_q")
+        name = name.replace(".cross_attn.key", ".src_attn.linear_k")
+        name = name.replace(".cross_attn.value", ".src_attn.linear_v")
+        name = name.replace(".cross_attn.out", ".src_attn.linear_out")
+        name = name.replace(".attn.query", ".self_attn.linear_q")
+        name = name.replace(".attn.key", ".self_attn.linear_k")
+        name = name.replace(".attn.value", ".self_attn.linear_v")
+        name = name.replace(".attn.out", ".self_attn.linear_out")
         name = name.replace("mlp.0", "feed_forward.w_1")
         name = name.replace("mlp.2", "feed_forward.w_2")
         if "decoder" in name:
@@ -161,22 +193,11 @@ def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
     print("DONE\n===================== End CKPT Conversion =========================\n")
 
 
-def convert_to_wenet_units(whisper_units, units_txt_path):
-    with open(whisper_units, "rb") as f:
-        contents = f.read()
-        tokens = {token: int(rank) for token, rank in
-                  (line.split() for line in contents.splitlines() if line)}
-        tokens_decoded = {base64.b64decode(token): int(rank) for token, rank in
-                          (line.split() for line in contents.splitlines() if line)}
-
+def convert_to_wenet_units(tokenizer, units_txt_path):
+    n_vocab = tokenizer.encoding.n_vocab
     with open(units_txt_path, "+w") as f:
-        for t, i in tokens.items():
-            f.write(f"{t} {i}\n")
-            f.flush()
-
-    with open("{}.decoded".format(units_txt_path), "+w") as f:
-        for t, i in tokens_decoded.items():
-            f.write(f"{t} {i}\n")
+        for i in range(n_vocab):
+            f.write(f"{tokenizer.decode([i])} {i}\n")
             f.flush()
 
 
@@ -184,8 +205,6 @@ def get_args():
     parser = argparse.ArgumentParser(description='load and parse whisper')
     parser.add_argument('--whisper_ckpt', required=True,
                         help='https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt')
-    parser.add_argument('--whisper_units', required=True,
-                        help='https://github.com/openai/whisper/blob/main/whisper/assets/multilingual.tiktoken')
     parser.add_argument('--output_dir', default='.',
                         help='output file in wenet\'s style: ' +
                              'units.txt, train.yaml, model.pt')
@@ -196,17 +215,20 @@ def get_args():
 def main():
     args = get_args()
     checkpoint = torch.load(args.whisper_ckpt, map_location="cpu")
+    multilingual = checkpoint["dims"]['n_vocab'] >= 51865
+    num_languages = checkpoint["dims"]['n_vocab'] - 51765 - int(multilingual)
+    tokenizer = get_tokenizer(multilingual=multilingual, num_languages=num_languages)
 
     convert_to_wenet_state_dict(
         checkpoint["model_state_dict"],
         os.path.join(args.output_dir, 'wenet_whisper.pt')
     )
     convert_to_wenet_units(
-        args.whisper_units,
+        tokenizer,
         os.path.join(args.output_dir, 'units.txt')
     )
     convert_to_wenet_yaml(
-        checkpoint["dims"],
+        tokenizer, checkpoint["dims"],
         os.path.join(args.output_dir, 'train.yaml')
     )
 

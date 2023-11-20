@@ -161,11 +161,12 @@ class Conv1dSubsampling2(BaseSubsampling):
             torch.Tensor: positional encoding
 
         """
+        time = x.size(1)
         x = x.transpose(1, 2)  # (b, f, t)
         x = self.conv(x)
         x = x.transpose(1, 2)  # (b, t, f)
         x, pos_emb = self.pos_enc(x, offset)
-        return x, pos_emb, x_mask[:, :, 2::2]
+        return x, pos_emb, x_mask[:, :, (time + 1) % 2::2]
 
 
 class Conv2dSubsampling4(BaseSubsampling):

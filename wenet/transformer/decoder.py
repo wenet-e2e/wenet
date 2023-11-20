@@ -197,6 +197,27 @@ class TransformerDecoder(torch.nn.Module):
             y = torch.log_softmax(self.output_layer(y), dim=-1)
         return y, new_cache
 
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        """Tie or clone module weights (between word_emb and output_layer)
+            depending of whether we are using TorchScript or not"""
+        if not self.use_output_layer:
+            return
+        if jit_mode:
+            self.output_layer.weight = torch.nn.Parameter(self.embed[0].weight.clone())
+        else:
+            self.output_layer.weight = self.embed[0].weight
+
+        if getattr(self.output_layer, "bias", None) is not None:
+            self.output_layer.bias.data = torch.nn.functional.pad(
+                self.output_layer.bias.data,
+                (
+                    0,
+                    self.output_layer.weight.shape[0] - self.output_layer.bias.shape[0],
+                ),
+                "constant",
+                0,
+            )
+
 
 class BiTransformerDecoder(torch.nn.Module):
     """Base class of Transfomer decoder module.
@@ -233,6 +254,7 @@ class BiTransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
+        key_bias: bool = True,
     ):
 
         super().__init__()
@@ -240,13 +262,15 @@ class BiTransformerDecoder(torch.nn.Module):
             vocab_size, encoder_output_size, attention_heads, linear_units,
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before)
+            input_layer, use_output_layer, normalize_before,
+            key_bias=key_bias)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before)
+            input_layer, use_output_layer, normalize_before,
+            key_bias=key_bias)
 
     def forward(
         self,
@@ -307,3 +331,9 @@ class BiTransformerDecoder(torch.nn.Module):
         """
         return self.left_decoder.forward_one_step(memory, memory_mask, tgt,
                                                   tgt_mask, cache)
+
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        """Tie or clone module weights (between word_emb and output_layer)
+            depending of whether we are using TorchScript or not"""
+        self.left_decoder.tie_or_clone_weights(jit_mode)
+        self.right_decoder.tie_or_clone_weights(jit_mode)
