@@ -40,7 +40,7 @@ jobs:
         run: |
           set -eux
           pip install -r requirements.txt
-          apt update && apt install -y ffmpeg
+          sudo apt update && sudo apt install -y ffmpeg
       - name: Run Pytest
         run: |
           set -eux
