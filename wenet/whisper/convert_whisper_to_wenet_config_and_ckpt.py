@@ -199,6 +199,12 @@ def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
 
 
 def convert_to_wenet_units(tokenizer, units_txt_path):
+    """ NOTE(xcsong):
+        The "units.txt" file is solely for adapting to the training API of Wenet
+        and for quickly checking the corresponding text of an ID when necessary.
+        It does not play any role in the tokenization process,
+        which is carried out by the tokenizer of openai-whisper.
+    """
     n_vocab = tokenizer.encoding.n_vocab
     with open(units_txt_path, "+w") as f:
         for i in range(n_vocab):
