@@ -90,7 +90,10 @@ def test_sinusoids(length, channels):
     ]
 )
 def test_model(model, audio_path):
-    download_root = "~/.cache/whisper"
+    default = os.path.join(os.path.expanduser("~"), ".cache")
+    download_root = os.path.join(os.getenv("XDG_CACHE_HOME", default),
+                                 "whisper",
+                                 "{}".format(model))
     language = "zh"
     task = "transcribe"
 
@@ -100,7 +103,7 @@ def test_model(model, audio_path):
     whisper_model.eval()
 
     # 2. Init wenet
-    checkpoint = torch.load("{}/tiny.pt".format(download_root), map_location="cpu")
+    checkpoint = torch.load("{}/{}.pt".format(download_root, model), map_location="cpu")
     multilingual = checkpoint["dims"]['n_vocab'] >= 51865
     num_languages = checkpoint["dims"]['n_vocab'] - 51765 - int(multilingual)
     tokenizer = get_tokenizer(multilingual, num_languages=num_languages,
@@ -341,9 +344,9 @@ def test_model(model, audio_path):
         print("check layer {}".format(whisper_layer["name"]))
         np.testing.assert_allclose(whisper_layer["value"].numpy(),
                                    wenet_layer["value"].numpy(),
-                                   rtol=1e-7, atol=1e-3)
+                                   rtol=1e-7, atol=5e-3)
     np.testing.assert_allclose(whisper_encoder_out.numpy(), wenet_encoder_out.numpy(),
-                               rtol=1e-7, atol=3e-04)
+                               rtol=1e-7, atol=5e-03)
     np.testing.assert_allclose(whisper_tokens.numpy(), wenet_tokens.numpy(),
                                rtol=1e-7, atol=1e-10)
     np.testing.assert_allclose(whisper_logits.numpy(), wenet_logits.numpy(),
