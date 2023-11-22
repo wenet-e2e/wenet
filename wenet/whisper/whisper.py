@@ -23,8 +23,7 @@ from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.encoder import TransformerEncoder
 from wenet.transformer.decoder import TransformerDecoder
-from wenet.utils.common import (IGNORE_ID, add_whisper_tokens,
-                                reverse_pad_list, th_accuracy)
+from wenet.utils.common import IGNORE_ID, add_whisper_tokens, th_accuracy
 
 
 class Whisper(ASRModel):
