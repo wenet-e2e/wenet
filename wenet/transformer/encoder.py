@@ -349,6 +349,7 @@ class TransformerEncoder(BaseEncoder):
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
         key_bias: bool = True,
+        activation_type: str = "relu",
     ):
         """ Construct TransformerEncoder
 
@@ -360,13 +361,15 @@ class TransformerEncoder(BaseEncoder):
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk,
                          global_cmvn, use_dynamic_left_chunk)
+        activation = get_activation(activation_type)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
                 MultiHeadedAttention(attention_heads, output_size,
                                      attention_dropout_rate, key_bias),
                 PositionwiseFeedForward(output_size, linear_units,
-                                        dropout_rate), dropout_rate,
+                                        dropout_rate, activation),
+                dropout_rate,
                 normalize_before) for _ in range(num_blocks)
         ])
 

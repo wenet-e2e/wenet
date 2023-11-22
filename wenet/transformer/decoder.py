@@ -25,6 +25,7 @@ from wenet.transformer.embedding import NoPositionalEncoding
 from wenet.transformer.embedding import LearnablePositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
+from wenet.utils.common import get_activation
 
 
 class TransformerDecoder(torch.nn.Module):
@@ -64,9 +65,11 @@ class TransformerDecoder(torch.nn.Module):
         normalize_before: bool = True,
         src_attention: bool = True,
         key_bias: bool = True,
+        activation_type: str = "relu",
     ):
         super().__init__()
         attention_dim = encoder_output_size
+        activation = get_activation(activation_type)
 
         if input_layer == "embed":
             self.embed = torch.nn.Sequential(
@@ -102,7 +105,7 @@ class TransformerDecoder(torch.nn.Module):
                                      src_attention_dropout_rate, key_bias)
                 if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
-                                        dropout_rate),
+                                        dropout_rate, activation),
                 dropout_rate,
                 normalize_before,
             ) for _ in range(self.num_blocks)

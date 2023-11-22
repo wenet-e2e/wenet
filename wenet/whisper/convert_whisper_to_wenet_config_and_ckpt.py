@@ -71,6 +71,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['encoder_conf']['pos_enc_layer_type'] = "abs_pos_whisper"
     configs['encoder_conf']['static_chunk_size'] = -1
     configs['encoder_conf']['key_bias'] = False
+    configs['encoder_conf']['activation_type'] = "gelu"
 
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
@@ -86,6 +87,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['decoder_conf']['normalize_before'] = True
     configs['decoder_conf']['src_attention'] = True
     configs['decoder_conf']['key_bias'] = False
+    configs['decoder_conf']['activation_type'] = "gelu"
 
     configs['model_conf'] = {}
     configs['model_conf']['ctc_weight'] = 0.3
@@ -178,6 +180,9 @@ def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
         if original_name == "decoder.positional_embedding":
             whisper_state_dict[name] = whisper_state_dict[name].unsqueeze(0)
             name = "decoder.embed.1.pe"
+        elif original_name == "encoder.positional_embedding":
+            whisper_state_dict[name] = whisper_state_dict[name].unsqueeze(0)
+            name = "encoder.embed.pos_enc.pe"
         print("name  {} ==> {}".format(original_name, name))
         print("type  {} ==> torch.float32".format(
             whisper_state_dict[original_name].dtype))

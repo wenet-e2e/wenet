@@ -345,9 +345,9 @@ def compute_log_mel_spectrogram(data,
         assert 'key' in sample
         assert 'label' in sample
         sample_rate = sample['sample_rate']
-        waveform = sample['wav']
+        waveform = sample['wav'].squeeze(0)  # (channel=1, sample) -> (sample,)
         if padding > 0:
-            audio = F.pad(waveform, (0, padding))
+            waveform = F.pad(waveform, (0, padding))
         window = torch.hann_window(n_fft)
         stft = torch.stft(waveform, n_fft, hop_length,
                           window=window, return_complex=True)
@@ -359,7 +359,7 @@ def compute_log_mel_spectrogram(data,
         mel_spec = filters @ magnitudes
 
         # NOTE(xcsong): https://github.com/openai/whisper/discussions/269
-        log_spec = torch.clamp(mel_spec, min=1e-10).log10().squeeze(0)
+        log_spec = torch.clamp(mel_spec, min=1e-10).log10()
         log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
         log_spec = (log_spec + 4.0) / 4.0
         yield dict(key=sample['key'], label=sample['label'],
