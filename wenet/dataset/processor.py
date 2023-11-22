@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import librosa
 import logging
 import json
 import random
@@ -23,6 +24,7 @@ from urllib.parse import urlparse
 import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
+import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from wenet.utils.tokenize_utils import tokenize_by_bpe_model
 
@@ -322,11 +324,54 @@ def compute_mfcc(data,
         yield dict(key=sample['key'], label=sample['label'], feat=mat)
 
 
+def compute_log_mel_spectrogram(data,
+                                n_fft=400,
+                                hop_length=160,
+                                num_mel_bins=80,
+                                padding=0):
+    """ Extract log mel spectrogram, modified from openai-whisper, see:
+        - https://github.com/openai/whisper/blob/main/whisper/audio.py
+        - https://github.com/wenet-e2e/wenet/pull/2141#issuecomment-1811765040
+
+        Args:
+            data: Iterable[{key, wav, label, sample_rate}]
+
+        Returns:
+            Iterable[{key, feat, label}]
+    """
+    for sample in data:
+        assert 'sample_rate' in sample
+        assert 'wav' in sample
+        assert 'key' in sample
+        assert 'label' in sample
+        sample_rate = sample['sample_rate']
+        waveform = sample['wav'].squeeze(0)  # (channel=1, sample) -> (sample,)
+        if padding > 0:
+            waveform = F.pad(waveform, (0, padding))
+        window = torch.hann_window(n_fft)
+        stft = torch.stft(waveform, n_fft, hop_length,
+                          window=window, return_complex=True)
+        magnitudes = stft[..., :-1].abs() ** 2
+
+        filters = torch.from_numpy(
+            librosa.filters.mel(sr=sample_rate, n_fft=n_fft, n_mels=num_mel_bins)
+        )
+        mel_spec = filters @ magnitudes
+
+        # NOTE(xcsong): https://github.com/openai/whisper/discussions/269
+        log_spec = torch.clamp(mel_spec, min=1e-10).log10()
+        log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
+        log_spec = (log_spec + 4.0) / 4.0
+        yield dict(key=sample['key'], label=sample['label'],
+                   feat=log_spec.transpose(0, 1))
+
+
 def tokenize(data,
              symbol_table,
              bpe_model=None,
              non_lang_syms=None,
-             split_with_space=False):
+             split_with_space=False,
+             whisper_tokenizer=None):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -352,6 +397,11 @@ def tokenize(data,
     for sample in data:
         assert 'txt' in sample
         txt = sample['txt'].strip()
+        # TODO(xcsong): This is a dirty workaround for whisper tokernizer,
+        #   refine it in the future
+        if whisper_tokenizer is not None:
+            sample['label'] = whisper_tokenizer.encode(txt)
+            yield sample
         if non_lang_syms_pattern is not None:
             parts = non_lang_syms_pattern.split(txt.upper())
             parts = [w for w in parts if len(w.strip()) > 0]

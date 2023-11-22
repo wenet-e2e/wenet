@@ -122,7 +122,8 @@ def Dataset(data_type,
             conf,
             bpe_model=None,
             non_lang_syms=None,
-            partition=True):
+            partition=True,
+            whisper_tokenizer=None):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -145,7 +146,8 @@ def Dataset(data_type,
         dataset = Processor(dataset, processor.parse_raw)
 
     dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model,
-                        non_lang_syms, conf.get('split_with_space', False))
+                        non_lang_syms, conf.get('split_with_space', False),
+                        whisper_tokenizer)
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 
@@ -157,13 +159,17 @@ def Dataset(data_type,
         dataset = Processor(dataset, processor.speed_perturb)
 
     feats_type = conf.get('feats_type', 'fbank')
-    assert feats_type in ['fbank', 'mfcc']
+    assert feats_type in ['fbank', 'mfcc', 'log_mel_spectrogram']
     if feats_type == 'fbank':
         fbank_conf = conf.get('fbank_conf', {})
         dataset = Processor(dataset, processor.compute_fbank, **fbank_conf)
     elif feats_type == 'mfcc':
         mfcc_conf = conf.get('mfcc_conf', {})
         dataset = Processor(dataset, processor.compute_mfcc, **mfcc_conf)
+    elif feats_type == 'log_mel_spectrogram':
+        log_mel_spectrogram_conf = conf.get('log_mel_spectrogram_conf', {})
+        dataset = Processor(dataset, processor.compute_log_mel_spectrogram,
+                            **log_mel_spectrogram_conf)
 
     spec_aug = conf.get('spec_aug', True)
     spec_sub = conf.get('spec_sub', False)

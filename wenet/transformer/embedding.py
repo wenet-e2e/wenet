@@ -20,6 +20,7 @@ from typing import Tuple, Union
 
 import torch
 import torch.nn.functional as F
+import numpy as np
 
 class PositionalEncoding(torch.nn.Module):
     """Positional encoding.
@@ -93,13 +94,13 @@ class PositionalEncoding(torch.nn.Module):
         # How to subscript a Union type:
         #   https://github.com/pytorch/pytorch/issues/69434
         if isinstance(offset, int):
-            assert offset + size < self.max_len
+            assert offset + size <= self.max_len
             pos_emb = self.pe[:, offset:offset + size]
         elif isinstance(offset, torch.Tensor) and offset.dim() == 0:  # scalar
-            assert offset + size < self.max_len
+            assert offset + size <= self.max_len
             pos_emb = self.pe[:, offset:offset + size]
         else:  # for batched streaming decoding on GPU
-            assert torch.max(offset) + size < self.max_len
+            assert torch.max(offset) + size <= self.max_len
             index = offset.unsqueeze(1) + \
                 torch.arange(0, size).to(offset.device)  # B X T
             flag = index > 0
@@ -138,6 +139,32 @@ class RelPositionalEncoding(PositionalEncoding):
         x = x * self.xscale
         pos_emb = self.position_encoding(offset, x.size(1), False)
         return self.dropout(x), self.dropout(pos_emb)
+
+
+class WhisperPositionalEncoding(PositionalEncoding):
+    """ Sinusoids position encoding used in openai-whisper.encoder
+    """
+    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 1500):
+        super().__init__(d_model, dropout_rate, max_len)
+        self.xscale = 1.0
+        log_timescale_increment = np.log(10000) / (d_model // 2 - 1)
+        inv_timescales = torch.exp(-log_timescale_increment *
+                                   torch.arange(d_model // 2))
+        scaled_time = torch.arange(max_len)[:, np.newaxis] * \
+            inv_timescales[np.newaxis, :]
+        pe = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)], dim=1)
+        delattr(self, "pe")
+        self.register_buffer("pe", pe.unsqueeze(0))
+
+
+class LearnablePositionalEncoding(PositionalEncoding):
+    """ Learnable position encoding used in openai-whisper.decoder
+    """
+    def __init__(self, d_model: int, dropout_rate: float, max_len: int = 448):
+        super().__init__(d_model, dropout_rate, max_len)
+        # NOTE(xcsong): overwrite self.pe & self.xscale
+        self.pe = torch.nn.Parameter(torch.empty(1, max_len, d_model))
+        self.xscale = 1.0
 
 
 class NoPositionalEncoding(torch.nn.Module):

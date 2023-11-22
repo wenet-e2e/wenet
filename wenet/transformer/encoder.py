@@ -23,11 +23,13 @@ from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.embedding import PositionalEncoding
+from wenet.transformer.embedding import WhisperPositionalEncoding
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.embedding import NoPositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.transformer.subsampling import Conv1dSubsampling2
 from wenet.transformer.subsampling import Conv2dSubsampling4
 from wenet.transformer.subsampling import Conv2dSubsampling6
 from wenet.transformer.subsampling import Conv2dSubsampling8
@@ -84,12 +86,15 @@ class BaseEncoder(torch.nn.Module):
             global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
+            key_bias: whether use bias in attention.linear_k, False for whisper models.
         """
         super().__init__()
         self._output_size = output_size
 
         if pos_enc_layer_type == "abs_pos":
             pos_enc_class = PositionalEncoding
+        elif pos_enc_layer_type == "abs_pos_whisper":
+            pos_enc_class = WhisperPositionalEncoding
         elif pos_enc_layer_type == "rel_pos":
             pos_enc_class = RelPositionalEncoding
         elif pos_enc_layer_type == "no_pos":
@@ -99,6 +104,8 @@ class BaseEncoder(torch.nn.Module):
 
         if input_layer == "linear":
             subsampling_class = LinearNoSubsampling
+        elif input_layer == "conv1d2":
+            subsampling_class = Conv1dSubsampling2
         elif input_layer == "conv2d":
             subsampling_class = Conv2dSubsampling4
         elif input_layer == "conv2d6":
@@ -341,6 +348,8 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        key_bias: bool = True,
+        activation_type: str = "relu",
     ):
         """ Construct TransformerEncoder
 
@@ -352,13 +361,15 @@ class TransformerEncoder(BaseEncoder):
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk,
                          global_cmvn, use_dynamic_left_chunk)
+        activation = get_activation(activation_type)
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
                 MultiHeadedAttention(attention_heads, output_size,
-                                     attention_dropout_rate),
+                                     attention_dropout_rate, key_bias),
                 PositionwiseFeedForward(output_size, linear_units,
-                                        dropout_rate), dropout_rate,
+                                        dropout_rate, activation),
+                dropout_rate,
                 normalize_before) for _ in range(num_blocks)
         ])
 
@@ -390,6 +401,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        key_bias: bool = True,
     ):
         """Construct ConformerEncoder
 
@@ -406,6 +418,7 @@ class ConformerEncoder(BaseEncoder):
             use_cnn_module (bool): Whether to use convolution module.
             cnn_module_kernel (int): Kernel size of convolution module.
             causal (bool): whether to use causal convolution or not.
+            key_bias: whether use bias in attention.linear_k, False for whisper models.
         """
         super().__init__(input_size, output_size, attention_heads,
                          linear_units, num_blocks, dropout_rate,
@@ -424,6 +437,7 @@ class ConformerEncoder(BaseEncoder):
             attention_heads,
             output_size,
             attention_dropout_rate,
+            key_bias,
         )
         # feed-forward module definition
         positionwise_layer = PositionwiseFeedForward

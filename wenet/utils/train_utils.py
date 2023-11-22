@@ -37,6 +37,7 @@ from deepspeed.runtime.zero.stage3 import (
 from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict
 )
+from whisper.tokenizer import get_tokenizer
 
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
@@ -208,13 +209,15 @@ def check_modify_and_save_config(args, configs):
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
+    elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
+        input_dim = configs['dataset_conf']['log_mel_spectrogram_conf']['num_mel_bins']
     else:
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
     symbol_table = read_symbol_table(args.symbol_table)
     vocab_size = len(symbol_table)
 
     configs['input_dim'] = input_dim
-    configs['output_dim'] = vocab_size
+    configs['output_dim'] = configs.get('output_dim', vocab_size)
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
     configs['lfmmi_dir'] = args.lfmmi_dir
@@ -246,15 +249,26 @@ def init_dataset_and_dataloader(args, configs):
     symbol_table = read_symbol_table(args.symbol_table)
     non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    # TODO(xcsong): This is a dirty workaround for whisper tokenizer,
+    #   refine it in the future
+    if configs.get("whisper", False):
+        logging.info("using whisper tokenizer")
+        whisper_tok = get_tokenizer(
+            multilingual=configs['whisper_conf']['is_multilingual'],
+            num_languages=configs['whisper_conf']['num_languages'])
+    else:
+        whisper_tok = None
     train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
-                            train_conf, args.bpe_model, non_lang_syms, True)
+                            train_conf, args.bpe_model, non_lang_syms, True,
+                            whisper_tok)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          symbol_table,
                          cv_conf,
                          args.bpe_model,
                          non_lang_syms,
-                         partition=False)
+                         partition=False,
+                         whisper_tokenizer=whisper_tok)
 
     # NOTE(xcsong): Why we prefer persistent_workers=True ?
     #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110

@@ -112,6 +112,63 @@ class LinearNoSubsampling(BaseSubsampling):
         return x, pos_emb, x_mask
 
 
+class Conv1dSubsampling2(BaseSubsampling):
+    """Convolutional 1D subsampling (to 1/2 length).
+       It is designed for Whisper, ref:
+       https://github.com/openai/whisper/blob/main/whisper/model.py
+
+    Args:
+        idim (int): Input dimension.
+        odim (int): Output dimension.
+        dropout_rate (float): Dropout rate.
+
+    """
+
+    def __init__(self, idim: int, odim: int, dropout_rate: float,
+                 pos_enc_class: torch.nn.Module):
+        """Construct an Conv1dSubsampling2 object."""
+        super().__init__()
+        self.conv = torch.nn.Sequential(
+            torch.nn.Conv1d(idim, odim, kernel_size=3, padding=1),
+            torch.nn.GELU(),
+            torch.nn.Conv1d(odim, odim, kernel_size=3, stride=2, padding=1),
+            torch.nn.GELU(),
+        )
+        self.pos_enc = pos_enc_class
+        # The right context for every conv layer is computed by:
+        # (kernel_size - 1) * frame_rate_of_this_layer
+        self.subsampling_rate = 2
+        # 4 = (3 - 1) * 1 + (3 - 1) * 1
+        self.right_context = 4
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Subsample x.
+
+        Args:
+            x (torch.Tensor): Input tensor (#batch, time, idim).
+            x_mask (torch.Tensor): Input mask (#batch, 1, time).
+
+        Returns:
+            torch.Tensor: Subsampled tensor (#batch, time', odim),
+                where time' = time // 2.
+            torch.Tensor: Subsampled mask (#batch, 1, time'),
+                where time' = time // 2.
+            torch.Tensor: positional encoding
+
+        """
+        time = x.size(1)
+        x = x.transpose(1, 2)  # (b, f, t)
+        x = self.conv(x)
+        x = x.transpose(1, 2)  # (b, t, f)
+        x, pos_emb = self.pos_enc(x, offset)
+        return x, pos_emb, x_mask[:, :, (time + 1) % 2::2]
+
+
 class Conv2dSubsampling4(BaseSubsampling):
     """Convolutional 2D subsampling (to 1/4 length).
 

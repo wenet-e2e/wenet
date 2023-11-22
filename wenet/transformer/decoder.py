@@ -16,13 +16,16 @@
 from typing import Tuple, List, Optional
 
 import torch
+import logging
 
 from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.embedding import PositionalEncoding
 from wenet.transformer.embedding import NoPositionalEncoding
+from wenet.transformer.embedding import LearnablePositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
+from wenet.utils.common import get_activation
 
 
 class TransformerDecoder(torch.nn.Module):
@@ -43,6 +46,7 @@ class TransformerDecoder(torch.nn.Module):
             False: use layer_norm after each sub-block of a layer.
         src_attention: if false, encoder-decoder cross attention is not
                        applied, such as CIF model
+        key_bias: whether use bias in attention.linear_k, False for whisper models.
     """
 
     def __init__(
@@ -60,9 +64,12 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         src_attention: bool = True,
+        key_bias: bool = True,
+        activation_type: str = "relu",
     ):
         super().__init__()
         attention_dim = encoder_output_size
+        activation = get_activation(activation_type)
 
         if input_layer == "embed":
             self.embed = torch.nn.Sequential(
@@ -72,24 +79,33 @@ class TransformerDecoder(torch.nn.Module):
         elif input_layer == 'none':
             self.embed = NoPositionalEncoding(attention_dim,
                                               positional_dropout_rate)
+        elif input_layer == 'embed_learnable_pe':
+            self.embed = torch.nn.Sequential(
+                torch.nn.Embedding(vocab_size, attention_dim),
+                LearnablePositionalEncoding(attention_dim,
+                                            positional_dropout_rate),
+            )
         else:
             raise ValueError(f"only 'embed' is supported: {input_layer}")
 
         self.normalize_before = normalize_before
         self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
         self.use_output_layer = use_output_layer
-        self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
+        if use_output_layer:
+            self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
+        else:
+            self.output_layer = torch.nn.Identity()
         self.num_blocks = num_blocks
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
                 MultiHeadedAttention(attention_heads, attention_dim,
-                                     self_attention_dropout_rate),
+                                     self_attention_dropout_rate, key_bias),
                 MultiHeadedAttention(attention_heads, attention_dim,
-                                     src_attention_dropout_rate)
+                                     src_attention_dropout_rate, key_bias)
                 if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
-                                        dropout_rate),
+                                        dropout_rate, activation),
                 dropout_rate,
                 normalize_before,
             ) for _ in range(self.num_blocks)
@@ -185,6 +201,29 @@ class TransformerDecoder(torch.nn.Module):
             y = torch.log_softmax(self.output_layer(y), dim=-1)
         return y, new_cache
 
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        """Tie or clone module weights (between word_emb and output_layer)
+            depending of whether we are using TorchScript or not"""
+        if not self.use_output_layer:
+            return
+        if jit_mode:
+            logging.info("clone emb.weight to output.weight")
+            self.output_layer.weight = torch.nn.Parameter(self.embed[0].weight.clone())
+        else:
+            logging.info("tie emb.weight with output.weight")
+            self.output_layer.weight = self.embed[0].weight
+
+        if getattr(self.output_layer, "bias", None) is not None:
+            self.output_layer.bias.data = torch.nn.functional.pad(
+                self.output_layer.bias.data,
+                (
+                    0,
+                    self.output_layer.weight.shape[0] - self.output_layer.bias.shape[0],
+                ),
+                "constant",
+                0,
+            )
+
 
 class BiTransformerDecoder(torch.nn.Module):
     """Base class of Transfomer decoder module.
@@ -203,6 +242,7 @@ class BiTransformerDecoder(torch.nn.Module):
         normalize_before:
             True: use layer_norm before each sub-block of a layer.
             False: use layer_norm after each sub-block of a layer.
+        key_bias: whether use bias in attention.linear_k, False for whisper models.
     """
 
     def __init__(
@@ -220,6 +260,7 @@ class BiTransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
+        key_bias: bool = True,
     ):
 
         super().__init__()
@@ -227,13 +268,15 @@ class BiTransformerDecoder(torch.nn.Module):
             vocab_size, encoder_output_size, attention_heads, linear_units,
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before)
+            input_layer, use_output_layer, normalize_before,
+            key_bias=key_bias)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before)
+            input_layer, use_output_layer, normalize_before,
+            key_bias=key_bias)
 
     def forward(
         self,
@@ -294,3 +337,9 @@ class BiTransformerDecoder(torch.nn.Module):
         """
         return self.left_decoder.forward_one_step(memory, memory_mask, tgt,
                                                   tgt_mask, cache)
+
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        """Tie or clone module weights (between word_emb and output_layer)
+            depending of whether we are using TorchScript or not"""
+        self.left_decoder.tie_or_clone_weights(jit_mode)
+        self.right_decoder.tie_or_clone_weights(jit_mode)
