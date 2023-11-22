@@ -1,0 +1,16 @@
+wenet.whisper package
+=====================
+
+.. automodule:: wenet.whisper
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.whisper.convert_whisper_to_wenet_config_and_ckpt
+   wenet.whisper.whisper

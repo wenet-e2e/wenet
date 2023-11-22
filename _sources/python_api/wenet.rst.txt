@@ -22,3 +22,4 @@ Subpackages
    wenet.transducer
    wenet.transformer
    wenet.utils
+   wenet.whisper
