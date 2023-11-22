@@ -86,7 +86,9 @@ def test_sinusoids(length, channels):
     "model,audio_path",
     [
         ("tiny", "test/resources/aishell-BAC009S0724W0121.wav"),
-        ("large-v3", "test/resources/librispeech-1995-1837-0001.wav")
+        ("base", "test/resources/librispeech-1995-1837-0001.wav"),
+        ("small", "test/resources/aishell-BAC009S0724W0121.wav"),
+        ("medium", "test/resources/librispeech-1995-1837-0001.wav"),
     ]
 )
 def test_model(model, audio_path):
