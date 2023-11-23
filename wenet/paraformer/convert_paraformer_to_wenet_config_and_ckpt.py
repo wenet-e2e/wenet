@@ -6,13 +6,12 @@ import math
 import os
 from pathlib import Path
 import urllib.request
-from torchaudio.compliance.kaldi import torch
 from tqdm import tqdm
 from typing import Dict, List, Optional, Tuple
 
 import yaml
 
-from wenet.utils.checkpoint import load_checkpoint, save_checkpoint
+from wenet.utils.checkpoint import save_checkpoint
 
 
 def _load_paraformer_cmvn(cmvn_file) -> Tuple[List, List]:
@@ -150,12 +149,10 @@ def get_args():
     parser.add_argument('--paraformer_cmvn',
                         default=None,
                         help='ali released Paraformer model\'s cmvn')
-    parser.add_argument(
-        '--output_dir',
-        default='.',
-        help=
-        'output file in wenet\'s style: global_cmvn, units.txt, train.yaml and \
-        wenet_paraformer.pt')
+    parser.add_argument('--output_dir',
+                        default='.',
+                        help="output file:\
+        global_cmvn, units.txt, train.yaml, wenet_paraformer.pt")
     parser.add_argument("--paraformer_model",
                         default=None,
                         help="ali released Paraformer model")
@@ -165,9 +162,9 @@ def get_args():
 
 def _download_fn(output_dir, name, renmae: Optional[str] = None):
     url = "https://www.modelscope.cn/api/v1/"\
-           "models/damo/"\
-           "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
-           "/repo?Revision=v1.0.4&FilePath=" + name
+        "models/damo/"\
+        "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
+        "/repo?Revision=v1.0.4&FilePath=" + name
     if renmae is None:
         output_file = os.path.join(output_dir, name)
     else:
@@ -194,8 +191,9 @@ def _download_fn(output_dir, name, renmae: Optional[str] = None):
 
 def may_get_assets_and_refine_args(args):
 
-    assets_dir = os.path.join(Path.home(), ".wenet", "cache"
-                              "paraformer-offline-cn")
+    assets_dir = os.path.join(Path.home(),
+                              ".wenet/cache/paraformer-offline-cn")
+
     if not os.path.exists(assets_dir):
         os.makedirs(assets_dir)
 
