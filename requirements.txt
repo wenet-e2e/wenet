@@ -15,6 +15,7 @@ pycodestyle==2.6.0
 pyflakes==2.2.0
 torch==1.13.0
 torchaudio==0.13.0
+tqdm
 deepspeed
 librosa
 openai-whisper
