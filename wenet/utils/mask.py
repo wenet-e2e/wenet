@@ -14,6 +14,8 @@
 # limitations under the License.
 
 
+from typing import Optional, Union
+
 import torch
 
 '''
@@ -370,16 +372,18 @@ def causal_or_lookahead_mask(
     return (gt & lt) * mask.transpose(1, 2) * mask
 
 
-def time_mask(batch_size: int,
-              choose_range: torch.Tensor,
-              mask_size: int,
-              max_length: torch.Tensor = None,
-              masks_per_frame: float = 0.0,
-              max_ratio: float = 1.0,
-              dtype=torch.float32,
-              multiplicity: int = 1,
-              fix_length: bool = False):
+def t_sequence_mask(batch_size: int,
+                    choose_range: torch.Tensor,
+                    mask_size: int,
+                    max_length: Optional[Union[torch.Tensor, int]] = None,
+                    masks_per_frame: float = 0.0,
+                    max_ratio: float = 1.0,
+                    dtype=torch.float32,
+                    multiplicity: int = 1,
+                    fix_length: bool = False,
+                    device: torch.device = torch.device('cpu')):
     """Create random mask (B, T) with spans
+
     Args:
         batch_size (int): batch size
         choose_range (torch.Tensor): range within which the masked entries must
@@ -389,18 +393,22 @@ def time_mask(batch_size: int,
             masked entries.
         masks_per_frame (float): number of masks per frame. If > 0, the
             multiplicity of the mask is set to be masks_per_frame * choose_range
+            If masks_per_frame == 0, all the masks are composed.The masked
+            regions are set to zero.
         max_ratio (float): maximum portion of the entire range allowed to be
             masked.
         multiplicity (int): maximum number of total masks.
         fix_length (bool): if spans is fix length or < rand(max_length)
+
     Returns:
         torch.Tensor: mask shape (B, T)
-    Examples:
 
     """
 
     if max_length is not None:
         assert max_length > 0
+        if isinstance(max_length, int):
+            max_length = torch.tensor(max_length, device=device)
         max_length = torch.broadcast_to(max_length.to(dtype), (batch_size, ))
     else:
         max_length = choose_range.to(dtype) * max_ratio
@@ -442,7 +450,7 @@ def time_mask(batch_size: int,
 
     # Sum masks with ppropriate multiplicity.
     if masks_per_frame > 0:
-        multiplicity_weights = torch.arange(end=multiplicity.to(torch.int32),
+        multiplicity_weights = torch.arange(end=multiplicity,
                                             dtype=torch.int32).to(dtype)
         multiplicity_weights = multiplicity_weights.unsqueeze(0)
         multiplicity_weights = torch.tile(multiplicity_weights,
@@ -457,3 +465,41 @@ def time_mask(batch_size: int,
     mask = (1.0 - (pre_mask > 0).to(dtype).to(dtype))
 
     return mask
+
+
+def time_mask(inputs: torch.Tensor,
+              inputs_len: torch.Tensor,
+              num_t_mask: int = 2,
+              max_t: int = 50):
+
+    if num_t_mask <= 0:
+        return inputs
+    B, T, _ = inputs.size()
+    time_mask = t_sequence_mask(
+        B,
+        inputs_len,
+        T,
+        max_t,
+        0.0,
+        multiplicity=num_t_mask,
+        device=inputs.device,
+    )
+    return inputs * time_mask.unsqueeze(2)
+
+
+def freq_mask(inputs: torch.Tensor, num_f_mask=2, max_f=10):
+    if num_f_mask <= 0:
+        return inputs
+    B, _, F = inputs.size()
+    f = torch.tensor(F, device=inputs.device)
+    choose_range = torch.broadcast_to(f, (B, )).to(torch.int32)
+    freq_mask = t_sequence_mask(
+        B,
+        choose_range,
+        F,
+        max_f,
+        0.0,
+        multiplicity=num_f_mask,
+        device=inputs.device,
+    )
+    return inputs * freq_mask.unsqueeze(1)
