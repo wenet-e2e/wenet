@@ -164,6 +164,8 @@ class Paraformer(torch.nn.Module):
         B, _ = ys_pad.size()
 
         tgt_mask = make_non_pad_mask(ys_pad_lens)
+        # zero the ignore id
+        ys_pad = ys_pad * tgt_mask
         ys_pad_embed = self.embed(ys_pad)  # [B, T, L]
         with torch.no_grad():
             decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
