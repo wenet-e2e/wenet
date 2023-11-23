@@ -395,6 +395,7 @@ def save_model(model, info_dict):
     rank = int(os.environ.get('RANK', 0))
     tag = info_dict["tag"]
     model_dir = info_dict["model_dir"]
+    # save ckpt
     if info_dict["train_engine"] == "deepspeed":
         # NOTE(xcsong): All ranks should call this API, but only rank 0
         #   save the general model params. see:
@@ -410,6 +411,11 @@ def save_model(model, info_dict):
         # NOTE(xcsong): For torch_ddp, only rank-0 should call this.
         save_model_path = os.path.join(model_dir, '{}.pt'.format(tag))
         save_checkpoint(model, save_model_path, info_dict)
+    # save yaml
+    if rank == 0:
+        with open("{}/{}.yaml".format(model_dir, tag), 'w') as fout:
+            data = yaml.dump(info_dict)
+            fout.write(data)
 
 
 def wenet_join(group_join, info_dict):
@@ -598,6 +604,3 @@ def log_per_epoch(writer, info_dict):
     if int(os.environ.get('RANK', 0)) == 0:
         writer.add_scalar('epoch/cv_loss', info_dict["cv_loss"], epoch)
         writer.add_scalar('epoch/lr', info_dict["lr"], epoch)
-        with open("{}/{}.yaml".format(info_dict["model_dir"], epoch), 'w') as fout:
-            data = yaml.dump(info_dict)
-            fout.write(data)
