@@ -216,6 +216,17 @@ def check_modify_and_save_config(args, configs):
     symbol_table = read_symbol_table(args.symbol_table)
     vocab_size = len(symbol_table)
 
+    if 'ctc_conf' not in configs:
+        configs['ctc_conf'] = {}
+
+    if '<blank>' in symbol_table:
+        if 'ctc_blank_id' in configs['ctc_conf']:
+            assert configs['ctc_conf']['ctc_blank_id'] == symbol_table['<blank>']
+        else:
+            configs['ctc_conf']['ctc_blank_id'] = symbol_table['<blank>']
+    else:
+        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
+
     configs['input_dim'] = input_dim
     configs['output_dim'] = configs.get('output_dim', vocab_size)
     configs['cmvn_file'] = args.cmvn
