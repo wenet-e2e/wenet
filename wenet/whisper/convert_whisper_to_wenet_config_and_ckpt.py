@@ -89,6 +89,9 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['decoder_conf']['key_bias'] = False
     configs['decoder_conf']['activation_type'] = "gelu"
 
+    configs['ctc_conf'] = {}
+    configs['ctc_conf']['ctc_blank_id'] = 50362  # <nospeech>
+
     configs['model_conf'] = {}
     configs['model_conf']['ctc_weight'] = 0.3
     configs['model_conf']['lsm_weight'] = 0.1
