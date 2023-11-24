@@ -59,12 +59,12 @@ text = "Speech Recognition in WeNet | 基于 WeNet 的语音识别"
 
 # description
 description = (
-    "Wenet Demo ! This is a speech recognition demo that supports Mandarin and English !"
+    "Wenet Demo ! This is a speech recognition demo that supports Mandarin and English !"  # noqa
 )
 
 article = (
     "<p style='text-align: center'>"
-    "<a href='https://github.com/wenet-e2e/wenet' target='_blank'>Github: Learn more about WeNet</a>"
+    "<a href='https://github.com/wenet-e2e/wenet' target='_blank'>Github: Learn more about WeNet</a>"  # noqa
     "</p>")
 
 interface = gr.Interface(
