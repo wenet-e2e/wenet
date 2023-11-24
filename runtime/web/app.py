@@ -46,15 +46,6 @@ inputs = [
 
 output = gr.outputs.Textbox(label="Output Text")
 
-examples = [
-    ['examples/BAC009S0767W0127.wav', 'CN'],
-    ['examples/BAC009S0767W0424.wav', 'CN'],
-    ['examples/BAC009S0767W0488.wav', 'CN'],
-    ['examples/1995-1836-0002.flac', 'EN'],
-    ['examples/61-70968-0000.flac', 'EN'],
-    ['examples/672-122797-0000.flac', 'EN'],
-]
-
 text = "Speech Recognition in WeNet | 基于 WeNet 的语音识别"
 
 # description
@@ -74,7 +65,6 @@ interface = gr.Interface(
     title=text,
     description=description,
     article=article,
-    examples=examples,
     theme='huggingface',
 )
 
