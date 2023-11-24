@@ -1,2 +1,2 @@
-wenetruntime
-gradio
+wenet @ git+https://github.com/wenet-e2e/wenet.git
+gradio==3.14.0
