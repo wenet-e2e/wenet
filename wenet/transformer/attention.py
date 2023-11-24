@@ -195,9 +195,10 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         n_feat (int): The number of features.
         dropout_rate (float): Dropout rate.
     """
-    def __init__(self, n_head, n_feat, dropout_rate):
+    def __init__(self, n_head: int, n_feat: int, dropout_rate: float,
+                 key_bias: bool = True):
         """Construct an RelPositionMultiHeadedAttention object."""
-        super().__init__(n_head, n_feat, dropout_rate)
+        super().__init__(n_head, n_feat, dropout_rate, key_bias)
         # linear transformation for positional encoding
         self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d
