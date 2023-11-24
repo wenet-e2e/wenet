@@ -1,0 +1,7 @@
+wenet.paraformer.convert\_paraformer\_to\_wenet\_config\_and\_ckpt module
+=========================================================================
+
+.. automodule:: wenet.paraformer.convert_paraformer_to_wenet_config_and_ckpt
+   :members:
+   :undoc-members:
+   :show-inheritance:

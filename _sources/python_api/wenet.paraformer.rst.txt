@@ -14,7 +14,7 @@ Submodules
 
    wenet.paraformer.attention
    wenet.paraformer.cif
-   wenet.paraformer.convert_paraformer_to_wenet_config
+   wenet.paraformer.convert_paraformer_to_wenet_config_and_ckpt
    wenet.paraformer.layers
    wenet.paraformer.paraformer
    wenet.paraformer.search
