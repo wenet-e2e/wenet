@@ -244,8 +244,8 @@ def init_dataset_and_dataloader(args, configs):
 
     tokenizer = init_tokenizer(configs, args, non_lang_syms)
     configs['vocab_size'] = tokenizer.vocab_size()
-    train_dataset = Dataset(args.data_type, 
-                            args.train_data, 
+    train_dataset = Dataset(args.data_type,
+                            args.train_data,
                             tokenizer,
                             train_conf,
                             True)
