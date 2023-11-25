@@ -24,8 +24,8 @@ def test_tokeniz(whisper_tokenizer):
     for i, text in enumerate(texts):
         tokens, ids = tokenizer.tokenize(text)
         assert len(tokens) == len(ids)
-        assert (all([h == r for h, r in zip(tokens, expected[i]["tokens"])]))
-        assert (all([h == r for h, r in zip(ids, expected[i]["ids"])]))
+        assert (all((h == r for h, r in zip(tokens, expected[i]["tokens"]))))
+        assert (all((h == r for h, r in zip(ids, expected[i]["ids"]))))
 
 
 def test_detokenize(whisper_tokenizer):
@@ -45,7 +45,7 @@ def test_detokenize(whisper_tokenizer):
         text, tokens = tokenize.detokenize(input)
         assert len(tokens) == len(expected[i]["tokens"])
         assert text == expected[i]["labels"]
-        assert all([h == r for h, r in zip(tokens, expected[i]["tokens"])])
+        assert all((h == r for h, r in zip(tokens, expected[i]["tokens"])))
 
 
 def test_consistency(whisper_tokenizer):
