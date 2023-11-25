@@ -216,8 +216,7 @@ def convert_to_wenet_units(tokenizer, units_txt_path):
                 unit = str(i)
                 print("can not decode id {}, convert to str({})".format(i, i))
             unit = unit.replace(" ", "<space>")
-            unit = bytes(unit, 'utf-8')
-            f.write("{} {}\n".format(str(unit), i))
+            f.write("{} {}\n".format(unit, i))
             f.flush()
 
 
