@@ -1,4 +1,3 @@
-from collections.abc import Iterable
 from os import PathLike
 from typing import List, Optional, Tuple, Union
 from wenet.text.base_tokenizer import BaseTokenizer
@@ -56,7 +55,7 @@ class WhisperTokenizer(BaseTokenizer):
     def text2tokens(self, line: str) -> List[str]:
         return self.tokenize(line)[0]
 
-    def tokens2text(self, tokens: Iterable[str]) -> str:
+    def tokens2text(self, tokens: List[str]) -> str:
         ids = [self.t2i[t] for t in tokens]
         return self.detokenize(ids)[0]
 

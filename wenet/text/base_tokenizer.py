@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterable
 from typing import List, Tuple
 
 
@@ -20,7 +19,7 @@ class BaseTokenizer(ABC):
         raise NotImplementedError("abstract method")
 
     @abstractmethod
-    def tokens2text(self, tokens: Iterable[str]) -> str:
+    def tokens2text(self, tokens: List[str]) -> str:
         raise NotImplementedError("abstract method")
 
     @abstractmethod

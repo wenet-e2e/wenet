@@ -1,6 +1,5 @@
 import re
 
-from collections.abc import Iterable
 from os import PathLike
 from typing import Dict, List, Optional, Union
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
@@ -67,7 +66,7 @@ class WenetTokenizer(BaseTokenizer):
                         tokens.append(ch)
         return tokens
 
-    def tokens2text(self, tokens: Iterable[str]) -> str:
+    def tokens2text(self, tokens: List[str]) -> str:
         return self.connect_symbol.join(tokens)
 
     def tokens2ids(self, tokens: List[str]) -> List[int]:
