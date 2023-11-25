@@ -211,7 +211,7 @@ def convert_to_wenet_units(tokenizer, units_txt_path):
     n_vocab = tokenizer.encoding.n_vocab
     with open(units_txt_path, "+w") as f:
         for i in range(n_vocab):
-            unit = str(tokenizer.encoding.decode_single_token_bytes((i))
+            unit = str(tokenizer.encoding.decode_single_token_bytes(i)
             if len(unit) == 0:
                 unit = str(i)
                 print("can not decode id {}, convert to str({})".format(i, i))
