@@ -19,10 +19,12 @@ import torch.distributed as dist
 from torch.utils.data import IterableDataset
 
 import wenet.dataset.processor as processor
+from wenet.text.base_tokenizer import BaseTokenizer
 from wenet.utils.file_utils import read_lists
 
 
 class Processor(IterableDataset):
+
     def __init__(self, source, f, *args, **kw):
         assert callable(f)
         self.source = source
@@ -47,6 +49,7 @@ class Processor(IterableDataset):
 
 
 class DistributedSampler:
+
     def __init__(self, shuffle=True, partition=True):
         self.epoch = -1
         self.update()
@@ -99,6 +102,7 @@ class DistributedSampler:
 
 
 class DataList(IterableDataset):
+
     def __init__(self, lists, shuffle=True, partition=True):
         self.lists = lists
         self.sampler = DistributedSampler(shuffle, partition)
@@ -118,12 +122,9 @@ class DataList(IterableDataset):
 
 def Dataset(data_type,
             data_list_file,
-            symbol_table,
+            tokenizer: BaseTokenizer,
             conf,
-            bpe_model=None,
-            non_lang_syms=None,
-            partition=True,
-            whisper_tokenizer=None):
+            partition=True):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -145,9 +146,7 @@ def Dataset(data_type,
     else:
         dataset = Processor(dataset, processor.parse_raw)
 
-    dataset = Processor(dataset, processor.tokenize, symbol_table, bpe_model,
-                        non_lang_syms, conf.get('split_with_space', False),
-                        whisper_tokenizer)
+    dataset = Processor(dataset, processor.tokenize, tokenizer)
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
 

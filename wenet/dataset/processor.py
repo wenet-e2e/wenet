@@ -16,7 +16,6 @@ import librosa
 import logging
 import json
 import random
-import re
 import tarfile
 from subprocess import PIPE, Popen
 from urllib.parse import urlparse
@@ -26,9 +25,9 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
-from wenet.utils.tokenize_utils import tokenize_by_bpe_model
+from wenet.text.base_tokenizer import BaseTokenizer
 
-torchaudio.utils.sox_utils.set_buffer_size(16500)
+# torchaudio.utils.sox_utils.set_buffer_size(16500)
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
@@ -366,12 +365,7 @@ def compute_log_mel_spectrogram(data,
                    feat=log_spec.transpose(0, 1))
 
 
-def tokenize(data,
-             symbol_table,
-             bpe_model=None,
-             non_lang_syms=None,
-             split_with_space=False,
-             whisper_tokenizer=None):
+def tokenize(data, tokenizer: BaseTokenizer):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -381,55 +375,9 @@ def tokenize(data,
         Returns:
             Iterable[{key, wav, txt, tokens, label, sample_rate}]
     """
-    if non_lang_syms is not None:
-        non_lang_syms_pattern = re.compile(r"(\[[^\[\]]+\]|<[^<>]+>|{[^{}]+})")
-    else:
-        non_lang_syms = {}
-        non_lang_syms_pattern = None
-
-    if bpe_model is not None:
-        import sentencepiece as spm
-        sp = spm.SentencePieceProcessor()
-        sp.load(bpe_model)
-    else:
-        sp = None
-
     for sample in data:
         assert 'txt' in sample
-        txt = sample['txt'].strip()
-        # TODO(xcsong): This is a dirty workaround for whisper tokernizer,
-        #   refine it in the future
-        if whisper_tokenizer is not None:
-            sample['label'] = whisper_tokenizer.encode(txt)
-            yield sample
-        if non_lang_syms_pattern is not None:
-            parts = non_lang_syms_pattern.split(txt.upper())
-            parts = [w for w in parts if len(w.strip()) > 0]
-        else:
-            parts = [txt]
-
-        label = []
-        tokens = []
-        for part in parts:
-            if part in non_lang_syms:
-                tokens.append(part)
-            else:
-                if bpe_model is not None:
-                    tokens.extend(tokenize_by_bpe_model(sp, part))
-                else:
-                    if split_with_space:
-                        part = part.split(" ")
-                    for ch in part:
-                        if ch == ' ':
-                            ch = "▁"
-                        tokens.append(ch)
-
-        for ch in tokens:
-            if ch in symbol_table:
-                label.append(symbol_table[ch])
-            elif '<unk>' in symbol_table:
-                label.append(symbol_table['<unk>'])
-
+        tokens, label = tokenizer.tokenize(sample['txt'])
         sample['tokens'] = tokens
         sample['label'] = label
         yield sample
