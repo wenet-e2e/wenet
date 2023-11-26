@@ -7,6 +7,8 @@ requirements = [
     "tqdm",
     "torch>=1.13.0",
     "torchaudio>=0.13.0",
+    "openai-whisper",
+    "librosa",
 ]
 if platform.system() == 'Windows':
     requirements += ['PySoundFile']
