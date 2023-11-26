@@ -9,7 +9,7 @@ def whisper_tokenizer(request):
     return WhisperTokenizer(is_multilingual)
 
 
-def test_tokeniz(whisper_tokenizer):
+def test_tokenize(whisper_tokenizer):
 
     tokenizer = whisper_tokenizer
     texts = ["life is short, i use wenet"]
