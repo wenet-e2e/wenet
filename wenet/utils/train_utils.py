@@ -374,7 +374,7 @@ def init_optimizer_and_scheduler(args, configs, model):
             args=args, model=model, optimizer=optimizer,
             lr_scheduler=scheduler, model_parameters=model.parameters())
 
-    step = configs["init_infos"].get("step", 0)
+    step = configs["init_infos"].get("step", -1)
     scheduler.set_step(step)
     return model, optimizer, scheduler
 
@@ -599,7 +599,9 @@ def log_per_step(writer, info_dict):
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
-            tag, epoch, batch_idx + 1, loss_dict['loss'].item() * accum_grad)
+            tag, epoch, batch_idx + 1,
+            loss_dict['loss'].item() * accum_grad if tag == "TRAIN"
+            else loss_dict['loss'].item())
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value.item())
