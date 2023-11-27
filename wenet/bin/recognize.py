@@ -264,7 +264,7 @@ def main():
                 context_graph=context_graph)
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
-                    content = [char_dict[w].replace("▁", " ") for w in hyps[i].tokens]
+                    content = [char_dict[w] for w in hyps[i].tokens]
                     line = '{} {}'.format(key,
                                           args.connect_symbol.join(content))
                     logging.info('{} {}'.format(mode.ljust(max_format_len),
