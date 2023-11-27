@@ -206,7 +206,7 @@ def main():
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
-    tokenizer = init_tokenizer(configs, args, non_lang_syms)
+    tokenizer = init_tokenizer(configs, args.dict, args.bpe_model, args.non_lang_syms)
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            tokenizer,
@@ -225,7 +225,7 @@ def main():
 
     context_graph = None
     if 'decoding-graph' in args.context_bias_mode:
-        context_graph = ContextGraph(args.context_list_path, symbol_table,
+        context_graph = ContextGraph(args.context_list_path, tokenizer.symbol_table,
                                      args.bpe_model, args.context_graph_score)
 
     # TODO(Dinghao Zhou): Support RNN-T related decoding

@@ -28,6 +28,7 @@ from torch.distributed.elastic.multiprocessing.errors import record
 from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.train_utils import (add_model_args, add_dataset_args,
                                      add_ddp_args, add_deepspeed_args,
                                      add_trace_args, init_distributed,
@@ -73,15 +74,18 @@ def main():
     if len(args.override_config) > 0:
         configs = override_config(configs, args.override_config)
 
+    # init tokenizer
+    tokenizer = init_tokenizer(configs, args.symbol_table, args.bpe_model, non_lang_syms)
+
     # Init env for ddp OR deepspeed
     world_size, local_rank, rank = init_distributed(args)
 
     # Get dataset & dataloader
     train_dataset, cv_dataset, train_data_loader, cv_data_loader = \
-        init_dataset_and_dataloader(args, configs)
+        init_dataset_and_dataloader(args, configs, tokenizer)
 
     # Do some sanity checks and save config to arsg.model_dir
-    configs = check_modify_and_save_config(args, configs)
+    configs = check_modify_and_save_config(args, configs, tokenizer.symbol_table)
 
     # Init asr model from configs
     model, configs = init_model(args, configs)

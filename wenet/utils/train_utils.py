@@ -39,7 +39,6 @@ from deepspeed.utils.zero_to_fp32 import (
 )
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 
 
@@ -161,7 +160,7 @@ def init_distributed(args):
     return world_size, local_rank, rank
 
 
-def check_modify_and_save_config(args, configs):
+def check_modify_and_save_config(args, configs, symbol_table):
     if args.train_engine == "torch_ddp":
         if args.use_amp:
             configs["dtype"] = "fp16"
@@ -244,7 +243,7 @@ def check_modify_and_save_config(args, configs):
     return configs
 
 
-def init_dataset_and_dataloader(args, configs):
+def init_dataset_and_dataloader(args, configs, tokenizer):
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
     cv_conf['speed_perturb'] = False
@@ -253,7 +252,6 @@ def init_dataset_and_dataloader(args, configs):
     cv_conf['spec_trim'] = False
     cv_conf['shuffle'] = False
 
-    tokenizer = init_tokenizer(configs, args, non_lang_syms)
     configs['vocab_size'] = tokenizer.vocab_size()
     train_dataset = Dataset(args.data_type,
                             args.train_data,

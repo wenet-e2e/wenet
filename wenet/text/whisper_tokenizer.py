@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 from wenet.text.base_tokenizer import BaseTokenizer
 
 from wenet.utils.file_utils import read_non_lang_symbols
@@ -67,3 +67,6 @@ class WhisperTokenizer(BaseTokenizer):
 
     def vocab_size(self) -> int:
         return len(self.t2i)
+
+    def symbol_table(self) -> Dict[str, int]:
+        return self.t2i

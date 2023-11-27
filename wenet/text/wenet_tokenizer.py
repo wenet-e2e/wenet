@@ -24,10 +24,10 @@ class WenetTokenizer(BaseTokenizer):
             self.non_lang_syms_pattern = re.compile(
                 r"(\[[^\[\]]+\]|<[^<>]+>|{[^{}]+})")
         if not isinstance(symbol_table, Dict):
-            self.symbol_table = read_symbol_table(symbol_table)
+            self._symbol_table = read_symbol_table(symbol_table)
         else:
             # symbol_table = {"我": 1, "是": 2, "{NOISE}": 3}
-            self.symbol_table = symbol_table
+            self._symbol_table = symbol_table
         if not isinstance(non_lang_syms, List):
             self.non_lang_syms = read_non_lang_symbols(non_lang_syms)
         else:
@@ -38,7 +38,7 @@ class WenetTokenizer(BaseTokenizer):
             import sentencepiece as spm
             self.bpe_model = spm.SentencePieceProcessor()
             self.bpe_model.load(bpe_model)
-        self.char_dict = {v: k for k, v in self.symbol_table.items()}
+        self.char_dict = {v: k for k, v in self._symbol_table.items()}
         self.split_with_space = split_with_space
         self.connect_symbol = connect_symbol
 
@@ -72,10 +72,10 @@ class WenetTokenizer(BaseTokenizer):
     def tokens2ids(self, tokens: List[str]) -> List[int]:
         ids = []
         for ch in tokens:
-            if ch in self.symbol_table:
-                ids.append(self.symbol_table[ch])
-            elif '<unk>' in self.symbol_table:
-                ids.append(self.symbol_table['<unk>'])
+            if ch in self._symbol_table:
+                ids.append(self._symbol_table[ch])
+            elif '<unk>' in self._symbol_table:
+                ids.append(self._symbol_table['<unk>'])
         return ids
 
     def ids2tokens(self, ids: List[int]) -> List[str]:
@@ -84,3 +84,7 @@ class WenetTokenizer(BaseTokenizer):
 
     def vocab_size(self) -> int:
         return len(self.char_dict)
+
+    @property
+    def symbol_table(self) -> Dict[str, int]:
+        return self._symbol_table

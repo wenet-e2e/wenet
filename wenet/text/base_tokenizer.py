@@ -1,5 +1,5 @@
-from abc import ABC, abstractmethod
-from typing import List, Tuple
+from abc import ABC, abstractmethod, abstractproperty
+from typing import Dict, List, Tuple
 
 
 class BaseTokenizer(ABC):
@@ -32,4 +32,8 @@ class BaseTokenizer(ABC):
 
     @abstractmethod
     def vocab_size(self) -> int:
+        raise NotImplementedError("abstract method")
+
+    @abstractproperty
+    def symbol_table(self) -> Dict[str, int]:
         raise NotImplementedError("abstract method")
