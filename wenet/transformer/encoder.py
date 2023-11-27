@@ -49,6 +49,7 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        gradient_checkpointing: bool = False,
     ):
         """
         Args:
@@ -78,6 +79,8 @@ class BaseEncoder(torch.nn.Module):
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
             key_bias: whether use bias in attention.linear_k, False for whisper models.
+            gradient_checkpointing: rerunning a forward-pass segment for each
+                checkpointed segment during backward.
         """
         super().__init__()
         self._output_size = output_size
@@ -95,6 +98,7 @@ class BaseEncoder(torch.nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
+        self.gradient_checkpointing = gradient_checkpointing
 
     def output_size(self) -> int:
         return self._output_size
@@ -138,7 +142,11 @@ class BaseEncoder(torch.nn.Module):
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
         for layer in self.encoders:
-            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+            if self.gradient_checkpointing and self.training:
+                xs, chunk_masks, _, _ = torch.utils.checkpoint.checkpoint(
+                    layer, xs, chunk_masks, pos_emb, mask_pad)
+            else:
+                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
@@ -315,6 +323,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_left_chunk: bool = False,
         key_bias: bool = True,
         activation_type: str = "relu",
+        gradient_checkpointing: bool = False,
     ):
         """ Construct TransformerEncoder
 
@@ -325,7 +334,8 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk,
+                         gradient_checkpointing)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
@@ -367,6 +377,7 @@ class ConformerEncoder(BaseEncoder):
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
         key_bias: bool = True,
+        gradient_checkpointing: bool = False,
     ):
         """Construct ConformerEncoder
 
@@ -390,7 +401,8 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk,
+                         gradient_checkpointing)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition

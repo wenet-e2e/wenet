@@ -125,6 +125,10 @@ def add_ddp_args(parser):
                         action='store_true',
                         default=False,
                         help='Use fp16 gradient sync for ddp')
+    parser.add_argument('--use_grad_checkpoint',
+                        action='store_true',
+                        default=False,
+                        help='Enable gradient_checkpointing during training')
     return parser
 
 

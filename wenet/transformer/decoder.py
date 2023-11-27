@@ -46,6 +46,8 @@ class TransformerDecoder(torch.nn.Module):
         src_attention: if false, encoder-decoder cross attention is not
                        applied, such as CIF model
         key_bias: whether use bias in attention.linear_k, False for whisper models.
+        gradient_checkpointing: rerunning a forward-pass segment for each
+            checkpointed segment during backward.
     """
 
     def __init__(
@@ -65,6 +67,7 @@ class TransformerDecoder(torch.nn.Module):
         src_attention: bool = True,
         key_bias: bool = True,
         activation_type: str = "relu",
+        gradient_checkpointing: bool = False,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -101,6 +104,8 @@ class TransformerDecoder(torch.nn.Module):
                 normalize_before,
             ) for _ in range(self.num_blocks)
         ])
+
+        self.gradient_checkpointing = gradient_checkpointing
 
     def forward(
         self,
@@ -140,8 +145,12 @@ class TransformerDecoder(torch.nn.Module):
         tgt_mask = tgt_mask & m
         x, _ = self.embed(tgt)
         for layer in self.decoders:
-            x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
-                                                     memory_mask)
+            if self.gradient_checkpointing and self.training:
+                x, tgt_mask, memory, memory_mask = torch.utils.checkpoint.checkpoint(
+                    x, tgt_mask, memory, memory_mask)
+            else:
+                x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
+                                                         memory_mask)
         if self.normalize_before:
             x = self.after_norm(x)
         if self.use_output_layer:
@@ -252,6 +261,7 @@ class BiTransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         key_bias: bool = True,
+        gradient_checkpointing: bool = False,
     ):
 
         super().__init__()
@@ -260,14 +270,14 @@ class BiTransformerDecoder(torch.nn.Module):
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before,
-            key_bias=key_bias)
+            key_bias=key_bias, gradient_checkpointing=gradient_checkpointing)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before,
-            key_bias=key_bias)
+            key_bias=key_bias, gradient_checkpointing=gradient_checkpointing)
 
     def forward(
         self,
