@@ -212,6 +212,17 @@ def check_modify_and_save_config(args, configs):
     else:
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
 
+    if 'ctc_conf' not in configs:
+        configs['ctc_conf'] = {}
+
+    if '<blank>' in symbol_table:
+        if 'ctc_blank_id' in configs['ctc_conf']:
+            assert configs['ctc_conf']['ctc_blank_id'] == symbol_table['<blank>']
+        else:
+            configs['ctc_conf']['ctc_blank_id'] = symbol_table['<blank>']
+    else:
+        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
+
     configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
     configs['cmvn_file'] = args.cmvn
@@ -555,7 +566,7 @@ def log_per_step(writer, info_dict):
     loss_dict = info_dict['loss_dict']
     epoch = info_dict.get('epoch', 0)
     train_engine = info_dict.get("train_engine", "torch_ddp")
-    accum_grad = info_dict.get('accum_grad', 1)
+    accum_grad = info_dict.get('accum_grad', 1) if tag != "CV" else 1
     log_interval = info_dict.get('log_interval', 10)
     lr = info_dict.get("lr", 0.0)
     history_loss = info_dict.get("history_loss", 0.0)
@@ -567,7 +578,8 @@ def log_per_step(writer, info_dict):
     if tag == "TRAIN" and rank == 0 and writer is not None:
         if (train_engine == "deepspeed" and is_gradient_accumulation_boundary) or \
            (train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0):
-            writer.add_scalar('train/train_loss', loss_dict['loss'].item(), step + 1)
+            writer.add_scalar('train/train_loss',
+                              loss_dict['loss'].item() * accum_grad, step + 1)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'], step + 1)
 
     if (batch_idx + 1) % log_interval == 0:

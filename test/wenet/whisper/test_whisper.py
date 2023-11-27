@@ -273,6 +273,7 @@ def test_model(model, audio_path):
 
         # 6. Forward wenet.decoder
         wenet_tokens, _ = add_whisper_tokens(
+<<<<<<< HEAD
             tokenizer.tokenizer,
             torch.tensor([dummy_tokens], dtype=torch.long),
             ignore_id=-1,
@@ -282,6 +283,12 @@ def test_model(model, audio_path):
             language=language,
             use_prev=False)
 
+=======
+            configs['model_conf']['special_tokens'],
+            torch.tensor([dummy_tokens], dtype=torch.long), ignore_id=-1,
+            task=task, no_timestamp=True, language=language, use_prev=False
+        )
+>>>>>>> main
         L = wenet_tokens.size(1)
         tgt_mask = ~make_pad_mask(
             torch.tensor([L], dtype=torch.long), L).unsqueeze(1)  # (B=1, 1, L)

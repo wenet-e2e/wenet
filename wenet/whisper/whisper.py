@@ -17,7 +17,6 @@
 import torch
 
 from typing import Tuple
-from whisper.tokenizer import get_tokenizer
 
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
@@ -38,16 +37,14 @@ class Whisper(ASRModel):
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
+        special_tokens: dict = None,
     ):
         super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight, ignore_id,
                          reverse_weight, lsm_weight, length_normalized_loss)
-        self.tokenizer = get_tokenizer(multilingual=self.is_multilingual,
-                                       num_languages=self.num_languages)
-        assert vocab_size == self.tokenizer.encoding.n_vocab, "{} v.s. {}".format(
-            vocab_size, self.tokenizer.encoding.n_vocab)
         assert reverse_weight == 0.0
-        self.sos = self.tokenizer.sot
-        self.eos = self.tokenizer.eot
+        self.sos = special_tokens["sot"]
+        self.eos = special_tokens["eot"]
+        self.special_tokens = special_tokens
 
     # TODO(xcsong): time align
     def set_alignment_heads(self, dump: bytes):
@@ -75,7 +72,7 @@ class Whisper(ASRModel):
         # TODO(xcsong): add args for no_timestamp, language, etc
         prev_len = ys_pad.size(1)
         ys_in_pad, ys_out_pad = add_whisper_tokens(
-            self.tokenizer, ys_pad, self.ignore_id, task_id=self.tokenizer.transcribe,
+            self.special_tokens, ys_pad, self.ignore_id, task="transcribe",
             no_timestamp=True, language="zh", use_prev=False
         )
         cur_len = ys_in_pad.size(1)

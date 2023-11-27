@@ -90,12 +90,22 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['decoder_conf']['activation_type'] = "gelu"
 
     configs['ctc_conf'] = {}
-    configs['ctc_conf']['ctc_blank_id'] = 50362  # <nospeech>
+    configs['ctc_conf']['ctc_blank_id'] = tokenizer.no_speech
 
     configs['model_conf'] = {}
     configs['model_conf']['ctc_weight'] = 0.3
     configs['model_conf']['lsm_weight'] = 0.1
     configs['model_conf']['length_normalized_loss'] = False
+    configs['model_conf']['special_tokens'] = {}
+    configs['model_conf']['special_tokens']['sot'] = tokenizer.sot
+    configs['model_conf']['special_tokens']['eot'] = tokenizer.sot
+    configs['model_conf']['special_tokens']['sot_prev'] = tokenizer.sot_prev
+    configs['model_conf']['special_tokens']['transcribe'] = tokenizer.transcribe
+    configs['model_conf']['special_tokens']['translate'] = tokenizer.translate
+    configs['model_conf']['special_tokens']['no_timestamps'] = tokenizer.no_timestamps
+    configs['model_conf']['special_tokens']['no_speech'] = tokenizer.no_speech
+    configs['model_conf']['special_tokens']['timestamp_begin'] = \
+        tokenizer.timestamp_begin
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
