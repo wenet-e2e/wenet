@@ -581,7 +581,7 @@ def log_per_step(writer, info_dict):
     loss_dict = info_dict['loss_dict']
     epoch = info_dict.get('epoch', 0)
     train_engine = info_dict.get("train_engine", "torch_ddp")
-    accum_grad = info_dict.get('accum_grad', 1)
+    accum_grad = info_dict.get('accum_grad', 1) if tag != "CV" else 1
     log_interval = info_dict.get('log_interval', 10)
     lr = info_dict.get("lr", 0.0)
     history_loss = info_dict.get("history_loss", 0.0)
