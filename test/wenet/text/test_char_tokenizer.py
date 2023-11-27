@@ -131,3 +131,11 @@ def test_detokenize(char_tokenizer):
 
 def test_vocab_size(char_tokenizer):
     assert char_tokenizer.vocab_size() == 5235
+
+
+def test_consistency(char_tokenizer):
+    text = "大家都好帅"
+
+    assert text == char_tokenizer.tokens2text(char_tokenizer.text2tokens(text))
+    assert text == char_tokenizer.detokenize(
+        char_tokenizer.tokenize(text)[1])[0]

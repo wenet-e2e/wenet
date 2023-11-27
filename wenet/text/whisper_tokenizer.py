@@ -39,7 +39,6 @@ class WhisperTokenizer(BaseTokenizer):
             # unit = bytes(unit, 'utf-8')
             self.t2i[unit] = i
             self.i2t[i] = unit
-        print(len(self.t2i), len(self.i2t))
         assert len(self.t2i) == len(self.i2t)
 
     def tokenize(self, line: str) -> Tuple[List[str], List[int]]:

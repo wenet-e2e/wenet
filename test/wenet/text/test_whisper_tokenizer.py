@@ -49,7 +49,7 @@ def test_detokenize(whisper_tokenizer):
 
 
 def test_consistency(whisper_tokenizer):
-    text = "whisper powered by wenet, it't great"
+    text = "whisper powered by wenet, it's great"
 
     assert text == whisper_tokenizer.tokens2text(
         whisper_tokenizer.text2tokens(text))

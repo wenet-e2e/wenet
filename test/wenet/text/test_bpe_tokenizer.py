@@ -86,3 +86,9 @@ def test_detokenize(bpe_tokenizer):
 
 def test_vocab_size(bpe_tokenizer):
     assert bpe_tokenizer.vocab_size() == 5002
+
+
+def test_consistency(bpe_tokenizer):
+    text = "WENET IS GREAT"
+    assert text == bpe_tokenizer.tokens2text(bpe_tokenizer.text2tokens(text))
+    assert text == bpe_tokenizer.detokenize(bpe_tokenizer.tokenize(text)[1])[0]
