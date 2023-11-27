@@ -39,7 +39,7 @@ def read_non_lang_symbols(non_lang_sym_path):
 
     """
     if non_lang_sym_path is None:
-        return {}
+        return []
     else:
         syms = read_lists(non_lang_sym_path)
         non_lang_syms_pattern = re.compile(r"(\[[^\[\]]+\]|<[^<>]+>|{[^{}]+})")
