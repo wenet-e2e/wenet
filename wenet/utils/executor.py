@@ -78,7 +78,7 @@ class Executor:
                     scaler, info_dict
                 )
                 log_per_step(writer, info_dict)
-                self.step += 1 if (batch_idx + 1) % accum_grad == 0 else 0
+                self.step += 1 if (batch_idx + 1) % info_dict["accum_grad"] == 0 else 0
 
     def cv(self, model, data_loader, configs):
         ''' Cross validation on
