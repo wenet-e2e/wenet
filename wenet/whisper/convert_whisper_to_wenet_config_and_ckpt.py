@@ -89,6 +89,9 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['decoder_conf']['key_bias'] = False
     configs['decoder_conf']['activation_type'] = "gelu"
 
+    configs['ctc_conf'] = {}
+    configs['ctc_conf']['ctc_blank_id'] = 50362  # <nospeech>
+
     configs['model_conf'] = {}
     configs['model_conf']['ctc_weight'] = 0.3
     configs['model_conf']['lsm_weight'] = 0.1
@@ -208,13 +211,12 @@ def convert_to_wenet_units(tokenizer, units_txt_path):
     n_vocab = tokenizer.encoding.n_vocab
     with open(units_txt_path, "+w") as f:
         for i in range(n_vocab):
-            unit = tokenizer.encoding.decode([i])
+            unit = str(tokenizer.encoding.decode_single_token_bytes(i))
             if len(unit) == 0:
                 unit = str(i)
                 print("can not decode id {}, convert to str({})".format(i, i))
             unit = unit.replace(" ", "<space>")
-            unit = bytes(unit, 'utf-8')
-            f.write("{} {}\n".format(str(unit), i))
+            f.write("{} {}\n".format(unit, i))
             f.flush()
 
 

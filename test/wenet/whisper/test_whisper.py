@@ -12,10 +12,10 @@ import yaml
 import numpy as np
 import torch.nn.functional as F
 
-from whisper.tokenizer import get_tokenizer
 from whisper.audio import N_FFT, HOP_LENGTH, N_SAMPLES, N_FRAMES, pad_or_trim
 
 from wenet.dataset.processor import compute_log_mel_spectrogram
+from wenet.text.whisper_tokenizer import WhisperTokenizer
 from wenet.transformer.embedding import WhisperPositionalEncoding
 from wenet.whisper.convert_whisper_to_wenet_config_and_ckpt import (
     convert_to_wenet_yaml, convert_to_wenet_state_dict, convert_to_wenet_units
@@ -108,19 +108,19 @@ def test_model(model, audio_path):
     checkpoint = torch.load("{}/{}.pt".format(download_root, model), map_location="cpu")
     multilingual = checkpoint["dims"]['n_vocab'] >= 51865
     num_languages = checkpoint["dims"]['n_vocab'] - 51765 - int(multilingual)
-    tokenizer = get_tokenizer(multilingual, num_languages=num_languages,
-                              language=language, task=task)
+    tokenizer = WhisperTokenizer(multilingual, num_languages=num_languages,
+                                 language=language, task=task)
 
     convert_to_wenet_state_dict(
         checkpoint["model_state_dict"],
         os.path.join(download_root, 'wenet_whisper.pt')
     )
     convert_to_wenet_units(
-        tokenizer,
+        tokenizer.tokenizer,
         os.path.join(download_root, 'units.txt')
     )
     convert_to_wenet_yaml(
-        tokenizer, checkpoint["dims"],
+        tokenizer.tokenizer, checkpoint["dims"],
         os.path.join(download_root, 'train.yaml')
     )
     with open("{}/train.yaml".format(download_root), 'r') as fin:
@@ -132,7 +132,7 @@ def test_model(model, audio_path):
     wenet_model.eval()
 
     with torch.no_grad():
-        dummy_tokens = tokenizer.encode("WeNet x OpenAI")
+        _, dummy_tokens = tokenizer.tokenize("WeNet x OpenAI")
 
         # 3. Forward whisper.encoder
         mel1 = whisper.log_mel_spectrogram(
@@ -173,8 +173,8 @@ def test_model(model, audio_path):
                                    rtol=1e-7, atol=1e-10)
 
         # 4. Forward whisper.decoder
-        whisper_tokens = torch.tensor(list(tokenizer.sot_sequence)
-                                      + [tokenizer.no_timestamps]
+        whisper_tokens = torch.tensor(list(tokenizer.tokenizer.sot_sequence)
+                                      + [tokenizer.tokenizer.no_timestamps]
                                       + dummy_tokens,
                                       dtype=torch.long).unsqueeze(0)  # (B=1, 9)
         whisper_decoder_embed = whisper_model.decoder.token_embedding(whisper_tokens)
@@ -273,10 +273,15 @@ def test_model(model, audio_path):
 
         # 6. Forward wenet.decoder
         wenet_tokens, _ = add_whisper_tokens(
-            tokenizer, torch.tensor([dummy_tokens], dtype=torch.long), ignore_id=-1,
-            task_id=tokenizer.transcribe if task == "transcribe" else tokenizer.translate,  # noqa
-            no_timestamp=True, language=language, use_prev=False
-        )
+            tokenizer.tokenizer,
+            torch.tensor([dummy_tokens], dtype=torch.long),
+            ignore_id=-1,
+            task_id=tokenizer.tokenizer.transcribe
+            if task == "transcribe" else tokenizer.tokenizer.translate,
+            no_timestamp=True,
+            language=language,
+            use_prev=False)
+
         L = wenet_tokens.size(1)
         tgt_mask = ~make_pad_mask(
             torch.tensor([L], dtype=torch.long), L).unsqueeze(1)  # (B=1, 1, L)

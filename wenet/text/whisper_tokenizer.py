@@ -1,7 +1,6 @@
 from os import PathLike
 from typing import List, Optional, Tuple, Union
 from wenet.text.base_tokenizer import BaseTokenizer
-from whisper.tokenizer import get_tokenizer
 
 from wenet.utils.file_utils import read_non_lang_symbols
 
@@ -18,6 +17,7 @@ class WhisperTokenizer(BaseTokenizer):
         *args,
         **kwargs,
     ) -> None:
+        from whisper.tokenizer import get_tokenizer
         self.tokenizer = get_tokenizer(multilingual=multilingual,
                                        num_languages=num_languages,
                                        language=language,

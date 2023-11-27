@@ -20,9 +20,6 @@ from typing import List, Tuple
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from whisper.tokenizer import LANGUAGES as WhiserLanguages
-
-WHISPER_LANGS = tuple(WhiserLanguages.keys())
 IGNORE_ID = -1
 
 
@@ -176,6 +173,8 @@ def add_whisper_tokens(
         ys_out (torch.Tensor) : (B, Lmax + ?)
 
     """
+    from whisper.tokenizer import LANGUAGES as WhiserLanguages
+    WHISPER_LANGS = tuple(WhiserLanguages.keys())
     if use_prev:
         # i.e., hotword list
         _prev = [tokenizer.sot_prev]
