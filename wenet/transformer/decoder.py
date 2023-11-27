@@ -69,7 +69,7 @@ class TransformerDecoder(torch.nn.Module):
         activation = get_activation(activation_type)
 
         self.embed = torch.nn.Sequential(
-            torch.nn.Identity() if input_layer == "none" else torch.nn.Embedding(
+            torch.nn.Identity() if input_layer == "no_pos" else torch.nn.Embedding(
                 vocab_size, attention_dim),
             WENET_EMB_CLASSES[input_layer](attention_dim, positional_dropout_rate),
         )

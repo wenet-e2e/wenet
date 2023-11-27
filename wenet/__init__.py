@@ -33,7 +33,6 @@ WENET_EMB_CLASSES = {
     "no_pos": NoPositionalEncoding,
     "abs_pos_whisper": WhisperPositionalEncoding,
     "embed_learnable_pe": LearnablePositionalEncoding,
-    "none": NoPositionalEncoding,
 }
 
 WENET_ATTENTION_CLASSES = {
