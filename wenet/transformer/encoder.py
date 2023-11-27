@@ -19,7 +19,7 @@ from typing import Tuple
 
 import torch
 
-from wenet.transformer import (
+from wenet import (
     WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES, WENET_ATTENTION_CLASSES
 )
 from wenet.transformer.convolution import ConvolutionModule

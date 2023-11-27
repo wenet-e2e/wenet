@@ -18,8 +18,7 @@ from typing import Tuple, List, Optional
 import torch
 import logging
 
-from wenet.transformer import WENET_EMB_CLASSES
-from wenet.transformer.attention import MultiHeadedAttention
+from wenet import WENET_EMB_CLASSES, WENET_ATTENTION_CLASSES
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
@@ -86,11 +85,14 @@ class TransformerDecoder(torch.nn.Module):
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
-                MultiHeadedAttention(attention_heads, attention_dim,
-                                     self_attention_dropout_rate, key_bias),
-                MultiHeadedAttention(attention_heads, attention_dim,
-                                     src_attention_dropout_rate, key_bias)
-                if src_attention else None,
+                WENET_ATTENTION_CLASSES["selfattn"](
+                    attention_heads, attention_dim,
+                    self_attention_dropout_rate, key_bias
+                ),
+                WENET_ATTENTION_CLASSES["selfattn"](
+                    attention_heads, attention_dim,
+                    src_attention_dropout_rate, key_bias
+                ) if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
                                         dropout_rate, activation),
                 dropout_rate,
