@@ -22,7 +22,7 @@ from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import (
     WENET_EMB_CLASSES, WENET_ATTENTION_CLASSES,
-    get_activation
+    WENET_ACTIVATION_CLASSES,
 )
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
 
@@ -68,7 +68,7 @@ class TransformerDecoder(torch.nn.Module):
     ):
         super().__init__()
         attention_dim = encoder_output_size
-        activation = get_activation(activation_type)
+        activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         self.embed = torch.nn.Sequential(
             torch.nn.Identity() if input_layer == "no_pos" else torch.nn.Embedding(
