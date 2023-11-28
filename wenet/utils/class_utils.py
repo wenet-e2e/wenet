@@ -18,6 +18,7 @@ from wenet.transformer.embedding import (
 from wenet.transformer.attention import (
     MultiHeadedAttention, RelPositionMultiHeadedAttention
 )
+from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
 
 
 def get_activation(act):
@@ -69,4 +70,5 @@ WENET_EMB_CLASSES = {
 WENET_ATTENTION_CLASSES = {
     "selfattn": MultiHeadedAttention,
     "rel_selfattn": RelPositionMultiHeadedAttention,
+    "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
 }
