@@ -110,6 +110,7 @@ def test_model(model, audio_path):
     num_languages = checkpoint["dims"]['n_vocab'] - 51765 - int(multilingual)
     tokenizer = WhisperTokenizer(multilingual, num_languages=num_languages,
                                  language=language, task=task)
+    tokenizer._build_tiktoken()
 
     convert_to_wenet_state_dict(
         checkpoint["model_state_dict"],
