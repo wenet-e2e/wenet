@@ -129,6 +129,10 @@ class BaseEncoder(torch.nn.Module):
             xs: padded output tensor (B, T' ~= T/subsample_rate, D)
             masks: torch.Tensor batch padding mask after subsample
                 (B, 1, T' ~= T/subsample_rate)
+        NOTE(xcsong):
+            We pass the `__call__` method of the modules instead of `forward` to the
+            checkpointing API because `__call__` attaches all the hooks of the module.
+            https://discuss.pytorch.org/t/any-different-between-model-input-and-model-forward-input/3690/2
         """
         T = xs.size(1)
         masks = ~make_pad_mask(xs_lens, T).unsqueeze(1)  # (B, 1, T)

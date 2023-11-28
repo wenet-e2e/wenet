@@ -133,6 +133,10 @@ class TransformerDecoder(torch.nn.Module):
                     vocab_size) if use_output_layer is True,
                 torch.tensor(0.0), in order to unify api with bidirectional decoder
                 olens: (batch, )
+        NOTE(xcsong):
+            We pass the `__call__` method of the modules instead of `forward` to the
+            checkpointing API because `__call__` attaches all the hooks of the module.
+            https://discuss.pytorch.org/t/any-different-between-model-input-and-model-forward-input/3690/2
         """
         tgt = ys_in_pad
         maxlen = tgt.size(1)
