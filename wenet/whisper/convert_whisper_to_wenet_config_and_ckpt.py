@@ -57,6 +57,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
 
     configs['encoder'] = 'transformer'
     configs['encoder_conf'] = {}
+    configs['encoder_conf']['gradient_checkpointing'] = True
     configs['encoder_conf']['input_layer'] = 'conv1d2'
     configs['encoder_conf']['output_size'] = dims['n_audio_state']
     configs['encoder_conf']['attention_heads'] = dims['n_audio_head']
@@ -75,6 +76,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
 
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
+    configs['decoder_conf']['gradient_checkpointing'] = True
     configs['decoder_conf']['attention_heads'] = dims['n_text_head']
     configs['decoder_conf']['linear_units'] = dims['n_text_state'] * 4
     configs['decoder_conf']['num_blocks'] = dims['n_text_layer']
