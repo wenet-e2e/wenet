@@ -49,6 +49,7 @@ WENET_SUBSAMPLE_CLASSES = {
 }
 
 WENET_EMB_CLASSES = {
+    "embed": PositionalEncoding,
     "abs_pos": PositionalEncoding,
     "rel_pos": RelPositionalEncoding,
     "no_pos": NoPositionalEncoding,
