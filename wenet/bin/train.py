@@ -130,6 +130,7 @@ def main():
                                     timeout=datetime.timedelta(seconds=args.timeout))
         executor.train(model, optimizer, scheduler, train_data_loader,
                        writer, configs, scaler, group_join)
+        dist.destroy_process_group(group_join)
 
         dist.barrier()  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)
