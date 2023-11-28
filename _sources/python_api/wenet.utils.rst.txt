@@ -13,6 +13,7 @@ Submodules
    :maxdepth: 2
 
    wenet.utils.checkpoint
+   wenet.utils.class_utils
    wenet.utils.cmvn
    wenet.utils.common
    wenet.utils.config

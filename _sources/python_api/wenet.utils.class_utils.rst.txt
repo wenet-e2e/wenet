@@ -1,0 +1,7 @@
+wenet.utils.class\_utils module
+===============================
+
+.. automodule:: wenet.utils.class_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
