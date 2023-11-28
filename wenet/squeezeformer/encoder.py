@@ -29,7 +29,7 @@ from wenet.squeezeformer.positionwise_feed_forward \
     import PositionwiseFeedForward
 from wenet.squeezeformer.convolution import ConvolutionModule
 from wenet.utils.mask import make_pad_mask, add_optional_chunk_mask
-from wenet.utils.class_utils import get_activation
+from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
 
 
 class SqueezeformerEncoder(nn.Module):
@@ -114,7 +114,7 @@ class SqueezeformerEncoder(nn.Module):
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
         self.pos_enc_layer_type = pos_enc_layer_type
-        activation = get_activation(activation_type)
+        activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition
         if pos_enc_layer_type != "rel_pos":

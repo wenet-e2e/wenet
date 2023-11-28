@@ -28,7 +28,7 @@ from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
 from wenet.utils.class_utils import (
     WENET_ATTENTION_CLASSES, WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES,
-    get_activation,
+    WENET_ACTIVATION_CLASSES,
 )
 
 class EBranchformerEncoder(nn.Module):
@@ -65,7 +65,7 @@ class EBranchformerEncoder(nn.Module):
         macaron_style: bool = True,
     ):
         super().__init__()
-        activation = get_activation(activation_type)
+        activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self._output_size = output_size
 
         self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](

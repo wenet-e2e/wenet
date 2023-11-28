@@ -33,7 +33,7 @@ from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
 from wenet.utils.class_utils import (
     WENET_ATTENTION_CLASSES, WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES,
-    get_activation,
+    WENET_ACTIVATION_CLASSES,
 )
 
 class EfficientConformerEncoder(torch.nn.Module):
@@ -104,7 +104,7 @@ class EfficientConformerEncoder(torch.nn.Module):
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
 
-        activation = get_activation(activation_type)
+        activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self.num_blocks = num_blocks
         self.attention_heads = attention_heads
         self.cnn_module_kernel = cnn_module_kernel

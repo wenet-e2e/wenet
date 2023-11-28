@@ -3,6 +3,7 @@
 # Copyright [2023-11-28] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 import torch
 
+from wenet.transformer.swish import Swish
 from wenet.transformer.subsampling import (
     LinearNoSubsampling, EmbedinigNoSubsampling,
     Conv1dSubsampling2, Conv2dSubsampling4,
@@ -21,32 +22,20 @@ from wenet.transformer.attention import (
 from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
 
 
-def get_activation(act):
-    """Return activation function."""
-    # Lazy load to avoid unused import
-    from wenet.transformer.swish import Swish
+WENET_ACTIVATION_CLASSES = {
+    "hardtanh": torch.nn.Hardtanh,
+    "tanh": torch.nn.Tanh,
+    "relu": torch.nn.ReLU,
+    "selu": torch.nn.SELU,
+    "swish": getattr(torch.nn, "SiLU", Swish),
+    "gelu": torch.nn.GELU,
+}
 
-    activation_funcs = {
-        "hardtanh": torch.nn.Hardtanh,
-        "tanh": torch.nn.Tanh,
-        "relu": torch.nn.ReLU,
-        "selu": torch.nn.SELU,
-        "swish": getattr(torch.nn, "SiLU", Swish),
-        "gelu": torch.nn.GELU
-    }
-
-    return activation_funcs[act]()
-
-
-def get_rnn(rnn_type: str) -> torch.nn.Module:
-    assert rnn_type in ["rnn", "lstm", "gru"]
-    if rnn_type == "rnn":
-        return torch.nn.RNN
-    elif rnn_type == "lstm":
-        return torch.nn.LSTM
-    else:
-        return torch.nn.GRU
-
+WENET_RNN_CLASSES = {
+    "rnn": torch.nn.RNN,
+    "lstm": torch.nn.LSTM,
+    "gru": torch.nn.GRU,
+}
 
 WENET_SUBSAMPLE_CLASSES = {
     "linear": LinearNoSubsampling,
