@@ -76,7 +76,7 @@ def main():
 
     # init tokenizer
     tokenizer = init_tokenizer(configs, args.symbol_table, args.bpe_model,
-                               non_lang_syms)
+                               args.non_lang_syms)
 
     # Init env for ddp OR deepspeed
     world_size, local_rank, rank = init_distributed(args)
