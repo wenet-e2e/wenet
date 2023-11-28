@@ -19,14 +19,14 @@ from typing import Tuple
 
 import torch
 
-from wenet import (
-    WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES, WENET_ATTENTION_CLASSES
-)
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.utils.common import get_activation
+from wenet.utils.class_utils import (
+    WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES, WENET_ATTENTION_CLASSES,
+    get_activation
+)
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
 

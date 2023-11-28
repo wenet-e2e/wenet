@@ -40,7 +40,7 @@ from wenet.efficient_conformer.convolution import ConvolutionModule
 from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
 from wenet.efficient_conformer.encoder_layer import StrideConformerEncoderLayer
 
-from wenet.utils.common import get_activation
+from wenet.utils.class_utils import get_activation
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
 

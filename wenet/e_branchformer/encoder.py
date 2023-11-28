@@ -41,7 +41,7 @@ from wenet.branchformer.cgmlp import ConvolutionalGatingMLP
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
-from wenet.utils.common import get_activation
+from wenet.utils.class_utils import get_activation
 
 
 class EBranchformerEncoder(nn.Module):

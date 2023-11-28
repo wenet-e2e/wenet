@@ -18,11 +18,13 @@ from typing import Tuple, List, Optional
 import torch
 import logging
 
-from wenet import WENET_EMB_CLASSES, WENET_ATTENTION_CLASSES
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.utils.class_utils import (
+    WENET_EMB_CLASSES, WENET_ATTENTION_CLASSES,
+    get_activation
+)
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
-from wenet.utils.common import get_activation
 
 
 class TransformerDecoder(torch.nn.Module):

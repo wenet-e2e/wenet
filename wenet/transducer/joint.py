@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 from torch import nn
-from wenet.utils.common import get_activation
+from wenet.utils.class_utils import get_activation
 
 
 class TransducerJoint(torch.nn.Module):
