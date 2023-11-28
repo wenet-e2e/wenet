@@ -125,6 +125,10 @@ def add_ddp_args(parser):
                         action='store_true',
                         default=False,
                         help='Use fp16 gradient sync for ddp')
+    parser.add_argument('--find_unused_parameters',
+                        action='store_true',
+                        default=False,
+                        help='https://github.com/wenet-e2e/wenet/pull/2173')
     return parser
 
 
@@ -222,6 +226,11 @@ def check_modify_and_save_config(args, configs, symbol_table):
     else:
         assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
 
+    if configs['model_conf']['ctc_weight'] == 0.0 or \
+            configs['model_conf']['ctc_weight'] == 1.0:
+        # https://github.com/wenet-e2e/wenet/pull/2173#issuecomment-1829406761
+        assert args.find_unused_parameters
+
     configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
     configs['cmvn_file'] = args.cmvn
@@ -289,7 +298,7 @@ def wrap_cuda_model(args, model):
         assert (torch.cuda.is_available())
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
-            model, find_unused_parameters=True)
+            model, find_unused_parameters=args.find_unused_parameters)
         device = torch.device("cuda")
         if args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (

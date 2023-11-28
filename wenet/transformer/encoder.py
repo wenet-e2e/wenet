@@ -18,6 +18,7 @@
 from typing import Tuple
 
 import torch
+import torch.utils.checkpoint as ckpt
 
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
@@ -143,8 +144,8 @@ class BaseEncoder(torch.nn.Module):
                                               num_decoding_left_chunks)
         for layer in self.encoders:
             if self.gradient_checkpointing and self.training:
-                xs, chunk_masks, _, _ = torch.utils.checkpoint.checkpoint(
-                    layer, xs, chunk_masks, pos_emb, mask_pad)
+                xs, chunk_masks, _, _ = ckpt.checkpoint(
+                    layer.__call__, xs, chunk_masks, pos_emb, mask_pad)
             else:
                 xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:

@@ -16,6 +16,7 @@
 from typing import Tuple, List, Optional
 
 import torch
+import torch.utils.checkpoint as ckpt
 import logging
 
 from wenet.transformer.decoder_layer import DecoderLayer
@@ -146,8 +147,8 @@ class TransformerDecoder(torch.nn.Module):
         x, _ = self.embed(tgt)
         for layer in self.decoders:
             if self.gradient_checkpointing and self.training:
-                x, tgt_mask, memory, memory_mask = torch.utils.checkpoint.checkpoint(
-                    x, tgt_mask, memory, memory_mask)
+                x, tgt_mask, memory, memory_mask = ckpt.checkpoint(
+                    layer.__call__, x, tgt_mask, memory, memory_mask)
             else:
                 x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
                                                          memory_mask)
