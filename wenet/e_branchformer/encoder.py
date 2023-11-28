@@ -21,28 +21,15 @@ import torch
 import torch.nn as nn
 from typing import List, Optional, Tuple, Union
 
-from wenet.transformer.attention import (
-    MultiHeadedAttention,
-    RelPositionMultiHeadedAttention,
-)
-from wenet.transformer.embedding import (
-    RelPositionalEncoding,
-    PositionalEncoding,
-    NoPositionalEncoding,
-)
-from wenet.transformer.subsampling import (
-    Conv2dSubsampling4,
-    Conv2dSubsampling6,
-    Conv2dSubsampling8,
-)
-
 from wenet.e_branchformer.encoder_layer import EBranchformerEncoderLayer
 from wenet.branchformer.cgmlp import ConvolutionalGatingMLP
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
-from wenet.utils.class_utils import get_activation
-
+from wenet.utils.class_utils import (
+    WENET_ATTENTION_CLASSES, WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES,
+    get_activation,
+)
 
 class EBranchformerEncoder(nn.Module):
     """E-Branchformer encoder module."""
@@ -81,64 +68,19 @@ class EBranchformerEncoder(nn.Module):
         activation = get_activation(activation_type)
         self._output_size = output_size
 
-        if pos_enc_layer_type == "abs_pos":
-            pos_enc_class = PositionalEncoding
-        elif pos_enc_layer_type == "no_pos":
-            pos_enc_class = NoPositionalEncoding
-        elif pos_enc_layer_type == "rel_pos":
-            assert attention_layer_type == "rel_selfattn"
-            pos_enc_class = RelPositionalEncoding
-        else:
-            raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
+        self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
+            input_size,
+            output_size,
+            dropout_rate,
+            WENET_EMB_CLASSES[pos_enc_layer_type](
+                output_size, positional_dropout_rate),
+        )
 
-        if input_layer == "linear":
-            self.embed = torch.nn.Sequential(
-                torch.nn.Linear(input_size, output_size),
-                torch.nn.LayerNorm(output_size),
-                torch.nn.Dropout(dropout_rate),
-                pos_enc_class(output_size, positional_dropout_rate),
-            )
-        elif input_layer == "conv2d":
-            self.embed = Conv2dSubsampling4(
-                input_size,
-                output_size,
-                dropout_rate,
-                pos_enc_class(output_size, positional_dropout_rate),
-            )
-        elif input_layer == "conv2d6":
-            self.embed = Conv2dSubsampling6(
-                input_size,
-                output_size,
-                dropout_rate,
-                pos_enc_class(output_size, positional_dropout_rate),
-            )
-        elif input_layer == "conv2d8":
-            self.embed = Conv2dSubsampling8(
-                input_size,
-                output_size,
-                dropout_rate,
-                pos_enc_class(output_size, positional_dropout_rate),
-            )
-        else:
-            raise ValueError("unknown input_layer: " + input_layer)
-
-        if attention_layer_type == "selfattn":
-            encoder_selfattn_layer = MultiHeadedAttention
-            encoder_selfattn_layer_args = (
-                attention_heads,
-                output_size,
-                attention_dropout_rate,
-            )
-        elif attention_layer_type == "rel_selfattn":
-            assert pos_enc_layer_type == "rel_pos"
-            encoder_selfattn_layer = RelPositionMultiHeadedAttention
-            encoder_selfattn_layer_args = (
-                attention_heads,
-                output_size,
-                attention_dropout_rate,
-            )
-        else:
-            raise ValueError("unknown encoder_attn_layer: " + attention_layer_type)
+        encoder_selfattn_layer_args = (
+            attention_heads,
+            output_size,
+            attention_dropout_rate,
+        )
 
         cgmlp_layer = ConvolutionalGatingMLP
         cgmlp_layer_args = (
@@ -171,7 +113,7 @@ class EBranchformerEncoder(nn.Module):
         self.encoders = torch.nn.ModuleList([
             EBranchformerEncoderLayer(
                 output_size,
-                encoder_selfattn_layer(*encoder_selfattn_layer_args),
+                WENET_ATTENTION_CLASSES[attention_layer_type](*encoder_selfattn_layer_args),
                 cgmlp_layer(*cgmlp_layer_args),
                 positionwise_layer(*positionwise_layer_args) if use_ffn else None,
                 positionwise_layer(*positionwise_layer_args)
