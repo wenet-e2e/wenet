@@ -24,9 +24,9 @@ import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
-from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.context_graph import ContextGraph
 
 
@@ -185,7 +185,6 @@ def main():
     if len(args.override_config) > 0:
         configs = override_config(configs, args.override_config)
 
-    symbol_table = read_symbol_table(args.dict)
     test_conf = copy.deepcopy(configs['dataset_conf'])
 
     test_conf['filter_conf']['max_length'] = 102400
@@ -206,23 +205,18 @@ def main():
         test_conf['mfcc_conf']['dither'] = 0.0
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
-    non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    tokenizer = init_tokenizer(configs, args.dict, args.bpe_model, args.non_lang_syms)
     test_dataset = Dataset(args.data_type,
                            args.test_data,
-                           symbol_table,
+                           tokenizer,
                            test_conf,
-                           args.bpe_model,
-                           non_lang_syms,
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
     model, configs = init_model(args, configs)
-
-    # Load dict
-    char_dict = {v: k for k, v in symbol_table.items()}
 
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')
@@ -231,7 +225,7 @@ def main():
 
     context_graph = None
     if 'decoding-graph' in args.context_bias_mode:
-        context_graph = ContextGraph(args.context_list_path, symbol_table,
+        context_graph = ContextGraph(args.context_list_path, tokenizer.symbol_table,
                                      args.bpe_model, args.context_graph_score)
 
     # TODO(Dinghao Zhou): Support RNN-T related decoding
@@ -264,9 +258,8 @@ def main():
                 context_graph=context_graph)
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
-                    content = [char_dict[w] for w in hyps[i].tokens]
-                    line = '{} {}'.format(key,
-                                          args.connect_symbol.join(content))
+                    tokens = hyps[i].tokens
+                    line = '{} {}'.format(key, tokenizer.detokenize(tokens)[0])
                     logging.info('{} {}'.format(mode.ljust(max_format_len),
                                                 line))
                     files[mode].write(line + '\n')

@@ -39,14 +39,16 @@ def read_non_lang_symbols(non_lang_sym_path):
 
     """
     if non_lang_sym_path is None:
-        return None
+        return []
     else:
         syms = read_lists(non_lang_sym_path)
         non_lang_syms_pattern = re.compile(r"(\[[^\[\]]+\]|<[^<>]+>|{[^{}]+})")
         for sym in syms:
             if non_lang_syms_pattern.fullmatch(sym) is None:
+
                 class BadSymbolFormat(Exception):
                     pass
+
                 raise BadSymbolFormat(
                     "Non-linguistic symbols should be "
                     "formatted in {xxx}/<xxx>/[xxx], consider"
