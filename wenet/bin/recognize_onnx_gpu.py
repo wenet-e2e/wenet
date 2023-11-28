@@ -47,8 +47,8 @@ from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
 from wenet.utils.common import IGNORE_ID
-from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.config import override_config
+from wenet.utils.init_tokenizer import init_tokenizer
 
 import onnxruntime as rt
 import multiprocessing
@@ -118,7 +118,6 @@ def main():
         configs = override_config(configs, args.override_config)
 
     reverse_weight = configs["model_conf"].get("reverse_weight", 0.0)
-    symbol_table = read_symbol_table(args.dict)
     test_conf = copy.deepcopy(configs['dataset_conf'])
     test_conf['filter_conf']['max_length'] = 102400
     test_conf['filter_conf']['min_length'] = 0
@@ -136,11 +135,11 @@ def main():
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
+    tokenizer = init_tokenizer(test_conf, args.dict, args.bpe_model)
     test_dataset = Dataset(args.data_type,
                            args.test_data,
-                           symbol_table,
+                           tokenizer,
                            test_conf,
-                           args.bpe_model,
                            partition=False)
 
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
