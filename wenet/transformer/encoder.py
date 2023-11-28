@@ -19,23 +19,14 @@ from typing import Tuple
 
 import torch
 
-from wenet.transformer.attention import MultiHeadedAttention
-from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.convolution import ConvolutionModule
-from wenet.transformer.embedding import PositionalEncoding
-from wenet.transformer.embedding import WhisperPositionalEncoding
-from wenet.transformer.embedding import RelPositionalEncoding
-from wenet.transformer.embedding import NoPositionalEncoding
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.transformer.subsampling import Conv1dSubsampling2
-from wenet.transformer.subsampling import Conv2dSubsampling4
-from wenet.transformer.subsampling import Conv2dSubsampling6
-from wenet.transformer.subsampling import Conv2dSubsampling8
-from wenet.transformer.subsampling import EmbedinigNoSubsampling
-from wenet.transformer.subsampling import LinearNoSubsampling
-from wenet.utils.common import get_activation
+from wenet.utils.class_utils import (
+    WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES, WENET_ATTENTION_CLASSES,
+    get_activation
+)
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
 
@@ -91,38 +82,12 @@ class BaseEncoder(torch.nn.Module):
         super().__init__()
         self._output_size = output_size
 
-        if pos_enc_layer_type == "abs_pos":
-            pos_enc_class = PositionalEncoding
-        elif pos_enc_layer_type == "abs_pos_whisper":
-            pos_enc_class = WhisperPositionalEncoding
-        elif pos_enc_layer_type == "rel_pos":
-            pos_enc_class = RelPositionalEncoding
-        elif pos_enc_layer_type == "no_pos":
-            pos_enc_class = NoPositionalEncoding
-        else:
-            raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
-
-        if input_layer == "linear":
-            subsampling_class = LinearNoSubsampling
-        elif input_layer == "conv1d2":
-            subsampling_class = Conv1dSubsampling2
-        elif input_layer == "conv2d":
-            subsampling_class = Conv2dSubsampling4
-        elif input_layer == "conv2d6":
-            subsampling_class = Conv2dSubsampling6
-        elif input_layer == "conv2d8":
-            subsampling_class = Conv2dSubsampling8
-        elif input_layer == "embed":
-            subsampling_class = EmbedinigNoSubsampling
-        else:
-            raise ValueError("unknown input_layer: " + input_layer)
-
         self.global_cmvn = global_cmvn
-        self.embed = subsampling_class(
+        self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
             input_size,
             output_size,
             dropout_rate,
-            pos_enc_class(output_size, positional_dropout_rate),
+            WENET_EMB_CLASSES[pos_enc_layer_type](output_size, positional_dropout_rate),
         )
 
         self.normalize_before = normalize_before
@@ -365,8 +330,8 @@ class TransformerEncoder(BaseEncoder):
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
-                MultiHeadedAttention(attention_heads, output_size,
-                                     attention_dropout_rate, key_bias),
+                WENET_ATTENTION_CLASSES["selfattn"](attention_heads, output_size,
+                                                    attention_dropout_rate, key_bias),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate, activation),
                 dropout_rate,
@@ -429,10 +394,6 @@ class ConformerEncoder(BaseEncoder):
         activation = get_activation(activation_type)
 
         # self-attention module definition
-        if pos_enc_layer_type != "rel_pos":
-            encoder_selfattn_layer = MultiHeadedAttention
-        else:
-            encoder_selfattn_layer = RelPositionMultiHeadedAttention
         encoder_selfattn_layer_args = (
             attention_heads,
             output_size,
@@ -440,7 +401,6 @@ class ConformerEncoder(BaseEncoder):
             key_bias,
         )
         # feed-forward module definition
-        positionwise_layer = PositionwiseFeedForward
         positionwise_layer_args = (
             output_size,
             linear_units,
@@ -448,18 +408,18 @@ class ConformerEncoder(BaseEncoder):
             activation,
         )
         # convolution module definition
-        convolution_layer = ConvolutionModule
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
                                   cnn_module_norm, causal)
 
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(
                 output_size,
-                encoder_selfattn_layer(*encoder_selfattn_layer_args),
-                positionwise_layer(*positionwise_layer_args),
-                positionwise_layer(
+                WENET_ATTENTION_CLASSES[selfattention_layer_type](
+                    *encoder_selfattn_layer_args),
+                PositionwiseFeedForward(*positionwise_layer_args),
+                PositionwiseFeedForward(
                     *positionwise_layer_args) if macaron_style else None,
-                convolution_layer(
+                ConvolutionModule(
                     *convolution_layer_args) if use_cnn_module else None,
                 dropout_rate,
                 normalize_before,

@@ -271,33 +271,6 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
     return float(numerator) / float(denominator)
 
 
-def get_rnn(rnn_type: str) -> torch.nn.Module:
-    assert rnn_type in ["rnn", "lstm", "gru"]
-    if rnn_type == "rnn":
-        return torch.nn.RNN
-    elif rnn_type == "lstm":
-        return torch.nn.LSTM
-    else:
-        return torch.nn.GRU
-
-
-def get_activation(act):
-    """Return activation function."""
-    # Lazy load to avoid unused import
-    from wenet.transformer.swish import Swish
-
-    activation_funcs = {
-        "hardtanh": torch.nn.Hardtanh,
-        "tanh": torch.nn.Tanh,
-        "relu": torch.nn.ReLU,
-        "selu": torch.nn.SELU,
-        "swish": getattr(torch.nn, "SiLU", Swish),
-        "gelu": torch.nn.GELU
-    }
-
-    return activation_funcs[act]()
-
-
 def get_subsample(config):
     input_layer = config["encoder_conf"]["input_layer"]
     assert input_layer in ["conv2d", "conv2d6", "conv2d8"]
