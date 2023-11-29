@@ -25,6 +25,23 @@ def test_whisper_tokenzier_parallel():
     assert all(h == r for (h, r) in zip(results, inputs))
 
 
+def test_whisper_tokenzier_parallel_after_property():
+
+    inputs = ["it's ok", "wenet is simple", "test for new io"]
+    tokenizer = WhisperTokenizer(False)
+
+    _ = tokenizer.vocab_size
+    _ = tokenizer.symbol_table
+    partial_tokenize = partial(consistency, tokenizer)
+    with Pool(processes=len(inputs)) as pool:
+        results = pool.map(partial_tokenize, inputs)
+
+    inputs.sort()
+    results.sort()
+
+    assert all(h == r for (h, r) in zip(results, inputs))
+
+
 def test_bpe_tokenzier_parallel():
 
     symbol_table_path = "test/resources/librispeech.words.txt"
@@ -32,6 +49,25 @@ def test_bpe_tokenzier_parallel():
 
     inputs = ["WENR IS SIMPLE", "GOOD"]
     tokenizer = BpeTokenizer(bpe_model, symbol_table_path)
+    partial_tokenize = partial(consistency, tokenizer)
+    with Pool(processes=len(inputs)) as pool:
+        results = pool.map(partial_tokenize, inputs)
+
+    inputs.sort()
+    results.sort()
+
+    assert all(h == r for (h, r) in zip(results, inputs))
+
+
+def test_bpe_tokenizer_parallel_after_property():
+    symbol_table_path = "test/resources/librispeech.words.txt"
+    bpe_model = "test/resources/librispeech.train_960_unigram5000.bpemodel"
+
+    inputs = ["WENR IS SIMPLE", "GOOD"]
+    tokenizer = BpeTokenizer(bpe_model, symbol_table_path)
+    _ = tokenizer.vocab_size
+    _ = tokenizer.symbol_table
+
     partial_tokenize = partial(consistency, tokenizer)
     with Pool(processes=len(inputs)) as pool:
         results = pool.map(partial_tokenize, inputs)

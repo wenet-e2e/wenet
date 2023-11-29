@@ -51,6 +51,7 @@ from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import load_checkpoint
 from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.init_model import init_model
+from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.bin.export_onnx_cpu import to_numpy
 from wenet.bin.export_onnx_bpu import export_encoder, export_ctc
 
@@ -80,9 +81,9 @@ def save_data(tensor, dirs, prefix):
 def make_calibration_data(enc, args, conf):
     conf['shuffle'] = True
     logger.info(conf)
+    tokenizer = init_tokenizer(ali_conf, args.symbol_table, args.bpe_model)
     dataset = Dataset(
-        "shard", args.cali_datalist, args.symbol_table, conf,
-        bpe_model=args.bpe_model, non_lang_syms=None, partition=False)
+        "shard", args.cali_datalist, tokenizer, conf, partition=False)
     dataloader = DataLoader(dataset, batch_size=None, num_workers=0)
 
     subsampling = enc.embed.subsampling_rate
@@ -148,9 +149,9 @@ def make_calibration_data(enc, args, conf):
 
 def check_wer(enc, ctc, args, conf):
     conf['shuffle'] = False
+    tokenizer = init_tokenizer(ali_conf, args.symbol_table, args.bpe_model)
     dataset = Dataset(
-        "shard", args.wer_datalist, args.symbol_table, conf,
-        bpe_model=args.bpe_model, non_lang_syms=None, partition=False)
+        "shard", args.wer_datalist, tokenizer, conf, partition=False)
     dataloader = DataLoader(dataset, batch_size=None, num_workers=0)
     char_dict = {v: k for k, v in args.symbol_table.items()}
     eos = len(char_dict) - 1

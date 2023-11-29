@@ -33,6 +33,16 @@ class WhisperTokenizer(BaseTokenizer):
         # TODO(Mddct): add special tokens, like non_lang_syms
         del self.non_lang_syms
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['tokenizer']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        recovery = {'tokenizer': None}
+        self.__dict__.update(recovery)
+
     def _build_tiktoken(self):
         if self.tokenizer is None:
             from whisper.tokenizer import get_tokenizer
@@ -87,6 +97,7 @@ class WhisperTokenizer(BaseTokenizer):
         self._build_tiktoken()
         return len(self.t2i)
 
+    @property
     def symbol_table(self) -> Dict[str, int]:
         self._build_tiktoken()
         return self.t2i

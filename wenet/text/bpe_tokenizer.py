@@ -8,7 +8,7 @@ class BpeTokenizer(CharTokenizer):
 
     def __init__(
         self,
-        bpe_model: PathLike,
+        bpe_model: Union[PathLike, str],
         symbol_table: Union[str, PathLike, Dict],
         non_lang_syms: Optional[Union[str, PathLike, List]] = None,
         split_with_space: bool = False,
