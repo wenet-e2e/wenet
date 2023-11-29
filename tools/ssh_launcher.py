@@ -46,6 +46,9 @@ IP1
 IP2
 ```
 
+NOTE:
+Ensure SSH passwordless login is enabled between different machines.
+
 """
 
 
