@@ -112,7 +112,7 @@ def main():
 
     # Get executor
     executor = Executor()
-    executor.step = configs["init_infos"].get('step', 0)
+    executor.step = configs["init_infos"].get('step', -1)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = None
@@ -129,13 +129,13 @@ def main():
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {} rank {}'.format(epoch, lr, rank))
 
+        dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
         group_join = dist.new_group(backend="gloo",
                                     timeout=datetime.timedelta(seconds=args.timeout))
-
-        dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         executor.train(model, optimizer, scheduler, train_data_loader,
                        writer, configs, scaler, group_join)
+        dist.destroy_process_group(group_join)
 
         dist.barrier()  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)
