@@ -376,7 +376,7 @@ def attention_rescoring(
                 tc.append(math.exp(s))
             score += decoder_out[i][len(hyp)][eos]
             # add right to left decoder score
-            if reverse_weight > 0:
+            if reverse_weight > 0 and r_decoder_out.dim() > 0:
                 r_score = 0.0
                 for j, w in enumerate(hyp):
                     s = r_decoder_out[i][len(hyp) - j - 1][w]
