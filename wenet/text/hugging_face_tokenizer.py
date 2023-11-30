@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import Union
+from typing import Dict, List, Union
 from wenet.text.base_tokenizer import BaseTokenizer
 
 
@@ -24,17 +24,10 @@ class HuggingFaceTokenizer(BaseTokenizer):
         from transformers import AutoTokenizer
         if self.tokenizer is None:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model)
-            self.t2i = {}
+            self.t2i = self.tokenizer.vocab
             self.i2t = {}
-            for i in range(self.tokenizer.encoding.n_vocab):
-                unit = str(
-                    self.tokenizer.encoding.decode_single_token_bytes(i))
-                if len(unit) == 0:
-                    unit = str(i)
-                unit = unit.replace(" ", "<space>")
-                # unit = bytes(unit, 'utf-8')
-                self.t2i[unit] = i
-                self.i2t[i] = unit
+            for (i, token) in self.t2i.items():
+                self.i2t[i] = token
             assert len(self.t2i) == len(self.i2t)
 
     def text2tokens(self, line: str) -> List[str]:
@@ -61,5 +54,5 @@ class HuggingFaceTokenizer(BaseTokenizer):
 
     @property
     def symbol_table(self) -> Dict[str, int]:
-        self._build_tiktoken()
+        self._build_hugging_face()
         return self.t2i
