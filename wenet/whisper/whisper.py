@@ -51,10 +51,6 @@ class Whisper(ASRModel):
         raise NotImplementedError
 
     @property
-    def device(self):
-        return next(self.parameters()).device
-
-    @property
     def is_multilingual(self):
         return self.vocab_size >= 51865
 
