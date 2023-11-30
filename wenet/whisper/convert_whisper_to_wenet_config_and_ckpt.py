@@ -115,7 +115,8 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['dataset_conf']['filter_conf']['token_min_length'] = 1
     configs['dataset_conf']['resample_conf'] = {}
     configs['dataset_conf']['resample_conf']['resample_rate'] = 16000
-    configs['dataset_conf']['speed_perturb'] = True
+    # NOTE: Disable speed_perturb, https://github.com/wenet-e2e/wenet/issues/2171
+    configs['dataset_conf']['speed_perturb'] = False
     configs['dataset_conf']['spec_aug'] = True
     configs['dataset_conf']['spec_aug_conf'] = {}
     configs['dataset_conf']['spec_aug_conf']['num_t_mask'] = 2
