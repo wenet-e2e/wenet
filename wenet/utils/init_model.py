@@ -100,7 +100,8 @@ def init_model(args, configs):
         decoder = BiTransformerDecoder(vocab_size, encoder.output_size(),
                                        **configs['decoder_conf'])
     ctc = CTC(vocab_size, encoder.output_size(),
-              blank_id=configs['ctc_conf']['ctc_blank_id'])
+              blank_id=configs['ctc_conf']['ctc_blank_id']
+              if 'ctc_conf' in configs else 0)
 
     # Init joint CTC/Attention or Transducer model
     if 'predictor' in configs:
