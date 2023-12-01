@@ -149,19 +149,35 @@ class TransformerDecoder(torch.nn.Module):
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
         x, _ = self.embed(tgt)
-        for layer in self.decoders:
-            if self.gradient_checkpointing and self.training:
-                x, tgt_mask, memory, memory_mask = ckpt.checkpoint(
-                    layer.__call__, x, tgt_mask, memory, memory_mask)
-            else:
-                x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
-                                                         memory_mask)
+        if self.gradient_checkpointing and self.training:
+            x = self.forward_layers_checkpointed(x, tgt_mask, memory, memory_mask)
+        else:
+            x = self.forward_layers(x, tgt_mask, memory, memory_mask)
         if self.normalize_before:
             x = self.after_norm(x)
         if self.use_output_layer:
             x = self.output_layer(x)
         olens = tgt_mask.sum(1)
         return x, torch.tensor(0.0), olens
+
+    def forward_layers(
+        self, x: torch.Tensor, tgt_mask: torch.Tensor,
+        memory: torch.Tensor, memory_mask: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.decoders:
+            x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
+                                                     memory_mask)
+        return x
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(
+        self, x: torch.Tensor, tgt_mask: torch.Tensor,
+        memory: torch.Tensor, memory_mask: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.decoders:
+            x, tgt_mask, memory, memory_mask = ckpt.checkpoint(
+                layer.__call__, x, tgt_mask, memory, memory_mask)
+        return x
 
     def forward_one_step(
         self,

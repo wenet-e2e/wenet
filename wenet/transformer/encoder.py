@@ -146,18 +146,34 @@ class BaseEncoder(torch.nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
-        for layer in self.encoders:
-            if self.gradient_checkpointing and self.training:
-                xs, chunk_masks, _, _ = ckpt.checkpoint(
-                    layer.__call__, xs, chunk_masks, pos_emb, mask_pad)
-            else:
-                xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+        if self.gradient_checkpointing and self.training:
+            xs = self.forward_layers_checkpointed(xs, chunk_masks, pos_emb, mask_pad)
+        else:
+            xs = self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
         # return the masks before encoder layers, and the masks will be used
         # for cross attention with decoder later
         return xs, masks
+
+    def forward_layers(
+        self, xs: torch.Tensor, chunk_masks: torch.Tensor,
+        pos_emb: torch.Tensor, mask_pad: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.encoders:
+            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+        return xs
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(
+        self, xs: torch.Tensor, chunk_masks: torch.Tensor,
+        pos_emb: torch.Tensor, mask_pad: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.encoders:
+            xs, chunk_masks, _, _ = ckpt.checkpoint(
+                layer.__call__, xs, chunk_masks, pos_emb, mask_pad)
+        return xs
 
     def forward_chunk(
         self,
