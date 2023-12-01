@@ -17,11 +17,13 @@ from wenet.transformer.decoder import TransformerDecoder, BiTransformerDecoder
 def test_encoder_gradient_checkpointing(module):
     torch.manual_seed(777)
     # Init model
-    model = module(80, 256, gradient_checkpointing=False)
-    model_grad_ckpt = module(80, 256, gradient_checkpointing=True)
+    model = module(80, 256, dropout_rate=0.0, positional_dropout_rate=0.0,
+                   gradient_checkpointing=False)
+    model_grad_ckpt = module(80, 256, dropout_rate=0.0, positional_dropout_rate=0.0,
+                             gradient_checkpointing=True)
     model_grad_ckpt.load_state_dict(model.state_dict(), strict=True)
-    model.eval()            # disable dropout
-    model_grad_ckpt.eval()  # disable dropout
+    model.train()
+    model_grad_ckpt.train()
     # Forward
     xs = torch.randn(2, 10, 80) + 10.0
     xs_lens = torch.tensor([10, 10], dtype=torch.long)
