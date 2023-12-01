@@ -28,10 +28,10 @@ from textgrid import TextGrid, IntervalTier
 import math
 
 from wenet.dataset.dataset import Dataset
-from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.ctc_utils import force_align
 from wenet.utils.common import get_subsample
 from wenet.utils.init_model import init_model
+from wenet.utils.init_tokenizer import init_tokenizer
 
 
 def generator_textgrid(maxtime, lines, output):
@@ -183,7 +183,6 @@ if __name__ == '__main__':
             char_dict[int(arr[1])] = arr[0]
     eos = len(char_dict) - 1
 
-    symbol_table = read_symbol_table(args.dict)
 
     # Init dataset and data loader
     ali_conf = copy.deepcopy(configs['dataset_conf'])
@@ -202,14 +201,12 @@ if __name__ == '__main__':
     ali_conf['fbank_conf']['dither'] = 0.0
     ali_conf['batch_conf']['batch_type'] = "static"
     ali_conf['batch_conf']['batch_size'] = args.batch_size
-    non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
 
+    tokenizer = init_tokenizer(ali_conf, args.dict, args.bpe_model, args.non_lang_syms)
     ali_dataset = Dataset(args.data_type,
                           args.input_file,
-                          symbol_table,
+                          tokenizer,
                           ali_conf,
-                          args.bpe_model,
-                          non_lang_syms,
                           partition=False)
 
     ali_data_loader = DataLoader(ali_dataset, batch_size=None, num_workers=0)

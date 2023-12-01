@@ -24,26 +24,17 @@ import logging
 import torch.nn.functional as F
 
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.transformer.embedding import PositionalEncoding
-from wenet.transformer.embedding import RelPositionalEncoding
-from wenet.transformer.embedding import NoPositionalEncoding
-from wenet.transformer.subsampling import Conv2dSubsampling4
-from wenet.transformer.subsampling import Conv2dSubsampling6
-from wenet.transformer.subsampling import Conv2dSubsampling8
-from wenet.transformer.subsampling import LinearNoSubsampling
-from wenet.transformer.attention import MultiHeadedAttention
-from wenet.transformer.attention import RelPositionMultiHeadedAttention
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 
-from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.efficient_conformer.convolution import ConvolutionModule
-from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
 from wenet.efficient_conformer.encoder_layer import StrideConformerEncoderLayer
 
-from wenet.utils.common import get_activation
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
-
+from wenet.utils.class_utils import (
+    WENET_ATTENTION_CLASSES, WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES,
+    WENET_ACTIVATION_CLASSES,
+)
 
 class EfficientConformerEncoder(torch.nn.Module):
     """Conformer encoder module."""
@@ -96,37 +87,15 @@ class EfficientConformerEncoder(torch.nn.Module):
         super().__init__()
         self._output_size = output_size
 
-        if pos_enc_layer_type == "abs_pos":
-            pos_enc_class = PositionalEncoding
-        elif pos_enc_layer_type == "rel_pos":
-            pos_enc_class = RelPositionalEncoding
-        elif pos_enc_layer_type == "no_pos":
-            pos_enc_class = NoPositionalEncoding
-        else:
-            raise ValueError("unknown pos_enc_layer: " + pos_enc_layer_type)
-
-        if input_layer == "linear":
-            subsampling_class = LinearNoSubsampling
-        elif input_layer == "conv2d2":
-            subsampling_class = Conv2dSubsampling2
-        elif input_layer == "conv2d":
-            subsampling_class = Conv2dSubsampling4
-        elif input_layer == "conv2d6":
-            subsampling_class = Conv2dSubsampling6
-        elif input_layer == "conv2d8":
-            subsampling_class = Conv2dSubsampling8
-        else:
-            raise ValueError("unknown input_layer: " + input_layer)
-
         logging.info(f"input_layer = {input_layer}, "
-                     f"subsampling_class = {subsampling_class}")
+                     f"subsampling_class = {WENET_SUBSAMPLE_CLASSES[input_layer]}")
 
         self.global_cmvn = global_cmvn
-        self.embed = subsampling_class(
+        self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
             input_size,
             output_size,
             dropout_rate,
-            pos_enc_class(output_size, positional_dropout_rate),
+            WENET_EMB_CLASSES[pos_enc_layer_type](output_size, positional_dropout_rate),
         )
         self.input_layer = input_layer
         self.normalize_before = normalize_before
@@ -135,7 +104,7 @@ class EfficientConformerEncoder(torch.nn.Module):
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
 
-        activation = get_activation(activation_type)
+        activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self.num_blocks = num_blocks
         self.attention_heads = attention_heads
         self.cnn_module_kernel = cnn_module_kernel
@@ -182,7 +151,7 @@ class EfficientConformerEncoder(torch.nn.Module):
         for i in range(num_blocks):
             # self-attention module definition
             if i in self.group_layer_idx:
-                encoder_selfattn_layer = GroupedRelPositionMultiHeadedAttention
+                encoder_selfattn_layer = WENET_ATTENTION_CLASSES["grouped_rel_selfattn"]
                 encoder_selfattn_layer_args = (
                     attention_heads,
                     output_size,
@@ -190,9 +159,9 @@ class EfficientConformerEncoder(torch.nn.Module):
                     self.grouped_size)
             else:
                 if pos_enc_layer_type == "no_pos":
-                    encoder_selfattn_layer = MultiHeadedAttention
+                    encoder_selfattn_layer = WENET_ATTENTION_CLASSES["selfattn"]
                 else:
-                    encoder_selfattn_layer = RelPositionMultiHeadedAttention
+                    encoder_selfattn_layer = WENET_ATTENTION_CLASSES["rel_selfattn"]
                 encoder_selfattn_layer_args = (
                     attention_heads,
                     output_size,

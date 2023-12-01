@@ -24,8 +24,8 @@ import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
-from wenet.transformer.asr_model import init_asr_model
-from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.init_model import init_model
+from wenet.utils.init_tokenizer import init_tokenizer
 
 from wenet.utils.common import get_subsample
 from wenet.utils.common import remove_duplicates_and_blank
@@ -186,11 +186,11 @@ if __name__ == '__main__':
     cv_conf['speed_perturb'] = False
     cv_conf['spec_aug'] = False
 
+    tokenizer = init_tokenizer(ali_conf, args.symbol_table, args.bpe_model)
     cv_dataset = Dataset(args.data_type,
                          args.input_data,
-                         symbol_table,
+                         tokenizer,
                          cv_conf,
-                         None,
                          partition=False)
 
     cv_data_loader = DataLoader(cv_dataset,
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     print("word_unit_list has the size of %d" % (len(word_unit_list)))
 
     # Init asr model from configs
-    model = init_asr_model(configs)
+    model, configs = init_model(args, configs)
     load_checkpoint(model, args.checkpoint)
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
     device = torch.device('cuda' if use_cuda else 'cpu')

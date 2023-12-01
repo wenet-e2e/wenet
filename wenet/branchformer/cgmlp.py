@@ -25,7 +25,7 @@ References:
 from typing import Tuple
 import torch
 import torch.nn as nn
-from wenet.utils.common import get_activation
+from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
 
 
 class ConvolutionalSpatialGatingUnit(torch.nn.Module):
@@ -73,7 +73,7 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
         if gate_activation == "identity":
             self.act = torch.nn.Identity()
         else:
-            self.act = get_activation(gate_activation)
+            self.act = WENET_ACTIVATION_CLASSES[gate_activation]()
 
         self.dropout = torch.nn.Dropout(dropout_rate)
 

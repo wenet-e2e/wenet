@@ -57,6 +57,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
 
     configs['encoder'] = 'transformer'
     configs['encoder_conf'] = {}
+    configs['encoder_conf']['gradient_checkpointing'] = True
     configs['encoder_conf']['input_layer'] = 'conv1d2'
     configs['encoder_conf']['output_size'] = dims['n_audio_state']
     configs['encoder_conf']['attention_heads'] = dims['n_audio_head']
@@ -75,6 +76,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
 
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
+    configs['decoder_conf']['gradient_checkpointing'] = True
     configs['decoder_conf']['attention_heads'] = dims['n_text_head']
     configs['decoder_conf']['linear_units'] = dims['n_text_state'] * 4
     configs['decoder_conf']['num_blocks'] = dims['n_text_layer']
@@ -90,12 +92,22 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['decoder_conf']['activation_type'] = "gelu"
 
     configs['ctc_conf'] = {}
-    configs['ctc_conf']['ctc_blank_id'] = 50362  # <nospeech>
+    configs['ctc_conf']['ctc_blank_id'] = tokenizer.no_speech
 
     configs['model_conf'] = {}
     configs['model_conf']['ctc_weight'] = 0.3
     configs['model_conf']['lsm_weight'] = 0.1
     configs['model_conf']['length_normalized_loss'] = False
+    configs['model_conf']['special_tokens'] = {}
+    configs['model_conf']['special_tokens']['sot'] = tokenizer.sot
+    configs['model_conf']['special_tokens']['eot'] = tokenizer.sot
+    configs['model_conf']['special_tokens']['sot_prev'] = tokenizer.sot_prev
+    configs['model_conf']['special_tokens']['transcribe'] = tokenizer.transcribe
+    configs['model_conf']['special_tokens']['translate'] = tokenizer.translate
+    configs['model_conf']['special_tokens']['no_timestamps'] = tokenizer.no_timestamps
+    configs['model_conf']['special_tokens']['no_speech'] = tokenizer.no_speech
+    configs['model_conf']['special_tokens']['timestamp_begin'] = \
+        tokenizer.timestamp_begin
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
@@ -105,7 +117,8 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['dataset_conf']['filter_conf']['token_min_length'] = 1
     configs['dataset_conf']['resample_conf'] = {}
     configs['dataset_conf']['resample_conf']['resample_rate'] = 16000
-    configs['dataset_conf']['speed_perturb'] = True
+    # NOTE: Disable speed_perturb, https://github.com/wenet-e2e/wenet/issues/2171
+    configs['dataset_conf']['speed_perturb'] = False
     configs['dataset_conf']['spec_aug'] = True
     configs['dataset_conf']['spec_aug_conf'] = {}
     configs['dataset_conf']['spec_aug_conf']['num_t_mask'] = 2

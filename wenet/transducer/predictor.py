@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 
 import torch
 from torch import nn
-from wenet.utils.common import get_activation, get_rnn
+from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES, WENET_RNN_CLASSES
 
 
 def ApplyPadding(input, padding, pad_value) -> torch.Tensor:
@@ -79,12 +79,12 @@ class RNNPredictor(PredictorBase):
         # NOTE(Mddct): rnn base from torch not support layer norm
         # will add layer norm and prune value in cell and layer
         # ref: https://github.com/Mddct/neural-lm/blob/main/models/gru_cell.py
-        self.rnn = get_rnn(rnn_type=rnn_type)(input_size=embed_size,
-                                              hidden_size=hidden_size,
-                                              num_layers=num_layers,
-                                              bias=bias,
-                                              batch_first=True,
-                                              dropout=dropout)
+        self.rnn = WENET_RNN_CLASSES[rnn_type](input_size=embed_size,
+                                               hidden_size=hidden_size,
+                                               num_layers=num_layers,
+                                               bias=bias,
+                                               batch_first=True,
+                                               dropout=dropout)
         self.projection = nn.Linear(hidden_size, output_size)
 
     def output_size(self):
@@ -237,7 +237,7 @@ class EmbeddingPredictor(PredictorBase):
         self.embed_dropout = nn.Dropout(p=embed_dropout)
         self.ffn = nn.Linear(self.embed_size, self.embed_size)
         self.norm = nn.LayerNorm(self.embed_size, eps=layer_norm_epsilon)
-        self.activatoin = get_activation(activation)
+        self.activatoin = WENET_ACTIVATION_CLASSES[activation]()
 
     def output_size(self):
         return self.embed_size
@@ -398,7 +398,7 @@ class ConvPredictor(PredictorBase):
                               groups=embed_size,
                               bias=bias)
         self.norm = nn.LayerNorm(embed_size, eps=layer_norm_epsilon)
-        self.activatoin = get_activation(activation)
+        self.activatoin = WENET_ACTIVATION_CLASSES[activation]()
 
     def output_size(self):
         return self.embed_size

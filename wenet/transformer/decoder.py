@@ -16,16 +16,16 @@
 from typing import Tuple, List, Optional
 
 import torch
+import torch.utils.checkpoint as ckpt
 import logging
 
-from wenet.transformer.attention import MultiHeadedAttention
 from wenet.transformer.decoder_layer import DecoderLayer
-from wenet.transformer.embedding import PositionalEncoding
-from wenet.transformer.embedding import NoPositionalEncoding
-from wenet.transformer.embedding import LearnablePositionalEncoding
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
+from wenet.utils.class_utils import (
+    WENET_EMB_CLASSES, WENET_ATTENTION_CLASSES,
+    WENET_ACTIVATION_CLASSES,
+)
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
-from wenet.utils.common import get_activation
 
 
 class TransformerDecoder(torch.nn.Module):
@@ -47,6 +47,8 @@ class TransformerDecoder(torch.nn.Module):
         src_attention: if false, encoder-decoder cross attention is not
                        applied, such as CIF model
         key_bias: whether use bias in attention.linear_k, False for whisper models.
+        gradient_checkpointing: rerunning a forward-pass segment for each
+            checkpointed segment during backward.
     """
 
     def __init__(
@@ -66,27 +68,17 @@ class TransformerDecoder(torch.nn.Module):
         src_attention: bool = True,
         key_bias: bool = True,
         activation_type: str = "relu",
+        gradient_checkpointing: bool = False,
     ):
         super().__init__()
         attention_dim = encoder_output_size
-        activation = get_activation(activation_type)
+        activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
-        if input_layer == "embed":
-            self.embed = torch.nn.Sequential(
-                torch.nn.Embedding(vocab_size, attention_dim),
-                PositionalEncoding(attention_dim, positional_dropout_rate),
-            )
-        elif input_layer == 'none':
-            self.embed = NoPositionalEncoding(attention_dim,
-                                              positional_dropout_rate)
-        elif input_layer == 'embed_learnable_pe':
-            self.embed = torch.nn.Sequential(
-                torch.nn.Embedding(vocab_size, attention_dim),
-                LearnablePositionalEncoding(attention_dim,
-                                            positional_dropout_rate),
-            )
-        else:
-            raise ValueError(f"only 'embed' is supported: {input_layer}")
+        self.embed = torch.nn.Sequential(
+            torch.nn.Identity() if input_layer == "no_pos" else torch.nn.Embedding(
+                vocab_size, attention_dim),
+            WENET_EMB_CLASSES[input_layer](attention_dim, positional_dropout_rate),
+        )
 
         self.normalize_before = normalize_before
         self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
@@ -99,17 +91,22 @@ class TransformerDecoder(torch.nn.Module):
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
-                MultiHeadedAttention(attention_heads, attention_dim,
-                                     self_attention_dropout_rate, key_bias),
-                MultiHeadedAttention(attention_heads, attention_dim,
-                                     src_attention_dropout_rate, key_bias)
-                if src_attention else None,
+                WENET_ATTENTION_CLASSES["selfattn"](
+                    attention_heads, attention_dim,
+                    self_attention_dropout_rate, key_bias
+                ),
+                WENET_ATTENTION_CLASSES["selfattn"](
+                    attention_heads, attention_dim,
+                    src_attention_dropout_rate, key_bias
+                ) if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
                                         dropout_rate, activation),
                 dropout_rate,
                 normalize_before,
             ) for _ in range(self.num_blocks)
         ])
+
+        self.gradient_checkpointing = gradient_checkpointing
 
     def forward(
         self,
@@ -136,6 +133,10 @@ class TransformerDecoder(torch.nn.Module):
                     vocab_size) if use_output_layer is True,
                 torch.tensor(0.0), in order to unify api with bidirectional decoder
                 olens: (batch, )
+        NOTE(xcsong):
+            We pass the `__call__` method of the modules instead of `forward` to the
+            checkpointing API because `__call__` attaches all the hooks of the module.
+            https://discuss.pytorch.org/t/any-different-between-model-input-and-model-forward-input/3690/2
         """
         tgt = ys_in_pad
         maxlen = tgt.size(1)
@@ -148,15 +149,35 @@ class TransformerDecoder(torch.nn.Module):
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
         x, _ = self.embed(tgt)
-        for layer in self.decoders:
-            x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
-                                                     memory_mask)
+        if self.gradient_checkpointing and self.training:
+            x = self.forward_layers_checkpointed(x, tgt_mask, memory, memory_mask)
+        else:
+            x = self.forward_layers(x, tgt_mask, memory, memory_mask)
         if self.normalize_before:
             x = self.after_norm(x)
         if self.use_output_layer:
             x = self.output_layer(x)
         olens = tgt_mask.sum(1)
         return x, torch.tensor(0.0), olens
+
+    def forward_layers(
+        self, x: torch.Tensor, tgt_mask: torch.Tensor,
+        memory: torch.Tensor, memory_mask: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.decoders:
+            x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
+                                                     memory_mask)
+        return x
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(
+        self, x: torch.Tensor, tgt_mask: torch.Tensor,
+        memory: torch.Tensor, memory_mask: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.decoders:
+            x, tgt_mask, memory, memory_mask = ckpt.checkpoint(
+                layer.__call__, x, tgt_mask, memory, memory_mask)
+        return x
 
     def forward_one_step(
         self,
@@ -261,6 +282,7 @@ class BiTransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         key_bias: bool = True,
+        gradient_checkpointing: bool = False,
     ):
 
         super().__init__()
@@ -269,14 +291,14 @@ class BiTransformerDecoder(torch.nn.Module):
             num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before,
-            key_bias=key_bias)
+            key_bias=key_bias, gradient_checkpointing=gradient_checkpointing)
 
         self.right_decoder = TransformerDecoder(
             vocab_size, encoder_output_size, attention_heads, linear_units,
             r_num_blocks, dropout_rate, positional_dropout_rate,
             self_attention_dropout_rate, src_attention_dropout_rate,
             input_layer, use_output_layer, normalize_before,
-            key_bias=key_bias)
+            key_bias=key_bias, gradient_checkpointing=gradient_checkpointing)
 
     def forward(
         self,

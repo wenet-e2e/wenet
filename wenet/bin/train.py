@@ -28,6 +28,7 @@ from torch.distributed.elastic.multiprocessing.errors import record
 from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
+from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.train_utils import (add_model_args, add_dataset_args,
                                      add_ddp_args, add_deepspeed_args,
                                      add_trace_args, init_distributed,
@@ -73,15 +74,19 @@ def main():
     if len(args.override_config) > 0:
         configs = override_config(configs, args.override_config)
 
+    # init tokenizer
+    tokenizer = init_tokenizer(configs, args.symbol_table, args.bpe_model,
+                               args.non_lang_syms)
+
     # Init env for ddp OR deepspeed
     world_size, local_rank, rank = init_distributed(args)
 
     # Get dataset & dataloader
     train_dataset, cv_dataset, train_data_loader, cv_data_loader = \
-        init_dataset_and_dataloader(args, configs)
+        init_dataset_and_dataloader(args, configs, tokenizer)
 
     # Do some sanity checks and save config to arsg.model_dir
-    configs = check_modify_and_save_config(args, configs)
+    configs = check_modify_and_save_config(args, configs, tokenizer.symbol_table)
 
     # Init asr model from configs
     model, configs = init_model(args, configs)
@@ -107,7 +112,7 @@ def main():
 
     # Get executor
     executor = Executor()
-    executor.step = configs["init_infos"].get('step', 0)
+    executor.step = configs["init_infos"].get('step', -1)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = None
@@ -124,13 +129,13 @@ def main():
         lr = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} TRAIN info lr {} rank {}'.format(epoch, lr, rank))
 
+        dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
         group_join = dist.new_group(backend="gloo",
                                     timeout=datetime.timedelta(seconds=args.timeout))
-
-        dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         executor.train(model, optimizer, scheduler, train_data_loader,
                        writer, configs, scaler, group_join)
+        dist.destroy_process_group(group_join)
 
         dist.barrier()  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)

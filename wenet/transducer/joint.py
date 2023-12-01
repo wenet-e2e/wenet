@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 from torch import nn
-from wenet.utils.common import get_activation
+from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
 
 
 class TransducerJoint(torch.nn.Module):
@@ -23,7 +23,7 @@ class TransducerJoint(torch.nn.Module):
         assert joint_mode in ['add']
         super().__init__()
 
-        self.activatoin = get_activation(activation)
+        self.activatoin = WENET_ACTIVATION_CLASSES[activation]()
         self.prejoin_linear = prejoin_linear
         self.postjoin_linear = postjoin_linear
         self.joint_mode = joint_mode
@@ -55,7 +55,8 @@ class TransducerJoint(torch.nn.Module):
                 torch.nn.Tanh(), torch.nn.Dropout(dropout_rate),
                 torch.nn.Linear(join_dim, 1), torch.nn.LogSigmoid())
             self.token_pred = torch.nn.Sequential(
-                get_activation(hat_activation), torch.nn.Dropout(dropout_rate),
+                WENET_ACTIVATION_CLASSES[hat_activation](),
+                torch.nn.Dropout(dropout_rate),
                 torch.nn.Linear(join_dim, self.vocab_size - 1))
 
     def forward(self,

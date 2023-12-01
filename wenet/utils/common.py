@@ -148,8 +148,8 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
 
 
 def add_whisper_tokens(
-    tokenizer, ys_pad: torch.Tensor,
-    ignore_id: int, task_id: int, no_timestamp: bool,
+    special_tokens, ys_pad: torch.Tensor,
+    ignore_id: int, task: str, no_timestamp: bool,
     language: str, use_prev: bool
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Add whisper-style tokens.
@@ -166,7 +166,7 @@ def add_whisper_tokens(
         |--> [no speech(VAD)] ---------------------------------------------------------------------->|       # noqa
 
     Args:
-        tokenizer: get IDs of special tokens
+        special_tokens: get IDs of special tokens
         ignore_id (int): index of padding
         no_timestamp (bool): whether to add timestamps tokens
         language (str): language tag
@@ -178,31 +178,39 @@ def add_whisper_tokens(
     """
     if use_prev:
         # i.e., hotword list
-        _prev = [tokenizer.sot_prev]
+        _prev = [special_tokens["sot_prev"]]
         # append hotword list to _prev
         # ...
         raise NotImplementedError
     else:
         _prev = []
 
-    language_id = tokenizer.sot + 1 + WHISPER_LANGS.index(language)
-    _sot = _prev + [tokenizer.sot, language_id, task_id]
-    _eot = torch.tensor([tokenizer.eot],
+    language_id = special_tokens["sot"] + 1 + WHISPER_LANGS.index(language)
+    if task == "transcribe":
+        task_id = special_tokens["transcribe"]
+    elif task == "translate":
+        task_id = special_tokens["translate"]
+    elif task == "vad":
+        task_id = special_tokens["no_speech"]
+    else:
+        raise NotImplementedError("unsupported task {}".format(task))
+    _sot = _prev + [special_tokens["sot"], language_id, task_id]
+    _eot = torch.tensor([special_tokens["eot"]],
                         dtype=torch.long,
                         requires_grad=False,
                         device=ys_pad.device)
     ys = [y[y != ignore_id] for y in ys_pad]  # parse padded ys
 
-    if task_id == tokenizer.transcribe or task_id == tokenizer.translate:
+    if task == "transcribe" or task == "translate":
         if no_timestamp:
-            _sot.append(tokenizer.no_timestamps)
+            _sot.append(special_tokens["no_timestamps"])
         else:
-            _sot.append(tokenizer.timestamp_begin)
+            _sot.append(special_tokens["timestamp_begin"])
             # add subsequent tokens
             # ...
             raise NotImplementedError
-    elif task_id == tokenizer.no_speech:
-        _sot.append(tokenizer.no_speech)
+    elif task == "vad":
+        _sot.append(special_tokens["no_speech"])
     else:
         raise NotImplementedError
 
@@ -210,7 +218,7 @@ def add_whisper_tokens(
                         requires_grad=False, device=ys_pad.device)
     ys_in = [torch.cat([_sot, y], dim=0) for y in ys]
     ys_out = [torch.cat([_sot[1:], y, _eot], dim=0) for y in ys]
-    return pad_list(ys_in, tokenizer.eot), pad_list(ys_out, ignore_id)
+    return pad_list(ys_in, special_tokens["eot"]), pad_list(ys_out, ignore_id)
 
 
 def reverse_pad_list(ys_pad: torch.Tensor,
@@ -261,33 +269,6 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
         pad_pred.masked_select(mask) == pad_targets.masked_select(mask))
     denominator = torch.sum(mask)
     return float(numerator) / float(denominator)
-
-
-def get_rnn(rnn_type: str) -> torch.nn.Module:
-    assert rnn_type in ["rnn", "lstm", "gru"]
-    if rnn_type == "rnn":
-        return torch.nn.RNN
-    elif rnn_type == "lstm":
-        return torch.nn.LSTM
-    else:
-        return torch.nn.GRU
-
-
-def get_activation(act):
-    """Return activation function."""
-    # Lazy load to avoid unused import
-    from wenet.transformer.swish import Swish
-
-    activation_funcs = {
-        "hardtanh": torch.nn.Hardtanh,
-        "tanh": torch.nn.Tanh,
-        "relu": torch.nn.ReLU,
-        "selu": torch.nn.SELU,
-        "swish": getattr(torch.nn, "SiLU", Swish),
-        "gelu": torch.nn.GELU
-    }
-
-    return activation_funcs[act]()
 
 
 def get_subsample(config):

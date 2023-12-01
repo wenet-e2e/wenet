@@ -37,11 +37,8 @@ from deepspeed.runtime.zero.stage3 import (
 from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict
 )
-from whisper.tokenizer import get_tokenizer
-
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 
 
@@ -163,7 +160,7 @@ def init_distributed(args):
     return world_size, local_rank, rank
 
 
-def check_modify_and_save_config(args, configs):
+def check_modify_and_save_config(args, configs, symbol_table):
     if args.train_engine == "torch_ddp":
         if args.use_amp:
             configs["dtype"] = "fp16"
@@ -213,8 +210,6 @@ def check_modify_and_save_config(args, configs):
         input_dim = configs['dataset_conf']['log_mel_spectrogram_conf']['num_mel_bins']
     else:
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
-    symbol_table = read_symbol_table(args.symbol_table)
-    vocab_size = len(symbol_table)
 
     if 'ctc_conf' not in configs:
         configs['ctc_conf'] = {}
@@ -228,7 +223,7 @@ def check_modify_and_save_config(args, configs):
         assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
 
     configs['input_dim'] = input_dim
-    configs['output_dim'] = configs.get('output_dim', vocab_size)
+    configs['output_dim'] = configs['vocab_size']
     configs['cmvn_file'] = args.cmvn
     configs['is_json_cmvn'] = True
     configs['lfmmi_dir'] = args.lfmmi_dir
@@ -248,7 +243,7 @@ def check_modify_and_save_config(args, configs):
     return configs
 
 
-def init_dataset_and_dataloader(args, configs):
+def init_dataset_and_dataloader(args, configs, tokenizer):
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
     cv_conf['speed_perturb'] = False
@@ -257,29 +252,17 @@ def init_dataset_and_dataloader(args, configs):
     cv_conf['spec_trim'] = False
     cv_conf['shuffle'] = False
 
-    symbol_table = read_symbol_table(args.symbol_table)
-    non_lang_syms = read_non_lang_symbols(args.non_lang_syms)
-
-    # TODO(xcsong): This is a dirty workaround for whisper tokenizer,
-    #   refine it in the future
-    if configs.get("whisper", False):
-        logging.info("using whisper tokenizer")
-        whisper_tok = get_tokenizer(
-            multilingual=configs['whisper_conf']['is_multilingual'],
-            num_languages=configs['whisper_conf']['num_languages'])
-    else:
-        whisper_tok = None
-    train_dataset = Dataset(args.data_type, args.train_data, symbol_table,
-                            train_conf, args.bpe_model, non_lang_syms, True,
-                            whisper_tok)
+    configs['vocab_size'] = tokenizer.vocab_size()
+    train_dataset = Dataset(args.data_type,
+                            args.train_data,
+                            tokenizer,
+                            train_conf,
+                            True)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
-                         symbol_table,
+                         tokenizer,
                          cv_conf,
-                         args.bpe_model,
-                         non_lang_syms,
-                         partition=False,
-                         whisper_tokenizer=whisper_tok)
+                         partition=False)
 
     # NOTE(xcsong): Why we prefer persistent_workers=True ?
     #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110
@@ -306,7 +289,7 @@ def wrap_cuda_model(args, model):
         assert (torch.cuda.is_available())
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
-            model, find_unused_parameters=True)
+            model, find_unused_parameters=False)
         device = torch.device("cuda")
         if args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (
@@ -374,7 +357,7 @@ def init_optimizer_and_scheduler(args, configs, model):
             args=args, model=model, optimizer=optimizer,
             lr_scheduler=scheduler, model_parameters=model.parameters())
 
-    step = configs["init_infos"].get("step", 0)
+    step = configs["init_infos"].get("step", -1)
     scheduler.set_step(step)
     return model, optimizer, scheduler
 
