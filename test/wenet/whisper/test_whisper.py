@@ -23,6 +23,7 @@ from wenet.whisper.convert_whisper_to_wenet_config_and_ckpt import (
 from wenet.utils.common import add_whisper_tokens
 from wenet.utils.init_model import init_model
 from wenet.utils.mask import make_pad_mask, subsequent_mask
+from wenet.utils.train_utils import trace_and_print_model
 
 
 torch.manual_seed(777)
@@ -33,6 +34,7 @@ class DummyArguments:
     jit = False
     enc_init = None
     checkpoint = None
+    print_model = False
 
 
 @pytest.mark.parametrize(
@@ -130,6 +132,8 @@ def test_model(model, audio_path):
     args = DummyArguments()
     args.checkpoint = "{}/wenet_whisper.pt".format(download_root)
     wenet_model, _ = init_model(args, configs)
+    args.jit = True
+    trace_and_print_model(args, wenet_model)
     wenet_model.eval()
 
     with torch.no_grad():
