@@ -130,6 +130,7 @@ def test_model(model, audio_path):
     args = DummyArguments()
     args.checkpoint = "{}/wenet_whisper.pt".format(download_root)
     wenet_model, _ = init_model(args, configs)
+    torch.jit.script(wenet_model)
     wenet_model.eval()
 
     with torch.no_grad():

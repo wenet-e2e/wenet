@@ -18,6 +18,7 @@
 from typing import Tuple
 
 import torch
+import torch.utils.checkpoint as ckpt
 
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
@@ -49,6 +50,7 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        gradient_checkpointing: bool = False,
     ):
         """
         Args:
@@ -78,6 +80,8 @@ class BaseEncoder(torch.nn.Module):
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
             key_bias: whether use bias in attention.linear_k, False for whisper models.
+            gradient_checkpointing: rerunning a forward-pass segment for each
+                checkpointed segment during backward.
         """
         super().__init__()
         self._output_size = output_size
@@ -95,6 +99,7 @@ class BaseEncoder(torch.nn.Module):
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
+        self.gradient_checkpointing = gradient_checkpointing
 
     def output_size(self) -> int:
         return self._output_size
@@ -124,6 +129,10 @@ class BaseEncoder(torch.nn.Module):
             xs: padded output tensor (B, T' ~= T/subsample_rate, D)
             masks: torch.Tensor batch padding mask after subsample
                 (B, 1, T' ~= T/subsample_rate)
+        NOTE(xcsong):
+            We pass the `__call__` method of the modules instead of `forward` to the
+            checkpointing API because `__call__` attaches all the hooks of the module.
+            https://discuss.pytorch.org/t/any-different-between-model-input-and-model-forward-input/3690/2
         """
         T = xs.size(1)
         masks = ~make_pad_mask(xs_lens, T).unsqueeze(1)  # (B, 1, T)
@@ -137,14 +146,34 @@ class BaseEncoder(torch.nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
-        for layer in self.encoders:
-            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+        if self.gradient_checkpointing and self.training:
+            xs = self.forward_layers_checkpointed(xs, chunk_masks, pos_emb, mask_pad)
+        else:
+            xs = self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
         # return the masks before encoder layers, and the masks will be used
         # for cross attention with decoder later
         return xs, masks
+
+    def forward_layers(
+        self, xs: torch.Tensor, chunk_masks: torch.Tensor,
+        pos_emb: torch.Tensor, mask_pad: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.encoders:
+            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+        return xs
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(
+        self, xs: torch.Tensor, chunk_masks: torch.Tensor,
+        pos_emb: torch.Tensor, mask_pad: torch.Tensor
+    ) -> torch.Tensor:
+        for layer in self.encoders:
+            xs, chunk_masks, _, _ = ckpt.checkpoint(
+                layer.__call__, xs, chunk_masks, pos_emb, mask_pad)
+        return xs
 
     def forward_chunk(
         self,
@@ -315,6 +344,7 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_left_chunk: bool = False,
         key_bias: bool = True,
         activation_type: str = "relu",
+        gradient_checkpointing: bool = False,
     ):
         """ Construct TransformerEncoder
 
@@ -325,7 +355,8 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk,
+                         gradient_checkpointing)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
@@ -367,6 +398,7 @@ class ConformerEncoder(BaseEncoder):
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
         key_bias: bool = True,
+        gradient_checkpointing: bool = False,
     ):
         """Construct ConformerEncoder
 
@@ -390,7 +422,8 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk)
+                         global_cmvn, use_dynamic_left_chunk,
+                         gradient_checkpointing)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition

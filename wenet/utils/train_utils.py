@@ -289,7 +289,7 @@ def wrap_cuda_model(args, model):
         assert (torch.cuda.is_available())
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
-            model, find_unused_parameters=True)
+            model, find_unused_parameters=False)
         device = torch.device("cuda")
         if args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (
