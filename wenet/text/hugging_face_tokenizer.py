@@ -1,14 +1,17 @@
 from os import PathLike
 from typing import Dict, List, Union
-from wenet.text.base_tokenizer import BaseTokenizer
+from wenet.text.base_tokenizer import BaseTokenizer, T as Type
 
 
 class HuggingFaceTokenizer(BaseTokenizer):
 
-    def __init__(self, model: Union[str, PathLike]) -> None:
+    def __init__(self, model: Union[str, PathLike], *args, **kwargs) -> None:
         # NOTE(Mddct): don't build here, pickle issues
         self.model = model
         self.tokenizer = None
+
+        self.args = args
+        self.kwargs = kwargs
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -23,27 +26,24 @@ class HuggingFaceTokenizer(BaseTokenizer):
     def _build_hugging_face(self):
         from transformers import AutoTokenizer
         if self.tokenizer is None:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model)
-            self.t2i = self.tokenizer.vocab
-            self.i2t = {}
-            for (i, token) in self.t2i.items():
-                self.i2t[i] = token
-            assert len(self.t2i) == len(self.i2t)
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.model, **self.kwargs)
+            self.t2i = self.tokenizer.get_vocab()
 
-    def text2tokens(self, line: str) -> List[str]:
+    def text2tokens(self, line: str) -> List[Type]:
         self._build_hugging_face()
         return self.tokenizer.tokenize(line)
 
-    def tokens2text(self, tokens: List[str]) -> str:
+    def tokens2text(self, tokens: List[Type]) -> str:
         self._build_hugging_face()
         ids = self.tokens2ids(tokens)
         return self.tokenizer.decode(ids)
 
-    def tokens2ids(self, tokens: List[str]) -> List[int]:
+    def tokens2ids(self, tokens: List[Type]) -> List[int]:
         self._build_hugging_face()
         return self.tokenizer.convert_tokens_to_ids(tokens)
 
-    def ids2tokens(self, ids: List[int]) -> List[str]:
+    def ids2tokens(self, ids: List[int]) -> List[Type]:
         self._build_hugging_face()
         return self.tokenizer.convert_ids_to_tokens(ids)
 
@@ -53,6 +53,6 @@ class HuggingFaceTokenizer(BaseTokenizer):
         return len(self.tokenizer)
 
     @property
-    def symbol_table(self) -> Dict[str, int]:
+    def symbol_table(self) -> Dict[Type, int]:
         self._build_hugging_face()
         return self.t2i
