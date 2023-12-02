@@ -187,6 +187,63 @@ class MultiHeadedAttention(nn.Module):
         return self.forward_attention(v, scores, mask), new_cache
 
 
+class FlashMultiHeadedAttention(MultiHeadedAttention):
+    """flash_attn powered MultiHeadedAttention
+    Paper: https://tridao.me/publications/flash2/flash2.pdf
+    """
+    def __init__(self, n_head: int, n_feat: int, dropout_rate: float,
+                 key_bias: bool = True):
+        """Construct an MultiHeadedAttention object."""
+        super().__init__(n_head, n_feat, dropout_rate, key_bias)
+
+    def forward(self, query: torch.Tensor, key: torch.Tensor,
+                value: torch.Tensor,
+                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+                pos_emb: torch.Tensor = torch.empty(0),
+                cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+                ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Compute scaled dot product attention.
+
+        Args:
+            query (torch.Tensor): Query tensor (#batch, time1, size).
+            key (torch.Tensor): Key tensor (#batch, time2, size).
+            value (torch.Tensor): Value tensor (#batch, time2, size).
+            mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
+                (#batch, time1, time2).
+                1.When applying cross attention between decoder and encoder,
+                the batch padding mask for input is in (#batch, 1, T) shape.
+                2.When applying self attention of encoder,
+                the mask is in (#batch, T, T)  shape.
+                3.When applying self attention of decoder,
+                the mask is in (#batch, L, L)  shape.
+                4.If the different position in decoder see different block
+                of the encoder, such as Mocha, the passed in mask could be
+                in (#batch, L, T) shape. But there is no such case in current
+                Wenet.
+            cache (torch.Tensor): Cache tensor (1, head, cache_t, d_k * 2),
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
+
+
+        Returns:
+            torch.Tensor: Output tensor (#batch, time1, d_model).
+            torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
+
+        """
+        from flash_attn import flash_attn_func  # lazy import
+        n_batch = query.size(0)
+        q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
+        k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
+        v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
+        out = flash_attn_func(q, k, v) # (batch_size, seqlen, nheads, headdim)
+        out = out.reshape(out.shape[0], out.shape[1], -1)
+        out = self.linear_out(out)
+
+        return out, cache
+
+
 class RelPositionMultiHeadedAttention(MultiHeadedAttention):
     """Multi-Head Attention layer with relative position encoding.
     Paper: https://arxiv.org/abs/1901.02860
