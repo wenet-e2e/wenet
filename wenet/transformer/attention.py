@@ -237,10 +237,9 @@ class FlashMultiHeadedAttention(MultiHeadedAttention):
         q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
         k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
         v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
-        out = flash_attn_func(q, k, v) # (batch_size, seqlen, nheads, headdim)
+        out = flash_attn_func(q, k, v)  # (batch_size, seqlen, nheads, headdim)
         out = out.reshape(out.shape[0], out.shape[1], -1)
         out = self.linear_out(out)
-
         return out, cache
 
 
