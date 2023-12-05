@@ -212,7 +212,7 @@ class FlashMultiHeadedAttention(MultiHeadedAttention):
             int: Max seqlen in a batch
 
         """
-        seqlens = mask.sum(dim=-1, dtype=torch.int32)  # (B, time) -> (B,)
+        seqlens = mask.sum(dim=-1, dtype=torch.int32).flatten()  # (B, time) -> (B,)
         indices = torch.nonzero(mask.flatten(), as_tuple=False).flatten()  # (B * time)
         max_seqlen = seqlens.max().item()
         cumulative_seqlens = torch.nn.functional.pad(  # (B,) -> (B + 1,)
@@ -281,12 +281,13 @@ class FlashMultiHeadedAttention(MultiHeadedAttention):
         """
         assert cache.size(0) == 0  # only support non-streaming
         n_batch, len_q = query.size(0), query.size(1)
+        _, len_k = key.size(0), key.size(1)
         from flash_attn import flash_attn_varlen_func  # lazy import
         q = self.linear_q(query).view(-1, self.h, self.d_k)  # (B * len_q, head, d_k)
         k = self.linear_k(key).view(-1, self.h, self.d_k)    # (B * len_k, head, d_k)
         v = self.linear_v(value).view(-1, self.h, self.d_k)  # (B * len_v, head, d_k)
         indices_k, cumulative_seqlens_k, max_seqlen_k = self.unpad(mask[:, -1, :])
-        if mask.size(1) == 1:  # cross-attention
+        if mask.size(1) == 1 and len_q != len_k:  # cross-attention
             query_mask = torch.ones(size=(n_batch, len_q), dtype=torch.bool,
                                     device=q.device)
             indices_q, cumulative_seqlens_q, max_seqlen_q = self.unpad(query_mask)
