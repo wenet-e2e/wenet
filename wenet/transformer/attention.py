@@ -195,6 +195,48 @@ class FlashMultiHeadedAttention(MultiHeadedAttention):
                  key_bias: bool = True):
         """Construct an MultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate, key_bias)
+        self.dropout_rate = dropout_rate
+
+    def unpad(self, mask):
+        """unpad Q/K/V according to attention mask.
+
+        Args:
+            mask (torch.Tensor): Mask tensor (#batch, time)
+
+        Returns:
+            torch.Tensor: Indices tensor (#batch * time), used to index_select
+                non-padding part of q/k/v before feeding into `flash_attn_varlen_func`.
+            torch.Tensor: Cumulative seqlens tensor (#batch + 1),
+                The cumulative sequence lengths of the sequences in the batch,
+                used to index flattened_q/k/v in `flash_attn_varlen_func`.
+            int: Max seqlen in a batch
+
+        """
+        seqlens = mask.sum(dim=-1, dtype=torch.int32)  # (B, time) -> (B,)
+        indices = torch.nonzero(mask.flatten(), as_tuple=False).flatten()  # (B * time)
+        max_seqlen = seqlens.max().item()
+        cumulative_seqlens = torch.nn.functional.pad(  # (B,) -> (B + 1,)
+            torch.cumsum(seqlens, dim=0, dtype=torch.torch.int32), (1, 0))
+        return indices, cumulative_seqlens, max_seqlen
+
+    def pad(self, hidden_states, indices, batch, seqlen):
+        """pad output according to indices.
+
+        Args:
+            hidden_states (torch.Tensor): Output tensor (#batch * time, d_model)
+            indices (torch.Tensor): (#batch * time)
+            batch (int): batch size
+            seqlen (int): sequence length before self.unpad
+
+        Returns:
+            torch.Tensor: Output tensor (#batch, time, d_model)
+
+        """
+        output = torch.zeros(batch * seqlen, self.h * self.d_k,
+                             device=hidden_states.device,
+                             dtype=hidden_states.dtype)
+        output[indices] = hidden_states
+        return output.view(batch, -1, self.h * self.d_k)
 
     def forward(self, query: torch.Tensor, key: torch.Tensor,
                 value: torch.Tensor,
@@ -231,15 +273,38 @@ class FlashMultiHeadedAttention(MultiHeadedAttention):
                 where `cache_t == chunk_size * num_decoding_left_chunks`
                 and `head * d_k == size`
 
+        NOTE(xcsong):
+            1. Install flash_attn:
+                https://github.com/wenet-e2e/wenet/pull/2191#issuecomment-1840057276
+            2. Currentlly, only support non-streaming attention.
+
         """
-        from flash_attn import flash_attn_func  # lazy import
-        n_batch = query.size(0)
-        q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
-        k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
-        v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
-        out = flash_attn_func(q, k, v)  # (batch_size, seqlen, nheads, headdim)
-        out = out.reshape(out.shape[0], out.shape[1], -1)
-        out = self.linear_out(out)
+        assert cache.size(0) == 0  # only support non-streaming
+        n_batch, len_q = query.size(0), query.size(1)
+        from flash_attn import flash_attn_varlen_func  # lazy import
+        q = self.linear_q(query).view(-1, self.h, self.d_k)  # (B * len_q, head, d_k)
+        k = self.linear_k(key).view(-1, self.h, self.d_k)    # (B * len_k, head, d_k)
+        v = self.linear_v(value).view(-1, self.h, self.d_k)  # (B * len_v, head, d_k)
+        indices_k, cumulative_seqlens_k, max_seqlen_k = self.unpad(mask[:, -1, :])
+        if mask.size(1) == 1:  # cross-attention
+            query_mask = torch.ones(size=(n_batch, len_q), dtype=torch.bool,
+                                    device=q.device)
+            indices_q, cumulative_seqlens_q, max_seqlen_q = self.unpad(query_mask)
+        else:  # self-attention
+            indices_q, cumulative_seqlens_q, max_seqlen_q = \
+                indices_k, cumulative_seqlens_k, max_seqlen_k
+        out = flash_attn_varlen_func(
+            q=q[indices_q], k=k[indices_k], v=v[indices_k],
+            cu_seqlens_q=cumulative_seqlens_q,
+            cu_seqlens_k=cumulative_seqlens_k,
+            max_seqlen_q=max_seqlen_q,
+            max_seqlen_k=max_seqlen_k,
+            dropout_p=self.dropout_rate if self.training else 0.,
+            causal=False
+        )  # (B * time, head, d_k)
+        out = out.reshape(out.shape[0], -1)  # (B * time, d_model)
+        out = self.linear_out(out)           # (B * time, d_model)
+        out = self.pad(out, indices_q, n_batch, len_q)  # (B, time, d_model)
         return out, cache
 
 
