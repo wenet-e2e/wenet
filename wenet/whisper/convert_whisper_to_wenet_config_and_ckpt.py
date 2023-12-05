@@ -58,6 +58,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['encoder'] = 'transformer'
     configs['encoder_conf'] = {}
     configs['encoder_conf']['gradient_checkpointing'] = True
+    configs['encoder_conf']['selfattention_layer_type'] = "flash_selfattn"
     configs['encoder_conf']['input_layer'] = 'conv1d2'
     configs['encoder_conf']['output_size'] = dims['n_audio_state']
     configs['encoder_conf']['attention_heads'] = dims['n_audio_head']

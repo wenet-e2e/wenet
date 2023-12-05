@@ -176,7 +176,7 @@ class TransformerDecoder(torch.nn.Module):
     ) -> torch.Tensor:
         for layer in self.decoders:
             x, tgt_mask, memory, memory_mask = ckpt.checkpoint(
-                layer.__call__, x, tgt_mask, memory, memory_mask)
+                layer.__call__, x, tgt_mask, memory, memory_mask, use_reentrant=False)
         return x
 
     def forward_one_step(

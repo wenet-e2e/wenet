@@ -17,7 +17,8 @@ from wenet.transformer.embedding import (
     NoPositionalEncoding
 )
 from wenet.transformer.attention import (
-    MultiHeadedAttention, RelPositionMultiHeadedAttention
+    MultiHeadedAttention, RelPositionMultiHeadedAttention,
+    FlashMultiHeadedAttention
 )
 from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
 
@@ -59,6 +60,7 @@ WENET_EMB_CLASSES = {
 
 WENET_ATTENTION_CLASSES = {
     "selfattn": MultiHeadedAttention,
+    "flash_selfattn": FlashMultiHeadedAttention,
     "rel_selfattn": RelPositionMultiHeadedAttention,
     "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
 }

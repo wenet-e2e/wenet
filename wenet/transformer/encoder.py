@@ -172,7 +172,7 @@ class BaseEncoder(torch.nn.Module):
     ) -> torch.Tensor:
         for layer in self.encoders:
             xs, chunk_masks, _, _ = ckpt.checkpoint(
-                layer.__call__, xs, chunk_masks, pos_emb, mask_pad)
+                layer.__call__, xs, chunk_masks, pos_emb, mask_pad, use_reentrant=False)
         return xs
 
     def forward_chunk(
@@ -345,6 +345,7 @@ class TransformerEncoder(BaseEncoder):
         key_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
+        selfattention_layer_type: str = "selfattn",
     ):
         """ Construct TransformerEncoder
 
@@ -361,8 +362,8 @@ class TransformerEncoder(BaseEncoder):
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
-                WENET_ATTENTION_CLASSES["selfattn"](attention_heads, output_size,
-                                                    attention_dropout_rate, key_bias),
+                WENET_ATTENTION_CLASSES[selfattention_layer_type](
+                    attention_heads, output_size, attention_dropout_rate, key_bias),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate, activation),
                 dropout_rate,
