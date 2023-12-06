@@ -44,14 +44,16 @@ class ASRModel(torch.nn.Module):
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
+        special_tokens: dict = None,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
 
         super().__init__()
         # note that eos is the same as sos (equivalent ID)
-        self.sos = vocab_size - 1
-        self.eos = vocab_size - 1
+        self.sos = special_tokens.get("sos", vocab_size - 1)
+        self.eos = special_tokens.get("eos", vocab_size - 1)
         self.vocab_size = vocab_size
+        self.special_tokens = special_tokens
         self.ignore_id = ignore_id
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
