@@ -14,6 +14,7 @@
 
 import re
 
+
 def tokenize_by_bpe_model(sp, txt):
     tokens = []
     # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:

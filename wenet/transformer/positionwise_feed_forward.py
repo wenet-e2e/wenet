@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Positionwise feed forward layer definition."""
 
 import torch
@@ -30,6 +29,7 @@ class PositionwiseFeedForward(torch.nn.Module):
         dropout_rate (float): Dropout rate.
         activation (torch.nn.Module): Activation function
     """
+
     def __init__(self,
                  idim: int,
                  hidden_units: int,

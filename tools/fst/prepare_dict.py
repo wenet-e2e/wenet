@@ -50,17 +50,16 @@ with open(sys.argv[2], 'r', encoding='utf8') as fin, \
                 else:
                     pieces = word
                 if contain_oov(pieces):
-                    print(
-                        'Ignoring words {}, which contains oov unit'.format(
-                            ''.join(word).strip('▁'))
-                    )
+                    print('Ignoring words {}, which contains oov unit'.format(
+                        ''.join(word).strip('▁')))
                     continue
                 chars = ' '.join(
                     [p if p in unit_table else '<unk>' for p in pieces])
             else:
                 # ignore words with OOV
                 if contain_oov(word):
-                    print('Ignoring words {}, which contains oov unit'.format(word))
+                    print('Ignoring words {}, which contains oov unit'.format(
+                        word))
                     continue
                 # Optional, append ▁ in front of english word
                 # we assume the model unit of our e2e system is char now.

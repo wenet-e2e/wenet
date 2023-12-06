@@ -23,13 +23,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='generate config.pbtxt for model_repo')
     parser.add_argument('--config', required=True, help='config file')
-    parser.add_argument('--vocab', required=True,
+    parser.add_argument('--vocab',
+                        required=True,
                         help='vocabulary file, units.txt')
-    parser.add_argument('--model_repo', required=True,
+    parser.add_argument('--model_repo',
+                        required=True,
                         help='model repo directory')
-    parser.add_argument('--onnx_model_dir', default=True, type=str, required=False,
+    parser.add_argument('--onnx_model_dir',
+                        default=True,
+                        type=str,
+                        required=False,
                         help="onnx model path")
-    parser.add_argument('--lm_path', default=None, type=str, required=False,
+    parser.add_argument('--lm_path',
+                        default=None,
+                        type=str,
+                        required=False,
                         help="the additional language model path")
     args = parser.parse_args()
     with open(args.config, 'r') as fin:
@@ -39,9 +47,9 @@ if __name__ == "__main__":
         onnx_configs = yaml.load(fin, Loader=yaml.FullLoader)
 
     params = [("#beam_size", 10), ("#num_mel_bins", 80), ("#frame_shift", 10),
-              ("#frame_length", 25), ("#sample_rate", 16000), ("#output_size", 256),
-              ("#lm_path", ""), ("#bidecoder", 0), ("#vocabulary_path", ""),
-              ("#DTYPE", "FP32")]
+              ("#frame_length", 25), ("#sample_rate", 16000),
+              ("#output_size", 256), ("#lm_path", ""), ("#bidecoder", 0),
+              ("#vocabulary_path", ""), ("#DTYPE", "FP32")]
     model_params = dict(params)
     # fill values
     model_params["#beam_size"] = onnx_configs["beam_size"]
@@ -74,7 +82,8 @@ if __name__ == "__main__":
         model_params["#chunk_size_in_seconds"] = chunk_seconds
         model_params["#num_layers"] = configs["encoder_conf"]["num_blocks"]
         model_params["#context"] = onnx_configs["context"]
-        model_params["#cnn_module_cache"] = onnx_configs["cnn_module_kernel_cache"]
+        model_params["#cnn_module_cache"] = onnx_configs[
+            "cnn_module_kernel_cache"]
         model_params["#decoding_window"] = onnx_configs["decoding_window"]
         head = configs["encoder_conf"]["attention_heads"]
         model_params["#num_head"] = head
@@ -87,7 +96,8 @@ if __name__ == "__main__":
         if "decoder" == model and model_params["#bidecoder"] == 0:
             template = "config_template2.pbtxt"
         # streaming transformer encoder
-        if "encoder" == model and model_params.get("#cnn_module_cache", -1) == 0:
+        if "encoder" == model and model_params.get("#cnn_module_cache",
+                                                   -1) == 0:
             template = "config_template2.pbtxt"
 
         model_dir = os.path.join(args.model_repo, model)
@@ -101,8 +111,8 @@ if __name__ == "__main__":
                 model_name = model + ".onnx"
             source_model = os.path.join(args.onnx_model_dir, model_name)
             target_model = os.path.join(model_dir, "1", model + ".onnx")
-            res = subprocess.call(
-                ["cp", source_model, target_model], shell=False)
+            res = subprocess.call(["cp", source_model, target_model],
+                                  shell=False)
             if model == "encoder":
                 # currently, with torch 1.10, the
                 # exported conformer encoder output size is -1
@@ -113,11 +123,13 @@ if __name__ == "__main__":
                     encoder_out = model.graph.output[2]
                 else:
                     encoder_out = model.graph.output[0]
-                output_dim = encoder_out.type.tensor_type.shape.dim[2].dim_param
+                output_dim = encoder_out.type.tensor_type.shape.dim[
+                    2].dim_param
                 if output_dim.startswith("Add"):
                     model_params["#encoder_output_size"] = -1
 
-        with open(os.path.join(model_dir, template), "r", encoding="utf-8") as f:
+        with open(os.path.join(model_dir, template), "r",
+                  encoding="utf-8") as f:
             for line in f:
                 if line.startswith("#"):
                     continue

@@ -11,7 +11,9 @@ from wenet.utils.file_utils import read_symbol_table
 
 class Paraformer:
 
-    def __init__(self, model_dir: str, device: int = -1,
+    def __init__(self,
+                 model_dir: str,
+                 device: int = -1,
                  resample_rate: int = 16000) -> None:
 
         model_path = os.path.join(model_dir, 'final.zip')
@@ -41,10 +43,9 @@ class Paraformer:
                             energy_floor=0.0,
                             sample_frequency=self.resample_rate)
         feats = feats.unsqueeze(0)
-        feats_lens = torch.tensor([
-            feats.size(1)],
-            dtype=torch.int64,
-            device=feats.device)
+        feats_lens = torch.tensor([feats.size(1)],
+                                  dtype=torch.int64,
+                                  device=feats.device)
 
         decoder_out, token_num = self.model.forward_paraformer(
             feats, feats_lens)

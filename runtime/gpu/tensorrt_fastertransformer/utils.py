@@ -41,11 +41,7 @@ def onnx_GetAllWeight(model):
 
 
 def onnx2np_type(dtype):
-    maps = {
-        1: np.float32,
-        6: np.int32,
-        7: np.int64
-    }
+    maps = {1: np.float32, 6: np.int32, 7: np.int64}
     return maps[dtype]
 
 

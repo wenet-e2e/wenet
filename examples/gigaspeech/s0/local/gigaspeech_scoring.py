@@ -14,6 +14,7 @@ gigaspeech_garbage_utterance_tags = ['<SIL>', '<NOISE>', '<MUSIC>', '<OTHER>']
 non_scoring_words = conversational_filler + unk_tags + \
     gigaspeech_punctuations + gigaspeech_garbage_utterance_tags
 
+
 def asr_text_post_processing(text):
     # 1. convert to uppercase
     text = text.upper()

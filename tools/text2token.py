@@ -27,11 +27,13 @@ def exist_or_not(i, match_pos):
 
     return start_pos, end_pos
 
+
 def seg_char(sent):
     pattern = re.compile(r'([\u4e00-\u9fa5])')
     chars = pattern.split(sent)
     chars = [w for w in chars if len(w.strip()) > 0]
     return chars
+
 
 def get_parser():
     parser = argparse.ArgumentParser(

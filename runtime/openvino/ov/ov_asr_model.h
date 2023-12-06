@@ -5,14 +5,14 @@
 #ifndef RUNTIME_OPENVINO_OV_OV_ASR_MODEL_H_
 #define RUNTIME_OPENVINO_OV_OV_ASR_MODEL_H_
 
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
-#include <map>
-#include "openvino/openvino.hpp"
 #include "decoder/asr_model.h"
-#include "utils/utils.h"
+#include "openvino/openvino.hpp"
 #include "utils/log.h"
+#include "utils/utils.h"
 
 namespace wenet {
 

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """MLP with convolutional gating (cgMLP) definition.
 
 References:
@@ -85,9 +84,7 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
             torch.nn.init.ones_(self.linear.bias)
 
     def forward(
-        self,
-        x: torch.Tensor,
-        cache: torch.Tensor = torch.zeros((0, 0, 0))
+        self, x: torch.Tensor, cache: torch.Tensor = torch.zeros((0, 0, 0))
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Forward method
 
@@ -118,7 +115,9 @@ class ConvolutionalSpatialGatingUnit(torch.nn.Module):
             # It's better we just return None if no cache is required,
             # However, for JIT export, here we just fake one tensor instead of
             # None.
-            new_cache = torch.zeros((0, 0, 0), dtype=x_g.dtype, device=x_g.device)
+            new_cache = torch.zeros((0, 0, 0),
+                                    dtype=x_g.dtype,
+                                    device=x_g.device)
 
         x_g = x_g.transpose(1, 2)
         x_g = self.norm(x_g)  # (N, T, D/2)
@@ -148,8 +147,7 @@ class ConvolutionalGatingMLP(torch.nn.Module):
         super().__init__()
 
         self.channel_proj1 = torch.nn.Sequential(
-            torch.nn.Linear(size, linear_units), torch.nn.GELU()
-        )
+            torch.nn.Linear(size, linear_units), torch.nn.GELU())
         self.csgu = ConvolutionalSpatialGatingUnit(
             size=linear_units,
             kernel_size=kernel_size,

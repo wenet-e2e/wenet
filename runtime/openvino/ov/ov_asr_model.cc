@@ -129,10 +129,10 @@ void OVAsrModel::Read(const std::string& model_dir) {
         num_left_chunks_ = -1;
       }
 
-      encoder_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
-          core_->compile_model(encoder_model, "CPU")));
-                               // {{"PERF_COUNT", "NO"} /* YES for profile */
-                              // })));
+      encoder_compile_model_ = std::make_shared<ov::CompiledModel>(
+          std::move(core_->compile_model(encoder_model, "CPU")));
+      // {{"PERF_COUNT", "NO"} /* YES for profile */
+      // })));
 
       auto inputs = encoder_compile_model_->inputs();
       for (auto& input : inputs) {
@@ -144,10 +144,10 @@ void OVAsrModel::Read(const std::string& model_dir) {
     }
     std::shared_ptr<ov::Model> ctc_model = core_->read_model(ctc_ir_path);
     if (ctc_model) {
-      ctc_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
-          core_->compile_model(ctc_model, "CPU")));
-                               // {{"PERFORMANCE_HINT", "THROUGHPUT"},
-                               // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
+      ctc_compile_model_ = std::make_shared<ov::CompiledModel>(
+          std::move(core_->compile_model(ctc_model, "CPU")));
+      // {{"PERFORMANCE_HINT", "THROUGHPUT"},
+      // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
 
       ctc_infer_ = std::make_shared<ov::InferRequest>(
           std::move(ctc_compile_model_->create_infer_request()));
@@ -160,10 +160,10 @@ void OVAsrModel::Read(const std::string& model_dir) {
     std::shared_ptr<ov::Model> rescore_model =
         core_->read_model(rescore_ir_path);
     if (rescore_model) {
-      rescore_compile_model_ = std::make_shared<ov::CompiledModel>(std::move(
-          core_->compile_model(rescore_model, "CPU")));
-                               // {{"PERFORMANCE_HINT", "THROUGHPUT"},
-                               // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
+      rescore_compile_model_ = std::make_shared<ov::CompiledModel>(
+          std::move(core_->compile_model(rescore_model, "CPU")));
+      // {{"PERFORMANCE_HINT", "THROUGHPUT"},
+      // {"PERFORMANCE_HINT_NUM_REQUESTS", 1}})));
 
       rescore_infer_ = std::make_shared<ov::InferRequest>(
           std::move(rescore_compile_model_->create_infer_request()));
@@ -217,11 +217,11 @@ OVAsrModel::OVAsrModel(const OVAsrModel& other) {
   ctc_compile_model_ = other.ctc_compile_model_;
   rescore_compile_model_ = other.rescore_compile_model_;
   encoder_infer_ = std::make_shared<ov::InferRequest>(
-                    std::move(encoder_compile_model_->create_infer_request()));
+      std::move(encoder_compile_model_->create_infer_request()));
   ctc_infer_ = std::make_shared<ov::InferRequest>(
-                std::move(ctc_compile_model_->create_infer_request()));
+      std::move(ctc_compile_model_->create_infer_request()));
   rescore_infer_ = std::make_shared<ov::InferRequest>(
-                    std::move(rescore_compile_model_->create_infer_request()));
+      std::move(rescore_compile_model_->create_infer_request()));
 }
 
 std::shared_ptr<AsrModel> OVAsrModel::Copy() const {
@@ -315,16 +315,15 @@ void OVAsrModel::ForwardEncoderFunc(
 
   // set input tensor
   size_t idx = 0;
-  std::map<std::string, ov::Output<const ov::Node>>::iterator it \
-                    = encoder_inputs_map_.begin();
+  std::map<std::string, ov::Output<const ov::Node>>::iterator it =
+      encoder_inputs_map_.begin();
   while (it != encoder_inputs_map_.end()) {
     if (it->first == "chunk") {
       encoder_infer_->set_tensor(it->second, feats_ov);
     } else if (it->first == "offset") {
       encoder_infer_->set_tensor(it->second, offset_ov);
     } else if (it->first == "required_cache_size") {
-      encoder_infer_->set_tensor(it->second,
-                                 required_cache_size_ov);
+      encoder_infer_->set_tensor(it->second, required_cache_size_ov);
     } else if (it->first == "att_cache") {
       encoder_infer_->set_tensor(it->second, att_cache_ov_);
     } else if (it->first == "cnn_cache") {

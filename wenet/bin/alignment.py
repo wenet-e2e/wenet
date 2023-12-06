@@ -74,9 +74,9 @@ def get_frames_timestamp(alignment,
             end += 1
         local_start = end - 1
         # find the possible front border for current token
-        while local_start >= start and (prob[local_start][0] < math.log(
-                blank_thres) or prob[local_start][alignment[
-                    end - 1]] > math.log(thres)):
+        while local_start >= start and (
+                prob[local_start][0] < math.log(blank_thres)
+                or prob[local_start][alignment[end - 1]] > math.log(thres)):
             alignment[local_start] = alignment[end - 1]
             local_start -= 1
         cur_alignment = alignment[start:end]
@@ -183,7 +183,6 @@ if __name__ == '__main__':
             char_dict[int(arr[1])] = arr[0]
     eos = len(char_dict) - 1
 
-
     # Init dataset and data loader
     ali_conf = copy.deepcopy(configs['dataset_conf'])
 
@@ -202,7 +201,8 @@ if __name__ == '__main__':
     ali_conf['batch_conf']['batch_type'] = "static"
     ali_conf['batch_conf']['batch_size'] = args.batch_size
 
-    tokenizer = init_tokenizer(ali_conf, args.dict, args.bpe_model, args.non_lang_syms)
+    tokenizer = init_tokenizer(ali_conf, args.dict, args.bpe_model,
+                               args.non_lang_syms)
     ali_dataset = Dataset(args.data_type,
                           args.input_file,
                           tokenizer,

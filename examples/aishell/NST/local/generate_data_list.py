@@ -15,6 +15,7 @@ import argparse
 import os
 import random
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='generate data.list file ')
     parser.add_argument('--tar_dir', help='path for tar file')
@@ -23,8 +24,8 @@ def get_args():
     parser.add_argument('--pseudo_data_ratio',
                         type=float,
                         help='ratio of pseudo data, '
-                             '0 means none pseudo data, '
-                             '1 means all using pseudo data.')
+                        '0 means none pseudo data, '
+                        '1 means all using pseudo data.')
     parser.add_argument('--out_data_list', help='output path for data list')
     args = parser.parse_args()
     return args
@@ -55,7 +56,9 @@ def main():
     for i in range(len(pseudo_data_list)):
         pseudo_data_list[i] = target_dir + "/" + pseudo_data_list[i] + "\n"
 
-    fused_list = pseudo_data_list[:pseudo_len] + supervised_data_list[:supervised_len]
+    fused_list = pseudo_data_list[:
+                                  pseudo_len] + supervised_data_list[:
+                                                                     supervised_len]
 
     with open(output_file, "w") as writer:
         for line in fused_list:

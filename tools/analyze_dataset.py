@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Analyze Dataset, Duration/TextLength/Speed etc.
 
@@ -47,16 +46,19 @@ def get_args():
                         default='wav_scp',
                         choices=['wav_scp', 'raw', 'shard'],
                         help='dataset type')
-    parser.add_argument('--output_dir', type=str,
-                        default="exp", help='write info to output dir')
-    parser.add_argument('--data_list', default=None,
+    parser.add_argument('--output_dir',
+                        type=str,
+                        default="exp",
+                        help='write info to output dir')
+    parser.add_argument('--data_list',
+                        default=None,
                         help='used in raw/shard mode')
-    parser.add_argument('--wav_scp', default=None,
-                        help='used in wav_scp mode')
-    parser.add_argument('--text', default=None,
-                        help='used in wav_scp mode')
-    parser.add_argument('--num_thread', type=int,
-                        default=4, help='number of threads')
+    parser.add_argument('--wav_scp', default=None, help='used in wav_scp mode')
+    parser.add_argument('--text', default=None, help='used in wav_scp mode')
+    parser.add_argument('--num_thread',
+                        type=int,
+                        default=4,
+                        help='number of threads')
     args = parser.parse_args()
     print(args)
     return args
@@ -109,8 +111,7 @@ def read_tar(file):
                             data['txt'] = file_obj.read().decode(
                                 'utf8').strip()
                         elif postfix in AUDIO_FORMAT_SETS:
-                            waveform, sample_rate = torchaudio.load(
-                                file_obj)
+                            waveform, sample_rate = torchaudio.load(file_obj)
                             # single channel
                             data['wav'] = waveform.numpy()[0, :]
                             data['sample_rate'] = sample_rate
@@ -118,16 +119,16 @@ def read_tar(file):
                             data[postfix] = file_obj.read()
                     except Exception as ex:
                         valid = False
-                        logging.warning(
-                            'error: {} when parse {}'.format(ex, name))
+                        logging.warning('error: {} when parse {}'.format(
+                            ex, name))
                 prev_prefix = prefix
             # The last data in tar
             if prev_prefix is not None:
                 data['key'] = prev_prefix
                 yield data
     except Exception as ex:
-        logging.warning(
-            'tar_file error: {} when processing {}'.format(ex, file))
+        logging.warning('tar_file error: {} when processing {}'.format(
+            ex, file))
 
 
 def main():
@@ -173,16 +174,18 @@ def main():
         # partition
         for i, (key1, key2) in enumerate(zip(wavs, texts)):
             assert key1 == key2
-            datas[i % args.num_thread].append(
-                {'key': key1, "wav": wavs[key1], "txt": texts[key1]}
-            )
+            datas[i % args.num_thread].append({
+                'key': key1,
+                "wav": wavs[key1],
+                "txt": texts[key1]
+            })
 
     logging.info("Stage-2: Start Analyze")
     # threads
     pool = multiprocessing.Pool(processes=args.num_thread)
     for i in range(args.num_thread):
-        output_file = os.path.join(
-            args.output_dir, "partition", "part-{}".format(i))
+        output_file = os.path.join(args.output_dir, "partition",
+                                   "part-{}".format(i))
         pool.apply_async(analyze, (datas[i], output_file, i))
     pool.close()
     pool.join()
@@ -190,8 +193,8 @@ def main():
     logging.info("Stage-3: Sort and Write Result")
     datas = []
     for i in range(args.num_thread):
-        output_file = os.path.join(
-            args.output_dir, "partition", "part-{}".format(i))
+        output_file = os.path.join(args.output_dir, "partition",
+                                   "part-{}".format(i))
         with open(output_file, "r", encoding='utf8') as f:
             for line in f.readlines():
                 data = json.loads(line)
@@ -201,26 +204,36 @@ def main():
     total_leading_sil = sum([x['leading_sil'] for x in datas])
     total_trailing_sil = sum([x['trailing_sil'] for x in datas])
     num_datas = len(datas)
-    names = ['key', 'dur', 'txt_length', 'speed',
-             'leading_sil', 'trailing_sil']
+    names = [
+        'key', 'dur', 'txt_length', 'speed', 'leading_sil', 'trailing_sil'
+    ]
     units = ['', 's', '', 'char/s', 'ms', 'ms']
-    avgs = [0, total_dur / num_datas, total_len / num_datas,
-            total_len / total_dur, total_leading_sil / num_datas,
-            total_trailing_sil / num_datas]
-    stds = [0, sum([(x['dur'] - avgs[1])**2 for x in datas]),
-            sum([(x['txt_length'] - avgs[2])**2 for x in datas]),
-            sum([(x['txt_length'] / x['dur'] - avgs[3])**2 for x in datas]),
-            sum([(x['leading_sil'] - avgs[4])**2 for x in datas]),
-            sum([(x['trailing_sil'] - avgs[5])**2 for x in datas])]
+    avgs = [
+        0, total_dur / num_datas, total_len / num_datas, total_len / total_dur,
+        total_leading_sil / num_datas, total_trailing_sil / num_datas
+    ]
+    stds = [
+        0,
+        sum([(x['dur'] - avgs[1])**2 for x in datas]),
+        sum([(x['txt_length'] - avgs[2])**2 for x in datas]),
+        sum([(x['txt_length'] / x['dur'] - avgs[3])**2 for x in datas]),
+        sum([(x['leading_sil'] - avgs[4])**2 for x in datas]),
+        sum([(x['trailing_sil'] - avgs[5])**2 for x in datas])
+    ]
     stds = [math.sqrt(x / num_datas) for x in stds]
     parts = ['max', 'P99', 'P75', 'P50', 'P25', 'min']
-    index = [num_datas - 1, int(num_datas * 0.99), int(num_datas * 0.75),
-             int(num_datas * 0.50), int(num_datas * 0.25), 0]
+    index = [
+        num_datas - 1,
+        int(num_datas * 0.99),
+        int(num_datas * 0.75),
+        int(num_datas * 0.50),
+        int(num_datas * 0.25), 0
+    ]
 
-    with open(args.output_dir + "/analyze_result_brief",
-              "w", encoding='utf8') as f:
-        for i, (name, unit, avg, std) in enumerate(
-                zip(names, units, avgs, stds)):
+    with open(args.output_dir + "/analyze_result_brief", "w",
+              encoding='utf8') as f:
+        for i, (name, unit, avg,
+                std) in enumerate(zip(names, units, avgs, stds)):
             if name == 'key':
                 continue
             f.write("==================\n")
@@ -229,10 +242,8 @@ def main():
             for p, j in zip(parts, index):
                 f.write("{} {}: {:.3f} {} (wav_id: {})\n".format(
                     p, name, datas[j][name], unit, datas[j]['key']))
-            f.write("avg {}: {:.3f} {}\n".format(
-                name, avg, unit))
-            f.write("std {}: {:.3f}\n".format(
-                name, std))
+            f.write("avg {}: {:.3f} {}\n".format(name, avg, unit))
+            f.write("std {}: {:.3f}\n".format(name, std))
     os.system("cat {}".format(args.output_dir + "/analyze_result_brief"))
 
     datas.sort(key=lambda x: x['dur'])

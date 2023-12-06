@@ -38,7 +38,8 @@ if __name__ == "__main__":
         type=str,
         required=False,
         default="localhost:8001",
-        help="Inference server URL. Default is " "localhost:8001.",
+        help="Inference server URL. Default is "
+        "localhost:8001.",
     )
     parser.add_argument(
         "--model_name",
@@ -157,12 +158,10 @@ if __name__ == "__main__":
 
     def single_job(client_files):
         with grpcclient.InferenceServerClient(
-            url=FLAGS.url, verbose=FLAGS.verbose
-        ) as triton_client:
+                url=FLAGS.url, verbose=FLAGS.verbose) as triton_client:
             protocol_client = grpcclient
-            speech_client = speech_client_cls(
-                triton_client, FLAGS.model_name, protocol_client, FLAGS
-            )
+            speech_client = speech_client_cls(triton_client, FLAGS.model_name,
+                                              protocol_client, FLAGS)
             idx, audio_files = client_files
             predictions = []
             for li in audio_files:

@@ -24,15 +24,12 @@ import websockets
 import soundfile as sf
 import statistics
 
-
 WS_START = json.dumps({
     'signal': 'start',
     'nbest': 1,
     'continuous_decoding': False,
 })
-WS_END = json.dumps({
-    'signal': 'end'
-})
+WS_END = json.dumps({'signal': 'end'})
 
 
 async def ws_rec(data, ws_uri):
@@ -73,20 +70,27 @@ async def ws_rec(data, ws_uri):
 def get_args():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument(
-        '-u', '--ws_uri', required=True,
+        '-u',
+        '--ws_uri',
+        required=True,
         help="websocket_server_main's uri, e.g. ws://127.0.0.1:10086")
-    parser.add_argument(
-        '-w', '--wav_scp', required=True,
-        help='path to wav_scp_file')
-    parser.add_argument(
-        '-t', '--trans', required=True,
-        help='path to trans_text_file of wavs')
-    parser.add_argument(
-        '-s', '--save_to', required=True,
-        help='path to save transcription')
-    parser.add_argument(
-        '-n', '--num_concurrence', type=int, required=True,
-        help='num of concurrence for query')
+    parser.add_argument('-w',
+                        '--wav_scp',
+                        required=True,
+                        help='path to wav_scp_file')
+    parser.add_argument('-t',
+                        '--trans',
+                        required=True,
+                        help='path to trans_text_file of wavs')
+    parser.add_argument('-s',
+                        '--save_to',
+                        required=True,
+                        help='path to save transcription')
+    parser.add_argument('-n',
+                        '--num_concurrence',
+                        type=int,
+                        required=True,
+                        help='num of concurrence for query')
     args = parser.parse_args()
     return args
 

@@ -368,7 +368,7 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinks(
           prev_link = link;  // move to next link
           link = link->next;
         }
-      }                  // for all outgoing links
+      }  // for all outgoing links
       if (fabs(tok_extra_cost - tok->extra_cost) > delta)
         changed = true;  // difference new minus old is bigger than delta
       tok->extra_cost = tok_extra_cost;
@@ -472,7 +472,7 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneForwardLinksFinal() {
       tok->extra_cost =
           tok_extra_cost;  // will be +infinity or <= lattice_beam_.
     }
-  }                        // while changed
+  }  // while changed
 }
 
 template <typename FST, typename Token>
@@ -537,7 +537,7 @@ void LatticeFasterDecoderTpl<FST, Token>::PruneActiveTokens(BaseFloat delta) {
       PruneForwardLinks(f, &extra_costs_changed, &links_pruned, delta);
       if (extra_costs_changed && f > 0)  // any token has changed extra_cost
         active_toks_[f - 1].must_prune_forward_links = true;
-      if (links_pruned)                  // any link was pruned
+      if (links_pruned)  // any link was pruned
         active_toks_[f].must_prune_tokens = true;
       active_toks_[f].must_prune_forward_links = false;  // job done
     }
@@ -585,7 +585,7 @@ void LatticeFasterDecoderTpl<FST, Token>::ComputeFinalCosts(
   if (final_best_cost != NULL) {
     if (best_cost_with_final != infinity) {  // final-state exists.
       *final_best_cost = best_cost_with_final;
-    } else {                                 // no final-state exists.
+    } else {  // no final-state exists.
       *final_best_cost = best_cost;
     }
   }

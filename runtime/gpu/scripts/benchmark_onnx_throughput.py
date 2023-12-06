@@ -15,7 +15,6 @@
 # limitations under the License.
 # Modified from below:
 # https://github.com/microsoft/onnxruntime/blob/main/onnxruntime/python/tools/transformers/onnx_exporter.py
-
 """
 Usage:
 export CUDA_VISIBLE_DEVICES="0"
@@ -37,8 +36,7 @@ import numpy
 
 def get_parser():
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(
         "--batch_sizes",
@@ -57,7 +55,7 @@ def get_parser():
     parser.add_argument(
         "--onnxFile",
         type=str,
-        default="/mnt/samsung-t7/yuekai/benchmark/wenet/wenet/bin/u2pp_aishell2_onnx/encoder_fp16.onnx",
+        default="wenet/bin/u2pp_aishell2_onnx/encoder_fp16.onnx",
         help="Path to the onnx file",
     )
 
@@ -96,9 +94,10 @@ def get_parser():
     return parser
 
 
-def allocateOutputBuffers(
-    output_buffers, output_buffer_max_sizes, device, data_type=torch.float32
-):
+def allocateOutputBuffers(output_buffers,
+                          output_buffer_max_sizes,
+                          device,
+                          data_type=torch.float32):
     # Allocate output tensors with the largest test size needed.
     # So the allocated memory can be reused
     # for each test run.
@@ -114,20 +113,22 @@ def get_latency_result(latency_list, batch_size):
     throughput_trt = 1000.0 / latency_ms
 
     return {
-        "test_times": len(latency_list),
-        "latency_variance": "{:.2f}".format(latency_variance),
-        "latency_90_percentile": "{:.2f}".format(
-            numpy.percentile(latency_list, 90) * 1000.0
-        ),
-        "latency_95_percentile": "{:.2f}".format(
-            numpy.percentile(latency_list, 95) * 1000.0
-        ),
-        "latency_99_percentile": "{:.2f}".format(
-            numpy.percentile(latency_list, 99) * 1000.0
-        ),
-        "average_latency_ms": "{:.2f}".format(latency_ms),
-        "QPS": "{:.2f}".format(throughput),
-        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt),
+        "test_times":
+        len(latency_list),
+        "latency_variance":
+        "{:.2f}".format(latency_variance),
+        "latency_90_percentile":
+        "{:.2f}".format(numpy.percentile(latency_list, 90) * 1000.0),
+        "latency_95_percentile":
+        "{:.2f}".format(numpy.percentile(latency_list, 95) * 1000.0),
+        "latency_99_percentile":
+        "{:.2f}".format(numpy.percentile(latency_list, 99) * 1000.0),
+        "average_latency_ms":
+        "{:.2f}".format(latency_ms),
+        "QPS":
+        "{:.2f}".format(throughput),
+        f"QPS_trt_batch{batch_size}":
+        "{:.2f}".format(throughput_trt),
     }
 
 
@@ -149,17 +150,16 @@ def create_onnxruntime_input(
         d_k = int(output_size / head)
         cnn_module_kernel = 7
 
-        chunk_xs = torch.randn(
-            batch_size, sequence_length, feature_size, dtype=data_type
-        ).numpy()
+        chunk_xs = torch.randn(batch_size,
+                               sequence_length,
+                               feature_size,
+                               dtype=data_type).numpy()
         inputs["chunk_xs"] = chunk_xs
-        chunk_lens = (
-            torch.ones(batch_size, dtype=torch.int32).numpy() * sequence_length
-        )
+        chunk_lens = (torch.ones(batch_size, dtype=torch.int32).numpy() *
+                      sequence_length)
         inputs["chunk_lens"] = chunk_lens
-        offset = (
-            torch.arange(0, batch_size, dtype=torch.int64).unsqueeze(1).numpy()
-        )
+        offset = (torch.arange(0, batch_size,
+                               dtype=torch.int64).unsqueeze(1).numpy())
         inputs["offset"] = offset
         att_cache = torch.randn(
             batch_size,
@@ -178,9 +178,10 @@ def create_onnxruntime_input(
             dtype=data_type,
         ).numpy()
         inputs["cnn_cache"] = cnn_cache
-        cache_mask = torch.ones(
-            batch_size, 1, required_cache_size, dtype=data_type
-        ).numpy()
+        cache_mask = torch.ones(batch_size,
+                                1,
+                                required_cache_size,
+                                dtype=data_type).numpy()
         inputs["cache_mask"] = cache_mask
 
     else:
@@ -202,9 +203,9 @@ def inference_ort(
         number=1,
         repeat=warm_up_repeat,
     )  # Dry run
-    latency_list = timeit.repeat(
-        lambda: ort_session.run(None, ort_inputs), number=1, repeat=repeat_times
-    )
+    latency_list = timeit.repeat(lambda: ort_session.run(None, ort_inputs),
+                                 number=1,
+                                 repeat=repeat_times)
     result.update(result_template)
     result.update({"io_binding": False})
     result.update(get_latency_result(latency_list, batch_size))
@@ -241,11 +242,9 @@ def inference_ort_with_io_binding(
     # Bind inputs to device
     for name in ort_inputs.keys():
         np_input = torch.from_numpy(ort_inputs[name]).to(device)
-        input_type = (
-            IO_BINDING_DATA_TYPE_MAP[str(ort_inputs[name].dtype)]
-            if str(ort_inputs[name].dtype) in IO_BINDING_DATA_TYPE_MAP
-            else data_type
-        )
+        input_type = (IO_BINDING_DATA_TYPE_MAP[str(ort_inputs[name].dtype)]
+                      if str(ort_inputs[name].dtype)
+                      in IO_BINDING_DATA_TYPE_MAP else data_type)
 
         io_binding.bind_input(
             name,
@@ -260,11 +259,9 @@ def inference_ort_with_io_binding(
         allocateOutputBuffers(output_buffers, output_buffer_max_sizes, device)
 
     for i, ort_output_name in enumerate(ort_output_names):
-        output_type = (
-            IO_BINDING_DATA_TYPE_MAP[str(ort_outputs[i].dtype)]
-            if str(ort_outputs[i].dtype) in IO_BINDING_DATA_TYPE_MAP
-            else data_type
-        )
+        output_type = (IO_BINDING_DATA_TYPE_MAP[str(ort_outputs[i].dtype)]
+                       if str(ort_outputs[i].dtype) in IO_BINDING_DATA_TYPE_MAP
+                       else data_type)
         io_binding.bind_output(
             ort_output_name,
             output_buffers[i].device.type,
@@ -306,12 +303,10 @@ def create_onnxruntime_session(
 
     if enable_all_optimization:
         sess_options.graph_optimization_level = (
-            onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
-        )
+            onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL)
     else:
         sess_options.graph_optimization_level = (
-            onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC
-        )
+            onnxruntime.GraphOptimizationLevel.ORT_ENABLE_BASIC)
         # sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_DISABLE_ALL # noqa
 
     if enable_profiling:
@@ -341,13 +336,14 @@ def create_onnxruntime_session(
 
     if provider_options:
         providers = [
-            (name, provider_options[name]) if name in provider_options else name
+            (name,
+             provider_options[name]) if name in provider_options else name
             for name in providers
         ]
 
-    session = onnxruntime.InferenceSession(
-        onnx_model_path, sess_options, providers=providers
-    )
+    session = onnxruntime.InferenceSession(onnx_model_path,
+                                           sess_options,
+                                           providers=providers)
 
     return session
 
@@ -403,10 +399,8 @@ if __name__ == "__main__":
     results = []
     for batch_size in batch_sizes:
         for sequence_length in sequence_lengths:
-            if (
-                max_sequence_length is not None
-                and sequence_length > max_sequence_length
-            ):
+            if (max_sequence_length is not None
+                    and sequence_length > max_sequence_length):
                 continue
 
             ort_inputs = create_onnxruntime_input(
@@ -423,11 +417,8 @@ if __name__ == "__main__":
                 "sequence_length": sequence_length,
             }
 
-            print(
-                "Run onnxruntime on {} with input shape {}".format(
-                    args.onnxFile, [batch_size, sequence_length]
-                )
-            )
+            print("Run onnxruntime on {} with input shape {}".format(
+                args.onnxFile, [batch_size, sequence_length]))
 
             if args.disable_ort_io_binding:
                 result = inference_ort(
@@ -444,8 +435,7 @@ if __name__ == "__main__":
                 output_buffer_max_sizes = []
                 for i in range(len(ort_outputs)):
                     output_buffer_max_sizes.append(
-                        numpy.prod(ort_outputs[i].shape)
-                    )
+                        numpy.prod(ort_outputs[i].shape))
 
                 data_type = numpy.intc
                 output_buffers = []

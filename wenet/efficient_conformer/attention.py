@@ -14,7 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Multi-Head Attention layer definition."""
 
 import math
@@ -36,6 +35,7 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         n_feat (int): The number of features.
         dropout_rate (float): Dropout rate.
     """
+
     def __init__(self, n_head, n_feat, dropout_rate, group_size=3):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate)
@@ -46,8 +46,10 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         self.n_feat = n_feat
         # these two learnable bias are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
-        self.pos_bias_u = nn.Parameter(torch.Tensor(self.h, self.d_k * self.group_size))
-        self.pos_bias_v = nn.Parameter(torch.Tensor(self.h, self.d_k * self.group_size))
+        self.pos_bias_u = nn.Parameter(
+            torch.Tensor(self.h, self.d_k * self.group_size))
+        self.pos_bias_v = nn.Parameter(
+            torch.Tensor(self.h, self.d_k * self.group_size))
         torch.nn.init.xavier_uniform_(self.pos_bias_u)
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
 
@@ -102,7 +104,7 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         K = F.pad(K, (0, 0, 0, padding_KV), value=0.0)
         V = F.pad(V, (0, 0, 0, padding_KV), value=0.0)
 
-        if mask is not None and mask.size(2) > 0 :  # time2 > 0:
+        if mask is not None and mask.size(2) > 0:  # time2 > 0:
             mask = mask[:, ::group_size, ::group_size]
 
         Q = Q.transpose(1, 2).contiguous().view(
@@ -117,15 +119,17 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         overflow_P = P.size(1) % group_size
         padding_P = group_size - overflow_P if overflow_P else 0
         P = F.pad(P, (0, 0, 0, padding_P), value=0.0)
-        P = P.view(P_batch_size, -1, self.h, self.d_k * group_size).transpose(1, 2)
+        P = P.view(P_batch_size, -1, self.h,
+                   self.d_k * group_size).transpose(1, 2)
 
         return Q, K, V, P, mask, padding_Q
 
-    def forward_attention(
-        self, value: torch.Tensor, scores: torch.Tensor,
-        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-        padding_q: Optional[int] = None
-    ) -> torch.Tensor:
+    def forward_attention(self,
+                          value: torch.Tensor,
+                          scores: torch.Tensor,
+                          mask: torch.Tensor = torch.ones((0, 0, 0),
+                                                          dtype=torch.bool),
+                          padding_q: Optional[int] = None) -> torch.Tensor:
         """Compute attention context vector.
 
         Args:
@@ -147,7 +151,7 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         #   1. onnx(16/4) [WHY? Because we feed real cache & real mask for the
         #           1st chunk to ease the onnx export.]
         #   2. pytorch training
-        if mask.size(2) > 0 :  # time2 > 0
+        if mask.size(2) > 0:  # time2 > 0
             mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
             # For last chunk, time2 might be larger than scores.size(-1)
             mask = mask[:, :, :, :scores.size(-1)]  # (batch, 1, *, time2)
@@ -172,12 +176,15 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         return self.linear_out(x)  # (batch, time1, d_model)
 
-    def forward(self, query: torch.Tensor, key: torch.Tensor,
-                value: torch.Tensor,
-                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                pos_emb: torch.Tensor = torch.empty(0),
-                cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-                ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        pos_emb: torch.Tensor = torch.empty(0),
+        cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
@@ -197,9 +204,9 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
                 and `head * d_k == size`
         """
         q = self.linear_q(query)
-        k = self.linear_k(key)          # (#batch, time2, size)
+        k = self.linear_k(key)  # (#batch, time2, size)
         v = self.linear_v(value)
-        p = self.linear_pos(pos_emb)    # (#batch, time2, size)
+        p = self.linear_pos(pos_emb)  # (#batch, time2, size)
 
         batch_size, seq_len_KV, _ = k.size()  # seq_len_KV = time2
 
@@ -209,8 +216,9 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
         v = v.view(batch_size, -1, self.h, self.d_k).transpose(1, 2)
         if cache.size(0) > 0:
             # use attention cache
-            key_cache, value_cache = torch.split(
-                cache, cache.size(-1) // 2, dim=-1)
+            key_cache, value_cache = torch.split(cache,
+                                                 cache.size(-1) // 2,
+                                                 dim=-1)
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
         new_cache = torch.cat((k, v), dim=-1)
@@ -222,7 +230,8 @@ class GroupedRelPositionMultiHeadedAttention(MultiHeadedAttention):
             v = v[:, :, -time2:, :]
 
         # q k v p: (batch, head, time1, d_k)
-        q, k, v, p, mask, padding_q = self.pad4group(q, k, v, p, mask, self.group_size)
+        q, k, v, p, mask, padding_q = self.pad4group(q, k, v, p, mask,
+                                                     self.group_size)
 
         # q_with_bias_u & q_with_bias_v = (batch, head, time1, d_k)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)

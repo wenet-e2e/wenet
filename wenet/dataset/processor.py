@@ -348,20 +348,25 @@ def compute_log_mel_spectrogram(data,
         if padding > 0:
             waveform = F.pad(waveform, (0, padding))
         window = torch.hann_window(n_fft)
-        stft = torch.stft(waveform, n_fft, hop_length,
-                          window=window, return_complex=True)
-        magnitudes = stft[..., :-1].abs() ** 2
+        stft = torch.stft(waveform,
+                          n_fft,
+                          hop_length,
+                          window=window,
+                          return_complex=True)
+        magnitudes = stft[..., :-1].abs()**2
 
         filters = torch.from_numpy(
-            librosa.filters.mel(sr=sample_rate, n_fft=n_fft, n_mels=num_mel_bins)
-        )
+            librosa.filters.mel(sr=sample_rate,
+                                n_fft=n_fft,
+                                n_mels=num_mel_bins))
         mel_spec = filters @ magnitudes
 
         # NOTE(xcsong): https://github.com/openai/whisper/discussions/269
         log_spec = torch.clamp(mel_spec, min=1e-10).log10()
         log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
         log_spec = (log_spec + 4.0) / 4.0
-        yield dict(key=sample['key'], label=sample['label'],
+        yield dict(key=sample['key'],
+                   label=sample['label'],
                    feat=log_spec.transpose(0, 1))
 
 
@@ -617,5 +622,10 @@ def padding(data):
                                       batch_first=True,
                                       padding_value=-1)
 
-        yield {"keys": sorted_keys, "feats": padded_feats, "target": padding_labels,
-               "feats_lengths": feats_lengths, "target_lengths": label_lengths}
+        yield {
+            "keys": sorted_keys,
+            "feats": padded_feats,
+            "target": padding_labels,
+            "feats_lengths": feats_lengths,
+            "target_lengths": label_lengths
+        }

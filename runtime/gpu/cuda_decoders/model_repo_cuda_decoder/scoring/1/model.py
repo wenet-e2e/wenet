@@ -22,6 +22,7 @@ import os
 import yaml
 from decoder import RivaWFSTDecoder, ctc_greedy_search
 
+
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
     that is created must have "TritonPythonModel" as the class name.
@@ -124,8 +125,7 @@ class TritonPythonModel:
         self.ignore_id = ignore_id
 
         if "tlg" in self.decoding_method:
-            self.decoder = RivaWFSTDecoder(len(self.vocabulary),
-                                           self.tlg_dir,
+            self.decoder = RivaWFSTDecoder(len(self.vocabulary), self.tlg_dir,
                                            self.tlg_decoding_config,
                                            self.beam_size)
 
@@ -149,7 +149,8 @@ class TritonPythonModel:
         for request in requests:
             # Perform inference on the request and append it to responses list...
             in_0 = pb_utils.get_input_tensor_by_name(request, "encoder_out")
-            in_1 = pb_utils.get_input_tensor_by_name(request, "encoder_out_lens")
+            in_1 = pb_utils.get_input_tensor_by_name(request,
+                                                     "encoder_out_lens")
             in_2 = pb_utils.get_input_tensor_by_name(request, "ctc_log_probs")
 
             in_0_tensor = from_dlpack(in_0.to_dlpack())
@@ -163,9 +164,14 @@ class TritonPythonModel:
             batch_count_list.append(in_0_tensor.shape[0])
 
         encoder_tensors, logits_tensors = [], []
-        for encoder_tensor, logits_tensor in zip(encoder_out_list, ctc_log_probs_list):
-            encoder_tensors += [item.squeeze(0) for item in encoder_tensor.split(1)]
-            logits_tensors += [item.squeeze(0) for item in logits_tensor.split(1)]
+        for encoder_tensor, logits_tensor in zip(encoder_out_list,
+                                                 ctc_log_probs_list):
+            encoder_tensors += [
+                item.squeeze(0) for item in encoder_tensor.split(1)
+            ]
+            logits_tensors += [
+                item.squeeze(0) for item in logits_tensor.split(1)
+            ]
         encoder_out = torch.nn.utils.rnn.pad_sequence(encoder_tensors,
                                                       batch_first=True,
                                                       padding_value=0.0)
@@ -175,8 +181,8 @@ class TritonPythonModel:
         encoder_out_len = torch.cat(encoder_out_lens_list, dim=0)
         return encoder_out, encoder_out_len, logits, batch_count_list
 
-    def rescore_hyps(self, total_tokens, nbest_scores,
-                     max_hyp_len, encoder_out, encoder_out_len):
+    def rescore_hyps(self, total_tokens, nbest_scores, max_hyp_len,
+                     encoder_out, encoder_out_len):
         """
         Rescore the hypotheses with attention rescoring
         """
@@ -193,7 +199,8 @@ class TritonPythonModel:
         for b in batch_count_list:
             sents = np.array(hyps[st:st + b])
             out0 = pb_utils.Tensor("OUTPUT0", sents.astype(self.out0_dtype))
-            inference_response = pb_utils.InferenceResponse(output_tensors=[out0])
+            inference_response = pb_utils.InferenceResponse(
+                output_tensors=[out0])
             responses.append(inference_response)
             st += b
         return responses
@@ -221,25 +228,29 @@ class TritonPythonModel:
         # as they will be overridden in subsequent inference requests. You can
         # make a copy of the underlying NumPy array and store it if it is
         # required.
-        encoder_out, encoder_out_len, ctc_log_probs, batch_count = self.collect_inputs(requests) # noqa
+        encoder_out, encoder_out_len, ctc_log_probs, batch_count = self.collect_inputs(
+            requests)  # noqa
         ctc_log_probs = ctc_log_probs.cuda()
         if self.decoding_method == "tlg_mbr":
-            total_hyps = self.decoder.decode_mbr(ctc_log_probs, encoder_out_len)
+            total_hyps = self.decoder.decode_mbr(ctc_log_probs,
+                                                 encoder_out_len)
         elif self.decoding_method == "ctc_greedy_search":
             total_hyps = ctc_greedy_search(ctc_log_probs, encoder_out_len,
-                                           self.vocabulary, self.blank_id, self.eos)
+                                           self.vocabulary, self.blank_id,
+                                           self.eos)
         elif self.decoding_method == "tlg":
-            nbest_hyps, nbest_ids, nbest_scores, max_hyp_len = self.decoder.decode_nbest(ctc_log_probs, encoder_out_len) # noqa
+            nbest_hyps, nbest_ids, nbest_scores, max_hyp_len = self.decoder.decode_nbest(
+                ctc_log_probs, encoder_out_len)  # noqa
             total_hyps = [nbest[0] for nbest in nbest_hyps]
 
         if self.decoding_method == "tlg" and self.rescore:
             assert self.beam_size > 1, "Beam size must be greater than 1 for rescoring"
-            selected_ids = self.rescore_hyps(nbest_ids,
-                                             nbest_scores,
-                                             max_hyp_len,
-                                             encoder_out,
+            selected_ids = self.rescore_hyps(nbest_ids, nbest_scores,
+                                             max_hyp_len, encoder_out,
                                              encoder_out_len)
-            total_hyps = [nbest[i] for nbest, i in zip(nbest_hyps, selected_ids)]
+            total_hyps = [
+                nbest[i] for nbest, i in zip(nbest_hyps, selected_ids)
+            ]
 
         responses = self.prepare_response(total_hyps, batch_count)
         return responses

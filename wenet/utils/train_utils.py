@@ -29,14 +29,11 @@ from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
 from deepspeed.runtime.zero.stage_1_and_2 import (
-    estimate_zero2_model_states_mem_needs_all_live
-)
+    estimate_zero2_model_states_mem_needs_all_live)
 from deepspeed.runtime.zero.stage3 import (
-    estimate_zero3_model_states_mem_needs_all_live
-)
+    estimate_zero3_model_states_mem_needs_all_live)
 from deepspeed.utils.zero_to_fp32 import (
-    convert_zero_checkpoint_to_fp32_state_dict
-)
+    convert_zero_checkpoint_to_fp32_state_dict)
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
@@ -54,8 +51,9 @@ def add_model_args(parser):
     parser.add_argument('--symbol_table',
                         required=True,
                         help='model unit symbol table for training')
-    parser.add_argument("--non_lang_syms",
-                        help="non-linguistic symbol file. One symbol per line.")
+    parser.add_argument(
+        "--non_lang_syms",
+        help="non-linguistic symbol file. One symbol per line.")
     parser.add_argument('--bpe_model',
                         default=None,
                         type=str,
@@ -68,16 +66,18 @@ def add_model_args(parser):
                         default=None,
                         type=str,
                         help="Pre-trained model to initialize encoder")
-    parser.add_argument("--enc_init_mods",
-                        default="encoder.",
-                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
-                        help="List of encoder modules \
+    parser.add_argument(
+        "--enc_init_mods",
+        default="encoder.",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help="List of encoder modules \
                         to initialize ,separated by a comma")
     parser.add_argument('--lfmmi_dir',
                         default='',
                         required=False,
                         help='LF-MMI dir')
     return parser
+
 
 def add_trace_args(parser):
     parser.add_argument('--jit',
@@ -89,6 +89,7 @@ def add_trace_args(parser):
                         default=False,
                         help='print model')
     return parser
+
 
 def add_dataset_args(parser):
     parser.add_argument('--data_type',
@@ -130,10 +131,14 @@ def add_ddp_args(parser):
 
 
 def add_deepspeed_args(parser):
-    parser.add_argument('--timeout', default=30, type=int,
+    parser.add_argument('--timeout',
+                        default=30,
+                        type=int,
                         help='timeout (in seconds) of wenet_join. ' +
-                             '30s for aishell & 300s for wenetspeech')
-    parser.add_argument('--local_rank', type=int, default=-1,
+                        '30s for aishell & 300s for wenetspeech')
+    parser.add_argument('--local_rank',
+                        type=int,
+                        default=-1,
                         help='local rank passed from distributed launcher')
     parser.add_argument('--deepspeed.save_states',
                         dest='save_states',
@@ -201,14 +206,16 @@ def check_modify_and_save_config(args, configs, symbol_table):
         else:
             configs["dtype"] = "fp32"
         assert ds_configs["train_micro_batch_size_per_gpu"] == 1
-        assert ds_configs["gradient_accumulation_steps"] == configs['accum_grad']
+        assert ds_configs["gradient_accumulation_steps"] == configs[
+            'accum_grad']
         assert ds_configs["gradient_clipping"] == configs['grad_clip']
         assert ds_configs["steps_per_print"] == configs['log_interval']
 
     if 'fbank_conf' in configs['dataset_conf']:
         input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
     elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
-        input_dim = configs['dataset_conf']['log_mel_spectrogram_conf']['num_mel_bins']
+        input_dim = configs['dataset_conf']['log_mel_spectrogram_conf'][
+            'num_mel_bins']
     else:
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
 
@@ -245,11 +252,8 @@ def init_dataset_and_dataloader(args, configs, tokenizer):
     cv_conf['shuffle'] = False
 
     configs['vocab_size'] = tokenizer.vocab_size()
-    train_dataset = Dataset(args.data_type,
-                            args.train_data,
-                            tokenizer,
-                            train_conf,
-                            True)
+    train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
+                            train_conf, True)
     cv_dataset = Dataset(args.data_type,
                          args.cv_data,
                          tokenizer,
@@ -285,25 +289,25 @@ def wrap_cuda_model(args, model):
         device = torch.device("cuda")
         if args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (
-                default as comm_hooks,
-            )
-            model.register_comm_hook(
-                state=None, hook=comm_hooks.fp16_compress_hook
-            )
+                default as comm_hooks, )
+            model.register_comm_hook(state=None,
+                                     hook=comm_hooks.fp16_compress_hook)
     elif args.train_engine == "deepspeed":  # deepspeed
         # NOTE(xcsong): look in detail how the memory estimator API works:
         #   https://deepspeed.readthedocs.io/en/latest/memory.html#discussion
         if int(os.environ.get('RANK', 0)) == 0:
             logging.info("Estimating model states memory needs (zero2)...")
             estimate_zero2_model_states_mem_needs_all_live(
-                model, num_gpus_per_node=local_world_size,
+                model,
+                num_gpus_per_node=local_world_size,
                 num_nodes=world_size // local_world_size)
             logging.info("Estimating model states memory needs (zero3)...")
             estimate_zero3_model_states_mem_needs_all_live(
-                model, num_gpus_per_node=local_world_size,
+                model,
+                num_gpus_per_node=local_world_size,
                 num_nodes=world_size // local_world_size)
-        device = None     # Init device later
-        pass              # Init DeepSpeed later
+        device = None  # Init device later
+        pass  # Init DeepSpeed later
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
 
@@ -343,11 +347,16 @@ def init_optimizer_and_scheduler(args, configs, model):
             if "scheduler" in ds_configs:
                 scheduler = None
             else:
+
                 def scheduler(opt):
                     return scheduler_type(opt, **configs['scheduler_conf'])
+
         model, optimizer, _, scheduler = deepspeed.initialize(
-            args=args, model=model, optimizer=optimizer,
-            lr_scheduler=scheduler, model_parameters=model.parameters())
+            args=args,
+            model=model,
+            optimizer=optimizer,
+            lr_scheduler=scheduler,
+            model_parameters=model.parameters())
 
     step = configs["init_infos"].get("step", -1)
     scheduler.set_step(step)
@@ -388,10 +397,13 @@ def save_model(model, info_dict):
         #   https://github.com/microsoft/DeepSpeed/issues/2993
         with torch.no_grad():
             model.save_checkpoint(save_dir=model_dir,
-                                  tag=tag, client_state=info_dict)
+                                  tag=tag,
+                                  client_state=info_dict)
             if info_dict["save_states"] == "model_only" and rank == 0:
-                convert_zero_checkpoint_to_fp32_state_dict(
-                    model_dir, "{}/{}.pt".format(model_dir, tag), tag=tag)
+                convert_zero_checkpoint_to_fp32_state_dict(model_dir,
+                                                           "{}/{}.pt".format(
+                                                               model_dir, tag),
+                                                           tag=tag)
                 os.system("rm -rf {}/{}".format(model_dir, tag))
     elif rank == 0:
         # NOTE(xcsong): For torch_ddp, only rank-0 should call this.
@@ -426,8 +438,8 @@ def wenet_join(group_join, info_dict):
     except RuntimeError as e:
         logging.info("Detected uneven workload distribution: {}\n".format(e) +
                      "Break current worker to manually join all workers, " +
-                     "world_size {}, current rank {}, current local_rank {}\n".format(
-                         world_size, rank, local_rank))
+                     "world_size {}, current rank {}, current local_rank {}\n".
+                     format(world_size, rank, local_rank))
         return True
 
     return False
@@ -448,9 +460,9 @@ def batch_forward(model, batch, scaler, info_dict):
 
     if train_engine == "deepspeed":
         # deepspeed
-        with torch.cuda.amp.autocast(
-            enabled=dtype is not None, dtype=dtype, cache_enabled=False
-        ):
+        with torch.cuda.amp.autocast(enabled=dtype is not None,
+                                     dtype=dtype,
+                                     cache_enabled=False):
             loss_dict = model(batch["feats"].to(device),
                               batch["feats_lengths"].to(device),
                               batch["target"].to(device),
@@ -494,10 +506,7 @@ def batch_backward(model, scaler, info_dict):
     return info_dict
 
 
-def update_parameter_and_lr(
-    model, optimizer,
-    scheduler, scaler, info_dict
-):
+def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
     rank = int(os.environ.get('RANK', 0))
     train_engine = info_dict.get("train_engine", "torch_ddp")
     accum_grad = info_dict.get('accum_grad', 1)
@@ -570,7 +579,8 @@ def log_per_step(writer, info_dict):
            (train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0):
             writer.add_scalar('train/train_loss',
                               loss_dict['loss'].item() * accum_grad, step + 1)
-            writer.add_scalar('train/grad_norm', info_dict['grad_norm'], step + 1)
+            writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
+                              step + 1)
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(

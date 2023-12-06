@@ -1,10 +1,10 @@
-
 # parse xml files and output simplified version
 
 import xml.dom.minidom
 import os
 import sys
 import multiprocessing
+
 
 def parsexml(afile, outpath):
     outfile = os.path.join(outpath, afile.split('/')[-1] + '.simp')
@@ -40,7 +40,8 @@ def parsexml(afile, outpath):
                 if suw.hasAttribute('OrthographicTranscription'):
                     txt = suw.getAttribute('OrthographicTranscription')
                 if suw.hasAttribute('PlainOrthographicTranscription'):
-                    plaintxt = suw.getAttribute('PlainOrthographicTranscription')
+                    plaintxt = suw.getAttribute(
+                        'PlainOrthographicTranscription')
                 if suw.hasAttribute('PhoneticTranscription'):
                     prontxt = suw.getAttribute('PhoneticTranscription')
                 wlist.append(txt)
@@ -63,9 +64,10 @@ def parsexml(afile, outpath):
             lemmasent = ' '.join(lemmalist)
             dictlemmasent = ' '.join(dictlemmalist)
             outrow = '{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(
-                starttime, endtime, txtsent, plaintxtsent,
-                prontxtsent, lemmasent, dictlemmasent)
+                starttime, endtime, txtsent, plaintxtsent, prontxtsent,
+                lemmasent, dictlemmasent)
             bw.write(outrow)
+
 
 def procfolder_orig(apath, outpath):
     count = 0
@@ -76,6 +78,7 @@ def procfolder_orig(apath, outpath):
         parsexml(afile, outpath)
         count += 1
         print('done: {} [{}]'.format(afile, count))
+
 
 def procfolder(apath, outpath):
     # count = 0
@@ -97,6 +100,7 @@ def procfolder(apath, outpath):
         pool.join()
     print('parallel {} threads done for {} files in total.'.format(
         nthreads, len(fnlist)))
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 3:

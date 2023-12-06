@@ -28,8 +28,13 @@ from wenet.utils.context_graph import ContextGraph
 
 
 class Model:
-    def __init__(self, model_dir: str, gpu: int = -1, beam: int = 5,
-                 context_path: str = None, context_score: float = 6.0,
+
+    def __init__(self,
+                 model_dir: str,
+                 gpu: int = -1,
+                 beam: int = 5,
+                 context_path: str = None,
+                 context_score: float = 6.0,
                  resample_rate: int = 16000):
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
@@ -46,7 +51,8 @@ class Model:
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
         self.beam = beam
         if context_path is not None:
-            self.context_graph = ContextGraph(context_path, self.symbol_table,
+            self.context_graph = ContextGraph(context_path,
+                                              self.symbol_table,
                                               context_score=context_score)
         else:
             self.context_graph = None
@@ -74,14 +80,15 @@ class Model:
                 label: str = None) -> dict:
         feats = self.compute_feats(audio_file)
         encoder_out, _, _ = self.model.forward_encoder_chunk(feats, 0, -1)
-        encoder_lens = torch.tensor([
-            encoder_out.size(1)],
-            dtype=torch.long,
-            device=encoder_out.device)
+        encoder_lens = torch.tensor([encoder_out.size(1)],
+                                    dtype=torch.long,
+                                    device=encoder_out.device)
         ctc_probs = self.model.ctc_activation(encoder_out)
         if label is None:
             ctc_prefix_results = ctc_prefix_beam_search(
-                ctc_probs, encoder_lens, self.beam,
+                ctc_probs,
+                encoder_lens,
+                self.beam,
                 context_graph=self.context_graph)
         else:  # force align mode, construct ctc prefix result from alignment
             label_t = self.tokenize(label)

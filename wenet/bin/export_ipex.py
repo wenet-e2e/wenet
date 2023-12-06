@@ -14,6 +14,7 @@ from wenet.utils.init_model import init_model
 import intel_extension_for_pytorch as ipex
 from intel_extension_for_pytorch.quantization import prepare, convert
 
+
 def get_args():
     parser = argparse.ArgumentParser(description='export your script model')
     parser.add_argument('--config', required=True, help='config file')
@@ -28,21 +29,20 @@ def get_args():
     args = parser.parse_args()
     return args
 
+
 def scripting(model):
     with torch.inference_mode():
         script_model = torch.jit.script(model)
         script_model = torch.jit.freeze(
             script_model,
-            preserved_attrs=["forward_encoder_chunk",
-                             "ctc_activation",
-                             "forward_attention_decoder",
-                             "subsampling_rate",
-                             "right_context",
-                             "sos_symbol",
-                             "eos_symbol",
-                             "is_bidirectional_decoder"]
-        )
+            preserved_attrs=[
+                "forward_encoder_chunk", "ctc_activation",
+                "forward_attention_decoder", "subsampling_rate",
+                "right_context", "sos_symbol", "eos_symbol",
+                "is_bidirectional_decoder"
+            ])
     return script_model
+
 
 def main():
     args = get_args()
@@ -62,8 +62,10 @@ def main():
     model.to(memory_format=torch.channels_last)
     if args.dtype == "fp32":
         ipex_model = ipex.optimize(model)
-    elif args.dtype == "bf16":    # For Intel 4th generation Xeon (SPR)
-        ipex_model = ipex.optimize(model, dtype=torch.bfloat16, weights_prepack=False)
+    elif args.dtype == "bf16":  # For Intel 4th generation Xeon (SPR)
+        ipex_model = ipex.optimize(model,
+                                   dtype=torch.bfloat16,
+                                   weights_prepack=False)
 
     # Export jit torch script model
     if args.output_file:
@@ -79,11 +81,8 @@ def main():
     # Export quantized jit torch script model
     if args.output_quant_file:
         dynamic_qconfig = ipex.quantization.default_dynamic_qconfig
-        dummy_data = (torch.zeros(1, 67, 80),
-                      16,
-                      -16,
-                      torch.zeros(12, 4, 32, 128),
-                      torch.zeros(12, 1, 256, 7))
+        dummy_data = (torch.zeros(1, 67, 80), 16, -16,
+                      torch.zeros(12, 4, 32, 128), torch.zeros(12, 1, 256, 7))
         model = prepare(model, dynamic_qconfig, dummy_data)
         model = convert(model)
         script_quant_model = scripting(model)

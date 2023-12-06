@@ -19,7 +19,8 @@ import numpy as np
 import torch
 
 
-def remove_duplicates_and_blank(hyp: List[int], blank_id: int = 0) -> List[int]:
+def remove_duplicates_and_blank(hyp: List[int],
+                                blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
@@ -31,14 +32,16 @@ def remove_duplicates_and_blank(hyp: List[int], blank_id: int = 0) -> List[int]:
     return new_hyp
 
 
-def replace_duplicates_with_blank(hyp: List[int], blank_id: int = 0) -> List[int]:
+def replace_duplicates_with_blank(hyp: List[int],
+                                  blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
         new_hyp.append(hyp[cur])
         prev = cur
         cur += 1
-        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != blank_id:
+        while cur < len(
+                hyp) and hyp[cur] == hyp[prev] and hyp[cur] != blank_id:
             new_hyp.append(blank_id)
             cur += 1
     return new_hyp
@@ -164,10 +167,12 @@ def get_blank_id(configs, symbol_table):
 
     if '<blank>' in symbol_table:
         if 'ctc_blank_id' in configs['ctc_conf']:
-            assert configs['ctc_conf']['ctc_blank_id'] == symbol_table['<blank>']
+            assert configs['ctc_conf']['ctc_blank_id'] == symbol_table[
+                '<blank>']
         else:
             configs['ctc_conf']['ctc_blank_id'] = symbol_table['<blank>']
     else:
-        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
+        assert 'ctc_blank_id' in configs[
+            'ctc_conf'], "PLZ set ctc_blank_id in yaml"
 
     return configs, configs['ctc_conf']['ctc_blank_id']

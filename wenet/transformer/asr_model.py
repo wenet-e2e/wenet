@@ -239,8 +239,8 @@ class ASRModel(torch.nn.Module):
                 ctc_probs, encoder_lens, blank_id)
         if 'ctc_prefix_beam_search' in methods:
             ctc_prefix_result = ctc_prefix_beam_search(ctc_probs, encoder_lens,
-                                                       beam_size, context_graph,
-                                                       blank_id)
+                                                       beam_size,
+                                                       context_graph, blank_id)
             results['ctc_prefix_beam_search'] = ctc_prefix_result
         if 'attention_rescoring' in methods:
             # attention_rescoring depends on ctc_prefix_beam_search nbest

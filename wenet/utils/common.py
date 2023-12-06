@@ -50,14 +50,22 @@ def pad_list(xs: List[torch.Tensor], pad_value: int):
     batchs = len(xs)
     ndim = xs[0].ndim
     if ndim == 1:
-        pad_res = torch.zeros(batchs, max_len,
-                              dtype=xs[0].dtype, device=xs[0].device)
+        pad_res = torch.zeros(batchs,
+                              max_len,
+                              dtype=xs[0].dtype,
+                              device=xs[0].device)
     elif ndim == 2:
-        pad_res = torch.zeros(batchs, max_len, xs[0].shape[1],
-                              dtype=xs[0].dtype, device=xs[0].device)
+        pad_res = torch.zeros(batchs,
+                              max_len,
+                              xs[0].shape[1],
+                              dtype=xs[0].dtype,
+                              device=xs[0].device)
     elif ndim == 3:
-        pad_res = torch.zeros(batchs, max_len, xs[0].shape[1],
-                              xs[0].shape[2], dtype=xs[0].dtype,
+        pad_res = torch.zeros(batchs,
+                              max_len,
+                              xs[0].shape[1],
+                              xs[0].shape[2],
+                              dtype=xs[0].dtype,
                               device=xs[0].device)
     else:
         raise ValueError(f"Unsupported ndim: {ndim}")
@@ -147,11 +155,9 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
     return pad_list(ys_in, eos), pad_list(ys_out, ignore_id)
 
 
-def add_whisper_tokens(
-    special_tokens, ys_pad: torch.Tensor,
-    ignore_id: int, task: str, no_timestamp: bool,
-    language: str, use_prev: bool
-) -> Tuple[torch.Tensor, torch.Tensor]:
+def add_whisper_tokens(special_tokens, ys_pad: torch.Tensor, ignore_id: int,
+                       task: str, no_timestamp: bool, language: str,
+                       use_prev: bool) -> Tuple[torch.Tensor, torch.Tensor]:
     """Add whisper-style tokens.
 
     ([PREV] -> [previous text tokens or hotwords]).optional --
@@ -214,8 +220,10 @@ def add_whisper_tokens(
     else:
         raise NotImplementedError
 
-    _sot = torch.tensor(_sot, dtype=torch.long,
-                        requires_grad=False, device=ys_pad.device)
+    _sot = torch.tensor(_sot,
+                        dtype=torch.long,
+                        requires_grad=False,
+                        device=ys_pad.device)
     ys_in = [torch.cat([_sot, y], dim=0) for y in ys]
     ys_out = [torch.cat([_sot[1:], y, _eot], dim=0) for y in ys]
     return pad_list(ys_in, special_tokens["eot"]), pad_list(ys_out, ignore_id)
