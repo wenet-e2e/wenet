@@ -205,8 +205,9 @@ def test_model(model, audio_path):
             dtype=torch.long).unsqueeze(0)  # (B=1, 9)
         whisper_decoder_embed = whisper_model.decoder.token_embedding(
             whisper_tokens)
-        whisper_decoder_pos = whisper_model.decoder.positional_embedding[:whisper_decoder_embed.shape[
-            1], :].unsqueeze(0)  # (B=1, 9, d_model)  # noqa
+        pos_func = whisper_model.decoder.positional_embedding
+        whisper_decoder_pos = pos_func[:whisper_decoder_embed.
+                                       shape[1], :].unsqueeze(0)
         whisper_decoder_embed_posed = whisper_decoder_embed + whisper_decoder_pos
         x = whisper_decoder_embed_posed.clone()
         for i, layer in enumerate(whisper_model.decoder.blocks):
