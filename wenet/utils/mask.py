@@ -13,9 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import torch
-
 '''
 def subsequent_mask(
         size: int,
@@ -49,6 +47,7 @@ def subsequent_mask(
     ret = torch.ones(size, size, device=device, dtype=torch.bool)
     return torch.tril(ret)
 '''
+
 
 def subsequent_mask(
         size: int,
@@ -124,10 +123,12 @@ def subsequent_chunk_mask(
     return ret
 
 
-def add_optional_chunk_mask(xs: torch.Tensor, masks: torch.Tensor,
+def add_optional_chunk_mask(xs: torch.Tensor,
+                            masks: torch.Tensor,
                             use_dynamic_chunk: bool,
                             use_dynamic_left_chunk: bool,
-                            decoding_chunk_size: int, static_chunk_size: int,
+                            decoding_chunk_size: int,
+                            static_chunk_size: int,
                             num_decoding_left_chunks: int,
                             enable_full_context: bool = True):
     """ Apply optional mask for encoder.
@@ -300,6 +301,7 @@ def mask_finished_preds(pred: torch.Tensor, flag: torch.Tensor,
     beam_size = pred.size(-1)
     finished = flag.repeat([1, beam_size])
     return pred.masked_fill_(finished, eos)
+
 
 def causal_or_lookahead_mask(
     mask: torch.Tensor,

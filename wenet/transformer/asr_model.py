@@ -44,14 +44,16 @@ class ASRModel(torch.nn.Module):
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
+        special_tokens: dict = None,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
 
         super().__init__()
         # note that eos is the same as sos (equivalent ID)
-        self.sos = vocab_size - 1
-        self.eos = vocab_size - 1
+        self.sos = special_tokens.get("sos", vocab_size - 1)
+        self.eos = special_tokens.get("eos", vocab_size - 1)
         self.vocab_size = vocab_size
+        self.special_tokens = special_tokens
         self.ignore_id = ignore_id
         self.ctc_weight = ctc_weight
         self.reverse_weight = reverse_weight
@@ -194,6 +196,7 @@ class ASRModel(torch.nn.Module):
         simulate_streaming: bool = False,
         reverse_weight: float = 0.0,
         context_graph: ContextGraph = None,
+        blank_id: int = 0,
     ) -> Dict[str, List[DecodeResult]]:
         """ Decode input speech
 
@@ -233,10 +236,11 @@ class ASRModel(torch.nn.Module):
                 self, encoder_out, encoder_mask, beam_size)
         if 'ctc_greedy_search' in methods:
             results['ctc_greedy_search'] = ctc_greedy_search(
-                ctc_probs, encoder_lens)
+                ctc_probs, encoder_lens, blank_id)
         if 'ctc_prefix_beam_search' in methods:
             ctc_prefix_result = ctc_prefix_beam_search(ctc_probs, encoder_lens,
-                                                       beam_size, context_graph)
+                                                       beam_size,
+                                                       context_graph, blank_id)
             results['ctc_prefix_beam_search'] = ctc_prefix_result
         if 'attention_rescoring' in methods:
             # attention_rescoring depends on ctc_prefix_beam_search nbest

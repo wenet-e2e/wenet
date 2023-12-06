@@ -14,7 +14,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Multi-Head Attention layer definition."""
 
 import math
@@ -33,8 +32,13 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         dropout_rate (float): Dropout rate.
     """
 
-    def __init__(self, n_head, n_feat, dropout_rate,
-                 do_rel_shift=False, adaptive_scale=False, init_weights=False):
+    def __init__(self,
+                 n_head,
+                 n_feat,
+                 dropout_rate,
+                 do_rel_shift=False,
+                 adaptive_scale=False,
+                 init_weights=False):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate)
         # linear transformation for positional encoding
@@ -47,15 +51,15 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         torch.nn.init.xavier_uniform_(self.pos_bias_u)
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
         self.adaptive_scale = adaptive_scale
-        self.ada_scale = nn.Parameter(
-            torch.ones([1, 1, n_feat]), requires_grad=adaptive_scale)
-        self.ada_bias = nn.Parameter(
-            torch.zeros([1, 1, n_feat]), requires_grad=adaptive_scale)
+        self.ada_scale = nn.Parameter(torch.ones([1, 1, n_feat]),
+                                      requires_grad=adaptive_scale)
+        self.ada_bias = nn.Parameter(torch.zeros([1, 1, n_feat]),
+                                     requires_grad=adaptive_scale)
         if init_weights:
             self.init_weights()
 
     def init_weights(self):
-        input_max = (self.h * self.d_k) ** -0.5
+        input_max = (self.h * self.d_k)**-0.5
         torch.nn.init.uniform_(self.linear_q.weight, -input_max, input_max)
         torch.nn.init.uniform_(self.linear_q.bias, -input_max, input_max)
         torch.nn.init.uniform_(self.linear_k.weight, -input_max, input_max)
@@ -93,8 +97,10 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         return x
 
     def forward_attention(
-            self, value: torch.Tensor, scores: torch.Tensor,
-            mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
+        self,
+        value: torch.Tensor,
+        scores: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool)
     ) -> torch.Tensor:
         """Compute attention context vector.
 
@@ -137,12 +143,15 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         return self.linear_out(x)  # (batch, time1, d_model)
 
-    def forward(self, query: torch.Tensor,
-                key: torch.Tensor, value: torch.Tensor,
-                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                pos_emb: torch.Tensor = torch.empty(0),
-                cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
-                ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        pos_emb: torch.Tensor = torch.empty(0),
+        cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
@@ -185,8 +194,9 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         # >>> d = torch.split(a, 2, dim=-1)
         # >>> torch.equal(d[0], d[1])  # True
         if cache.size(0) > 0:
-            key_cache, value_cache = torch.split(
-                cache, cache.size(-1) // 2, dim=-1)
+            key_cache, value_cache = torch.split(cache,
+                                                 cache.size(-1) // 2,
+                                                 dim=-1)
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
         # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's

@@ -59,6 +59,7 @@ git clone https://github.com/wenet-e2e/wenet.git
 conda create -n wenet python=3.8
 conda activate wenet
 pip install -r requirements.txt
+pre-commit install  # for clean and tidy code
 ```
 
 **Build for deployment**

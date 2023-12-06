@@ -59,13 +59,11 @@ class TritonPythonModel:
 
         # Get OUTPUT0 configuration
         output0_config = pb_utils.get_output_config_by_name(
-            model_config, "OUTPUT0"
-        )
+            model_config, "OUTPUT0")
 
         # Convert Triton types to numpy types
         self.output0_dtype = pb_utils.triton_string_to_numpy(
-            output0_config["data_type"]
-        )
+            output0_config["data_type"])
 
         self.init_decoder(self.model_config["parameters"])
 
@@ -96,9 +94,9 @@ class TritonPythonModel:
         self.sos = self.eos = len(vocab) - 1
 
         if "tlg" in self.decoding_method:
-            self.decoder = RivaWFSTOnlineDecoder(
-                len(self.vocabulary), self.tlg_dir, self.tlg_decoding_config
-            )
+            self.decoder = RivaWFSTOnlineDecoder(len(self.vocabulary),
+                                                 self.tlg_dir,
+                                                 self.tlg_decoding_config)
 
     def load_vocab(self, vocab_file):
         """
@@ -179,10 +177,10 @@ class TritonPythonModel:
         responses = []
         for sentence in total_hyps:
             sent = np.array(sentence)
-            out_tensor_0 = pb_utils.Tensor(
-                "OUTPUT0", sent.astype(self.output0_dtype)
-            )
-            response = pb_utils.InferenceResponse(output_tensors=[out_tensor_0])
+            out_tensor_0 = pb_utils.Tensor("OUTPUT0",
+                                           sent.astype(self.output0_dtype))
+            response = pb_utils.InferenceResponse(
+                output_tensors=[out_tensor_0])
             responses.append(response)
         assert len(requests) == len(responses)
         return responses

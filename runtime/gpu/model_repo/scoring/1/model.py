@@ -23,6 +23,7 @@ import json
 import os
 import yaml
 
+
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
     that is created must have "TritonPythonModel" as the class name.
@@ -114,11 +115,14 @@ class TritonPythonModel:
             if self.hotwords is not None:
                 for w in self.hotwords:
                     max_order = max(max_order, len(w))
-                self.hotwords_scorer = HotWordsScorer(self.hotwords, vocab,
+                self.hotwords_scorer = HotWordsScorer(self.hotwords,
+                                                      vocab,
                                                       window_length=max_order,
                                                       SPACE_ID=-2,
                                                       is_character_based=True)
-                print(f"Successfully load hotwords! Hotwords orders = {max_order}")
+                print(
+                    f"Successfully load hotwords! Hotwords orders = {max_order}"
+                )
         self.vocabulary = vocab
         self.bidecoder = bidecoder
         sos = eos = len(vocab) - 1
@@ -188,12 +192,16 @@ class TritonPythonModel:
         for request in requests:
             # Perform inference on the request and append it to responses list...
             in_0 = pb_utils.get_input_tensor_by_name(request, "encoder_out")
-            in_1 = pb_utils.get_input_tensor_by_name(request, "encoder_out_lens")
-            in_2 = pb_utils.get_input_tensor_by_name(request, "batch_log_probs")
-            in_3 = pb_utils.get_input_tensor_by_name(request, "batch_log_probs_idx")
+            in_1 = pb_utils.get_input_tensor_by_name(request,
+                                                     "encoder_out_lens")
+            in_2 = pb_utils.get_input_tensor_by_name(request,
+                                                     "batch_log_probs")
+            in_3 = pb_utils.get_input_tensor_by_name(request,
+                                                     "batch_log_probs_idx")
 
             batch_encoder_out.append(in_0.as_numpy())
-            encoder_max_len = max(encoder_max_len, batch_encoder_out[-1].shape[1])
+            encoder_max_len = max(encoder_max_len,
+                                  batch_encoder_out[-1].shape[1])
 
             cur_b_lens = in_1.as_numpy()
             batch_encoder_lens.append(cur_b_lens)
@@ -204,8 +212,10 @@ class TritonPythonModel:
             cur_b_log_probs_idx = in_3.as_numpy()
             for i in range(cur_batch):
                 cur_len = cur_b_lens[i]
-                cur_probs = cur_b_log_probs[i][0:cur_len, :].tolist()  # T X Beam
-                cur_idx = cur_b_log_probs_idx[i][0:cur_len, :].tolist()  # T x Beam
+                cur_probs = cur_b_log_probs[i][
+                    0:cur_len, :].tolist()  # T X Beam
+                cur_idx = cur_b_log_probs_idx[i][
+                    0:cur_len, :].tolist()  # T x Beam
                 batch_log_probs.append(cur_probs)
                 batch_log_probs_idx.append(cur_idx)
                 root_dict[total] = PathTrie()
@@ -213,17 +223,18 @@ class TritonPythonModel:
                 batch_start.append(True)
                 total += 1
 
-        score_hyps = ctc_beam_search_decoder_batch(batch_log_probs,
-                                                   batch_log_probs_idx,
-                                                   batch_root,
-                                                   batch_start,
-                                                   self.beam_size,
-                                                   min(total, self.num_processes),
-                                                   blank_id=self.blank_id,
-                                                   space_id=-2,
-                                                   cutoff_prob=self.cutoff_prob,
-                                                   ext_scorer=self.lm,
-                                                   hotwords_scorer=self.hotwords_scorer)
+        score_hyps = ctc_beam_search_decoder_batch(
+            batch_log_probs,
+            batch_log_probs_idx,
+            batch_root,
+            batch_start,
+            self.beam_size,
+            min(total, self.num_processes),
+            blank_id=self.blank_id,
+            space_id=-2,
+            cutoff_prob=self.cutoff_prob,
+            ext_scorer=self.lm,
+            hotwords_scorer=self.hotwords_scorer)
         all_hyps = []
         all_ctc_score = []
         max_seq_len = 0
@@ -231,7 +242,8 @@ class TritonPythonModel:
             # if candidates less than beam size
             if len(seq_cand) != self.beam_size:
                 seq_cand = list(seq_cand)
-                seq_cand += (self.beam_size - len(seq_cand)) * [(-float("INF"), (0,))]
+                seq_cand += (self.beam_size - len(seq_cand)) * [(-float("INF"),
+                                                                 (0, ))]
 
             for score, hyps in seq_cand:
                 all_hyps.append(list(hyps))
@@ -277,7 +289,8 @@ class TritonPythonModel:
         in_tensor_3 = pb_utils.Tensor("hyps_lens_sos", in_hyps_lens_sos)
         input_tensors = [in_tensor_0, in_tensor_1, in_tensor_2, in_tensor_3]
         if self.bidecoder:
-            in_tensor_4 = pb_utils.Tensor("r_hyps_pad_sos_eos", in_r_hyps_pad_sos_eos)
+            in_tensor_4 = pb_utils.Tensor("r_hyps_pad_sos_eos",
+                                          in_r_hyps_pad_sos_eos)
             input_tensors.append(in_tensor_4)
         in_tensor_5 = pb_utils.Tensor("ctc_score", in_ctc_score)
         input_tensors.append(in_tensor_5)
@@ -289,11 +302,12 @@ class TritonPythonModel:
 
         inference_response = inference_request.exec()
         if inference_response.has_error():
-            raise pb_utils.TritonModelException(inference_response.error().message())
+            raise pb_utils.TritonModelException(
+                inference_response.error().message())
         else:
             # Extract the output tensors from the inference response.
-            best_index = pb_utils.get_output_tensor_by_name(inference_response,
-                                                            'best_index')
+            best_index = pb_utils.get_output_tensor_by_name(
+                inference_response, 'best_index')
             if best_index.is_cpu():
                 best_index = best_index.as_numpy()
             else:
@@ -304,17 +318,20 @@ class TritonPythonModel:
             for cands, cand_lens in zip(in_hyps_pad_sos_eos, in_hyps_lens_sos):
                 best_idx = best_index[idx][0]
                 best_cand_len = cand_lens[best_idx] - 1  # remove sos
-                best_cand = cands[best_idx][1: 1 + best_cand_len].tolist()
+                best_cand = cands[best_idx][1:1 + best_cand_len].tolist()
                 hyps.append(best_cand)
                 idx += 1
 
-            hyps = map_batch(hyps, self.vocabulary,
-                             min(multiprocessing.cpu_count(), len(in_ctc_score)))
+            hyps = map_batch(
+                hyps, self.vocabulary,
+                min(multiprocessing.cpu_count(), len(in_ctc_score)))
             st = 0
             for b in batch_count:
                 sents = np.array(hyps[st:st + b])
-                out0 = pb_utils.Tensor("OUTPUT0", sents.astype(self.out0_dtype))
-                inference_response = pb_utils.InferenceResponse(output_tensors=[out0])
+                out0 = pb_utils.Tensor("OUTPUT0",
+                                       sents.astype(self.out0_dtype))
+                inference_response = pb_utils.InferenceResponse(
+                    output_tensors=[out0])
                 responses.append(inference_response)
                 st += b
         return responses

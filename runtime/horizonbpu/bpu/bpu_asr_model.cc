@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #include "bpu/bpu_asr_model.h"
 
 #include <algorithm>
@@ -30,16 +29,20 @@ void BPUAsrModel::GetInputOutputInfo(
   for (size_t i = 0; i < input.size(); ++i) {
     auto& shapes = input[i]->properties.validShape.dimensionSize;
     std::string layout = (input[i]->properties.tensorLayout ==
-        hbDNNTensorLayout::HB_DNN_LAYOUT_NHWC ? "NHWC" : "NCHW");
-    LOG(INFO) << "\tInput-" << i << ": Shape [" << shapes[0] << ","
-              << shapes[1] << "," << shapes[2] << "," << shapes[3]
-              << "], Layout [" << layout << "]";
+                                  hbDNNTensorLayout::HB_DNN_LAYOUT_NHWC
+                              ? "NHWC"
+                              : "NCHW");
+    LOG(INFO) << "\tInput-" << i << ": Shape [" << shapes[0] << "," << shapes[1]
+              << "," << shapes[2] << "," << shapes[3] << "], Layout [" << layout
+              << "]";
   }
   // Output info
   for (size_t i = 0; i < output.size(); ++i) {
     auto& shapes = output[i]->properties.validShape.dimensionSize;
     std::string layout = (output[i]->properties.tensorLayout ==
-        hbDNNTensorLayout::HB_DNN_LAYOUT_NHWC ? "NHWC" : "NCHW");
+                                  hbDNNTensorLayout::HB_DNN_LAYOUT_NHWC
+                              ? "NHWC"
+                              : "NCHW");
     LOG(INFO) << "\tOutput-" << i << ": Shape [" << shapes[0] << ","
               << shapes[1] << "," << shapes[2] << "," << shapes[3]
               << "], Layout [" << layout << "]";
@@ -86,13 +89,14 @@ void BPUAsrModel::Read(const std::string& model_dir) {
   sos_ = ctc_output_[0]->properties.validShape.dimensionSize[1] - 1;
   eos_ = sos_;
   chunk_size_ = ctc_input_[0]->properties.validShape.dimensionSize[3];
-  num_left_chunks_ = encoder_input_[3]->properties.validShape.dimensionSize[3]
-      / chunk_size_ - 1;
+  num_left_chunks_ =
+      encoder_input_[3]->properties.validShape.dimensionSize[3] / chunk_size_ -
+      1;
   hidden_dim_ = ctc_input_[0]->properties.validShape.dimensionSize[1];
   int frames = (chunk_size_ - 1) * subsampling_rate_ + right_context_ + 1;
-  CHECK_EQ(frames, encoder_input_[0]->properties.validShape.dimensionSize[2]) <<
-      "NOTE(xcsong): Only support 1/8 subsample, since 1/4 subsample" <<
-      " is too slow on edge-devices.";
+  CHECK_EQ(frames, encoder_input_[0]->properties.validShape.dimensionSize[2])
+      << "NOTE(xcsong): Only support 1/8 subsample, since 1/4 subsample"
+      << " is too slow on edge-devices.";
   LOG(INFO) << "Bpu Model Info:";
   LOG(INFO) << "\tchunk_size " << chunk_size_;
   LOG(INFO) << "\tnum_left_chunks " << num_left_chunks_;
@@ -126,9 +130,9 @@ std::shared_ptr<AsrModel> BPUAsrModel::Copy() const {
   auto asr_model = std::make_shared<BPUAsrModel>(*this);
   // Reset the inner states for new decoding
   asr_model->AllocMemory(encoder_model_, &(asr_model->encoder_input_),
-      &(asr_model->encoder_output_));
+                         &(asr_model->encoder_output_));
   asr_model->AllocMemory(ctc_model_, &(asr_model->ctc_input_),
-      &(asr_model->ctc_output_));
+                         &(asr_model->ctc_output_));
   asr_model->Reset();
   return asr_model;
 }
@@ -246,7 +250,7 @@ void BPUAsrModel::PrepareEncoderInput(
            cached_feature_[i].size() * sizeof(float));
     addr_shift += cached_feature_[i].size();
   }
-  for (size_t i = 0; i < chunk_feats.size(); ++i) {      // copy chunk_feats
+  for (size_t i = 0; i < chunk_feats.size(); ++i) {  // copy chunk_feats
     memcpy(feat_ptr + addr_shift, chunk_feats[i].data(),
            chunk_feats[i].size() * sizeof(float));
     addr_shift += chunk_feats[i].size();
@@ -270,7 +274,9 @@ void BPUAsrModel::PrepareEncoderInput(
   int head = encoder_input_[3]->properties.validShape.dimensionSize[1];
   if (valid_len <= total_len) {
     std::vector<float> padding(total_len, 1.0f);
-    for (size_t i = 0; i < total_len - valid_len; ++i) { padding[i] = 0.0f;}
+    for (size_t i = 0; i < total_len - valid_len; ++i) {
+      padding[i] = 0.0f;
+    }
     for (size_t i = 0; i < head * chunk_size_; ++i) {
       float* start_ptr =
           reinterpret_cast<float*>(att_mask->sysMem[0].virAddr) + total_len * i;
@@ -307,9 +313,17 @@ void BPUAsrModel::AttentionRescoring(const std::vector<std::vector<int>>& hyps,
 }
 
 BPUAsrModel::~BPUAsrModel() {
-  for (auto& tensor : encoder_input_) { hbSysFreeMem(tensor->sysMem); }
-  for (auto& tensor : encoder_output_) { hbSysFreeMem(tensor->sysMem); }
-  for (auto& tensor : ctc_input_) { hbSysFreeMem(tensor->sysMem); }
-  for (auto& tensor : ctc_output_) { hbSysFreeMem(tensor->sysMem); }
+  for (auto& tensor : encoder_input_) {
+    hbSysFreeMem(tensor->sysMem);
+  }
+  for (auto& tensor : encoder_output_) {
+    hbSysFreeMem(tensor->sysMem);
+  }
+  for (auto& tensor : ctc_input_) {
+    hbSysFreeMem(tensor->sysMem);
+  }
+  for (auto& tensor : ctc_output_) {
+    hbSysFreeMem(tensor->sysMem);
+  }
 }
 }  // namespace wenet

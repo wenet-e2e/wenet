@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """SqueezeformerEncoderLayer definition."""
 
 import torch
@@ -39,15 +38,15 @@ class SqueezeformerEncoderLayer(nn.Module):
         """
 
     def __init__(
-            self,
-            size: int,
-            self_attn: torch.nn.Module,
-            feed_forward1: Optional[nn.Module] = None,
-            conv_module: Optional[nn.Module] = None,
-            feed_forward2: Optional[nn.Module] = None,
-            normalize_before: bool = False,
-            dropout_rate: float = 0.1,
-            concat_after: bool = False,
+        self,
+        size: int,
+        self_attn: torch.nn.Module,
+        feed_forward1: Optional[nn.Module] = None,
+        conv_module: Optional[nn.Module] = None,
+        feed_forward2: Optional[nn.Module] = None,
+        normalize_before: bool = False,
+        dropout_rate: float = 0.1,
+        concat_after: bool = False,
     ):
         super(SqueezeformerEncoderLayer, self).__init__()
         self.size = size
@@ -68,19 +67,20 @@ class SqueezeformerEncoderLayer(nn.Module):
             self.concat_linear = nn.Identity()
 
     def forward(
-            self,
-            x: torch.Tensor,
-            mask: torch.Tensor,
-            pos_emb: torch.Tensor,
-            mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-            att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-            cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor,
+        pos_emb: torch.Tensor,
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         # self attention module
         residual = x
         if self.normalize_before:
             x = self.layer_norm1(x)
-        x_att, new_att_cache = self.self_attn(x, x, x, mask, pos_emb, att_cache)
+        x_att, new_att_cache = self.self_attn(x, x, x, mask, pos_emb,
+                                              att_cache)
         if self.concat_after:
             x_concat = torch.cat((x, x_att), dim=-1)
             x = residual + self.concat_linear(x_concat)

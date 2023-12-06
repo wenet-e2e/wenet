@@ -29,8 +29,8 @@ class Executor:
     def __init__(self):
         self.step = 0
 
-    def train(self, model, optimizer, scheduler, data_loader, writer,
-              configs, scaler, group_join):
+    def train(self, model, optimizer, scheduler, data_loader, writer, configs,
+              scaler, group_join):
         ''' Train one epoch
         '''
         model.train()
@@ -70,15 +70,16 @@ class Executor:
                     context = nullcontext
 
                 with context():
-                    info_dict = batch_forward(model, batch_dict, scaler, info_dict)
+                    info_dict = batch_forward(model, batch_dict, scaler,
+                                              info_dict)
                     info_dict = batch_backward(model, scaler, info_dict)
 
-                info_dict = update_parameter_and_lr(
-                    model, optimizer, scheduler,
-                    scaler, info_dict
-                )
+                info_dict = update_parameter_and_lr(model, optimizer,
+                                                    scheduler, scaler,
+                                                    info_dict)
                 log_per_step(writer, info_dict)
-                self.step += 1 if (batch_idx + 1) % info_dict["accum_grad"] == 0 else 0
+                self.step += 1 if (batch_idx +
+                                   1) % info_dict["accum_grad"] == 0 else 0
 
     def cv(self, model, data_loader, configs):
         ''' Cross validation on

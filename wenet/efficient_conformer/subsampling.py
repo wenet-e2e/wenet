@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
-
 """Subsampling layer definition."""
 
 from typing import Tuple, Union
@@ -32,14 +30,13 @@ class Conv2dSubsampling2(BaseSubsampling):
         dropout_rate (float): Dropout rate.
 
     """
+
     def __init__(self, idim: int, odim: int, dropout_rate: float,
                  pos_enc_class: torch.nn.Module):
         """Construct an Conv2dSubsampling4 object."""
         super().__init__()
-        self.conv = torch.nn.Sequential(
-            torch.nn.Conv2d(1, odim, 3, 2),
-            torch.nn.ReLU()
-        )
+        self.conv = torch.nn.Sequential(torch.nn.Conv2d(1, odim, 3, 2),
+                                        torch.nn.ReLU())
         self.out = torch.nn.Sequential(
             torch.nn.Linear(odim * ((idim - 1) // 2), odim))
         self.pos_enc = pos_enc_class
@@ -50,10 +47,10 @@ class Conv2dSubsampling2(BaseSubsampling):
         self.right_context = 2
 
     def forward(
-            self,
-            x: torch.Tensor,
-            x_mask: torch.Tensor,
-            offset: Union[int, torch.Tensor] = 0
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Subsample x.
 

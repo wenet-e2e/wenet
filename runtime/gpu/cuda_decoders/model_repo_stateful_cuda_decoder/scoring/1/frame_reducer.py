@@ -25,6 +25,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
     """
     Args:
@@ -50,7 +51,6 @@ def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
     expaned_lengths = seq_range.unsqueeze(0).expand(n, max_len)
 
     return expaned_lengths >= lengths.unsqueeze(-1)
-
 
 
 class FrameReducer(nn.Module):
@@ -99,22 +99,17 @@ class FrameReducer(nn.Module):
         N, T, C = x.size()
 
         padding_mask = make_pad_mask(x_lens, x.size(1))
-        non_blank_mask = (ctc_output[:, :, blank_id] < math.log(self.blank_threshlod)) * (~padding_mask) # noqa
+        non_blank_mask = (ctc_output[:, :, blank_id] < math.log(
+            self.blank_threshlod)) * (~padding_mask)  # noqa
 
         if y_lens is not None:
             # Limit the maximum number of reduced frames
             limit_lens = T - y_lens
             max_limit_len = limit_lens.max().int()
-            fake_limit_indexes = torch.topk(
-                ctc_output[:, :, blank_id], max_limit_len
-            ).indices
-            T = (
-                torch.arange(max_limit_len)
-                .expand_as(
-                    fake_limit_indexes,
-                )
-                .to(device=x.device)
-            )
+            fake_limit_indexes = torch.topk(ctc_output[:, :, blank_id],
+                                            max_limit_len).indices
+            T = (torch.arange(max_limit_len).expand_as(
+                fake_limit_indexes, ).to(device=x.device))
             T = torch.remainder(T, limit_lens.unsqueeze(1))
             limit_indexes = torch.gather(fake_limit_indexes, 1, T)
             limit_mask = torch.full_like(
@@ -127,20 +122,18 @@ class FrameReducer(nn.Module):
 
         out_lens = non_blank_mask.sum(dim=1)
         max_len = out_lens.max()
-        pad_lens_list = (
-            torch.full_like(
-                out_lens,
-                max_len.item(),
-                device=x.device,
-            )
-            - out_lens
-        )
+        pad_lens_list = (torch.full_like(
+            out_lens,
+            max_len.item(),
+            device=x.device,
+        ) - out_lens)
         max_pad_len = pad_lens_list.max()
 
         out = F.pad(x, (0, 0, 0, max_pad_len))
 
         valid_pad_mask = ~make_pad_mask(pad_lens_list)
-        total_valid_mask = torch.concat([non_blank_mask, valid_pad_mask], dim=1)
+        total_valid_mask = torch.concat([non_blank_mask, valid_pad_mask],
+                                        dim=1)
 
         out = out[total_valid_mask].reshape(N, -1, C)
 
@@ -160,8 +153,7 @@ if __name__ == "__main__":
     x_lens = torch.tensor([seq_len] * 15, dtype=torch.int64, device=device)
     y_lens = torch.tensor([150] * 15, dtype=torch.int64, device=device)
     ctc_output = torch.log(
-        torch.randn(15, seq_len, 500, dtype=torch.float32, device=device),
-    )
+        torch.randn(15, seq_len, 500, dtype=torch.float32, device=device), )
 
     avg_time = 0
     for i in range(test_times):

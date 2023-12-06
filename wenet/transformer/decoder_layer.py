@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Decoder self-attention layer definition."""
 from typing import Optional, Tuple
 
@@ -38,6 +37,7 @@ class DecoderLayer(nn.Module):
             True: use layer_norm before each sub-block.
             False: to use layer_norm after each sub-block.
     """
+
     def __init__(
         self,
         size: int,

@@ -26,6 +26,7 @@ from wenet.utils.common import IGNORE_ID, add_whisper_tokens, th_accuracy
 
 
 class Whisper(ASRModel):
+
     def __init__(
         self,
         vocab_size: int,
@@ -39,12 +40,12 @@ class Whisper(ASRModel):
         length_normalized_loss: bool = False,
         special_tokens: dict = None,
     ):
-        super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight, ignore_id,
-                         reverse_weight, lsm_weight, length_normalized_loss)
+        super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight,
+                         ignore_id, reverse_weight, lsm_weight,
+                         length_normalized_loss, special_tokens)
         assert reverse_weight == 0.0
         self.sos = special_tokens["sot"]
         self.eos = special_tokens["eot"]
-        self.special_tokens = special_tokens
 
     # TODO(xcsong): time align
     def set_alignment_heads(self, dump: bytes):
@@ -67,10 +68,13 @@ class Whisper(ASRModel):
     ) -> Tuple[torch.Tensor, float]:
         # TODO(xcsong): add args for no_timestamp, language, etc
         prev_len = ys_pad.size(1)
-        ys_in_pad, ys_out_pad = add_whisper_tokens(
-            self.special_tokens, ys_pad, self.ignore_id, task="transcribe",
-            no_timestamp=True, language="zh", use_prev=False
-        )
+        ys_in_pad, ys_out_pad = add_whisper_tokens(self.special_tokens,
+                                                   ys_pad,
+                                                   self.ignore_id,
+                                                   task="transcribe",
+                                                   no_timestamp=True,
+                                                   language="zh",
+                                                   use_prev=False)
         cur_len = ys_in_pad.size(1)
         ys_in_lens = ys_pad_lens + cur_len - prev_len
 

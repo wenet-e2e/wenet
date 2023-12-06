@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 #ifndef RUNTIME_HORIZONBPU_BPU_BPU_ASR_MODEL_H_
 #define RUNTIME_HORIZONBPU_BPU_BPU_ASR_MODEL_H_
 
@@ -20,19 +19,19 @@
 #include <string>
 #include <vector>
 
+#include "easy_dnn/data_structure.h"
 #include "easy_dnn/model.h"
 #include "easy_dnn/model_manager.h"
 #include "easy_dnn/task_manager.h"
-#include "easy_dnn/data_structure.h"
 
 #include "decoder/asr_model.h"
 #include "utils/log.h"
 #include "utils/utils.h"
 
-using hobot::easy_dnn::Model;
 using hobot::easy_dnn::DNNTensor;
-using hobot::easy_dnn::TaskManager;
+using hobot::easy_dnn::Model;
 using hobot::easy_dnn::ModelManager;
+using hobot::easy_dnn::TaskManager;
 
 namespace wenet {
 
@@ -47,10 +46,9 @@ class BPUAsrModel : public AsrModel {
                           float reverse_weight,
                           std::vector<float>* rescoring_score) override;
   std::shared_ptr<AsrModel> Copy() const override;
-  static void AllocMemory(
-      const std::shared_ptr<Model>& model,
-      std::vector<std::shared_ptr<DNNTensor>>* input,
-      std::vector<std::shared_ptr<DNNTensor>>* output);
+  static void AllocMemory(const std::shared_ptr<Model>& model,
+                          std::vector<std::shared_ptr<DNNTensor>>* input,
+                          std::vector<std::shared_ptr<DNNTensor>>* output);
   void GetInputOutputInfo(
       const std::vector<std::shared_ptr<DNNTensor>>& input_tensors,
       const std::vector<std::shared_ptr<DNNTensor>>& output_tensors);
@@ -76,7 +74,7 @@ class BPUAsrModel : public AsrModel {
   // input/output tensors
   std::vector<std::shared_ptr<DNNTensor>> encoder_input_, encoder_output_;
   std::vector<std::shared_ptr<DNNTensor>> ctc_input_, ctc_output_;
-  std::vector<std::vector<float> > encoder_outs_;
+  std::vector<std::vector<float>> encoder_outs_;
 };
 
 }  // namespace wenet

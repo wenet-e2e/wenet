@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Positionwise feed forward layer definition."""
 
 import torch
@@ -38,8 +37,7 @@ class PositionwiseFeedForward(torch.nn.Module):
                  dropout_rate: float,
                  activation: torch.nn.Module = torch.nn.ReLU(),
                  adaptive_scale: bool = False,
-                 init_weights: bool = False
-                 ):
+                 init_weights: bool = False):
         """Construct a PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
         self.idim = idim
@@ -51,16 +49,16 @@ class PositionwiseFeedForward(torch.nn.Module):
         self.ada_scale = None
         self.ada_bias = None
         self.adaptive_scale = adaptive_scale
-        self.ada_scale = torch.nn.Parameter(
-            torch.ones([1, 1, idim]), requires_grad=adaptive_scale)
-        self.ada_bias = torch.nn.Parameter(
-            torch.zeros([1, 1, idim]), requires_grad=adaptive_scale)
+        self.ada_scale = torch.nn.Parameter(torch.ones([1, 1, idim]),
+                                            requires_grad=adaptive_scale)
+        self.ada_bias = torch.nn.Parameter(torch.zeros([1, 1, idim]),
+                                           requires_grad=adaptive_scale)
         if init_weights:
             self.init_weights()
 
     def init_weights(self):
-        ffn1_max = self.idim ** -0.5
-        ffn2_max = self.hidden_units ** -0.5
+        ffn1_max = self.idim**-0.5
+        ffn2_max = self.hidden_units**-0.5
         torch.nn.init.uniform_(self.w_1.weight.data, -ffn1_max, ffn1_max)
         torch.nn.init.uniform_(self.w_1.bias.data, -ffn1_max, ffn1_max)
         torch.nn.init.uniform_(self.w_2.weight.data, -ffn2_max, ffn2_max)

@@ -128,8 +128,8 @@ struct ForwardLink {
   BaseFloat graph_cost;  // graph cost of traversing arc (contains LM, etc.)
   BaseFloat acoustic_cost;  // acoustic cost (pre-scaled) of traversing arc
   float context_score;
-  ForwardLink* next;        // next in singly-linked list of forward arcs (arcs
-                            // in the state-level lattice) from a token.
+  ForwardLink* next;  // next in singly-linked list of forward arcs (arcs
+                      // in the state-level lattice) from a token.
   inline ForwardLink(Token* next_tok, Label ilabel, Label olabel,
                      BaseFloat graph_cost, BaseFloat acoustic_cost,
                      ForwardLink* next)

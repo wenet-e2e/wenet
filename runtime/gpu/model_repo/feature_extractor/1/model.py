@@ -7,7 +7,9 @@ import _kaldifeat
 from typing import List
 import json
 
+
 class Fbank(torch.nn.Module):
+
     def __init__(self, opts):
         super(Fbank, self).__init__()
         self.fbank = kaldifeat.Fbank(opts)
@@ -117,7 +119,8 @@ class TritonPythonModel:
             batch_len.append(cur_len)
             for wav, wav_len in zip(cur_b_wav, cur_b_wav_lens):
                 wav_len = wav_len[0]
-                wav = torch.tensor(wav[0:wav_len], dtype=torch.float32,
+                wav = torch.tensor(wav[0:wav_len],
+                                   dtype=torch.float32,
                                    device=self.device)
                 total_waves.append(wav)
 
@@ -126,12 +129,15 @@ class TritonPythonModel:
         for b, l in zip(batch_count, batch_len):
             expect_feat_len = _kaldifeat.num_frames(l, self.opts.frame_opts)
             speech = torch.zeros((b, expect_feat_len, self.feature_size),
-                                 dtype=self.output0_dtype, device=self.device)
-            speech_lengths = torch.zeros((b, 1), dtype=torch.int32, device=self.device)
+                                 dtype=self.output0_dtype,
+                                 device=self.device)
+            speech_lengths = torch.zeros((b, 1),
+                                         dtype=torch.int32,
+                                         device=self.device)
             for i in range(b):
                 f = features[idx]
                 f_l = f.shape[0]
-                speech[i, 0: f_l, :] = f.to(self.output0_dtype)
+                speech[i, 0:f_l, :] = f.to(self.output0_dtype)
                 speech_lengths[i][0] = f_l
                 idx += 1
             # put speech feature on device will cause empty output
@@ -141,6 +147,7 @@ class TritonPythonModel:
             out0 = pb_utils.Tensor.from_dlpack("speech", to_dlpack(speech))
             out1 = pb_utils.Tensor.from_dlpack("speech_lengths",
                                                to_dlpack(speech_lengths))
-            inference_response = pb_utils.InferenceResponse(output_tensors=[out0, out1])
+            inference_response = pb_utils.InferenceResponse(
+                output_tensors=[out0, out1])
             responses.append(inference_response)
         return responses

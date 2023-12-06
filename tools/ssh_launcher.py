@@ -9,8 +9,6 @@ import random
 import socket
 import subprocess
 from threading import Thread
-
-
 """
 Requirements:
 
@@ -125,11 +123,8 @@ def submit(nworker, hostfile, port, sshport, cmd):
         try:
             subprocess.check_call(prog, shell=True)
         except subprocess.CalledProcessError as e:
-            logging.info(
-                "subprocess({}) failed({})! {}".format(
-                    e.cmd, e.returncode, e.output
-                )
-            )
+            logging.info("subprocess({}) failed({})! {}".format(
+                e.cmd, e.returncode, e.output))
             os._exit(-1)
 
     pass_envs = os.environ.copy()
@@ -145,12 +140,8 @@ def submit(nworker, hostfile, port, sshport, cmd):
         prog = (
             "ssh -o StrictHostKeyChecking=no "
             # + ssh_port_arg   # no port available in aidi
-            + node
-            + " '"
-            + prog
-            + "'"
-        )
-        thread = Thread(target=run, args=(prog,))
+            + node + " '" + prog + "'")
+        thread = Thread(target=run, args=(prog, ))
         thread.setDaemon(True)
         thread.start()
         thread_list.append(thread)
@@ -170,9 +161,10 @@ if __name__ == "__main__":
         required=True,
         help="number of worker process to be launched",
     )
-    parser.add_argument(
-        "-H", "--hostfile", type=str, help="the hostfile of workers"
-    )
+    parser.add_argument("-H",
+                        "--hostfile",
+                        type=str,
+                        help="the hostfile of workers")
     parser.add_argument(
         "-p",
         "--port",
@@ -187,9 +179,9 @@ if __name__ == "__main__":
         default=443,
         help="the port used for ssh connect, used when distribute-training",
     )
-    parser.add_argument(
-        "command", nargs="+", help="command for plugin program"
-    )
+    parser.add_argument("command",
+                        nargs="+",
+                        help="command for plugin program")
     args = parser.parse_args()
     cmd = " ".join(args.command)
     submit(args.nworker, args.hostfile, args.port, args.sshport, cmd)
