@@ -159,7 +159,7 @@ def get_args():
         type=str,
         default='',
         help='''Context bias mode, selectable from the following
-                                option: decoding-graph、deep-biasing''')
+                                option: decoding-graph, deep-biasing''')
     parser.add_argument('--context_list_path',
                         type=str,
                         default='',
@@ -216,6 +216,7 @@ def main():
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
+    args.jit = False
     model, configs = init_model(args, configs)
 
     use_cuda = args.gpu >= 0 and torch.cuda.is_available()
@@ -227,6 +228,16 @@ def main():
     if 'decoding-graph' in args.context_bias_mode:
         context_graph = ContextGraph(args.context_list_path, tokenizer.symbol_table,
                                      args.bpe_model, args.context_graph_score)
+
+    if '<blank>' in tokenizer.symbol_table:
+        if 'ctc_blank_id' in configs['ctc_conf']:
+            assert configs['ctc_conf']['ctc_blank_id'] == \
+                tokenizer.symbol_table['<blank>']
+        else:
+            configs['ctc_conf']['ctc_blank_id'] = tokenizer.symbol_table['<blank>']
+    else:
+        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
+    blank_id = configs['ctc_conf']['ctc_blank_id']
 
     # TODO(Dinghao Zhou): Support RNN-T related decoding
     # TODO(Lv Xiang): Support k2 related decoding
@@ -255,7 +266,8 @@ def main():
                 ctc_weight=args.ctc_weight,
                 simulate_streaming=args.simulate_streaming,
                 reverse_weight=args.reverse_weight,
-                context_graph=context_graph)
+                context_graph=context_graph,
+                blank_id=blank_id)
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     tokens = hyps[i].tokens

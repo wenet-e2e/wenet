@@ -19,11 +19,11 @@ import numpy as np
 import torch
 
 
-def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
+def remove_duplicates_and_blank(hyp: List[int], blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
-        if hyp[cur] != 0:
+        if hyp[cur] != blank_id:
             new_hyp.append(hyp[cur])
         prev = cur
         while cur < len(hyp) and hyp[cur] == hyp[prev]:
@@ -31,24 +31,24 @@ def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
     return new_hyp
 
 
-def replace_duplicates_with_blank(hyp: List[int]) -> List[int]:
+def replace_duplicates_with_blank(hyp: List[int], blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
         new_hyp.append(hyp[cur])
         prev = cur
         cur += 1
-        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != 0:
-            new_hyp.append(0)
+        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != blank_id:
+            new_hyp.append(blank_id)
             cur += 1
     return new_hyp
 
 
-def gen_ctc_peak_time(hyp: List[int]) -> List[int]:
+def gen_ctc_peak_time(hyp: List[int], blank_id: int = 0) -> List[int]:
     times = []
     cur = 0
     while cur < len(hyp):
-        if hyp[cur] != 0:
+        if hyp[cur] != blank_id:
             times.append(cur)
         prev = cur
         while cur < len(hyp) and hyp[cur] == hyp[prev]:
