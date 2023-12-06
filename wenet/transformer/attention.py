@@ -283,9 +283,11 @@ class FlashMultiHeadedAttention(MultiHeadedAttention):
         n_batch, len_q = query.size(0), query.size(1)
         _, len_k = key.size(0), key.size(1)
         from flash_attn import flash_attn_varlen_func  # lazy import
+        # 1. forward_qkv
         q = self.linear_q(query).view(-1, self.h, self.d_k)  # (B * len_q, head, d_k)
         k = self.linear_k(key).view(-1, self.h, self.d_k)    # (B * len_k, head, d_k)
         v = self.linear_v(value).view(-1, self.h, self.d_k)  # (B * len_v, head, d_k)
+        # 2. calculate_score + forward_attention
         indices_k, cumulative_seqlens_k, max_seqlen_k = self.unpad(mask[:, -1, :])
         if mask.size(1) == 1 and len_q != len_k:  # cross-attention
             query_mask = torch.ones(size=(n_batch, len_q), dtype=torch.bool,
