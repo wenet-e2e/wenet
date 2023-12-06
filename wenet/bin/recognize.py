@@ -28,6 +28,7 @@ from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.context_graph import ContextGraph
+from wenet.utils.ctc_utils import get_blank_id
 
 
 def get_args():
@@ -229,15 +230,8 @@ def main():
         context_graph = ContextGraph(args.context_list_path, tokenizer.symbol_table,
                                      args.bpe_model, args.context_graph_score)
 
-    if '<blank>' in tokenizer.symbol_table:
-        if 'ctc_blank_id' in configs['ctc_conf']:
-            assert configs['ctc_conf']['ctc_blank_id'] == \
-                tokenizer.symbol_table['<blank>']
-        else:
-            configs['ctc_conf']['ctc_blank_id'] = tokenizer.symbol_table['<blank>']
-    else:
-        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
-    blank_id = configs['ctc_conf']['ctc_blank_id']
+    _, blank_id = get_blank_id(configs, tokenizer.symbol_table)
+    logging.info("blank_id is {}".format(blank_id))
 
     # TODO(Dinghao Zhou): Support RNN-T related decoding
     # TODO(Lv Xiang): Support k2 related decoding

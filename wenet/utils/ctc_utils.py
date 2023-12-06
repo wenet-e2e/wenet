@@ -156,3 +156,18 @@ def force_align(ctc_probs: torch.Tensor, y: torch.Tensor, blank_id=0) -> list:
         output_alignment.append(y_insert_blank[state_seq[t, 0]])
 
     return output_alignment
+
+
+def get_blank_id(configs, symbol_table):
+    if 'ctc_conf' not in configs:
+        configs['ctc_conf'] = {}
+
+    if '<blank>' in symbol_table:
+        if 'ctc_blank_id' in configs['ctc_conf']:
+            assert configs['ctc_conf']['ctc_blank_id'] == symbol_table['<blank>']
+        else:
+            configs['ctc_conf']['ctc_blank_id'] = symbol_table['<blank>']
+    else:
+        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
+
+    return configs, configs['ctc_conf']['ctc_blank_id']
