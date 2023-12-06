@@ -40,6 +40,7 @@ from deepspeed.utils.zero_to_fp32 import (
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
+from wenet.utils.ctc_utils import get_blank_id
 
 
 def add_model_args(parser):
@@ -211,16 +212,7 @@ def check_modify_and_save_config(args, configs, symbol_table):
     else:
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
 
-    if 'ctc_conf' not in configs:
-        configs['ctc_conf'] = {}
-
-    if '<blank>' in symbol_table:
-        if 'ctc_blank_id' in configs['ctc_conf']:
-            assert configs['ctc_conf']['ctc_blank_id'] == symbol_table['<blank>']
-        else:
-            configs['ctc_conf']['ctc_blank_id'] = symbol_table['<blank>']
-    else:
-        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
+    configs, _ = get_blank_id(configs, symbol_table)
 
     configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']

@@ -102,24 +102,26 @@ class PrefixScore:
 
 
 def ctc_greedy_search(ctc_probs: torch.Tensor,
-                      ctc_lens: torch.Tensor) -> List[DecodeResult]:
+                      ctc_lens: torch.Tensor,
+                      blank_id: int = 0) -> List[DecodeResult]:
     batch_size = ctc_probs.shape[0]
     maxlen = ctc_probs.size(1)
     topk_prob, topk_index = ctc_probs.topk(1, dim=2)  # (B, maxlen, 1)
     topk_index = topk_index.view(batch_size, maxlen)  # (B, maxlen)
     mask = make_pad_mask(ctc_lens, maxlen)  # (B, maxlen)
-    topk_index = topk_index.masked_fill_(mask, 0)  # (B, maxlen)
+    topk_index = topk_index.masked_fill_(mask, blank_id)  # (B, maxlen)
     hyps = [hyp.tolist() for hyp in topk_index]
     scores = topk_prob.max(1)
     results = []
     for hyp in hyps:
-        r = DecodeResult(remove_duplicates_and_blank(hyp))
+        r = DecodeResult(remove_duplicates_and_blank(hyp, blank_id))
         results.append(r)
     return results
 
 
 def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                            beam_size: int, context_graph: ContextGraph = None,
+                           blank_id: int = 0,
                            ) -> List[DecodeResult]:
     """
         Returns:
@@ -151,7 +153,7 @@ def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
                 prob = logp[u].item()
                 for prefix, prefix_score in cur_hyps:
                     last = prefix[-1] if len(prefix) > 0 else None
-                    if u == 0:  # blank
+                    if u == blank_id:  # blank
                         next_score = next_hyps[prefix]
                         next_score.s = log_add(next_score.s,
                                                prefix_score.score() + prob)

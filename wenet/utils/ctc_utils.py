@@ -19,11 +19,11 @@ import numpy as np
 import torch
 
 
-def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
+def remove_duplicates_and_blank(hyp: List[int], blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
-        if hyp[cur] != 0:
+        if hyp[cur] != blank_id:
             new_hyp.append(hyp[cur])
         prev = cur
         while cur < len(hyp) and hyp[cur] == hyp[prev]:
@@ -31,24 +31,24 @@ def remove_duplicates_and_blank(hyp: List[int]) -> List[int]:
     return new_hyp
 
 
-def replace_duplicates_with_blank(hyp: List[int]) -> List[int]:
+def replace_duplicates_with_blank(hyp: List[int], blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
         new_hyp.append(hyp[cur])
         prev = cur
         cur += 1
-        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != 0:
-            new_hyp.append(0)
+        while cur < len(hyp) and hyp[cur] == hyp[prev] and hyp[cur] != blank_id:
+            new_hyp.append(blank_id)
             cur += 1
     return new_hyp
 
 
-def gen_ctc_peak_time(hyp: List[int]) -> List[int]:
+def gen_ctc_peak_time(hyp: List[int], blank_id: int = 0) -> List[int]:
     times = []
     cur = 0
     while cur < len(hyp):
-        if hyp[cur] != 0:
+        if hyp[cur] != blank_id:
             times.append(cur)
         prev = cur
         while cur < len(hyp) and hyp[cur] == hyp[prev]:
@@ -156,3 +156,18 @@ def force_align(ctc_probs: torch.Tensor, y: torch.Tensor, blank_id=0) -> list:
         output_alignment.append(y_insert_blank[state_seq[t, 0]])
 
     return output_alignment
+
+
+def get_blank_id(configs, symbol_table):
+    if 'ctc_conf' not in configs:
+        configs['ctc_conf'] = {}
+
+    if '<blank>' in symbol_table:
+        if 'ctc_blank_id' in configs['ctc_conf']:
+            assert configs['ctc_conf']['ctc_blank_id'] == symbol_table['<blank>']
+        else:
+            configs['ctc_conf']['ctc_blank_id'] = symbol_table['<blank>']
+    else:
+        assert 'ctc_blank_id' in configs['ctc_conf'], "PLZ set ctc_blank_id in yaml"
+
+    return configs, configs['ctc_conf']['ctc_blank_id']
