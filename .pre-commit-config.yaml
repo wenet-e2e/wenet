@@ -11,8 +11,11 @@ repos:
     rev: 'v0.32.0'
     hooks:
     - id: yapf
-  - repo: https://gitlab.com/daverona/pre-commit/cpp
-    rev: '0.8.0'
+  - repo: https://github.com/cpplint/cpplint
+    rev: '1.6.1'
     hooks:
     - id: cpplint
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: 'v17.0.6'
+    hooks:
     - id: clang-format
