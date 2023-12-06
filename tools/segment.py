@@ -32,4 +32,5 @@ if __name__ == '__main__':
             item = l.strip().split()
             if item[1] in wav_dic:
                 item[1] = wav_dic[item[1]]
-                f.write("{} {},{},{}\n".format(item[0], item[1], item[2], item[3]))
+                f.write("{} {},{},{}\n".format(item[0], item[1], item[2],
+                                               item[3]))

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """Encoder self-attention layer definition."""
 
 from typing import Optional, Tuple
@@ -37,6 +36,7 @@ class TransformerEncoderLayer(nn.Module):
             True: use layer_norm before each sub-block.
             False: to use layer_norm after each sub-block.
     """
+
     def __init__(
         self,
         size: int,
@@ -90,8 +90,7 @@ class TransformerEncoderLayer(nn.Module):
         residual = x
         if self.normalize_before:
             x = self.norm1(x)
-        x_att, new_att_cache = self.self_attn(
-            x, x, x, mask, cache=att_cache)
+        x_att, new_att_cache = self.self_attn(x, x, x, mask, cache=att_cache)
         x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm1(x)
@@ -126,6 +125,7 @@ class ConformerEncoderLayer(nn.Module):
             True: use layer_norm before each sub-block.
             False: use layer_norm after each sub-block.
     """
+
     def __init__(
         self,
         size: int,
@@ -150,14 +150,12 @@ class ConformerEncoderLayer(nn.Module):
         else:
             self.ff_scale = 1.0
         if self.conv_module is not None:
-            self.norm_conv = nn.LayerNorm(size,
-                                          eps=1e-5)  # for the CNN module
+            self.norm_conv = nn.LayerNorm(size, eps=1e-5)  # for the CNN module
             self.norm_final = nn.LayerNorm(
                 size, eps=1e-5)  # for the final output of the block
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
-
 
     def forward(
         self,
@@ -204,8 +202,8 @@ class ConformerEncoderLayer(nn.Module):
         residual = x
         if self.normalize_before:
             x = self.norm_mha(x)
-        x_att, new_att_cache = self.self_attn(
-            x, x, x, mask, pos_emb, att_cache)
+        x_att, new_att_cache = self.self_attn(x, x, x, mask, pos_emb,
+                                              att_cache)
         x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm_mha(x)

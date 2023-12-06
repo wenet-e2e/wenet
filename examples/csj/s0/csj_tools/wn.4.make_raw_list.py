@@ -58,7 +58,11 @@ if __name__ == '__main__':
                 if key in segments_table:
                     wav_key, start, end = segments_table[key]
                     wav = wav_table[wav_key]
-                    line = dict(key=key, wav=wav, txt=txt, start=start, end=end)
+                    line = dict(key=key,
+                                wav=wav,
+                                txt=txt,
+                                start=start,
+                                end=end)
                 else:
                     line = None
             if line:

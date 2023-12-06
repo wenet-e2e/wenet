@@ -14,14 +14,18 @@ python compute_hotwords_f1.py \
     --hotword="data/hotwords.yaml"
 """
 
+
 def _sorted_iteritems(d):
     return sorted(d.items())
+
 
 def _iteritems(d):
     return iter(d.items())
 
+
 def _iterkeys(d):
     return iter(d.keys())
+
 
 _basestring = str
 _SENTINEL = object()
@@ -163,6 +167,7 @@ class _Node(object):
 class CharTrie(collectionsAbc.MutableMapping):
     """A trie implementation with dict interface plus some extensions.
     """
+
     def __init__(self, *args, **kwargs):
         self._root = _Node()
         self._sorted = False
@@ -384,8 +389,8 @@ class CharTrie(collectionsAbc.MutableMapping):
             step = next(_iterkeys(node.children))
             node = node.children[step]
             trace.append((step, node))
-        return (self._key_from_path((step for step, _ in trace[1:])),
-                self._pop_from_node(node, trace))
+        return (self._key_from_path(
+            (step for step, _ in trace[1:])), self._pop_from_node(node, trace))
 
     def __delitem__(self, key_or_slice):
         """Deletes value associated with given key or raises KeyError.
@@ -531,8 +536,9 @@ def cal_f1(ner_dict_pred, ner_dict_label):
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--label", default="data/aishell1_text_hotwords")
-    parser.add_argument("--preds",
-                        default="data/with_hotwords_ali.log;data/without_hotwords_ali.log")
+    parser.add_argument(
+        "--preds",
+        default="data/with_hotwords_ali.log;data/without_hotwords_ali.log")
     parser.add_argument("--hotword", default="data/hotwords.yaml")
     return parser.parse_args()
 

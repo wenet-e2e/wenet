@@ -22,7 +22,8 @@ import logging
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import (
-    WENET_EMB_CLASSES, WENET_ATTENTION_CLASSES,
+    WENET_EMB_CLASSES,
+    WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
 )
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
@@ -75,9 +76,10 @@ class TransformerDecoder(torch.nn.Module):
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         self.embed = torch.nn.Sequential(
-            torch.nn.Identity() if input_layer == "no_pos" else torch.nn.Embedding(
-                vocab_size, attention_dim),
-            WENET_EMB_CLASSES[input_layer](attention_dim, positional_dropout_rate),
+            torch.nn.Identity() if input_layer == "no_pos" else
+            torch.nn.Embedding(vocab_size, attention_dim),
+            WENET_EMB_CLASSES[input_layer](attention_dim,
+                                           positional_dropout_rate),
         )
 
         self.normalize_before = normalize_before
@@ -93,12 +95,10 @@ class TransformerDecoder(torch.nn.Module):
                 attention_dim,
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim,
-                    self_attention_dropout_rate, key_bias
-                ),
+                    self_attention_dropout_rate, key_bias),
                 WENET_ATTENTION_CLASSES["selfattn"](
-                    attention_heads, attention_dim,
-                    src_attention_dropout_rate, key_bias
-                ) if src_attention else None,
+                    attention_heads, attention_dim, src_attention_dropout_rate,
+                    key_bias) if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
                                         dropout_rate, activation),
                 dropout_rate,
@@ -150,7 +150,8 @@ class TransformerDecoder(torch.nn.Module):
         tgt_mask = tgt_mask & m
         x, _ = self.embed(tgt)
         if self.gradient_checkpointing and self.training:
-            x = self.forward_layers_checkpointed(x, tgt_mask, memory, memory_mask)
+            x = self.forward_layers_checkpointed(x, tgt_mask, memory,
+                                                 memory_mask)
         else:
             x = self.forward_layers(x, tgt_mask, memory, memory_mask)
         if self.normalize_before:
@@ -160,20 +161,19 @@ class TransformerDecoder(torch.nn.Module):
         olens = tgt_mask.sum(1)
         return x, torch.tensor(0.0), olens
 
-    def forward_layers(
-        self, x: torch.Tensor, tgt_mask: torch.Tensor,
-        memory: torch.Tensor, memory_mask: torch.Tensor
-    ) -> torch.Tensor:
+    def forward_layers(self, x: torch.Tensor, tgt_mask: torch.Tensor,
+                       memory: torch.Tensor,
+                       memory_mask: torch.Tensor) -> torch.Tensor:
         for layer in self.decoders:
             x, tgt_mask, memory, memory_mask = layer(x, tgt_mask, memory,
                                                      memory_mask)
         return x
 
     @torch.jit.ignore(drop=True)
-    def forward_layers_checkpointed(
-        self, x: torch.Tensor, tgt_mask: torch.Tensor,
-        memory: torch.Tensor, memory_mask: torch.Tensor
-    ) -> torch.Tensor:
+    def forward_layers_checkpointed(self, x: torch.Tensor,
+                                    tgt_mask: torch.Tensor,
+                                    memory: torch.Tensor,
+                                    memory_mask: torch.Tensor) -> torch.Tensor:
         for layer in self.decoders:
             x, tgt_mask, memory, memory_mask = ckpt.checkpoint(
                 layer.__call__, x, tgt_mask, memory, memory_mask)
@@ -229,7 +229,8 @@ class TransformerDecoder(torch.nn.Module):
             return
         if jit_mode:
             logging.info("clone emb.weight to output.weight")
-            self.output_layer.weight = torch.nn.Parameter(self.embed[0].weight.clone())
+            self.output_layer.weight = torch.nn.Parameter(
+                self.embed[0].weight.clone())
         else:
             logging.info("tie emb.weight with output.weight")
             self.output_layer.weight = self.embed[0].weight
@@ -239,7 +240,8 @@ class TransformerDecoder(torch.nn.Module):
                 self.output_layer.bias.data,
                 (
                     0,
-                    self.output_layer.weight.shape[0] - self.output_layer.bias.shape[0],
+                    self.output_layer.weight.shape[0] -
+                    self.output_layer.bias.shape[0],
                 ),
                 "constant",
                 0,
@@ -287,18 +289,36 @@ class BiTransformerDecoder(torch.nn.Module):
 
         super().__init__()
         self.left_decoder = TransformerDecoder(
-            vocab_size, encoder_output_size, attention_heads, linear_units,
-            num_blocks, dropout_rate, positional_dropout_rate,
-            self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before,
-            key_bias=key_bias, gradient_checkpointing=gradient_checkpointing)
+            vocab_size,
+            encoder_output_size,
+            attention_heads,
+            linear_units,
+            num_blocks,
+            dropout_rate,
+            positional_dropout_rate,
+            self_attention_dropout_rate,
+            src_attention_dropout_rate,
+            input_layer,
+            use_output_layer,
+            normalize_before,
+            key_bias=key_bias,
+            gradient_checkpointing=gradient_checkpointing)
 
         self.right_decoder = TransformerDecoder(
-            vocab_size, encoder_output_size, attention_heads, linear_units,
-            r_num_blocks, dropout_rate, positional_dropout_rate,
-            self_attention_dropout_rate, src_attention_dropout_rate,
-            input_layer, use_output_layer, normalize_before,
-            key_bias=key_bias, gradient_checkpointing=gradient_checkpointing)
+            vocab_size,
+            encoder_output_size,
+            attention_heads,
+            linear_units,
+            r_num_blocks,
+            dropout_rate,
+            positional_dropout_rate,
+            self_attention_dropout_rate,
+            src_attention_dropout_rate,
+            input_layer,
+            use_output_layer,
+            normalize_before,
+            key_bias=key_bias,
+            gradient_checkpointing=gradient_checkpointing)
 
     def forward(
         self,
@@ -331,8 +351,8 @@ class BiTransformerDecoder(torch.nn.Module):
                                           ys_in_lens)
         r_x = torch.tensor(0.0)
         if reverse_weight > 0.0:
-            r_x, _, olens = self.right_decoder(memory, memory_mask, r_ys_in_pad,
-                                               ys_in_lens)
+            r_x, _, olens = self.right_decoder(memory, memory_mask,
+                                               r_ys_in_pad, ys_in_lens)
         return l_x, r_x, olens
 
     def forward_one_step(

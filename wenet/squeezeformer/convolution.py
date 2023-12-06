@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """ConvolutionModule definition."""
 
 from typing import Tuple
@@ -24,6 +23,7 @@ from torch import nn
 
 class ConvolutionModule(nn.Module):
     """ConvolutionModule in Conformer model."""
+
     def __init__(self,
                  channels: int,
                  kernel_size: int = 15,
@@ -32,8 +32,7 @@ class ConvolutionModule(nn.Module):
                  causal: bool = False,
                  bias: bool = True,
                  adaptive_scale: bool = False,
-                 init_weights: bool = False
-                 ):
+                 init_weights: bool = False):
         """Construct an ConvolutionModule object.
         Args:
             channels (int): The number of channels of conv layers.
@@ -45,10 +44,10 @@ class ConvolutionModule(nn.Module):
         self.channels = channels
         self.kernel_size = kernel_size
         self.adaptive_scale = adaptive_scale
-        self.ada_scale = torch.nn.Parameter(
-            torch.ones([1, 1, channels]), requires_grad=adaptive_scale)
-        self.ada_bias = torch.nn.Parameter(
-            torch.zeros([1, 1, channels]), requires_grad=adaptive_scale)
+        self.ada_scale = torch.nn.Parameter(torch.ones([1, 1, channels]),
+                                            requires_grad=adaptive_scale)
+        self.ada_bias = torch.nn.Parameter(torch.zeros([1, 1, channels]),
+                                           requires_grad=adaptive_scale)
 
         self.pointwise_conv1 = nn.Conv1d(
             channels,
@@ -101,17 +100,23 @@ class ConvolutionModule(nn.Module):
             self.init_weights()
 
     def init_weights(self):
-        pw_max = self.channels ** -0.5
-        dw_max = self.kernel_size ** -0.5
-        torch.nn.init.uniform_(self.pointwise_conv1.weight.data, -pw_max, pw_max)
+        pw_max = self.channels**-0.5
+        dw_max = self.kernel_size**-0.5
+        torch.nn.init.uniform_(self.pointwise_conv1.weight.data, -pw_max,
+                               pw_max)
         if self.bias:
-            torch.nn.init.uniform_(self.pointwise_conv1.bias.data, -pw_max, pw_max)
-        torch.nn.init.uniform_(self.depthwise_conv.weight.data, -dw_max, dw_max)
+            torch.nn.init.uniform_(self.pointwise_conv1.bias.data, -pw_max,
+                                   pw_max)
+        torch.nn.init.uniform_(self.depthwise_conv.weight.data, -dw_max,
+                               dw_max)
         if self.bias:
-            torch.nn.init.uniform_(self.depthwise_conv.bias.data, -dw_max, dw_max)
-        torch.nn.init.uniform_(self.pointwise_conv2.weight.data, -pw_max, pw_max)
+            torch.nn.init.uniform_(self.depthwise_conv.bias.data, -dw_max,
+                                   dw_max)
+        torch.nn.init.uniform_(self.pointwise_conv2.weight.data, -pw_max,
+                               pw_max)
         if self.bias:
-            torch.nn.init.uniform_(self.pointwise_conv2.bias.data, -pw_max, pw_max)
+            torch.nn.init.uniform_(self.pointwise_conv2.bias.data, -pw_max,
+                                   pw_max)
 
     def forward(
         self,

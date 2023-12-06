@@ -14,7 +14,10 @@ __author__ = "Minhua Wu"
 parser = argparse.ArgumentParser(description="format acronyms to a._b._c.")
 parser.add_argument("-i", "--input", help="Input transcripts", required=True)
 parser.add_argument("-o", "--output", help="Output transcripts", required=True)
-parser.add_argument("-M", "--Map", help="Input acronyms mapping", required=True)
+parser.add_argument("-M",
+                    "--Map",
+                    help="Input acronyms mapping",
+                    required=True)
 args = parser.parse_args()
 
 fin_map = open(args.Map, "r")
@@ -27,7 +30,6 @@ for pair in fin_map:
 fin_map.close()
 del dict_acronym_noi["I"]
 del dict_acronym_noi["i"]
-
 
 fin_trans = open(args.input, "r")
 fout_trans = open(args.output, "w")

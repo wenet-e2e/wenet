@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 
+
 def _sampler(pdf: torch.Tensor, num_samples: int,
              device=torch.device('cpu')) -> torch.Tensor:
     size = pdf.size()

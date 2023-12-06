@@ -16,8 +16,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """
 
 This script generates the following files in the directory sys.argv[3]:
@@ -139,9 +137,8 @@ def contain_oov(token_sym_table: Dict[str, int], tokens: List[str]) -> bool:
     return False
 
 
-def generate_lexicon(
-    token_sym_table: Dict[str, int], words: List[str]
-) -> Lexicon:
+def generate_lexicon(token_sym_table: Dict[str, int],
+                     words: List[str]) -> Lexicon:
     """Generate a lexicon from a word list and token_sym_table.
 
     Args:
@@ -205,8 +202,10 @@ def generate_words(text_file: str) -> Dict[str, int]:
 
     # We put '<eps>' '<UNK>' at begining of word2id
     # '#0', '<s>', '</s>' at end of word2id
-    words = [word for word in words
-             if word not in ['<eps>', '<UNK>', '#0', '<s>', '</s>']]
+    words = [
+        word for word in words
+        if word not in ['<eps>', '<UNK>', '#0', '<s>', '</s>']
+    ]
     words.insert(0, '<eps>')
     words.insert(1, '<UNK>')
     words.append('#0')
@@ -221,9 +220,10 @@ def main():
     word2id = generate_words(sys.argv[2])
     tgt_dir = Path(sys.argv[3])
 
-    words = [word for word in word2id.keys()
-             if word not in
-             ["<eps>", "!SIL", "<SPOKEN_NOISE>", "<UNK>", "#0", "<s>", "</s>"]]
+    words = [
+        word for word in word2id.keys() if word not in
+        ["<eps>", "!SIL", "<SPOKEN_NOISE>", "<UNK>", "#0", "<s>", "</s>"]
+    ]
     lexicon = generate_lexicon(token2id, words)
 
     lexicon_disambig, max_disambig = add_disambig_symbols(lexicon)

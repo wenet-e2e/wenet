@@ -28,6 +28,7 @@ from wenet.utils.context_graph import ContextGraph, ContextState
 
 
 class DecodeResult:
+
     def __init__(self,
                  tokens: List[int],
                  score: float = 0.0,
@@ -60,6 +61,7 @@ class DecodeResult:
 
 class PrefixScore:
     """ For CTC prefix beam search """
+
     def __init__(self,
                  s: float = float('-inf'),
                  ns: float = float('-inf'),
@@ -120,10 +122,13 @@ def ctc_greedy_search(ctc_probs: torch.Tensor,
     return results
 
 
-def ctc_prefix_beam_search(ctc_probs: torch.Tensor, ctc_lens: torch.Tensor,
-                           beam_size: int, context_graph: ContextGraph = None,
-                           blank_id: int = 0,
-                           ) -> List[DecodeResult]:
+def ctc_prefix_beam_search(
+    ctc_probs: torch.Tensor,
+    ctc_lens: torch.Tensor,
+    beam_size: int,
+    context_graph: ContextGraph = None,
+    blank_id: int = 0,
+) -> List[DecodeResult]:
     """
         Returns:
             List[List[List[int]]]: nbest result for each utterance
@@ -265,7 +270,8 @@ def attention_beam_search(
                           device=device)  # (B*N, 4)
         # TODO(xcsong): add args for language, task, etc
         hyps[:, 0] = model.special_tokens["sot"]
-        hyps[:, 1] = model.special_tokens["sot"] + 1 + WHISPER_LANGS.index("zh")
+        hyps[:,
+             1] = model.special_tokens["sot"] + 1 + WHISPER_LANGS.index("zh")
         hyps[:, 2] = model.special_tokens["transcribe"]
         hyps[:, 3] = model.special_tokens["no_timestamps"]
     else:
@@ -374,10 +380,13 @@ def attention_rescoring(
         if model.special_tokens is not None and "transcribe" in model.special_tokens:
             # TODO(xcsong): add args for language, task, etc
             prev_len = hyps_pad.size(1)
-            hyps_pad, _ = add_whisper_tokens(
-                model.special_tokens, hyps_pad, model.ignore_id, task="transcribe",
-                no_timestamp=True, language="zh", use_prev=False
-            )
+            hyps_pad, _ = add_whisper_tokens(model.special_tokens,
+                                             hyps_pad,
+                                             model.ignore_id,
+                                             task="transcribe",
+                                             no_timestamp=True,
+                                             language="zh",
+                                             use_prev=False)
             cur_len = hyps_pad.size(1)
             hyps_lens = hyps_lens + cur_len - prev_len
             prefix_len = 4
@@ -404,7 +413,8 @@ def attention_rescoring(
             if reverse_weight > 0 and r_decoder_out.dim() > 0:
                 r_score = 0.0
                 for j, w in enumerate(hyp):
-                    s = r_decoder_out[i][len(hyp) - j - 1 + (prefix_len - 1)][w]
+                    s = r_decoder_out[i][len(hyp) - j - 1 +
+                                         (prefix_len - 1)][w]
                     r_score += s
                     tc[j] = (tc[j] + math.exp(s)) / 2
                 r_score += r_decoder_out[i][len(hyp) + (prefix_len - 1)][eos]

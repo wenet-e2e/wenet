@@ -19,6 +19,7 @@ import soundfile as sf
 
 
 class OfflineSpeechClient(object):
+
     def __init__(self, triton_client, model_name, protocol_client, args):
         self.triton_client = triton_client
         self.protocol_client = protocol_client
@@ -36,12 +37,10 @@ class OfflineSpeechClient(object):
         sequence_id = 10086 + idx
         result = ""
         inputs = [
-            self.protocol_client.InferInput(
-                "WAV", samples.shape, np_to_triton_dtype(samples.dtype)
-            ),
-            self.protocol_client.InferInput(
-                "WAV_LENS", lengths.shape, np_to_triton_dtype(lengths.dtype)
-            ),
+            self.protocol_client.InferInput("WAV", samples.shape,
+                                            np_to_triton_dtype(samples.dtype)),
+            self.protocol_client.InferInput("WAV_LENS", lengths.shape,
+                                            np_to_triton_dtype(lengths.dtype)),
         ]
         inputs[0].set_data_from_numpy(samples)
         inputs[1].set_data_from_numpy(lengths)
@@ -61,6 +60,7 @@ class OfflineSpeechClient(object):
 
 
 class StreamingSpeechClient(object):
+
     def __init__(self, triton_client, model_name, protocol_client, args):
         self.triton_client = triton_client
         self.protocol_client = protocol_client
@@ -76,8 +76,7 @@ class StreamingSpeechClient(object):
         # since the subsampling will look ahead several frames
         first_chunk_length = (chunk_size - 1) * subsampling + context
         add_frames = math.ceil(
-            (frame_length_ms - frame_shift_ms) / frame_shift_ms
-        )
+            (frame_length_ms - frame_shift_ms) / frame_shift_ms)
         first_chunk_ms = (first_chunk_length + add_frames) * frame_shift_ms
         other_chunk_ms = chunk_size * subsampling * frame_shift_ms
         self.first_chunk_in_secs = first_chunk_ms / 1000
@@ -90,10 +89,10 @@ class StreamingSpeechClient(object):
         while i < len(waveform):
             if i == 0:
                 stride = int(self.first_chunk_in_secs * sample_rate)
-                wav_segs.append(waveform[i : i + stride])
+                wav_segs.append(waveform[i:i + stride])
             else:
                 stride = int(self.other_chunk_in_secs * sample_rate)
-                wav_segs.append(waveform[i : i + stride])
+                wav_segs.append(waveform[i:i + stride])
             i += len(wav_segs[-1])
 
         sequence_id = idx + 10086
@@ -127,7 +126,9 @@ class StreamingSpeechClient(object):
             inputs[0].set_data_from_numpy(input0_data)
             inputs[1].set_data_from_numpy(input1_data)
 
-            outputs = [self.protocol_client.InferRequestedOutput("TRANSCRIPTS")]
+            outputs = [
+                self.protocol_client.InferRequestedOutput("TRANSCRIPTS")
+            ]
             end = False
             if idx == len(wav_segs) - 1:
                 end = True

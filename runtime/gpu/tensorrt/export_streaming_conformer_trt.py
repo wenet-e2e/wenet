@@ -43,8 +43,7 @@ import timeit
 
 def get_parser():
     parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument(
         "--chunk_xs",
@@ -144,20 +143,22 @@ def get_latency_result(latency_list, batch_size):
     throughput_trt = 1000.0 / latency_ms
 
     return {
-        "test_times": len(latency_list),
-        "latency_variance": "{:.2f}".format(latency_variance),
-        "latency_90_percentile": "{:.2f}".format(
-            np.percentile(latency_list, 90) * 1000.0
-        ),
-        "latency_95_percentile": "{:.2f}".format(
-            np.percentile(latency_list, 95) * 1000.0
-        ),
-        "latency_99_percentile": "{:.2f}".format(
-            np.percentile(latency_list, 99) * 1000.0
-        ),
-        "average_latency_ms": "{:.2f}".format(latency_ms),
-        "QPS": "{:.2f}".format(throughput),
-        f"QPS_trt_batch{batch_size}": "{:.2f}".format(throughput_trt),
+        "test_times":
+        len(latency_list),
+        "latency_variance":
+        "{:.2f}".format(latency_variance),
+        "latency_90_percentile":
+        "{:.2f}".format(np.percentile(latency_list, 90) * 1000.0),
+        "latency_95_percentile":
+        "{:.2f}".format(np.percentile(latency_list, 95) * 1000.0),
+        "latency_99_percentile":
+        "{:.2f}".format(np.percentile(latency_list, 99) * 1000.0),
+        "average_latency_ms":
+        "{:.2f}".format(latency_ms),
+        "QPS":
+        "{:.2f}".format(throughput),
+        f"QPS_trt_batch{batch_size}":
+        "{:.2f}".format(throughput_trt),
     }
 
 
@@ -183,8 +184,7 @@ def test(engine, context, nBatchSize, batch_threshold=8):
     context.set_binding_shape(bindingBias + 5, [nBatchSize, 1, 80])
 
     nInput = np.sum(
-        [engine.binding_is_input(i) for i in range(engine.num_bindings)]
-    )
+        [engine.binding_is_input(i) for i in range(engine.num_bindings)])
     nOutput = engine.num_bindings - nInput
 
     nInput = nInput // nProfile
@@ -197,9 +197,12 @@ def test(engine, context, nBatchSize, batch_threshold=8):
     #  (elayers, b, head, cache_t1, d_k * 2)
     head = 4
     d_k = 64
-    att_cache = torch.randn(
-        nBatchSize, 12, head, 80, d_k * 2, dtype=torch.float32
-    ).numpy()
+    att_cache = torch.randn(nBatchSize,
+                            12,
+                            head,
+                            80,
+                            d_k * 2,
+                            dtype=torch.float32).numpy()
     cnn_cache = torch.randn(nBatchSize, 12, 256, 7, dtype=torch.float32)
 
     cache_mask = torch.ones(nBatchSize, 1, 80, dtype=torch.float32)
@@ -220,8 +223,7 @@ def test(engine, context, nBatchSize, batch_threshold=8):
             np.empty(
                 context.get_binding_shape(bindingBias + i),
                 dtype=trt.nptype(engine.get_binding_dtype(bindingBias + i)),
-            )
-        )
+            ))
     bufferD = []
     for i in range(nInput + nOutput):
         bufferD.append(cudart.cudaMalloc(bufferH[i].nbytes)[1])
@@ -240,12 +242,11 @@ def test(engine, context, nBatchSize, batch_threshold=8):
         )
 
     nWarm, nTest = 5, 10
-    timeit.repeat(
-        lambda: context.execute_v2(bufferD), number=1, repeat=nWarm
-    )  # Dry run
-    latency_list = timeit.repeat(
-        lambda: context.execute_v2(bufferD), number=1, repeat=nTest
-    )
+    timeit.repeat(lambda: context.execute_v2(bufferD), number=1,
+                  repeat=nWarm)  # Dry run
+    latency_list = timeit.repeat(lambda: context.execute_v2(bufferD),
+                                 number=1,
+                                 repeat=nTest)
     print(get_latency_result(latency_list, nBatchSize))
 
     if nProfile == 1 or nBatchSize > batch_threshold:
@@ -280,8 +281,7 @@ def main():
     else:
         builder = trt.Builder(logger)
         network = builder.create_network(
-            1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
-        )
+            1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH))
         config = builder.create_builder_config()
 
         if args.useTimeCache:

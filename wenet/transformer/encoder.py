@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """Encoder definition."""
 from typing import Tuple
 
@@ -25,7 +24,9 @@ from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import (
-    WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES, WENET_ATTENTION_CLASSES,
+    WENET_EMB_CLASSES,
+    WENET_SUBSAMPLE_CLASSES,
+    WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
 )
 from wenet.utils.mask import make_pad_mask
@@ -33,6 +34,7 @@ from wenet.utils.mask import add_optional_chunk_mask
 
 
 class BaseEncoder(torch.nn.Module):
+
     def __init__(
         self,
         input_size: int,
@@ -91,7 +93,8 @@ class BaseEncoder(torch.nn.Module):
             input_size,
             output_size,
             dropout_rate,
-            WENET_EMB_CLASSES[pos_enc_layer_type](output_size, positional_dropout_rate),
+            WENET_EMB_CLASSES[pos_enc_layer_type](output_size,
+                                                  positional_dropout_rate),
         )
 
         self.normalize_before = normalize_before
@@ -147,7 +150,8 @@ class BaseEncoder(torch.nn.Module):
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
         if self.gradient_checkpointing and self.training:
-            xs = self.forward_layers_checkpointed(xs, chunk_masks, pos_emb, mask_pad)
+            xs = self.forward_layers_checkpointed(xs, chunk_masks, pos_emb,
+                                                  mask_pad)
         else:
             xs = self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
         if self.normalize_before:
@@ -157,22 +161,22 @@ class BaseEncoder(torch.nn.Module):
         # for cross attention with decoder later
         return xs, masks
 
-    def forward_layers(
-        self, xs: torch.Tensor, chunk_masks: torch.Tensor,
-        pos_emb: torch.Tensor, mask_pad: torch.Tensor
-    ) -> torch.Tensor:
+    def forward_layers(self, xs: torch.Tensor, chunk_masks: torch.Tensor,
+                       pos_emb: torch.Tensor,
+                       mask_pad: torch.Tensor) -> torch.Tensor:
         for layer in self.encoders:
             xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         return xs
 
     @torch.jit.ignore(drop=True)
-    def forward_layers_checkpointed(
-        self, xs: torch.Tensor, chunk_masks: torch.Tensor,
-        pos_emb: torch.Tensor, mask_pad: torch.Tensor
-    ) -> torch.Tensor:
+    def forward_layers_checkpointed(self, xs: torch.Tensor,
+                                    chunk_masks: torch.Tensor,
+                                    pos_emb: torch.Tensor,
+                                    mask_pad: torch.Tensor) -> torch.Tensor:
         for layer in self.encoders:
-            xs, chunk_masks, _, _ = ckpt.checkpoint(
-                layer.__call__, xs, chunk_masks, pos_emb, mask_pad)
+            xs, chunk_masks, _, _ = ckpt.checkpoint(layer.__call__, xs,
+                                                    chunk_masks, pos_emb,
+                                                    mask_pad)
         return xs
 
     def forward_chunk(
@@ -229,8 +233,8 @@ class BaseEncoder(torch.nn.Module):
         elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
         chunk_size = xs.size(1)
         attention_key_size = cache_t1 + chunk_size
-        pos_emb = self.embed.position_encoding(
-            offset=offset - cache_t1, size=attention_key_size)
+        pos_emb = self.embed.position_encoding(offset=offset - cache_t1,
+                                               size=attention_key_size)
         if required_cache_size < 0:
             next_cache_start = 0
         elif required_cache_size == 0:
@@ -244,10 +248,11 @@ class BaseEncoder(torch.nn.Module):
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
             xs, _, new_att_cache, new_cnn_cache = layer(
-                xs, att_mask, pos_emb,
+                xs,
+                att_mask,
+                pos_emb,
                 att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
-                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
-            )
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache)
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
@@ -314,17 +319,22 @@ class BaseEncoder(torch.nn.Module):
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            (y, att_cache, cnn_cache) = self.forward_chunk(
-                chunk_xs, offset, required_cache_size, att_cache, cnn_cache)
+            (y, att_cache,
+             cnn_cache) = self.forward_chunk(chunk_xs, offset,
+                                             required_cache_size, att_cache,
+                                             cnn_cache)
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)
-        masks = torch.ones((1, 1, ys.size(1)), device=ys.device, dtype=torch.bool)
+        masks = torch.ones((1, 1, ys.size(1)),
+                           device=ys.device,
+                           dtype=torch.bool)
         return ys, masks
 
 
 class TransformerEncoder(BaseEncoder):
     """Transformer encoder module."""
+
     def __init__(
         self,
         input_size: int,
@@ -354,24 +364,25 @@ class TransformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk,
-                         gradient_checkpointing)
+                         static_chunk_size, use_dynamic_chunk, global_cmvn,
+                         use_dynamic_left_chunk, gradient_checkpointing)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
-                WENET_ATTENTION_CLASSES["selfattn"](attention_heads, output_size,
-                                                    attention_dropout_rate, key_bias),
+                WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
+                                                    output_size,
+                                                    attention_dropout_rate,
+                                                    key_bias),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate, activation),
-                dropout_rate,
-                normalize_before) for _ in range(num_blocks)
+                dropout_rate, normalize_before) for _ in range(num_blocks)
         ])
 
 
 class ConformerEncoder(BaseEncoder):
     """Conformer encoder module."""
+
     def __init__(
         self,
         input_size: int,
@@ -421,9 +432,8 @@ class ConformerEncoder(BaseEncoder):
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk,
-                         global_cmvn, use_dynamic_left_chunk,
-                         gradient_checkpointing)
+                         static_chunk_size, use_dynamic_chunk, global_cmvn,
+                         use_dynamic_left_chunk, gradient_checkpointing)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition

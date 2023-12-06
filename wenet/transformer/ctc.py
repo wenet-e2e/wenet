@@ -19,6 +19,7 @@ import torch.nn.functional as F
 
 class CTC(torch.nn.Module):
     """CTC module"""
+
     def __init__(
         self,
         odim: int,
@@ -41,7 +42,8 @@ class CTC(torch.nn.Module):
         self.ctc_lo = torch.nn.Linear(eprojs, odim)
 
         reduction_type = "sum" if reduce else "none"
-        self.ctc_loss = torch.nn.CTCLoss(blank=blank_id, reduction=reduction_type)
+        self.ctc_loss = torch.nn.CTCLoss(blank=blank_id,
+                                         reduction=reduction_type)
 
     def forward(self, hs_pad: torch.Tensor, hlens: torch.Tensor,
                 ys_pad: torch.Tensor, ys_lens: torch.Tensor) -> torch.Tensor:

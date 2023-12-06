@@ -4,7 +4,6 @@
 #            2016  Johns Hopkins University (author: Daniel Povey)
 # Apache 2.0
 
-
 import sys
 
 # This script joins together pairs of split-up words like "you 're" -> "you're".

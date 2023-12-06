@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Label smoothing module."""
 
 import torch
@@ -51,6 +50,7 @@ class LabelSmoothingLoss(nn.Module):
             normalize loss by sequence length if True
             normalize loss by batch size if False
     """
+
     def __init__(self,
                  size: int,
                  padding_idx: int,
