@@ -239,7 +239,7 @@ class TritonPythonModel:
                                            self.vocabulary, self.blank_id,
                                            self.eos)
         elif self.decoding_method == "tlg":
-            nbest_hyps, nbest_ids, nbest_scores, max_hyp_len = self.decoder.decode_nbest(
+            nbest_hyps, nbest_ids, nbest_scores, max_hyp_len = self.decoder.decode_nbest( \
                 ctc_log_probs, encoder_out_len)  # noqa
             total_hyps = [nbest[0] for nbest in nbest_hyps]
 
