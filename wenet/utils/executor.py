@@ -38,7 +38,6 @@ class Executor:
         info_dict["tag"] = "TRAIN"
         logging.info('using accumulate grad, new batch size is {} times'
                      ' larger than before'.format(info_dict['accum_grad']))
-
         # A context manager to be used in conjunction with an instance of
         # torch.nn.parallel.DistributedDataParallel to be able to train
         # with uneven inputs across participating processes.

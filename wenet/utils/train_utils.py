@@ -66,12 +66,15 @@ def add_model_args(parser):
                         default=None,
                         type=str,
                         help="Pre-trained model to initialize encoder")
-    parser.add_argument(
-        "--enc_init_mods",
-        default="encoder.",
-        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
-        help="List of encoder modules \
+    parser.add_argument('--enc_init_mods',
+                        default="encoder.",
+                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+                        help="List of encoder modules \
                         to initialize ,separated by a comma")
+    parser.add_argument('--freeze_modules',
+                        default="",
+                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+                        help='free module names',)
     parser.add_argument('--lfmmi_dir',
                         default='',
                         required=False,
@@ -238,6 +241,12 @@ def check_modify_and_save_config(args, configs, symbol_table):
         with open(saved_config_path, 'w') as fout:
             data = yaml.dump(configs)
             fout.write(data)
+
+    if configs["model_conf"]["apply_non_blank_embedding"]:
+        logging.warn(
+            'Had better load a well trained model'
+            'if apply_non_blank_embedding is true !!!'
+        )
 
     return configs
 
@@ -601,3 +610,10 @@ def log_per_epoch(writer, info_dict):
     if int(os.environ.get('RANK', 0)) == 0:
         writer.add_scalar('epoch/cv_loss', info_dict["cv_loss"], epoch)
         writer.add_scalar('epoch/lr', info_dict["lr"], epoch)
+
+def freeze_modules(model, args):
+    for name, param in model.named_parameters():
+        for module_name in args.freeze_modules:
+            if module_name in name:
+                param.requires_grad = False
+                logging.debug("{} module is freezed".format(name))
