@@ -39,3 +39,7 @@ class BaseTokenizer(ABC):
     @abstractproperty
     def symbol_table(self) -> Dict[T, int]:
         raise NotImplementedError("abstract method")
+
+    @abstractmethod
+    def add_tokens(self, tokens: List[T]) -> int:
+        raise NotImplementedError("abstract method")

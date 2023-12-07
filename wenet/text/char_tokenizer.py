@@ -76,3 +76,12 @@ class CharTokenizer(BaseTokenizer):
     @property
     def symbol_table(self) -> Dict[str, int]:
         return self._symbol_table
+
+    def add_tokens(self, tokens: List[str]) -> int:
+        n = 0
+        for token in tokens:
+            if token not in self.symbol_table.keys():
+                self.symbol_table[token] = len(self.symbol_table)
+                self.char_dict[len(self.char_dict)] = token
+                n += 1
+        return n
