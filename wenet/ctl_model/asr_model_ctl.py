@@ -25,6 +25,7 @@ from wenet.ctl_model.encoder import TransformerEncoder
 from wenet.transformer.asr_model import ASRModel
 from wenet.utils.common import IGNORE_ID
 
+
 class CTLModel(ASRModel):
     """
         Implementation of Interspeecch 2023 paper:
@@ -32,6 +33,7 @@ class CTLModel(ASRModel):
          with Contrastive Learning'
         https://arxiv.org/abs/2306.00755
     """
+
     def __init__(
         self,
         vocab_size: int,
@@ -48,8 +50,8 @@ class CTLModel(ASRModel):
         ctl_weight: float = 1,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
-        super().__init__(vocab_size, encoder, decoder, ctc,
-                         ctc_weight, ignore_id, reverse_weight, lsm_weight,
+        super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight,
+                         ignore_id, reverse_weight, lsm_weight,
                          length_normalized_loss)
 
         # For CTL Loss
@@ -76,13 +78,18 @@ class CTLModel(ASRModel):
             num = encoder_out_full.size(1)
             targets = encoder_out_full
             src = encoder_out
-            negs, negs_idxs = self.sample_negatives(
-                targets, targets.size(1), speech_lengths=lens_chunk)
+            negs, negs_idxs = self.sample_negatives(targets,
+                                                    targets.size(1),
+                                                    speech_lengths=lens_chunk)
             ctl_loss = self.CTL(src, targets, negs, encoder_mask)
 
         loss = loss_full + loss_chunk + self.ctl_weight * ctl_loss
-        return {"loss": loss, "loss_full": loss_full,
-                "loss_chunk": loss_chunk, "loss_ctl": ctl_loss}
+        return {
+            "loss": loss,
+            "loss_full": loss_full,
+            "loss_chunk": loss_chunk,
+            "loss_ctl": ctl_loss
+        }
 
     def forward_full(
         self,
@@ -107,7 +114,8 @@ class CTLModel(ASRModel):
                 text_lengths.shape[0]), (speech.shape, speech_lengths.shape,
                                          text.shape, text_lengths.shape)
         # 1. Encoder
-        encoder_out, encoder_mask = self.encoder.forward_full(speech, speech_lengths)
+        encoder_out, encoder_mask = self.encoder.forward_full(
+            speech, speech_lengths)
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # 2a. Attention-decoder branch
@@ -194,33 +202,30 @@ class CTLModel(ASRModel):
             assert high > 1, f"{bsz,tsz,fsz}"
 
             if self.n_negatives > 0:
-                tszs = (
-                    torch.arange(num)
-                    .unsqueeze(-1)
-                    .expand(-1, self.n_negatives)
-                    .flatten()
-                )
+                tszs = (torch.arange(num).unsqueeze(-1).expand(
+                    -1, self.n_negatives).flatten())
                 if speech_lengths is not None:
-                    neg_idxs = [torch.randint(
-                        low=0, high=speech_lengths[i].item() - 1,
-                        size=(1, self.n_negatives * tsz))
-                        for i in range(len(speech_lengths))]
-                    neg_idxs = torch.cat(neg_idxs).reshape(bsz, self.n_negatives * tsz)
+                    neg_idxs = [
+                        torch.randint(low=0,
+                                      high=speech_lengths[i].item() - 1,
+                                      size=(1, self.n_negatives * tsz))
+                        for i in range(len(speech_lengths))
+                    ]
+                    neg_idxs = torch.cat(neg_idxs).reshape(
+                        bsz, self.n_negatives * tsz)
                 else:
-                    neg_idxs = torch.randint(
-                        low=0, high=num - 1, size=(bsz, self.n_negatives * tsz)
-                    )
+                    neg_idxs = torch.randint(low=0,
+                                             high=num - 1,
+                                             size=(bsz,
+                                                   self.n_negatives * tsz))
                 neg_idxs[neg_idxs >= tszs] += 1
 
         if self.n_negatives > 0:
             neg_idxs = neg_idxs + (torch.arange(bsz).unsqueeze(1) * high)
 
         negs = y[neg_idxs.view(-1)]
-        negs = negs.contiguous().view(
-            bsz, num, self.n_negatives, fsz
-        ).permute(
-            2, 0, 1, 3
-        )  # to NxBxTxC
+        negs = negs.contiguous().view(bsz, num, self.n_negatives,
+                                      fsz).permute(2, 0, 1, 3)  # to NxBxTxC
         return negs, neg_idxs
 
     def compute_preds(self, x, y, negatives):

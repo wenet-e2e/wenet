@@ -34,7 +34,6 @@
 2. specific decoding method: ctc_greedy_search
 """
 
-
 from __future__ import print_function
 
 import os
@@ -53,7 +52,6 @@ from wenet.utils.init_model import init_model
 from wenet.bin.export_onnx_cpu import (get_args, to_numpy,
                                        print_input_output_info)
 
-
 try:
     import onnx
     import onnxruntime
@@ -61,13 +59,13 @@ except ImportError:
     print('Please install onnx and onnxruntime!')
     sys.exit(1)
 
-
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
 
 
 class BPULayerNorm(torch.nn.Module):
     """Refactor torch.nn.LayerNorm to meet 4-D dataflow."""
+
     def __init__(self, module, chunk_size=8, run_on_bpu=False):
         super().__init__()
         original = copy.deepcopy(module)
@@ -77,21 +75,23 @@ class BPULayerNorm(torch.nn.Module):
 
         if self.run_on_bpu:
             self.weight = torch.nn.Parameter(
-                module.weight.reshape(1, self.hidden, 1, 1).repeat(
-                    1, 1, 1, chunk_size))
+                module.weight.reshape(1, self.hidden, 1,
+                                      1).repeat(1, 1, 1, chunk_size))
             self.bias = torch.nn.Parameter(
-                module.bias.reshape(1, self.hidden, 1, 1).repeat(
-                    1, 1, 1, chunk_size))
+                module.bias.reshape(1, self.hidden, 1,
+                                    1).repeat(1, 1, 1, chunk_size))
             self.negtive = torch.nn.Parameter(
                 torch.ones((1, self.hidden, 1, chunk_size)) * -1.0)
             self.eps = torch.nn.Parameter(
                 torch.zeros((1, self.hidden, 1, chunk_size)) + module.eps)
             self.mean_conv_1 = torch.nn.Conv2d(self.hidden, 1, 1, bias=False)
             self.mean_conv_1.weight = torch.nn.Parameter(
-                torch.ones(self.hidden, self.hidden, 1, 1) / (1.0 * self.hidden))
+                torch.ones(self.hidden, self.hidden, 1, 1) /
+                (1.0 * self.hidden))
             self.mean_conv_2 = torch.nn.Conv2d(self.hidden, 1, 1, bias=False)
             self.mean_conv_2.weight = torch.nn.Parameter(
-                torch.ones(self.hidden, self.hidden, 1, 1) / (1.0 * self.hidden))
+                torch.ones(self.hidden, self.hidden, 1, 1) /
+                (1.0 * self.hidden))
         else:
             self.norm = module
 
@@ -101,9 +101,11 @@ class BPULayerNorm(torch.nn.Module):
         random_data = torch.randn(1, self.chunk_size, self.hidden)
         orig_out = module(random_data)
         new_out = self.forward(random_data.transpose(1, 2).unsqueeze(2))
-        np.testing.assert_allclose(
-            to_numpy(orig_out), to_numpy(new_out.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(orig_out),
+                                   to_numpy(
+                                       new_out.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.run_on_bpu:
@@ -125,22 +127,26 @@ class BPUIdentity(torch.nn.Module):
     """Refactor torch.nn.Identity().
        For inserting BPU node whose input == output.
     """
+
     def __init__(self, channels):
         super().__init__()
         self.channels = channels
-        self.identity_conv = torch.nn.Conv2d(
-            channels, channels, 1, groups=channels, bias=False)
-        torch.nn.init.dirac_(
-            self.identity_conv.weight.data, groups=channels)
+        self.identity_conv = torch.nn.Conv2d(channels,
+                                             channels,
+                                             1,
+                                             groups=channels,
+                                             bias=False)
+        torch.nn.init.dirac_(self.identity_conv.weight.data, groups=channels)
 
         self.check_equal()
 
     def check_equal(self):
         random_data = torch.randn(1, self.channels, 1, 10)
         result = self.forward(random_data)
-        np.testing.assert_allclose(
-            to_numpy(random_data), to_numpy(result),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(random_data),
+                                   to_numpy(result),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Identity with 4-D dataflow, input == output.
@@ -155,6 +161,7 @@ class BPUIdentity(torch.nn.Module):
 
 class BPULinear(torch.nn.Module):
     """Refactor torch.nn.Linear or pointwise_conv"""
+
     def __init__(self, module, is_pointwise_conv=False):
         super().__init__()
         # Unchanged submodules and attributes
@@ -187,10 +194,11 @@ class BPULinear(torch.nn.Module):
             original_result = original_result.transpose(1, 2)
         random_data = random_data.transpose(1, 2).unsqueeze(2)
         new_result = self.forward(random_data)
-        np.testing.assert_allclose(
-            to_numpy(original_result),
-            to_numpy(new_result.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_result),
+                                   to_numpy(
+                                       new_result.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Linear with 4-D dataflow.
@@ -204,6 +212,7 @@ class BPULinear(torch.nn.Module):
 
 class BPUGlobalCMVN(torch.nn.Module):
     """Refactor wenet/transformer/cmvn.py::GlobalCMVN"""
+
     def __init__(self, module):
         super().__init__()
         # Unchanged submodules and attributes
@@ -231,6 +240,7 @@ class BPUConv2dSubsampling8(torch.nn.Module):
 
     NOTE(xcsong): Only support pos_enc_class == NoPositionalEncoding
     """
+
     def __init__(self, module):
         super().__init__()
         # Unchanged submodules and attributes
@@ -245,8 +255,7 @@ class BPUConv2dSubsampling8(torch.nn.Module):
         self.conv = module.conv
         for idx in [0, 2, 4]:
             self.conv[idx].weight = torch.nn.Parameter(
-                module.conv[idx].weight.transpose(2, 3)
-            )
+                module.conv[idx].weight.transpose(2, 3))
 
         # 2. Modify self.linear
         # NOTE(xcsong): Split final projection to meet the requirment of
@@ -256,20 +265,18 @@ class BPUConv2dSubsampling8(torch.nn.Module):
         freq = module.linear.weight.size(1) // odim  # 4608 // 512 == 9
         self.odim, self.freq = odim, freq
         weight = module.linear.weight.reshape(
-            odim, odim, freq, 1)  # (odim, odim * freq) -> (odim, odim, freq, 1)
+            odim, odim, freq,
+            1)  # (odim, odim * freq) -> (odim, odim, freq, 1)
         self.split_size = []
         num_split = (freq - 1) // 7 + 1  # XJ3 requires kernel_size <= 7
         slice_begin = 0
         for idx in range(num_split):
             kernel_size = min(freq, (idx + 1) * 7) - idx * 7
-            conv_ele = torch.nn.Conv2d(
-                odim, odim, (kernel_size, 1), (kernel_size, 1))
+            conv_ele = torch.nn.Conv2d(odim, odim, (kernel_size, 1),
+                                       (kernel_size, 1))
             conv_ele.weight = torch.nn.Parameter(
-                weight[:, :, slice_begin:slice_begin + kernel_size, :]
-            )
-            conv_ele.bias = torch.nn.Parameter(
-                torch.zeros_like(conv_ele.bias)
-            )
+                weight[:, :, slice_begin:slice_begin + kernel_size, :])
+            conv_ele.bias = torch.nn.Parameter(torch.zeros_like(conv_ele.bias))
             self.linear.append(conv_ele)
             self.split_size.append(kernel_size)
             slice_begin += kernel_size
@@ -281,12 +288,14 @@ class BPUConv2dSubsampling8(torch.nn.Module):
         random_data = torch.randn(1, 67, 80)
         mask = torch.zeros(1, 1, 67)
         original_result, _, _ = module(random_data, mask)  # (1, 8, 512)
-        random_data = random_data.transpose(1, 2).unsqueeze(0)  # (1, 1, 80, 67)
+        random_data = random_data.transpose(1,
+                                            2).unsqueeze(0)  # (1, 1, 80, 67)
         new_result = self.forward(random_data)  # (1, 512, 1, 8)
-        np.testing.assert_allclose(
-            to_numpy(original_result),
-            to_numpy(new_result.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_result),
+                                   to_numpy(
+                                       new_result.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Subsample x with 4-D dataflow.
@@ -311,6 +320,7 @@ class BPUMultiHeadedAttention(torch.nn.Module):
     NOTE(xcsong): Only support attention_class == MultiHeadedAttention,
         we do not consider RelPositionMultiHeadedAttention currently.
     """
+
     def __init__(self, module, chunk_size, left_chunks):
         super().__init__()
         # Unchanged submodules and attributes
@@ -340,26 +350,31 @@ class BPUMultiHeadedAttention(torch.nn.Module):
                           dtype=torch.bool)
         cache = torch.zeros(1, self.h, self.chunk_size * self.left_chunks,
                             self.d_k * 2)
-        original_out, original_cache = module(
-            random_data, random_data, random_data,
-            mask[:, 0, :, :], torch.empty(0), cache)
+        original_out, original_cache = module(random_data, random_data,
+                                              random_data, mask[:, 0, :, :],
+                                              torch.empty(0), cache)
         random_data = random_data.transpose(1, 2).unsqueeze(2)
         cache = cache.reshape(1, self.h, self.d_k * 2,
                               self.chunk_size * self.left_chunks)
-        new_out, new_cache = self.forward(
-            random_data, random_data, random_data, mask, cache)
-        np.testing.assert_allclose(
-            to_numpy(original_out),
-            to_numpy(new_out.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
-        np.testing.assert_allclose(
-            to_numpy(original_cache),
-            to_numpy(new_cache.transpose(2, 3)),
-            rtol=1e-02, atol=1e-03)
+        new_out, new_cache = self.forward(random_data, random_data,
+                                          random_data, mask, cache)
+        np.testing.assert_allclose(to_numpy(original_out),
+                                   to_numpy(
+                                       new_out.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_cache),
+                                   to_numpy(new_cache.transpose(2, 3)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(
-        self, q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
-        mask: torch.Tensor, cache: torch.Tensor,
+        self,
+        q: torch.Tensor,
+        k: torch.Tensor,
+        v: torch.Tensor,
+        mask: torch.Tensor,
+        cache: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute scaled dot product attention.
 
@@ -410,6 +425,7 @@ class BPUConvolution(torch.nn.Module):
 
     NOTE(xcsong): Only suport use_layer_norm == False
     """
+
     def __init__(self, module):
         super().__init__()
         # Unchanged submodules and attributes
@@ -426,9 +442,10 @@ class BPUConvolution(torch.nn.Module):
         self.pointwise_conv1 = BPULinear(module.pointwise_conv1, True)
 
         # 2. Modify self.depthwise_conv
-        self.depthwise_conv = torch.nn.Conv2d(
-            channels, channels, (1, kernel_size),
-            stride=1, groups=channels)
+        self.depthwise_conv = torch.nn.Conv2d(channels,
+                                              channels, (1, kernel_size),
+                                              stride=1,
+                                              groups=channels)
         self.depthwise_conv.weight = torch.nn.Parameter(
             module.depthwise_conv.weight.unsqueeze(-2))
         self.depthwise_conv.bias = torch.nn.Parameter(
@@ -460,18 +477,18 @@ class BPUConvolution(torch.nn.Module):
         random_data = random_data.transpose(1, 2).unsqueeze(2)
         cache = cache.unsqueeze(2)
         new_out, new_cache = self.forward(random_data, cache)
-        np.testing.assert_allclose(
-            to_numpy(original_out),
-            to_numpy(new_out.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
-        np.testing.assert_allclose(
-            to_numpy(original_cache),
-            to_numpy(new_cache.squeeze(2)),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_out),
+                                   to_numpy(
+                                       new_out.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_cache),
+                                   to_numpy(new_cache.squeeze(2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
-    def forward(
-        self, x: torch.Tensor, cache: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor,
+                cache: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute convolution module.
         Args:
             x (torch.Tensor): Input tensor (#batch, channels, 1, chunk_size).
@@ -499,6 +516,7 @@ class BPUConvolution(torch.nn.Module):
 class BPUFFN(torch.nn.Module):
     """Refactor wenet/transformer/positionwise_feed_forward.py::PositionwiseFeedForward
     """
+
     def __init__(self, module):
         super().__init__()
         # Unchanged submodules and attributes
@@ -516,10 +534,11 @@ class BPUFFN(torch.nn.Module):
         original_out = module(random_data)
         random_data = random_data.transpose(1, 2).unsqueeze(2)
         new_out = self.forward(random_data)
-        np.testing.assert_allclose(
-            to_numpy(original_out),
-            to_numpy(new_out.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_out),
+                                   to_numpy(
+                                       new_out.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward function.
@@ -535,6 +554,7 @@ class BPUFFN(torch.nn.Module):
 class BPUConformerEncoderLayer(torch.nn.Module):
     """Refactor wenet/transformer/encoder_layer.py::ConformerEncoderLayer
     """
+
     def __init__(self, module, chunk_size, left_chunks, ln_run_on_bpu=False):
         super().__init__()
         # Unchanged submodules and attributes
@@ -545,24 +565,25 @@ class BPUConformerEncoderLayer(torch.nn.Module):
 
         # 1. Modify submodules
         self.feed_forward_macaron = BPUFFN(module.feed_forward_macaron)
-        self.self_attn = BPUMultiHeadedAttention(
-            module.self_attn, chunk_size, left_chunks)
+        self.self_attn = BPUMultiHeadedAttention(module.self_attn, chunk_size,
+                                                 left_chunks)
         self.conv_module = BPUConvolution(module.conv_module)
         self.feed_forward = BPUFFN(module.feed_forward)
 
         # 2. Modify norms
         self.norm_ff = BPULayerNorm(module.norm_ff, chunk_size, ln_run_on_bpu)
-        self.norm_mha = BPULayerNorm(module.norm_mha, chunk_size, ln_run_on_bpu)
-        self.norm_ff_macron = BPULayerNorm(module.norm_ff_macaron,
-                                           chunk_size, ln_run_on_bpu)
-        self.norm_conv = BPULayerNorm(module.norm_conv,
-                                      chunk_size, ln_run_on_bpu)
-        self.norm_final = BPULayerNorm(module.norm_final,
-                                       chunk_size, ln_run_on_bpu)
+        self.norm_mha = BPULayerNorm(module.norm_mha, chunk_size,
+                                     ln_run_on_bpu)
+        self.norm_ff_macron = BPULayerNorm(module.norm_ff_macaron, chunk_size,
+                                           ln_run_on_bpu)
+        self.norm_conv = BPULayerNorm(module.norm_conv, chunk_size,
+                                      ln_run_on_bpu)
+        self.norm_final = BPULayerNorm(module.norm_final, chunk_size,
+                                       ln_run_on_bpu)
 
         # 3. 4-D ff_scale
-        self.register_buffer(
-            "ff_scale", torch.full((1, self.size, 1, 1), module.ff_scale))
+        self.register_buffer("ff_scale",
+                             torch.full((1, self.size, 1, 1), module.ff_scale))
 
         self.check_equal(original)
 
@@ -575,31 +596,32 @@ class BPUConformerEncoderLayer(torch.nn.Module):
         att_cache = torch.zeros(1, h, time2 - time1, d_k * 2)
         cnn_cache = torch.zeros(1, self.size, self.conv_module.lorder)
         original_x, _, original_att_cache, original_cnn_cache = module(
-            random_x, att_mask[:, 0, :, :], torch.empty(0),
-            att_cache=att_cache, cnn_cache=cnn_cache
-        )
+            random_x,
+            att_mask[:, 0, :, :],
+            torch.empty(0),
+            att_cache=att_cache,
+            cnn_cache=cnn_cache)
         random_x = random_x.transpose(1, 2).unsqueeze(2)
         att_cache = att_cache.reshape(1, h, d_k * 2, time2 - time1)
         cnn_cache = cnn_cache.unsqueeze(2)
         new_x, new_att_cache, new_cnn_cache = self.forward(
-            random_x, att_mask, att_cache, cnn_cache
-        )
-        np.testing.assert_allclose(
-            to_numpy(original_att_cache),
-            to_numpy(new_att_cache.transpose(2, 3)),
-            rtol=1e-02, atol=1e-03)
-        np.testing.assert_allclose(
-            to_numpy(original_x),
-            to_numpy(new_x.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
-        np.testing.assert_allclose(
-            to_numpy(original_cnn_cache),
-            to_numpy(new_cnn_cache.squeeze(2)),
-            rtol=1e-02, atol=1e-03)
+            random_x, att_mask, att_cache, cnn_cache)
+        np.testing.assert_allclose(to_numpy(original_att_cache),
+                                   to_numpy(new_att_cache.transpose(2, 3)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_x),
+                                   to_numpy(new_x.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_cnn_cache),
+                                   to_numpy(new_cnn_cache.squeeze(2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(
-        self, x: torch.Tensor, att_mask: torch.Tensor,
-        att_cache: torch.Tensor, cnn_cache: torch.Tensor
+        self, x: torch.Tensor, att_mask: torch.Tensor, att_cache: torch.Tensor,
+        cnn_cache: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
@@ -625,8 +647,7 @@ class BPUConformerEncoderLayer(torch.nn.Module):
         # 2. attention
         residual = x
         x = self.norm_mha(x)
-        x_att, new_att_cache = self.self_attn(
-            x, x, x, att_mask, att_cache)
+        x_att, new_att_cache = self.self_attn(x, x, x, att_mask, att_cache)
         x = residual + x_att
 
         # 3. convolution
@@ -649,6 +670,7 @@ class BPUConformerEncoderLayer(torch.nn.Module):
 class BPUConformerEncoder(torch.nn.Module):
     """Refactor wenet/transformer/encoder.py::ConformerEncoder
     """
+
     def __init__(self, module, chunk_size, left_chunks, ln_run_on_bpu=False):
         super().__init__()
         # Unchanged submodules and attributes
@@ -666,8 +688,9 @@ class BPUConformerEncoder(torch.nn.Module):
         self.embed = BPUConv2dSubsampling8(module.embed)
         self.encoders = torch.nn.ModuleList()
         for layer in module.encoders:
-            self.encoders.append(BPUConformerEncoderLayer(
-                layer, chunk_size, left_chunks, ln_run_on_bpu))
+            self.encoders.append(
+                BPUConformerEncoderLayer(layer, chunk_size, left_chunks,
+                                         ln_run_on_bpu))
 
         # 2. Auxiliary conv
         self.identity_cnncache = BPUIdentity(output_size)
@@ -688,29 +711,32 @@ class BPUConformerEncoder(torch.nn.Module):
         att_cache = torch.zeros(layers, h, time2 - time1, d_k * 2)
         cnn_cache = torch.zeros(layers, 1, self._output_size, lorder)
         orig_x, orig_att_cache, orig_cnn_cache = module.forward_chunk(
-            random_x, 0, time2 - time1, att_mask=att_mask[:, 0, :, :],
-            att_cache=att_cache, cnn_cache=cnn_cache
-        )
+            random_x,
+            0,
+            time2 - time1,
+            att_mask=att_mask[:, 0, :, :],
+            att_cache=att_cache,
+            cnn_cache=cnn_cache)
         random_x = random_x.unsqueeze(0)
         att_cache = att_cache.reshape(1, h * layers, d_k * 2, time2 - time1)
         cnn_cache = cnn_cache.reshape(1, self._output_size, layers, lorder)
         new_x, new_att_cache, new_cnn_cache = self.forward(
-            random_x, att_cache, cnn_cache, att_mask
-        )
+            random_x, att_cache, cnn_cache, att_mask)
         caches = torch.split(new_att_cache, h, dim=1)
         caches = [c.transpose(2, 3) for c in caches]
-        np.testing.assert_allclose(
-            to_numpy(orig_att_cache),
-            to_numpy(torch.cat(caches, dim=0)),
-            rtol=1e-02, atol=1e-03)
-        np.testing.assert_allclose(
-            to_numpy(orig_x),
-            to_numpy(new_x.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(orig_att_cache),
+                                   to_numpy(torch.cat(caches, dim=0)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
+        np.testing.assert_allclose(to_numpy(orig_x),
+                                   to_numpy(new_x.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
         np.testing.assert_allclose(
             to_numpy(orig_cnn_cache),
             to_numpy(new_cnn_cache.transpose(0, 2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
+            rtol=1e-02,
+            atol=1e-03)
 
     def forward(
         self, xs: torch.Tensor, att_cache: torch.Tensor,
@@ -753,13 +779,14 @@ class BPUConformerEncoder(torch.nn.Module):
         r_att_cache = []
         r_cnn_cache = []
         for i, layer in enumerate(self.encoders):
-            xs, new_att_cache, new_cnn_cache = layer(
-                xs, att_mask, att_cache=att_cache[i], cnn_cache=cnn_cache[i])
+            xs, new_att_cache, new_cnn_cache = layer(xs,
+                                                     att_mask,
+                                                     att_cache=att_cache[i],
+                                                     cnn_cache=cnn_cache[i])
             r_att_cache.append(new_att_cache[:, :, :, self.chunk_size:])
             r_cnn_cache.append(new_cnn_cache)
         r_att_cache = torch.cat(r_att_cache, dim=1)
-        r_cnn_cache = self.identity_cnncache(
-            torch.cat(r_cnn_cache, dim=2))
+        r_cnn_cache = self.identity_cnncache(torch.cat(r_cnn_cache, dim=2))
 
         xs = xs.squeeze(2).transpose(1, 2).contiguous()
         xs = self.after_norm(xs)
@@ -772,6 +799,7 @@ class BPUConformerEncoder(torch.nn.Module):
 class BPUCTC(torch.nn.Module):
     """Refactor wenet/transformer/ctc.py::CTC
     """
+
     def __init__(self, module):
         super().__init__()
         # Unchanged submodules and attributes
@@ -803,10 +831,11 @@ class BPUCTC(torch.nn.Module):
         original_result = module.ctc_lo(random_data)
         random_data = random_data.transpose(1, 2).unsqueeze(2)
         new_result = self.forward(random_data)
-        np.testing.assert_allclose(
-            to_numpy(original_result),
-            to_numpy(new_result.squeeze(2).transpose(1, 2)),
-            rtol=1e-02, atol=1e-03)
+        np.testing.assert_allclose(to_numpy(original_result),
+                                   to_numpy(
+                                       new_result.squeeze(2).transpose(1, 2)),
+                                   rtol=1e-02,
+                                   atol=1e-03)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """frame activations, without softmax.
@@ -826,9 +855,9 @@ class BPUCTC(torch.nn.Module):
 def export_encoder(asr_model, args):
     logger.info("Stage-1: export encoder")
     decode_window, mel_dim = args.decoding_window, args.feature_size
-    encoder = BPUConformerEncoder(
-        asr_model.encoder, args.chunk_size, args.num_decoding_left_chunks,
-        args.ln_run_on_bpu)
+    encoder = BPUConformerEncoder(asr_model.encoder, args.chunk_size,
+                                  args.num_decoding_left_chunks,
+                                  args.ln_run_on_bpu)
     encoder.eval()
     encoder_outpath = os.path.join(args.output_dir, 'encoder.onnx')
 
@@ -870,11 +899,16 @@ def export_encoder(asr_model, args):
         att_mask.size(1), att_mask.size(2), att_mask.size(3)
     )
     torch.onnx.export(  # NOTE(xcsong): only support opset==11
-        encoder, inputs, encoder_outpath, opset_version=11,
-        export_params=True, do_constant_folding=True,
+        encoder,
+        inputs,
+        encoder_outpath,
+        opset_version=11,
+        export_params=True,
+        do_constant_folding=True,
         input_names=attributes['input_name'].split(';'),
         output_names=attributes['output_name'].split(';'),
-        dynamic_axes=None, verbose=False)
+        dynamic_axes=None,
+        verbose=False)
     onnx_encoder = onnx.load(encoder_outpath)
     for k in vars(args):
         meta = onnx_encoder.metadata_props.add()
@@ -895,11 +929,10 @@ def export_encoder(asr_model, args):
     torch_cnn_cache = copy.deepcopy(cnn_cache)
     for i in range(10):
         logger.info("torch chunk-{}: {}, att_cache: {}, cnn_cache: {}"
-                    ", att_mask: {}".format(
-                        i, list(torch_chunk.size()),
-                        list(torch_att_cache.size()),
-                        list(torch_cnn_cache.size()),
-                        list(torch_att_mask.size())))
+                    ", att_mask: {}".format(i, list(torch_chunk.size()),
+                                            list(torch_att_cache.size()),
+                                            list(torch_cnn_cache.size()),
+                                            list(torch_att_mask.size())))
         torch_att_mask[:, :, :, -(encoder.chunk_size * (i + 1)):] = 1
         out, torch_att_cache, torch_cnn_cache = encoder(
             torch_chunk, torch_att_cache, torch_cnn_cache, torch_att_mask)
@@ -914,21 +947,26 @@ def export_encoder(asr_model, args):
     input_names = [node.name for node in onnx_encoder.graph.input]
     for i in range(10):
         logger.info("onnx  chunk-{}: {}, att_cache: {}, cnn_cache: {},"
-                    " att_mask: {}".format(
-                        i, onnx_chunk.shape, onnx_att_cache.shape,
-                        onnx_cnn_cache.shape, onnx_att_mask.shape))
+                    " att_mask: {}".format(i, onnx_chunk.shape,
+                                           onnx_att_cache.shape,
+                                           onnx_cnn_cache.shape,
+                                           onnx_att_mask.shape))
         onnx_att_mask[:, :, :, -(encoder.chunk_size * (i + 1)):] = 1
         ort_inputs = {
-            'chunk': onnx_chunk, 'att_cache': onnx_att_cache,
-            'cnn_cache': onnx_cnn_cache, 'att_mask': onnx_att_mask,
+            'chunk': onnx_chunk,
+            'att_cache': onnx_att_cache,
+            'cnn_cache': onnx_cnn_cache,
+            'att_mask': onnx_att_mask,
         }
         ort_outs = ort_session.run(None, ort_inputs)
         onnx_att_cache, onnx_cnn_cache = ort_outs[1], ort_outs[2]
         onnx_output.append(ort_outs[0])
     onnx_output = np.concatenate(onnx_output, axis=-1)
 
-    np.testing.assert_allclose(to_numpy(torch_output), onnx_output,
-                               rtol=1e-03, atol=1e-04)
+    np.testing.assert_allclose(to_numpy(torch_output),
+                               onnx_output,
+                               rtol=1e-03,
+                               atol=1e-04)
     meta = ort_session.get_modelmeta()
     logger.info("custom_metadata_map={}".format(meta.custom_metadata_map))
     logger.info("Check onnx_encoder, pass!")
@@ -952,13 +990,21 @@ def export_ctc(asr_model, args):
     attributes['input_layout_train'] = "NCHW"
     attributes['input_layout_rt'] = "NCHW"
     attributes['input_shape'] = "{}x{}x{}x{}".format(
-        hidden.size(0), hidden.size(1), hidden.size(2), hidden.size(3),
+        hidden.size(0),
+        hidden.size(1),
+        hidden.size(2),
+        hidden.size(3),
     )
-    torch.onnx.export(
-        ctc, hidden, ctc_outpath, opset_version=11,
-        export_params=True, do_constant_folding=True,
-        input_names=['hidden'], output_names=['probs'],
-        dynamic_axes=None, verbose=False)
+    torch.onnx.export(ctc,
+                      hidden,
+                      ctc_outpath,
+                      opset_version=11,
+                      export_params=True,
+                      do_constant_folding=True,
+                      input_names=['hidden'],
+                      output_names=['probs'],
+                      dynamic_axes=None,
+                      verbose=False)
     onnx_ctc = onnx.load(ctc_outpath)
     for k in vars(args):
         meta = onnx_ctc.metadata_props.add()
@@ -977,8 +1023,10 @@ def export_ctc(asr_model, args):
     ort_session = onnxruntime.InferenceSession(ctc_outpath)
     onnx_output = ort_session.run(None, {'hidden': to_numpy(hidden)})
 
-    np.testing.assert_allclose(to_numpy(torch_output), onnx_output[0],
-                               rtol=1e-03, atol=1e-04)
+    np.testing.assert_allclose(to_numpy(torch_output),
+                               onnx_output[0],
+                               rtol=1e-03,
+                               atol=1e-04)
     meta = ort_session.get_modelmeta()
     logger.info("custom_metadata_map={}".format(meta.custom_metadata_map))
     logger.info("Check onnx_ctc, pass!")

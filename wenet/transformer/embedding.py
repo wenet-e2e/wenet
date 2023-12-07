@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """Positonal Encoding Module."""
 
 import math
@@ -21,6 +20,7 @@ from typing import Tuple, Union
 import torch
 import torch.nn.functional as F
 import numpy as np
+
 
 class PositionalEncoding(torch.nn.Module):
     """Positional encoding.
@@ -32,6 +32,7 @@ class PositionalEncoding(torch.nn.Module):
     PE(pos, 2i)   = sin(pos/(10000^(2i/dmodel)))
     PE(pos, 2i+1) = cos(pos/(10000^(2i/dmodel)))
     """
+
     def __init__(self,
                  d_model: int,
                  dropout_rate: float,
@@ -74,7 +75,9 @@ class PositionalEncoding(torch.nn.Module):
         x = x * self.xscale + pos_emb
         return self.dropout(x), self.dropout(pos_emb)
 
-    def position_encoding(self, offset: Union[int, torch.Tensor], size: int,
+    def position_encoding(self,
+                          offset: Union[int, torch.Tensor],
+                          size: int,
                           apply_dropout: bool = True) -> torch.Tensor:
         """ For getting encoding in a streaming fashion
 
@@ -112,6 +115,7 @@ class PositionalEncoding(torch.nn.Module):
             pos_emb = self.dropout(pos_emb)
         return pos_emb
 
+
 class RelPositionalEncoding(PositionalEncoding):
     """Relative positional encoding module.
     See : Appendix B in https://arxiv.org/abs/1901.02860
@@ -120,6 +124,7 @@ class RelPositionalEncoding(PositionalEncoding):
         dropout_rate (float): Dropout rate.
         max_len (int): Maximum input length.
     """
+
     def __init__(self, d_model: int, dropout_rate: float, max_len: int = 5000):
         """Initialize class."""
         super().__init__(d_model, dropout_rate, max_len, reverse=True)
@@ -144,6 +149,7 @@ class RelPositionalEncoding(PositionalEncoding):
 class WhisperPositionalEncoding(PositionalEncoding):
     """ Sinusoids position encoding used in openai-whisper.encoder
     """
+
     def __init__(self, d_model: int, dropout_rate: float, max_len: int = 1500):
         super().__init__(d_model, dropout_rate, max_len)
         self.xscale = 1.0
@@ -160,6 +166,7 @@ class WhisperPositionalEncoding(PositionalEncoding):
 class LearnablePositionalEncoding(PositionalEncoding):
     """ Learnable position encoding used in openai-whisper.decoder
     """
+
     def __init__(self, d_model: int, dropout_rate: float, max_len: int = 448):
         super().__init__(d_model, dropout_rate, max_len)
         # NOTE(xcsong): overwrite self.pe & self.xscale
@@ -170,6 +177,7 @@ class LearnablePositionalEncoding(PositionalEncoding):
 class NoPositionalEncoding(torch.nn.Module):
     """ No position encoding
     """
+
     def __init__(self, d_model: int, dropout_rate: float):
         super().__init__()
         self.d_model = d_model
@@ -184,6 +192,6 @@ class NoPositionalEncoding(torch.nn.Module):
         pos_emb = torch.zeros(1, x.size(1), self.d_model).to(x.device)
         return self.dropout(x), pos_emb
 
-    def position_encoding(
-            self, offset: Union[int, torch.Tensor], size: int) -> torch.Tensor:
+    def position_encoding(self, offset: Union[int, torch.Tensor],
+                          size: int) -> torch.Tensor:
         return torch.zeros(1, size, self.d_model)

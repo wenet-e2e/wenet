@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """Encoder definition."""
 
 import torch
@@ -27,9 +26,12 @@ from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
 from wenet.utils.class_utils import (
-    WENET_ATTENTION_CLASSES, WENET_EMB_CLASSES, WENET_SUBSAMPLE_CLASSES,
+    WENET_ATTENTION_CLASSES,
+    WENET_EMB_CLASSES,
+    WENET_SUBSAMPLE_CLASSES,
     WENET_ACTIVATION_CLASSES,
 )
+
 
 class EBranchformerEncoder(nn.Module):
     """E-Branchformer encoder module."""
@@ -72,8 +74,8 @@ class EBranchformerEncoder(nn.Module):
             input_size,
             output_size,
             dropout_rate,
-            WENET_EMB_CLASSES[pos_enc_layer_type](
-                output_size, positional_dropout_rate),
+            WENET_EMB_CLASSES[pos_enc_layer_type](output_size,
+                                                  positional_dropout_rate),
         )
 
         encoder_selfattn_layer_args = (
@@ -83,15 +85,9 @@ class EBranchformerEncoder(nn.Module):
         )
 
         cgmlp_layer = ConvolutionalGatingMLP
-        cgmlp_layer_args = (
-            output_size,
-            cgmlp_linear_units,
-            cgmlp_conv_kernel,
-            dropout_rate,
-            use_linear_after_conv,
-            gate_activation,
-            causal
-        )
+        cgmlp_layer_args = (output_size, cgmlp_linear_units, cgmlp_conv_kernel,
+                            dropout_rate, use_linear_after_conv,
+                            gate_activation, causal)
 
         # feed-forward module definition
         positionwise_layer = PositionwiseFeedForward
@@ -107,15 +103,16 @@ class EBranchformerEncoder(nn.Module):
         if len(stochastic_depth_rate) != num_blocks:
             raise ValueError(
                 f"Length of stochastic_depth_rate ({len(stochastic_depth_rate)}) "
-                f"should be equal to num_blocks ({num_blocks})"
-            )
+                f"should be equal to num_blocks ({num_blocks})")
 
         self.encoders = torch.nn.ModuleList([
             EBranchformerEncoderLayer(
                 output_size,
-                WENET_ATTENTION_CLASSES[attention_layer_type](*encoder_selfattn_layer_args),
+                WENET_ATTENTION_CLASSES[attention_layer_type](
+                    *encoder_selfattn_layer_args),
                 cgmlp_layer(*cgmlp_layer_args),
-                positionwise_layer(*positionwise_layer_args) if use_ffn else None,
+                positionwise_layer(
+                    *positionwise_layer_args) if use_ffn else None,
                 positionwise_layer(*positionwise_layer_args)
                 if use_ffn and macaron_style else None,
                 dropout_rate,
@@ -175,7 +172,7 @@ class EBranchformerEncoder(nn.Module):
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
         for layer in self.encoders:
-            xs, chunk_masks, _ , _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+            xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
 
         xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
@@ -237,8 +234,8 @@ class EBranchformerEncoder(nn.Module):
         elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
         chunk_size = xs.size(1)
         attention_key_size = cache_t1 + chunk_size
-        pos_emb = self.embed.position_encoding(
-            offset=offset - cache_t1, size=attention_key_size)
+        pos_emb = self.embed.position_encoding(offset=offset - cache_t1,
+                                               size=attention_key_size)
         if required_cache_size < 0:
             next_cache_start = 0
         elif required_cache_size == 0:
@@ -252,10 +249,11 @@ class EBranchformerEncoder(nn.Module):
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
             xs, _, new_att_cache, new_cnn_cache = layer(
-                xs, att_mask, pos_emb,
+                xs,
+                att_mask,
+                pos_emb,
                 att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
-                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache
-            )
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache)
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
@@ -322,10 +320,14 @@ class EBranchformerEncoder(nn.Module):
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            (y, att_cache, cnn_cache) = self.forward_chunk(
-                chunk_xs, offset, required_cache_size, att_cache, cnn_cache)
+            (y, att_cache,
+             cnn_cache) = self.forward_chunk(chunk_xs, offset,
+                                             required_cache_size, att_cache,
+                                             cnn_cache)
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)
-        masks = torch.ones((1, 1, ys.size(1)), device=ys.device, dtype=torch.bool)
+        masks = torch.ones((1, 1, ys.size(1)),
+                           device=ys.device,
+                           dtype=torch.bool)
         return ys, masks

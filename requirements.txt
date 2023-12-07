@@ -19,3 +19,4 @@ tqdm
 deepspeed
 librosa
 openai-whisper
+pre-commit==3.5.0

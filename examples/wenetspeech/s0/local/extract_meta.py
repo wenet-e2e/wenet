@@ -25,7 +25,8 @@ def get_args():
       where the long wav is splitinto segments and
       data of wenet format is generated.
       """)
-    parser.add_argument('input_json', help="""Input json file of WenetSpeech""")
+    parser.add_argument('input_json',
+                        help="""Input json file of WenetSpeech""")
     parser.add_argument('output_dir', help="""Output dir for prepared data""")
 
     args = parser.parse_args()
@@ -91,6 +92,7 @@ def meta_analysis(input_json, output_dir):
                                 segment_sub_names = " ".join(segment_subsets)
                                 utt2subsets.write(
                                     f'{sid}\t{segment_sub_names}\n')
+
 
 def main():
     args = get_args()

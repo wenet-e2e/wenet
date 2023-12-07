@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """BranchformerEncoderLayer definition."""
 
 import torch
@@ -50,8 +49,7 @@ class BranchformerEncoderLayer(torch.nn.Module):
     ):
         super().__init__()
         assert (attn is not None) or (
-            cgmlp is not None
-        ), "At least one branch should be valid"
+            cgmlp is not None), "At least one branch should be valid"
 
         self.size = size
         self.attn = attn
@@ -66,7 +64,8 @@ class BranchformerEncoderLayer(torch.nn.Module):
             self.norm_mha = nn.LayerNorm(size)  # for the MHA module
         if cgmlp is not None:
             self.norm_mlp = nn.LayerNorm(size)  # for the MLP module
-        self.norm_final = nn.LayerNorm(size)  # for the final output of the block
+        self.norm_final = nn.LayerNorm(
+            size)  # for the final output of the block
 
         self.dropout = torch.nn.Dropout(dropout_rate)
 
@@ -87,9 +86,8 @@ class BranchformerEncoderLayer(torch.nn.Module):
                 self.merge_proj = torch.nn.Linear(size, size)
 
             elif self.merge_method == "fixed_ave":
-                assert (
-                    0.0 <= cgmlp_weight <= 1.0
-                ), "cgmlp weight should be between 0.0 and 1.0"
+                assert (0.0 <= cgmlp_weight <=
+                        1.0), "cgmlp weight should be between 0.0 and 1.0"
 
                 # remove the other branch if only one branch is used
                 if cgmlp_weight == 0.0:
@@ -157,7 +155,8 @@ class BranchformerEncoderLayer(torch.nn.Module):
         # Branch 1: multi-headed attention module
         if self.attn is not None:
             x1 = self.norm_mha(x1)
-            x_att, new_att_cache = self.attn(x1, x1, x1, mask, pos_emb, att_cache)
+            x_att, new_att_cache = self.attn(x1, x1, x1, mask, pos_emb,
+                                             att_cache)
             x1 = self.dropout(x_att)
 
         # Branch 2: convolutional gating mlp
@@ -172,57 +171,54 @@ class BranchformerEncoderLayer(torch.nn.Module):
         if self.use_two_branches:
             if self.merge_method == "concat":
                 x = x + stoch_layer_coeff * self.dropout(
-                    self.merge_proj(torch.cat([x1, x2], dim=-1))
-                )
+                    self.merge_proj(torch.cat([x1, x2], dim=-1)))
             elif self.merge_method == "learned_ave":
-                if (
-                    self.training
-                    and self.attn_branch_drop_rate > 0
-                    and torch.rand(1).item() < self.attn_branch_drop_rate
-                ):
+                if (self.training and self.attn_branch_drop_rate > 0
+                        and torch.rand(1).item() < self.attn_branch_drop_rate):
                     # Drop the attn branch
                     w1, w2 = torch.tensor(0.0), torch.tensor(1.0)
                 else:
                     # branch1
-                    score1 = (self.pooling_proj1(x1).transpose(1, 2) / self.size**0.5)
+                    score1 = (self.pooling_proj1(x1).transpose(1, 2) /
+                              self.size**0.5)
                     score1 = score1.masked_fill(mask_pad.eq(0), -float('inf'))
                     score1 = torch.softmax(score1, dim=-1).masked_fill(
-                        mask_pad.eq(0), 0.0
-                    )
+                        mask_pad.eq(0), 0.0)
 
-                    pooled1 = torch.matmul(score1, x1).squeeze(1)  # (batch, size)
+                    pooled1 = torch.matmul(score1,
+                                           x1).squeeze(1)  # (batch, size)
                     weight1 = self.weight_proj1(pooled1)  # (batch, 1)
 
                     # branch2
-                    score2 = (self.pooling_proj2(x2).transpose(1, 2) / self.size**0.5)
+                    score2 = (self.pooling_proj2(x2).transpose(1, 2) /
+                              self.size**0.5)
                     score2 = score2.masked_fill(mask_pad.eq(0), -float('inf'))
                     score2 = torch.softmax(score2, dim=-1).masked_fill(
-                        mask_pad.eq(0), 0.0
-                    )
+                        mask_pad.eq(0), 0.0)
 
-                    pooled2 = torch.matmul(score2, x2).squeeze(1)  # (batch, size)
+                    pooled2 = torch.matmul(score2,
+                                           x2).squeeze(1)  # (batch, size)
                     weight2 = self.weight_proj2(pooled2)  # (batch, 1)
 
                     # normalize weights of two branches
-                    merge_weights = torch.softmax(
-                        torch.cat([weight1, weight2], dim=-1), dim=-1
-                    )  # (batch, 2)
+                    merge_weights = torch.softmax(torch.cat([weight1, weight2],
+                                                            dim=-1),
+                                                  dim=-1)  # (batch, 2)
                     merge_weights = merge_weights.unsqueeze(-1).unsqueeze(
-                        -1
-                    )  # (batch, 2, 1, 1)
-                    w1, w2 = merge_weights[:, 0], merge_weights[:, 1]  # (batch, 1, 1)
+                        -1)  # (batch, 2, 1, 1)
+                    w1, w2 = merge_weights[:,
+                                           0], merge_weights[:,
+                                                             1]  # (batch, 1, 1)
 
                 x = x + stoch_layer_coeff * self.dropout(
-                    self.merge_proj(w1 * x1 + w2 * x2)
-                )
+                    self.merge_proj(w1 * x1 + w2 * x2))
             elif self.merge_method == "fixed_ave":
                 x = x + stoch_layer_coeff * self.dropout(
-                    self.merge_proj(
-                        (1.0 - self.cgmlp_weight) * x1 + self.cgmlp_weight * x2
-                    )
-                )
+                    self.merge_proj((1.0 - self.cgmlp_weight) * x1 +
+                                    self.cgmlp_weight * x2))
             else:
-                raise RuntimeError(f"unknown merge method: {self.merge_method}")
+                raise RuntimeError(
+                    f"unknown merge method: {self.merge_method}")
         else:
             if self.attn is None:
                 x = x + stoch_layer_coeff * self.dropout(self.merge_proj(x2))
@@ -230,7 +226,8 @@ class BranchformerEncoderLayer(torch.nn.Module):
                 x = x + stoch_layer_coeff * self.dropout(self.merge_proj(x1))
             else:
                 # This should not happen
-                raise RuntimeError("Both branches are not None, which is unexpected.")
+                raise RuntimeError(
+                    "Both branches are not None, which is unexpected.")
 
         x = self.norm_final(x)
 

@@ -26,6 +26,7 @@ from wenet_onnx_model import WenetModel
 
 from torch.utils.dlpack import from_dlpack
 
+
 class TritonPythonModel:
     """Your Python model must use the same class name. Every Python model
     that is created must have "TritonPythonModel" as the class name.
@@ -146,14 +147,20 @@ class TritonPythonModel:
 
             batch_idx += 1
 
-        batch_states = [trieVector, batch_start, batch_encoder_hist, cur_encoder_out]
-        res_sents, new_states = self.model.infer(batch_log_probs, batch_log_probs_idx,
-                                                 batch_len, rescore_index, batch_states)
+        batch_states = [
+            trieVector, batch_start, batch_encoder_hist, cur_encoder_out
+        ]
+        res_sents, new_states = self.model.infer(batch_log_probs,
+                                                 batch_log_probs_idx,
+                                                 batch_len, rescore_index,
+                                                 batch_states)
         cur_encoder_out = new_states
         for i in range(len(res_sents)):
             sent = np.array(res_sents[i])
-            out_tensor_0 = pb_utils.Tensor("OUTPUT0", sent.astype(self.output0_dtype))
-            response = pb_utils.InferenceResponse(output_tensors=[out_tensor_0])
+            out_tensor_0 = pb_utils.Tensor("OUTPUT0",
+                                           sent.astype(self.output0_dtype))
+            response = pb_utils.InferenceResponse(
+                output_tensors=[out_tensor_0])
             responses.append(response)
             corr = batch_idx2_corrid[i]
             if i in rescore_index:
@@ -164,8 +171,9 @@ class TritonPythonModel:
                     if self.seq_states[corr][1] is None:
                         self.seq_states[corr][1] = cur_encoder_out[i]
                     else:
-                        new_hist = torch.cat([self.seq_states[corr][1],
-                                              cur_encoder_out[i]], axis=0)
+                        new_hist = torch.cat(
+                            [self.seq_states[corr][1], cur_encoder_out[i]],
+                            axis=0)
                         self.seq_states[corr][1] = new_hist
 
         assert len(requests) == len(responses)

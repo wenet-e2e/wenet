@@ -36,7 +36,8 @@ def export_GetAllWeight(model, gsg):
         if 'encoder' in str(w.name) or 'ctc' in str(w.name):
             print("export ", w.name, w.dims, w.data_type)
             dtype = utils.onnx2np_type(w.data_type)
-            res[w.name] = np.frombuffer(w.raw_data, dtype=dtype).reshape(w.dims)
+            res[w.name] = np.frombuffer(w.raw_data,
+                                        dtype=dtype).reshape(w.dims)
             exported_name.append(w.name)
             if w.name.endswith("bias"):
                 new_name = w.name[0:len(w.name) - 4] + "weight"
@@ -45,11 +46,11 @@ def export_GetAllWeight(model, gsg):
                     continue
                 w = utils.onnx_GetWeight(model, wname)
                 dtype = utils.onnx2np_type(w.data_type)
-                res[new_name] = np.frombuffer(
-                    w.raw_data, dtype=dtype).reshape(w.dims)
+                res[new_name] = np.frombuffer(w.raw_data,
+                                              dtype=dtype).reshape(w.dims)
                 res[new_name] = np.transpose(res[new_name], (1, 0))
-                print("export ", w.name, w.dims, w.data_type,
-                      " -> ", new_name, res[new_name].shape)
+                print("export ", w.name, w.dims, w.data_type, " -> ", new_name,
+                      res[new_name].shape)
                 exported_name.append(w.name)
 
     not_name = get_not(model, exported_name)
@@ -63,14 +64,14 @@ def export_GetAllWeight(model, gsg):
                    and node.inputs[1].name == w.name:
                     new_name = "encoder.encoders." + \
                         str(cur_idx) + ".self_attn.linear_pos.weight"
-                    print("export ", w.name, w.dims,
-                          w.data_type, " -> ", new_name)
+                    print("export ", w.name, w.dims, w.data_type, " -> ",
+                          new_name)
                     dtype = utils.onnx2np_type(w.data_type)
-                    res[new_name] = np.frombuffer(
-                        w.raw_data, dtype=dtype).reshape(w.dims)
+                    res[new_name] = np.frombuffer(w.raw_data,
+                                                  dtype=dtype).reshape(w.dims)
                     res[new_name] = np.transpose(res[new_name], (1, 0))
-                    print("export ", w.name, w.dims, w.data_type,
-                          " -> ", new_name, res[new_name].shape)
+                    print("export ", w.name, w.dims, w.data_type, " -> ",
+                          new_name, res[new_name].shape)
                     exported_name.append(w.name)
                     cur_idx += 1
 
@@ -83,22 +84,22 @@ def export_GetAllWeight(model, gsg):
                    and node.inputs[1].name == w.name:
                     new_name = "encoder.encoders." + \
                         str(cur_idx) + ".conv_module.depthwise_conv.weight"
-                    print("export ", w.name, w.dims,
-                          w.data_type, " -> ", new_name)
+                    print("export ", w.name, w.dims, w.data_type, " -> ",
+                          new_name)
                     dtype = utils.onnx2np_type(w.data_type)
-                    res[new_name] = np.frombuffer(
-                        w.raw_data, dtype=dtype).reshape(w.dims)
+                    res[new_name] = np.frombuffer(w.raw_data,
+                                                  dtype=dtype).reshape(w.dims)
                     exported_name.append(w.name)
 
                     bname = node.inputs[2].name
                     w = utils.onnx_GetWeight(model, bname)
                     new_name = "encoder.encoders." + \
                         str(cur_idx) + ".conv_module.depthwise_conv.bias"
-                    print("export ", w.name, w.dims,
-                          w.data_type, " -> ", new_name)
+                    print("export ", w.name, w.dims, w.data_type, " -> ",
+                          new_name)
                     dtype = utils.onnx2np_type(w.data_type)
-                    res[new_name] = np.frombuffer(
-                        w.raw_data, dtype=dtype).reshape(w.dims)
+                    res[new_name] = np.frombuffer(w.raw_data,
+                                                  dtype=dtype).reshape(w.dims)
                     exported_name.append(w.name)
                     cur_idx += 1
 
@@ -124,7 +125,8 @@ def export_decoder_GetAllWeight(model, gsg):
         if len(str(w.name)) > 4:
             print("export ", w.name, w.dims, w.data_type)
             dtype = utils.onnx2np_type(w.data_type)
-            res[w.name] = np.frombuffer(w.raw_data, dtype=dtype).reshape(w.dims)
+            res[w.name] = np.frombuffer(w.raw_data,
+                                        dtype=dtype).reshape(w.dims)
             exported_name.append(w.name)
             if w.name.endswith("bias"):
                 new_name = w.name[0:len(w.name) - 4] + "weight"
@@ -133,11 +135,11 @@ def export_decoder_GetAllWeight(model, gsg):
                     continue
                 w = utils.onnx_GetWeight(model, wname)
                 dtype = utils.onnx2np_type(w.data_type)
-                res[new_name] = np.frombuffer(
-                    w.raw_data, dtype=dtype).reshape(w.dims)
+                res[new_name] = np.frombuffer(w.raw_data,
+                                              dtype=dtype).reshape(w.dims)
                 res[new_name] = np.transpose(res[new_name], (1, 0))
-                print("export ", w.name, w.dims, w.data_type,
-                      " -> ", new_name, res[new_name].shape)
+                print("export ", w.name, w.dims, w.data_type, " -> ", new_name,
+                      res[new_name].shape)
                 exported_name.append(w.name)
 
     for node in gsg.nodes:
@@ -163,10 +165,14 @@ def export_decoder_GetAllWeight(model, gsg):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='process onnx file for trt engine generation')
-    parser.add_argument('--input_onnx', type=str,
-                        required=True, help="input onnx model path")
-    parser.add_argument('--output_dir', type=str,
-                        required=True, help="output weights dir")
+    parser.add_argument('--input_onnx',
+                        type=str,
+                        required=True,
+                        help="input onnx model path")
+    parser.add_argument('--output_dir',
+                        type=str,
+                        required=True,
+                        help="output weights dir")
 
     args = parser.parse_args()
 

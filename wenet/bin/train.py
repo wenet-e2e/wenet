@@ -29,15 +29,13 @@ from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
-from wenet.utils.train_utils import (add_model_args, add_dataset_args,
-                                     add_ddp_args, add_deepspeed_args,
-                                     add_trace_args, init_distributed,
-                                     init_dataset_and_dataloader,
-                                     check_modify_and_save_config,
-                                     init_optimizer_and_scheduler,
-                                     trace_and_print_model, wrap_cuda_model,
-                                     init_summarywriter, save_model,
-                                     log_per_epoch)
+from wenet.utils.train_utils import (
+    add_model_args, add_dataset_args, add_ddp_args, add_deepspeed_args,
+    add_trace_args, init_distributed, init_dataset_and_dataloader,
+    check_modify_and_save_config, init_optimizer_and_scheduler,
+    trace_and_print_model, wrap_cuda_model, init_summarywriter, save_model,
+    log_per_epoch)
+
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
@@ -86,7 +84,8 @@ def main():
         init_dataset_and_dataloader(args, configs, tokenizer)
 
     # Do some sanity checks and save config to arsg.model_dir
-    configs = check_modify_and_save_config(args, configs, tokenizer.symbol_table)
+    configs = check_modify_and_save_config(args, configs,
+                                           tokenizer.symbol_table)
 
     # Init asr model from configs
     model, configs = init_model(args, configs)
@@ -105,10 +104,14 @@ def main():
         args, configs, model)
 
     # Save checkpoints
-    save_model(model, info_dict={
-        "save_time": datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-        "tag": "init", **configs
-    })
+    save_model(model,
+               info_dict={
+                   "save_time":
+                   datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                   "tag":
+                   "init",
+                   **configs
+               })
 
     # Get executor
     executor = Executor()
@@ -127,25 +130,33 @@ def main():
         configs['epoch'] = epoch
 
         lr = optimizer.param_groups[0]['lr']
-        logging.info('Epoch {} TRAIN info lr {} rank {}'.format(epoch, lr, rank))
+        logging.info('Epoch {} TRAIN info lr {} rank {}'.format(
+            epoch, lr, rank))
 
-        dist.barrier()  # NOTE(xcsong): Ensure all ranks start Train at the same time.
+        dist.barrier(
+        )  # NOTE(xcsong): Ensure all ranks start Train at the same time.
         # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
-        group_join = dist.new_group(backend="gloo",
-                                    timeout=datetime.timedelta(seconds=args.timeout))
-        executor.train(model, optimizer, scheduler, train_data_loader,
-                       writer, configs, scaler, group_join)
+        group_join = dist.new_group(
+            backend="gloo", timeout=datetime.timedelta(seconds=args.timeout))
+        executor.train(model, optimizer, scheduler, train_data_loader, writer,
+                       configs, scaler, group_join)
         dist.destroy_process_group(group_join)
 
-        dist.barrier()  # NOTE(xcsong): Ensure all ranks start CV at the same time.
+        dist.barrier(
+        )  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)
         cv_loss = total_loss / num_seen_utts
 
-        logging.info('Epoch {} CV info cv_loss {} rank {}'.format(epoch, cv_loss, rank))
+        logging.info('Epoch {} CV info cv_loss {} rank {}'.format(
+            epoch, cv_loss, rank))
         info_dict = {
-            'epoch': epoch, 'lr': lr, 'cv_loss': cv_loss, 'step': executor.step,
+            'epoch': epoch,
+            'lr': lr,
+            'cv_loss': cv_loss,
+            'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-            'tag': str(epoch), **configs
+            'tag': str(epoch),
+            **configs
         }
         log_per_epoch(writer, info_dict=info_dict)
         save_model(model, info_dict=info_dict)
@@ -154,7 +165,8 @@ def main():
 
     if final_epoch is not None and rank == 0:
         final_model_path = os.path.join(args.model_dir, 'final.pt')
-        os.remove(final_model_path) if os.path.exists(final_model_path) else None
+        os.remove(final_model_path) if os.path.exists(
+            final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
 

@@ -32,7 +32,8 @@ class CollateFunc(object):
             value = item[1].strip().split(",")
             assert len(value) == 3 or len(value) == 1
             wav_path = value[0]
-            sample_rate = torchaudio.backend.sox_io_backend.info(wav_path).sample_rate
+            sample_rate = torchaudio.backend.sox_io_backend.info(
+                wav_path).sample_rate
             resample_rate = sample_rate
             # len(value) == 3 means segmented wav.scp,
             # len(value) == 1 means original wav.scp
@@ -64,6 +65,7 @@ class CollateFunc(object):
 
 
 class AudioDataset(Dataset):
+
     def __init__(self, data_file):
         self.items = []
         with codecs.open(data_file, 'r', encoding='utf-8') as f:
@@ -101,7 +103,8 @@ if __name__ == '__main__':
     feat_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
     resample_rate = 0
     if 'resample_conf' in configs['dataset_conf']:
-        resample_rate = configs['dataset_conf']['resample_conf']['resample_rate']
+        resample_rate = configs['dataset_conf']['resample_conf'][
+            'resample_rate']
         print('using resample and new sample rate is {}'.format(resample_rate))
 
     collate_func = CollateFunc(feat_dim, resample_rate)

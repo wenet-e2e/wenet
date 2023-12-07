@@ -25,6 +25,7 @@ from wenet.utils.common import (IGNORE_ID, add_sos_eos, reverse_pad_list)
 
 
 class K2Model(ASRModel):
+
     def __init__(
         self,
         vocab_size: int,

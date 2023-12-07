@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
-
 """EBranchformerEncoderLayer definition."""
 
 import torch
@@ -135,8 +134,7 @@ class EBranchformerEncoderLayer(torch.nn.Module):
             residual = x
             x = self.norm_ff_macaron(x)
             x = residual + stoch_layer_coeff * self.ff_scale * self.dropout(
-                self.feed_forward_macaron(x)
-            )
+                self.feed_forward_macaron(x))
 
         # Two branches
         x1 = x
@@ -162,15 +160,15 @@ class EBranchformerEncoderLayer(torch.nn.Module):
             assert x_tmp.size(2) > self.lorder
         x_tmp = self.depthwise_conv_fusion(x_tmp)
         x_tmp = x_tmp.transpose(1, 2)
-        x = x + stoch_layer_coeff * self.dropout(self.merge_proj(x_concat + x_tmp))
+        x = x + stoch_layer_coeff * self.dropout(
+            self.merge_proj(x_concat + x_tmp))
 
         if self.feed_forward is not None:
             # feed forward module
             residual = x
             x = self.norm_ff(x)
             x = residual + stoch_layer_coeff * self.ff_scale * self.dropout(
-                self.feed_forward(x)
-            )
+                self.feed_forward(x))
 
         x = self.norm_final(x)
 

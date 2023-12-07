@@ -14,7 +14,6 @@
 # Modified from Squeezeformer(https://github.com/kssteven418/Squeezeformer)
 #               Squeezeformer(https://github.com/upskyy/Squeezeformer)
 #               NeMo(https://github.com/NVIDIA/NeMo)
-
 """DepthwiseConv2dSubsampling4 and TimeReductionLayer definition."""
 
 import torch
@@ -37,37 +36,39 @@ class DepthwiseConv2dSubsampling4(BaseSubsampling):
 
         """
 
-    def __init__(
-            self, idim: int, odim: int,
-            pos_enc_class: torch.nn.Module,
-            dw_stride: bool = False,
-            input_size: int = 80,
-            input_dropout_rate: float = 0.1,
-            init_weights: bool = True
-    ):
+    def __init__(self,
+                 idim: int,
+                 odim: int,
+                 pos_enc_class: torch.nn.Module,
+                 dw_stride: bool = False,
+                 input_size: int = 80,
+                 input_dropout_rate: float = 0.1,
+                 init_weights: bool = True):
         super(DepthwiseConv2dSubsampling4, self).__init__()
         self.idim = idim
         self.odim = odim
-        self.pw_conv = nn.Conv2d(
-            in_channels=idim, out_channels=odim, kernel_size=3, stride=2)
+        self.pw_conv = nn.Conv2d(in_channels=idim,
+                                 out_channels=odim,
+                                 kernel_size=3,
+                                 stride=2)
         self.act1 = nn.ReLU()
-        self.dw_conv = nn.Conv2d(
-            in_channels=odim, out_channels=odim, kernel_size=3, stride=2,
-            groups=odim if dw_stride else 1
-        )
+        self.dw_conv = nn.Conv2d(in_channels=odim,
+                                 out_channels=odim,
+                                 kernel_size=3,
+                                 stride=2,
+                                 groups=odim if dw_stride else 1)
         self.act2 = nn.ReLU()
         self.pos_enc = pos_enc_class
         self.input_proj = nn.Sequential(
-            nn.Linear(
-                odim * (((input_size - 1) // 2 - 1) // 2), odim),
+            nn.Linear(odim * (((input_size - 1) // 2 - 1) // 2), odim),
             nn.Dropout(p=input_dropout_rate),
         )
         if init_weights:
-            linear_max = (odim * input_size / 4) ** -0.5
-            torch.nn.init.uniform_(
-                self.input_proj.state_dict()['0.weight'], -linear_max, linear_max)
-            torch.nn.init.uniform_(
-                self.input_proj.state_dict()['0.bias'], -linear_max, linear_max)
+            linear_max = (odim * input_size / 4)**-0.5
+            torch.nn.init.uniform_(self.input_proj.state_dict()['0.weight'],
+                                   -linear_max, linear_max)
+            torch.nn.init.uniform_(self.input_proj.state_dict()['0.bias'],
+                                   -linear_max, linear_max)
         self.subsampling_rate = 4
         # 6 = (3 - 1) * 1 + (3 - 1) * 2
         self.right_context = 6
@@ -105,8 +106,11 @@ class TimeReductionLayer1D(nn.Module):
         stride (int): Downsampling factor in time dimension.
     """
 
-    def __init__(self, channel: int, out_dim: int,
-                 kernel_size: int = 5, stride: int = 2):
+    def __init__(self,
+                 channel: int,
+                 out_dim: int,
+                 kernel_size: int = 5,
+                 stride: int = 2):
         super(TimeReductionLayer1D, self).__init__()
 
         self.channel = channel
@@ -125,24 +129,31 @@ class TimeReductionLayer1D(nn.Module):
         )
 
         self.pw_conv = nn.Conv1d(
-            in_channels=channel, out_channels=out_dim,
-            kernel_size=1, stride=1, padding=0, groups=1,
+            in_channels=channel,
+            out_channels=out_dim,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            groups=1,
         )
 
         self.init_weights()
 
     def init_weights(self):
-        dw_max = self.kernel_size ** -0.5
-        pw_max = self.channel ** -0.5
+        dw_max = self.kernel_size**-0.5
+        pw_max = self.channel**-0.5
         torch.nn.init.uniform_(self.dw_conv.weight, -dw_max, dw_max)
         torch.nn.init.uniform_(self.dw_conv.bias, -dw_max, dw_max)
         torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
         torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
 
-    def forward(self, xs, xs_lens: torch.Tensor,
-                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                ):
+    def forward(
+            self,
+            xs,
+            xs_lens: torch.Tensor,
+            mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+            mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+    ):
         xs = xs.transpose(1, 2)  # [B, C, T]
         xs = xs.masked_fill(mask_pad.eq(0), 0.0)
 
@@ -167,18 +178,19 @@ class TimeReductionLayer1D(nn.Module):
 
 
 class TimeReductionLayer2D(nn.Module):
-    def __init__(
-            self, kernel_size: int = 5, stride: int = 2, encoder_dim: int = 256):
+
+    def __init__(self,
+                 kernel_size: int = 5,
+                 stride: int = 2,
+                 encoder_dim: int = 256):
         super(TimeReductionLayer2D, self).__init__()
         self.encoder_dim = encoder_dim
         self.kernel_size = kernel_size
-        self.dw_conv = Conv2dValid(
-            in_channels=encoder_dim,
-            out_channels=encoder_dim,
-            kernel_size=(kernel_size, 1),
-            stride=stride,
-            valid_trigy=True
-        )
+        self.dw_conv = Conv2dValid(in_channels=encoder_dim,
+                                   out_channels=encoder_dim,
+                                   kernel_size=(kernel_size, 1),
+                                   stride=stride,
+                                   valid_trigy=True)
         self.pw_conv = Conv2dValid(
             in_channels=encoder_dim,
             out_channels=encoder_dim,
@@ -193,23 +205,26 @@ class TimeReductionLayer2D(nn.Module):
         self.init_weights()
 
     def init_weights(self):
-        dw_max = self.kernel_size ** -0.5
-        pw_max = self.encoder_dim ** -0.5
+        dw_max = self.kernel_size**-0.5
+        pw_max = self.encoder_dim**-0.5
         torch.nn.init.uniform_(self.dw_conv.weight, -dw_max, dw_max)
         torch.nn.init.uniform_(self.dw_conv.bias, -dw_max, dw_max)
         torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
         torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
 
     def forward(
-            self, xs: torch.Tensor, xs_lens: torch.Tensor,
-            mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-            mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        self,
+        xs: torch.Tensor,
+        xs_lens: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         xs = xs.masked_fill(mask_pad.transpose(1, 2).eq(0), 0.0)
         xs = xs.unsqueeze(2)
         padding1 = self.kernel_size - self.stride
         xs = F.pad(xs, (0, 0, 0, 0, 0, padding1, 0, 0),
-                   mode='constant', value=0.)
+                   mode='constant',
+                   value=0.)
         xs = self.dw_conv(xs.permute(0, 3, 1, 2))
         xs = self.pw_conv(xs).permute(0, 3, 2, 1).squeeze(1).contiguous()
         tmp_length = xs.size(1)
@@ -236,8 +251,11 @@ class TimeReductionLayerStream(nn.Module):
         stride (int): Downsampling factor in time dimension.
     """
 
-    def __init__(self, channel: int, out_dim: int,
-                 kernel_size: int = 1, stride: int = 2):
+    def __init__(self,
+                 channel: int,
+                 out_dim: int,
+                 kernel_size: int = 1,
+                 stride: int = 2):
         super(TimeReductionLayerStream, self).__init__()
 
         self.channel = channel
@@ -255,24 +273,31 @@ class TimeReductionLayerStream(nn.Module):
         )
 
         self.pw_conv = nn.Conv1d(
-            in_channels=channel, out_channels=out_dim,
-            kernel_size=1, stride=1, padding=0, groups=1,
+            in_channels=channel,
+            out_channels=out_dim,
+            kernel_size=1,
+            stride=1,
+            padding=0,
+            groups=1,
         )
 
         self.init_weights()
 
     def init_weights(self):
-        dw_max = self.kernel_size ** -0.5
-        pw_max = self.channel ** -0.5
+        dw_max = self.kernel_size**-0.5
+        pw_max = self.channel**-0.5
         torch.nn.init.uniform_(self.dw_conv.weight, -dw_max, dw_max)
         torch.nn.init.uniform_(self.dw_conv.bias, -dw_max, dw_max)
         torch.nn.init.uniform_(self.pw_conv.weight, -pw_max, pw_max)
         torch.nn.init.uniform_(self.pw_conv.bias, -pw_max, pw_max)
 
-    def forward(self, xs, xs_lens: torch.Tensor,
-                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                ):
+    def forward(
+            self,
+            xs,
+            xs_lens: torch.Tensor,
+            mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+            mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+    ):
         xs = xs.transpose(1, 2)  # [B, C, T]
         xs = xs.masked_fill(mask_pad.eq(0), 0.0)
 

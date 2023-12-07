@@ -3,6 +3,7 @@ import sys
 
 # train test1 test2 test3
 
+
 def readtst(tstfn):
     outlist = list()
     with open(tstfn) as br:
@@ -10,6 +11,7 @@ def readtst(tstfn):
             aline = aline.strip()
             outlist.append(aline)
     return outlist
+
 
 def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
     test1list = readtst(test1fn)
@@ -37,6 +39,7 @@ def split_train_tests_xml(xmlpath, test1fn, test2fn, test3fn):
 
     return outtrainlist, outt1list, outt2list, outt3list
 
+
 def all_wavs(wavpath):
     wavlist = list()
     for afile in os.listdir(wavpath):
@@ -45,6 +48,7 @@ def all_wavs(wavpath):
         afile2 = wavpath + '/' + afile
         wavlist.append(afile2)
     return wavlist
+
 
 def gen_text(xmllist, outpath):
     # id \t text
@@ -74,6 +78,7 @@ def gen_text(xmllist, outpath):
                     aoutline = '{}\t{}\n'.format(afullid, atxt)
                     bw.write(aoutline)
 
+
 def parse_xml_set(xmllist):
     outset = set()
     for xml in xmllist:
@@ -81,6 +86,7 @@ def parse_xml_set(xmllist):
         aid2 = aid.split('.')[0]
         outset.add(aid2)
     return outset
+
 
 def gen_wav_scp(xmllist, wavlist, outpath):
     # xmlset = pure id set, alike 'S04F1228'
@@ -109,15 +115,11 @@ def gen_wav_scp(xmllist, wavlist, outpath):
             bw.write(aoutline)
 
 
-def prep_text_wavscp(
-        xmlpath, wavpath, test1fn, test2fn, test3fn,
-        outtrainpath, out1path, out2path, out3path):
+def prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath,
+                     out1path, out2path, out3path):
 
     trainlist, t1list, t2list, t3list = split_train_tests_xml(
-        xmlpath,
-        test1fn,
-        test2fn,
-        test3fn)
+        xmlpath, test1fn, test2fn, test3fn)
     wavlist = all_wavs(wavpath)
 
     gen_text(trainlist, outtrainpath)
@@ -130,12 +132,12 @@ def prep_text_wavscp(
     gen_wav_scp(t2list, wavlist, out2path)
     gen_wav_scp(t3list, wavlist, out3path)
 
+
 if __name__ == '__main__':
     if len(sys.argv) < 10:
-        print(
-            "Usage: {}".format(sys.argv[0]) + "<xmlpath> " +
-            "<wavpath> <test1fn> <test2fn> <test3fn> " +
-            "<outtrainpath> <out1path> <out2path> <out3path>")
+        print("Usage: {}".format(sys.argv[0]) + "<xmlpath> " +
+              "<wavpath> <test1fn> <test2fn> <test3fn> " +
+              "<outtrainpath> <out1path> <out2path> <out3path>")
         exit(1)
 
     xmlpath = sys.argv[1]
@@ -149,6 +151,5 @@ if __name__ == '__main__':
     out2path = sys.argv[8]
     out3path = sys.argv[9]
 
-    prep_text_wavscp(xmlpath, wavpath, test1fn,
-                     test2fn, test3fn, outtrainpath,
+    prep_text_wavscp(xmlpath, wavpath, test1fn, test2fn, test3fn, outtrainpath,
                      out1path, out2path, out3path)

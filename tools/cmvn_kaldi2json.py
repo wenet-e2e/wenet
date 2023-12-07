@@ -4,6 +4,7 @@ import logging
 import sys
 import json
 
+
 def kaldi2json(kaldi_cmvn_file):
     means = []
     variance = []
@@ -26,10 +27,9 @@ def kaldi2json(kaldi_cmvn_file):
         for i in range(feat_dim + 2, 2 * feat_dim + 2):
             variance.append(float(arr[i]))
 
-    cmvn_info = {'mean_stat:' : means,
-                 'var_stat' : variance,
-                 'frame_num' : count}
+    cmvn_info = {'mean_stat:': means, 'var_stat': variance, 'frame_num': count}
     return cmvn_info
+
 
 if __name__ == '__main__':
     with open(sys.argv[2], 'w') as fout:

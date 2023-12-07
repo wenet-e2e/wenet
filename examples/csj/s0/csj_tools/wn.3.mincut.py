@@ -2,6 +2,7 @@ import librosa
 # import os
 import sys
 
+
 def mincut(wavscpfn, minsec):
     outfn = wavscpfn + "_" + str(minsec)
 
@@ -14,6 +15,7 @@ def mincut(wavscpfn, minsec):
                 dur = librosa.get_duration(filename=afn)
                 if dur >= minsec:
                     bw.write(aline + '\n')
+
 
 # wn.3.mincut.py <wav.scp> <min.sec>
 if __name__ == '__main__':

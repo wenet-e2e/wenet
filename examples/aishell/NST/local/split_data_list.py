@@ -17,13 +17,17 @@ import argparse
 
 def get_args():
     parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--job_nums', type=int, default=8,
+    parser.add_argument('--job_nums',
+                        type=int,
+                        default=8,
                         help='number of total split jobs')
-    parser.add_argument('--data_list_path', required=True,
+    parser.add_argument('--data_list_path',
+                        required=True,
                         help='the path to the data.list file')
-    parser.add_argument('--output_dir', required=True,
+    parser.add_argument('--output_dir',
+                        required=True,
                         help='path to output dir, '
-                             'eg --output_dir=data/train/aishell_split_60')
+                        'eg --output_dir=data/train/aishell_split_60')
     args = parser.parse_args()
     return args
 
@@ -46,7 +50,7 @@ def main():
     len_d = int(len(data_list_we) / num_lists)
     rest_lines = data_list_we[num_lists * len_d:]
     rest_len = len(rest_lines)
-    print("total num of lines", len(data_list_we) , "rest len is", rest_len)
+    print("total num of lines", len(data_list_we), "rest len is", rest_len)
 
     # generate N sublist
     for i in range(num_lists):
@@ -57,7 +61,7 @@ def main():
 
         with open(output_list, 'w', encoding="utf-8") as writer:
 
-            new_list = data_list_we[i * len_d: (i + 1) * len_d]
+            new_list = data_list_we[i * len_d:(i + 1) * len_d]
             if i < rest_len:
                 new_list.append(rest_lines[i])
             for x in new_list:

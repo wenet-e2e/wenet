@@ -9,6 +9,7 @@ import textgrid
 
 
 class Segment(object):
+
     def __init__(self, uttid, spkr, stime, etime, text):
         self.uttid = uttid
         self.spkr = spkr

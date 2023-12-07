@@ -45,31 +45,30 @@ void init(JNIEnv* env, jobject, jstring jModelDir) {
 
   resource = std::make_shared<DecodeResource>();
   resource->model = model;
-  resource->symbol_table = std::shared_ptr<fst::SymbolTable>(
-          fst::SymbolTable::ReadText(dictPath));
+  resource->symbol_table =
+      std::shared_ptr<fst::SymbolTable>(fst::SymbolTable::ReadText(dictPath));
   LOG(INFO) << "dict path: " << dictPath;
 
   PostProcessOptions post_process_opts;
-  resource->post_processor =
-    std::make_shared<PostProcessor>(post_process_opts);
+  resource->post_processor = std::make_shared<PostProcessor>(post_process_opts);
 
   feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
   feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
 
   decode_config = std::make_shared<DecodeOptions>();
   decode_config->chunk_size = 16;
-  decoder = std::make_shared<AsrDecoder>(feature_pipeline, resource,
-                                         *decode_config);
+  decoder =
+      std::make_shared<AsrDecoder>(feature_pipeline, resource, *decode_config);
 }
 
-void reset(JNIEnv *env, jobject) {
+void reset(JNIEnv* env, jobject) {
   LOG(INFO) << "wenet reset";
   decoder->Reset();
   state = kEndBatch;
   total_result = "";
 }
 
-void accept_waveform(JNIEnv *env, jobject, jshortArray jWaveform) {
+void accept_waveform(JNIEnv* env, jobject, jshortArray jWaveform) {
   jsize size = env->GetArrayLength(jWaveform);
   int16_t* waveform = env->GetShortArrayElements(jWaveform, 0);
   feature_pipeline->AcceptWaveform(waveform, size);
@@ -114,7 +113,7 @@ void start_decode() {
   decode_thread.detach();
 }
 
-jboolean get_finished(JNIEnv *env, jobject) {
+jboolean get_finished(JNIEnv* env, jobject) {
   if (state == kEndFeats) {
     LOG(INFO) << "wenet recognize finished";
     return JNI_TRUE;
@@ -122,7 +121,7 @@ jboolean get_finished(JNIEnv *env, jobject) {
   return JNI_FALSE;
 }
 
-jstring get_result(JNIEnv *env, jobject) {
+jstring get_result(JNIEnv* env, jobject) {
   std::string result;
   if (decoder->DecodedSomething()) {
     result = decoder->result()[0].sentence;
@@ -132,9 +131,9 @@ jstring get_result(JNIEnv *env, jobject) {
 }
 }  // namespace wenet
 
-JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
-  JNIEnv *env;
-  if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
+JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void*) {
+  JNIEnv* env;
+  if (vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
     return JNI_ERR;
   }
 
@@ -144,16 +143,16 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *) {
   }
 
   static const JNINativeMethod methods[] = {
-    {"init", "(Ljava/lang/String;)V", reinterpret_cast<void*>(wenet::init)},
-    {"reset", "()V", reinterpret_cast<void *>(wenet::reset)},
-    {"acceptWaveform", "([S)V",
-     reinterpret_cast<void *>(wenet::accept_waveform)},
-    {"setInputFinished", "()V",
-     reinterpret_cast<void *>(wenet::set_input_finished)},
-    {"getFinished", "()Z", reinterpret_cast<void *>(wenet::get_finished)},
-    {"startDecode", "()V", reinterpret_cast<void *>(wenet::start_decode)},
-    {"getResult", "()Ljava/lang/String;",
-     reinterpret_cast<void *>(wenet::get_result)},
+      {"init", "(Ljava/lang/String;)V", reinterpret_cast<void*>(wenet::init)},
+      {"reset", "()V", reinterpret_cast<void*>(wenet::reset)},
+      {"acceptWaveform", "([S)V",
+       reinterpret_cast<void*>(wenet::accept_waveform)},
+      {"setInputFinished", "()V",
+       reinterpret_cast<void*>(wenet::set_input_finished)},
+      {"getFinished", "()Z", reinterpret_cast<void*>(wenet::get_finished)},
+      {"startDecode", "()V", reinterpret_cast<void*>(wenet::start_decode)},
+      {"getResult", "()Ljava/lang/String;",
+       reinterpret_cast<void*>(wenet::get_result)},
   };
   int rc = env->RegisterNatives(c, methods,
                                 sizeof(methods) / sizeof(JNINativeMethod));

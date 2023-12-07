@@ -17,7 +17,7 @@ import ctypes
 import numpy as np
 from time import time_ns
 import tensorrt as trt
-import pycuda.autoinit # noqa
+import pycuda.autoinit  # noqa
 import pycuda.driver as cuda
 
 useFile = False
@@ -73,9 +73,8 @@ def layerNormCPU(bufferH):
     _15 = _14 - _12  # a-bμ/sqrt(...)
     _16 = _x * _11  # bx/sqrt(...)
     _17 = _15 + _16  # b(x-μ)/sqrt(...)+a
-    _18 = _17.reshape(
-        bufferH[0].shape[0], bufferH[0].shape[1], bufferH[0].shape[2]
-    )
+    _18 = _17.reshape(bufferH[0].shape[0], bufferH[0].shape[1],
+                      bufferH[0].shape[2])
     return _18
 
 
@@ -88,32 +87,25 @@ def testLayerNormCPU():
     bufferH.append(io["(Unnamed Layer* 13) [Constant]_output"])
 
     temp1 = layerNormCPU(bufferH)
-    print(
-        "outputCPU: %s,SumAbs=%.5e,Var=%.5f,Max=%.5f,Min=%.5f,SAD=%.5f"
-        % (
-            str(temp1.shape),
-            np.sum(abs(temp1)),
-            np.var(temp1),
-            np.max(temp1),
-            np.min(temp1),
-            np.sum(np.abs(np.diff(temp1.reshape(-1)))),
-        )
-    )
+    print("outputCPU: %s,SumAbs=%.5e,Var=%.5f,Max=%.5f,Min=%.5f,SAD=%.5f" % (
+        str(temp1.shape),
+        np.sum(abs(temp1)),
+        np.var(temp1),
+        np.max(temp1),
+        np.min(temp1),
+        np.sum(np.abs(np.diff(temp1.reshape(-1)))),
+    ))
     # print(temp1)
     temp2 = io[
-        "seq2seq/encoder_1/layer_0/multi_head/conv1d/conv1d/ExpandDims:0"
-    ]
-    print(
-        "outputRef: %s,SumAbs=%.5e,Var=%.5f,Max=%.5f,Min=%.5f,SAD=%.5f"
-        % (
-            str(temp2.shape),
-            np.sum(abs(temp2)),
-            np.var(temp2),
-            np.max(temp2),
-            np.min(temp2),
-            np.sum(np.abs(np.diff(temp2.reshape(-1)))),
-        )
-    )
+        "seq2seq/encoder_1/layer_0/multi_head/conv1d/conv1d/ExpandDims:0"]
+    print("outputRef: %s,SumAbs=%.5e,Var=%.5f,Max=%.5f,Min=%.5f,SAD=%.5f" % (
+        str(temp2.shape),
+        np.sum(abs(temp2)),
+        np.var(temp2),
+        np.max(temp2),
+        np.min(temp2),
+        np.sum(np.abs(np.diff(temp2.reshape(-1)))),
+    ))
     # print(temp2)
     print("check result:")
     print(check(temp1, temp2, True))
@@ -147,13 +139,13 @@ def run():
 
     inputTensorList = []
     inputTensorList.append(
-        network.add_input("inputT", trt.float32, [-1, -1, 256])
-    )
+        network.add_input("inputT", trt.float32, [-1, -1, 256]))
     inputTensorList.append(network.add_input("inputB", trt.float32, [256]))
     inputTensorList.append(network.add_input("inputA", trt.float32, [256]))
 
     profile = builder.create_optimization_profile()
-    profile.set_shape("inputT", [1, 4, 256], [1024, 256, 256], [1024, 256, 256])
+    profile.set_shape("inputT", [1, 4, 256], [1024, 256, 256],
+                      [1024, 256, 256])
     config.add_optimization_profile(profile)
 
     pluginLayer = network.add_plugin_v2(inputTensorList, getLayerNormPlugin())
@@ -167,15 +159,12 @@ def run():
     context.set_binding_shape(0, [nBS, nSL, nEmbedding])
     context.set_binding_shape(1, [nEmbedding])
     context.set_binding_shape(2, [nEmbedding])
-    print(
-        "Binding all? %s"
-        % (["No", "Yes"][int(context.all_binding_shapes_specified)])
-    )
+    print("Binding all? %s" %
+          (["No", "Yes"][int(context.all_binding_shapes_specified)]))
     stream = cuda.Stream()
 
     nInput = np.sum(
-        [engine.binding_is_input(i) for i in range(engine.num_bindings)]
-    )
+        [engine.binding_is_input(i) for i in range(engine.num_bindings)])
     nOutput = engine.num_bindings - nInput
     for i in range(engine.num_bindings):
         print(
@@ -187,35 +176,31 @@ def run():
 
     bufferH = []
     bufferH.append(
-        np.random.rand(nBS, nSL, nEmbedding)
-        .astype(np.float32)
-        .reshape(nBS, nSL, nEmbedding)
-        * 2
-        - 1
-    )
+        np.random.rand(nBS, nSL, nEmbedding).astype(np.float32).reshape(
+            nBS, nSL, nEmbedding) * 2 - 1)
     bufferH.append(np.ones(nEmbedding).astype(np.float32))
     bufferH.append(np.zeros(nEmbedding).astype(np.float32))
     bufferH.append(
         np.empty(
             context.get_binding_shape(3),
             dtype=trt.nptype(engine.get_binding_dtype(3)),
-        )
-    )
+        ))
 
     bufferD = []
     for i in range(engine.num_bindings):
         bufferD.append(cuda.mem_alloc(bufferH[i].nbytes))
 
     for i in range(nInput):
-        cuda.memcpy_htod_async(
-            bufferD[i], np.ascontiguousarray(bufferH[i].reshape(-1)), stream
-        )
+        cuda.memcpy_htod_async(bufferD[i],
+                               np.ascontiguousarray(bufferH[i].reshape(-1)),
+                               stream)
 
     context.execute_async_v2(bufferD, stream.handle)
     stream.synchronize()
 
     for i in range(nOutput):
-        cuda.memcpy_dtoh_async(bufferH[nInput + i], bufferD[nInput + i], stream)
+        cuda.memcpy_dtoh_async(bufferH[nInput + i], bufferD[nInput + i],
+                               stream)
     stream.synchronize()
 
     for i in range(nInput):
@@ -254,10 +239,8 @@ def run():
         context.execute_async_v2(bufferD, stream.handle)
     stream.synchronize()
     time1 = time_ns()
-    print(
-        testCase
-        + "average %fms per inference\n" % ((time1 - time0) / nTime / 1000000)
-    )
+    print(testCase + "average %fms per inference\n" %
+          ((time1 - time0) / nTime / 1000000))
 
     print("check result:")
     temp1 = bufferH[-1]

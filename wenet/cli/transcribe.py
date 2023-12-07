@@ -50,11 +50,14 @@ def get_args():
     parser.add_argument('--paraformer',
                         action='store_true',
                         help='whether to use the best chinese model')
-    parser.add_argument('--beam', type=int, default=5,
-                        help="beam size")
-    parser.add_argument('--context_path', type=str, default=None,
+    parser.add_argument('--beam', type=int, default=5, help="beam size")
+    parser.add_argument('--context_path',
+                        type=str,
+                        default=None,
                         help='context list file')
-    parser.add_argument('--context_score', type=float, default=6.0,
+    parser.add_argument('--context_score',
+                        type=float,
+                        default=6.0,
                         help='context score')
     args = parser.parse_args()
     return args
@@ -66,8 +69,8 @@ def main():
     if args.paraformer:
         model = load_paraformer(args.model_dir, args.gpu)
     else:
-        model = load_model(args.language, args.model_dir, args.gpu,
-                           args.beam, args.context_path, args.context_score)
+        model = load_model(args.language, args.model_dir, args.gpu, args.beam,
+                           args.context_path, args.context_score)
     if args.align:
         result = model.align(args.audio_file, args.label)
     else:

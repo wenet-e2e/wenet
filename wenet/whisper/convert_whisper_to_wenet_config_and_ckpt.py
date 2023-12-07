@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """
 Requirements:
 
@@ -29,7 +28,6 @@ python convert_whisper_to_wenet_config_and_ckpt.py \
 ```
 """
 
-
 import argparse
 import copy
 import os
@@ -40,6 +38,7 @@ import yaml
 _cpath_ = sys.path[0]
 sys.path.remove(_cpath_)
 from whisper.tokenizer import get_tokenizer
+
 sys.path.insert(0, _cpath_)
 
 
@@ -102,18 +101,22 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['model_conf']['special_tokens']['sot'] = tokenizer.sot
     configs['model_conf']['special_tokens']['eot'] = tokenizer.sot
     configs['model_conf']['special_tokens']['sot_prev'] = tokenizer.sot_prev
-    configs['model_conf']['special_tokens']['transcribe'] = tokenizer.transcribe
+    configs['model_conf']['special_tokens'][
+        'transcribe'] = tokenizer.transcribe
     configs['model_conf']['special_tokens']['translate'] = tokenizer.translate
-    configs['model_conf']['special_tokens']['no_timestamps'] = tokenizer.no_timestamps
+    configs['model_conf']['special_tokens'][
+        'no_timestamps'] = tokenizer.no_timestamps
     configs['model_conf']['special_tokens']['no_speech'] = tokenizer.no_speech
     configs['model_conf']['special_tokens']['timestamp_begin'] = \
         tokenizer.timestamp_begin
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
-    configs['dataset_conf']['filter_conf']['max_length'] = dims['n_audio_ctx'] * 2  # 1/2 subsample # noqa
+    configs['dataset_conf']['filter_conf'][
+        'max_length'] = dims['n_audio_ctx'] * 2  # 1/2 subsample # noqa
     configs['dataset_conf']['filter_conf']['min_length'] = 0
-    configs['dataset_conf']['filter_conf']['token_max_length'] = dims['n_text_ctx']
+    configs['dataset_conf']['filter_conf']['token_max_length'] = dims[
+        'n_text_ctx']
     configs['dataset_conf']['filter_conf']['token_min_length'] = 1
     configs['dataset_conf']['resample_conf'] = {}
     configs['dataset_conf']['resample_conf']['resample_rate'] = 16000
@@ -137,7 +140,8 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['dataset_conf']['log_mel_spectrogram_conf'] = {}
     configs['dataset_conf']['log_mel_spectrogram_conf']['n_fft'] = 400
     configs['dataset_conf']['log_mel_spectrogram_conf']['hop_length'] = 160
-    configs['dataset_conf']['log_mel_spectrogram_conf']['num_mel_bins'] = dims['n_mels']
+    configs['dataset_conf']['log_mel_spectrogram_conf']['num_mel_bins'] = dims[
+        'n_mels']
     configs['dataset_conf']['log_mel_spectrogram_conf']['padding'] = 0
     configs['dataset_conf']['batch_conf'] = {}
     configs['dataset_conf']['batch_conf']['batch_type'] = 'dynamic'
@@ -167,7 +171,9 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
 def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
     wenet_state_dict = {}
     unused = []
-    print("===================== start CKPT Conversion =========================")
+    print(
+        "===================== start CKPT Conversion ========================="
+    )
     for name in whisper_state_dict.keys():
         original_name = copy.deepcopy(name)
         name = name.replace("encoder.conv1", "encoder.embed.conv.0")
@@ -211,7 +217,9 @@ def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
         print("NOTE!!! drop {}".format(name))
     print("Saving fp32 ckpt to {}...".format(wenet_state_dict_path))
     torch.save(wenet_state_dict, wenet_state_dict_path)
-    print("DONE\n===================== End CKPT Conversion =========================\n")
+    print(
+        "DONE\n===================== End CKPT Conversion =========================\n"
+    )
 
 
 def convert_to_wenet_units(tokenizer, units_txt_path):
@@ -235,11 +243,17 @@ def convert_to_wenet_units(tokenizer, units_txt_path):
 
 def get_args():
     parser = argparse.ArgumentParser(description='load and parse whisper')
-    parser.add_argument('--whisper_ckpt', required=True,
-                        help='https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt')
-    parser.add_argument('--output_dir', default='.',
+    # yapf: disable
+    parser.add_argument(
+        '--whisper_ckpt',
+        required=True,
+        help='https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt'  # noqa
+    )
+    # yapf: enable
+    parser.add_argument('--output_dir',
+                        default='.',
                         help='output file in wenet\'s style: ' +
-                             'units.txt, train.yaml, model.pt')
+                        'units.txt, train.yaml, model.pt')
     args = parser.parse_args()
     return args
 
@@ -249,20 +263,16 @@ def main():
     checkpoint = torch.load(args.whisper_ckpt, map_location="cpu")
     multilingual = checkpoint["dims"]['n_vocab'] >= 51865
     num_languages = checkpoint["dims"]['n_vocab'] - 51765 - int(multilingual)
-    tokenizer = get_tokenizer(multilingual=multilingual, num_languages=num_languages)
+    tokenizer = get_tokenizer(multilingual=multilingual,
+                              num_languages=num_languages)
 
     convert_to_wenet_state_dict(
         checkpoint["model_state_dict"],
-        os.path.join(args.output_dir, 'wenet_whisper.pt')
-    )
-    convert_to_wenet_units(
-        tokenizer,
-        os.path.join(args.output_dir, 'units.txt')
-    )
-    convert_to_wenet_yaml(
-        tokenizer, checkpoint["dims"],
-        os.path.join(args.output_dir, 'train.yaml')
-    )
+        os.path.join(args.output_dir, 'wenet_whisper.pt'))
+    convert_to_wenet_units(tokenizer, os.path.join(args.output_dir,
+                                                   'units.txt'))
+    convert_to_wenet_yaml(tokenizer, checkpoint["dims"],
+                          os.path.join(args.output_dir, 'train.yaml'))
 
 
 if __name__ == "__main__":

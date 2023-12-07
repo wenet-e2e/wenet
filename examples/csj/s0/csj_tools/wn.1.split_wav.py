@@ -7,6 +7,7 @@ import multiprocessing
 import librosa
 import soundfile as sf
 
+
 # use .simp as the source for .wav file splitting
 def wavfn(apath):
     wavdict = dict()  # key=id, value=full.path of .wav
@@ -15,6 +16,7 @@ def wavfn(apath):
         aid = awavfn.replace('.wav', '')
         wavdict[aid] = fullwavpath
     return wavdict
+
 
 def xmlfn(apath):
     xmldict = dict()  # key=id, value=full.path of .xml.simp
@@ -26,6 +28,7 @@ def xmlfn(apath):
         # print('obtain id: {}\t{}'.format(axmlfn, aid))
         xmldict[aid] = axmlfn2
     return xmldict
+
 
 def ch2to1(f1, outf1):
     wav1, _ = librosa.load(f1, sr=16000, mono=False)
@@ -39,6 +42,7 @@ def ch2to1(f1, outf1):
     # rename the .1ch file back to the .wav file and
     # overwrite the old .wav file which is 2ch
     # print(res, acmd)
+
 
 def proc1file(fullxmlfn, fullwavfn, outwavpath):
     with open(fullxmlfn) as xmlbr:
@@ -58,7 +62,8 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
             partwavfn = os.path.join(outwavpath, name2)
 
             dur = float(etime) - float(stime)
-            acmd = 'sox {} {} trim {} {}'.format(fullwavfn, partwavfn, stime, dur)
+            acmd = 'sox {} {} trim {} {}'.format(fullwavfn, partwavfn, stime,
+                                                 dur)
             res = os.system(acmd)
             # print(res, acmd)
 
@@ -66,6 +71,7 @@ def proc1file(fullxmlfn, fullwavfn, outwavpath):
             partwavfn1ch = partwavfn + ".1ch.wav"  # NOTE must ends with '.wav'!
             # otherwise, soundfile.write will give us error report!
             ch2to1(partwavfn, partwavfn1ch)
+
 
 def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
     # atag = 'core' and 'noncore'
@@ -92,19 +98,19 @@ def procpath(atag, csjpath, xmlsimppath, outwavpath, idset):
                 fullwavfn = wavdict[wavid]
                 if wavid in xmldict:
                     fullxmlfn = xmldict[wavid]
-                    pool.apply_async(proc1file, (fullxmlfn, fullwavfn, outwavpath))
+                    pool.apply_async(proc1file,
+                                     (fullxmlfn, fullwavfn, outwavpath))
         pool.close()
         pool.join()
 
     print('parallel {} threads done for {} files.'.format(
-        nthreads,
-        len(wavidlist)))
+        nthreads, len(wavidlist)))
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
-        print(
-            "Usage: {}".format(sys.argv[0]) +
-            "<in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]")
+        print("Usage: {}".format(sys.argv[0]) +
+              "<in.csj.path> <in.xml.simp.path> <out.wav.path> [id.list.fn]")
         exit(1)
 
     csjpath = sys.argv[1]

@@ -20,45 +20,40 @@ import argparse
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="process onnx file for trt engine generation"
-    )
-    parser.add_argument(
-        "--input_onnx", type=str, required=True, help="input onnx model path"
-    )
-    parser.add_argument(
-        "--output_onnx", type=str, required=True, help="output .npy file path"
-    )
+        description="process onnx file for trt engine generation")
+    parser.add_argument("--input_onnx",
+                        type=str,
+                        required=True,
+                        help="input onnx model path")
+    parser.add_argument("--output_onnx",
+                        type=str,
+                        required=True,
+                        help="output .npy file path")
     args = parser.parse_args()
 
     sourceOnnx = args.input_onnx
     destinationOnnx = args.output_onnx
 
     graph = gs.import_onnx(
-        onnx.shape_inference.infer_shapes(onnx.load(sourceOnnx))
-    )
+        onnx.shape_inference.infer_shapes(onnx.load(sourceOnnx)))
 
     nLayerNormPlugin = 0
     for node in graph.nodes:
-        if (
-            node.op == "ReduceMean"
-            and node.o().op == "Sub"
-            and node.o().inputs[0] == node.inputs[0]
-            and node.o().o(0).op == "Pow"
-            and node.o().o(1).op == "Div"
-            and node.o().o(0).o().op == "ReduceMean"
-            and node.o().o(0).o().o().op == "Add"
-            and node.o().o(0).o().o().o().op == "Sqrt"
-            and node.o().o(0).o().o().o().o().op == "Div"
-            and node.o().o(0).o().o().o().o() == node.o().o(1)
-            and node.o().o(0).o().o().o().o().o().op == "Mul"
-            and node.o().o(0).o().o().o().o().o().o().op == "Add"
-        ):
+        if (node.op == "ReduceMean" and node.o().op == "Sub"
+                and node.o().inputs[0] == node.inputs[0]
+                and node.o().o(0).op == "Pow" and node.o().o(1).op == "Div"
+                and node.o().o(0).o().op == "ReduceMean"
+                and node.o().o(0).o().o().op == "Add"
+                and node.o().o(0).o().o().o().op == "Sqrt"
+                and node.o().o(0).o().o().o().o().op == "Div"
+                and node.o().o(0).o().o().o().o() == node.o().o(1)
+                and node.o().o(0).o().o().o().o().o().op == "Mul"
+                and node.o().o(0).o().o().o().o().o().o().op == "Add"):
             inputTensor = node.inputs[0]
 
             lastMultipyNode = node.o().o(0).o().o().o().o().o()
-            index = ["weight" in i.name for i in lastMultipyNode.inputs].index(
-                True
-            )
+            index = ["weight" in i.name
+                     for i in lastMultipyNode.inputs].index(True)
             b = np.array(
                 deepcopy(lastMultipyNode.inputs[index].values.tolist()),
                 dtype=np.float32,
@@ -104,8 +99,7 @@ if __name__ == "__main__":
                 index = graph.outputs.index(lastAddNode.outputs[0])
                 # TODO: FIX ME YUEKAI, for offline asr encoder_out dtype
                 graph.outputs[index] = layerNormN.outputs[0].to_variable(
-                    np.float16
-                )
+                    np.float16)
                 # graph.outputs[index] = layerNormN.outputs[0]
             else:  # other LayerNorm contain the subsequent Squeeze operation
                 for n in graph.nodes:

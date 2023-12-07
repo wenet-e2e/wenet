@@ -24,18 +24,19 @@ def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
     """
     batch_size = lengths.size(0)
     max_len = max_len if max_len > 0 else lengths.max().item()
-    seq_range = torch.arange(
-        0, max_len, dtype=torch.int64, device=lengths.device
-    )
+    seq_range = torch.arange(0,
+                             max_len,
+                             dtype=torch.int64,
+                             device=lengths.device)
     seq_range_expand = seq_range.unsqueeze(0).expand(batch_size, max_len)
     seq_length_expand = lengths.unsqueeze(-1)
     mask = seq_range_expand >= seq_length_expand
     return mask
 
 
-def remove_duplicates_and_blank(
-    hyp: List[int], eos: int, blank_id: int = 0
-) -> List[int]:
+def remove_duplicates_and_blank(hyp: List[int],
+                                eos: int,
+                                blank_id: int = 0) -> List[int]:
     new_hyp: List[int] = []
     cur = 0
     while cur < len(hyp):
@@ -71,33 +72,27 @@ def load_word_symbols(path):
 
 
 class RivaWFSTOnlineDecoder:
+
     def __init__(self, vocab_size, tlg_dir, config_dict):
         config = BatchedMappedDecoderCudaConfig()
         config.online_opts.decoder_opts.lattice_beam = config_dict[
-            "lattice_beam"
-        ]
+            "lattice_beam"]
         config.online_opts.lattice_postprocessor_opts.acoustic_scale = config_dict[
-            "acoustic_scale"
-        ]  # noqa
+            "acoustic_scale"]  # noqa
         config.n_input_per_chunk = config_dict["n_input_per_chunk"]
         config.online_opts.decoder_opts.default_beam = config_dict[
-            "default_beam"
-        ]
+            "default_beam"]
         config.online_opts.decoder_opts.max_active = config_dict["max_active"]
         config.online_opts.determinize_lattice = config_dict[
-            "determinize_lattice"
-        ]
+            "determinize_lattice"]
         config.online_opts.max_batch_size = config_dict["max_batch_size"]
         config.online_opts.num_channels = config_dict["num_channels"]
         config.online_opts.frame_shift_seconds = config_dict[
-            "frame_shift_seconds"
-        ]
+            "frame_shift_seconds"]
         config.online_opts.lattice_postprocessor_opts.lm_scale = config_dict[
-            "lm_scale"
-        ]
+            "lm_scale"]
         config.online_opts.lattice_postprocessor_opts.word_ins_penalty = config_dict[
-            "word_ins_penalty"
-        ]  # noqa
+            "word_ins_penalty"]  # noqa
 
         config.online_opts.decoder_opts.ntokens_pre_allocated = 10_000_000
         config.online_opts.num_decoder_copy_threads = 2
@@ -111,8 +106,7 @@ class RivaWFSTOnlineDecoder:
             vocab_size,
         )
         self.word_id_to_word_str = load_word_symbols(
-            os.path.join(tlg_dir, "words.txt")
-        )
+            os.path.join(tlg_dir, "words.txt"))
         # self.frame_reducer = FrameReducer(0.98)
 
     def decode_batch(
@@ -135,15 +129,14 @@ class RivaWFSTOnlineDecoder:
         # log_probs_list = [t for t in torch.unbind(ctc_log_probs, dim=0)]
         log_probs_list = []
         for i, ctc_log_prob in enumerate(ctc_log_probs):
-            log_probs_list.append(ctc_log_prob[: encoder_out_lens[i]])
-        _, hypos = self.decoder.decode_batch(
-            corr_ids, log_probs_list, is_first_chunk_list, is_last_chunk_list
-        )
+            log_probs_list.append(ctc_log_prob[:encoder_out_lens[i]])
+        _, hypos = self.decoder.decode_batch(corr_ids, log_probs_list,
+                                             is_first_chunk_list,
+                                             is_last_chunk_list)
         total_hyps = []
         for sent in hypos:
-            hyp = sep_symbol.join(
-                self.word_id_to_word_str[word] for word in sent.words
-            )
+            hyp = sep_symbol.join(self.word_id_to_word_str[word]
+                                  for word in sent.words)
             total_hyps.append(hyp)
         return total_hyps
 
