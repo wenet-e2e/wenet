@@ -1,3 +1,5 @@
+import re
+
 from os import PathLike
 from typing import Dict, List, Optional, Union
 from wenet.utils.file_utils import read_symbol_table, read_non_lang_symbols
