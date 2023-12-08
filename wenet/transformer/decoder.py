@@ -50,6 +50,8 @@ class TransformerDecoder(torch.nn.Module):
         key_bias: whether use bias in attention.linear_k, False for whisper models.
         gradient_checkpointing: rerunning a forward-pass segment for each
             checkpointed segment during backward.
+        tie_word_embedding: Tie or clone module weights depending of whether we are
+            using TorchScript or not
     """
 
     def __init__(
@@ -70,6 +72,7 @@ class TransformerDecoder(torch.nn.Module):
         key_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
+        tie_word_embedding: bool = False,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -107,6 +110,7 @@ class TransformerDecoder(torch.nn.Module):
         ])
 
         self.gradient_checkpointing = gradient_checkpointing
+        self.tie_word_embedding = tie_word_embedding
 
     def forward(
         self,
@@ -285,9 +289,11 @@ class BiTransformerDecoder(torch.nn.Module):
         normalize_before: bool = True,
         key_bias: bool = True,
         gradient_checkpointing: bool = False,
+        tie_word_embedding: bool = False,
     ):
 
         super().__init__()
+        self.tie_word_embedding = tie_word_embedding
         self.left_decoder = TransformerDecoder(
             vocab_size,
             encoder_output_size,
@@ -302,7 +308,8 @@ class BiTransformerDecoder(torch.nn.Module):
             use_output_layer,
             normalize_before,
             key_bias=key_bias,
-            gradient_checkpointing=gradient_checkpointing)
+            gradient_checkpointing=gradient_checkpointing,
+            tie_word_embedding=tie_word_embedding)
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -318,7 +325,8 @@ class BiTransformerDecoder(torch.nn.Module):
             use_output_layer,
             normalize_before,
             key_bias=key_bias,
-            gradient_checkpointing=gradient_checkpointing)
+            gradient_checkpointing=gradient_checkpointing,
+            tie_word_embedding=tie_word_embedding)
 
     def forward(
         self,

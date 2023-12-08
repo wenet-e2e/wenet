@@ -75,6 +75,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
 
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
+    configs['decoder_conf']['tie_word_embedding'] = True
     configs['decoder_conf']['gradient_checkpointing'] = True
     configs['decoder_conf']['attention_heads'] = dims['n_text_head']
     configs['decoder_conf']['linear_units'] = dims['n_text_state'] * 4
@@ -152,7 +153,6 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['accum_grad'] = 1
     configs['max_epoch'] = 100
     configs['log_interval'] = 100
-    configs['tie_word_embedding'] = True
 
     configs['optim'] = "adam"
     configs['optim_conf'] = {}
