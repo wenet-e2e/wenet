@@ -20,9 +20,19 @@
 
 . ./path.sh || exit 1;
 
+# Automatically detect number of gpus
+num_gpus=$(nvidia-smi -L | wc -l)
+gpu_list=""
+for (( i=0; i<num_gpus; i++ )); do
+  if [ $i -gt 0 ]; then
+    gpu_list="$gpu_list,"
+  fi
+  gpu_list="$gpu_list$i"
+done
+echo ${gpu_list}
 # Use this to control how many gpu you use, It's 1-gpu training if you specify
 # just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+export CUDA_VISIBLE_DEVICES=${gpu_list}
 
 stage=1 # start from 0 if you need to start from data preparation
 stop_stage=8
@@ -72,7 +82,6 @@ data_type=shard
 num_utts_per_shard=1000
 train_set=train
 train_config=conf/train_conformer.yaml
-cmvn=true
 average_checkpoint=true
 target_pt=80
 decode_checkpoint=$dir/$target_pt.pt
@@ -113,9 +122,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   dist_backend="nccl"
   # the global_cmvn file need to be calculated by combining both supervised/unsupervised datasets,
   # and it should be positioned at data/${train_set}/global_cmvn .
-  cmvn_opts=
-  $cmvn && cp data/${train_set}/global_cmvn $dir/global_cmvn
-  $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
 
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
@@ -133,14 +139,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type $data_type \
-      --symbol_table $dict \
       --train_data data/$train_set/$data_list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
-      $cmvn_opts \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
