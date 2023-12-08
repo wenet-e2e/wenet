@@ -112,19 +112,11 @@ def init_model(args, configs):
         elif predictor_type == 'embedding':
             predictor = EmbeddingPredictor(vocab_size,
                                            **configs['predictor_conf'])
-            configs['predictor_conf']['output_size'] = configs[
-                'predictor_conf']['embed_size']
         elif predictor_type == 'conv':
             predictor = ConvPredictor(vocab_size, **configs['predictor_conf'])
-            configs['predictor_conf']['output_size'] = configs[
-                'predictor_conf']['embed_size']
         else:
             raise NotImplementedError(
                 "only rnn, embedding and conv type support now")
-        configs['joint_conf']['enc_output_size'] = configs['encoder_conf'][
-            'output_size']
-        configs['joint_conf']['pred_output_size'] = configs['predictor_conf'][
-            'output_size']
         joint = TransducerJoint(vocab_size, **configs['joint_conf'])
         model = Transducer(vocab_size=vocab_size,
                            blank=0,
