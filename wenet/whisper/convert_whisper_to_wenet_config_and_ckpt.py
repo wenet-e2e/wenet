@@ -114,6 +114,11 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['ctc_conf'] = {}
     configs['ctc_conf']['ctc_blank_id'] = tokenizer.no_speech
 
+    configs['cmvn'] = None
+    configs['cmvn_conf'] = {}
+    configs['cmvn_conf']['cmvn_file'] = None
+    configs['cmvn_conf']['is_json_cmvn'] = None
+
     configs['model'] = "whisper"
     configs['model_conf'] = {}
     configs['model_conf']['ctc_weight'] = 0.3
@@ -138,7 +143,10 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['dataset_conf']['spec_aug_conf']['num_f_mask'] = 2
     configs['dataset_conf']['spec_aug_conf']['max_t'] = 50
     configs['dataset_conf']['spec_aug_conf']['max_f'] = 10
-    configs['dataset_conf']['spec_sub'] = False
+    configs['dataset_conf']['spec_sub'] = True
+    configs['dataset_conf']['spec_sub_conf'] = {}
+    configs['dataset_conf']['spec_sub_conf']['num_t_sub'] = 3
+    configs['dataset_conf']['spec_sub_conf']['max_t'] = 30
     configs['dataset_conf']['spec_trim'] = False
     configs['dataset_conf']['shuffle'] = True
     configs['dataset_conf']['shuffle_conf'] = {}
@@ -159,16 +167,16 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['dataset_conf']['batch_conf']['max_frames_in_batch'] = 12000
 
     configs['grad_clip'] = 5
-    configs['accum_grad'] = 1
+    configs['accum_grad'] = 4
     configs['max_epoch'] = 100
     configs['log_interval'] = 100
 
     configs['optim'] = "adam"
     configs['optim_conf'] = {}
-    configs['optim_conf']['lr'] = 0.002
+    configs['optim_conf']['lr'] = 0.0005
     configs['scheduler'] = "warmuplr"
     configs['scheduler_conf'] = {}
-    configs['scheduler_conf']['warmup_steps'] = 25000
+    configs['scheduler_conf']['warmup_steps'] = 12000
 
     with open(wenet_yaml_path, '+w') as f:
         f.write(yaml.dump(configs))

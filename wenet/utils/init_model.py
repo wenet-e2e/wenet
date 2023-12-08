@@ -75,8 +75,9 @@ WENET_MODEL_CLASSES = {
 
 def init_model(args, configs):
 
-    if configs.get('cmvn_file', None) is not None:
-        mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
+    if configs['cmvn'] == 'global_cmvn':
+        mean, istd = load_cmvn(configs['cmvn_conf']['cmvn_file'],
+                               configs['cmvn_conf']['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
             torch.from_numpy(mean).float(),
             torch.from_numpy(istd).float())

@@ -252,8 +252,10 @@ def main():
                                     configs, seg_dict)
     configs['output_dim'] = vocab_size
     configs['model'] = 'paraformer'
-    configs['is_json_cmvn'] = True
-    configs['cmvn_file'] = json_cmvn_path
+    configs['cmvn'] = "global_cmvn"
+    configs['cmvn_conf'] = {}
+    configs['cmvn_conf']['is_json_cmvn'] = True
+    configs['cmvn_conf']['cmvn_file'] = json_cmvn_path
     configs['input_dim'] = 80
     fields_to_keep = [
         'encoder_conf', 'decoder_conf', 'predictor_conf', 'input_dim',

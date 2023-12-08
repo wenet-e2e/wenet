@@ -201,8 +201,7 @@ if __name__ == '__main__':
     ali_conf['batch_conf']['batch_type'] = "static"
     ali_conf['batch_conf']['batch_size'] = args.batch_size
 
-    tokenizer = init_tokenizer(ali_conf, args.dict, args.bpe_model,
-                               args.non_lang_syms)
+    tokenizer = init_tokenizer(configs)
     ali_dataset = Dataset(args.data_type,
                           args.input_file,
                           tokenizer,

@@ -47,17 +47,6 @@ def add_model_args(parser):
     parser.add_argument('--tensorboard_dir',
                         default='tensorboard',
                         help='tensorboard log dir')
-    parser.add_argument('--cmvn', default=None, help='global cmvn file')
-    parser.add_argument('--symbol_table',
-                        required=True,
-                        help='model unit symbol table for training')
-    parser.add_argument(
-        "--non_lang_syms",
-        help="non-linguistic symbol file. One symbol per line.")
-    parser.add_argument('--bpe_model',
-                        default=None,
-                        type=str,
-                        help='bpe model for english part')
     parser.add_argument('--override_config',
                         action='append',
                         default=[],
@@ -229,8 +218,6 @@ def check_modify_and_save_config(args, configs, symbol_table):
 
     configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
-    configs['cmvn_file'] = args.cmvn
-    configs['is_json_cmvn'] = True
     configs['lfmmi_dir'] = args.lfmmi_dir
 
     configs['train_engine'] = args.train_engine

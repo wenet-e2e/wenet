@@ -49,7 +49,6 @@ from torch.utils.data import DataLoader
 from wenet.utils.common import remove_duplicates_and_blank
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import load_checkpoint
-from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.bin.export_onnx_cpu import to_numpy
@@ -76,10 +75,9 @@ def save_data(tensor, dirs, prefix):
     data.tofile(dirs + "/" + prefix + ".bin")
 
 
-def make_calibration_data(enc, args, conf):
+def make_calibration_data(enc, args, conf, tokenizer):
     conf['shuffle'] = True
     logger.info(conf)
-    tokenizer = init_tokenizer(ali_conf, args.symbol_table, args.bpe_model)
     dataset = Dataset("shard",
                       args.cali_datalist,
                       tokenizer,
@@ -151,16 +149,15 @@ def make_calibration_data(enc, args, conf):
                       prefix + "." + str(i))
 
 
-def check_wer(enc, ctc, args, conf):
+def check_wer(enc, ctc, args, conf, tokenizer):
     conf['shuffle'] = False
-    tokenizer = init_tokenizer(ali_conf, args.symbol_table, args.bpe_model)
     dataset = Dataset("shard",
                       args.wer_datalist,
                       tokenizer,
                       conf,
                       partition=False)
     dataloader = DataLoader(dataset, batch_size=None, num_workers=0)
-    char_dict = {v: k for k, v in args.symbol_table.items()}
+    char_dict = {v: k for k, v in tokenizer.symbol_table.items()}
     eos = len(char_dict) - 1
 
     enc_session = HB_ONNXRuntime(
@@ -375,7 +372,6 @@ def get_args():
                         default=0.5,
                         type=float,
                         help='reverse_weight in attention_rescoing')
-    parser.add_argument('--dict', type=str, required=True, help='dict file')
     parser.add_argument('--max_samples',
                         type=int,
                         required=True,
@@ -389,10 +385,6 @@ def get_args():
                         default=None,
                         help='check wer')
     parser.add_argument('--wer_text', type=str, default=None, help='check wer')
-    parser.add_argument('--bpe_model',
-                        default=None,
-                        type=str,
-                        help='bpe model for english part')
     parser.add_argument('--ln_run_on_bpu',
                         action='store_true',
                         help='layernorm running on bpu')
@@ -418,15 +410,14 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
     with open(args.config, 'r') as fin:
-        conf = yaml.load(fin, Loader=yaml.FullLoader)
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
 
-    model = init_model(conf)
+    model = init_model(args, configs)
     load_checkpoint(model, args.checkpoint)
+    tokenizer = init_tokenizer(configs)
     model.eval()
 
-    symbol_table = read_symbol_table(args.dict)
-    args.symbol_table = symbol_table
-    args.feature_size = conf['input_dim']
+    args.feature_size = configs['input_dim']
     args.output_size = model.encoder.output_size()
     args.decoding_window = (args.chunk_size - 1) * \
         model.encoder.embed.subsampling_rate + \
@@ -436,7 +427,7 @@ if __name__ == '__main__':
     enc, enc_session = export_encoder(model, args)
     ctc, ctc_session = export_ctc(model, args)
 
-    conf = copy.deepcopy(conf['dataset_conf'])
+    conf = copy.deepcopy(configs['dataset_conf'])
     conf['filter_conf']['max_length'] = 102400
     conf['filter_conf']['min_length'] = 0
     conf['filter_conf']['token_max_length'] = 102400
@@ -483,7 +474,7 @@ if __name__ == '__main__':
         generate_config(enc_session, ctc_session, args)
 
         logger.info("Stage-3: Make calibration data")
-        make_calibration_data(enc, args, conf)
+        make_calibration_data(enc, args, conf, tokenizer)
 
         output_dir = os.path.realpath(args.output_dir)
         logger.info("Stage-4: Make ctc.bin")
@@ -502,7 +493,7 @@ if __name__ == '__main__':
         logger.info(
             "Stage-6: Check wer between torch model and quantized onnx")
         assert args.wer_text is not None
-        check_wer(enc, ctc, args, conf)
+        check_wer(enc, ctc, args, conf, tokenizer)
         os.system(
             "python3 tools/compute-wer.py --char=1 --v=1 {} {} > {}".format(
                 args.wer_text, args.output_dir + "/torch_text",

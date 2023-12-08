@@ -8,7 +8,7 @@ from wenet.utils.cmvn import load_cmvn
 
 
 def init_model(configs, checkpoint_path=None):
-    mean, istd = load_cmvn(configs['cmvn_file'], True)
+    mean, istd = load_cmvn(configs['cmvn_conf']['cmvn_file'], True)
     global_cmvn = GlobalCMVN(
         torch.from_numpy(mean).float(),
         torch.from_numpy(istd).float())
