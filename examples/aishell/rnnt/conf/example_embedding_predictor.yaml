@@ -17,6 +17,8 @@ encoder_conf:
 
 
 joint_conf:
+    enc_output_size: 256
+    pred_output_size: 320
     join_dim: 320
     prejoin_linear: true
     postjoin_linear: false
@@ -26,6 +28,7 @@ joint_conf:
 predictor: embedding
 predictor_conf:
     embed_size: 320
+    output_size: 320
     embed_dropout: 0.1
     n_head: 4
     history_size: 5

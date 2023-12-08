@@ -218,6 +218,7 @@ class EmbeddingPredictor(PredictorBase):
     def __init__(self,
                  voca_size: int,
                  embed_size: int,
+                 output_size: int,
                  embed_dropout: float,
                  n_head: int,
                  history_size: int = 2,
@@ -226,6 +227,7 @@ class EmbeddingPredictor(PredictorBase):
                  layer_norm_epsilon: float = 1e-5) -> None:
 
         super().__init__()
+        assert output_size == embed_size
         # multi head
         self.num_heads = n_head
         self.embed_size = embed_size
@@ -379,6 +381,7 @@ class ConvPredictor(PredictorBase):
     def __init__(self,
                  voca_size: int,
                  embed_size: int,
+                 output_size: int,
                  embed_dropout: float,
                  history_size: int = 2,
                  activation: str = "relu",
@@ -386,6 +389,7 @@ class ConvPredictor(PredictorBase):
                  layer_norm_epsilon: float = 1e-5) -> None:
         super().__init__()
 
+        assert embed_size == output_size
         assert history_size >= 0
         self.embed_size = embed_size
         self.context_size = history_size + 1
