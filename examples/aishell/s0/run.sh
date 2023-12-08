@@ -182,7 +182,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   if [ ${average_checkpoint} == true ] && [ ! -e "${decode_checkpoint}" ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
-    python3 wenet/bin/average_model.py \
+    python wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
       --num ${average_num} \
@@ -194,14 +194,14 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   decoding_chunk_size=
   ctc_weight=0.3
   reverse_weight=0.5
-  python3 wenet/bin/recognize.py --gpu 0 \
+  python wenet/bin/recognize.py --gpu 0 \
     --modes $decode_modes \
     --config $dir/train.yaml \
     --data_type $data_type \
     --test_data data/test/data.list \
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
-    --batch_size 16 \
+    --batch_size 32 \
     --penalty 0.0 \
     --dict $dict \
     --ctc_weight $ctc_weight \
@@ -209,7 +209,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     --result_dir $dir \
     ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
   for mode in ${decode_modes}; do
-    python3 tools/compute-wer.py --char=1 --v=1 \
+    python tools/compute-wer.py --char=1 --v=1 \
       data/test/text $dir/$mode/text > $dir/$mode/wer
   done
 fi

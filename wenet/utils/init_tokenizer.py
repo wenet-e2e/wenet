@@ -40,6 +40,7 @@ def init_tokenizer(configs) -> BaseTokenizer:
         tokenizer = BpeTokenizer(
             configs['tokenizer_conf']['bpe_path'],
             configs['tokenizer_conf']['symbol_table_path'],
+            configs['tokenizer_conf']['non_lang_syms_path'],
             split_with_space=configs['tokenizer_conf'].get(
                 'split_with_space', False))
     elif configs["tokenizer"] == 'paraformer':

@@ -37,12 +37,11 @@ dict=data/dict/lang_char.txt
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
 # faster on reading data and training.
-data_type=raw
+data_type=shard
 num_utts_per_shard=1000
 
 train_set=train
-train_config=conf/conformer_u2pp_rnnt.yaml
-cmvn=true
+train_config=conf/example_embedding_predictor.yaml
 dir=exp/conformer_rnnt
 checkpoint=
 
@@ -54,8 +53,8 @@ decode_modes="rnnt_beam_search"
 
 train_engine=torch_ddp
 
-deepspeed_config=../../aishell/s0/conf/ds_stage2.json
-deepspeed_save_states="model_only"
+deepspeed_config=../../aishell/s0/conf/ds_stage1.json
+deepspeed_save_states="model+optimizer"  # "model_only" or "model+optimizer"
 
 . tools/parse_options.sh || exit 1;
 
@@ -118,9 +117,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
   dist_backend="nccl"
-  cmvn_opts=
-  $cmvn && cp data/${train_set}/global_cmvn $dir
-  $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
 
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
@@ -137,14 +133,12 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type $data_type \
-      --symbol_table $dict \
       --train_data data/$train_set/data.list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
-      $cmvn_opts \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
@@ -152,7 +146,7 @@ fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Test model, please specify the model you want to test by --checkpoint
-  if [ ${average_checkpoint} == true ]; then
+  if [ ${average_checkpoint} == true ] && [ ! -e "${decode_checkpoint}" ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
     python wenet/bin/average_model.py \

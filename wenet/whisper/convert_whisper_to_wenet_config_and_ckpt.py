@@ -125,6 +125,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['model_conf']['lsm_weight'] = 0.1
     configs['model_conf']['length_normalized_loss'] = False
 
+    configs['dataset'] = "asr"
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
     configs['dataset_conf']['filter_conf'][
