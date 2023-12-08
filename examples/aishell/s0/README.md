@@ -32,6 +32,19 @@
 | HLG(k2 LM)  + attention rescoring | 4.32  | 4.70  |
 | HLG(k2 LM)  + attention rescoring + LFMMI | 4.11  | 4.47  |
 
+## U2++ lite Conformer Result (uio shard)
+
+* Feature info: using fbank feature, dither=1.0, cmvn, oneline speed perturb
+* Training info: lr 0.001, batch size 16, 8 gpu, acc_grad 1, load a well trained model and continue training 80 epochs with u2++ lite config
+* Decoding info: ctc_weight 0.3, reverse_weight 0.5  average_num 30
+* Git hash: 73185808fa1463b0163a922dc722513b7baabe9e
+
+| decoding mode/chunk size  | full  | 16    |
+|---------------------------|-------|-------|
+| ctc greedy search         | 5.21  | 5.91  |
+| ctc prefix beam search    | 5.20  | 5.91  |
+| attention rescoring       | 4.67  | 5.10  |
+
 ## Unified Conformer Result
 
 * Feature info: using fbank feature, dither=0, cmvn, oneline speed perturb

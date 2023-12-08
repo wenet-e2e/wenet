@@ -13,6 +13,8 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 
+from typing import Tuple
+
 import torch
 import torch.nn.functional as F
 
@@ -46,7 +48,9 @@ class CTC(torch.nn.Module):
                                          reduction=reduction_type)
 
     def forward(self, hs_pad: torch.Tensor, hlens: torch.Tensor,
-                ys_pad: torch.Tensor, ys_lens: torch.Tensor) -> torch.Tensor:
+                ys_pad: torch.Tensor,
+                ys_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+
         """Calculate CTC loss.
 
         Args:
@@ -63,7 +67,8 @@ class CTC(torch.nn.Module):
         loss = self.ctc_loss(ys_hat, ys_pad, hlens, ys_lens)
         # Batch-size average
         loss = loss / ys_hat.size(1)
-        return loss
+        ys_hat = ys_hat.transpose(0, 1)
+        return loss, ys_hat
 
     def log_softmax(self, hs_pad: torch.Tensor) -> torch.Tensor:
         """log_softmax of frame activations

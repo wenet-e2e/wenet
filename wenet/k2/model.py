@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -49,9 +49,9 @@ class K2Model(ASRModel):
     @torch.jit.ignore(drop=True)
     def _forward_ctc(self, encoder_out: torch.Tensor,
                      encoder_mask: torch.Tensor, text: torch.Tensor,
-                     text_lengths: torch.Tensor) -> torch.Tensor:
-        loss_ctc = self._calc_lfmmi_loss(encoder_out, encoder_mask, text)
-        return loss_ctc
+                     text_lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        loss_ctc, ctc_probs = self._calc_lfmmi_loss(encoder_out, encoder_mask, text)
+        return loss_ctc, ctc_probs
 
     @torch.jit.ignore(drop=True)
     def load_lfmmi_resource(self):
@@ -106,7 +106,7 @@ class K2Model(ASRModel):
             for i in text
         ]
         loss = self.lfmmi(dense_fsa_vec=dense_fsa_vec, texts=text) / len(text)
-        return loss
+        return loss, ctc_probs
 
     def load_hlg_resource_if_necessary(self, hlg, word):
         try:
