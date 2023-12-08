@@ -38,10 +38,18 @@ class K2Model(ASRModel):
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
         lfmmi_dir: str = '',
+        special_tokens: dict = None,
     ):
-        super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight,
-                         ignore_id, reverse_weight, lsm_weight,
-                         length_normalized_loss)
+        super().__init__(vocab_size,
+                         encoder,
+                         decoder,
+                         ctc,
+                         ctc_weight,
+                         ignore_id,
+                         reverse_weight,
+                         lsm_weight,
+                         length_normalized_loss,
+                         special_tokens=special_tokens)
         self.lfmmi_dir = lfmmi_dir
         if self.lfmmi_dir != '':
             self.load_lfmmi_resource()
