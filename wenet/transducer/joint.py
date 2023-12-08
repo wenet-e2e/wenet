@@ -8,7 +8,7 @@ from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
 class TransducerJoint(torch.nn.Module):
 
     def __init__(self,
-                 voca_size: int,
+                 vocab_size: int,
                  enc_output_size: int,
                  pred_output_size: int,
                  join_dim: int,
@@ -43,10 +43,10 @@ class TransducerJoint(torch.nn.Module):
 
         # NOTE: <blank> in vocab_size
         self.hat_joint = hat_joint
-        self.vocab_size = voca_size
+        self.vocab_size = vocab_size
         self.ffn_out: Optional[torch.nn.Linear] = None
         if not self.hat_joint:
-            self.ffn_out = nn.Linear(join_dim, voca_size)
+            self.ffn_out = nn.Linear(join_dim, vocab_size)
 
         self.blank_pred: Optional[torch.nn.Module] = None
         self.token_pred: Optional[torch.nn.Module] = None
