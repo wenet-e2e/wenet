@@ -1,4 +1,5 @@
-# modified from https://github.com/huggingface/transformers/blob/main/src/transformers/tokenization_utils.py#L52
+# modified from:
+# https://github.com/huggingface/transformers/blob/main/src/transformers/tokenization_utils.py#L52 # noqa
 
 from typing import List, OrderedDict
 
@@ -10,19 +11,19 @@ class Trie:
         self.data = {}
 
     def add(self, word: str):
-        """
-        Example:
+        """Example:
 
         ```python
-        >>> trie = Trie()
-        >>> trie.add("Hello wenet")
+        >>> trie = Trie() >>> trie.add("Hello wenet")
         >>> trie.data
-        {'H': {'e': {'l': {'l': {'o': {' ': {'w': {'e': {'n': {'e': {'t': {'': 1}}}}}}}}}}}}
+        {'H': {'e': {'l': {'l': {'o': {' ': {'w': {'e': {'n': {'e': {'t': {'':
+        1}}}}}}}}}}}}
 
         >>> trie.add("中国")
-        >>> trie.data
-        {'H': {'e': {'l': {'l': {'o': {' ': {'w': {'e': {'n': {'e': {'t': {'': 1}}}}}}}}}}}, '中': {'国': {'': 1}}}
-        ```
+        >>> trie.data {'H': {'e': {'l': {'l': {'o': {' ':
+            {'w': {'e': {'n': {'e': {'t': {'': 1}}}}}}}}}}}, '中': {'国': {'':
+            1}}} ```
+
         """
         if word is None or word == '':
             return
@@ -35,9 +36,8 @@ class Trie:
         ref[""] = 1
 
     def split(self, text: str) -> List[str]:
-        """
-        Will look for the words added to the trie within `text`. Output is the original string splitted along the
-        boundaries of the words found.
+        """Will look for the words added to the trie within `text`. Output is
+        the original string splitted along the boundaries of the words found.
 
         This trie will match the longest possible word first !
 
@@ -50,6 +50,7 @@ class Trie:
         >>> trie.split("Hello wenet 中国")
         ["Hello wenet", ' ', "中国"]
         ```
+
         """
         # indexes are counted left of the chars index.
         # "hello", index 0, is left of h, index 1 is between h and e.
@@ -81,10 +82,10 @@ class Trie:
                 # like extra_id_100 and id_100
                 continue
 
-            # This will track every state
-            # that stop matching, we need to stop tracking them.
-            # If we look at "lowball", we're going to match "l" (add it to states), "o", "w", then
-            # fail on "b", we need to remove 0 from the valid states.
+            # This will track every state that stop matching, we need to stop
+            # tracking them. If we look at "lowball", we're going to match "l"
+            # (add it to states), "o", "w", then fail on "b", we need to remove
+            # 0 from the valid states.
             to_remove = set()
             # Whenever we found a match, we need to drop everything
             # this is a greedy algorithm, it will match on the first found token
@@ -96,11 +97,10 @@ class Trie:
                     # This is a final match, we need to reset and
                     # store the results in `offsets`.
 
-                    # Lookahead to match longest first
-                    # Important in case of extra_id_1 vs extra_id_100
-                    # Here we are also actively looking for other earlier partial
-                    # matches
-                    # "[CLS]", "L", we need to match CLS even if L is special
+                    # Lookahead to match longest first Important in case of
+                    # extra_id_1 vs extra_id_100 Here we are also actively
+                    # looking for other earlier partial matches "[CLS]", "L",
+                    # we need to match CLS even if L is special
                     for lookstart, looktrie_pointer in states.items():
                         if lookstart > start:
                             # This partial match is later, we can stop looking
@@ -144,8 +144,9 @@ class Trie:
                     reset = True
                     break
                 elif current_char in trie_pointer:
-                    # The current character being looked at has a match within the trie
-                    # update the pointer (it will be stored back into states later).
+                    # The current character being looked at has a match within
+                    # the trie update the pointer (it will be stored back into
+                    # states later).
                     trie_pointer = trie_pointer[current_char]
 
                     # Storing back the new pointer into the states.
@@ -187,8 +188,8 @@ class Trie:
 
     def cut_text(self, text, offsets):
         # We have all the offsets now, we just need to do the actual splitting.
-        # We need to eventually add the first part of the string and the eventual
-        # last part.
+        # We need to eventually add the first part of the string and the
+        # eventual last part.
         offsets.append(len(text))
         tokens = []
         start = 0
