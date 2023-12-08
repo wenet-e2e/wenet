@@ -171,7 +171,7 @@ def init_model(args, configs):
     print(configs)
 
     # Tie emb.weight to decoder.output_layer.weight
-    if configs.get("tie_word_embedding", False):
+    if model.decoder.tie_word_embedding:
         model.decoder.tie_or_clone_weights(jit_mode=args.jit)
 
     return model, configs
