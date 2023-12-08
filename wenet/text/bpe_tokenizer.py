@@ -62,10 +62,9 @@ class BpeTokenizer(CharTokenizer):
                     parts[i - 1] += part
                     parts[i] = ""
                 elif not part.startswith(
-                        '▁') and right is not None and right[0] == ' ':
+                        '▁') and right is not None and right[0] != ' ':
                     parts[i + 1] = part + parts[i + 1]
                     parts[i] = ''
-
         tokens = []
         for part in parts:
             if part == '':
