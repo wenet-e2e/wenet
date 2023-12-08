@@ -47,10 +47,12 @@ class K2Model(ASRModel):
             self.load_lfmmi_resource()
 
     @torch.jit.ignore(drop=True)
-    def _forward_ctc(self, encoder_out: torch.Tensor,
-                     encoder_mask: torch.Tensor, text: torch.Tensor,
-                     text_lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        loss_ctc, ctc_probs = self._calc_lfmmi_loss(encoder_out, encoder_mask, text)
+    def _forward_ctc(
+            self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
+            text: torch.Tensor,
+            text_lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        loss_ctc, ctc_probs = self._calc_lfmmi_loss(encoder_out, encoder_mask,
+                                                    text)
         return loss_ctc, ctc_probs
 
     @torch.jit.ignore(drop=True)

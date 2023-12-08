@@ -50,7 +50,6 @@ class CTC(torch.nn.Module):
     def forward(self, hs_pad: torch.Tensor, hlens: torch.Tensor,
                 ys_pad: torch.Tensor,
                 ys_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-
         """Calculate CTC loss.
 
         Args:

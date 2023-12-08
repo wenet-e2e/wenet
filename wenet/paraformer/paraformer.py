@@ -137,8 +137,8 @@ class Paraformer(torch.nn.Module):
         loss_ctc: Optional[torch.Tensor] = None
         if self.ctc_weight != 0.0:
             loss_ctc, ctc_probs = self._forward_ctc(encoder_out,
-                                                    encoder_out_mask,
-                                                    text, text_lengths)
+                                                    encoder_out_mask, text,
+                                                    text_lengths)
         # TODO(Mddc): thu acc
         loss_decoder = self.criterion_att(decoder_out, ys_pad)
         loss = loss_decoder
@@ -151,13 +151,16 @@ class Paraformer(torch.nn.Module):
         }
 
     @torch.jit.ignore(drop=True)
-    def _forward_ctc(self, encoder_out: torch.Tensor,
-                     encoder_mask: torch.Tensor, text: torch.Tensor,
-                     text_lengths: torch.Tensor,
-                     ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _forward_ctc(
+        self,
+        encoder_out: torch.Tensor,
+        encoder_mask: torch.Tensor,
+        text: torch.Tensor,
+        text_lengths: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-        loss_ctc, ctc_probs = self.ctc(encoder_out, encoder_out_lens,
-                                       text, text_lengths)
+        loss_ctc, ctc_probs = self.ctc(encoder_out, encoder_out_lens, text,
+                                       text_lengths)
         return loss_ctc, ctc_probs
 
     @torch.jit.ignore(drop=True)

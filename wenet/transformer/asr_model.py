@@ -53,16 +53,10 @@ class ASRModel(torch.nn.Module):
 
         super().__init__()
         # note that eos is the same as sos (equivalent ID)
-        self.sos = (
-            vocab_size - 1
-            if special_tokens is None
-            else special_tokens.get("sos", vocab_size - 1)
-        )
-        self.eos = (
-            vocab_size - 1
-            if special_tokens is None
-            else special_tokens.get("eos", vocab_size - 1)
-        )
+        self.sos = (vocab_size - 1 if special_tokens is None else
+                    special_tokens.get("sos", vocab_size - 1))
+        self.eos = (vocab_size - 1 if special_tokens is None else
+                    special_tokens.get("eos", vocab_size - 1))
         self.vocab_size = vocab_size
         self.special_tokens = special_tokens
         self.ignore_id = ignore_id
@@ -136,12 +130,13 @@ class ASRModel(torch.nn.Module):
         return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc}
 
     @torch.jit.ignore(drop=True)
-    def _forward_ctc(self, encoder_out: torch.Tensor,
-                     encoder_mask: torch.Tensor, text: torch.Tensor,
-                     text_lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _forward_ctc(
+            self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
+            text: torch.Tensor,
+            text_lengths: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-        loss_ctc, ctc_probs = self.ctc(encoder_out, encoder_out_lens,
-                                       text, text_lengths)
+        loss_ctc, ctc_probs = self.ctc(encoder_out, encoder_out_lens, text,
+                                       text_lengths)
         return loss_ctc, ctc_probs
 
     def filter_blank_embedding(
