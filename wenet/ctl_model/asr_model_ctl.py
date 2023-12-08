@@ -48,11 +48,19 @@ class CTLModel(ASRModel):
         logit_temp: float = 0.1,
         n_negatives: int = 0,
         ctl_weight: float = 1,
+        special_tokens: dict = None,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
-        super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight,
-                         ignore_id, reverse_weight, lsm_weight,
-                         length_normalized_loss)
+        super().__init__(vocab_size,
+                         encoder,
+                         decoder,
+                         ctc,
+                         ctc_weight,
+                         ignore_id,
+                         reverse_weight,
+                         lsm_weight,
+                         length_normalized_loss,
+                         special_tokens=special_tokens)
 
         # For CTL Loss
         self.n_negatives = n_negatives

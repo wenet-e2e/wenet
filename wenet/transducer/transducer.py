@@ -41,11 +41,19 @@ class Transducer(ASRModel):
         warmup_steps: float = 25000,
         lm_only_scale: float = 0.25,
         am_only_scale: float = 0.0,
+        special_tokens: dict = None,
     ) -> None:
         assert attention_weight + ctc_weight + transducer_weight == 1.0
-        super().__init__(vocab_size, encoder, attention_decoder, ctc,
-                         ctc_weight, ignore_id, reverse_weight, lsm_weight,
-                         length_normalized_loss)
+        super().__init__(vocab_size,
+                         encoder,
+                         attention_decoder,
+                         ctc,
+                         ctc_weight,
+                         ignore_id,
+                         reverse_weight,
+                         lsm_weight,
+                         length_normalized_loss,
+                         special_tokens=special_tokens)
 
         self.blank = blank
         self.transducer_weight = transducer_weight
