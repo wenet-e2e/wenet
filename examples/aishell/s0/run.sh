@@ -304,8 +304,10 @@ if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
   # 9.1 Build token level bigram fst for LF-MMI training
   tools/k2/prepare_mmi.sh data/train/ data/dev data/local/lfmmi
 
-  # 9.2 Run LF-MMI training from stage 4, with below new args
-  # --lfmmi_dir data/local/lfmmi
+  # 9.2 Run LF-MMI training from stage 4, modify below args in train.yaml
+  # model: k2model
+  # model_conf:
+  #   lfmmi_dir data/local/lfmmi
 
   # 9.3 Run HLG decode from stage 8.2
 fi

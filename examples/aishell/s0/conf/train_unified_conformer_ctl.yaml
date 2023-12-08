@@ -1,6 +1,6 @@
 # network architecture
 # encoder related
-encoder: conformer
+encoder: dual_conformer
 encoder_conf:
     output_size: 256    # dimension of attention
     attention_heads: 4
@@ -32,8 +32,8 @@ decoder_conf:
     self_attention_dropout_rate: 0.0
     src_attention_dropout_rate: 0.0
 
-ctlmodel: true
 # hybrid CTC/attention
+model: ctlmodel
 model_conf:
     ctc_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
