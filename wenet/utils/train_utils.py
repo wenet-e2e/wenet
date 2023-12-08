@@ -67,10 +67,6 @@ def add_model_args(parser):
         type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
         help='free module names',
     )
-    parser.add_argument('--lfmmi_dir',
-                        default='',
-                        required=False,
-                        help='LF-MMI dir')
     return parser
 
 
@@ -218,7 +214,6 @@ def check_modify_and_save_config(args, configs, symbol_table):
 
     configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
-    configs['lfmmi_dir'] = args.lfmmi_dir
 
     configs['train_engine'] = args.train_engine
     configs['use_amp'] = args.use_amp
