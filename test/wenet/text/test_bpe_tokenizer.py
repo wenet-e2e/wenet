@@ -92,3 +92,20 @@ def test_consistency(bpe_tokenizer):
     text = "WENET IS GREAT"
     assert text == bpe_tokenizer.tokens2text(bpe_tokenizer.text2tokens(text))
     assert text == bpe_tokenizer.detokenize(bpe_tokenizer.tokenize(text)[1])[0]
+
+
+def test_add_tokens(bpe_tokenizer):
+    tokenizer = bpe_tokenizer
+    tokenizer.upper = False
+
+    special_tokens = ["<s>", "</s>", "▁wenet"]
+    tokenizer.add_tokens(special_tokens)
+
+    # text = "wenethappy IT'S OKAY wenethappy hawenethappy wenethappy 好"
+    text = "▁wenet OK"
+    expected = ['▁wenet', '▁O', 'K']
+    tokens, labels = tokenizer.tokenize(text)
+    print(tokens)
+    print(labels)
+    assert tokenizer.vocab_size() == 5002 + len(special_tokens)
+    assert all(h == r for (h, r) in zip(tokens, expected))

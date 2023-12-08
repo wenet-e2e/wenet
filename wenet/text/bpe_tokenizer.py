@@ -15,6 +15,7 @@ class BpeTokenizer(CharTokenizer):
         split_with_space: bool = False,
         connect_symbol: str = '',
         unk='<unk>',
+        upper: bool = True,
     ) -> None:
         super().__init__(symbol_table, non_lang_syms, split_with_space,
                          connect_symbol, unk)
@@ -25,6 +26,7 @@ class BpeTokenizer(CharTokenizer):
         # NOTE(Mddct): we can handle proto, see:
         # https://github.com/google/sentencepiece/issues/121#issuecomment-400362011
         self.extra_tokens = Trie()
+        self.upper = upper
 
     def _build_sp(self):
         if self.bpe_model is None:
@@ -35,8 +37,9 @@ class BpeTokenizer(CharTokenizer):
     def text2tokens(self, line: str) -> List[str]:
         self._build_sp()
         line = line.strip()
+        line = line.upper() if self.upper else line
         if self.non_lang_syms_pattern is not None:
-            parts = self.non_lang_syms_pattern.split(line.upper())
+            parts = self.non_lang_syms_pattern.split(line)
             parts = [w for w in parts if len(w.strip()) > 0]
         else:
             parts = [line]
@@ -48,9 +51,26 @@ class BpeTokenizer(CharTokenizer):
             else:
                 extra_part.extend(self.extra_tokens.split(part))
         parts = extra_part
+        for (i, part) in enumerate(parts):
+            left = parts[i - 1] if i > 0 else None
+            right = parts[i + 1] if i < len(parts) - 1 else None
+
+            if self.extra_tokens.find(part):
+                if (not part.startswith('▁') and left is not None
+                        and left[-1] != " "):
+                    # part of word
+                    parts[i - 1] += part
+                    parts[i] = ""
+                elif not part.startswith(
+                        '▁') and right is not None and right[0] == ' ':
+                    parts[i + 1] = part + parts[i + 1]
+                    parts[i] = ''
+
         tokens = []
         for part in parts:
-            if part in self.non_lang_syms:
+            if part == '':
+                continue
+            if part in self.non_lang_syms or self.extra_tokens.find(part):
                 tokens.append(part)
             else:
                 tokens.extend(tokenize_by_bpe_model(self.bpe_model, part))
@@ -64,6 +84,7 @@ class BpeTokenizer(CharTokenizer):
     def add_tokens(self, tokens: List[str]) -> int:
         added_tokens = 0
         for token in tokens:
+            token = token.upper() if self.upper else token
             if token not in self.symbol_table:
                 self.extra_tokens.add(token)
                 self.symbol_table[token] = len(self.symbol_table)

@@ -204,3 +204,6 @@ class Trie:
             start = end
 
         return tokens
+
+    def find(self, token) -> bool:
+        return token in self._tokens
