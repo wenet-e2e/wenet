@@ -245,7 +245,7 @@ def check_modify_and_save_config(args, configs, symbol_table):
             data = yaml.dump(configs)
             fout.write(data)
 
-    if configs["model_conf"]["apply_non_blank_embedding"]:
+    if configs["model_conf"].get("apply_non_blank_embedding", False):
         logging.warn('Had better load a well trained model'
                      'if apply_non_blank_embedding is true !!!')
 
