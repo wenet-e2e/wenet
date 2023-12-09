@@ -44,11 +44,6 @@ sys.path.insert(0, _cpath_)
 
 def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs = {}
-    configs['whisper'] = True
-    configs['whisper_conf'] = {}
-    configs['whisper_conf']['is_multilingual'] = dims['n_vocab'] >= 51865
-    configs['whisper_conf']['num_languages'] = dims['n_vocab'] - 51765 - \
-        int(configs['whisper_conf']['is_multilingual'])
     configs['input_dim'] = dims['n_mels']
     configs['output_dim'] = dims['n_vocab']
     assert dims['n_vocab'] == tokenizer.encoding.n_vocab, "{} v.s. {}".format(
@@ -94,6 +89,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['ctc_conf'] = {}
     configs['ctc_conf']['ctc_blank_id'] = tokenizer.no_speech
 
+    configs['model'] = "whisper"
     configs['model_conf'] = {}
     configs['model_conf']['ctc_weight'] = 0.3
     configs['model_conf']['lsm_weight'] = 0.1

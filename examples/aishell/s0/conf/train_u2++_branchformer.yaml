@@ -38,6 +38,7 @@ decoder_conf:
     src_attention_dropout_rate: 0.1
 
 # hybrid CTC/attention
+model: asrmodel
 model_conf:
     ctc_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
