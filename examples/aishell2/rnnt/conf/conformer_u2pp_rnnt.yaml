@@ -52,6 +52,7 @@ decoder_conf:
   src_attention_dropout_rate: 0.1
 
 # hybrid transducer+ctc+attention
+model: transducer
 model_conf:
     transducer_weight: 0.75
     ctc_weight: 0.1

@@ -107,7 +107,8 @@ def init_model(args, configs):
         blank_id=configs['ctc_conf']['ctc_blank_id']
         if 'ctc_conf' in configs else 0)
 
-    if configs['model'] == "transducer":
+    model_type = configs.get('model', 'asrmodel')
+    if model_type == "transducer":
         predictor_type = configs.get('predictor', 'rnn')
         joint_type = configs.get('joint', 'transducerjoint')
         predictor = WENET_PREDICTOR_CLASSES[predictor_type](
@@ -122,9 +123,10 @@ def init_model(args, configs):
             attention_decoder=decoder,
             joint=joint,
             ctc=ctc,
-            special_tokens=configs['tokenizer_conf'].get('special_tokens', None),
+            special_tokens=configs['tokenizer_conf'].get(
+                'special_tokens', None),
             **configs['model_conf'])
-    elif configs['model'] == 'paraformer':
+    elif model_type == 'paraformer':
         """ NOTE(Mddct): support fintune  paraformer, if there is a need for
                 sanmencoder/decoder in the future, simplify here.
         """
@@ -140,7 +142,8 @@ def init_model(args, configs):
             encoder=encoder,
             decoder=decoder,
             ctc=ctc,
-            special_tokens=configs['tokenizer_conf'].get('special_tokens', None),
+            special_tokens=configs['tokenizer_conf'].get(
+                'special_tokens', None),
             **configs['model_conf'])
 
     # If specify checkpoint, load some info from checkpoint
