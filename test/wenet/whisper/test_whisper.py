@@ -361,7 +361,7 @@ def test_model(model, audio_path):
 
         # 6. Forward wenet.decoder
         wenet_tokens, _ = add_whisper_tokens(
-            configs['model_conf']['special_tokens'],
+            configs['tokenizer_conf']['special_tokens'],
             torch.tensor([dummy_tokens], dtype=torch.long),
             ignore_id=-1,
             task=task,
