@@ -17,7 +17,7 @@ encoder_conf:
     pos_enc_layer_type: 'rel_pos'
     selfattention_layer_type: 'rel_selfattn'
 
-
+joint: transducer_joint
 joint_conf:
     enc_output_size: 256
     pred_output_size: 256
@@ -50,6 +50,7 @@ decoder_conf:
   src_attention_dropout_rate: 0.1
 
 # hybrid transducer+ctc+attention
+model: transducer
 model_conf:
     transducer_weight: 0.75
     ctc_weight: 0.1
