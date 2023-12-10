@@ -4,9 +4,18 @@
 
 . ./path.sh || exit 1;
 
-# Use this to control how many gpu you use, It's 1-gpu training if you specify
-# just 1gpu, otherwise it's is multiple gpu training based on DDP in pytorch
-export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
+# Automatically detect number of gpus
+if command -v nvidia-smi &> /dev/null; then
+  num_gpus=$(nvidia-smi -L | wc -l)
+  gpu_list=$(seq -s, 0 $((num_gpus-1)))
+else
+  num_gpus=-1
+  gpu_list="-1"
+fi
+# You can also manually specify CUDA_VISIBLE_DEVICES
+# if you don't want to utilize all available GPU resources.
+export CUDA_VISIBLE_DEVICES="${gpu_list}"
+echo "CUDA_VISIBLE_DEVICES is ${CUDA_VISIBLE_DEVICES}"
 stage=0 # start from 0 if you need to start from data preparation
 stop_stage=5
 
