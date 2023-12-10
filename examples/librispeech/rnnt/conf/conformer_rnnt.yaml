@@ -17,7 +17,7 @@ encoder_conf:
     pos_enc_layer_type: 'rel_pos'
     selfattention_layer_type: 'rel_selfattn'
 
-joint: transducerjoint
+joint: transducer_joint
 joint_conf:
     enc_output_size: 256
     pred_output_size: 256

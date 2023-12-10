@@ -305,7 +305,7 @@ if [ ${stage} -le 9 ] && [ ${stop_stage} -ge 9 ]; then
   tools/k2/prepare_mmi.sh data/train/ data/dev data/local/lfmmi
 
   # 9.2 Run LF-MMI training from stage 4, modify below args in train.yaml
-  # model: k2model
+  # model: k2_model
   # model_conf:
   #   lfmmi_dir data/local/lfmmi
 

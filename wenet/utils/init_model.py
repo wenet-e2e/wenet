@@ -34,7 +34,7 @@ from wenet.whisper.whisper import Whisper
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 
-_WENET_ENCODER_CLASSES = {
+WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
     "conformer": ConformerEncoder,
     "squeezeformer": SqueezeformerEncoder,
@@ -45,30 +45,30 @@ _WENET_ENCODER_CLASSES = {
     "dual_conformer": DualConformerEncoder,
 }
 
-_WENET_DECODER_CLASSES = {
+WENET_DECODER_CLASSES = {
     "transformer": TransformerDecoder,
     "bitransformer": BiTransformerDecoder,
 }
 
-_WENET_CTC_CLASSES = {
+WENET_CTC_CLASSES = {
     "ctc": CTC,
 }
 
-_WENET_PREDICTOR_CLASSES = {
+WENET_PREDICTOR_CLASSES = {
     "rnn": RNNPredictor,
     "embedding": EmbeddingPredictor,
     "conv": ConvPredictor,
 }
 
-_WENET_JOINT_CLASSES = {
-    "transducerjoint": TransducerJoint,
+WENET_JOINT_CLASSES = {
+    "transducer_joint": TransducerJoint,
 }
 
-_WENET_MODEL_CLASSES = {
-    "asrmodel": ASRModel,
-    "ctlmodel": CTLModel,
+WENET_MODEL_CLASSES = {
+    "asr_model": ASRModel,
+    "ctl_model": CTLModel,
     "whisper": Whisper,
-    "k2model": K2Model,
+    "k2_model": K2Model,
     "transducer": Transducer,
 }
 
@@ -90,32 +90,32 @@ def init_model(args, configs):
     decoder_type = configs.get('decoder', 'bitransformer')
     ctc_type = configs.get('ctc', 'ctc')
 
-    encoder = _WENET_ENCODER_CLASSES[encoder_type](
+    encoder = WENET_ENCODER_CLASSES[encoder_type](
         input_dim,
         global_cmvn=global_cmvn,
         **configs['encoder_conf'],
         **configs['encoder_conf']['efficient_conf']
         if 'efficient_conf' in configs['encoder_conf'] else {})
 
-    decoder = _WENET_DECODER_CLASSES[decoder_type](vocab_size,
-                                                   encoder.output_size(),
-                                                   **configs['decoder_conf'])
+    decoder = WENET_DECODER_CLASSES[decoder_type](vocab_size,
+                                                  encoder.output_size(),
+                                                  **configs['decoder_conf'])
 
-    ctc = _WENET_CTC_CLASSES[ctc_type](
+    ctc = WENET_CTC_CLASSES[ctc_type](
         vocab_size,
         encoder.output_size(),
         blank_id=configs['ctc_conf']['ctc_blank_id']
         if 'ctc_conf' in configs else 0)
 
-    model_type = configs.get('model', 'asrmodel')
+    model_type = configs.get('model', 'asr_model')
     if model_type == "transducer":
         predictor_type = configs.get('predictor', 'rnn')
-        joint_type = configs.get('joint', 'transducerjoint')
-        predictor = _WENET_PREDICTOR_CLASSES[predictor_type](
+        joint_type = configs.get('joint', 'transducer_joint')
+        predictor = WENET_PREDICTOR_CLASSES[predictor_type](
             vocab_size, **configs['predictor_conf'])
-        joint = _WENET_JOINT_CLASSES[joint_type](vocab_size,
-                                                 **configs['joint_conf'])
-        model = _WENET_MODEL_CLASSES[model_type](
+        joint = WENET_JOINT_CLASSES[joint_type](vocab_size,
+                                                **configs['joint_conf'])
+        model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             blank=0,
             predictor=predictor,
@@ -137,7 +137,7 @@ def init_model(args, configs):
         print(configs)
         return model, configs
     else:
-        model = _WENET_MODEL_CLASSES[model_type](
+        model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             encoder=encoder,
             decoder=decoder,
