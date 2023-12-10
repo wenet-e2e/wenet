@@ -75,7 +75,7 @@ WENET_MODEL_CLASSES = {
 
 def init_model(args, configs):
 
-    if configs['cmvn_file'] is not None:
+    if configs.get('cmvn_file', None) is not None:
         mean, istd = load_cmvn(configs['cmvn_file'], configs['is_json_cmvn'])
         global_cmvn = GlobalCMVN(
             torch.from_numpy(mean).float(),
@@ -115,7 +115,7 @@ def init_model(args, configs):
             vocab_size, **configs['predictor_conf'])
         joint = WENET_JOINT_CLASSES[joint_type](vocab_size,
                                                 **configs['joint_conf'])
-        model = WENET_MODEL_CLASSES[configs['model']](
+        model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             blank=0,
             predictor=predictor,
@@ -123,8 +123,8 @@ def init_model(args, configs):
             attention_decoder=decoder,
             joint=joint,
             ctc=ctc,
-            special_tokens=configs['tokenizer_conf'].get(
-                'special_tokens', None),
+            special_tokens=configs.get('tokenizer_conf',
+                                       {}).get('special_tokens', None),
             **configs['model_conf'])
     elif model_type == 'paraformer':
         """ NOTE(Mddct): support fintune  paraformer, if there is a need for
@@ -137,13 +137,13 @@ def init_model(args, configs):
         print(configs)
         return model, configs
     else:
-        model = WENET_MODEL_CLASSES[configs['model']](
+        model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             encoder=encoder,
             decoder=decoder,
             ctc=ctc,
-            special_tokens=configs['tokenizer_conf'].get(
-                'special_tokens', None),
+            special_tokens=configs.get('tokenizer_conf',
+                                       {}).get('special_tokens', None),
             **configs['model_conf'])
 
     # If specify checkpoint, load some info from checkpoint

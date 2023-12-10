@@ -19,6 +19,8 @@ encoder_conf:
 
 joint: transducerjoint
 joint_conf:
+    enc_output_size: 256
+    pred_output_size: 256
     join_dim: 512
     prejoin_linear: True
     postjoin_linear: false
