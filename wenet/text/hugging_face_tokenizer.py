@@ -56,3 +56,6 @@ class HuggingFaceTokenizer(BaseTokenizer):
     def symbol_table(self) -> Dict[Type, int]:
         self._build_hugging_face()
         return self.t2i
+
+    def add_tokens(self, tokens: List[Type]) -> int:
+        return [0]

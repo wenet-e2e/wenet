@@ -1,8 +1,9 @@
 from os import PathLike
+
 from typing import Dict, List, Optional, Union
+
 from wenet.text.char_tokenizer import CharTokenizer
 from wenet.text.tokenize_utils import tokenize_by_bpe_model
-from wenet.text.tries import Trie
 
 
 class BpeTokenizer(CharTokenizer):
@@ -25,14 +26,31 @@ class BpeTokenizer(CharTokenizer):
         self.bpe_model = None
         # NOTE(Mddct): we can handle proto, see:
         # https://github.com/google/sentencepiece/issues/121#issuecomment-400362011
-        self.extra_tokens = Trie()
+        self.bpe_spm = None
         self.upper = upper
+        self.extra_tokens = {}
 
     def _build_sp(self):
+        import sentencepiece as spm
         if self.bpe_model is None:
-            import sentencepiece as spm
             self.bpe_model = spm.SentencePieceProcessor()
-            self.bpe_model.load(self._model)
+            self.bpe_model.Load(self._model)
+            if len(self.extra_tokens) > 0:
+                from transformers.utils import (sentencepiece_model_pb2_new as
+                                                sentencepiece_model_pb2)
+                self.bpe_spm = sentencepiece_model_pb2.ModelProto()
+                self.bpe_spm.ParseFromString(
+                    self.bpe_model.serialized_model_proto())
+                for token_id in sorted(self.extra_tokens.items(),
+                                       key=lambda x: x[1]):
+                    new_p = sentencepiece_model_pb2.ModelProto().SentencePiece(
+                    )
+                    new_p.piece = token_id[0]
+                    new_p.score = 0
+                    self.bpe_spm.pieces.append(new_p)
+
+                self.bpe_model = spm.SentencePieceProcessor(
+                    model_proto=self.bpe_spm.SerializeToString())
 
     def text2tokens(self, line: str) -> List[str]:
         self._build_sp()
@@ -44,32 +62,11 @@ class BpeTokenizer(CharTokenizer):
         else:
             parts = [line]
 
-        extra_part = []
-        for part in parts:
-            if part in self.non_lang_syms:
-                extra_part.append(part)
-            else:
-                extra_part.extend(self.extra_tokens.split(part))
-        parts = extra_part
-        for (i, part) in enumerate(parts):
-            left = parts[i - 1] if i > 0 else None
-            right = parts[i + 1] if i < len(parts) - 1 else None
-
-            if self.extra_tokens.find(part):
-                if (not part.startswith('▁') and left is not None
-                        and left[-1] != " "):
-                    # part of word
-                    parts[i - 1] += part
-                    parts[i] = ""
-                elif not part.startswith(
-                        '▁') and right is not None and right[0] != ' ':
-                    parts[i + 1] = part + parts[i + 1]
-                    parts[i] = ''
         tokens = []
         for part in parts:
             if part == '':
                 continue
-            if part in self.non_lang_syms or self.extra_tokens.find(part):
+            if part in self.non_lang_syms:
                 tokens.append(part)
             else:
                 tokens.extend(tokenize_by_bpe_model(self.bpe_model, part))
@@ -85,8 +82,8 @@ class BpeTokenizer(CharTokenizer):
         for token in tokens:
             token = token.upper() if self.upper else token
             if token not in self.symbol_table:
-                self.extra_tokens.add(token)
                 self.symbol_table[token] = len(self.symbol_table)
                 added_tokens += 1
                 self.char_dict[len(self.char_dict)] = token
+                self.extra_tokens[token] = self.symbol_table[token]
         return added_tokens

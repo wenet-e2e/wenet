@@ -98,16 +98,19 @@ def test_add_tokens(bpe_tokenizer):
     tokenizer = bpe_tokenizer
     tokenizer.upper = False
 
-    special_tokens = ["<s>", "</s>", "▁wenet", "WENET"]
+    special_tokens = ["<s>", "</s>", "▁wenet", "WENET", "▁WENET"]
     tokenizer.add_tokens(special_tokens)
 
     # text = "wenethappy IT'S OKAY wenethappy hawenethappy wenethappy 好"
-    text = "▁wenet OK HELLO HAWENET WENETSPEECH"
+    text = "种 wenet OK HELLO HAWENET WENETSPEECH"
     # text = "▁wenet OK HELLO HAWENET SPEECHWENET"
-    expected = ['▁wenet', '▁O', 'K', '▁HE', 'LL', 'O', '▁HA', 'WE', 'NE', 'T']
+    expected = [
+        '种', '▁wenet', '▁O', 'K', '▁HE', 'LL', 'O', '▁HA', 'WENET', '▁WENET',
+        'S', 'PE', 'E', 'CH'
+    ]
     tokens, labels = tokenizer.tokenize(text)
     print(tokens)
     print(labels)
     assert tokenizer.vocab_size() == 5002 + len(special_tokens)
+    assert len(tokens) == len(expected)
     assert all(h == r for (h, r) in zip(tokens, expected))
-    assert 1 == 3

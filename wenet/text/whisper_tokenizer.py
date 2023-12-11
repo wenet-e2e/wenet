@@ -101,3 +101,6 @@ class WhisperTokenizer(BaseTokenizer):
     def symbol_table(self) -> Dict[str, int]:
         self._build_tiktoken()
         return self.t2i
+
+    def add_tokens(self, tokens: List[str]) -> int:
+        return [0]
