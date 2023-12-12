@@ -139,6 +139,7 @@ def test_tokenize(symbol_table_path):
             "label": [24, 46, 2, 43, 1, 35, 27, 7, 56]
         }]
 
+    configs = {}
     configs['tokenizer'] = 'bpe'
     configs['tokenizer_conf'] = {}
     configs['tokenizer_conf']['bpe_path'] = bpe_model
