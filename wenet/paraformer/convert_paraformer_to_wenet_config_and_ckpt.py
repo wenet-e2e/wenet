@@ -133,6 +133,11 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['dataset_conf']['spec_aug_conf']['num_f_mask'] = 2
     configs['dataset_conf']['spec_aug_conf']['max_t'] = 50
     configs['dataset_conf']['spec_aug_conf']['max_f'] = 10
+    configs['dataset_conf']['fbank_conf'] = {}
+    configs['dataset_conf']['fbank_conf']['num_mel_bins'] = 80
+    configs['dataset_conf']['fbank_conf']['frame_shift'] = 10
+    configs['dataset_conf']['fbank_conf']['frame_length'] = 25
+    configs['dataset_conf']['fbank_conf']['dither'] = 0.1
     configs['dataset_conf']['spec_sub'] = False
     configs['dataset_conf']['spec_trim'] = False
     configs['dataset_conf']['shuffle'] = True
