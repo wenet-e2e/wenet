@@ -19,8 +19,6 @@ def init_tokenizer(configs,
     elif configs.get("paraformer", False):
         assert 'tokenizer' in configs
         assert 'tokenizer_conf' in configs
-        print(symbol_table)
-        print(configs['tokenizer_conf']['symbol_table_path'])
         assert symbol_table == configs['tokenizer_conf']['symbol_table_path']
         return ParaformerTokenizer(
             symbol_table=configs['tokenizer_conf']['symbol_table_path'],
