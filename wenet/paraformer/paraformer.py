@@ -116,9 +116,8 @@ class Paraformer(torch.nn.Module):
         if self.add_eos:
             _, ys_pad = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
             ys_pad_lens = text_lengths + 1
-        acoustic_embd, _, _, _ = self.predictor(encoder_out, ys_pad,
-                                                encoder_out_mask,
-                                                self.ignore_id)
+        acoustic_embd, token_num, _, _ = self.predictor(
+            encoder_out, ys_pad, encoder_out_mask, self.ignore_id)
 
         # 2 decoder with sampler
         # TODO(Mddct): support mwer here
@@ -136,18 +135,27 @@ class Paraformer(torch.nn.Module):
         # 3.1 ctc branhch
         loss_ctc: Optional[torch.Tensor] = None
         if self.ctc_weight != 0.0:
-            loss_ctc, ctc_probs = self._forward_ctc(encoder_out,
-                                                    encoder_out_mask, text,
-                                                    text_lengths)
+            loss_ctc, _ = self._forward_ctc(encoder_out, encoder_out_mask,
+                                            text, text_lengths)
+        # 3.2 quantity loss for cif
+        loss_quantity = torch.nn.functional.l1_loss(
+            token_num,
+            ys_pad_lens.to(token_num.dtype),
+            reduce=None,
+        )
+        loss_quantity = loss_quantity / token_num.sum()
+
         # TODO(Mddc): thu acc
         loss_decoder = self.criterion_att(decoder_out, ys_pad)
         loss = loss_decoder
         if loss_ctc is not None:
             loss = loss + self.ctc_weight * loss_ctc
+        loss = loss + loss_quantity
         return {
             "loss": loss,
             "loss_ctc": loss_ctc,
-            "loss_decoder": loss_decoder
+            "loss_decoder": loss_decoder,
+            "loss_quantity": loss_quantity,
         }
 
     @torch.jit.ignore(drop=True)
