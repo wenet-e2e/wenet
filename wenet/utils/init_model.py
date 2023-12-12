@@ -15,6 +15,9 @@
 import torch
 
 from wenet.k2.model import K2Model
+from wenet.paraformer.cif import Cif
+from wenet.paraformer.layers import SanmDecoder, SanmEncoder
+from wenet.paraformer.paraformer import Paraformer
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -43,11 +46,13 @@ WENET_ENCODER_CLASSES = {
     "e_branchformer": EBranchformerEncoder,
     "dual_transformer": DualTransformerEncoder,
     "dual_conformer": DualConformerEncoder,
+    'sanm_encoder': SanmEncoder,
 }
 
 WENET_DECODER_CLASSES = {
     "transformer": TransformerDecoder,
     "bitransformer": BiTransformerDecoder,
+    "sanm_decoder": SanmDecoder,
 }
 
 WENET_CTC_CLASSES = {
@@ -58,6 +63,7 @@ WENET_PREDICTOR_CLASSES = {
     "rnn": RNNPredictor,
     "embedding": EmbeddingPredictor,
     "conv": ConvPredictor,
+    "cif_predictor": Cif,
 }
 
 WENET_JOINT_CLASSES = {
@@ -70,6 +76,7 @@ WENET_MODEL_CLASSES = {
     "whisper": Whisper,
     "k2_model": K2Model,
     "transducer": Transducer,
+    'paraformer': Paraformer,
 }
 
 
@@ -131,11 +138,19 @@ def init_model(args, configs):
                 sanmencoder/decoder in the future, simplify here.
         """
         # TODO(Mddct): refine this
-        from wenet.utils.init_ali_paraformer import (init_model as
-                                                     init_ali_paraformer_model)
-        model, configs = init_ali_paraformer_model(configs, args.checkpoint)
-        print(configs)
-        return model, configs
+        predictor_type = configs.get('predictor', 'cif')
+        predictor = WENET_PREDICTOR_CLASSES[predictor_type](
+            **configs['predictor_conf'])
+        model = WENET_MODEL_CLASSES[model_type](
+            vocab_size=vocab_size,
+            encoder=encoder,
+            decoder=decoder,
+            predictor=predictor,
+            ctc=ctc,
+            **configs['model_conf'],
+            special_tokens=configs.get('tokenizer_conf',
+                                       {}).get('special_tokens', None),
+        )
     else:
         model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
@@ -147,9 +162,9 @@ def init_model(args, configs):
             **configs['model_conf'])
 
     # If specify checkpoint, load some info from checkpoint
-    if args.checkpoint is not None:
+    if hasattr(args, 'checkpoint') and args.checkpoint is not None:
         infos = load_checkpoint(model, args.checkpoint)
-    elif args.enc_init is not None:
+    elif hasattr(args, 'checkpoint') and args.enc_init is not None:
         infos = load_trained_modules(model, args)
     else:
         infos = {}
