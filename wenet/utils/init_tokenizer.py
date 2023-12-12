@@ -9,9 +9,6 @@ def init_tokenizer(configs,
                    symbol_table,
                    bpe_model=None,
                    non_lang_syms=None) -> BaseTokenizer:
-    # TODO:
-    # 1 paraformer tokenizer
-
     if configs.get("whisper", False):
         tokenizer = WhisperTokenizer(
             multilingual=configs['whisper_conf']['is_multilingual'],
