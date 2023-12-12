@@ -1,5 +1,5 @@
 import pytest
-from sentencepiece import os
+import os
 from wenet.paraformer.convert_paraformer_to_wenet_config_and_ckpt import (
     extract_dict, _download_fn)
 from wenet.utils.init_tokenizer import init_tokenizer
