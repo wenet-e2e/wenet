@@ -16,7 +16,7 @@ Here is a brief introduction of each module(directory).
 * `efficient_conformer`: efficient conformer implementation, please refer [paper](https://arxiv.org/pdf/2109.01163.pdf)
 * `cif`: Continuous Integrate-and-Fire implemented, please refer [paper](https://arxiv.org/pdf/1905.11235.pdf)
 * `branchformer`: branchformer implementation, please refer [paper](https://arxiv.org/abs/2207.02971)
-* `whisper`: whisper intergrate, please refer[paper](https://arxiv.org/abs/2212.04356)
+* `whisper`: whisper intergrate, please refer [paper](https://arxiv.org/abs/2212.04356)
 
 `transducer`, `squeezeformer`, `efficient_conformer`, `branchformer` and `cif` are all based on `transformer`,
 they resue a lot of the common blocks of `tranformer`.
