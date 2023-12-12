@@ -140,7 +140,7 @@ def test_tokenize(symbol_table_path):
         }]
 
     configs = {'split_with_space': False}
-    tokenizer = init_tokenizer(configs, symbol_table_path, bpe_model)
+    tokenizer = init_tokenizer(configs)
     outs = processor.tokenize(txts, tokenizer)
     for (hyp, ref) in zip(outs, refs):
         assert (len(hyp["tokens"]) == len(ref["tokens"]))

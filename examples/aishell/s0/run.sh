@@ -36,7 +36,7 @@ dict=data/dict/lang_char.txt
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
 # faster on reading data and training.
-data_type=shard
+data_type=raw
 num_utts_per_shard=1000
 
 train_set=train
@@ -55,7 +55,7 @@ dir=exp/conformer
 tensorboard_dir=tensorboard
 checkpoint=
 num_workers=8
-prefetch=1500
+prefetch=500
 
 # use average_checkpoint will get better result
 average_checkpoint=true
@@ -63,10 +63,10 @@ decode_checkpoint=$dir/final.pt
 average_num=30
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
-train_engine=deepspeed
+train_engine=torch_ddp
 
-deepspeed_config=conf/ds_stage1.json
-deepspeed_save_states="model+optimizer"  # "model_only" or "model+optimizer"
+deepspeed_config=conf/ds_stage2.json
+deepspeed_save_states="model_only"
 
 . tools/parse_options.sh || exit 1;
 
@@ -179,7 +179,7 @@ fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Test model, please specify the model you want to test by --checkpoint
-  if [ ${average_checkpoint} == true ] && [ ! -e "${decode_checkpoint}" ]; then
+  if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
     python wenet/bin/average_model.py \

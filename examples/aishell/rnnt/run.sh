@@ -37,11 +37,11 @@ dict=data/dict/lang_char.txt
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
 # faster on reading data and training.
-data_type=shard
+data_type=raw
 num_utts_per_shard=1000
 
 train_set=train
-train_config=conf/example_embedding_predictor.yaml
+train_config=conf/conformer_u2pp_rnnt.yaml
 dir=exp/conformer_rnnt
 checkpoint=
 
@@ -53,8 +53,8 @@ decode_modes="rnnt_beam_search"
 
 train_engine=torch_ddp
 
-deepspeed_config=../../aishell/s0/conf/ds_stage1.json
-deepspeed_save_states="model+optimizer"  # "model_only" or "model+optimizer"
+deepspeed_config=../../aishell/s0/conf/ds_stage2.json
+deepspeed_save_states="model_only"
 
 . tools/parse_options.sh || exit 1;
 
@@ -146,7 +146,7 @@ fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Test model, please specify the model you want to test by --checkpoint
-  if [ ${average_checkpoint} == true ] && [ ! -e "${decode_checkpoint}" ]; then
+  if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
     python wenet/bin/average_model.py \

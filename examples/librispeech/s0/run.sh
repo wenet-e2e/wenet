@@ -31,16 +31,15 @@ data_url=www.openslr.org/resources/12
 datadir=/export/data/en-asr-data/OpenSLR
 # wav data dir
 wave_data=data
-data_type=shard
+data_type=raw
 # Optional train_config
 # 1. conf/train_transformer_large.yaml: Standard transformer
 train_config=conf/train_conformer.yaml
-dir=exp/conformer
 checkpoint=
-num_workers=8
-prefetch=500
+num_workers=1
 do_delta=false
 
+dir=exp/sp_spec_aug
 tensorboard_dir=tensorboard
 
 # use average_checkpoint will get better result
@@ -62,10 +61,10 @@ train_set=train_960
 dev_set=dev
 recog_set="test_clean test_other dev_clean dev_other"
 
-train_engine=deepspeed
+train_engine=torch_ddp
 
-deepspeed_config=../../aishell/s0/conf/ds_stage1.json
-deepspeed_save_states="model+optimizer"
+deepspeed_config=../../aishell/s0/conf/ds_stage2.json
+deepspeed_save_states="model_only"
 
 . tools/parse_options.sh || exit 1;
 
@@ -136,14 +135,8 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   # Prepare wenet required data
   echo "Prepare data, prepare required format"
   for x in $dev_set ${recog_set} $train_set ; do
-    if [ $data_type == "shard" ]; then
-      tools/make_shard_list.py --num_utts_per_shard 1000 \
-        --num_threads 16 $wave_data/$x/wav.scp $wave_data/$x/text \
-        $(realpath $wave_data/$x/shards) $wave_data/$x/data.list
-    else
-      tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
-          $wave_data/$x/data.list
-    fi
+    tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
+        $wave_data/$x/data.list
   done
 
 fi
@@ -177,7 +170,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --tensorboard_dir ${tensorboard_dir} \
       --ddp.dist_backend $dist_backend \
       --num_workers ${num_workers} \
-      --prefetch ${prefetch} \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
@@ -206,7 +198,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     python wenet/bin/recognize.py --gpu 0 \
       --modes $decode_modes \
       --config $dir/train.yaml \
-      --data_type ${data_type} \
+      --data_type raw \
       --dict $dict \
       --bpe_model ${bpemodel}.model \
       --test_data $wave_data/$test/data.list \
