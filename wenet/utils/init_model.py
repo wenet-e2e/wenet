@@ -75,6 +75,7 @@ WENET_MODEL_CLASSES = {
 
 def init_model(args, configs):
 
+    # TODO(xcsong): Forcefully read the 'cmvn' attribute.
     if configs.get('cmvn', None) == 'global_cmvn':
         mean, istd = load_cmvn(configs['cmvn_conf']['cmvn_file'],
                                configs['cmvn_conf']['is_json_cmvn'])
