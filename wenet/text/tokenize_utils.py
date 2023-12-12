@@ -16,6 +16,25 @@ import re
 
 
 def tokenize_by_bpe_model(sp, txt):
+    return _tokenize_by_seg_dic_or_bpe_model(txt, sp=sp, upper=True)
+
+
+def tokenize_by_seg_dict(seg_dict, txt):
+    return _tokenize_by_seg_dic_or_bpe_model(txt,
+                                             seg_dict=seg_dict,
+                                             upper=False)
+
+
+def _tokenize_by_seg_dic_or_bpe_model(
+    txt,
+    sp=None,
+    seg_dict=None,
+    upper=True,
+):
+    if sp is None:
+        assert seg_dict is not None
+    if seg_dict is None:
+        assert sp is not None
     tokens = []
     # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
     # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
@@ -23,7 +42,7 @@ def tokenize_by_bpe_model(sp, txt):
     # Example:
     #   txt   = "你好 ITS'S OKAY 的"
     #   chars = ["你", "好", " ITS'S OKAY ", "的"]
-    chars = pattern.split(txt.upper())
+    chars = pattern.split(txt.upper() if upper else txt)
     mix_chars = [w for w in chars if len(w.strip()) > 0]
     for ch_or_w in mix_chars:
         # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
@@ -32,7 +51,15 @@ def tokenize_by_bpe_model(sp, txt):
         # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
         # encode ch_or_w using bpe_model.
         else:
-            for p in sp.encode_as_pieces(ch_or_w):
-                tokens.append(p)
+            if sp is not None:
+                for p in sp.encode_as_pieces(ch_or_w):
+                    tokens.append(p)
+            else:
+                for en_token in ch_or_w.split():
+                    en_token = en_token.strip()
+                    if en_token in seg_dict:
+                        tokens.extend(seg_dict[en_token].split(' '))
+                    else:
+                        tokens.append(en_token)
 
     return tokens

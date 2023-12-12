@@ -1,7 +1,7 @@
 from os import PathLike
-import re
 from typing import Dict, List, Optional, Union
 from wenet.text.char_tokenizer import CharTokenizer
+from wenet.text.tokenize_utils import tokenize_by_seg_dict
 
 
 def read_seg_dict(path):
@@ -44,31 +44,5 @@ class ParaformerTokenizer(CharTokenizer):
             if part in self.non_lang_syms:
                 tokens.append(part)
             else:
-                tokens.extend(self.tokenize_by_seg_dict(part))
-        return tokens
-
-    def tokenize_by_seg_dict(self, txt):
-        tokens = []
-        # CJK(China Japan Korea) unicode range is [U+4E00, U+9FFF], ref:
-        # https://en.wikipedia.org/wiki/CJK_Unified_Ideographs_(Unicode_block)
-        pattern = re.compile(r'([\u4e00-\u9fff])')
-        # Example:
-        #   txt   = "你好 ITS'S OKAY 的"
-        #   chars = ["你", "好", " ITS'S OKAY ", "的"]
-        chars = pattern.split(txt)
-        mix_chars = [w for w in chars if len(w.strip()) > 0]
-        for ch_or_w in mix_chars:
-            # ch_or_w is a single CJK charater(i.e., "你"), do nothing.
-            if pattern.fullmatch(ch_or_w) is not None:
-                tokens.append(ch_or_w)
-            # ch_or_w contains non-CJK charaters(i.e., " IT'S OKAY "),
-            # encode ch_or_w using bpe_model.
-            else:
-                for en_token in ch_or_w.split():
-                    en_token = en_token.strip()
-                    if en_token in self.seg_dict:
-                        tokens.extend(self.seg_dict[en_token].split(' '))
-                    else:
-                        tokens.append(en_token)
-
+                tokens.extend(tokenize_by_seg_dict(self.seg_dict, part))
         return tokens

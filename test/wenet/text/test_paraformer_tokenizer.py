@@ -57,6 +57,7 @@ def test_tokenize(paraformer_tokenizer):
         tokenizer.unk] == 8403
     for (i, txt) in enumerate(txts):
         tokens, labels = tokenizer.tokenize(txt)
+        print(tokens, labels)
         assert len(tokens) == len(expected[i]['tokens'])
         assert len(labels) == len(expected[i]['label'])
         assert labels == expected[i]['label']
