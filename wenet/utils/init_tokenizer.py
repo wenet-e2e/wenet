@@ -16,7 +16,7 @@ def init_tokenizer(configs,
         tokenizer = WhisperTokenizer(
             multilingual=configs['whisper_conf']['is_multilingual'],
             num_languages=configs['whisper_conf']['num_languages'])
-    elif configs.get("paraformer", False):
+    elif configs.get("tokenizer", "char") == 'paraformer':
         assert 'tokenizer' in configs
         assert 'tokenizer_conf' in configs
         assert symbol_table == configs['tokenizer_conf']['symbol_table_path']

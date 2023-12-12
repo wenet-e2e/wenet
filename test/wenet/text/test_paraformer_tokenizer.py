@@ -22,7 +22,7 @@ def paraformer_tokenizer(request):
     extract_dict(configs, wenet_units)
 
     configs = {}
-    configs['paraformer'] = True
+    configs['model'] = 'paraformer'
     configs['tokenizer'] = 'paraformer'
     configs['tokenizer_conf'] = {}
     configs['tokenizer_conf']['symbol_table_path'] = wenet_units

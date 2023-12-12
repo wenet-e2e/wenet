@@ -251,7 +251,7 @@ def main():
     convert_to_wenet_tokenizer_conf(wenet_units, args.paraformer_seg_dict,
                                     configs, seg_dict)
     configs['output_dim'] = vocab_size
-    configs['paraformer'] = True
+    configs['model'] = 'paraformer'
     configs['is_json_cmvn'] = True
     configs['cmvn_file'] = json_cmvn_path
     configs['input_dim'] = 80
