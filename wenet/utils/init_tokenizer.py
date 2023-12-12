@@ -26,17 +26,19 @@ def init_tokenizer(configs) -> BaseTokenizer:
     # TODO(Mddct):
     # 1 paraformer tokenizer
 
-    if configs["tokenizer"] == "whisper":
+    # TODO(xcsong): Forcefully read the 'tokenizer' attribute.
+    tokenizer_type = configs.get("tokenizer", "char")
+    if tokenizer_type == "whisper":
         tokenizer = WhisperTokenizer(
             multilingual=configs['tokenizer_conf']['is_multilingual'],
             num_languages=configs['tokenizer_conf']['num_languages'])
-    elif configs["tokenizer"] == "char":
+    elif tokenizer_type == "char":
         tokenizer = CharTokenizer(
             configs['tokenizer_conf']['symbol_table_path'],
             configs['tokenizer_conf']['non_lang_syms_path'],
             split_with_space=configs['tokenizer_conf'].get(
                 'split_with_space', False))
-    elif configs["tokenizer"] == "bpe":
+    elif tokenizer_type == "bpe":
         tokenizer = BpeTokenizer(
             configs['tokenizer_conf']['bpe_path'],
             configs['tokenizer_conf']['symbol_table_path'],
