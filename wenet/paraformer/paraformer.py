@@ -143,7 +143,7 @@ class Paraformer(torch.nn.Module):
             ys_pad_lens.to(token_num.dtype),
             reduce=None,
         )
-        loss_quantity = loss_quantity / token_num.sum()
+        loss_quantity = loss_quantity / ys_pad_lens.sum().to(token_num.dtype)
 
         # TODO(Mddc): thu acc
         loss_decoder = self.criterion_att(decoder_out, ys_pad)
