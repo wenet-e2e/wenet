@@ -23,9 +23,6 @@ from wenet.text.whisper_tokenizer import WhisperTokenizer
 
 
 def init_tokenizer(configs) -> BaseTokenizer:
-    # TODO(Mddct):
-    # 1 paraformer tokenizer
-
     # TODO(xcsong): Forcefully read the 'tokenizer' attribute.
     tokenizer_type = configs.get("tokenizer", "char")
     if tokenizer_type == "whisper":
@@ -45,11 +42,8 @@ def init_tokenizer(configs) -> BaseTokenizer:
             configs['tokenizer_conf']['non_lang_syms_path'],
             split_with_space=configs['tokenizer_conf'].get(
                 'split_with_space', False))
-    elif configs["tokenizer"] == 'paraformer':
-        assert 'tokenizer' in configs
-        assert 'tokenizer_conf' in configs
-        assert symbol_table == configs['tokenizer_conf']['symbol_table_path']
-        return ParaformerTokenizer(
+    elif tokenizer_type == 'paraformer':
+        tokenizer = ParaformerTokenizer(
             symbol_table=configs['tokenizer_conf']['symbol_table_path'],
             seg_dict=configs['tokenizer_conf']['seg_dict_path'])
     else:
