@@ -134,10 +134,6 @@ def init_model(args, configs):
                                        {}).get('special_tokens', None),
             **configs['model_conf'])
     elif model_type == 'paraformer':
-        """ NOTE(Mddct): support fintune  paraformer, if there is a need for
-                sanmencoder/decoder in the future, simplify here.
-        """
-        # TODO(Mddct): refine this
         predictor_type = configs.get('predictor', 'cif')
         predictor = WENET_PREDICTOR_CLASSES[predictor_type](
             **configs['predictor_conf'])
