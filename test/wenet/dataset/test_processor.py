@@ -1,6 +1,6 @@
 import pytest
 
-import wenet.dataset.processor as processor
+from wenet.dataset import processor
 from wenet.utils.init_tokenizer import init_tokenizer
 
 
@@ -29,6 +29,11 @@ def test_tokenize(symbol_table_path):
     }, {
         "txt": "It's okay"
     }]
+    configs = {}
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
+    configs['tokenizer_conf']['non_lang_syms_path'] = None
+    configs['tokenizer_conf']['split_with_space'] = False
     if symbol_table_path == "test/resources/librispeech.words.txt":
         bpe_model = "test/resources/librispeech.train_960_unigram5000.bpemodel"
         refs = [{
@@ -67,6 +72,8 @@ def test_tokenize(symbol_table_path):
             "tokens": ['▁IT', "'", 'S', '▁O', 'KA', 'Y'],
             "label": [2344, 2, 3790, 3010, 2418, 4979]
         }]
+        configs['tokenizer'] = 'bpe'
+        configs['tokenizer_conf']['bpe_path'] = bpe_model
     else:
         bpe_model = None
         refs = [{
@@ -138,14 +145,8 @@ def test_tokenize(symbol_table_path):
             "tokens": ['I', 't', "'", 's', '▁', 'o', 'k', 'a', 'y'],
             "label": [24, 46, 2, 43, 1, 35, 27, 7, 56]
         }]
+        configs['tokenizer'] = 'char'
 
-    configs = {}
-    configs['tokenizer'] = 'bpe'
-    configs['tokenizer_conf'] = {}
-    configs['tokenizer_conf']['bpe_path'] = bpe_model
-    configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
-    configs['tokenizer_conf']['non_lang_syms_path'] = None
-    configs['tokenizer_conf']['split_with_space'] = False
     tokenizer = init_tokenizer(configs)
     outs = processor.tokenize(txts, tokenizer)
     for (hyp, ref) in zip(outs, refs):
