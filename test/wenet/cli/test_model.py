@@ -3,6 +3,7 @@
 # Copyright [2023-12-12] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 
 import os
+import requests
 import pytest
 
 from wenet.cli.hub import download
