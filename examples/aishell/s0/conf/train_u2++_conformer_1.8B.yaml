@@ -57,7 +57,7 @@ cmvn_conf:
   is_json_cmvn: true
 
 # hybrid CTC/attention
-model: asrmodel
+model: asr_model
 model_conf:
     ctc_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
