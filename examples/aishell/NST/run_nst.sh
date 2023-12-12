@@ -184,7 +184,6 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       --beam_size 10 \
       --batch_size 1 \
       --penalty 0.0 \
-      --dict $dict \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
       --result_file $test_dir/text \
