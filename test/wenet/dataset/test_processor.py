@@ -139,7 +139,12 @@ def test_tokenize(symbol_table_path):
             "label": [24, 46, 2, 43, 1, 35, 27, 7, 56]
         }]
 
-    configs = {'split_with_space': False}
+    configs['tokenizer'] = 'bpe'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['bpe_path'] = bpe_model
+    configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
+    configs['tokenizer_conf']['non_lang_syms_path'] = None
+    configs['tokenizer_conf']['split_with_space'] = False
     tokenizer = init_tokenizer(configs)
     outs = processor.tokenize(txts, tokenizer)
     for (hyp, ref) in zip(outs, refs):
