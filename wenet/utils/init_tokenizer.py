@@ -9,8 +9,7 @@ def init_tokenizer(configs,
                    bpe_model=None,
                    non_lang_syms=None) -> BaseTokenizer:
     # TODO:
-    # 1 huggface tokenizer
-    # 2 paraformer tokenizer
+    # 1 paraformer tokenizer
 
     if configs.get("whisper", False):
         tokenizer = WhisperTokenizer(
