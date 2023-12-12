@@ -265,7 +265,8 @@ def attention_beam_search(
     encoder_mask = encoder_mask.unsqueeze(1).repeat(1, beam_size, 1, 1).view(
         running_size, 1, maxlen)  # (B*N, 1, max_len)
 
-    if model.special_tokens is not None and "transcribe" in model.special_tokens:
+    if getattr(model, 'special_tokens', None) is not None \
+            and "transcribe" in model.special_tokens:
         hyps = torch.ones([running_size, 4], dtype=torch.long,
                           device=device)  # (B*N, 4)
         # TODO(xcsong): add args for language, task, etc
@@ -377,7 +378,8 @@ def attention_rescoring(
         hyps_lens = torch.tensor([len(hyp) for hyp in hyps],
                                  device=device,
                                  dtype=torch.long)  # (beam_size,)
-        if model.special_tokens is not None and "transcribe" in model.special_tokens:
+        if getattr(model, 'special_tokens', None) is not None \
+                and "transcribe" in model.special_tokens:
             # TODO(xcsong): add args for language, task, etc
             prev_len = hyps_pad.size(1)
             hyps_pad, _ = add_whisper_tokens(model.special_tokens,
