@@ -1,7 +1,7 @@
 import pytest
 
 import wenet.dataset.processor as processor
-from wenet.text.wenet_tokenizer import WenetTokenizer
+from wenet.utils.init_tokenizer import init_tokenizer
 
 
 @pytest.mark.parametrize("symbol_table_path", [
@@ -139,9 +139,8 @@ def test_tokenize(symbol_table_path):
             "label": [24, 46, 2, 43, 1, 35, 27, 7, 56]
         }]
 
-    tokenizer = WenetTokenizer(symbol_table_path,
-                               bpe_model,
-                               split_with_space=False)
+    configs = {'split_with_space': False}
+    tokenizer = init_tokenizer(configs, symbol_table_path, bpe_model)
     outs = processor.tokenize(txts, tokenizer)
     for (hyp, ref) in zip(outs, refs):
         assert (len(hyp["tokens"]) == len(ref["tokens"]))
