@@ -2,7 +2,6 @@ from os import PathLike
 import re
 from typing import Dict, List, Optional, Union
 from wenet.text.char_tokenizer import CharTokenizer
-from wenet.text.tries import Trie
 
 
 def read_seg_dict(path):
@@ -28,10 +27,6 @@ class ParaformerTokenizer(CharTokenizer):
         self.seg_dict = seg_dict
         if seg_dict is not None and not isinstance(seg_dict, Dict):
             self.seg_dict = read_seg_dict(seg_dict)
-        if seg_dict is not None:
-            self.tries = Trie()
-            for word in self.seg_dict.keys():
-                self.tries.add(word)
 
     def text2tokens(self, line: str) -> List[str]:
         assert self.seg_dict is not None
