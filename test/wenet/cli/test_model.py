@@ -29,10 +29,7 @@ def test_model(model):
                       if data["Key"] == model)
     model_url = model_info['Url']
     download(model_url, dest=dest, only_child=True)
-    model = Model(dest,
-                  gpu=-1,
-                  beam=5,
-                  resample_rate=16000)
+    model = Model(dest, gpu=-1, beam=5, resample_rate=16000)
     if dataset in ['gigaspeech', 'librispeech']:
         audio_file = "test/resources/librispeech-1995-1837-0001.wav"
         text = "▁IT▁WAS▁THE▁FIRST▁GREAT▁SORROW▁OF▁HIS▁LIFE▁IT▁WAS▁NOT▁SO▁MUCH" + \
