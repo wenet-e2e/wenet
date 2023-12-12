@@ -63,7 +63,7 @@ decode_checkpoint=$dir/final.pt
 average_num=30
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
 
-train_engine=torch_ddp
+train_engine=deepspeed
 
 deepspeed_config=conf/ds_stage1.json
 deepspeed_save_states="model+optimizer"  # "model_only" or "model+optimizer"

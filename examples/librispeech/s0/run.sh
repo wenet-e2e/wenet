@@ -31,16 +31,16 @@ data_url=www.openslr.org/resources/12
 datadir=/export/data/en-asr-data/OpenSLR
 # wav data dir
 wave_data=data
-data_type=raw
+data_type=shard
 # Optional train_config
 # 1. conf/train_transformer_large.yaml: Standard transformer
 train_config=conf/train_conformer.yaml
+dir=exp/conformer
 checkpoint=
-num_workers=1
-cmvn=true
+num_workers=8
+prefetch=500
 do_delta=false
 
-dir=exp/sp_spec_aug
 tensorboard_dir=tensorboard
 
 # use average_checkpoint will get better result
@@ -62,10 +62,10 @@ train_set=train_960
 dev_set=dev
 recog_set="test_clean test_other dev_clean dev_other"
 
-train_engine=torch_ddp
+train_engine=deepspeed
 
-deepspeed_config=../../aishell/s0/conf/ds_stage2.json
-deepspeed_save_states="model_only"
+deepspeed_config=../../aishell/s0/conf/ds_stage1.json
+deepspeed_save_states="model+optimizer"
 
 . tools/parse_options.sh || exit 1;
 
@@ -136,8 +136,14 @@ if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   # Prepare wenet required data
   echo "Prepare data, prepare required format"
   for x in $dev_set ${recog_set} $train_set ; do
-    tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
-        $wave_data/$x/data.list
+    if [ $data_type == "shard" ]; then
+      tools/make_shard_list.py --num_utts_per_shard 1000 \
+        --num_threads 16 $wave_data/$x/wav.scp $wave_data/$x/text \
+        $(realpath $wave_data/$x/shards) $wave_data/$x/data.list
+    else
+      tools/make_raw_list.py $wave_data/$x/wav.scp $wave_data/$x/text \
+          $wave_data/$x/data.list
+    fi
   done
 
 fi
@@ -149,8 +155,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
   dist_backend="nccl"
-  cmvn_opts=
-  $cmvn && cmvn_opts="--cmvn $wave_data/${train_set}/global_cmvn"
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
@@ -166,8 +170,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type ${data_type} \
-      --symbol_table $dict \
-      --bpe_model ${bpemodel}.model \
       --train_data $wave_data/$train_set/data.list \
       --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
@@ -175,7 +177,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --tensorboard_dir ${tensorboard_dir} \
       --ddp.dist_backend $dist_backend \
       --num_workers ${num_workers} \
-      $cmvn_opts \
+      --prefetch ${prefetch} \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
@@ -183,8 +185,6 @@ fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Test model, please specify the model you want to test by --checkpoint
-  cmvn_opts=
-  $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
   # TODO, Add model average here
   mkdir -p $dir/test
   if [ ${average_checkpoint} == true ]; then
@@ -206,7 +206,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     python wenet/bin/recognize.py --gpu 0 \
       --modes $decode_modes \
       --config $dir/train.yaml \
-      --data_type raw \
+      --data_type ${data_type} \
       --dict $dict \
       --bpe_model ${bpemodel}.model \
       --test_data $wave_data/$test/data.list \
