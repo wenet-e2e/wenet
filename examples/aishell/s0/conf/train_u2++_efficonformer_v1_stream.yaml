@@ -49,8 +49,8 @@ tokenizer_conf:
   special_tokens:
     <blank>: 0
     <unk>: 1
-    <sos>: 4232
-    <eos>: 4232
+    <sos>: 2
+    <eos>: 2
 
 ctc: ctc
 ctc_conf:
