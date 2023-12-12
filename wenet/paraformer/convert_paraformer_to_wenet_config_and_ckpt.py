@@ -5,6 +5,7 @@ import json
 import math
 import os
 from pathlib import Path
+import shutil
 import urllib.request
 from tqdm import tqdm
 from typing import Dict, List, Optional, Tuple
@@ -81,6 +82,15 @@ def convert_to_wenet_json_cmvn(paraformer_cmvn_path, wenet_cmvn_path: str):
         f.flush()
 
 
+def convert_to_wenet_tokenizer_conf(symbol_table_path, seg_dict, configs,
+                                    output_path):
+    configs['tokenizer'] = 'paraformer'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
+    configs['tokenizer_conf']['seg_dict_path'] = output_path
+    shutil.copy(seg_dict, output_path)
+
+
 def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
                           fields_to_keep: List[str]) -> Dict:
     configs = _filter_dict_fields(configs, fields_to_keep)
@@ -149,6 +159,9 @@ def get_args():
     parser.add_argument('--paraformer_cmvn',
                         default=None,
                         help='ali released Paraformer model\'s cmvn')
+    parser.add_argument('--paraformer_seg_dict',
+                        default=None,
+                        help='ali released Paraformer model\'s en dict')
     parser.add_argument('--output_dir',
                         default='.',
                         help="output file:\
@@ -208,6 +221,11 @@ def may_get_assets_and_refine_args(args):
         args.paraformer_cmvn = os.path.join(assets_dir, cmvn_name)
         if not os.path.exists(args.paraformer_cmvn):
             _download_fn(assets_dir, cmvn_name)
+    if args.paraformer_seg_dict is None:
+        seg_dict = 'seg_dict'
+        args.paraformer_seg_dict = os.path.join(assets_dir, "seg_dict")
+        if not os.path.exists(args.paraformer_seg_dict):
+            _download_fn(assets_dir, seg_dict)
     if args.paraformer_model is None:
         model_name = 'model.pb'
         args.paraformer_model = os.path.join(assets_dir, "model.pt")
@@ -227,16 +245,21 @@ def main():
     convert_to_wenet_json_cmvn(args.paraformer_cmvn, json_cmvn_path)
 
     wenet_units = os.path.join(args.output_dir, 'units.txt')
+    seg_dict = os.path.join(args.output_dir,
+                            os.path.basename(args.paraformer_seg_dict))
     vocab_size = extract_dict(configs, wenet_units)
+    convert_to_wenet_tokenizer_conf(wenet_units, args.paraformer_seg_dict,
+                                    configs, seg_dict)
     configs['output_dim'] = vocab_size
-    configs['paraformer'] = True
+    configs['model'] = 'paraformer'
     configs['is_json_cmvn'] = True
     configs['cmvn_file'] = json_cmvn_path
     configs['input_dim'] = 80
     fields_to_keep = [
         'encoder_conf', 'decoder_conf', 'predictor_conf', 'input_dim',
         'output_dim', 'cmvn_file', 'is_json_cmvn', 'model_conf', 'paraformer',
-        'optim', 'optim_conf', 'scheduler', 'scheduler_conf'
+        'optim', 'optim_conf', 'scheduler', 'scheduler_conf', 'tokenizer',
+        'tokenizer_conf'
     ]
     wenet_train_yaml = os.path.join(args.output_dir, "train.yaml")
     wenet_configs = convert_to_wenet_yaml(configs, wenet_train_yaml,
@@ -246,11 +269,11 @@ def main():
     convert_to_wenet_state_dict(wenet_configs, args.paraformer_model,
                                 wenet_model_path)
 
-    print("Please check {} {} {} {} in {}".format(json_cmvn_path,
-                                                  wenet_train_yaml,
-                                                  wenet_model_path,
-                                                  wenet_units,
-                                                  args.output_dir))
+    print("Please check {} {} {} {} {} in {}".format(json_cmvn_path,
+                                                     wenet_train_yaml,
+                                                     wenet_model_path,
+                                                     wenet_units, seg_dict,
+                                                     args.output_dir))
 
 
 if __name__ == "__main__":

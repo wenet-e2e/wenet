@@ -6,7 +6,7 @@ import torchaudio.compliance.kaldi as kaldi
 
 from wenet.cli.hub import Hub
 from wenet.paraformer.search import paraformer_beautify_result, paraformer_greedy_search
-from wenet.utils.file_utils import read_symbol_table
+from wenet.text.paraformer_tokenizer import ParaformerTokenizer
 
 
 class Paraformer:
@@ -26,9 +26,7 @@ class Paraformer:
             device = 'cpu'
         self.device = torch.device(device)
         self.model = self.model.to(self.device)
-        symbol_table = read_symbol_table(units_path)
-        self.char_dict = {v: k for k, v in symbol_table.items()}
-        self.eos = 2
+        self.tokenizer = ParaformerTokenizer(symbol_table=units_path)
 
     def transcribe(self, audio_file: str, tokens_info: bool = False) -> dict:
         waveform, sample_rate = torchaudio.load(audio_file, normalize=False)
@@ -54,15 +52,13 @@ class Paraformer:
 
         result = {}
         result['confidence'] = res.confidence
-        # # TODO(Mddct): deal with '@@' and 'eos'
         result['text'] = paraformer_beautify_result(
-            [self.char_dict[x] for x in res.tokens])
-
+            self.tokenizer.detokenize(res.tokens)[1])
         if tokens_info:
             tokens_info = []
             for i, x in enumerate(res.tokens):
                 tokens_info.append({
-                    'token': self.char_dict[x],
+                    'token': self.tokenizer.char_dict[x],
                     # TODO(Mddct): support times
                     # 'start': 0,
                     # 'end': 0,
