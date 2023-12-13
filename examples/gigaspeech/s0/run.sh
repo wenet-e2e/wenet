@@ -42,7 +42,6 @@ nj=16
 # 2. conf/train_transformer_bidecoder.yaml: Bidecoder Conformer
 train_config=conf/train_conformer_bidecoder.yaml
 checkpoint=
-cmvn=false
 do_delta=false
 dir=exp/sp_spec_aug
 
@@ -112,6 +111,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   mkdir -p $data/lang_char_$set/
   echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
   echo "<unk> 1" >> ${dict} # <unk> must be 1
+  echo "<sos/eos> 2" >> $dict # <eos>
 
   # we borrowed these code and scripts which are related bpe from ESPnet.
   cut -f 2- -d" " $data/${train_set}/text > $data/lang_char_$set/input.txt
@@ -119,10 +119,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     --model_type=${bpemode} --model_prefix=${bpemodel} --input_sentence_size=100000000
   tools/spm_encode --model=${bpemodel}.model --output_format=piece \
     < $data/lang_char_$set/input.txt | \
-    tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
-  num_token=$(cat $dict | wc -l)
-  echo "<sos/eos> $num_token" >> $dict # <eos>
-  wc -l ${dict}
+    tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+2}' >> ${dict}
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
@@ -148,9 +145,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
   dist_backend="nccl"
-  cmvn_opts=
-  $cmvn && cp ${feat_dir}/${train_set}/global_cmvn $dir
-  $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
@@ -165,15 +159,12 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     wenet/bin/train.py \
       --config $train_config \
       --data_type "shard" \
-      --symbol_table $dict \
-      --bpe_model $bpemodel.model \
       --train_data $data/$train_set/data.list \
       --cv_data $data/$train_dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.dist_backend $dist_backend \
       --num_workers 16 \
-      $cmvn_opts \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
@@ -181,8 +172,6 @@ fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Test model, please specify the model you want to test by --checkpoint
-  cmvn_opts=
-  $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
   # TODO, Add model average here
   mkdir -p $dir/test
   if [ ${average_checkpoint} == true ]; then
@@ -205,13 +194,11 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --modes $decode_modes \
       --config $dir/train.yaml \
       --data_type "shard" \
-      --bpe_model $bpemodel.model \
       --test_data $data/$test/format.data \
       --checkpoint $decode_checkpoint \
       --beam_size 20 \
       --batch_size 32 \
       --penalty 0.0 \
-      --dict $dict \
       --result_dir $result_dir \
       --ctc_weight $ctc_weight \
       ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
