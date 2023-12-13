@@ -53,6 +53,7 @@ class Paraformer(torch.nn.Module):
                  sampler: bool = True,
                  sampling_ratio: float = 0.75,
                  add_eos: bool = True,
+                 special_tokens: Optional[Dict] = None,
                  **kwargs):
         assert isinstance(encoder,
                           SanmEncoder), isinstance(decoder, SanmDecoder)
@@ -67,8 +68,9 @@ class Paraformer(torch.nn.Module):
 
         self.lfr = LFR()
 
-        self.sos = 1
-        self.eos = 2
+        assert special_tokens is not None
+        self.sos = special_tokens['<sos>']
+        self.eos = special_tokens['<eos>']
         self.ignore_id = ignore_id
 
         self.criterion_att = LabelSmoothingLoss(
