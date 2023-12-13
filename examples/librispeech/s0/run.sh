@@ -192,7 +192,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   ctc_weight=0.5
   for test in $recog_set; do
     result_dir=$dir/${test}
-    mkdir -p $test_dir
     python wenet/bin/recognize.py --gpu 0 \
       --modes $decode_modes \
       --config $dir/train.yaml \
@@ -208,6 +207,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
 
     for mode in $decode_modes; do
       test_dir=$result_dir/$mode
+      mkdir -p $test_dir
       cp $test_dir/text $test_dir/text_bpe
       cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
       cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
