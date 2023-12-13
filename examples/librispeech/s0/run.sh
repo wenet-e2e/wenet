@@ -199,7 +199,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --test_data $wave_data/$test/data.list \
       --checkpoint $decode_checkpoint \
       --beam_size 10 \
-      --batch_size 1 \
+      --batch_size 16 \
       --penalty 0.0 \
       --result_dir $result_dir \
       --ctc_weight $ctc_weight \
@@ -207,13 +207,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
 
     for mode in $decode_modes; do
       test_dir=$result_dir/$mode
-      mkdir -p $test_dir
-      cp $test_dir/text $test_dir/text_bpe
-      cut -f2- -d " " $test_dir/text_bpe > $test_dir/text_bpe_value_tmp
-      cut -f1 -d " " $test_dir/text_bpe > $test_dir/text_bpe_key_tmp
-      tools/spm_decode --model=${bpemodel}.model --input_format=piece \
-        < $test_dir/text_bpe_value_tmp | sed -e "s/▁/ /g" > $test_dir/text_value_tmp
-      paste -d " " $test_dir/text_bpe_key_tmp $test_dir/text_value_tmp > $test_dir/text
       python tools/compute-wer.py --char=1 --v=1 \
         $wave_data/$test/text $test_dir/text > $test_dir/wer
     done
