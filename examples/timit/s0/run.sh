@@ -17,7 +17,6 @@ job_id=2023
 
 # data
 timit_data=/home/Liangcd/data/timit
-timit_data=/mnt/f/BaiduNetdiskDownload/TIMIT/data/lisa/data/timit/raw/TIMIT/
 # path to save preproecssed data
 # export data=data
 
