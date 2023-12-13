@@ -38,7 +38,6 @@ test_sets="test_net test_meeting"
 
 train_config=conf/train_conformer.yaml
 checkpoint=
-cmvn=true
 cmvn_sampling_divisor=20 # 20 means 5% of the training data to estimate cmvn
 dir=exp/conformer
 
@@ -78,33 +77,29 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     mkdir -p $(dirname $dict)
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
-    echo "▁ 2" >> ${dict} # ▁ is for space
+    echo "<sos/eos> 2" >> $dict
+    echo "▁ 3" >> ${dict} # ▁ is for space
     tools/text2token.py -s 1 -n 1 --space "▁" data/${train_set}/text \
         | cut -f 2- -d" " | tr " " "\n" \
         | sort | uniq | grep -a -v -e '^\s*$' \
         | grep -v "▁" \
-        | awk '{print $0 " " NR+2}' >> ${dict} \
+        | awk '{print $0 " " NR+3}' >> ${dict} \
         || exit 1;
-    num_token=$(cat $dict | wc -l)
-    echo "<sos/eos> $num_token" >> $dict
 fi
 
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   echo "Compute cmvn"
   # Here we use all the training data, you can sample some some data to save time
   # BUG!!! We should use the segmented data for CMVN
-  if $cmvn; then
-    full_size=`cat data/${train_set}/wav.scp | wc -l`
-    sampling_size=$((full_size / cmvn_sampling_divisor))
-    shuf -n $sampling_size data/$train_set/wav.scp \
-      > data/$train_set/wav.scp.sampled
-    python3 tools/compute_cmvn_stats.py \
-    --num_workers 16 \
-    --train_config $train_config \
-    --in_scp data/$train_set/wav.scp.sampled \
-    --out_cmvn data/$train_set/global_cmvn \
-    || exit 1;
-  fi
+  full_size=`cat data/${train_set}/wav.scp | wc -l`
+  sampling_size=$((full_size / cmvn_sampling_divisor))
+  shuf -n $sampling_size data/$train_set/wav.scp \
+    > data/$train_set/wav.scp.sampled
+  python3 tools/compute_cmvn_stats.py \
+  --num_workers 16 \
+  --train_config $train_config \
+  --in_scp data/$train_set/wav.scp.sampled \
+  --out_cmvn data/$train_set/global_cmvn
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
@@ -129,9 +124,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
   dist_backend="nccl"
-  cmvn_opts=
-  $cmvn && cp data/${train_set}/global_cmvn $dir
-  $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
@@ -147,13 +139,11 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type "shard" \
-      --symbol_table $dict \
       --train_data data/$train_set/data.list \
       --cv_data data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.dist_backend $dist_backend \
-      $cmvn_opts \
       --num_workers 8 \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
@@ -189,7 +179,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --beam_size 10 \
       --batch_size 1 \
       --penalty 0.0 \
-      --dict $dict \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
       --result_dir $result_dir \
@@ -199,6 +188,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         data/$testset/text $result_dir/$mode/text > $result_dir/$mode/wer
     done
   }
+  done
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
