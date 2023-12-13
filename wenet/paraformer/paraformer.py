@@ -143,7 +143,7 @@ class Paraformer(torch.nn.Module):
         loss_quantity = torch.nn.functional.l1_loss(
             token_num,
             ys_pad_lens.to(token_num.dtype),
-            reduce=None,
+            reduction='sum',
         )
         loss_quantity = loss_quantity / ys_pad_lens.sum().to(token_num.dtype)
 
