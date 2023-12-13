@@ -28,13 +28,38 @@ decoder_conf:
     self_attention_dropout_rate: 0.0
     src_attention_dropout_rate: 0.0
 
+tokenizer: bpe
+tokenizer_conf:
+  symbol_table_path: 'data/lang_char/train_960_unigram5000_units.txt'
+  split_with_space: false
+  bpe_path: 'data/lang_char/train_960_unigram5000.model'
+  non_lang_syms_path: null
+  is_multilingual: false
+  num_languages: 1
+  special_tokens:
+    <blank>: 0
+    <unk>: 1
+    <sos>: 2
+    <eos>: 2
+
+ctc: ctc
+ctc_conf:
+  ctc_blank_id: 0
+
+cmvn: global_cmvn
+cmvn_conf:
+  cmvn_file: 'data/train_960/global_cmvn'
+  is_json_cmvn: true
+
 # hybrid CTC/attention
+model: asr_model
 model_conf:
     ctc_weight: 0.3
     lsm_weight: 0.1     # label smoothing option
     length_normalized_loss: false
 
 # dataset related
+dataset: asr
 dataset_conf:
     filter_conf:
         max_length: 2000
