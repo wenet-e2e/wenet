@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 
 from wenet.utils.checkpoint import save_checkpoint
+from wenet.utils.init_model import init_model
 
 
 def _load_paraformer_cmvn(cmvn_file) -> Tuple[List, List]:
@@ -88,23 +89,34 @@ def convert_to_wenet_tokenizer_conf(symbol_table_path, seg_dict, configs,
     configs['tokenizer_conf'] = {}
     configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
     configs['tokenizer_conf']['seg_dict_path'] = output_path
+    configs['tokenizer_conf']['special_tokens'] = {}
+    configs['tokenizer_conf']['special_tokens']['<eos>'] = 2
+    configs['tokenizer_conf']['special_tokens']['<sos>'] = 1
+    configs['tokenizer_conf']['special_tokens']['<blank>'] = 0
+    configs['tokenizer_conf']['special_tokens']['<unk>'] = 8403
+
     shutil.copy(seg_dict, output_path)
 
 
 def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
                           fields_to_keep: List[str]) -> Dict:
     configs = _filter_dict_fields(configs, fields_to_keep)
-    configs['encoder'] = 'SanmEncoder'
+    configs['encoder'] = 'sanm_encoder'
     configs['encoder_conf']['input_layer'] = 'conv2d'
-    configs['decoder'] = 'SanmDecoder'
+    configs['decoder'] = 'sanm_decoder'
     configs['lfr_conf'] = {'lfr_m': 7, 'lfr_n': 6}
 
-    configs['cif_predictor_conf'] = configs.pop('predictor_conf')
-    configs['cif_predictor_conf']['cnn_groups'] = 1
-    configs['cif_predictor_conf']['residual'] = False
+    configs['input_dim'] = configs['lfr_conf']['lfr_m'] * 80
+    configs['predictor'] = 'cif_predictor'
+    configs['predictor_conf'] = configs.pop('predictor_conf')
+    configs['predictor_conf']['cnn_groups'] = 1
+    configs['predictor_conf']['residual'] = False
     # This type not use
     del configs['encoder_conf']['selfattention_layer_type'], configs[
         'encoder_conf']['pos_enc_class']
+
+    configs['ctc_conf'] = {}
+    configs['ctc_conf']['ctc_blank_id'] = 0
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
@@ -121,6 +133,11 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['dataset_conf']['spec_aug_conf']['num_f_mask'] = 2
     configs['dataset_conf']['spec_aug_conf']['max_t'] = 50
     configs['dataset_conf']['spec_aug_conf']['max_f'] = 10
+    configs['dataset_conf']['fbank_conf'] = {}
+    configs['dataset_conf']['fbank_conf']['num_mel_bins'] = 80
+    configs['dataset_conf']['fbank_conf']['frame_shift'] = 10
+    configs['dataset_conf']['fbank_conf']['frame_length'] = 25
+    configs['dataset_conf']['fbank_conf']['dither'] = 0.1
     configs['dataset_conf']['spec_sub'] = False
     configs['dataset_conf']['spec_trim'] = False
     configs['dataset_conf']['shuffle'] = True
@@ -145,9 +162,9 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     return configs
 
 
-def convert_to_wenet_state_dict(configs, paraformer_path, wenet_model_path):
-    from wenet.utils.init_ali_paraformer import init_model
-    model, _ = init_model(configs, paraformer_path)
+def convert_to_wenet_state_dict(args, configs, wenet_model_path):
+    args.checkpoint = args.paraformer_model
+    model, _ = init_model(args, configs)
     save_checkpoint(model, wenet_model_path)
 
 
@@ -254,9 +271,9 @@ def main():
     configs['model'] = 'paraformer'
     configs['is_json_cmvn'] = True
     configs['cmvn_file'] = json_cmvn_path
-    configs['input_dim'] = 80
+    # configs['input_dim'] = 80
     fields_to_keep = [
-        'encoder_conf', 'decoder_conf', 'predictor_conf', 'input_dim',
+        'model', 'encoder_conf', 'decoder_conf', 'predictor_conf', 'input_dim',
         'output_dim', 'cmvn_file', 'is_json_cmvn', 'model_conf', 'paraformer',
         'optim', 'optim_conf', 'scheduler', 'scheduler_conf', 'tokenizer',
         'tokenizer_conf'
@@ -266,8 +283,7 @@ def main():
                                           fields_to_keep)
 
     wenet_model_path = os.path.join(args.output_dir, "wenet_paraformer.pt")
-    convert_to_wenet_state_dict(wenet_configs, args.paraformer_model,
-                                wenet_model_path)
+    convert_to_wenet_state_dict(args, wenet_configs, wenet_model_path)
 
     print("Please check {} {} {} {} {} in {}".format(json_cmvn_path,
                                                      wenet_train_yaml,
