@@ -1,7 +1,0 @@
-wenet.utils.init\_ali\_paraformer module
-========================================
-
-.. automodule:: wenet.utils.init_ali_paraformer
-   :members:
-   :undoc-members:
-   :show-inheritance:
