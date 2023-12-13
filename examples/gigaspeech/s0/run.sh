@@ -225,6 +225,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       local/gigaspeech_scoring.py $data/$test/ref $test_dir/hyp $test_dir
     done
   }
+  done
 fi
 
 if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
