@@ -51,7 +51,6 @@ train_set=train
 #    trained model, and freeze encoder module, otherwise there will be a
 #    autograd error
 train_config=conf/train_conformer.yaml
-cmvn=true
 dir=exp/conformer
 tensorboard_dir=tensorboard
 checkpoint=
@@ -104,11 +103,10 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   mkdir -p $(dirname $dict)
   echo "<blank> 0" > ${dict}  # 0 is for "blank" in CTC
   echo "<unk> 1"  >> ${dict}  # <unk> must be 1
+  echo "<sos/eos> 2" >> $dict
   tools/text2token.py -s 1 -n 1 data/train/text | cut -f 2- -d" " \
     | tr " " "\n" | sort | uniq | grep -a -v -e '^\s*$' | \
-    awk '{print $0 " " NR+1}' >> ${dict}
-  num_token=$(cat $dict | wc -l)
-  echo "<sos/eos> $num_token" >> $dict
+    awk '{print $0 " " NR+2}' >> ${dict}
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
@@ -132,9 +130,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # NOTE(xcsong): deepspeed fails with gloo, see
   #   https://github.com/microsoft/DeepSpeed/issues/2818
   dist_backend="nccl"
-  cmvn_opts=
-  $cmvn && cp data/${train_set}/global_cmvn $dir
-  $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
 
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
@@ -168,7 +163,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type  $data_type \
-      --symbol_table  ${dict} \
       --train_data data/$train_set/data.list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
@@ -177,7 +171,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --ddp.dist_backend $dist_backend \
       --num_workers ${num_workers} \
       --prefetch ${prefetch} \
-      $cmvn_opts \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
@@ -209,7 +202,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     --beam_size 10 \
     --batch_size 32 \
     --penalty 0.0 \
-    --dict $dict \
     --ctc_weight $ctc_weight \
     --reverse_weight $reverse_weight \
     --result_dir $dir \

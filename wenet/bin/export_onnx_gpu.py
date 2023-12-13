@@ -1195,7 +1195,13 @@ if __name__ == "__main__":
     with open(args.config, "r") as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
     if args.cmvn_file and os.path.exists(args.cmvn_file):
-        configs["cmvn_file"] = args.cmvn_file
+        if 'cmvn' not in configs:
+            configs['cmvn'] = "global_cmvn"
+            configs['cmvn_conf'] = {}
+        else:
+            assert configs['cmvn'] == "global_cmvn"
+            assert configs['cmvn']['cmvn_conf'] is not None
+        configs['cmvn_conf']["cmvn_file"] = args.cmvn_file
     if (args.reverse_weight != -1.0
             and "reverse_weight" in configs["model_conf"]):
         configs["model_conf"]["reverse_weight"] = args.reverse_weight
