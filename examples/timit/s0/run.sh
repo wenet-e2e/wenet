@@ -9,6 +9,12 @@ export CUDA_VISIBLE_DEVICES="0"
 stage=0     # start from 0 if you need to start from data preparation
 stop_stage=4
 
+# You should change the following two parameters for multiple machine training,
+# see https://pytorch.org/docs/stable/elastic/run.html
+HOST_NODE_ADDR="localhost:0"
+num_nodes=1
+job_id=2023
+
 # data
 timit_data=/home/Liangcd/data/timit
 # path to save preproecssed data
@@ -33,7 +39,6 @@ train_set=train
 # 6. conf/train_u2++_conformer.yaml: U2++ conformer
 # 7. conf/train_u2++_transformer.yaml: U2++ transformer
 train_config=conf/train_transformer.yaml
-cmvn=true
 dir=exp/transformer_phn_5k_acc4_bs16
 checkpoint=
 
@@ -82,13 +87,11 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     mkdir -p $(dirname $dict)
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
+    echo "<sos/eos> 2" >> $dict # <eos>
 
     tools/text2token.py -s 1 -n 1 --space sil --trans_type ${trans_type} data/${train_set}/text  \
       | cut -f 2- -d" " | tr " " "\n" | sort | uniq | grep -v -e '^\s*$' | \
-      awk '{print $0 " " NR+1}' >> ${dict}
-    wc -l ${dict}
-    num_token=$(cat $dict | wc -l)
-    echo "<sos/eos> $num_token" >> $dict # <eos>
+      awk '{print $0 " " NR+2}' >> ${dict}
     echo "Finish stage 2"
 fi
 
@@ -112,9 +115,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
   dist_backend="nccl"
-  cmvn_opts=
-  $cmvn && cp data/${train_set}/global_cmvn $dir
-  $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
 
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
@@ -126,19 +126,17 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   fi
   echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
-           --rdzv_id=2023 --rdzv_backend="c10d" \
+           --rdzv_id=${job_id} --rdzv_backend="c10d" \
     wenet/bin/train.py \
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type $data_type \
-      --symbol_table $dict \
       --train_data data/$train_set/data.list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
-      $cmvn_opts \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
@@ -174,7 +172,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --beam_size 10 \
       --batch_size 1 \
       --penalty 0.0 \
-      --dict $dict \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
       --result_file $test_dir/text \
