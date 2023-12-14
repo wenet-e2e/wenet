@@ -456,20 +456,14 @@ def batch_forward(model, batch, scaler, info_dict):
         with torch.cuda.amp.autocast(enabled=dtype is not None,
                                      dtype=dtype,
                                      cache_enabled=False):
-            loss_dict = model(batch["feats"].to(device),
-                              batch["feats_lengths"].to(device),
-                              batch["target"].to(device),
-                              batch["target_lengths"].to(device))
+            loss_dict = model(batch, device)
     else:
         # torch_ddp
         # autocast context
         # The more details about amp can be found in
         # https://pytorch.org/docs/stable/notes/amp_examples.html
         with torch.cuda.amp.autocast(scaler is not None):
-            loss_dict = model(batch["feats"].to(device),
-                              batch["feats_lengths"].to(device),
-                              batch["target"].to(device),
-                              batch["target_lengths"].to(device))
+            loss_dict = model(batch, device)
     info_dict['loss_dict'] = loss_dict
 
     return info_dict
