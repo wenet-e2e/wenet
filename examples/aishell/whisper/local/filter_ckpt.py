@@ -46,3 +46,7 @@ def main():
             continue
         new_state[k] = state[k]
     torch.save(new_state, args.output_ckpt)
+
+
+if __name__ == '__main__':
+    main()
