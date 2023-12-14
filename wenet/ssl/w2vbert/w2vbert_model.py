@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 import torch
 
 from wenet.ssl.bestrq.mask import compute_mask_indices_v2
@@ -161,13 +161,12 @@ class W2VBERTModel(torch.nn.Module):
     @torch.jit.ignore(drop=True)
     def forward(
         self,
-        xs: torch.Tensor,
-        xs_lens: torch.Tensor,
-        text: Optional[torch.Tensor] = None,
-        text_length: Optional[torch.Tensor] = None,
-        steps: Optional[int] = None,
+        batch: Dict,
+        device: torch.device,
     ):
-
+        steps = batch.get('steps', None)
+        xs = batch['feats'].to(device)
+        xs_lens = batch['feats_lengths'].to(device)
         assert xs.size(0) == xs_lens.size(0)
         assert steps is not None
 
