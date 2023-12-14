@@ -94,19 +94,16 @@ class Paraformer(torch.nn.Module):
     @torch.jit.ignore(drop=True)
     def forward(
         self,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
-        text: torch.Tensor,
-        text_lengths: torch.Tensor,
+        batch: Dict,
+        device: torch.device,
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + Decoder + Calc loss
-
-        Args:
-            speech: (Batch, Length, ...)
-            speech_lengths: (Batch, )
-            text: (Batch, Length)
-            text_lengths: (Batch,)
         """
+        speech = batch['feats'].to(device)
+        speech_lengths = batch['feats_lengths'].to(device)
+        text = batch['target'].to(device)
+        text_lengths = batch['target_lengths'].to(device)
+
         features, features_lens = self.lfr(speech, speech_lengths)
         features_lens = features_lens.to(speech_lengths.dtype)
 
