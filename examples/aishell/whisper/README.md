@@ -22,6 +22,15 @@ python local/filter_ckpt.py \
 
 # Performance Record
 
+## Whisper-largev2 (original) Result
+
+| decoding mode             |  CER  |
+|---------------------------|-------|
+| attention decoder         | 8.47  |
+| ctc greedy search         |  N/A  |
+| ctc prefix beam search    |  N/A  |
+| attention rescoring       |  N/A  |
+
 ## Whisper-largev3 (conv1d2, full-parameter tuning) Result
 
 * Feature info: using log_mel_spectrogram feature, no cmvn, no speed perturb
