@@ -11,7 +11,7 @@ ln -s ../s0/data .
 mkdir -p exp
 mkdir -p exp/whisper
 mkdir -p exp/whisper/large-v3
-python local/convert_whisper_to_wenet_config_and_ckpt.py \
+. ./path.sh && python local/convert_whisper_to_wenet_config_and_ckpt.py \
   --whisper_ckpt downloaded-large-v3.pt \
   --output_dir exp/whisper/large-v3
 python local/filter_ckpt.py \
