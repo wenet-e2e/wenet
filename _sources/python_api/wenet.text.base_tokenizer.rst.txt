@@ -1,0 +1,7 @@
+wenet.text.base\_tokenizer module
+=================================
+
+.. automodule:: wenet.text.base_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,21 @@
+wenet.text package
+==================
+
+.. automodule:: wenet.text
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.text.base_tokenizer
+   wenet.text.bpe_tokenizer
+   wenet.text.char_tokenizer
+   wenet.text.hugging_face_tokenizer
+   wenet.text.paraformer_tokenizer
+   wenet.text.tokenize_utils
+   wenet.text.whisper_tokenizer

@@ -1,0 +1,7 @@
+wenet.text.paraformer\_tokenizer module
+=======================================
+
+.. automodule:: wenet.text.paraformer_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:

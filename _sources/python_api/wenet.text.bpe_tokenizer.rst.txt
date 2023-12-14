@@ -1,0 +1,7 @@
+wenet.text.bpe\_tokenizer module
+================================
+
+.. automodule:: wenet.text.bpe_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+wenet.text.hugging\_face\_tokenizer module
+==========================================
+
+.. automodule:: wenet.text.hugging_face_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:

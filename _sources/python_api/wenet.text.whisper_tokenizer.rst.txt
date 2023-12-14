@@ -1,0 +1,7 @@
+wenet.text.whisper\_tokenizer module
+====================================
+
+.. automodule:: wenet.text.whisper_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:

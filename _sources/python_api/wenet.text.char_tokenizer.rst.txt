@@ -1,0 +1,7 @@
+wenet.text.char\_tokenizer module
+=================================
+
+.. automodule:: wenet.text.char_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:
