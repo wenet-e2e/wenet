@@ -17,7 +17,7 @@ from whisper.audio import N_FFT, HOP_LENGTH, N_SAMPLES, N_FRAMES, pad_or_trim
 from wenet.dataset.processor import compute_log_mel_spectrogram
 from wenet.text.whisper_tokenizer import WhisperTokenizer
 from wenet.transformer.embedding import WhisperPositionalEncoding
-from wenet.whisper.convert_whisper_to_wenet_config_and_ckpt import (
+from examples.aishell.whisper.convert_whisper_to_wenet_config_and_ckpt import (
     convert_to_wenet_yaml, convert_to_wenet_state_dict, convert_to_wenet_units)
 from wenet.utils.common import add_whisper_tokens
 from wenet.utils.init_model import init_model

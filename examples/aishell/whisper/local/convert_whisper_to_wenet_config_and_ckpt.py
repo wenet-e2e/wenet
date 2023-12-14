@@ -31,15 +31,15 @@ python convert_whisper_to_wenet_config_and_ckpt.py \
 import argparse
 import copy
 import os
-import sys
+# import sys
 import torch
 import yaml
 
-_cpath_ = sys.path[0]
-sys.path.remove(_cpath_)
+# _cpath_ = sys.path[0]
+# sys.path.remove(_cpath_)
 from whisper.tokenizer import get_tokenizer
 
-sys.path.insert(0, _cpath_)
+# sys.path.insert(0, _cpath_)
 
 
 def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
