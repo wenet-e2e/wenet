@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 import torch
 
 from wenet.ssl.bestrq.mask import compute_mask_indices_v2
@@ -164,11 +164,11 @@ class BestRQModel(torch.nn.Module):
 
     def forward(
         self,
-        xs: torch.Tensor,
-        xs_lens: torch.Tensor,
-        text: Optional[torch.Tensor] = None,
-        text_length: Optional[torch.Tensor] = None,
+        batch: Dict,
+        device: torch.device,
     ):
+        xs = batch['feats'].to(device)
+        xs_lens = batch['feats_lengths'].to(device)
         # force global cmvn
         xs = xs - self.signal_mean
         if self.signal_norm_var:
