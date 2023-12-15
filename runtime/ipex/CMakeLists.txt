@@ -10,6 +10,7 @@ option(GRPC "whether to build with gRPC" OFF)
 option(WEBSOCKET "whether to build with websocket" OFF)
 option(HTTP "whether to build with http" OFF)
 option(TORCH "whether to build with Torch" ON)
+option(ITN "whether to use WeTextProcessing" ON)
 option(IPEX "whether to build with Torch+IPEX" ON)
 
 set(CMAKE_VERBOSE_MAKEFILE OFF)
@@ -30,6 +31,9 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
+if(ITN)
+  include(wetextprocessing)
+endif()
 
 # Build all libraries
 add_subdirectory(utils)
