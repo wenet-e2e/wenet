@@ -67,9 +67,11 @@ def test_tokenize(bpe_tokenizer):
     for (hyp, ref) in zip(results, refs):
         for module in hyp["tokens"].keys():
             assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r for h, r in zip(hyp["tokens"][module], ref["tokens"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
             assert (len(hyp["label"][module]) == len(ref["label"]))
-            assert (all(h == r for h, r in zip(hyp["label"][module], ref["label"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["label"][module], ref["label"])))
 
 
 def test_detokenize(bpe_tokenizer):
@@ -83,7 +85,9 @@ def test_detokenize(bpe_tokenizer):
     result = tokenizer.detokenize(ids)
     for module in result["tokens"].keys():
         assert result["text"][module] == expected['txt']
-        assert (all(h == r for h, r in zip(result["tokens"][module], expected['tokens'])))
+        assert (all(
+            h == r
+            for h, r in zip(result["tokens"][module], expected['tokens'])))
 
 
 def test_vocab_size(bpe_tokenizer):

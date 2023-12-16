@@ -25,8 +25,11 @@ def test_tokenize(whisper_tokenizer):
         result = tokenizer.tokenize(text)
         for module in result["tokens"].keys():
             assert len(result["label"][module]) == len(result["label"][module])
-            assert (all((h == r for h, r in zip(result["tokens"][module], expected[i]["tokens"]))))
-            assert (all((h == r for h, r in zip(result["label"][module], expected[i]["ids"]))))
+            assert (all((h == r for h, r in zip(result["tokens"][module],
+                                                expected[i]["tokens"]))))
+            assert (all((
+                h == r
+                for h, r in zip(result["label"][module], expected[i]["ids"]))))
 
 
 def test_detokenize(whisper_tokenizer):
@@ -47,7 +50,8 @@ def test_detokenize(whisper_tokenizer):
         for module in result["tokens"].keys():
             assert len(result["tokens"][module]) == len(expected[i]["tokens"])
             assert result["text"][module] == expected[i]["labels"]
-            assert all((h == r for h, r in zip(result["tokens"][module], expected[i]["tokens"])))
+            assert all((h == r for h, r in zip(result["tokens"][module],
+                                               expected[i]["tokens"])))
 
 
 def test_consistency(whisper_tokenizer):

@@ -62,7 +62,8 @@ def test_tokenize(paraformer_tokenizer):
             assert len(result["tokens"][module]) == len(expected[i]['tokens'])
             assert len(result["label"][module]) == len(expected[i]['label'])
             assert result["label"][module] == expected[i]['label']
-            assert all(h == r for (h, r) in zip(result["tokens"][module], expected[i]['tokens']))
+            assert all(h == r for (
+                h, r) in zip(result["tokens"][module], expected[i]['tokens']))
 
 
 def test_detokenize(paraformer_tokenizer):
@@ -87,9 +88,11 @@ def test_detokenize(paraformer_tokenizer):
     for (hyp, ref) in zip(results, refs):
         for module in hyp["tokens"].keys():
             assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r for h, r in zip(hyp["tokens"][module], ref["tokens"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
             assert len(hyp["text"][module]) == len(ref["txt"])
-            assert (all(h == r for h, r in zip(hyp["text"][module], ref["txt"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["text"][module], ref["txt"])))
 
 
 def test_vocab_size(paraformer_tokenizer):

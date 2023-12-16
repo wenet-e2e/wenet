@@ -152,6 +152,8 @@ def test_tokenize(symbol_table_path):
     for (hyp, ref) in zip(outs, refs):
         for module in hyp["tokens"].keys():
             assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r for h, r in zip(hyp["tokens"][module], ref["tokens"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
             assert (len(hyp["label"][module]) == len(ref["label"]))
-            assert (all(h == r for h, r in zip(hyp["label"][module], ref["label"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["label"][module], ref["label"])))

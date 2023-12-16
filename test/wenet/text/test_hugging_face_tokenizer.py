@@ -96,4 +96,5 @@ def test_tongyi_tokenizer():
 
     for module in result["tokens"].keys():
         assert len(result["tokens"][module]) == len(tongyi_result)
-        assert all(h == r for (h, r) in zip(result["tokens"][module], tongyi_result))
+        assert all(h == r
+                   for (h, r) in zip(result["tokens"][module], tongyi_result))

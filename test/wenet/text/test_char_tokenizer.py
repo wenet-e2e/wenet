@@ -99,9 +99,11 @@ def test_tokenize(char_tokenizer):
     for (hyp, ref) in zip(results, refs):
         for module in hyp["tokens"].keys():
             assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r for h, r in zip(hyp["tokens"][module], ref["tokens"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
             assert (len(hyp["label"][module]) == len(ref["label"]))
-            assert (all(h == r for h, r in zip(hyp["label"][module], ref["label"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["label"][module], ref["label"])))
 
 
 def test_detokenize(char_tokenizer):
@@ -126,9 +128,11 @@ def test_detokenize(char_tokenizer):
     for (hyp, ref) in zip(results, refs):
         for module in hyp["tokens"].keys():
             assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r for h, r in zip(hyp["tokens"][module], ref["tokens"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
             assert len(hyp["text"][module]) == len(ref["txt"])
-            assert (all(h == r for h, r in zip(hyp["text"][module], ref["txt"])))
+            assert (all(h == r
+                        for h, r in zip(hyp["text"][module], ref["txt"])))
 
 
 def test_vocab_size(char_tokenizer):
