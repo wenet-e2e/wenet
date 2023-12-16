@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Union, Any
 from wenet.text.base_tokenizer import BaseTokenizer
 
 from wenet.utils.file_utils import read_non_lang_symbols
@@ -63,17 +63,35 @@ class WhisperTokenizer(BaseTokenizer):
                 self.i2t[i] = unit
             assert len(self.t2i) == len(self.i2t)
 
-    def tokenize(self, line: str) -> Tuple[List[str], List[int]]:
+    def tokenize(self, line: str) -> Dict[str, Any]:
         self._build_tiktoken()
         ids = self.tokenizer.encoding.encode(line)
-        text = [self.i2t[d] for d in ids]
-        return text, ids
+        tokens = [self.i2t[d] for d in ids]
+        return {
+            "tokens": {
+                "ctc": tokens,
+                "decoder": tokens
+            },
+            "label": {
+                "ctc": ids,
+                "decoder": ids
+            }
+        }
 
-    def detokenize(self, ids: List[int]) -> Tuple[str, List[str]]:
+    def detokenize(self, ids: List[int]) -> Dict[str, Any]:
         self._build_tiktoken()
         tokens = [self.i2t[d] for d in ids]
         text = self.tokenizer.encoding.decode(ids)
-        return text, tokens
+        return {
+            "text": {
+                "ctc": text,
+                "decoder": text
+            },
+            "tokens": {
+                "ctc": tokens,
+                "decoder": tokens
+            }
+        }
 
     def text2tokens(self, line: str) -> List[str]:
         self._build_tiktoken()

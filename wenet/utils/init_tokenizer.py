@@ -15,14 +15,17 @@
 
 import logging
 
+from typing import Union
+
 from wenet.text.base_tokenizer import BaseTokenizer
 from wenet.text.bpe_tokenizer import BpeTokenizer
 from wenet.text.char_tokenizer import CharTokenizer
 from wenet.text.paraformer_tokenizer import ParaformerTokenizer
 from wenet.text.whisper_tokenizer import WhisperTokenizer
+from wenet.text.hybrid_tokenizer import HybridTokenizer
 
 
-def init_tokenizer(configs) -> BaseTokenizer:
+def init_single_tokenizer(configs) -> BaseTokenizer:
     # TODO(xcsong): Forcefully read the 'tokenizer' attribute.
     tokenizer_type = configs.get("tokenizer", "char")
     if tokenizer_type == "whisper":
@@ -50,6 +53,27 @@ def init_tokenizer(configs) -> BaseTokenizer:
             seg_dict=configs['tokenizer_conf']['seg_dict_path'])
     else:
         raise NotImplementedError
+
+    return tokenizer
+
+
+def init_tokenizer(configs) -> Union[BaseTokenizer, HybridTokenizer]:
+    # TODO(xcsong): Forcefully read the 'tokenizer' attribute.
+    tokenizer_type = configs.get("tokenizer", "char")
+    if tokenizer_type == "hybrid":
+        tokenizers = {}
+        modules = configs["tokenizer_conf"]["tokenizer_types"].keys(
+        )  # ctc_zh, ctc_en, decoder, ... etc
+        for module in modules:
+            module_tokenizer_conf = {}
+            module_tokenizer_conf["tokenizer"] = configs["tokenizer_conf"][
+                "tokenizer_types"][module]
+            module_tokenizer_conf["tokenizer_conf"] = configs[
+                "tokenizer_conf"]["{}_tokenizer_conf".format(module)]
+            tokenizers[module] = init_single_tokenizer(module_tokenizer_conf)
+        tokenizer = HybridTokenizer(tokenizers)
+    else:
+        tokenizer = init_single_tokenizer(configs)
     logging.info("use {} tokenizer".format(configs["tokenizer"]))
 
     return tokenizer

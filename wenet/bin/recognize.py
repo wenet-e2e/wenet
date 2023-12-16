@@ -241,9 +241,7 @@ def main():
         for batch_idx, batch in enumerate(test_data_loader):
             keys = batch["keys"]
             feats = batch["feats"].to(device)
-            target = batch["target"].to(device)
             feats_lengths = batch["feats_lengths"].to(device)
-            target_lengths = batch["target_lengths"].to(device)
             results = model.decode(
                 args.modes,
                 feats,
@@ -260,7 +258,9 @@ def main():
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     tokens = hyps[i].tokens
-                    line = '{} {}'.format(key, tokenizer.detokenize(tokens)[0])
+                    text = tokenizer.detokenize(tokens)["text"]
+                    text = text["ctc"] if "ctc" in mode else text["decoder"]
+                    line = '{} {}'.format(key, text)
                     logging.info('{} {}'.format(mode.ljust(max_format_len),
                                                 line))
                     files[mode].write(line + '\n')

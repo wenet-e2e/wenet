@@ -191,14 +191,16 @@ def filter(data,
             continue
         if num_frames > max_length:
             continue
-        if len(sample['label']) < token_min_length:
+        if len(sample['label']['ctc']) < token_min_length:
             continue
-        if len(sample['label']) > token_max_length:
+        if len(sample['label']['ctc']) > token_max_length:
             continue
         if num_frames != 0:
-            if len(sample['label']) / num_frames < min_output_input_ratio:
+            if len(sample['label']
+                   ['ctc']) / num_frames < min_output_input_ratio:
                 continue
-            if len(sample['label']) / num_frames > max_output_input_ratio:
+            if len(sample['label']
+                   ['ctc']) / num_frames > max_output_input_ratio:
                 continue
         yield sample
 
@@ -383,9 +385,10 @@ def tokenize(data, tokenizer: BaseTokenizer):
     """
     for sample in data:
         assert 'txt' in sample
-        tokens, label = tokenizer.tokenize(sample['txt'])
-        sample['tokens'] = tokens
-        sample['label'] = label
+        result = tokenizer.tokenize(sample['txt'])
+        for key in result:  # tokens, label, ... etc
+            assert key not in sample
+            sample[key] = result[key]
         yield sample
 
 
@@ -603,6 +606,7 @@ def padding(data):
     """
     for sample in data:
         assert isinstance(sample, list)
+        batch = {}
         feats_length = torch.tensor([x['feat'].size(0) for x in sample],
                                     dtype=torch.int32)
         order = torch.argsort(feats_length, descending=True)
@@ -610,31 +614,34 @@ def padding(data):
             [sample[i]['feat'].size(0) for i in order], dtype=torch.int32)
         sorted_feats = [sample[i]['feat'] for i in order]
         sorted_keys = [sample[i]['key'] for i in order]
-        sorted_labels = [
-            torch.tensor(sample[i]['label'], dtype=torch.int64) for i in order
-        ]
         sorted_wavs = [sample[i]['wav'].squeeze(0) for i in order]
-        label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
-                                     dtype=torch.int32)
         wav_lengths = torch.tensor([x.size(0) for x in sorted_wavs],
                                    dtype=torch.int32)
-
-        padded_feats = pad_sequence(sorted_feats,
-                                    batch_first=True,
-                                    padding_value=0)
-        padding_labels = pad_sequence(sorted_labels,
-                                      batch_first=True,
-                                      padding_value=-1)
         padded_wavs = pad_sequence(sorted_wavs,
                                    batch_first=True,
                                    padding_value=0)
+        padded_feats = pad_sequence(sorted_feats,
+                                    batch_first=True,
+                                    padding_value=0)
+        batch["keys"] = sorted_keys
+        batch["feats"] = padded_feats
+        batch["feats_lengths"] = feats_lengths
+        batch["pcm"] = padded_wavs
+        batch["pcm_length"] = wav_lengths
 
-        yield {
-            "keys": sorted_keys,
-            "feats": padded_feats,
-            "target": padding_labels,
-            "feats_lengths": feats_lengths,
-            "target_lengths": label_lengths,
-            "pcm": padded_wavs,
-            "pcm_length": wav_lengths,
-        }
+        label_types = sample[0]['label'].keys(
+        )  # ctc_zh, ctc_en, decoder, ... etc
+        for label_type in label_types:
+            sorted_labels = [
+                torch.tensor(sample[i]['label'][label_type], dtype=torch.int64)
+                for i in order
+            ]
+            label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
+                                         dtype=torch.int32)
+            padding_labels = pad_sequence(sorted_labels,
+                                          batch_first=True,
+                                          padding_value=-1)
+            batch["target_{}".format(label_type)] = padding_labels
+            batch["target_lengths_{}".format(label_type)] = label_lengths
+
+        yield batch

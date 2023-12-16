@@ -83,22 +83,18 @@ class ASRModel(torch.nn.Module):
         """Frontend + Encoder + Decoder + Calc loss"""
         speech = batch['feats'].to(device)
         speech_lengths = batch['feats_lengths'].to(device)
-        text = batch['target'].to(device)
-        text_lengths = batch['target_lengths'].to(device)
+        text_ctc = batch['target_ctc'].to(device)
+        text_lengths_ctc = batch['target_lengths_ctc'].to(device)
+        text_decoder = batch['target_decoder'].to(device)
+        text_lengths_decoder = batch['target_lengths_decoder'].to(device)
 
-        assert text_lengths.dim() == 1, text_lengths.shape
-        # Check that batch_size is unified
-        assert (speech.shape[0] == speech_lengths.shape[0] == text.shape[0] ==
-                text_lengths.shape[0]), (speech.shape, speech_lengths.shape,
-                                         text.shape, text_lengths.shape)
         # 1. Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)
-        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
 
         # 2a. CTC branch
         if self.ctc_weight != 0.0:
-            loss_ctc, ctc_probs = self.ctc(encoder_out, encoder_out_lens, text,
-                                           text_lengths)
+            loss_ctc, ctc_probs = self._forward_ctc(encoder_out, encoder_mask,
+                                                    text_ctc, text_lengths_ctc)
         else:
             loss_ctc = None
 
@@ -110,7 +106,8 @@ class ASRModel(torch.nn.Module):
                 ctc_probs, encoder_out)
         if self.ctc_weight != 1.0:
             loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
-                                                    text, text_lengths)
+                                                    text_decoder,
+                                                    text_lengths_decoder)
         else:
             loss_att = None
             acc_att = None
