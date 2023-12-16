@@ -56,11 +56,12 @@ def test_tokenize(hugging_face_tokenizer: HuggingFaceTokenizer):
     ids = [19082, 1195, 6097, 1304, 4348, 106]
     tokens = ['hello', 'we', '##net', 'very', 'cool', '!']
 
-    r_tokens, r_ids = tokenizer.tokenize(text)
-    assert len(r_tokens) == len(tokens)
-    assert all(h == r for (h, r) in zip(r_tokens, tokens))
-    assert len(r_ids) == len(ids)
-    assert all(h == r for (h, r) in zip(r_ids, ids))
+    result = tokenizer.tokenize(text)
+    for module in result["tokens"].keys():
+        assert len(result["tokens"][module]) == len(tokens)
+        assert all(h == r for (h, r) in zip(result["tokens"][module], tokens))
+        assert len(result["label"][module]) == len(ids)
+        assert all(h == r for (h, r) in zip(result["label"][module], ids))
 
 
 def test_detokenize(hugging_face_tokenizer: HuggingFaceTokenizer):
@@ -69,10 +70,11 @@ def test_detokenize(hugging_face_tokenizer: HuggingFaceTokenizer):
     ids = [19082, 1195, 6097, 1304, 4348, 106]
     tokens = ['hello', 'we', '##net', 'very', 'cool', '!']
 
-    r_text, r_tokens = tokenizer.detokenize(ids)
-    assert r_text == text
-    assert len(r_tokens) == len(tokens)
-    assert all(h == r for (h, r) in zip(r_tokens, tokens))
+    result = tokenizer.detokenize(ids)
+    for module in result["text"].keys():
+        assert result["text"][module] == text
+        assert len(result["tokens"][module]) == len(tokens)
+        assert all(h == r for (h, r) in zip(result["tokens"][module], tokens))
 
 
 def test_vocab_size(hugging_face_tokenizer: HuggingFaceTokenizer):
@@ -90,7 +92,8 @@ def test_tongyi_tokenizer():
     tokenizer = HuggingFaceTokenizer(model_dir, trust_remote_code=True)
     text = "from transformers import AutoModelForCausalLM, AutoTokenizer"
     tongyi_result = tongyi_tokenizer.tokenize(text)
-    result, _ = tokenizer.tokenize(text)
+    result = tokenizer.tokenize(text)
 
-    assert len(result) == len(tongyi_result)
-    assert all(h == r for (h, r) in zip(result, tongyi_result))
+    for module in result["tokens"].keys():
+        assert len(result["tokens"][module]) == len(tongyi_result)
+        assert all(h == r for (h, r) in zip(result["tokens"][module], tongyi_result))

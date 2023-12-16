@@ -95,12 +95,12 @@ class WhisperTokenizer(BaseTokenizer):
 
     def text2tokens(self, line: str) -> List[str]:
         self._build_tiktoken()
-        return self.tokenize(line)[0]
+        return self.tokenize(line)["tokens"]["decoder"]
 
     def tokens2text(self, tokens: List[str]) -> str:
         self._build_tiktoken()
         ids = [self.t2i[t] for t in tokens]
-        return self.detokenize(ids)[0]
+        return self.detokenize(ids)["text"]["decoder"]
 
     def tokens2ids(self, tokens: List[str]) -> List[int]:
         self._build_tiktoken()

@@ -61,14 +61,15 @@ def test_tokenize(bpe_tokenizer):
 
     results = []
     for line in txts:
-        tokens, label = tokenizer.tokenize(line)
-        results.append({"tokens": tokens, "label": label})
+        result = tokenizer.tokenize(line)
+        results.append(result)
 
     for (hyp, ref) in zip(results, refs):
-        assert (len(hyp["tokens"]) == len(ref["tokens"]))
-        assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
-        assert (len(hyp["label"]) == len(ref["label"]))
-        assert (all(h == r for h, r in zip(hyp["label"], ref["label"])))
+        for module in hyp["tokens"].keys():
+            assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
+            assert (all(h == r for h, r in zip(hyp["tokens"][module], ref["tokens"])))
+            assert (len(hyp["label"][module]) == len(ref["label"]))
+            assert (all(h == r for h, r in zip(hyp["label"][module], ref["label"])))
 
 
 def test_detokenize(bpe_tokenizer):
@@ -79,9 +80,10 @@ def test_detokenize(bpe_tokenizer):
         'txt': "IT'S OKAY",
         "tokens": ['▁IT', "'", 'S', '▁O', 'KA', 'Y']
     }
-    txt, tokens = tokenizer.detokenize(ids)
-    assert txt == expected['txt']
-    assert (all(h == r for h, r in zip(tokens, expected['tokens'])))
+    result = tokenizer.detokenize(ids)
+    for module in result["tokens"].keys():
+        assert result["text"][module] == expected['txt']
+        assert (all(h == r for h, r in zip(result["tokens"][module], expected['tokens'])))
 
 
 def test_vocab_size(bpe_tokenizer):
@@ -91,4 +93,6 @@ def test_vocab_size(bpe_tokenizer):
 def test_consistency(bpe_tokenizer):
     text = "WENET IS GREAT"
     assert text == bpe_tokenizer.tokens2text(bpe_tokenizer.text2tokens(text))
-    assert text == bpe_tokenizer.detokenize(bpe_tokenizer.tokenize(text)[1])[0]
+    result = bpe_tokenizer.tokenize(text)["label"]
+    for module in result.keys():
+        assert text == bpe_tokenizer.detokenize(result[module])["text"][module]

@@ -150,7 +150,8 @@ def test_tokenize(symbol_table_path):
     tokenizer = init_tokenizer(configs)
     outs = processor.tokenize(txts, tokenizer)
     for (hyp, ref) in zip(outs, refs):
-        assert (len(hyp["tokens"]) == len(ref["tokens"]))
-        assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
-        assert (len(hyp["label"]) == len(ref["label"]))
-        assert (all(h == r for h, r in zip(hyp["label"], ref["label"])))
+        for module in hyp["tokens"].keys():
+            assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
+            assert (all(h == r for h, r in zip(hyp["tokens"][module], ref["tokens"])))
+            assert (len(hyp["label"][module]) == len(ref["label"]))
+            assert (all(h == r for h, r in zip(hyp["label"][module], ref["label"])))
