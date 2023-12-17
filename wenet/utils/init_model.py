@@ -81,6 +81,21 @@ WENET_MODEL_CLASSES = {
 }
 
 
+def get_special_tokens(configs):
+    special_tokens = {}
+    if configs["tokenizer"] == "hybrid":
+        modules = configs["tokenizer_conf"]["tokenizer_types"].keys(
+        )  # ctc_zh, ctc_en, decoder, ... etc
+        for module in modules:
+            print(configs["tokenizer_conf"]["{}_tokenizer_conf".format(module)])
+            for token, token_id in configs["tokenizer_conf"]["{}_tokenizer_conf".format(module)]["special_tokens"].items():
+                assert token not in special_tokens
+                special_tokens[token] = token_id
+    else:
+        special_tokens = configs["tokenizer_conf"].get("special_tokens", {})
+    return special_tokens
+
+
 def init_model(args, configs):
 
     # TODO(xcsong): Forcefully read the 'cmvn' attribute.
@@ -118,6 +133,7 @@ def init_model(args, configs):
         if 'ctc_conf' in configs else 0)
 
     model_type = configs.get('model', 'asr_model')
+    special_tokens = get_special_tokens(configs)
     if model_type == "transducer":
         predictor_type = configs.get('predictor', 'rnn')
         joint_type = configs.get('joint', 'transducer_joint')
@@ -133,8 +149,7 @@ def init_model(args, configs):
             attention_decoder=decoder,
             joint=joint,
             ctc=ctc,
-            special_tokens=configs.get('tokenizer_conf',
-                                       {}).get('special_tokens', None),
+            special_tokens=special_tokens,
             **configs['model_conf'])
     elif model_type == 'paraformer':
         predictor_type = configs.get('predictor', 'cif')
@@ -146,18 +161,15 @@ def init_model(args, configs):
             decoder=decoder,
             predictor=predictor,
             ctc=ctc,
-            **configs['model_conf'],
-            special_tokens=configs.get('tokenizer_conf',
-                                       {}).get('special_tokens', None),
-        )
+            special_tokens=special_tokens,
+            **configs['model_conf'])
     else:
         model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             encoder=encoder,
             decoder=decoder,
             ctc=ctc,
-            special_tokens=configs.get('tokenizer_conf',
-                                       {}).get('special_tokens', None),
+            special_tokens=special_tokens,
             **configs['model_conf'])
 
     # If specify checkpoint, load some info from checkpoint

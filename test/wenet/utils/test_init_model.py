@@ -14,6 +14,25 @@ class DummyArguments:
     checkpoint = None
 
 
+def modify_config(config):
+    if config['tokenizer'] == "char":
+        config['tokenizer_conf'][
+            'symbol_table_path'] = "test/resources/aishell2.words.txt"
+    elif config['tokenizer'] == "bpe":
+        config['tokenizer_conf']['bpe_path'] = \
+            "test/resources/librispeech.train_960_unigram5000.bpemodel"
+        config['tokenizer_conf']['symbol_table_path'] = \
+            "test/resources/librispeech.words.txt"
+        config['tokenizer_conf']['non_lang_syms_path'] = \
+            "test/resources/non-linguistic-symbols.invalid"
+    elif config['tokenizer'] == "whisper":
+        config['tokenizer_conf']['is_multilingual'] = True
+        config['tokenizer_conf']['num_languages'] = 100
+    else:
+        raise NotImplementedError
+    return config
+
+
 def test_init_model():
     configs = glob.glob("examples/*/*/conf/*.yaml")
     args = DummyArguments()
@@ -32,22 +51,21 @@ def test_init_model():
         config['output_dim'] = 3000
         if config.get('cmvn', None) == "global_cmvn":
             config['cmvn_conf']['cmvn_file'] = "test/resources/global_cmvn"
+        # TODO(xcsong): forcefully read 'tokenizer'
         if 'tokenizer' in config:
-            if config['tokenizer'] == "char":
-                config['tokenizer_conf'][
-                    'symbol_table_path'] = "test/resources/aishell2.words.txt"
-            elif config['tokenizer'] == "bpe":
-                config['tokenizer_conf']['bpe_path'] = \
-                    "test/resources/librispeech.train_960_unigram5000.bpemodel"
-                config['tokenizer_conf']['symbol_table_path'] = \
-                    "test/resources/librispeech.words.txt"
-                config['tokenizer_conf']['non_lang_syms_path'] = \
-                    "test/resources/non-linguistic-symbols.invalid"
-            elif config['tokenizer'] == "whisper":
-                config['tokenizer_conf']['is_multilingual'] = True
-                config['tokenizer_conf']['num_languages'] = 100
+            if config['tokenizer'] == "hybrid":
+                modules = config["tokenizer_conf"]["tokenizer_types"].keys(
+                )  # ctc_zh, ctc_en, decoder, ... etc
+                for module in modules:
+                    module_tokenizer_conf = {}
+                    module_tokenizer_conf["tokenizer"] = config["tokenizer_conf"][
+                        "tokenizer_types"][module]
+                    module_tokenizer_conf["tokenizer_conf"] = config[
+                        "tokenizer_conf"]["{}_tokenizer_conf".format(module)]
+                    module_tokenizer_conf = modify_config(module_tokenizer_conf)
+                    config["tokenizer_conf"]["{}_tokenizer_conf".format(module)] = module_tokenizer_conf["tokenizer_conf"]
             else:
-                raise NotImplementedError
+                config = modify_config(config)
         else:
             config['tokenizer'] = "char"
             config['tokenizer_conf'] = {}
