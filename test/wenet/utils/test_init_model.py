@@ -58,12 +58,14 @@ def test_init_model():
                 )  # ctc_zh, ctc_en, decoder, ... etc
                 for module in modules:
                     module_tokenizer_conf = {}
-                    module_tokenizer_conf["tokenizer"] = config["tokenizer_conf"][
-                        "tokenizer_types"][module]
+                    module_tokenizer_conf["tokenizer"] = config[
+                        "tokenizer_conf"]["tokenizer_types"][module]
                     module_tokenizer_conf["tokenizer_conf"] = config[
                         "tokenizer_conf"]["{}_tokenizer_conf".format(module)]
-                    module_tokenizer_conf = modify_config(module_tokenizer_conf)
-                    config["tokenizer_conf"]["{}_tokenizer_conf".format(module)] = module_tokenizer_conf["tokenizer_conf"]
+                    module_tokenizer_conf = modify_config(
+                        module_tokenizer_conf)
+                    config["tokenizer_conf"]["{}_tokenizer_conf".format(
+                        module)] = module_tokenizer_conf["tokenizer_conf"]
             else:
                 config = modify_config(config)
         else:

@@ -87,8 +87,11 @@ def get_special_tokens(configs):
         modules = configs["tokenizer_conf"]["tokenizer_types"].keys(
         )  # ctc_zh, ctc_en, decoder, ... etc
         for module in modules:
-            print(configs["tokenizer_conf"]["{}_tokenizer_conf".format(module)])
-            for token, token_id in configs["tokenizer_conf"]["{}_tokenizer_conf".format(module)]["special_tokens"].items():
+            print(
+                configs["tokenizer_conf"]["{}_tokenizer_conf".format(module)])
+            for token, token_id in configs["tokenizer_conf"][
+                    "{}_tokenizer_conf".format(
+                        module)]["special_tokens"].items():
                 assert token not in special_tokens
                 special_tokens[token] = token_id
     else:
@@ -141,36 +144,33 @@ def init_model(args, configs):
             vocab_size, **configs['predictor_conf'])
         joint = WENET_JOINT_CLASSES[joint_type](vocab_size,
                                                 **configs['joint_conf'])
-        model = WENET_MODEL_CLASSES[model_type](
-            vocab_size=vocab_size,
-            blank=0,
-            predictor=predictor,
-            encoder=encoder,
-            attention_decoder=decoder,
-            joint=joint,
-            ctc=ctc,
-            special_tokens=special_tokens,
-            **configs['model_conf'])
+        model = WENET_MODEL_CLASSES[model_type](vocab_size=vocab_size,
+                                                blank=0,
+                                                predictor=predictor,
+                                                encoder=encoder,
+                                                attention_decoder=decoder,
+                                                joint=joint,
+                                                ctc=ctc,
+                                                special_tokens=special_tokens,
+                                                **configs['model_conf'])
     elif model_type == 'paraformer':
         predictor_type = configs.get('predictor', 'cif')
         predictor = WENET_PREDICTOR_CLASSES[predictor_type](
             **configs['predictor_conf'])
-        model = WENET_MODEL_CLASSES[model_type](
-            vocab_size=vocab_size,
-            encoder=encoder,
-            decoder=decoder,
-            predictor=predictor,
-            ctc=ctc,
-            special_tokens=special_tokens,
-            **configs['model_conf'])
+        model = WENET_MODEL_CLASSES[model_type](vocab_size=vocab_size,
+                                                encoder=encoder,
+                                                decoder=decoder,
+                                                predictor=predictor,
+                                                ctc=ctc,
+                                                special_tokens=special_tokens,
+                                                **configs['model_conf'])
     else:
-        model = WENET_MODEL_CLASSES[model_type](
-            vocab_size=vocab_size,
-            encoder=encoder,
-            decoder=decoder,
-            ctc=ctc,
-            special_tokens=special_tokens,
-            **configs['model_conf'])
+        model = WENET_MODEL_CLASSES[model_type](vocab_size=vocab_size,
+                                                encoder=encoder,
+                                                decoder=decoder,
+                                                ctc=ctc,
+                                                special_tokens=special_tokens,
+                                                **configs['model_conf'])
 
     # If specify checkpoint, load some info from checkpoint
     if hasattr(args, 'checkpoint') and args.checkpoint is not None:
