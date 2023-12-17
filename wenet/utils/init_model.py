@@ -87,8 +87,6 @@ def get_special_tokens(configs):
         modules = configs["tokenizer_conf"]["tokenizer_types"].keys(
         )  # ctc_zh, ctc_en, decoder, ... etc
         for module in modules:
-            print(
-                configs["tokenizer_conf"]["{}_tokenizer_conf".format(module)])
             for token, token_id in configs["tokenizer_conf"][
                     "{}_tokenizer_conf".format(
                         module)]["special_tokens"].items():
