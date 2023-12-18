@@ -489,6 +489,8 @@ def batch_backward(model, scaler, info_dict):
         else:
             scaled_loss.backward()
     info_dict['loss_dict']['loss'] = scaled_loss
+    for loss_name, loss_value in info_dict['loss_dict'].items():
+        info_dict['loss_dict'][loss_name] = loss_value.item()
 
     return info_dict
 
@@ -565,7 +567,7 @@ def log_per_step(writer, info_dict):
         if (train_engine == "deepspeed" and is_gradient_accumulation_boundary) or \
            (train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0):
             writer.add_scalar('train/train_loss',
-                              loss_dict['loss'].item() * accum_grad, step + 1)
+                              loss_dict['loss'] * accum_grad, step + 1)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
                               step + 1)
     elif "step_" in tag and rank == 0 and writer is not None:
@@ -575,10 +577,10 @@ def log_per_step(writer, info_dict):
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
-            tag, epoch, batch_idx + 1, loss_dict['loss'].item() * accum_grad)
+            tag, epoch, batch_idx + 1, loss_dict['loss'] * accum_grad)
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
-                log_str += '{} {:.6f} '.format(name, value.item())
+                log_str += '{} {:.6f} '.format(name, value)
         if tag == "TRAIN":
             log_str += 'lr {:.8f} grad_norm {:.6f} rank {}'.format(
                 lr, info_dict['grad_norm'], rank)

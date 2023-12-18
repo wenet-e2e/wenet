@@ -52,7 +52,11 @@ def main():
     checkpoints = []
     val_scores = []
     if args.val_best:
-        yamls = glob.glob('{}/[!train]*.yaml'.format(args.src_path))
+        yamls = glob.glob('{}/*.yaml'.format(args.src_path))
+        yamls = [
+            f for f in yamls if not (os.path.basename(f).startswith('train')
+                                     or os.path.basename(f).startswith('init'))
+        ]
         for y in yamls:
             with open(y, 'r') as f:
                 dic_yaml = yaml.load(f, Loader=yaml.FullLoader)
@@ -64,11 +68,11 @@ def main():
         sorted_val_scores = sorted(val_scores,
                                    key=lambda x: x[1],
                                    reverse=False)
-        print("best val scores = " + str(sorted_val_scores[:args.num, 1]))
-        print("selected tags = " + sorted_val_scores[:args.num, 2])
+        print("best val (epoch, loss, tag) = " +
+              str(sorted_val_scores[:args.num]))
         path_list = [
-            args.src_path + '/{}.pt'.format(tag)
-            for tag in sorted_val_scores[:args.num, 2]
+            args.src_path + '/{}.pt'.format(score[2])
+            for score in sorted_val_scores[:args.num]
         ]
     else:
         path_list = glob.glob('{}/[!init]*.pt'.format(args.src_path))
