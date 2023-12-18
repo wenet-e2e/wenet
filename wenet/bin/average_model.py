@@ -41,6 +41,11 @@ def get_args():
                         default=65536,
                         type=int,
                         help='max epoch used for averaging model')
+    parser.add_argument('--mode',
+                        default="hybrid",
+                        choices=["hybrid", "epoch", "step"],
+                        type=str,
+                        help='average mode')
 
     args = parser.parse_args()
     print(args)
@@ -52,11 +57,16 @@ def main():
     checkpoints = []
     val_scores = []
     if args.val_best:
-        yamls = glob.glob('{}/*.yaml'.format(args.src_path))
-        yamls = [
-            f for f in yamls if not (os.path.basename(f).startswith('train')
-                                     or os.path.basename(f).startswith('init'))
-        ]
+        if args.mode == "hybrid":
+            yamls = glob.glob('{}/*.yaml'.format(args.src_path))
+            yamls = [
+                f for f in yamls if not (os.path.basename(f).startswith('train')
+                                         or os.path.basename(f).startswith('init'))
+            ]
+        elif args.mode == "step":
+            yamls = glob.glob('{}/step_*.yaml'.format(args.src_path))
+        else:
+            yamls = glob.glob('{}/epoch_*.yaml'.format(args.src_path))
         for y in yamls:
             with open(y, 'r') as f:
                 dic_yaml = yaml.load(f, Loader=yaml.FullLoader)
