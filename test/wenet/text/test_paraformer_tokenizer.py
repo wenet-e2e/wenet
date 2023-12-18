@@ -56,14 +56,12 @@ def test_tokenize(paraformer_tokenizer):
     assert '<unk>' in tokenizer.symbol_table and tokenizer.symbol_table[
         tokenizer.unk] == 8403
     for (i, txt) in enumerate(txts):
-        result = tokenizer.tokenize(txt)
-        print(result["tokens"], result["label"])
-        for module in result["tokens"].keys():
-            assert len(result["tokens"][module]) == len(expected[i]['tokens'])
-            assert len(result["label"][module]) == len(expected[i]['label'])
-            assert result["label"][module] == expected[i]['label']
-            assert all(h == r for (
-                h, r) in zip(result["tokens"][module], expected[i]['tokens']))
+        tokens, labels = tokenizer.tokenize(txt)
+        print(tokens, labels)
+        assert len(tokens) == len(expected[i]['tokens'])
+        assert len(labels) == len(expected[i]['label'])
+        assert labels == expected[i]['label']
+        assert all(h == r for (h, r) in zip(tokens, expected[i]['tokens']))
 
 
 def test_detokenize(paraformer_tokenizer):
@@ -82,17 +80,14 @@ def test_detokenize(paraformer_tokenizer):
     }]
     results = []
     for ids in idss:
-        result = tokenizer.detokenize(ids)
-        results.append(result)
+        txt, tokens = tokenizer.detokenize(ids)
+        results.append({"tokens": tokens, "txt": txt})
 
     for (hyp, ref) in zip(results, refs):
-        for module in hyp["tokens"].keys():
-            assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r
-                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
-            assert len(hyp["text"][module]) == len(ref["txt"])
-            assert (all(h == r
-                        for h, r in zip(hyp["text"][module], ref["txt"])))
+        assert (len(hyp["tokens"]) == len(ref["tokens"]))
+        assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
+        assert len(hyp["txt"]) == len(ref["txt"])
+        assert (all(h == r for h, r in zip(hyp["txt"], ref["txt"])))
 
 
 def test_vocab_size(paraformer_tokenizer):
@@ -104,7 +99,5 @@ def test_consistency(paraformer_tokenizer):
 
     assert text == paraformer_tokenizer.tokens2text(
         paraformer_tokenizer.text2tokens(text))
-    result = paraformer_tokenizer.tokenize(text)["label"]
-    for module in result.keys():
-        assert text == paraformer_tokenizer.detokenize(
-            result[module])["text"][module]
+    assert text == paraformer_tokenizer.detokenize(
+        paraformer_tokenizer.tokenize(text)[1])[0]

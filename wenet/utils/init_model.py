@@ -84,9 +84,7 @@ WENET_MODEL_CLASSES = {
 def get_special_tokens(configs):
     special_tokens = {}
     if configs["tokenizer"] == "hybrid":
-        modules = configs["tokenizer_conf"]["tokenizer_types"].keys(
-        )  # ctc_zh, ctc_en, decoder, ... etc
-        for module in modules:
+        for module in ["ctc", "decoder"]:
             for token, token_id in configs["tokenizer_conf"][
                     "{}_tokenizer_conf".format(
                         module)]["special_tokens"].items():
@@ -110,8 +108,12 @@ def init_model(args, configs):
         global_cmvn = None
 
     input_dim = configs['input_dim']
-    vocab_size = configs['output_dim']['decoder']
-    vocab_size_ctc = configs['output_dim']['ctc']
+    if isinstance(configs['output_dim'], dict):
+        vocab_size = configs['output_dim']['decoder']
+        vocab_size_ctc = configs['output_dim']['ctc']
+    else:
+        vocab_size = configs['output_dim']
+        vocab_size_ctc = vocab_size
 
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')

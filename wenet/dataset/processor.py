@@ -19,6 +19,7 @@ import random
 import tarfile
 from subprocess import PIPE, Popen
 from urllib.parse import urlparse
+from typing import Union
 
 import torch
 import torchaudio
@@ -26,6 +27,7 @@ import torchaudio.compliance.kaldi as kaldi
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_sequence
 from wenet.text.base_tokenizer import BaseTokenizer
+from wenet.text.hybrid_tokenizer import HybridTokenizer
 
 torchaudio.utils.sox_utils.set_buffer_size(16500)
 
@@ -191,16 +193,21 @@ def filter(data,
             continue
         if num_frames > max_length:
             continue
-        if len(sample['label']['ctc']) < token_min_length:
+        key, value = next(iter(sample['label'].items()))
+        if isinstance(value, list):  # HybridTokenizer
+            label_len = len(sample['label']['ctc'])
+        elif isinstance(value, int):  # BaseTokenizer
+            label_len = len(sample['label'])
+        else:
+            raise NotImplementedError()
+        if label_len < token_min_length:
             continue
-        if len(sample['label']['ctc']) > token_max_length:
+        if label_len > token_max_length:
             continue
         if num_frames != 0:
-            if len(sample['label']
-                   ['ctc']) / num_frames < min_output_input_ratio:
+            if label_len / num_frames < min_output_input_ratio:
                 continue
-            if len(sample['label']
-                   ['ctc']) / num_frames > max_output_input_ratio:
+            if label_len / num_frames > max_output_input_ratio:
                 continue
         yield sample
 
@@ -373,7 +380,7 @@ def compute_log_mel_spectrogram(data,
         yield sample
 
 
-def tokenize(data, tokenizer: BaseTokenizer):
+def tokenize(data, tokenizer: Union[BaseTokenizer, HybridTokenizer]):
     """ Decode text to chars or BPE
         Inplace operation
 
@@ -386,9 +393,14 @@ def tokenize(data, tokenizer: BaseTokenizer):
     for sample in data:
         assert 'txt' in sample
         result = tokenizer.tokenize(sample['txt'])
-        for key in result:  # tokens, label, ... etc
-            assert key not in sample
-            sample[key] = result[key]
+        if isinstance(result, dict):  # HybridTokenizer
+            sample['tokens'] = result['tokens']
+            sample['label'] = result['label']
+        elif isinstance(result, tuple):  # BaseTokenizer
+            sample['tokens'] = result[0]
+            sample['label'] = result[1]
+        else:
+            raise NotImplementedError()
         yield sample
 
 
@@ -629,12 +641,20 @@ def padding(data):
         batch["pcm"] = padded_wavs
         batch["pcm_length"] = wav_lengths
 
-        label_types = sample[0]['label'].keys(
-        )  # ctc_zh, ctc_en, decoder, ... etc
+        key, value = next(iter(sample[0]['label'].items()))
+        if isinstance(value, list):  # HybridTokenizer
+            tokenizer_type = "hybrid"
+        elif isinstance(value, int):  # BaseTokenizer
+            tokenizer_type = "base"
+        else:
+            raise NotImplementedError()
+
+        label_types = ["ctc", "decoder"]
         for label_type in label_types:
             sorted_labels = [
-                torch.tensor(sample[i]['label'][label_type], dtype=torch.int64)
-                for i in order
+                torch.tensor(sample[i]['label'] if tokenizer_type == "base"
+                             else sample[i]['label'][label_type],
+                             dtype=torch.int64) for i in order
             ]
             label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
                                          dtype=torch.int32)

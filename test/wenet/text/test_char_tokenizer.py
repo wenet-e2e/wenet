@@ -93,17 +93,14 @@ def test_tokenize(char_tokenizer):
     }]
     results = []
     for line in txts:
-        result = tokenizer.tokenize(line)
-        results.append(result)
+        tokens, label = tokenizer.tokenize(line)
+        results.append({"tokens": tokens, "label": label})
 
     for (hyp, ref) in zip(results, refs):
-        for module in hyp["tokens"].keys():
-            assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r
-                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
-            assert (len(hyp["label"][module]) == len(ref["label"]))
-            assert (all(h == r
-                        for h, r in zip(hyp["label"][module], ref["label"])))
+        assert (len(hyp["tokens"]) == len(ref["tokens"]))
+        assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
+        assert (len(hyp["label"]) == len(ref["label"]))
+        assert (all(h == r for h, r in zip(hyp["label"], ref["label"])))
 
 
 def test_detokenize(char_tokenizer):
@@ -122,17 +119,14 @@ def test_detokenize(char_tokenizer):
     }]
     results = []
     for ids in idss:
-        result = tokenizer.detokenize(ids)
-        results.append(result)
+        txt, tokens = tokenizer.detokenize(ids)
+        results.append({"tokens": tokens, "txt": txt})
 
     for (hyp, ref) in zip(results, refs):
-        for module in hyp["tokens"].keys():
-            assert (len(hyp["tokens"][module]) == len(ref["tokens"]))
-            assert (all(h == r
-                        for h, r in zip(hyp["tokens"][module], ref["tokens"])))
-            assert len(hyp["text"][module]) == len(ref["txt"])
-            assert (all(h == r
-                        for h, r in zip(hyp["text"][module], ref["txt"])))
+        assert (len(hyp["tokens"]) == len(ref["tokens"]))
+        assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
+        assert len(hyp["txt"]) == len(ref["txt"])
+        assert (all(h == r for h, r in zip(hyp["txt"], ref["txt"])))
 
 
 def test_vocab_size(char_tokenizer):
@@ -143,7 +137,5 @@ def test_consistency(char_tokenizer):
     text = "大家都好帅"
 
     assert text == char_tokenizer.tokens2text(char_tokenizer.text2tokens(text))
-    result = char_tokenizer.tokenize(text)["label"]
-    for module in result.keys():
-        assert text == char_tokenizer.detokenize(
-            result[module])["text"][module]
+    assert text == char_tokenizer.detokenize(
+        char_tokenizer.tokenize(text)[1])[0]

@@ -295,13 +295,14 @@ class ASRModel(torch.nn.Module):
                     ctc_probs, encoder_lens, beam_size, context_graph,
                     blank_id)
             new_ctc_prefix_result = copy.deepcopy(ctc_prefix_result)
-            for prefix_result in new_ctc_prefix_result:
-                for i in range(len(prefix_result.nbest)):
-                    prefix_result.nbest[i] = tokenizer.tokenizers[
-                        "decoder"].tokenize(
-                            tokenizer.tokenizers["ctc"].detokenize(
-                                prefix_result.nbest[i])["text"]
-                            ["ctc"])["label"]["decoder"]
+            if isinstance(tokenizer, HybridTokenizer):
+                # ids = tokenize_decoder(detokenize_ctc(ids))
+                for prefix_result in new_ctc_prefix_result:
+                    for i in range(len(prefix_result.nbest)):
+                        prefix_result.nbest[i] = tokenizer.tokenizers[
+                            "decoder"].tokenize(
+                                tokenizer.tokenizers["ctc"].detokenize(
+                                    prefix_result.nbest[i])[0])[1]
             if self.apply_non_blank_embedding:
                 encoder_out, _ = self.filter_blank_embedding(
                     ctc_probs, encoder_out)

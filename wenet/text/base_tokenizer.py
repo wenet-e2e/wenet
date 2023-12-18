@@ -1,38 +1,20 @@
 from abc import ABC, abstractmethod, abstractproperty
-from typing import Dict, List, Union, Any
+from typing import Dict, List, Tuple, Union
 
 T = Union[str, bytes]
 
 
 class BaseTokenizer(ABC):
 
-    def tokenize(self, line: str) -> Dict[str, Any]:
+    def tokenize(self, line: str) -> Tuple[List[T], List[int]]:
         tokens = self.text2tokens(line)
         ids = self.tokens2ids(tokens)
-        return {
-            "tokens": {
-                "ctc": tokens,
-                "decoder": tokens
-            },
-            "label": {
-                "ctc": ids,
-                "decoder": ids
-            }
-        }
+        return tokens, ids
 
-    def detokenize(self, ids: List[int]) -> Dict[str, Any]:
+    def detokenize(self, ids: List[int]) -> Tuple[str, List[T]]:
         tokens = self.ids2tokens(ids)
         text = self.tokens2text(tokens)
-        return {
-            "text": {
-                "ctc": text,
-                "decoder": text
-            },
-            "tokens": {
-                "ctc": tokens,
-                "decoder": tokens
-            }
-        }
+        return text, tokens
 
     @abstractmethod
     def text2tokens(self, line: str) -> List[T]:

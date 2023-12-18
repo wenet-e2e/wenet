@@ -214,12 +214,14 @@ def check_modify_and_save_config(args, configs, symbol_table):
     if "ctc" in symbol_table and isinstance(symbol_table["ctc"], dict):
         configs, _ = get_blank_id(configs, symbol_table["ctc"])
         configs["output_dim"] = {}
-        for module in symbol_table.keys():
-            configs["output_dim"][module] = len(symbol_table[module])
+        configs["output_dim"]["ctc"] = len(symbol_table["ctc"])
+        configs["output_dim"]["decoder"] = len(symbol_table["decoder"])
     # symbol_table = {"<blank>": 0, "<unk>": 1, ...}
     else:
         configs, _ = get_blank_id(configs, symbol_table)
-        configs['output_dim'] = len(symbol_table)
+        configs["output_dim"] = {}
+        configs["output_dim"]["ctc"] = len(symbol_table)
+        configs["output_dim"]["decoder"] = len(symbol_table)
 
     configs['input_dim'] = input_dim
     configs['train_engine'] = args.train_engine

@@ -139,7 +139,7 @@ def test_model(model, audio_path):
     wenet_model.eval()
 
     with torch.no_grad():
-        dummy_tokens = tokenizer.tokenize("WeNet x OpenAI")["label"]["decoder"]
+        _, dummy_tokens = tokenizer.tokenize("WeNet x OpenAI")
 
         # 3. Forward whisper.encoder
         mel1 = whisper.log_mel_spectrogram(audio_path,

@@ -54,7 +54,7 @@ class Paraformer:
         result = {}
         result['confidence'] = res.confidence
         result['text'] = paraformer_beautify_result(
-            self.tokenizer.detokenize(res.tokens)["tokens"]["decoder"])
+            self.tokenizer.detokenize(res.tokens)[1])
         if tokens_info:
             tokens_info = []
             times = gen_timestamps_from_peak(res.times,

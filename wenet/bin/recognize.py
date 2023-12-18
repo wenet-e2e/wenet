@@ -29,6 +29,8 @@ from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.context_graph import ContextGraph
 from wenet.utils.ctc_utils import get_blank_id
+from wenet.text.base_tokenizer import BaseTokenizer
+from wenet.text.hybrid_tokenizer import HybridTokenizer
 
 
 def get_args():
@@ -259,12 +261,19 @@ def main():
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     tokens = hyps[i].tokens
-                    if "ctc" in mode:
-                        text = tokenizer.tokenizers["ctc"].detokenize(
-                            tokens)["text"]["ctc"]
+                    if isinstance(tokenizer, HybridTokenizer):
+                        # TODO(xcsong): Multi-language support ?
+                        #   i.e., each language has its own CTC branch.
+                        if "ctc" in mode:
+                            text = tokenizer.tokenizers["ctc"].detokenize(
+                                tokens)[0]
+                        else:
+                            text = tokenizer.tokenizers["decoder"].detokenize(
+                                tokens)[0]
+                    elif isinstance(tokenizer, BaseTokenizer):
+                        text = tokenizer.detokenize(tokens)[0]
                     else:
-                        text = tokenizer.tokenizers["decoder"].detokenize(
-                            tokens)["text"]["decoder"]
+                        raise NotImplementedError()
                     line = '{} {}'.format(key, text)
                     logging.info('{} {}'.format(mode.ljust(max_format_len),
                                                 line))

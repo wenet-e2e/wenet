@@ -8,8 +8,7 @@ from wenet.text.whisper_tokenizer import WhisperTokenizer
 
 
 def consistency(tokenizer: BaseTokenizer, line: str) -> str:
-    return tokenizer.detokenize(
-        tokenizer.tokenize(line)["label"]["ctc"])["text"]["ctc"]
+    return tokenizer.detokenize(tokenizer.tokenize(line)[1])[0]
 
 
 def test_whisper_tokenzier_parallel():
