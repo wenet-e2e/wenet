@@ -78,7 +78,6 @@ class Executor:
                 info_dict = update_parameter_and_lr(model, optimizer,
                                                     scheduler, scaler,
                                                     info_dict)
-                log_per_step(writer, info_dict)
                 save_interval = info_dict.get('save_interval', 10000)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
@@ -95,6 +94,7 @@ class Executor:
                         optimizer.param_groups[0]['lr']
                     })
                     save_model(model, info_dict)
+                log_per_step(writer, info_dict)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
 

@@ -568,6 +568,10 @@ def log_per_step(writer, info_dict):
                               loss_dict['loss'].item() * accum_grad, step + 1)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
                               step + 1)
+    elif "step_" in tag and rank == 0 and writer is not None:
+        writer.add_scalar('global_step/cv_loss', info_dict["cv_loss"],
+                          step + 1)
+        writer.add_scalar('global_step/lr', lr, step + 1)
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
