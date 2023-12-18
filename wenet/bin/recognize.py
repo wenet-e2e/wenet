@@ -254,12 +254,17 @@ def main():
                 reverse_weight=args.reverse_weight,
                 context_graph=context_graph,
                 blank_id=blank_id,
-                blank_penalty=args.blank_penalty)
+                blank_penalty=args.blank_penalty,
+                tokenizer=tokenizer)
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     tokens = hyps[i].tokens
-                    text = tokenizer.detokenize(tokens)["text"]
-                    text = text["ctc"] if "ctc" in mode else text["decoder"]
+                    if "ctc" in mode:
+                        text = tokenizer.tokenizers["ctc"].detokenize(
+                            tokens)["text"]["ctc"]
+                    else:
+                        text = tokenizer.tokenizers["decoder"].detokenize(
+                            tokens)["text"]["decoder"]
                     line = '{} {}'.format(key, text)
                     logging.info('{} {}'.format(mode.ljust(max_format_len),
                                                 line))

@@ -32,10 +32,23 @@ class HybridTokenizer():
         return result
 
     def detokenize(self, ids: List[int]) -> Dict[str, Any]:
-        result = {"tokens": {}, "label": {}}
+        result = {"tokens": {}, "text": {}}
         for module, tokenizer in self.tokenizers.items():
             tokens = tokenizer.ids2tokens(ids)
             text = tokenizer.tokens2text(tokens)
             result["text"][module] = text
             result["tokens"][module] = tokens
+        return result
+
+    def vocab_size(self) -> Dict[str, int]:
+        result = {}
+        for module in self.tokenizers.keys():
+            result[module] = len(self.tokenizers[module].char_dict)
+        return result
+
+    @property
+    def symbol_table(self) -> Dict[str, Dict[str, int]]:
+        result = {}
+        for module in self.tokenizers.keys():
+            result[module] = self.tokenizers[module].symbol_table
         return result

@@ -110,7 +110,8 @@ def init_model(args, configs):
         global_cmvn = None
 
     input_dim = configs['input_dim']
-    vocab_size = configs['output_dim']
+    vocab_size = configs['output_dim']['decoder']
+    vocab_size_ctc = configs['output_dim']['ctc']
 
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')
@@ -128,7 +129,7 @@ def init_model(args, configs):
                                                   **configs['decoder_conf'])
 
     ctc = WENET_CTC_CLASSES[ctc_type](
-        vocab_size,
+        vocab_size_ctc,
         encoder.output_size(),
         blank_id=configs['ctc_conf']['ctc_blank_id']
         if 'ctc_conf' in configs else 0)

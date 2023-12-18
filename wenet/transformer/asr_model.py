@@ -13,8 +13,9 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
+import copy
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
@@ -30,6 +31,8 @@ from wenet.utils.mask import make_pad_mask
 from wenet.utils.common import (IGNORE_ID, add_sos_eos, th_accuracy,
                                 reverse_pad_list)
 from wenet.utils.context_graph import ContextGraph
+from wenet.text.base_tokenizer import BaseTokenizer
+from wenet.text.hybrid_tokenizer import HybridTokenizer
 
 
 class ASRModel(torch.nn.Module):
@@ -232,6 +235,7 @@ class ASRModel(torch.nn.Module):
         context_graph: ContextGraph = None,
         blank_id: int = 0,
         blank_penalty: float = 0.0,
+        tokenizer: Union[BaseTokenizer, HybridTokenizer] = None,
     ) -> Dict[str, List[DecodeResult]]:
         """ Decode input speech
 
@@ -290,12 +294,20 @@ class ASRModel(torch.nn.Module):
                 ctc_prefix_result = ctc_prefix_beam_search(
                     ctc_probs, encoder_lens, beam_size, context_graph,
                     blank_id)
+            new_ctc_prefix_result = copy.deepcopy(ctc_prefix_result)
+            for prefix_result in new_ctc_prefix_result:
+                for i in range(len(prefix_result.nbest)):
+                    prefix_result.nbest[i] = tokenizer.tokenizers[
+                        "decoder"].tokenize(
+                            tokenizer.tokenizers["ctc"].detokenize(
+                                prefix_result.nbest[i])["text"]
+                            ["ctc"])["label"]["decoder"]
             if self.apply_non_blank_embedding:
                 encoder_out, _ = self.filter_blank_embedding(
                     ctc_probs, encoder_out)
             results['attention_rescoring'] = attention_rescoring(
-                self, ctc_prefix_result, encoder_out, encoder_lens, ctc_weight,
-                reverse_weight)
+                self, new_ctc_prefix_result, encoder_out, encoder_lens,
+                ctc_weight, reverse_weight)
         return results
 
     @torch.jit.export

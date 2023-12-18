@@ -55,7 +55,7 @@ class Executor:
                 if wenet_join(group_join, info_dict):
                     break
 
-                if batch_dict["target_lengths"].size(0) == 0:
+                if batch_dict["target_lengths_ctc"].size(0) == 0:
                     continue
 
                 context = None
@@ -111,7 +111,7 @@ class Executor:
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
 
-                num_utts = batch_dict["target_lengths"].size(0)
+                num_utts = batch_dict["target_lengths_ctc"].size(0)
                 if num_utts == 0:
                     continue
 

@@ -209,11 +209,19 @@ def check_modify_and_save_config(args, configs, symbol_table):
     else:
         input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
 
-    configs, _ = get_blank_id(configs, symbol_table)
+    # symbol_table = {"ctc": {"<blank>": 0, "<unk>": 1, ...},
+    #                 "decoder": {"happy": 0, "net": 1, ...}}
+    if "ctc" in symbol_table and isinstance(symbol_table["ctc"], dict):
+        configs, _ = get_blank_id(configs, symbol_table["ctc"])
+        configs["output_dim"] = {}
+        for module in symbol_table.keys():
+            configs["output_dim"][module] = len(symbol_table[module])
+    # symbol_table = {"<blank>": 0, "<unk>": 1, ...}
+    else:
+        configs, _ = get_blank_id(configs, symbol_table)
+        configs['output_dim'] = len(symbol_table)
 
     configs['input_dim'] = input_dim
-    configs['output_dim'] = configs['vocab_size']
-
     configs['train_engine'] = args.train_engine
     configs['use_amp'] = args.use_amp
     configs['model_dir'] = args.model_dir
@@ -242,7 +250,6 @@ def init_dataset_and_dataloader(args, configs, tokenizer):
     cv_conf['spec_trim'] = False
     cv_conf['shuffle'] = False
 
-    configs['vocab_size'] = tokenizer.vocab_size()
     train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
                             train_conf, True)
     cv_dataset = Dataset(args.data_type,
