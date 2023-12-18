@@ -21,7 +21,8 @@ from contextlib import nullcontext
 import torch
 
 from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
-                                     update_parameter_and_lr, log_per_step)
+                                     update_parameter_and_lr, log_per_step,
+                                     save_model)
 
 
 class Executor:
@@ -35,7 +36,6 @@ class Executor:
         '''
         model.train()
         info_dict = copy.deepcopy(configs)
-        info_dict["tag"] = "TRAIN"
         logging.info('using accumulate grad, new batch size is {} times'
                      ' larger than before'.format(info_dict['accum_grad']))
         # A context manager to be used in conjunction with an instance of
@@ -48,6 +48,7 @@ class Executor:
 
         with model_context():
             for batch_idx, batch_dict in enumerate(data_loader):
+                info_dict["tag"] = "TRAIN"
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
                 if wenet_join(group_join, info_dict):
@@ -79,16 +80,21 @@ class Executor:
                 log_per_step(writer, info_dict)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
+                save_interval = info_dict.get('save_interval', 10000)
+                if (self.step + 1) % save_interval == 0 and self.step != -1 \
+                        and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                    info_dict["tag"] = "step_{}".format(self.step + 1)
+                    save_model(model, info_dict)
 
     def cv(self, model, data_loader, configs):
         ''' Cross validation on
         '''
         model.eval()
         info_dict = copy.deepcopy(configs)
-        info_dict["tag"] = "CV"
         num_seen_utts, total_loss = 1, 0.0  # in order to avoid division by 0
         with torch.no_grad():
             for batch_idx, batch_dict in enumerate(data_loader):
+                info_dict["tag"] = "CV"
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
 

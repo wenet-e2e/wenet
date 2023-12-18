@@ -154,7 +154,7 @@ def main():
             'cv_loss': cv_loss,
             'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-            'tag': str(epoch),
+            'tag': "epoch_{}".format(epoch),
             **configs
         }
         log_per_epoch(writer, info_dict=info_dict)

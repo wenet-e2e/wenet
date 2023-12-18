@@ -17,7 +17,6 @@ import argparse
 import glob
 
 import yaml
-import numpy as np
 import torch
 
 
@@ -59,20 +58,20 @@ def main():
                 dic_yaml = yaml.load(f, Loader=yaml.FullLoader)
                 loss = dic_yaml['cv_loss']
                 epoch = dic_yaml['epoch']
+                tag = dic_yaml['tag']
                 if epoch >= args.min_epoch and epoch <= args.max_epoch:
-                    val_scores += [[epoch, loss]]
-        val_scores = np.array(val_scores)
-        sort_idx = np.argsort(val_scores[:, -1])
-        sorted_val_scores = val_scores[sort_idx][::1]
+                    val_scores += [[epoch, loss, tag]]
+        sorted_val_scores = sorted(val_scores,
+                                   key=lambda x: x[1],
+                                   reverse=False)
         print("best val scores = " + str(sorted_val_scores[:args.num, 1]))
-        print("selected epochs = " +
-              str(sorted_val_scores[:args.num, 0].astype(np.int64)))
+        print("selected tags = " + sorted_val_scores[:args.num, 2])
         path_list = [
-            args.src_path + '/{}.pt'.format(int(epoch))
-            for epoch in sorted_val_scores[:args.num, 0]
+            args.src_path + '/{}.pt'.format(tag)
+            for tag in sorted_val_scores[:args.num, 2]
         ]
     else:
-        path_list = glob.glob('{}/[0-9]*.pt'.format(args.src_path))
+        path_list = glob.glob('{}/[!init]*.pt'.format(args.src_path))
         path_list = sorted(path_list, key=os.path.getmtime)
         path_list = path_list[-args.num:]
     print(path_list)
