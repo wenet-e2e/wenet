@@ -32,8 +32,7 @@ class Executor:
         self.step = 0
 
     def train(self, model, optimizer, scheduler, train_data_loader,
-              cv_data_loader, writer, configs,
-              scaler, group_join):
+              cv_data_loader, writer, configs, scaler, group_join):
         ''' Train one epoch
         '''
         model.train()
@@ -83,13 +82,17 @@ class Executor:
                 save_interval = info_dict.get('save_interval', 10000)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
-                    total_loss, num_seen_utts = self.cv(model, cv_data_loader, configs)
+                    total_loss, num_seen_utts = self.cv(
+                        model, cv_data_loader, configs)
                     info_dict.update({
-                        "tag": "step_{}".format(self.step),
-                        "cv_loss": total_loss / num_seen_utts,
-                        "save_time": datetime.datetime.now().strftime(
-                            '%d/%m/%Y %H:%M:%S'),
-                        "lr": optimizer.param_groups[0]['lr']
+                        "tag":
+                        "step_{}".format(self.step),
+                        "cv_loss":
+                        total_loss / num_seen_utts,
+                        "save_time":
+                        datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                        "lr":
+                        optimizer.param_groups[0]['lr']
                     })
                     save_model(model, info_dict)
                 self.step += 1 if (batch_idx +

@@ -138,8 +138,7 @@ def main():
         group_join = dist.new_group(
             backend="gloo", timeout=datetime.timedelta(seconds=args.timeout))
         executor.train(model, optimizer, scheduler, train_data_loader,
-                       cv_data_loader, writer,
-                       configs, scaler, group_join)
+                       cv_data_loader, writer, configs, scaler, group_join)
         dist.destroy_process_group(group_join)
 
         dist.barrier(
