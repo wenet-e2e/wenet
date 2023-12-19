@@ -83,6 +83,7 @@ class Executor:
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
                     total_loss, num_seen_utts = self.cv(
                         model, cv_data_loader, configs)
+                    model.train()
                     info_dict.update({
                         "tag":
                         "step_{}".format(self.step),

@@ -122,7 +122,9 @@ def main():
         scaler = torch.cuda.amp.GradScaler()
 
     # Start training loop
-    start_epoch = configs["init_infos"].get('epoch', -1) + 1
+    tag = configs["init_infos"].get("tag", "init")
+    start_epoch = configs["init_infos"].get('epoch', -1) + int("epoch_" in tag)
+    configs.pop("init_infos", None)
     final_epoch = None
     for epoch in range(start_epoch, configs.get('max_epoch', 100)):
         train_dataset.set_epoch(epoch)
