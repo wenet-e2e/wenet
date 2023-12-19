@@ -58,3 +58,17 @@ python local/filter_ckpt.py \
 | ctc greedy search         | 6.87  |
 | ctc prefix beam search    | 6.87  |
 | attention rescoring       | 5.33  |
+
+## Whisper-largev3 (conv2d4, full-parameter tuning, HybridTokenizer) Result
+
+* Feature info: using log_mel_spectrogram feature, no cmvn, no speed perturb
+* Training info: bf16, deepspeed stage1, activation checkpointing, batch dynamic12000, acc_grad 4, 8 * 3090 gpu, 40 epochs (about 10 hours)
+* Decoding info: ctc_weight 0.3, average_num 5
+* Git hash: TBD
+
+| decoding mode             | CER   |
+|---------------------------|-------|
+| attention decoder         | 3.67  |
+| ctc greedy search         | 6.18  |
+| ctc prefix beam search    | 6.18  |
+| attention rescoring       | 4.63  |
