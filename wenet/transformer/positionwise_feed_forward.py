@@ -30,11 +30,13 @@ class PositionwiseFeedForward(torch.nn.Module):
         activation (torch.nn.Module): Activation function
     """
 
-    def __init__(self,
-                 idim: int,
-                 hidden_units: int,
-                 dropout_rate: float,
-                 activation: torch.nn.Module = torch.nn.ReLU()):
+    def __init__(
+            self,
+            idim: int,
+            hidden_units: int,
+            dropout_rate: float,
+            activation: torch.nn.Module = torch.nn.ReLU(),
+    ):
         """Construct a PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
         self.w_1 = torch.nn.Linear(idim, hidden_units)
@@ -51,3 +53,52 @@ class PositionwiseFeedForward(torch.nn.Module):
             output tensor, (B, L, D)
         """
         return self.w_2(self.dropout(self.activation(self.w_1(xs))))
+
+
+class MoEFFNLayer(torch.nn.Module):
+
+    def __init__(
+            self,
+            n_expert: int,
+            n_expert_per_token: int,
+            idim: int,
+            hidden_units: int,
+            dropout_rate: float,
+            activation: torch.nn.Module = torch.nn.ReLU(),
+    ):
+        """Construct a mixture of expert which is PositionwiseFeedForward layer.
+        Modified from https://github.com/Lightning-AI/lit-gpt/pull/823
+                      https://github.com/mistralai/mistral-src/blob/b46d6/moe_one_file_ref.py#L203-L219
+        """
+        super(MoEFFNLayer, self).__init__()
+        self.gate = torch.nn.Linear(idim, n_expert, bias=False)
+        self.experts = torch.nn.ModuleList(
+            PositionwiseFeedForward(idim, hidden_units, dropout_rate,
+                                    activation) for _ in range(n_expert))
+        self.n_expert_per_token = n_expert_per_token
+
+    def forward(self, xs: torch.Tensor) -> torch.Tensor:
+        """Foward function.
+        Args:
+            xs: input tensor (B, L, D)
+        Returns:
+            output tensor, (B, L, D)
+
+        """
+        B, L, D = xs.size(
+        )  # batch size, sequence length, embedding dimension (idim)
+        xs = xs.view(-1, D)  # (B*L, D)
+        router = self.gate(xs)  # (B*L, n_expert)
+        probs, indices = torch.topk(
+            router, self.n_expert_per_token
+        )  # probs:(B*L, n_expert), indices: (B*L, n_expert)
+        probs = torch.nn.functional.softmax(
+            probs, dim=1,
+            dtype=torch.float).to(dtype=xs.dtype)  # (B*L, n_expert_per_token)
+        y = torch.zeros_like(xs)  # (B*L, D)
+        for i, expert in enumerate(self.experts):
+            mask = indices == i
+            batch_idx, ith_expert = torch.where(mask)
+            y[batch_idx] += probs[batch_idx, ith_expert, None] * expert(
+                xs[batch_idx])
+        return y.view(B, L, D)
