@@ -89,16 +89,16 @@ class MoEFFNLayer(torch.nn.Module):
         )  # batch size, sequence length, embedding dimension (idim)
         xs = xs.view(-1, D)  # (B*L, D)
         router = self.gate(xs)  # (B*L, n_expert)
-        probs, indices = torch.topk(
+        logits, indices = torch.topk(
             router, self.n_expert_per_token
         )  # probs:(B*L, n_expert), indices: (B*L, n_expert)
-        probs = torch.nn.functional.softmax(
-            probs, dim=1,
+        weights = torch.nn.functional.softmax(
+            logits, dim=1,
             dtype=torch.float).to(dtype=xs.dtype)  # (B*L, n_expert_per_token)
-        y = torch.zeros_like(xs)  # (B*L, D)
+        output = torch.zeros_like(xs)  # (B*L, D)
         for i, expert in enumerate(self.experts):
             mask = indices == i
             batch_idx, ith_expert = torch.where(mask)
-            y[batch_idx] += probs[batch_idx, ith_expert, None] * expert(
+            output[batch_idx] += weights[batch_idx, ith_expert, None] * expert(
                 xs[batch_idx])
-        return y.view(B, L, D)
+        return output.view(B, L, D)
