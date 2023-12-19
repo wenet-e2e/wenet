@@ -77,19 +77,14 @@ class ASRModel(torch.nn.Module):
     @torch.jit.ignore(drop=True)
     def forward(
         self,
-        speech: torch.Tensor,
-        speech_lengths: torch.Tensor,
-        text: torch.Tensor,
-        text_lengths: torch.Tensor,
+        batch: dict,
+        device: torch.device,
     ) -> Dict[str, Optional[torch.Tensor]]:
-        """Frontend + Encoder + Decoder + Calc loss
-
-        Args:
-            speech: (Batch, Length, ...)
-            speech_lengths: (Batch, )
-            text: (Batch, Length)
-            text_lengths: (Batch,)
-        """
+        """Frontend + Encoder + Decoder + Calc loss"""
+        speech = batch['feats'].to(device)
+        speech_lengths = batch['feats_lengths'].to(device)
+        text = batch['target'].to(device)
+        text_lengths = batch['target_lengths'].to(device)
 
         assert text_lengths.dim() == 1, text_lengths.shape
         # Check that batch_size is unified

@@ -44,10 +44,6 @@ def get_args():
                         default=-1,
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
-    parser.add_argument('--dict', required=True, help='dict file')
-    parser.add_argument(
-        "--non_lang_syms",
-        help="non-linguistic symbol file. One symbol per line.")
     parser.add_argument('--beam_size',
                         type=int,
                         default=10,
@@ -121,18 +117,10 @@ def get_args():
                         default=0.0,
                         help='''right to left weight for attention rescoring
                                 decode mode''')
-    parser.add_argument('--bpe_model',
-                        default=None,
-                        type=str,
-                        help='bpe model for english part')
     parser.add_argument('--override_config',
                         action='append',
                         default=[],
                         help="override yaml config")
-    parser.add_argument('--connect_symbol',
-                        default='',
-                        type=str,
-                        help='used to connect the output characters')
 
     parser.add_argument('--word',
                         default='',
@@ -207,8 +195,7 @@ def main():
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
-    tokenizer = init_tokenizer(configs, args.dict, args.bpe_model,
-                               args.non_lang_syms)
+    tokenizer = init_tokenizer(configs)
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            tokenizer,
@@ -229,7 +216,8 @@ def main():
     context_graph = None
     if 'decoding-graph' in args.context_bias_mode:
         context_graph = ContextGraph(args.context_list_path,
-                                     tokenizer.symbol_table, args.bpe_model,
+                                     tokenizer.symbol_table,
+                                     configs['tokenizer_conf']['bpe_path'],
                                      args.context_graph_score)
 
     _, blank_id = get_blank_id(configs, tokenizer.symbol_table)

@@ -6,12 +6,13 @@ from wenet.utils.init_tokenizer import init_tokenizer
 def test_init_whisper_tokenizer():
     # TODO(Mddct): add configs generator
     configs = {}
-    configs['whisper'] = True
-    configs['whisper_conf'] = {}
-    configs['whisper_conf']['is_multilingual'] = False
-    configs['whisper_conf']['num_languages'] = 99
+    configs['tokenizer'] = 'whisper'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['symbol_table_path'] = None
+    configs['tokenizer_conf']['is_multilingual'] = False
+    configs['tokenizer_conf']['num_languages'] = 99
 
-    tokenizer = init_tokenizer(configs, None)
+    tokenizer = init_tokenizer(configs)
     text = "whisper powered by wenet, it's great"
 
     assert text == tokenizer.tokens2text(tokenizer.text2tokens(text))
@@ -22,7 +23,11 @@ def test_init_whisper_tokenizer():
 ])
 def test_init_char_tokenizer(symbol_table_path):
     configs = {}
-    tokenizer = init_tokenizer(configs, symbol_table_path)
+    configs['tokenizer'] = 'char'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
+    configs['tokenizer_conf']['non_lang_syms_path'] = None
+    tokenizer = init_tokenizer(configs)
 
     text = "大家都好帅"
     assert text == tokenizer.tokens2text(tokenizer.text2tokens(text))
@@ -35,7 +40,12 @@ def test_init_char_tokenizer(symbol_table_path):
 def test_init_bpe_tokenizer(symbol_table_path, bpe_model):
 
     configs = {}
-    tokenizer = init_tokenizer(configs, symbol_table_path, bpe_model)
+    configs['tokenizer'] = 'bpe'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['bpe_path'] = bpe_model
+    configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
+    configs['tokenizer_conf']['non_lang_syms_path'] = None
+    tokenizer = init_tokenizer(configs)
     text = "WENET IT'S GREAT"
 
     assert text == tokenizer.tokens2text(tokenizer.text2tokens(text))

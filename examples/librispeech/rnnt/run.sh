@@ -37,7 +37,6 @@ wave_data=data
 # 1. conf/train_transformer_large.yaml: Standard transformer
 train_config=conf/conformer_rnnt.yaml
 checkpoint=
-cmvn=true
 do_delta=false
 
 dir=exp/conformer_transducer
@@ -116,14 +115,12 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
 
   echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
   echo "<unk> 1" >> ${dict} # <unk> must be 1
+  echo "<sos/eos> 2" >> $dict # <eos>
 
   # we borrowed these code and scripts which are related bpe from ESPnet.
   cut -f 2- -d" " $wave_data/${train_set}/text > $wave_data/lang_char/input.txt
   tools/spm_train --input=$wave_data/lang_char/input.txt --vocab_size=${nbpe} --model_type=${bpemode} --model_prefix=${bpemodel} --input_sentence_size=100000000
-  tools/spm_encode --model=${bpemodel}.model --output_format=piece < $wave_data/lang_char/input.txt | tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+1}' >> ${dict}
-  num_token=$(cat $dict | wc -l)
-  echo "<sos/eos> $num_token" >> $dict # <eos>
-  wc -l ${dict}
+  tools/spm_encode --model=${bpemodel}.model --output_format=piece < $wave_data/lang_char/input.txt | tr ' ' '\n' | sort | uniq | awk '{print $0 " " NR+2}' >> ${dict}
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
@@ -146,10 +143,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   echo "$0: init method is $init_method"
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
-  dist_backend="gloo"
   dist_backend="nccl"
-  cmvn_opts=
-  $cmvn && cmvn_opts="--cmvn $wave_data/${train_set}/global_cmvn"
   # train.py will write $train_config to $dir/train.yaml with model input
   # and output dimension, train.yaml will be used for inference or model
   # export later
@@ -157,8 +151,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     wenet/bin/train.py \
       --config $train_config \
       --data_type raw \
-      --symbol_table $dict \
-      --bpe_model ${bpemodel}.model \
       --train_data $wave_data/$train_set/data.list \
       --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
@@ -166,14 +158,11 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --ddp.rank $i \
       --ddp.dist_backend $dist_backend \
       --num_workers 4 \
-      $cmvn_opts \
       --pin_memory
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   # Test model, please specify the model you want to test by --checkpoint
-  cmvn_opts=
-  $cmvn && cmvn_opts="--cmvn data/${train_set}/global_cmvn"
   # TODO, Add model average here
   mkdir -p $dir/test
   if [ ${average_checkpoint} == true ]; then
@@ -196,8 +185,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --modes $decode_modes \
       --config $dir/train.yaml \
       --data_type raw \
-      --dict $dict \
-      --bpe_model ${bpemodel}.model \
       --test_data $wave_data/$test/data.list \
       --checkpoint $decode_checkpoint \
       --beam_size 10 \

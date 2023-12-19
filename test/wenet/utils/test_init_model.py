@@ -30,5 +30,30 @@ def test_init_model():
         config['input_dim'] = input_dim
         # TODO(xcsong): fix vocab_size
         config['output_dim'] = 3000
+        if config.get('cmvn', None) == "global_cmvn":
+            config['cmvn_conf']['cmvn_file'] = "test/resources/global_cmvn"
+        if 'tokenizer' in config:
+            if config['tokenizer'] == "char":
+                config['tokenizer_conf'][
+                    'symbol_table_path'] = "test/resources/aishell2.words.txt"
+            elif config['tokenizer'] == "bpe":
+                config['tokenizer_conf']['bpe_path'] = \
+                    "test/resources/librispeech.train_960_unigram5000.bpemodel"
+                config['tokenizer_conf']['symbol_table_path'] = \
+                    "test/resources/librispeech.words.txt"
+                config['tokenizer_conf']['non_lang_syms_path'] = \
+                    "test/resources/non-linguistic-symbols.invalid"
+            elif config['tokenizer'] == "whisper":
+                config['tokenizer_conf']['is_multilingual'] = True
+                config['tokenizer_conf']['num_languages'] = 100
+            else:
+                raise NotImplementedError
+        else:
+            config['tokenizer'] = "char"
+            config['tokenizer_conf'] = {}
+            config['tokenizer_conf']['symbol_table_path'] = \
+                "test/resources/aishell2.words.txt"
+            config['tokenizer_conf']['non_lang_syms_path'] = \
+                "test/resources/non-linguistic-symbols.invalid"
         print("checking {} {}".format(c, config))
         init_model(args, config)

@@ -62,9 +62,10 @@ git clone https://github.com/wenet-e2e/wenet
 cd wenet
 pip install -r requirements.txt
 ```
-Installation of IPEX
+Upgrading of PyTorch and TorchAudio, followed by the installation of IPEX
 ``` sh
-pip install intel_extension_for_pytorch==2.0.100 -f https://developer.intel.com/ipex-whl-stable-cpu
+pip install torch==2.0.1 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cpu --force-reinstall
+pip install intel_extension_for_pytorch==2.0.100
 ```
 
 Installation of related tools: Intel® OpenMP and TCMalloc

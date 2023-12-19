@@ -28,7 +28,7 @@ def paraformer_tokenizer(request):
     configs['tokenizer_conf']['symbol_table_path'] = wenet_units
     configs['tokenizer_conf']['seg_dict_path'] = os.path.join(
         download_root, seg_dict)
-    return init_tokenizer(configs, wenet_units)
+    return init_tokenizer(configs)
 
 
 def test_tokenize(paraformer_tokenizer):

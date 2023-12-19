@@ -47,17 +47,6 @@ def add_model_args(parser):
     parser.add_argument('--tensorboard_dir',
                         default='tensorboard',
                         help='tensorboard log dir')
-    parser.add_argument('--cmvn', default=None, help='global cmvn file')
-    parser.add_argument('--symbol_table',
-                        required=True,
-                        help='model unit symbol table for training')
-    parser.add_argument(
-        "--non_lang_syms",
-        help="non-linguistic symbol file. One symbol per line.")
-    parser.add_argument('--bpe_model',
-                        default=None,
-                        type=str,
-                        help='bpe model for english part')
     parser.add_argument('--override_config',
                         action='append',
                         default=[],
@@ -78,10 +67,6 @@ def add_model_args(parser):
         type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
         help='free module names',
     )
-    parser.add_argument('--lfmmi_dir',
-                        default='',
-                        required=False,
-                        help='LF-MMI dir')
     return parser
 
 
@@ -229,9 +214,6 @@ def check_modify_and_save_config(args, configs, symbol_table):
 
     configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
-    configs['cmvn_file'] = args.cmvn
-    configs['is_json_cmvn'] = True
-    configs['lfmmi_dir'] = args.lfmmi_dir
 
     configs['train_engine'] = args.train_engine
     configs['use_amp'] = args.use_amp
@@ -474,20 +456,14 @@ def batch_forward(model, batch, scaler, info_dict):
         with torch.cuda.amp.autocast(enabled=dtype is not None,
                                      dtype=dtype,
                                      cache_enabled=False):
-            loss_dict = model(batch["feats"].to(device),
-                              batch["feats_lengths"].to(device),
-                              batch["target"].to(device),
-                              batch["target_lengths"].to(device))
+            loss_dict = model(batch, device)
     else:
         # torch_ddp
         # autocast context
         # The more details about amp can be found in
         # https://pytorch.org/docs/stable/notes/amp_examples.html
         with torch.cuda.amp.autocast(scaler is not None):
-            loss_dict = model(batch["feats"].to(device),
-                              batch["feats_lengths"].to(device),
-                              batch["target"].to(device),
-                              batch["target_lengths"].to(device))
+            loss_dict = model(batch, device)
     info_dict['loss_dict'] = loss_dict
 
     return info_dict

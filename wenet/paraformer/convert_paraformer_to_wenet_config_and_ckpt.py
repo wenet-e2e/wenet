@@ -269,13 +269,14 @@ def main():
                                     configs, seg_dict)
     configs['output_dim'] = vocab_size
     configs['model'] = 'paraformer'
-    configs['is_json_cmvn'] = True
-    configs['cmvn_file'] = json_cmvn_path
-    # configs['input_dim'] = 80
+    configs['cmvn'] = "global_cmvn"
+    configs['cmvn_conf'] = {}
+    configs['cmvn_conf']['is_json_cmvn'] = True
+    configs['cmvn_conf']['cmvn_file'] = json_cmvn_path
     fields_to_keep = [
         'model', 'encoder_conf', 'decoder_conf', 'predictor_conf', 'input_dim',
-        'output_dim', 'cmvn_file', 'is_json_cmvn', 'model_conf', 'paraformer',
-        'optim', 'optim_conf', 'scheduler', 'scheduler_conf', 'tokenizer',
+        'output_dim', 'cmvn', 'cmvn_conf', 'model_conf', 'paraformer', 'optim',
+        'optim_conf', 'scheduler', 'scheduler_conf', 'tokenizer',
         'tokenizer_conf'
     ]
     wenet_train_yaml = os.path.join(args.output_dir, "train.yaml")

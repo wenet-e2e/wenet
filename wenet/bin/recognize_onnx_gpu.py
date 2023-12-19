@@ -139,7 +139,7 @@ def main():
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
-    tokenizer = init_tokenizer(test_conf, args.dict, args.bpe_model)
+    tokenizer = init_tokenizer(configs)
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            tokenizer,

@@ -72,7 +72,6 @@ data_type=shard
 num_utts_per_shard=1000
 train_set=train
 train_config=conf/train_conformer.yaml
-cmvn=true
 average_checkpoint=true
 target_pt=80
 decode_checkpoint=$dir/$target_pt.pt
@@ -113,9 +112,6 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   dist_backend="nccl"
   # the global_cmvn file need to be calculated by combining both supervised/unsupervised datasets,
   # and it should be positioned at data/${train_set}/global_cmvn .
-  cmvn_opts=
-  $cmvn && cp data/${train_set}/global_cmvn $dir/global_cmvn
-  $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
 
   # train.py rewrite $train_config to $dir/train.yaml with model input
   # and output dimension, and $dir/train.yaml will be used for inference
@@ -133,14 +129,12 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type $data_type \
-      --symbol_table $dict \
       --train_data data/$train_set/$data_list \
       --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --ddp.dist_backend $dist_backend \
       --num_workers 1 \
-      $cmvn_opts \
       --pin_memory \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
@@ -190,7 +184,6 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       --beam_size 10 \
       --batch_size 1 \
       --penalty 0.0 \
-      --dict $dict \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
       --result_file $test_dir/text \
@@ -216,7 +209,6 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       --beam_size 10 \
       --batch_size 1 \
       --penalty 0.0 \
-      --dict $dict \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
       --result_file $dev_dir/text \
@@ -275,7 +267,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     --beam_size 10 \
     --batch_size 1 \
     --penalty 0.0 \
-    --dict $dict \
     --ctc_weight $ctc_weight \
     --reverse_weight $reverse_weight \
     --result_file data/train/${dir_split}data_sublist${job_num}/${hypo_name} \

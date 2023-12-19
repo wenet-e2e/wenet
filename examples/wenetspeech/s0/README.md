@@ -27,14 +27,12 @@
 ## U2++ conformer
 
 * Feature info: using fbank feature, with dither 1.0, with cmvn
-* Training info: lr 0.001, batch size 48, 8 gpus on A100, acc_grad 16, 50 epochs
-* Decoding info: ctc_weight 0.5, reverse_weight 0.3, average_num 10
+* Training info: lr 0.002, batch size dynamic24000, 24 gpus on 3090, acc_grad 16, 80 epochs, 4.5 days
+* Decoding info: ctc_weight 0.5, reverse_weight 0.0, average_num 10
 
 | Decoding mode - Chunk size    | Dev  | Test\_Net | Test\_Meeting |
 |:-----------------------------:|:----:|:---------:|:-------------:|
-| ctc greedy search - full      | 8.85 | 9.78      | 17.77         |
-| ctc greedy search - 16        | 9.32 | 11.02     | 18.79         |
-| ctc prefix beam search - full | 8.80 | 9.73      | 17.57         |
-| ctc prefix beam search - 16   | 9.25 | 10.96     | 18.62         |
-| attention rescoring - full    | 8.60 | 9.26      | 17.34         |
-| attention rescoring - 16      | 8.87 | 10.22     | 18.11         |
+| ctc greedy search - full      | 8.50 | 9.47      | 15.77         |
+| ctc greedy search - 16        | 9.01 | 11.14     | 16.89         |
+| attention rescoring - full    | 8.37 | 9.02      | 15.52         |
+| attention rescoring - 16      | 8.62 | 10.30     | 16.32         |

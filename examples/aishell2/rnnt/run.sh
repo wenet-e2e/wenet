@@ -37,7 +37,6 @@ dict=data/dict/lang_char.txt
 
 train_set=train
 train_config=conf/conformer_u2pp_rnnt.yaml
-cmvn=true
 dir=exp/`basename ${train_config%.*}`
 checkpoint=
 
@@ -94,10 +93,9 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     mkdir -p $(dirname $dict)
     echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
     echo "<unk> 1" >> ${dict} # <unk> must be 1
+    echo "<sos/eos> 2" >> $dict # <eos>
     tools/text2token.py -s 1 -n 1 data/${train_set}/text | cut -f 2- -d" " | tr " " "\n" \
-        | sort | uniq | grep -a -v -e '^\s*$' | awk '{print $0 " " NR+1}' >> ${dict}
-    num_token=$(cat $dict | wc -l)
-    echo "<sos/eos> $num_token" >> $dict # <eos>
+        | sort | uniq | grep -a -v -e '^\s*$' | awk '{print $0 " " NR+2}' >> ${dict}
 fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
@@ -115,9 +113,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
     # Use "nccl" if it works, otherwise use "gloo"
     dist_backend="nccl"
-    cmvn_opts=
-    $cmvn && cp data/${train_set}/global_cmvn $dir
-    $cmvn && cmvn_opts="--cmvn ${dir}/global_cmvn"
     # train.py will write $train_config to $dir/train.yaml with model input
     # and output dimension, train.yaml will be used for inference or model
     # export later
@@ -133,14 +128,12 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
               --train_engine ${train_engine} \
               --config $train_config \
               --data_type raw \
-              --symbol_table $dict \
               --train_data data/$train_set/data.list \
               --cv_data data/dev/data.list \
               ${checkpoint:+--checkpoint $checkpoint} \
               --model_dir $dir \
               --ddp.dist_backend $dist_backend \
               --num_workers 4 \
-              $cmvn_opts \
               --pin_memory \
               --deepspeed_config ${deepspeed_config} \
               --deepspeed.save_states ${deepspeed_save_states} \
@@ -168,7 +161,6 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
         --beam_size 10 \
         --batch_size 1 \
         --penalty 0.0 \
-        --dict $dict \
         --ctc_weight $rescore_ctc_weight \
         --transducer_weight $rescore_transducer_weight \
         --attn_weight $rescore_attn_weight \
