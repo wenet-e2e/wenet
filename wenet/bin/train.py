@@ -137,8 +137,8 @@ def main():
         # NOTE(xcsong): Why we need a new group? see `train_utils.py::wenet_join`
         group_join = dist.new_group(
             backend="gloo", timeout=datetime.timedelta(seconds=args.timeout))
-        executor.train(model, optimizer, scheduler, train_data_loader, writer,
-                       configs, scaler, group_join)
+        executor.train(model, optimizer, scheduler, train_data_loader,
+                       cv_data_loader, writer, configs, scaler, group_join)
         dist.destroy_process_group(group_join)
 
         dist.barrier(
@@ -146,15 +146,16 @@ def main():
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)
         cv_loss = total_loss / num_seen_utts
 
-        logging.info('Epoch {} CV info cv_loss {} rank {}'.format(
-            epoch, cv_loss, rank))
+        lr = optimizer.param_groups[0]['lr']
+        logging.info('Epoch {} CV info lr {} cv_loss {} rank {}'.format(
+            epoch, lr, cv_loss, rank))
         info_dict = {
             'epoch': epoch,
             'lr': lr,
             'cv_loss': cv_loss,
             'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-            'tag': str(epoch),
+            'tag': "epoch_{}".format(epoch),
             **configs
         }
         log_per_epoch(writer, info_dict=info_dict)

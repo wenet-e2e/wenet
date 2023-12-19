@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import copy
+import datetime
 import logging
 from contextlib import nullcontext
 
@@ -21,7 +22,8 @@ from contextlib import nullcontext
 import torch
 
 from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
-                                     update_parameter_and_lr, log_per_step)
+                                     update_parameter_and_lr, log_per_step,
+                                     save_model)
 
 
 class Executor:
@@ -29,13 +31,12 @@ class Executor:
     def __init__(self):
         self.step = 0
 
-    def train(self, model, optimizer, scheduler, data_loader, writer, configs,
-              scaler, group_join):
+    def train(self, model, optimizer, scheduler, train_data_loader,
+              cv_data_loader, writer, configs, scaler, group_join):
         ''' Train one epoch
         '''
         model.train()
         info_dict = copy.deepcopy(configs)
-        info_dict["tag"] = "TRAIN"
         logging.info('using accumulate grad, new batch size is {} times'
                      ' larger than before'.format(info_dict['accum_grad']))
         # A context manager to be used in conjunction with an instance of
@@ -47,7 +48,8 @@ class Executor:
             model_context = nullcontext
 
         with model_context():
-            for batch_idx, batch_dict in enumerate(data_loader):
+            for batch_idx, batch_dict in enumerate(train_data_loader):
+                info_dict["tag"] = "TRAIN"
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
                 if wenet_join(group_join, info_dict):
@@ -76,19 +78,35 @@ class Executor:
                 info_dict = update_parameter_and_lr(model, optimizer,
                                                     scheduler, scaler,
                                                     info_dict)
+                save_interval = info_dict.get('save_interval', 10000)
+                if self.step % save_interval == 0 and self.step != 0 \
+                        and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                    total_loss, num_seen_utts = self.cv(
+                        model, cv_data_loader, configs)
+                    info_dict.update({
+                        "tag":
+                        "step_{}".format(self.step),
+                        "cv_loss":
+                        total_loss / num_seen_utts,
+                        "save_time":
+                        datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
+                        "lr":
+                        optimizer.param_groups[0]['lr']
+                    })
+                    save_model(model, info_dict)
                 log_per_step(writer, info_dict)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
 
-    def cv(self, model, data_loader, configs):
+    def cv(self, model, cv_data_loader, configs):
         ''' Cross validation on
         '''
         model.eval()
         info_dict = copy.deepcopy(configs)
-        info_dict["tag"] = "CV"
         num_seen_utts, total_loss = 1, 0.0  # in order to avoid division by 0
         with torch.no_grad():
-            for batch_idx, batch_dict in enumerate(data_loader):
+            for batch_idx, batch_dict in enumerate(cv_data_loader):
+                info_dict["tag"] = "CV"
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
 
