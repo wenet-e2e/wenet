@@ -88,8 +88,8 @@ class ASRModel(torch.nn.Module):
         speech_lengths = batch['feats_lengths'].to(device)
         text_ctc = batch['target_ctc'].to(device)
         text_lengths_ctc = batch['target_lengths_ctc'].to(device)
-        text_decoder = batch['target_decoder'].to(device)
-        text_lengths_decoder = batch['target_lengths_decoder'].to(device)
+        text_decoder = batch['target'].to(device)
+        text_lengths_decoder = batch['target_lengths'].to(device)
 
         # 1. Encoder
         encoder_out, encoder_mask = self.encoder(speech, speech_lengths)

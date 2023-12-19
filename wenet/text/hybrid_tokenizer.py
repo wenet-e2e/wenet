@@ -20,6 +20,7 @@ from wenet.text.base_tokenizer import BaseTokenizer
 class HybridTokenizer():
 
     def __init__(self, tokenizers: Dict[str, BaseTokenizer]) -> None:
+        assert set(tokenizers.keys()) == set(["ctc", "decoder"])
         self.tokenizers = tokenizers
 
     def tokenize(self, line: str) -> Dict[str, Any]:

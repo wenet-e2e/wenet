@@ -614,7 +614,7 @@ def padding(data):
             data: Iterable[List[{key, feat, label}]]
 
         Returns:
-            Iterable[Tuple(keys, feats, labels, feats lengths, label lengths)]
+            Iterable[{keys, feats, labels, feats lengths, label lengths}]
     """
     for sample in data:
         assert isinstance(sample, list)
@@ -663,5 +663,8 @@ def padding(data):
                                           padding_value=-1)
             batch["target_{}".format(label_type)] = padding_labels
             batch["target_lengths_{}".format(label_type)] = label_lengths
+        # For the sake of code compatibility
+        batch["target"] = batch["target_decoder"]
+        batch["target_lengths"] = batch["target_lengths_decoder"]
 
         yield batch
