@@ -113,8 +113,9 @@ def main():
                })
 
     # Get executor
+    tag = configs["init_infos"].get("tag", "init")
     executor = Executor()
-    executor.step = configs["init_infos"].get('step', -1)
+    executor.step = configs["init_infos"].get('step', -1) + int("step_" in tag)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = None
@@ -122,8 +123,7 @@ def main():
         scaler = torch.cuda.amp.GradScaler()
 
     # Start training loop
-    tag = configs["init_infos"].get("tag", "init")
-    start_epoch = configs["init_infos"].get('epoch', -1) + int("epoch_" in tag)
+    start_epoch = configs["init_infos"].get('epoch', 0) + int("epoch_" in tag)
     configs.pop("init_infos", None)
     final_epoch = None
     for epoch in range(start_epoch, configs.get('max_epoch', 100)):
