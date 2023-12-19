@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import copy
-import datetime
 import deepspeed
 import json
 import logging
@@ -426,8 +425,7 @@ def wenet_join(group_join, info_dict):
         #   operations are executed. If we add a communication operation that is not
         #   managed by Deepspeed in this group, it's highly likely to cause
         #   communication chaos, resulting in hard-to-troubleshoot hangs.
-        dist.monitored_barrier(group=group_join,
-                               timeout=datetime.timedelta(seconds=30))
+        dist.monitored_barrier(group=group_join)
     except RuntimeError as e:
         logging.info("Detected uneven workload distribution: {}\n".format(e) +
                      "Break current worker to manually join all workers, " +
