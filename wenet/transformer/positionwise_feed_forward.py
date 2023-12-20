@@ -56,6 +56,21 @@ class PositionwiseFeedForward(torch.nn.Module):
 
 
 class MoEFFNLayer(torch.nn.Module):
+    """
+    Mixture of expert with Positionwise feed forward layer
+    See also figure 1 in https://arxiv.org/pdf/2305.15663.pdf
+    The output dim is same with the input dim.
+
+    Modified from https://github.com/Lightning-AI/lit-gpt/pull/823
+                  https://github.com/mistralai/mistral-src/blob/b46d6/moe_one_file_ref.py#L203-L219
+    Args:
+        n_expert: number of expert.
+        n_expert_per_token: The actual number of experts used for each frame
+        idim (int): Input dimenstion.
+        hidden_units (int): The number of hidden units.
+        dropout_rate (float): Dropout rate.
+        activation (torch.nn.Module): Activation function
+    """
 
     def __init__(
             self,
@@ -66,10 +81,6 @@ class MoEFFNLayer(torch.nn.Module):
             dropout_rate: float,
             activation: torch.nn.Module = torch.nn.ReLU(),
     ):
-        """Construct a mixture of expert which is PositionwiseFeedForward layer.
-        Modified from https://github.com/Lightning-AI/lit-gpt/pull/823
-                      https://github.com/mistralai/mistral-src/blob/b46d6/moe_one_file_ref.py#L203-L219
-        """
         super(MoEFFNLayer, self).__init__()
         self.gate = torch.nn.Linear(idim, n_expert, bias=False)
         self.experts = torch.nn.ModuleList(
