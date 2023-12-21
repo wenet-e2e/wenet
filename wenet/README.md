@@ -14,7 +14,8 @@ Here is a brief introduction of each module(directory).
 * `transducer`: transducer implementation
 * `squeezeformer`: squeezeformer implementation, please refer [paper](https://arxiv.org/pdf/2206.00888.pdf)
 * `efficient_conformer`: efficient conformer implementation, please refer [paper](https://arxiv.org/pdf/2109.01163.pdf)
-* `cif`: Continuous Integrate-and-Fire implemented, please refer [paper](https://arxiv.org/pdf/1905.11235.pdf)
+* `paraformer`: paraformer implementation, please refer [paper](https://arxiv.org/pdf/1905.11235.pdf)
+   * `paraformer/cif.py`: Continuous Integrate-and-Fire implemented, please refer [paper](https://arxiv.org/pdf/1905.11235.pdf)
 * `branchformer`: branchformer implementation, please refer [paper](https://arxiv.org/abs/2207.02971)
 * `whisper`: whisper implementation, please refer [paper](https://arxiv.org/abs/2212.04356)
 * `ssl`: Self-supervised speech model implementation. e.g. wav2vec2, bestrq, w2vbert.
