@@ -16,29 +16,27 @@ from __future__ import print_function
 
 import argparse
 import copy
+import itertools
 import logging
 import os
 
 import torch
 import yaml
-from torch.utils.data import DataLoader
 
-from wenet.dataset.dataset import Dataset
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.context_graph import ContextGraph
 from wenet.utils.ctc_utils import get_blank_id
+from wenet.utils.train_utils import add_dataset_args, add_ddp_args, init_dataset_and_dataloader, init_distributed, wrap_cuda_model
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
+    add_dataset_args(parser, train=False)
+    add_ddp_args(parser, train=False)
+
     parser.add_argument('--config', required=True, help='config file')
-    parser.add_argument('--test_data', required=True, help='test data file')
-    parser.add_argument('--data_type',
-                        default='raw',
-                        choices=['raw', 'shard'],
-                        help='train and cv data type')
     parser.add_argument('--gpu',
                         type=int,
                         default=-1,
@@ -195,23 +193,26 @@ def main():
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
+    # Init tokenizer
     tokenizer = init_tokenizer(configs)
-    test_dataset = Dataset(args.data_type,
-                           args.test_data,
-                           tokenizer,
-                           test_conf,
-                           partition=False)
-
-    test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
+    # Init env for ddp distributed
+    if args.gpu >= 0:
+        args.test_engine = True
+        world_size, _, rank = init_distributed(args)
+    else:
+        rank = 0
 
     # Init asr model from configs
     args.jit = False
     model, configs = init_model(args, configs)
-
-    use_cuda = args.gpu >= 0 and torch.cuda.is_available()
-    device = torch.device('cuda' if use_cuda else 'cpu')
-    model = model.to(device)
+    model, device = wrap_cuda_model(args, model)
     model.eval()
+
+    # Get test dataset & dataloader
+    test_dataset, test_data_loader = init_dataset_and_dataloader(args,
+                                                                 test_conf,
+                                                                 tokenizer,
+                                                                 train=False)
 
     context_graph = None
     if 'decoding-graph' in args.context_bias_mode:
@@ -226,13 +227,16 @@ def main():
     # TODO(Dinghao Zhou): Support RNN-T related decoding
     # TODO(Lv Xiang): Support k2 related decoding
     # TODO(Kaixun Huang): Support context graph
-    files = {}
-    for mode in args.modes:
-        dir_name = os.path.join(args.result_dir, mode)
-        os.makedirs(dir_name, exist_ok=True)
-        file_name = os.path.join(dir_name, 'text')
-        files[mode] = open(file_name, 'w')
-    max_format_len = max([len(mode) for mode in args.modes])
+    if rank == 0:
+        files = {}
+        for mode in args.modes:
+            dir_name = os.path.join(args.result_dir, mode)
+            os.makedirs(dir_name, exist_ok=True)
+            file_name = os.path.join(dir_name, 'text')
+            files[mode] = open(file_name, 'w')
+            max_format_len = max([len(mode) for mode in args.modes])
+    if args.gpu >= 0:
+        torch.distributed.barrier()
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_data_loader):
             keys = batch["keys"]
@@ -252,15 +256,38 @@ def main():
                 reverse_weight=args.reverse_weight,
                 context_graph=context_graph,
                 blank_id=blank_id)
+
+            if args.gpu >= 0:
+                gather_results = [None for _ in range(world_size)]
+                gather_keys = [None for _ in range(world_size)]
+                torch.distributed.all_gather_object(gather_results, results)
+                torch.distributed.all_gather_object(gather_keys, keys)
+
+                keys = [
+                    _ for _ in itertools.chain.from_iterable(gather_results)
+                ]
+                results = gather_results[0]
+                for result in gather_results[1:]:
+                    for key in result.keys():
+                        results[key].extend(result[key])
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     tokens = hyps[i].tokens
-                    line = '{} {}'.format(key, tokenizer.detokenize(tokens)[0])
+                    line = '{} {} by rank {}'.format(
+                        key,
+                        tokenizer.detokenize(tokens)[0],
+                        rank,
+                    )
                     logging.info('{} {}'.format(mode.ljust(max_format_len),
                                                 line))
-                    files[mode].write(line + '\n')
-    for mode, f in files.items():
-        f.close()
+                    if rank == 0:
+                        files[mode].write(line + '\n')
+
+            torch.distributed.barrier()
+
+    if rank == 0:
+        for mode, f in files.items():
+            f.close()
 
 
 if __name__ == '__main__':

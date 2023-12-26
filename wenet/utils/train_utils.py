@@ -81,13 +81,20 @@ def add_trace_args(parser):
     return parser
 
 
-def add_dataset_args(parser):
+def add_dataset_args(parser, train=True):
     parser.add_argument('--data_type',
                         default='raw',
                         choices=['raw', 'shard'],
                         help='train and cv data type')
-    parser.add_argument('--train_data', required=True, help='train data file')
-    parser.add_argument('--cv_data', required=True, help='cv data file')
+    if train:
+        parser.add_argument('--train_data',
+                            required=True,
+                            help='train data file')
+        parser.add_argument('--cv_data', required=True, help='cv data file')
+    else:
+        parser.add_argument('--test_data',
+                            required=True,
+                            help='test data file')
     parser.add_argument('--num_workers',
                         default=0,
                         type=int,
@@ -103,20 +110,21 @@ def add_dataset_args(parser):
     return parser
 
 
-def add_ddp_args(parser):
+def add_ddp_args(parser, train=True):
     parser.add_argument('--ddp.dist_backend',
                         dest='dist_backend',
                         default='nccl',
                         choices=['nccl', 'gloo'],
                         help='distributed backend')
-    parser.add_argument('--use_amp',
-                        action='store_true',
-                        default=False,
-                        help='Use automatic mixed precision training')
-    parser.add_argument('--fp16_grad_sync',
-                        action='store_true',
-                        default=False,
-                        help='Use fp16 gradient sync for ddp')
+    if train:
+        parser.add_argument('--use_amp',
+                            action='store_true',
+                            default=False,
+                            help='Use automatic mixed precision training')
+        parser.add_argument('--fp16_grad_sync',
+                            action='store_true',
+                            default=False,
+                            help='Use fp16 gradient sync for ddp')
     return parser
 
 
@@ -146,7 +154,7 @@ def init_distributed(args):
     rank = int(os.environ.get('RANK', 0))
     logging.info('training on multiple gpus, this gpu {}'.format(local_rank) +
                  ', rank {}, world_size {}'.format(rank, world_size))
-    if args.train_engine == "torch_ddp":
+    if hasattr(args, 'test_engine') or args.train_engine == "torch_ddp":
         torch.cuda.set_device(local_rank)
         dist.init_process_group(args.dist_backend)
     elif args.train_engine == "deepspeed":
@@ -233,47 +241,55 @@ def check_modify_and_save_config(args, configs, symbol_table):
     return configs
 
 
-def init_dataset_and_dataloader(args, configs, tokenizer):
-    train_conf = configs['dataset_conf']
-    cv_conf = copy.deepcopy(train_conf)
-    cv_conf['speed_perturb'] = False
-    cv_conf['spec_aug'] = False
-    cv_conf['spec_sub'] = False
-    cv_conf['spec_trim'] = False
-    cv_conf['shuffle'] = False
+def init_dataset_and_dataloader(args, configs, tokenizer, train=True):
+
+    def _get_dataloader(dataset):
+        # NOTE(xcsong): Why we prefer persistent_workers=True ?
+        #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110
+        return DataLoader(dataset,
+                          batch_size=None,
+                          pin_memory=args.pin_memory,
+                          num_workers=args.num_workers,
+                          persistent_workers=True,
+                          prefetch_factor=args.prefetch)
 
     configs['vocab_size'] = tokenizer.vocab_size()
-    train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
-                            train_conf, True)
-    cv_dataset = Dataset(args.data_type,
-                         args.cv_data,
-                         tokenizer,
-                         cv_conf,
-                         partition=False)
+    if train:
+        train_conf = configs['dataset_conf']
+        cv_conf = copy.deepcopy(train_conf)
+        cv_conf['speed_perturb'] = False
+        cv_conf['spec_aug'] = False
+        cv_conf['spec_sub'] = False
+        cv_conf['spec_trim'] = False
+        cv_conf['shuffle'] = False
 
-    # NOTE(xcsong): Why we prefer persistent_workers=True ?
-    #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110
-    train_data_loader = DataLoader(train_dataset,
-                                   batch_size=None,
-                                   pin_memory=args.pin_memory,
-                                   num_workers=args.num_workers,
-                                   persistent_workers=True,
-                                   prefetch_factor=args.prefetch)
-    cv_data_loader = DataLoader(cv_dataset,
-                                batch_size=None,
-                                pin_memory=args.pin_memory,
-                                num_workers=args.num_workers,
-                                persistent_workers=True,
-                                prefetch_factor=args.prefetch)
-    return train_dataset, cv_dataset, train_data_loader, cv_data_loader
+        train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
+                                train_conf, True)
+        cv_dataset = Dataset(args.data_type,
+                             args.cv_data,
+                             tokenizer,
+                             cv_conf,
+                             partition=False)
+
+        train_data_loader = _get_dataloader(dataset=train_dataset)
+        cv_data_loader = _get_dataloader(dataset=cv_dataset)
+        return train_dataset, cv_dataset, train_data_loader, cv_data_loader
+    else:
+        test_dataset = Dataset(args.data_type,
+                               args.test_data,
+                               tokenizer,
+                               conf=configs,
+                               partition=True)
+        test_data_loader = _get_dataloader(test_dataset)
+        return test_dataset, test_data_loader
 
 
 def wrap_cuda_model(args, model):
     local_world_size = int(os.environ.get('LOCAL_WORLD_SIZE', 1))
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     grad_ckpt = getattr(model.encoder, 'gradient_checkpointing', False)
-    # TODO(xcsong): could one GPU use ddp? and int(os.environ.get('WORLD_SIZE', 1)) > 1
-    if args.train_engine == "torch_ddp":  # native pytorch ddp
+    if hasattr(args, 'test_engine'
+               ) or args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
