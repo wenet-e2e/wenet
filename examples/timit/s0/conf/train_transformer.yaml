@@ -27,6 +27,7 @@ tokenizer: char
 tokenizer_conf:
   symbol_table_path: 'data/dict/phn_units.txt'
   split_with_space: true
+  connect_symbol: ' '
   bpe_path: null
   non_lang_syms_path: null
   is_multilingual: false
