@@ -28,7 +28,12 @@ from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.context_graph import ContextGraph
 from wenet.utils.ctc_utils import get_blank_id
-from wenet.utils.train_utils import add_dataset_args, add_ddp_args, init_dataset_and_dataloader, init_distributed, wrap_cuda_model
+from wenet.utils.train_utils import (
+    add_dataset_args,
+    add_ddp_args,
+    init_dataset_and_dataloader,
+    init_test_distributed,
+)
 
 
 def get_args():
@@ -41,6 +46,10 @@ def get_args():
                         type=int,
                         default=-1,
                         help='gpu id for this rank, -1 for cpu')
+    parser.add_argument('--test_engine',
+                        default='torch_single',
+                        choices=['torch_ddp', 'torch_single'],
+                        help='whether to use distributed decoding style')
     parser.add_argument('--checkpoint', required=True, help='checkpoint model')
     parser.add_argument('--beam_size',
                         type=int,
@@ -195,17 +204,22 @@ def main():
 
     # Init tokenizer
     tokenizer = init_tokenizer(configs)
-    # Init env for ddp distributed
-    if args.gpu >= 0:
-        args.test_engine = True
-        world_size, _, rank = init_distributed(args)
-    else:
-        rank = 0
 
     # Init asr model from configs
     args.jit = False
     model, configs = init_model(args, configs)
-    model, device = wrap_cuda_model(args, model)
+
+    use_cuda = args.gpu >= 0 and torch.cuda.is_available()
+    use_distributed_env = (args.test_engine == 'torch_ddp' and use_cuda)
+    # Init env for ddp distributed
+    if use_distributed_env:
+        world_size, _, rank = init_test_distributed(args)
+        device = torch.device('cuda')
+        model = model.cuda()
+    else:
+        rank = 0
+        device = torch.device('cuda' if use_cuda else 'cpu')
+        model = model.to(device)
     model.eval()
 
     # Get test dataset & dataloader
@@ -234,8 +248,10 @@ def main():
             os.makedirs(dir_name, exist_ok=True)
             file_name = os.path.join(dir_name, 'text')
             files[mode] = open(file_name, 'w')
-            max_format_len = max([len(mode) for mode in args.modes])
-    if args.gpu >= 0:
+    for mode in args.modes:
+        max_format_len = max([len(mode) for mode in args.modes])
+
+    if use_distributed_env:
         torch.distributed.barrier()
     with torch.no_grad():
         for batch_idx, batch in enumerate(test_data_loader):
@@ -257,15 +273,13 @@ def main():
                 context_graph=context_graph,
                 blank_id=blank_id)
 
-            if args.gpu >= 0:
+            if use_distributed_env:
                 gather_results = [None for _ in range(world_size)]
                 gather_keys = [None for _ in range(world_size)]
                 torch.distributed.all_gather_object(gather_results, results)
                 torch.distributed.all_gather_object(gather_keys, keys)
 
-                keys = [
-                    _ for _ in itertools.chain.from_iterable(gather_results)
-                ]
+                keys = list(itertools.chain.from_iterable(gather_keys))
                 results = gather_results[0]
                 for result in gather_results[1:]:
                     for key in result.keys():
@@ -273,21 +287,22 @@ def main():
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     tokens = hyps[i].tokens
-                    line = '{} {} by rank {}'.format(
+                    line = '{} {}'.format(
                         key,
                         tokenizer.detokenize(tokens)[0],
-                        rank,
                     )
                     logging.info('{} {}'.format(mode.ljust(max_format_len),
                                                 line))
                     if rank == 0:
                         files[mode].write(line + '\n')
-
-            torch.distributed.barrier()
+            if use_distributed_env:
+                torch.distributed.barrier()
 
     if rank == 0:
         for mode, f in files.items():
             f.close()
+    if use_distributed_env:
+        torch.distributed.destroy_process_group()
 
 
 if __name__ == '__main__':

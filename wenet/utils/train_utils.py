@@ -154,13 +154,26 @@ def init_distributed(args):
     rank = int(os.environ.get('RANK', 0))
     logging.info('training on multiple gpus, this gpu {}'.format(local_rank) +
                  ', rank {}, world_size {}'.format(rank, world_size))
-    if hasattr(args, 'test_engine') or args.train_engine == "torch_ddp":
+    if args.train_engine == "torch_ddp":
         torch.cuda.set_device(local_rank)
         dist.init_process_group(args.dist_backend)
     elif args.train_engine == "deepspeed":
         deepspeed.init_distributed(dist_backend=args.dist_backend)
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
+    return world_size, local_rank, rank
+
+
+def init_test_distributed(args):
+    world_size = int(os.environ.get('WORLD_SIZE', 1))
+    local_rank = int(os.environ.get('LOCAL_RANK', 0))
+    rank = int(os.environ.get('RANK', 0))
+    logging.info('test on multiple gpus, this gpu {}'.format(local_rank) +
+                 ', rank {}, world_size {}'.format(rank, world_size))
+    assert hasattr(args, 'test_engine')
+    assert args.test_engine == 'torch_ddp'
+    torch.cuda.set_device(local_rank)
+    dist.init_process_group(args.dist_backend)
     return world_size, local_rank, rank
 
 
@@ -275,11 +288,12 @@ def init_dataset_and_dataloader(args, configs, tokenizer, train=True):
         cv_data_loader = _get_dataloader(dataset=cv_dataset)
         return train_dataset, cv_dataset, train_data_loader, cv_data_loader
     else:
-        test_dataset = Dataset(args.data_type,
-                               args.test_data,
-                               tokenizer,
-                               conf=configs,
-                               partition=True)
+        test_dataset = Dataset(
+            args.data_type,
+            args.test_data,
+            tokenizer,
+            conf=configs,
+            partition=True if args.test_engine != 'torch_ddp' else False)
         test_data_loader = _get_dataloader(test_dataset)
         return test_dataset, test_data_loader
 
@@ -295,7 +309,7 @@ def wrap_cuda_model(args, model):
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=not grad_ckpt)
         device = torch.device("cuda")
-        if args.fp16_grad_sync:
+        if hasattr(args, 'fp16_grad_sync') and args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (
                 default as comm_hooks, )
             model.register_comm_hook(state=None,
