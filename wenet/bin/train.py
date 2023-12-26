@@ -76,7 +76,7 @@ def main():
     tokenizer = init_tokenizer(configs)
 
     # Init env for ddp OR deepspeed
-    world_size, local_rank, rank = init_distributed(args)
+    _, _, rank = init_distributed(args)
 
     # Get dataset & dataloader
     train_dataset, cv_dataset, train_data_loader, cv_data_loader = \
