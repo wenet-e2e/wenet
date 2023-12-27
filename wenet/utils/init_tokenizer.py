@@ -34,7 +34,9 @@ def init_tokenizer(configs) -> BaseTokenizer:
             configs['tokenizer_conf']['symbol_table_path'],
             configs['tokenizer_conf']['non_lang_syms_path'],
             split_with_space=configs['tokenizer_conf'].get(
-                'split_with_space', False))
+                'split_with_space', False),
+            connect_symbol=configs['tokenizer_conf'].get(
+                'connect_symbol', ''))
     elif tokenizer_type == "bpe":
         tokenizer = BpeTokenizer(
             configs['tokenizer_conf']['bpe_path'],
