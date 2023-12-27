@@ -21,14 +21,7 @@ Usage:
 num_nodes=2 python3 tools/ssh_launcher.py -n ${num_nodes} -H hostfile '
 NCCL_SOCKET_IFNAME=eth0 bash run.sh \
   --stage 4 --stop_stage 4 \
-  --data_type shard --train_set train \
-  --train_engine ${engine} \
-  --dir ${dir} \
-  --tensorboard_dir ${tensorboard_dir} \
-  --job_id 2023 \
-  --train_config ${train_config} \
   --HOST_NODE_ADDR ${HOST_NODE_ADDR}:26555 \
-  ${checkpoint:+--checkpoint $checkpoint} \
   --num_nodes ${num_node}
 '
 ```
@@ -45,7 +38,8 @@ IP2
 ```
 
 NOTE:
-Ensure SSH passwordless login is enabled between different machines.
+1. Ensure SSH passwordless login is enabled between different machines.
+2. HOST_NODE_ADDR is automatically parsed in function `submit()` and passed to ENV
 
 """
 
