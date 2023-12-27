@@ -293,7 +293,7 @@ def init_dataset_and_dataloader(args, configs, tokenizer, train=True):
             args.test_data,
             tokenizer,
             conf=configs,
-            partition=True if args.test_engine != 'torch_ddp' else False)
+            partition=True if args.test_engine == 'torch_ddp' else False)
         test_data_loader = _get_dataloader(test_dataset)
         return test_dataset, test_data_loader
 
@@ -302,8 +302,7 @@ def wrap_cuda_model(args, model):
     local_world_size = int(os.environ.get('LOCAL_WORLD_SIZE', 1))
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     grad_ckpt = getattr(model.encoder, 'gradient_checkpointing', False)
-    if hasattr(args, 'test_engine'
-               ) or args.train_engine == "torch_ddp":  # native pytorch ddp
+    if args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
