@@ -283,7 +283,8 @@ def compute_fbank(data,
                           dither=dither,
                           energy_floor=0.0,
                           sample_frequency=sample_rate)
-        yield dict(key=sample['key'], label=sample['label'], feat=mat)
+        sample['feat'] = mat
+        yield sample
 
 
 def compute_mfcc(data,
@@ -320,7 +321,8 @@ def compute_mfcc(data,
                          high_freq=high_freq,
                          low_freq=low_freq,
                          sample_frequency=sample_rate)
-        yield dict(key=sample['key'], label=sample['label'], feat=mat)
+        sample['feat'] = mat
+        yield sample
 
 
 def compute_log_mel_spectrogram(data,
@@ -365,9 +367,8 @@ def compute_log_mel_spectrogram(data,
         log_spec = torch.clamp(mel_spec, min=1e-10).log10()
         log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
         log_spec = (log_spec + 4.0) / 4.0
-        yield dict(key=sample['key'],
-                   label=sample['label'],
-                   feat=log_spec.transpose(0, 1))
+        sample['feat'] = log_spec.transpose(0, 1)
+        yield sample
 
 
 def tokenize(data, tokenizer: BaseTokenizer):
@@ -612,8 +613,11 @@ def padding(data):
         sorted_labels = [
             torch.tensor(sample[i]['label'], dtype=torch.int64) for i in order
         ]
+        sorted_wavs = [sample[i]['wav'].squeeze(0) for i in order]
         label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
                                      dtype=torch.int32)
+        wav_lengths = torch.tensor([x.size(0) for x in sorted_wavs],
+                                   dtype=torch.int32)
 
         padded_feats = pad_sequence(sorted_feats,
                                     batch_first=True,
@@ -621,11 +625,16 @@ def padding(data):
         padding_labels = pad_sequence(sorted_labels,
                                       batch_first=True,
                                       padding_value=-1)
+        padded_wavs = pad_sequence(sorted_wavs,
+                                   batch_first=True,
+                                   padding_value=0)
 
         yield {
             "keys": sorted_keys,
             "feats": padded_feats,
             "target": padding_labels,
             "feats_lengths": feats_lengths,
-            "target_lengths": label_lengths
+            "target_lengths": label_lengths,
+            "pcm": padded_wavs,
+            "pcm_length": wav_lengths,
         }
