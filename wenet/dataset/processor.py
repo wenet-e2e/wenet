@@ -193,10 +193,9 @@ def filter(data,
             continue
         if num_frames > max_length:
             continue
-        key, value = next(iter(sample['label'].items()))
-        if isinstance(value, list):  # HybridTokenizer
+        if isinstance(sample['label'], dict):  # HybridTokenizer
             label_len = len(sample['label']['ctc'])
-        elif isinstance(value, int):  # BaseTokenizer
+        elif isinstance(sample['label'], list):  # BaseTokenizer
             label_len = len(sample['label'])
         else:
             raise NotImplementedError()
@@ -641,10 +640,9 @@ def padding(data):
         batch["pcm"] = padded_wavs
         batch["pcm_length"] = wav_lengths
 
-        key, value = next(iter(sample[0]['label'].items()))
-        if isinstance(value, list):  # HybridTokenizer
+        if isinstance(sample[0]['label'], dict):  # HybridTokenizer
             tokenizer_type = "hybrid"
-        elif isinstance(value, int):  # BaseTokenizer
+        elif isinstance(sample[0]['label'], list):  # BaseTokenizer
             tokenizer_type = "base"
         else:
             raise NotImplementedError()
