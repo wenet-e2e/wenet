@@ -23,6 +23,7 @@ stop_stage=7
 # see https://pytorch.org/docs/stable/elastic/run.html
 HOST_NODE_ADDR="localhost:0"
 num_nodes=1
+job_id=2023
 
 # data
 data_url=www.openslr.org/resources/12
@@ -148,6 +149,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   # and output dimension, train.yaml will be used for inference or model
   # export later
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
+          --rdzv_id=$job_id --rdzv_backend="c10d" \
     wenet/bin/train.py \
       --config $train_config \
       --data_type raw \
@@ -155,7 +157,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --cv_data $wave_data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
-      --ddp.rank $i \
       --ddp.dist_backend $dist_backend \
       --num_workers 4 \
       --pin_memory
