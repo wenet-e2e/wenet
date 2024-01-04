@@ -190,11 +190,15 @@ def get_args():
     return args
 
 
-def _download_fn(output_dir, name, renmae: Optional[str] = None):
+def _download_fn(output_dir,
+                 name,
+                 renmae: Optional[str] = None,
+                 version: str = 'master'):
     url = "https://www.modelscope.cn/api/v1/"\
         "models/damo/"\
-        "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
-        "/repo?Revision=v1.0.4&FilePath=" + name
+        "speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
+        "/repo?Revision={}&FilePath=".format(version) + name
+    # "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
     if renmae is None:
         output_file = os.path.join(output_dir, name)
     else:
@@ -232,7 +236,7 @@ def may_get_assets_and_refine_args(args):
         config_name = 'config.yaml'
         args.paraformer_config = os.path.join(assets_dir, config_name)
         if not os.path.exists(args.paraformer_config):
-            _download_fn(assets_dir, config_name)
+            _download_fn(assets_dir, config_name, version='v1.2.4')
     if args.paraformer_cmvn is None:
         cmvn_name = 'am.mvn'
         args.paraformer_cmvn = os.path.join(assets_dir, cmvn_name)
