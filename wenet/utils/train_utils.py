@@ -271,7 +271,10 @@ def init_dataset_and_dataloader(args, configs, tokenizer):
 def wrap_cuda_model(args, model):
     local_world_size = int(os.environ.get('LOCAL_WORLD_SIZE', 1))
     world_size = int(os.environ.get('WORLD_SIZE', 1))
-    grad_ckpt = getattr(model.encoder, 'gradient_checkpointing', False)
+    if hasattr(model, 'encoder'):
+        grad_ckpt = getattr(model.encoder, 'gradient_checkpointing', False)
+    else:
+        grad_ckpt = False
     # TODO(xcsong): could one GPU use ddp? and int(os.environ.get('WORLD_SIZE', 1)) > 1
     if args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
@@ -425,7 +428,8 @@ def wenet_join(group_join, info_dict):
         #   operations are executed. If we add a communication operation that is not
         #   managed by Deepspeed in this group, it's highly likely to cause
         #   communication chaos, resulting in hard-to-troubleshoot hangs.
-        dist.monitored_barrier(group=group_join, timeout=group_join.options._timeout)
+        dist.monitored_barrier(group=group_join,
+                               timeout=group_join.options._timeout)
     except RuntimeError as e:
         logging.info("Detected uneven workload distribution: {}\n".format(e) +
                      "Break current worker to manually join all workers, " +
