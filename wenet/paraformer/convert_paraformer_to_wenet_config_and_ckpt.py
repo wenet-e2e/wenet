@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 import shutil
 import urllib.request
-from torchaudio.compliance.kaldi import torch
+import torch
 from tqdm import tqdm
 from typing import Dict, List, Optional, Tuple
 
