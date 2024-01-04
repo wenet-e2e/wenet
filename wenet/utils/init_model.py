@@ -37,6 +37,8 @@ from wenet.whisper.whisper import Whisper
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 from wenet.tts.vits.models import VitsModel
+from wenet.tts.megabyte import MegaByte
+from wenet.tts.valle import VallE
 
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
@@ -120,6 +122,10 @@ def init_model(args, configs):
 
     if model_type == 'vits':
         model = VitsModel(vocab_size, input_dim, **configs['model_conf'])
+    elif model_type == 'megabyte':
+        model = MegaByte(vocab_size, **configs['model_conf'])
+    elif model_type == 'valle':
+        model = VallE(vocab_size, **configs['model_conf'])
     elif model_type == "transducer":
         predictor_type = configs.get('predictor', 'rnn')
         joint_type = configs.get('joint', 'transducer_joint')
