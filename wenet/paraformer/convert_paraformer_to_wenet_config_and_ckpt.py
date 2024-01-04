@@ -7,13 +7,11 @@ import os
 from pathlib import Path
 import shutil
 import urllib.request
+from torchaudio.compliance.kaldi import torch
 from tqdm import tqdm
 from typing import Dict, List, Optional, Tuple
 
 import yaml
-
-from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.init_model import init_model
 
 
 def _load_paraformer_cmvn(cmvn_file) -> Tuple[List, List]:
@@ -163,10 +161,25 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     return configs
 
 
-def convert_to_wenet_state_dict(args, configs, wenet_model_path):
-    args.checkpoint = args.paraformer_model
-    model, _ = init_model(args, configs)
-    save_checkpoint(model, wenet_model_path)
+def convert_to_wenet_state_dict(args, wenet_model_path):
+    wenet_state_dict = {}
+    checkpoint = torch.load(args.paraformer_model, map_location='cpu')
+    for name in checkpoint.keys():
+        wenet_name = name
+        if wenet_name.startswith('predictor.cif'):
+            wenet_name = wenet_name.replace('predictor.cif',
+                                            'predictor.predictor.cif')
+        elif wenet_name.startswith('predictor.upsample'):
+            wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
+        elif wenet_name.startswith('predictor.blstm'):
+            wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
+        elif wenet_name.startswith('predictor.cif_output2'):
+            wenet_name = wenet_name.replace('predictor.cif_output2.',
+                                            'predictor.tp_output.')
+
+        wenet_state_dict[wenet_name] = checkpoint[name]
+
+    torch.save(wenet_state_dict, wenet_model_path)
 
 
 def get_args():
@@ -285,11 +298,10 @@ def main():
         'tokenizer_conf'
     ]
     wenet_train_yaml = os.path.join(args.output_dir, "train.yaml")
-    wenet_configs = convert_to_wenet_yaml(configs, wenet_train_yaml,
-                                          fields_to_keep)
+    convert_to_wenet_yaml(configs, wenet_train_yaml, fields_to_keep)
 
     wenet_model_path = os.path.join(args.output_dir, "wenet_paraformer.pt")
-    convert_to_wenet_state_dict(args, wenet_configs, wenet_model_path)
+    convert_to_wenet_state_dict(args, wenet_model_path)
 
     print("Please check {} {} {} {} {} in {}".format(json_cmvn_path,
                                                      wenet_train_yaml,

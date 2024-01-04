@@ -52,13 +52,15 @@ class Cif(nn.Module):
         self.tail_threshold = tail_threshold
         self.residual = residual
 
-    def forward(self,
-                hidden,
-                target_label: Optional[torch.Tensor] = None,
-                mask: torch.Tensor = torch.tensor(0),
-                ignore_id: int = -1,
-                mask_chunk_predictor: Optional[torch.Tensor] = None,
-                target_label_length: Optional[torch.Tensor] = None):
+    def forward(
+        self,
+        hidden,
+        target_label: Optional[torch.Tensor] = None,
+        mask: torch.Tensor = torch.tensor(0),
+        ignore_id: int = -1,
+        mask_chunk_predictor: Optional[torch.Tensor] = None,
+        target_label_length: Optional[torch.Tensor] = None
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         h = hidden
         context = h.transpose(1, 2)
         queries = self.pad(context)

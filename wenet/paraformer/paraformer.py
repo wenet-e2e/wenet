@@ -33,7 +33,7 @@ from wenet.utils.common import add_sos_eos
 from wenet.utils.mask import make_non_pad_mask
 
 
-class Predictor(Cif):
+class Predictor(torch.nn.Module):
 
     def __init__(
         self,
@@ -52,25 +52,25 @@ class Predictor(Cif):
         upsample_times=3,
         **kwargs,
     ):
-        super().__init__(idim, l_order, r_order, threshold, dropout,
-                         smooth_factor, noise_threshold, tail_threshold,
-                         residual, cnn_groups)
-        self.smooth_factor = smooth_factor2
+        super().__init__()
+        self.predictor = Cif(idim, l_order, r_order, threshold, dropout,
+                             smooth_factor, noise_threshold, tail_threshold,
+                             residual, cnn_groups)
+        self.smooth_factor2 = smooth_factor2
         self.noise_threshold2 = noise_threshold
         self.upsample_times = upsample_times
         self.noise_threshold2 = noise_threshold2
         # accurate timestamp branch
-        self.upsample_cnn = torch.nn.ConvTranspose1d(idim, idim,
-                                                     self.upsample_times,
-                                                     self.upsample_times)
-        self.blstm = torch.nn.LSTM(idim,
-                                   idim,
-                                   1,
-                                   bias=True,
-                                   batch_first=True,
-                                   dropout=0.0,
-                                   bidirectional=True)
-        self.tp_cif = torch.nn.Linear(idim * 2, 1)
+        self.tp_upsample_cnn = torch.nn.ConvTranspose1d(
+            idim, idim, self.upsample_times, self.upsample_times)
+        self.tp_blstm = torch.nn.LSTM(idim,
+                                      idim,
+                                      1,
+                                      bias=True,
+                                      batch_first=True,
+                                      dropout=0.0,
+                                      bidirectional=True)
+        self.tp_output = torch.nn.Linear(idim * 2, 1)
 
     def forward(self,
                 hidden,
@@ -80,17 +80,17 @@ class Predictor(Cif):
                 mask_chunk_predictor: Optional[torch.Tensor] = None,
                 target_label_length: Optional[torch.Tensor] = None):
 
-        acoustic_embeds, token_num, alphas, cif_peak = super().forward(
+        acoustic_embeds, token_num, alphas, cif_peak = self.predictor(
             hidden, target_label, mask, ignore_id, mask_chunk_predictor,
             target_label_length)
 
-        output, (_, _) = self.blstm(
-            self.upsample_cnn(hidden.transpose(1, 2)).transpose(1, 2))
-        alpha = self.tp_cif(output)
-        alpha = torch.nn.functional.relu(alphas * self.smooth_factor -
-                                         self.noise_threshold)
+        output, (_, _) = self.tp_blstm(
+            self.tp_upsample_cnn(hidden.transpose(1, 2)).transpose(1, 2))
+        alpha = self.tp_output(output)
+        alpha = torch.nn.functional.relu(alpha * self.smooth_factor2 -
+                                         self.noise_threshold2)
         mask = mask.repeat(1, self.upsample_times,
-                           1).transpose(-1, -2).reshape(alphas2.shape[0], -1)
+                           1).transpose(-1, -2).reshape(alpha.shape[0], -1)
         mask = mask.unsqueeze(-1)
         alpha = alpha * mask
         alpha = alpha.squeeze(-1)
@@ -210,7 +210,7 @@ class Paraformer(torch.nn.Module):
         )
         loss_quantity = loss_quantity / ys_pad_lens.sum().to(token_num.dtype)
         loss_quantity_tp = torch.nn.functional.l1_loss(
-            tp_token_num, ys_pad_len.to(token_num.dtype),
+            tp_token_num, ys_pad_lens.to(token_num.dtype),
             reduction='sum') / ys_pad_lens.sum().to(token_num.dtype)
 
         # TODO(Mddc): thu acc
@@ -218,7 +218,7 @@ class Paraformer(torch.nn.Module):
         loss = loss_decoder
         if loss_ctc is not None:
             loss = loss + self.ctc_weight * loss_ctc
-        loss = loss + loss_quantity
+        loss = loss + loss_quantity + loss_quantity_tp
         return {
             "loss": loss,
             "loss_ctc": loss_ctc,
