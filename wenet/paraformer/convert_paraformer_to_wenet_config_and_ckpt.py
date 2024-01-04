@@ -107,7 +107,8 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['lfr_conf'] = {'lfr_m': 7, 'lfr_n': 6}
 
     configs['input_dim'] = configs['lfr_conf']['lfr_m'] * 80
-    configs['predictor'] = 'cif_predictor'
+    # configs['predictor'] = 'cif_predictor'
+    configs['predictor'] = 'paraformer_predictor'
     configs['predictor_conf'] = configs.pop('predictor_conf')
     configs['predictor_conf']['cnn_groups'] = 1
     configs['predictor_conf']['residual'] = False

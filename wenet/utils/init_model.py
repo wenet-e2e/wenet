@@ -17,7 +17,7 @@ import torch
 from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
-from wenet.paraformer.paraformer import Paraformer
+from wenet.paraformer.paraformer import Paraformer, Predictor
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -64,6 +64,7 @@ WENET_PREDICTOR_CLASSES = {
     "embedding": EmbeddingPredictor,
     "conv": ConvPredictor,
     "cif_predictor": Cif,
+    "paraformer_predictor": Predictor,
 }
 
 WENET_JOINT_CLASSES = {
