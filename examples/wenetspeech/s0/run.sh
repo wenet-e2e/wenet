@@ -44,7 +44,7 @@ dir=exp/conformer
 decode_checkpoint=
 average_checkpoint=true
 average_num=10
-decode_modes="attention_rescoring ctc_greedy_search"
+decode_modes="attention_rescoring ctc_prefix_beam_search"
 
 train_engine=torch_ddp
 
@@ -171,7 +171,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   for testset in ${test_sets} ${dev_set}; do
   {
     base=$(basename $decode_checkpoint)
-    result_dir=$dir/${testset}_${base}
+    result_dir=$dir/${testset}_${base}_chunk${decoding_chunk_size}_ctc${ctc_weight}_reverse${reverse_weight}_blankpenalty${blank_penalty}
     python wenet/bin/recognize.py --gpu 0 \
       --modes $decode_modes \
       --config $dir/train.yaml \
@@ -179,7 +179,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --test_data data/$testset/data.list \
       --checkpoint $decode_checkpoint \
       --beam_size 10 \
-      --batch_size 1 \
+      --batch_size 32 \
       --blank_penalty ${blank_penalty} \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
