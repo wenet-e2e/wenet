@@ -61,9 +61,6 @@ class Paraformer:
                                              num_frames=tp_alphas.size(1),
                                              frame_rate=0.02)
 
-            from textgrid import TextGrid, IntervalTier
-            tg = TextGrid(maxTime=times[-1][1])
-            linetier = IntervalTier(name="line", maxTime=times[-1][1])
             for i, x in enumerate(res.tokens):
                 tokens_info.append({
                     'token': self.tokenizer.char_dict[x],
@@ -71,12 +68,7 @@ class Paraformer:
                     'end': times[i][1],
                     'confidence': res.tokens_confidence[i]
                 })
-                linetier.add(minTime=float(times[i][0]),
-                             maxTime=float(times[i][1]),
-                             mark=self.tokenizer.char_dict[x])
-            tg.append(linetier)
             result['tokens'] = tokens_info
-            tg.write('a.TextGrid')
 
         return result
 
