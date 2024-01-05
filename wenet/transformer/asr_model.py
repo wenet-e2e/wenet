@@ -269,7 +269,7 @@ class ASRModel(torch.nn.Module):
         encoder_lens = encoder_mask.squeeze(1).sum(1)
         if blank_penalty > 0.0:
             logits = self.ctc.ctc_lo(encoder_out)
-            logits[:, :, 0] -= blank_penalty
+            logits[:, :, blank_id] -= blank_penalty
             ctc_probs = logits.log_softmax(dim=2)
         else:
             ctc_probs = self.ctc.log_softmax(encoder_out)
