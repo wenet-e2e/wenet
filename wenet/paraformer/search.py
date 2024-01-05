@@ -114,8 +114,8 @@ def gen_timestamps_from_peak(cif_peaks: List[int],
                              num_frames: int,
                              frame_rate=0.02):
     START_END_THRESHOLD = 5
-    MAX_TOKEN_DURATION = 12
-    force_time_shift = -1.5
+    MAX_TOKEN_DURATION = 14
+    force_time_shift = -0.5
     fire_place = [peak + force_time_shift for peak in cif_peaks]
     times = []
     for i in range(len(fire_place) - 1):

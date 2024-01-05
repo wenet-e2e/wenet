@@ -18,7 +18,7 @@
 from typing import Dict, List, Optional, Tuple
 
 import torch
-from wenet.paraformer.cif import Cif
+from wenet.paraformer.cif import Cif, cif_without_hidden
 
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.layers import LFR
@@ -40,10 +40,10 @@ class Predictor(torch.nn.Module):
         idim,
         l_order,
         r_order,
-        threshold=1,
+        threshold=1.0,
         dropout=0.1,
-        smooth_factor=1,
-        noise_threshold=0,
+        smooth_factor=1.0,
+        noise_threshold=0.0,
         tail_threshold=0.45,
         residual=True,
         cnn_groups=0,
@@ -56,11 +56,12 @@ class Predictor(torch.nn.Module):
         self.predictor = Cif(idim, l_order, r_order, threshold, dropout,
                              smooth_factor, noise_threshold, tail_threshold,
                              residual, cnn_groups)
+
+        # accurate timestamp branch
         self.smooth_factor2 = smooth_factor2
         self.noise_threshold2 = noise_threshold
         self.upsample_times = upsample_times
         self.noise_threshold2 = noise_threshold2
-        # accurate timestamp branch
         self.tp_upsample_cnn = torch.nn.ConvTranspose1d(
             idim, idim, self.upsample_times, self.upsample_times)
         self.tp_blstm = torch.nn.LSTM(idim,
@@ -86,17 +87,20 @@ class Predictor(torch.nn.Module):
 
         output, (_, _) = self.tp_blstm(
             self.tp_upsample_cnn(hidden.transpose(1, 2)).transpose(1, 2))
-        alpha = self.tp_output(output)
-        alpha = torch.nn.functional.relu(alpha * self.smooth_factor2 -
-                                         self.noise_threshold2)
-        mask = mask.repeat(1, self.upsample_times,
-                           1).transpose(-1, -2).reshape(alpha.shape[0], -1)
-        mask = mask.unsqueeze(-1)
-        alpha = alpha * mask
-        alpha = alpha.squeeze(-1)
-        tp_token_num = alphas.sum(-1)
+        tp_alphas = torch.sigmoid(self.tp_output(output))
+        tp_alphas = torch.nn.functional.relu(tp_alphas * self.smooth_factor2 -
+                                             self.noise_threshold2)
 
-        return acoustic_embeds, token_num, alphas, cif_peak, tp_token_num
+        mask = mask.repeat(1, self.upsample_times,
+                           1).transpose(-1,
+                                        -2).reshape(tp_alphas.shape[0], -1)
+        mask = mask.unsqueeze(-1)
+        tp_alphas = tp_alphas * mask
+        tp_alphas = tp_alphas.squeeze(-1)
+        tp_token_num = tp_alphas.sum(-1)
+
+        # print(tp_alphas, tp_token_num)
+        return acoustic_embeds, token_num, alphas, cif_peak, tp_alphas, tp_token_num
 
 
 class Paraformer(torch.nn.Module):
@@ -181,7 +185,8 @@ class Paraformer(torch.nn.Module):
         if self.add_eos:
             _, ys_pad = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
             ys_pad_lens = text_lengths + 1
-        acoustic_embd, token_num, _, _, tp_token_num = self.predictor(
+        # acoustic_embd, token_num, _, _, _, tp_token_num = self.predictor(
+        acoustic_embd, token_num, _, _, _, tp_token_num = self.predictor(
             encoder_out, ys_pad, encoder_out_mask, self.ignore_id)
 
         # 2 decoder with sampler
@@ -286,22 +291,35 @@ class Paraformer(torch.nn.Module):
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         features, features_lens = self.lfr(speech, speech_lengths)
         features_lens = features_lens.to(speech_lengths.dtype)
         # encoder
         encoder_out, encoder_out_mask = self.encoder(features, features_lens)
 
         # cif predictor
-        acoustic_embed, token_num, _, _, _ = self.predictor(
+        acoustic_embed, token_num, _, _, tp_alphas, _ = self.predictor(
             encoder_out, mask=encoder_out_mask)
-        token_num = token_num.floor().to(speech_lengths.dtype)
+        # token_num = token_num.floor().to(speech_lengths.dtype)
+        token_num = token_num.round().to(speech_lengths.dtype)
 
         # decoder
         decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
                                          acoustic_embed, token_num)
         decoder_out = decoder_out.log_softmax(dim=-1)
-        return decoder_out, token_num
+
+        return decoder_out, token_num, tp_alphas
+
+    @torch.jit.export
+    def forward_cif_peaks(self, alphas: torch.Tensor,
+                          token_nums: torch.Tensor) -> torch.Tensor:
+        cif2_token_nums = alphas.sum(-1)
+        scale_alphas = alphas / (cif2_token_nums / token_nums).unsqueeze(1)
+        peaks = cif_without_hidden(scale_alphas,
+                                   self.predictor.predictor.threshold - 1e-4)
+
+        # peaks = (peaks >= self.predictor.predictor.threshold - 1e-4)
+        return peaks
 
     def decode(self,
                methods: List[str],
