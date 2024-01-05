@@ -1,5 +1,5 @@
 import math
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 import torch
 
 from wenet.transformer.search import DecodeResult
@@ -110,19 +110,44 @@ def paraformer_beautify_result(tokens: List[str]) -> str:
     return ''.join(word_lists).strip()
 
 
+def gen_timestamps_from_peak(cif_peaks: List[int],
+                             num_frames: int,
+                             frame_rate=0.02):
+    START_END_THRESHOLD = 5
+    MAX_TOKEN_DURATION = 12
+    force_time_shift = -1.5
+    fire_place = [peak + force_time_shift for peak in cif_peaks]
+    times = []
+    for i in range(len(fire_place) - 1):
+        if MAX_TOKEN_DURATION < 0 or fire_place[
+                i + 1] - fire_place[i] <= MAX_TOKEN_DURATION:
+            times.append(
+                [fire_place[i] * frame_rate, fire_place[i + 1] * frame_rate])
+        else:
+            split = fire_place[i] + MAX_TOKEN_DURATION
+            times.append([fire_place[i] * frame_rate, split * frame_rate])
+    if num_frames - fire_place[-1] > START_END_THRESHOLD:
+        end = (num_frames + fire_place[-1]) * 0.5
+        times[-1][1] = end * frame_rate
+        times.append([end * frame_rate, num_frames * frame_rate])
+    else:
+        times[-1][1] = num_frames * frame_rate
+    return times
+
+
 def paraformer_greedy_search(
         decoder_out: torch.Tensor,
-        decoder_out_lens: torch.Tensor) -> List[DecodeResult]:
+        decoder_out_lens: torch.Tensor,
+        cif_peaks: Optional[torch.Tensor] = None) -> List[DecodeResult]:
     batch_size = decoder_out.shape[0]
     maxlen = decoder_out.size(1)
     topk_prob, topk_index = decoder_out.topk(1, dim=2)
     topk_index = topk_index.view(batch_size, maxlen)  # (B, maxlen)
     topk_prob = topk_prob.view(batch_size, maxlen)
-    results = []
+    results: List[DecodeResult] = []
     topk_index = topk_index.cpu().tolist()
     topk_prob = topk_prob.cpu().tolist()
     decoder_out_lens = decoder_out_lens.cpu().numpy()
-    # TODO(Mddct) times
     for (i, hyp) in enumerate(topk_index):
         confidence = 0.0
         tokens_confidence = []
@@ -134,6 +159,20 @@ def paraformer_greedy_search(
                          tokens_confidence=tokens_confidence,
                          confidence=math.exp(confidence / lens))
         results.append(r)
+
+    if cif_peaks is not None:
+        for (b, peaks) in enumerate(cif_peaks):
+            result = results[b]
+            times = []
+            n_token = 0
+            for (i, peak) in enumerate(peaks):
+                if n_token >= len(result.tokens):
+                    break
+                if peak > 1 - 1e-4:
+                    times.append(i)
+                    n_token += 1
+            result.times = times
+            assert len(result.times) == len(result.tokens)
     return results
 
 

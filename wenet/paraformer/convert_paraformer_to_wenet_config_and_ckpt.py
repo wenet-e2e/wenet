@@ -166,18 +166,19 @@ def convert_to_wenet_state_dict(args, wenet_model_path):
     checkpoint = torch.load(args.paraformer_model, map_location='cpu')
     for name in checkpoint.keys():
         wenet_name = name
-        if wenet_name.startswith('predictor.cif'):
+
+        if wenet_name.startswith('predictor.cif_output2'):
+            wenet_name = wenet_name.replace('predictor.cif_output2.',
+                                            'predictor.tp_output.')
+        elif wenet_name.startswith('predictor.cif'):
             wenet_name = wenet_name.replace('predictor.cif',
                                             'predictor.predictor.cif')
         elif wenet_name.startswith('predictor.upsample'):
             wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
         elif wenet_name.startswith('predictor.blstm'):
             wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
-        elif wenet_name.startswith('predictor.cif_output2'):
-            wenet_name = wenet_name.replace('predictor.cif_output2.',
-                                            'predictor.tp_output.')
 
-        wenet_state_dict[wenet_name] = checkpoint[name]
+        wenet_state_dict[wenet_name] = checkpoint[name].float()
 
     torch.save(wenet_state_dict, wenet_model_path)
 

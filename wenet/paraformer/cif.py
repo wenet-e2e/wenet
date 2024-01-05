@@ -31,7 +31,7 @@ class Cif(nn.Module):
         threshold=1.0,
         dropout=0.1,
         smooth_factor=1.0,
-        noise_threshold=0,
+        noise_threshold=0.0,
         tail_threshold=0.45,
         residual=True,
         cnn_groups=0,
@@ -98,6 +98,7 @@ class Cif(nn.Module):
                                                              alphas,
                                                              token_num,
                                                              mask=mask)
+
         acoustic_embeds, cif_peak = cif(hidden, alphas, self.threshold)
 
         if target_length is None and self.tail_threshold > 0.0:
@@ -219,6 +220,31 @@ class MAELoss(nn.Module):
         loss = self.criterion(token_length, pre_token_length)
         loss = loss / loss_token_normalizer
         return loss
+
+
+def cif_without_hidden(alphas: torch.Tensor, threshold: float):
+    # https://github.com/alibaba-damo-academy/FunASR/blob/main/funasr/models/predictor/cif.py#L187
+    batch_size, len_time = alphas.size()
+
+    # loop varss
+    integrate = torch.zeros([batch_size], device=alphas.device)
+    # intermediate vars along time
+    list_fires = []
+
+    for t in range(len_time):
+        alpha = alphas[:, t]
+
+        integrate += alpha
+        list_fires.append(integrate)
+
+        fire_place = integrate >= threshold
+        integrate = torch.where(
+            fire_place, integrate -
+            torch.ones([batch_size], device=alphas.device) * threshold,
+            integrate)
+
+    fires = torch.stack(list_fires, 1)
+    return fires
 
 
 def cif(hidden: torch.Tensor, alphas: torch.Tensor, threshold: float):

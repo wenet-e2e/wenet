@@ -5,7 +5,9 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 
 from wenet.cli.hub import Hub
-from wenet.paraformer.search import paraformer_beautify_result, paraformer_greedy_search
+from wenet.paraformer.search import (gen_timestamps_from_peak,
+                                     paraformer_beautify_result,
+                                     paraformer_greedy_search)
 from wenet.text.paraformer_tokenizer import ParaformerTokenizer
 
 
@@ -45,28 +47,36 @@ class Paraformer:
                                   dtype=torch.int64,
                                   device=feats.device)
 
-        decoder_out, token_num = self.model.forward_paraformer(
+        decoder_out, token_num, tp_alphas = self.model.forward_paraformer(
             feats, feats_lens)
-
-        res = paraformer_greedy_search(decoder_out, token_num)[0]
-
+        cif_peaks = self.model.forward_cif_peaks(tp_alphas, token_num)
+        res = paraformer_greedy_search(decoder_out, token_num, cif_peaks)[0]
         result = {}
         result['confidence'] = res.confidence
         result['text'] = paraformer_beautify_result(
             self.tokenizer.detokenize(res.tokens)[1])
         if tokens_info:
             tokens_info = []
+            times = gen_timestamps_from_peak(res.times,
+                                             num_frames=tp_alphas.size(1),
+                                             frame_rate=0.02)
+
+            # tg = TextGrid(maxTime=times[-1][1])
+            # linetier = IntervalTier(name="line", maxTime=times[-1][1])
             for i, x in enumerate(res.tokens):
                 tokens_info.append({
                     'token': self.tokenizer.char_dict[x],
-                    # TODO(Mddct): support times
-                    # 'start': 0,
-                    # 'end': 0,
+                    'start': times[i][0],
+                    'end': times[i][1],
                     'confidence': res.tokens_confidence[i]
                 })
+            #     linetier.add(minTime=float(times[i][0]),
+            #                  maxTime=float(times[i][1]),
+            #                  mark=self.tokenizer.char_dict[x])
+            # tg.append(linetier)
             result['tokens'] = tokens_info
+            # tg.write('a.TextGrid')
 
-        # result = ''.join(hyp)
         return result
 
     def align(self, audio_file: str, label: str) -> dict:
