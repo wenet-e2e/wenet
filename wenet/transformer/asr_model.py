@@ -234,6 +234,7 @@ class ASRModel(torch.nn.Module):
         reverse_weight: float = 0.0,
         context_graph: ContextGraph = None,
         blank_id: int = 0,
+        blank_penalty: float = 0.0,
     ) -> Dict[str, List[DecodeResult]]:
         """ Decode input speech
 
@@ -266,7 +267,12 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size,
             num_decoding_left_chunks, simulate_streaming)
         encoder_lens = encoder_mask.squeeze(1).sum(1)
-        ctc_probs = self.ctc.log_softmax(encoder_out)
+        if blank_penalty > 0.0:
+            logits = self.ctc.ctc_lo(encoder_out)
+            logits[:, :, blank_id] -= blank_penalty
+            ctc_probs = logits.log_softmax(dim=2)
+        else:
+            ctc_probs = self.ctc.log_softmax(encoder_out)
         results = {}
         if 'attention' in methods:
             results['attention'] = attention_beam_search(
@@ -285,7 +291,8 @@ class ASRModel(torch.nn.Module):
                 ctc_prefix_result = results['ctc_prefix_beam_search']
             else:
                 ctc_prefix_result = ctc_prefix_beam_search(
-                    ctc_probs, encoder_lens, beam_size, context_graph)
+                    ctc_probs, encoder_lens, beam_size, context_graph,
+                    blank_id)
             if self.apply_non_blank_embedding:
                 encoder_out, _ = self.filter_blank_embedding(
                     ctc_probs, encoder_out)
