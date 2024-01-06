@@ -7,13 +7,11 @@ import os
 from pathlib import Path
 import shutil
 import urllib.request
+import torch
 from tqdm import tqdm
 from typing import Dict, List, Optional, Tuple
 
 import yaml
-
-from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.init_model import init_model
 
 
 def _load_paraformer_cmvn(cmvn_file) -> Tuple[List, List]:
@@ -107,7 +105,8 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['lfr_conf'] = {'lfr_m': 7, 'lfr_n': 6}
 
     configs['input_dim'] = configs['lfr_conf']['lfr_m'] * 80
-    configs['predictor'] = 'cif_predictor'
+    # configs['predictor'] = 'cif_predictor'
+    configs['predictor'] = 'paraformer_predictor'
     configs['predictor_conf'] = configs.pop('predictor_conf')
     configs['predictor_conf']['cnn_groups'] = 1
     configs['predictor_conf']['residual'] = False
@@ -162,10 +161,26 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     return configs
 
 
-def convert_to_wenet_state_dict(args, configs, wenet_model_path):
-    args.checkpoint = args.paraformer_model
-    model, _ = init_model(args, configs)
-    save_checkpoint(model, wenet_model_path)
+def convert_to_wenet_state_dict(args, wenet_model_path):
+    wenet_state_dict = {}
+    checkpoint = torch.load(args.paraformer_model, map_location='cpu')
+    for name in checkpoint.keys():
+        wenet_name = name
+
+        if wenet_name.startswith('predictor.cif_output2'):
+            wenet_name = wenet_name.replace('predictor.cif_output2.',
+                                            'predictor.tp_output.')
+        elif wenet_name.startswith('predictor.cif'):
+            wenet_name = wenet_name.replace('predictor.cif',
+                                            'predictor.predictor.cif')
+        elif wenet_name.startswith('predictor.upsample'):
+            wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
+        elif wenet_name.startswith('predictor.blstm'):
+            wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
+
+        wenet_state_dict[wenet_name] = checkpoint[name].float()
+
+    torch.save(wenet_state_dict, wenet_model_path)
 
 
 def get_args():
@@ -190,11 +205,15 @@ def get_args():
     return args
 
 
-def _download_fn(output_dir, name, renmae: Optional[str] = None):
+def _download_fn(output_dir,
+                 name,
+                 renmae: Optional[str] = None,
+                 version: str = 'master'):
     url = "https://www.modelscope.cn/api/v1/"\
         "models/damo/"\
-        "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
-        "/repo?Revision=v1.0.4&FilePath=" + name
+        "speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
+        "/repo?Revision={}&FilePath=".format(version) + name
+    # "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
     if renmae is None:
         output_file = os.path.join(output_dir, name)
     else:
@@ -232,7 +251,7 @@ def may_get_assets_and_refine_args(args):
         config_name = 'config.yaml'
         args.paraformer_config = os.path.join(assets_dir, config_name)
         if not os.path.exists(args.paraformer_config):
-            _download_fn(assets_dir, config_name)
+            _download_fn(assets_dir, config_name, version='v1.2.4')
     if args.paraformer_cmvn is None:
         cmvn_name = 'am.mvn'
         args.paraformer_cmvn = os.path.join(assets_dir, cmvn_name)
@@ -280,11 +299,10 @@ def main():
         'tokenizer_conf'
     ]
     wenet_train_yaml = os.path.join(args.output_dir, "train.yaml")
-    wenet_configs = convert_to_wenet_yaml(configs, wenet_train_yaml,
-                                          fields_to_keep)
+    convert_to_wenet_yaml(configs, wenet_train_yaml, fields_to_keep)
 
     wenet_model_path = os.path.join(args.output_dir, "wenet_paraformer.pt")
-    convert_to_wenet_state_dict(args, wenet_configs, wenet_model_path)
+    convert_to_wenet_state_dict(args, wenet_model_path)
 
     print("Please check {} {} {} {} {} in {}".format(json_cmvn_path,
                                                      wenet_train_yaml,

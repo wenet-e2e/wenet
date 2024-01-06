@@ -15,7 +15,7 @@ def paraformer_tokenizer(request):
     _download_fn(download_root, seg_dict)
 
     config_name = 'config.yaml'
-    _download_fn(download_root, config_name)
+    _download_fn(download_root, config_name, version='v1.2.4')
     with open(os.path.join(download_root, config_name), 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
     wenet_units = os.path.join(download_root, 'units.txt')
