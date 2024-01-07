@@ -25,7 +25,7 @@ utt_suffix=
 validate_opts=   # should rarely be needed.
 # end configuration section
 
-. local/parse_options.sh
+. tools/parse_options.sh
 
 if [ $# != 2 ]; then
   echo "Usage: "

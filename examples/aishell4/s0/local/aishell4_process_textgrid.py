@@ -33,11 +33,7 @@ def main(args):
     utt2textgrid = {}
     for line in textgrid_flist:
         path = Path(line.strip())
-        # the name of textgrid file is different between training and test set
-        if "train" in path.parts:
-            uttid = "%s_%s" % (path.parts[-2], path.stem)
-        else:
-            uttid = path.stem
+        uttid = path.parts[-1].split('.')[0]
         utt2textgrid[uttid] = path
     # parse the textgrid file for each utterance
     all_segments = []
@@ -46,6 +42,7 @@ def main(args):
         if uttid not in utt2textgrid:
             print("%s doesn't have transcription" % uttid)
             continue
+        print("processing {}".format(uttid))
         segments = []
         tg = textgrid.TextGrid.fromFile(utt2textgrid[uttid])
         for i in range(tg.__len__()):
