@@ -51,9 +51,9 @@ prefetch=500
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=30
-decode_modes="attention_rescoring"
+decode_modes="ctc_prefix_beam_search attention_rescoring ctc_greedy_search attention"
 
-train_engine=deepspeed
+train_engine=torch_ddp
 
 deepspeed_config=../../aishell/whisper/conf/ds_stage1.json
 deepspeed_save_states="model_only"
