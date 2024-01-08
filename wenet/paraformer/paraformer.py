@@ -99,7 +99,6 @@ class Predictor(torch.nn.Module):
         tp_alphas = tp_alphas.squeeze(-1)
         tp_token_num = tp_alphas.sum(-1)
 
-        # print(tp_alphas, tp_token_num)
         return acoustic_embeds, token_num, alphas, cif_peak, tp_alphas, tp_token_num
 
 
@@ -300,8 +299,8 @@ class Paraformer(torch.nn.Module):
         # cif predictor
         acoustic_embed, token_num, _, _, tp_alphas, _ = self.predictor(
             encoder_out, mask=encoder_out_mask)
-        # token_num = token_num.floor().to(speech_lengths.dtype)
-        token_num = token_num.round().to(speech_lengths.dtype)
+        token_num = token_num.floor().to(speech_lengths.dtype)
+        # token_num = token_num.round().to(speech_lengths.dtype)
 
         # decoder
         decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
