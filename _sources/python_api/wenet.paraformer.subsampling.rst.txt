@@ -1,0 +1,7 @@
+wenet.paraformer.subsampling module
+===================================
+
+.. automodule:: wenet.paraformer.subsampling
+   :members:
+   :undoc-members:
+   :show-inheritance:
