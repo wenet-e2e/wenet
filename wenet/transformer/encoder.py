@@ -89,7 +89,6 @@ class BaseEncoder(torch.nn.Module):
         self._output_size = output_size
 
         self.global_cmvn = global_cmvn
-        print(input_layer)
         self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
             input_size,
             output_size,
