@@ -492,7 +492,8 @@ def batch_backward(model, scaler, info_dict):
             scaled_loss.backward()
     info_dict['loss_dict']['loss'] = scaled_loss
     for loss_name, loss_value in info_dict['loss_dict'].items():
-        info_dict['loss_dict'][loss_name] = loss_value.item()
+        if loss_value is not None:
+            info_dict['loss_dict'][loss_name] = loss_value.item()
 
     return info_dict
 
