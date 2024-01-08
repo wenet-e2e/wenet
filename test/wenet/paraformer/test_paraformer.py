@@ -1,6 +1,6 @@
 import torch
 
-from wenet.transformer.embedding import ParaformerPositinoalEncoding
+from wenet.paraformer.embedding import ParaformerPositinoalEncoding
 
 
 class SinusoidalPositionEncoder(torch.nn.Module):
@@ -36,19 +36,24 @@ class SinusoidalPositionEncoder(torch.nn.Module):
         positions = torch.arange(1, timesteps + 1, device=x.device)[None, :]
         position_encoding = self.encode(positions, input_dim,
                                         x.dtype).to(x.device)
-        return x + position_encoding
+        return x + position_encoding, position_encoding
 
 
 def test_pe():
     torch.manual_seed(777)
     Paraformer_pe = SinusoidalPositionEncoder()
-    Wenet_paraformer_pe = ParaformerPositinoalEncoding(d_model=560,
+    d_model = 512
+    depth = 560
+    Wenet_paraformer_pe = ParaformerPositinoalEncoding(d_model=d_model,
+                                                       depth=560,
                                                        dropout_rate=0.0,
                                                        max_len=5000)
     Paraformer_pe.eval()
     Wenet_paraformer_pe.eval()
 
-    input = torch.rand(1, 70, 560)
-    paraformer_pe_out = Paraformer_pe(input)
-    wenet_paraformer_pe_out, _ = Wenet_paraformer_pe(input, offset=1)
+    input = torch.rand(1, 70, depth)
+    paraformer_x_out, paraformer_pe_out = Paraformer_pe(input * d_model**0.5)
+    wenet_paraformer_x_out, wenet_paraformer_pe_out = Wenet_paraformer_pe(
+        input, offset=1)
     assert torch.allclose(paraformer_pe_out, wenet_paraformer_pe_out)
+    assert torch.allclose(paraformer_x_out, wenet_paraformer_x_out)
