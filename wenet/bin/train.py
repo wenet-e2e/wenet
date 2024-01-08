@@ -34,7 +34,7 @@ from wenet.utils.train_utils import (
     add_trace_args, init_distributed, init_dataset_and_dataloader,
     check_modify_and_save_config, init_optimizer_and_scheduler,
     trace_and_print_model, wrap_cuda_model, init_summarywriter, save_model,
-    log_per_epoch)
+    log_per_epoch, get_lr)
 
 
 def get_args():
@@ -130,7 +130,7 @@ def main():
         train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch
 
-        lr = optimizer.param_groups[0]['lr']
+        lr = get_lr(optimizer)
         logging.info('Epoch {} TRAIN info lr {} rank {}'.format(
             epoch, lr, rank))
 
@@ -148,7 +148,7 @@ def main():
         total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)
         cv_loss = total_loss / num_seen_utts
 
-        lr = optimizer.param_groups[0]['lr']
+        lr = get_lr(optimizer)
         logging.info('Epoch {} CV info lr {} cv_loss {} rank {}'.format(
             epoch, lr, cv_loss, rank))
         info_dict = {

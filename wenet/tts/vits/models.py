@@ -16,6 +16,7 @@ from wenet.tts.vits.commons import init_weights, get_padding
 from wenet.tts.vits.losses import generator_loss, discriminator_loss, feature_loss, kl_loss
 from wenet.tts.vits.mel_processing import mel_spectrogram_torch
 from wenet.utils.mask import make_pad_mask
+from wenet.utils.scheduler import WarmupLR
 
 
 class StochasticDurationPredictor(nn.Module):
@@ -787,19 +788,45 @@ class VitsModel(nn.Module):
                                 self.segment_size // self.hop_length,
                                 **kwargs['generator'])
         self.d = MultiPeriodDiscriminator(**kwargs['discriminator'])
-        self.step = 0
+
+    def get_optimizer(self):
+        optim_d = torch.optim.AdamW(self.d.parameters(),
+                                    0.0002,
+                                    betas=[0.8, 0.99],
+                                    eps=1.0e-9)
+        optim_g = torch.optim.AdamW(self.g.parameters(),
+                                    0.0002,
+                                    betas=[0.8, 0.99],
+                                    eps=1.0e-9)
+        return [optim_d, optim_g]
+
+    def get_scheduler(self, optimizer):
+        scheduler_d = WarmupLR(optimizer[0], warmup_steps=250)
+        scheduler_g = WarmupLR(optimizer[1], warmup_steps=250)
+        return [scheduler_d, scheduler_g]
 
     def forward(self, batch: dict, device: torch.device):
         x = batch['target'].to(device)
         x_lengths = batch['target_lengths'].to(device)
         x_mask = make_pad_mask(x_lengths)
         x = x.masked_fill(x_mask, 0)  # change pad value(IGNORE_ID = -1) to 0
-        spec = batch['feats'].to(device)
-        spec_lengths = batch['feats_lengths'].to(device)
-        spec = spec.transpose(1, 2)
+        # spec = batch['feats'].to(device)
+        # spec_lengths = batch['feats_lengths'].to(device)
+        # spec = spec.transpose(1, 2)
         y = batch['pcm'].to(device)
         y = y.unsqueeze(1)
         y_lengths = batch['pcm_length'].to(device)
+        optimizer_idx = batch.get('optimizer_idx', 0)
+
+        spec = mel_spectrogram_torch(
+            y.squeeze(1),
+            self.filter_length,
+            self.n_mel_channels,
+            self.sampling_rate,
+            self.hop_length,
+            self.win_length,
+        )
+        spec_lengths = (y_lengths - self.win_length) // self.hop_length + 1
 
         batch_size = x.size(0)
         sid = torch.zeros(batch_size, device=device, dtype=torch.long)
@@ -812,14 +839,15 @@ class VitsModel(nn.Module):
         #     self.n_mel_channels,
         #     self.sampling_rate,
         # )
-        mel = mel_spectrogram_torch(
-            y.squeeze(1),
-            self.filter_length,
-            self.n_mel_channels,
-            self.sampling_rate,
-            self.hop_length,
-            self.win_length,
-        )
+        # mel = mel_spectrogram_torch(
+        #     y.squeeze(1),
+        #     self.filter_length,
+        #     self.n_mel_channels,
+        #     self.sampling_rate,
+        #     self.hop_length,
+        #     self.win_length,
+        # )
+        mel = spec
         y_mel = commons.slice_segments(mel, ids_slice,
                                        self.segment_size // self.hop_length)
         y_hat_mel = mel_spectrogram_torch(
@@ -833,7 +861,7 @@ class VitsModel(nn.Module):
         y = commons.slice_segments(y, ids_slice * self.hop_length,
                                    self.segment_size)
         # Train generator and discriminator alternately
-        if self.step % self.d_interval == 0:
+        if optimizer_idx == 0:
             # Discriminator
             y_d_hat_r, y_d_hat_g, _, _ = self.d(y, y_hat.detach())
             loss_disc, losses_disc_r, losses_disc_g = discriminator_loss(
@@ -857,8 +885,7 @@ class VitsModel(nn.Module):
                 'loss_dur': loss_dur,
                 'loss_kl': loss_kl,
             }
-
-        self.step += 1
+        print('optimizer_idx', optimizer_idx)
         return losses
 
     def infer(self, text: torch.Tensor):

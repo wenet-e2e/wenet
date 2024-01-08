@@ -310,7 +310,9 @@ def wrap_cuda_model(args, model):
 
 
 def init_optimizer_and_scheduler(args, configs, model):
-    if configs['optim'] == 'adam':
+    if hasattr(model.module, 'get_optimizer'):
+        optimizer = model.module.get_optimizer()
+    elif configs['optim'] == 'adam':
         optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
     elif configs['optim'] == 'adamw':
         optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
@@ -318,7 +320,9 @@ def init_optimizer_and_scheduler(args, configs, model):
         raise ValueError("unknown optimizer: " + configs['optim'])
 
     scheduler_type = None
-    if configs['scheduler'] == 'warmuplr':
+    if hasattr(model.module, 'get_scheduler'):
+        scheduler = model.module.get_scheduler(optimizer)
+    elif configs['scheduler'] == 'warmuplr':
         scheduler_type = WarmupLR
         scheduler = WarmupLR(optimizer, **configs['scheduler_conf'])
     elif configs['scheduler'] == 'NoamHoldAnnealing':
@@ -354,7 +358,11 @@ def init_optimizer_and_scheduler(args, configs, model):
             model_parameters=model.parameters())
 
     step = configs["init_infos"].get("step", -1)
-    scheduler.set_step(step)
+    if isinstance(scheduler, list):
+        for s in scheduler:
+            s.set_step(step)
+    else:
+        scheduler.set_step(step)
     return model, optimizer, scheduler
 
 
@@ -497,6 +505,13 @@ def batch_backward(model, scaler, info_dict):
     return info_dict
 
 
+def get_lr(optimizer):
+    if isinstance(optimizer, list):
+        return optimizer[0].param_groups[0]['lr']
+    else:
+        return optimizer.param_groups[0]['lr']
+
+
 def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
     rank = int(os.environ.get('RANK', 0))
     train_engine = info_dict.get("train_engine", "torch_ddp")
@@ -543,7 +558,7 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
         optimizer.zero_grad()
         scheduler.step()
 
-    info_dict["lr"] = optimizer.param_groups[0]['lr']
+    info_dict["lr"] = get_lr(optimizer)
     info_dict["grad_norm"] = grad_norm
 
     return info_dict
