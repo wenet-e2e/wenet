@@ -331,15 +331,15 @@ class Paraformer(torch.nn.Module):
                ctc_weight: float = 0,
                simulate_streaming: bool = False,
                reverse_weight: float = 0) -> Dict[str, List[DecodeResult]]:
-        decoder_out, decoder_out_lens = self.forward_paraformer(
+        decoder_out, decoder_out_lens, tp_alphas = self.forward_paraformer(
             speech, speech_lengths)
-
+        peaks = self.forward_cif_peaks(tp_alphas, decoder_out_lens)
         results = {}
         if 'paraformer_greedy_search' in methods:
             assert decoder_out is not None
             assert decoder_out_lens is not None
             paraformer_greedy_result = paraformer_greedy_search(
-                decoder_out, decoder_out_lens)
+                decoder_out, decoder_out_lens, peaks)
             results['paraformer_greedy_search'] = paraformer_greedy_result
         if 'paraformer_beam_search' in methods:
             assert decoder_out is not None
