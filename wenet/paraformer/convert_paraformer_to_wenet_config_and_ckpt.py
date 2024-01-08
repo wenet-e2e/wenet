@@ -156,6 +156,8 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['max_epoch'] = 100
     configs['log_interval'] = 100
 
+    configs['model_conf']['length_normalized_loss'] = False
+
     with open(wenet_yaml_path, '+w') as f:
         f.write(yaml.dump(configs))
         f.flush()
