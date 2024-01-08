@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright [2023-11-28] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 import torch
+from wenet.paraformer.embedding import ParaformerPositinoalEncoding
 
 from wenet.transformer.swish import Swish
 from wenet.transformer.subsampling import (
@@ -47,6 +48,7 @@ WENET_SUBSAMPLE_CLASSES = {
     "dwconv2d4": DepthwiseConv2dSubsampling4,
     "conv2d6": Conv2dSubsampling6,
     "conv2d8": Conv2dSubsampling8,
+    'paraformer_dummy': torch.nn.Identity
 }
 
 WENET_EMB_CLASSES = {
@@ -56,6 +58,7 @@ WENET_EMB_CLASSES = {
     "no_pos": NoPositionalEncoding,
     "abs_pos_whisper": WhisperPositionalEncoding,
     "embed_learnable_pe": LearnablePositionalEncoding,
+    "abs_pos_paraformer": ParaformerPositinoalEncoding,
 }
 
 WENET_ATTENTION_CLASSES = {

@@ -100,7 +100,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
                           fields_to_keep: List[str]) -> Dict:
     configs = _filter_dict_fields(configs, fields_to_keep)
     configs['encoder'] = 'sanm_encoder'
-    configs['encoder_conf']['input_layer'] = 'conv2d'
+    configs['encoder_conf']['input_layer'] = 'paraformer_dummy'
     configs['decoder'] = 'sanm_decoder'
     configs['lfr_conf'] = {'lfr_m': 7, 'lfr_n': 6}
 
@@ -113,6 +113,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     # This type not use
     del configs['encoder_conf']['selfattention_layer_type'], configs[
         'encoder_conf']['pos_enc_class']
+    configs['encoder_conf']['pos_enc_layer_type'] = 'abs_pos_paraformer'
 
     configs['ctc_conf'] = {}
     configs['ctc_conf']['ctc_blank_id'] = 0

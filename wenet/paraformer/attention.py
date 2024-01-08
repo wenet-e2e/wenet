@@ -90,9 +90,10 @@ class MultiHeadedAttentionSANM(MultiHeadedAttention):
         key: torch.Tensor,
         value: torch.Tensor,
         mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         pos_emb: torch.Tensor = torch.empty(0),
         cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-        mask_shfit_chunk: Optional[torch.Tensor] = None
+        mask_shfit_chunk: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         q, k, v = self.forward_qkv(query, key, value)
         if cache.size(0) > 0:
@@ -104,7 +105,9 @@ class MultiHeadedAttentionSANM(MultiHeadedAttention):
         # NOTE(Mddct): we need know fsmn_memory's cache, but paraformer is nonstreamming
         # refactor later if streaming model is available
         new_cache = torch.cat((k, v), dim=-1)
-        fsmn_memory = self.forward_fsmn(v, mask, mask_shfit_chunk)
+        fsmn_memory = self.forward_fsmn(v,
+                                        mask=mask_pad,
+                                        mask_shfit_chunk=mask_shfit_chunk)
 
         scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
         att = self.forward_attention(v, scores, mask)
@@ -133,12 +136,12 @@ class DummyMultiHeadSANM(MultiHeadedAttentionSANM):
         key: torch.Tensor,
         value: torch.Tensor,
         mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         pos_emb: torch.Tensor = torch.empty(0),
         cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         mask_shfit_chunk: Optional[torch.Tensor] = None
     ) -> Tuple[torch.Tensor, Optional[torch.Tensor]]:
-        if mask is not None:
-            query = query * mask.transpose(1, 2)
+        query = query * mask_pad.transpose(1, 2)
         inputs = query
         x = inputs.transpose(1, 2)
         x = self.pad_fn(x)
@@ -151,8 +154,7 @@ class DummyMultiHeadSANM(MultiHeadedAttentionSANM):
 
         x = x + inputs
         x = self.dropout(x)
-        if mask is not None:
-            x = x * mask.transpose(1, 2)
+        x = x * mask_pad.transpose(1, 2)
         return x, cache
 
 
@@ -201,6 +203,7 @@ class MultiHeadAttentionCross(MultiHeadedAttentionSANM):
         key: torch.Tensor,
         value: torch.Tensor,
         mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         pos_emb: torch.Tensor = torch.empty(0),
         cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         mask_shfit_chunk: Optional[torch.Tensor] = None

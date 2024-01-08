@@ -7,6 +7,8 @@ import torch
 from wenet.paraformer.attention import (DummyMultiHeadSANM,
                                         MultiHeadAttentionCross,
                                         MultiHeadedAttentionSANM)
+from wenet.paraformer.embedding import ParaformerPositinoalEncoding
+from wenet.paraformer.subsampling import IdentitySubsampling
 from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.decoder_layer import DecoderLayer
@@ -117,43 +119,6 @@ class PositionwiseFeedForwardDecoderSANM(torch.nn.Module):
         return self.w_2(self.norm(self.dropout(self.activation(self.w_1(x)))))
 
 
-class SinusoidalPositionEncoder(torch.nn.Module):
-    """https://github.com/alibaba-damo-academy/FunASR/blob/main/funasr/modules/embedding.py#L387
-    """
-
-    def __int__(self):
-        pass
-
-    def encode(self,
-               positions: torch.Tensor,
-               depth: int,
-               dtype: torch.dtype = torch.float32) -> torch.Tensor:
-        batch_size = positions.size(0)
-        positions = positions.type(dtype)
-        device = positions.device
-        log_timescale_increment = torch.log(
-            torch.tensor([10000], dtype=dtype,
-                         device=device)) / (depth / 2 - 1)
-        inv_timescales = torch.exp(
-            torch.arange(depth / 2, device=device).type(dtype) *
-            (-log_timescale_increment))
-        inv_timescales = torch.reshape(inv_timescales, [batch_size, -1])
-        scaled_time = torch.reshape(positions, [1, -1, 1]) * torch.reshape(
-            inv_timescales, [1, 1, -1])
-        encoding = torch.cat([torch.sin(scaled_time),
-                              torch.cos(scaled_time)],
-                             dim=2)
-        return encoding.to(dtype)
-
-    def forward(self, x):
-        _, timesteps, input_dim = x.size()
-        positions = torch.arange(1, timesteps + 1, device=x.device)[None, :]
-        position_encoding = self.encode(positions, input_dim,
-                                        x.dtype).to(x.device)
-
-        return x + position_encoding
-
-
 class AliParaformerEncoderLayer(TransformerEncoderLayer):
 
     def __init__(self,
@@ -184,7 +149,14 @@ class AliParaformerEncoderLayer(TransformerEncoderLayer):
         residual = x
         if self.normalize_before:
             x = self.norm1(x)
-        x_att, new_att_cache = self.self_attn(x, x, x, mask, cache=att_cache)
+        x_att, new_att_cache = self.self_attn(
+            x,
+            x,
+            x,
+            mask,
+            cache=att_cache,
+            mask_pad=mask_pad,
+        )
         if self.in_size == self.size:
             x = residual + self.dropout(x_att)
         else:
@@ -206,24 +178,26 @@ class AliParaformerEncoderLayer(TransformerEncoderLayer):
 
 class SanmEncoder(BaseEncoder):
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int = 256,
-                 attention_heads: int = 4,
-                 linear_units: int = 2048,
-                 num_blocks: int = 6,
-                 dropout_rate: float = 0.1,
-                 positional_dropout_rate: float = 0.1,
-                 attention_dropout_rate: float = 0,
-                 input_layer: str = "conv2d",
-                 pos_enc_layer_type: str = "abs_pos",
-                 normalize_before: bool = True,
-                 static_chunk_size: int = 0,
-                 use_dynamic_chunk: bool = False,
-                 global_cmvn: torch.nn.Module = None,
-                 use_dynamic_left_chunk: bool = False,
-                 kernel_size: int = 11,
-                 sanm_shfit: int = 0):
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int = 256,
+        attention_heads: int = 4,
+        linear_units: int = 2048,
+        num_blocks: int = 6,
+        dropout_rate: float = 0.1,
+        positional_dropout_rate: float = 0.1,
+        attention_dropout_rate: float = 0,
+        input_layer: str = "conv2d",
+        pos_enc_layer_type: str = "abs_pos",
+        normalize_before: bool = True,
+        static_chunk_size: int = 0,
+        use_dynamic_chunk: bool = False,
+        global_cmvn: torch.nn.Module = None,
+        use_dynamic_left_chunk: bool = False,
+        kernel_size: int = 11,
+        sanm_shfit: int = 0,
+    ):
         super().__init__(input_size, output_size, attention_heads,
                          linear_units, num_blocks, dropout_rate,
                          positional_dropout_rate, attention_dropout_rate,
@@ -231,7 +205,15 @@ class SanmEncoder(BaseEncoder):
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk)
         del self.embed
-        self.embed = SinusoidalPositionEncoder()
+        self.embed = IdentitySubsampling(
+            input_size,
+            output_size,
+            dropout_rate,
+            ParaformerPositinoalEncoding(input_size,
+                                         output_size,
+                                         positional_dropout_rate,
+                                         max_len=5000),
+        )
 
         encoder_selfattn_layer = MultiHeadedAttentionSANM
         encoder_selfattn_layer_args0 = (
@@ -277,25 +259,29 @@ class SanmEncoder(BaseEncoder):
         if self.normalize_before:
             self.after_norm = torch.nn.LayerNorm(output_size)
 
-    def forward(
-        self,
-        xs: torch.Tensor,
-        xs_lens: torch.Tensor,
-        decoding_chunk_size: int = 0,
-        num_decoding_left_chunks: int = -1
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        if self.global_cmvn is not None:
-            xs = self.global_cmvn(xs)
-        masks_pad = make_non_pad_mask(xs_lens).unsqueeze(1)  # [B,1,T]
-        xs = xs * self.output_size()**0.5
-        xs = self.embed(xs)
+    def forward_layers(self, xs: torch.Tensor, chunk_masks: torch.Tensor,
+                       pos_emb: torch.Tensor,
+                       mask_pad: torch.Tensor) -> torch.Tensor:
         for layer in self.encoders0:
-            xs, _, _, _ = layer(xs, masks_pad, None)
+            xs, _, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         for layer in self.encoders:
-            xs, _, _, _ = layer(xs, masks_pad, None)
-        if self.normalize_before:
-            xs = self.after_norm(xs)
-        return xs, masks_pad
+            xs, _, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
+        return xs
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(self, xs: torch.Tensor,
+                                    chunk_masks: torch.Tensor,
+                                    pos_emb: torch.Tensor,
+                                    mask_pad: torch.Tensor) -> torch.Tensor:
+        for layer in self.encoders0:
+            xs, _, _, _, _ = torch.utils.checkpoint(layer.__call__, xs,
+                                                    chunk_masks, mask_pad,
+                                                    pos_emb)
+        for layer in self.encoders:
+            xs, _, _, _, _ = torch.utils.checkpoint(layer.__call__, xs,
+                                                    chunk_masks, mask_pad,
+                                                    pos_emb)
+        return xs
 
 
 class _Decoders3(torch.nn.Module):
@@ -358,7 +344,11 @@ class SanmDecoderLayer(DecoderLayer):
             if self.normalize_before:
                 tgt = self.norm2(tgt)
             tgt_q = tgt
-            x = self.self_attn(tgt_q, tgt, tgt, tgt_q_mask)[0]
+            x = self.self_attn(tgt_q,
+                               tgt,
+                               tgt,
+                               tgt_q_mask,
+                               mask_pad=tgt_q_mask)[0]
             x = residual + self.dropout(x)
 
         if self.src_attn is not None:
@@ -367,7 +357,8 @@ class SanmDecoderLayer(DecoderLayer):
                 x = self.norm3(x)
 
             x = residual + self.dropout(
-                self.src_attn(x, memory, memory, memory_mask)[0])
+                self.src_attn(
+                    x, memory, memory, memory_mask, mask_pad=memory_mask)[0])
 
         return x, tgt_mask, memory, memory_mask
 
@@ -439,10 +430,8 @@ class SanmDecoder(TransformerDecoder):
         r_ys_in_pad: torch.Tensor = torch.empty(0),
         reverse_weight: float = 0.0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """ only for inference now
-        """
-        ys_pad_mask = make_non_pad_mask(ys_pad_lens).unsqueeze(1)
 
+        ys_pad_mask = make_non_pad_mask(ys_pad_lens).unsqueeze(1)
         x = sematic_embeds
         for layer in self.decoders:
             x, _, _, _ = layer(x, ys_pad_mask, encoder_out, encoder_out_mask)
