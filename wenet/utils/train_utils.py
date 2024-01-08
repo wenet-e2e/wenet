@@ -209,6 +209,8 @@ def check_modify_and_save_config(args, configs, symbol_table):
                 'num_mel_bins']
         else:
             input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
+    else:
+        input_dim = configs['input_dim']
 
     configs, _ = get_blank_id(configs, symbol_table)
 
