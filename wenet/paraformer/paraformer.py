@@ -204,7 +204,6 @@ class Paraformer(ASRModel):
             tp_token_num, ys_pad_lens.to(token_num.dtype),
             reduction='sum') / ys_pad_lens.sum().to(token_num.dtype)
 
-        # TODO(Mddc): thu acc
         loss_decoder, acc_att = self._calc_att_loss(encoder_out,
                                                     encoder_out_mask, ys_pad,
                                                     acoustic_embd, ys_pad_lens)
