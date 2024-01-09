@@ -285,7 +285,9 @@ class Paraformer(ASRModel):
         assert simulate_streaming is False
         features, features_lens = self.lfr(speech, speech_lengths)
         features_lens = features_lens.to(speech_lengths.dtype)
-        encoder_out, encoder_out_mask = self.encoder(features, features_lens)
+        encoder_out, encoder_out_mask = self.encoder(features, features_lens,
+                                                     decoding_chunk_size,
+                                                     num_decoding_left_chunks)
         return encoder_out, encoder_out_mask
 
     @torch.jit.export
@@ -322,11 +324,16 @@ class Paraformer(ASRModel):
         return peaks
 
     def _forward_paraformer(
-            self, speech: torch.Tensor,
-            speech_lengths: torch.Tensor) -> Dict[str, torch.Tensor]:
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+    ) -> Dict[str, torch.Tensor]:
         # encoder
         encoder_out, encoder_out_mask = self._forward_encoder(
-            speech, speech_lengths)
+            speech, speech_lengths, decoding_chunk_size,
+            num_decoding_left_chunks)
 
         # cif predictor
         acoustic_embed, token_num, _, _, tp_alphas, _ = self.predictor(
@@ -359,7 +366,9 @@ class Paraformer(ASRModel):
                context_graph=None,
                blank_id: int = 0,
                blank_penalty: float = 0.0) -> Dict[str, List[DecodeResult]]:
-        res = self._forward_paraformer(speech, speech_lengths)
+        res = self._forward_paraformer(speech, speech_lengths,
+                                       decoding_chunk_size,
+                                       num_decoding_left_chunks)
         encoder_out, encoder_mask, decoder_out, decoder_out_lens, tp_alphas = res[
             'encoder_out'], res['encoder_out_mask'], res['decoder_out'], res[
                 'decoder_out_lens'], res['tp_alphas']
