@@ -78,7 +78,7 @@ class Executor:
                 info_dict = update_parameter_and_lr(model, optimizer,
                                                     scheduler, scaler,
                                                     info_dict)
-                save_interval = info_dict.get('save_interval', 10000)
+                save_interval = info_dict.get('save_interval', 100000000000000)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
                     total_loss, num_seen_utts = self.cv(
