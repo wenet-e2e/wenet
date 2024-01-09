@@ -23,7 +23,7 @@ import torch
 
 from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
                                      update_parameter_and_lr, log_per_step,
-                                     save_model)
+                                     save_model, get_lr)
 
 
 class Executor:
@@ -69,15 +69,24 @@ class Executor:
                 # processes.
                 else:
                     context = nullcontext
+                num_opt = len(optimizer) if isinstance(optimizer, list) else 1
+                loss_dict = {}
+                for opt_idx in range(num_opt):
+                    batch_dict['optimizer_idx'] = opt_idx
+                    with context():
+                        info_dict = batch_forward(model, batch_dict, scaler,
+                                                  info_dict)
+                        info_dict = batch_backward(model, scaler, info_dict)
 
-                with context():
-                    info_dict = batch_forward(model, batch_dict, scaler,
-                                              info_dict)
-                    info_dict = batch_backward(model, scaler, info_dict)
-
-                info_dict = update_parameter_and_lr(model, optimizer,
-                                                    scheduler, scaler,
-                                                    info_dict)
+                    info_dict = update_parameter_and_lr(
+                        model,
+                        optimizer[opt_idx] if num_opt > 1 else optimizer,
+                        scheduler[opt_idx] if num_opt > 1 else scheduler,
+                        scaler,
+                        info_dict,
+                    )
+                    loss_dict.update(info_dict['loss_dict'])
+                info_dict['loss_dict'] = loss_dict
                 save_interval = info_dict.get('save_interval', 10000)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
@@ -92,7 +101,7 @@ class Executor:
                         "save_time":
                         datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
                         "lr":
-                        optimizer.param_groups[0]['lr']
+                        get_lr(optimizer)
                     })
                     save_model(model, info_dict)
                 log_per_step(writer, info_dict)
