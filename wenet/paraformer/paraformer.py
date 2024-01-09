@@ -24,12 +24,12 @@ from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.layers import LFR
 from wenet.paraformer.search import (paraformer_beam_search,
                                      paraformer_greedy_search)
+from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import BaseEncoder
-from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
-from wenet.transformer.search import DecodeResult
-from wenet.utils.common import add_sos_eos
+from wenet.transformer.search import DecodeResult, ctc_greedy_search, ctc_prefix_beam_search
+from wenet.utils.common import IGNORE_ID, add_sos_eos, th_accuracy
 from wenet.utils.mask import make_non_pad_mask
 
 
@@ -102,7 +102,7 @@ class Predictor(torch.nn.Module):
         return acoustic_embeds, token_num, alphas, cif_peak, tp_alphas, tp_token_num
 
 
-class Paraformer(torch.nn.Module):
+class Paraformer(ASRModel):
     """ Paraformer: Fast and Accurate Parallel Transformer for
         Non-autoregressive End-to-End Speech Recognition
         see https://arxiv.org/pdf/2206.08317.pdf
@@ -114,7 +114,7 @@ class Paraformer(torch.nn.Module):
                  encoder: BaseEncoder,
                  decoder: TransformerDecoder,
                  predictor: Predictor,
-                 ctc: Optional[CTC] = None,
+                 ctc: CTC,
                  ctc_weight: float = 0.5,
                  ignore_id: int = -1,
                  lsm_weight: float = 0,
@@ -123,30 +123,21 @@ class Paraformer(torch.nn.Module):
                  sampling_ratio: float = 0.75,
                  add_eos: bool = True,
                  special_tokens: Optional[Dict] = None,
+                 apply_non_blank_embedding: bool = False,
                  **kwargs):
         assert isinstance(encoder,
                           SanmEncoder), isinstance(decoder, SanmDecoder)
-        super().__init__()
-        self.ctc_weight = ctc_weight
-        self.ctc = ctc
+        super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight,
+                         IGNORE_ID, 0.0, lsm_weight, length_normalized_loss,
+                         None, apply_non_blank_embedding)
         if ctc_weight == 0.0:
             del ctc
-        self.encoder = encoder
-        self.decoder = decoder
         self.predictor = predictor
-
         self.lfr = LFR()
 
         assert special_tokens is not None
         self.sos = special_tokens['<sos>']
         self.eos = special_tokens['<eos>']
-        self.ignore_id = ignore_id
-
-        self.criterion_att = LabelSmoothingLoss(
-            size=vocab_size,
-            padding_idx=ignore_id,
-            smoothing=lsm_weight,
-            normalize_length=length_normalized_loss)
 
         self.sampler = sampler
         self.sampling_ratio = sampling_ratio
@@ -166,18 +157,16 @@ class Paraformer(torch.nn.Module):
         batch: Dict,
         device: torch.device,
     ) -> Dict[str, Optional[torch.Tensor]]:
-        """Frontend + Encoder + Decoder + Calc loss
+        """Frontend + Encoder + Predictor + Decoder + Calc loss
         """
         speech = batch['feats'].to(device)
         speech_lengths = batch['feats_lengths'].to(device)
         text = batch['target'].to(device)
         text_lengths = batch['target_lengths'].to(device)
 
-        features, features_lens = self.lfr(speech, speech_lengths)
-        features_lens = features_lens.to(speech_lengths.dtype)
-
         # 0 encoder
-        encoder_out, encoder_out_mask = self.encoder(features, features_lens)
+        encoder_out, encoder_out_mask = self._forward_encoder(
+            speech, speech_lengths)
 
         # 1 predictor
         ys_pad, ys_pad_lens = text, text_lengths
@@ -197,9 +186,6 @@ class Paraformer(torch.nn.Module):
             ys_pad_lens,
             acoustic_embd,
         )
-        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
-                                         acoustic_embd, ys_pad_lens)
-
         # 3 loss
         # 3.1 ctc branhch
         loss_ctc: Optional[torch.Tensor] = None
@@ -218,7 +204,9 @@ class Paraformer(torch.nn.Module):
             reduction='sum') / ys_pad_lens.sum().to(token_num.dtype)
 
         # TODO(Mddc): thu acc
-        loss_decoder = self.criterion_att(decoder_out, ys_pad)
+        loss_decoder, acc_att = self._calc_att_loss(encoder_out,
+                                                    encoder_out_mask, ys_pad,
+                                                    acoustic_embd, ys_pad_lens)
         loss = loss_decoder
         if loss_ctc is not None:
             loss = loss + self.ctc_weight * loss_ctc
@@ -229,20 +217,20 @@ class Paraformer(torch.nn.Module):
             "loss_decoder": loss_decoder,
             "loss_quantity": loss_quantity,
             "loss_quantity_tp": loss_quantity_tp,
+            "th_accuracy": acc_att,
         }
 
-    @torch.jit.ignore(drop=True)
-    def _forward_ctc(
-        self,
-        encoder_out: torch.Tensor,
-        encoder_mask: torch.Tensor,
-        text: torch.Tensor,
-        text_lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        encoder_out_lens = encoder_mask.squeeze(1).sum(1)
-        loss_ctc, ctc_probs = self.ctc(encoder_out, encoder_out_lens, text,
-                                       text_lengths)
-        return loss_ctc, ctc_probs
+    def _calc_att_loss(
+            self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
+            ys_pad: torch.Tensor, ys_pad_emb: torch.Tensor,
+            ys_pad_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        decoder_out, _, _ = self.decoder(encoder_out, encoder_mask, ys_pad_emb,
+                                         ys_pad_lens)
+        loss_att = self.criterion_att(decoder_out, ys_pad)
+        acc_att = th_accuracy(decoder_out.view(-1, self.vocab_size),
+                              ys_pad,
+                              ignore_label=self.ignore_id)
+        return loss_att, acc_att
 
     @torch.jit.ignore(drop=True)
     def _sampler(self, encoder_out, encoder_out_mask, ys_pad, ys_pad_lens,
@@ -285,29 +273,43 @@ class Paraformer(torch.nn.Module):
         # zero out the paddings
         return sematic_embeds * tgt_mask.unsqueeze(2)
 
+    def _forward_encoder(
+        self,
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        simulate_streaming: bool = False,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # TODO(Mddct): support chunk by chunk
+        assert simulate_streaming is False
+        features, features_lens = self.lfr(speech, speech_lengths)
+        features_lens = features_lens.to(speech_lengths.dtype)
+        encoder_out, encoder_out_mask = self.encoder(features, features_lens)
+        return encoder_out, encoder_out_mask
+
     @torch.jit.export
     def forward_paraformer(
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        features, features_lens = self.lfr(speech, speech_lengths)
-        features_lens = features_lens.to(speech_lengths.dtype)
-        # encoder
-        encoder_out, encoder_out_mask = self.encoder(features, features_lens)
+        res = self._forward_paraformer(speech, speech_lengths)
+        return res['decoder_out'], res['decoder_out_lens'], res['tp_alphas']
 
-        # cif predictor
-        acoustic_embed, token_num, _, _, tp_alphas, _ = self.predictor(
-            encoder_out, mask=encoder_out_mask)
-        token_num = token_num.floor().to(speech_lengths.dtype)
-        # token_num = token_num.round().to(speech_lengths.dtype)
-
-        # decoder
-        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
-                                         acoustic_embed, token_num)
-        decoder_out = decoder_out.log_softmax(dim=-1)
-
-        return decoder_out, token_num, tp_alphas
+    @torch.jit.export
+    def forward_encoder_chunk(
+        self,
+        xs: torch.Tensor,
+        offset: int,
+        required_cache_size: int,
+        att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+        cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        # TODO(Mddct): fix
+        xs_lens = torch.tensor(xs.size(1), dtype=torch.int)
+        encoder_out, _ = self._forward_encoder(xs, xs_lens)
+        return encoder_out, att_cache, cnn_cache
 
     @torch.jit.export
     def forward_cif_peaks(self, alphas: torch.Tensor,
@@ -317,8 +319,32 @@ class Paraformer(torch.nn.Module):
         peaks = cif_without_hidden(scale_alphas,
                                    self.predictor.predictor.threshold - 1e-4)
 
-        # peaks = (peaks >= self.predictor.predictor.threshold - 1e-4)
         return peaks
+
+    def _forward_paraformer(
+            self, speech: torch.Tensor,
+            speech_lengths: torch.Tensor) -> Dict[str, torch.Tensor]:
+        # encoder
+        encoder_out, encoder_out_mask = self._forward_encoder(
+            speech, speech_lengths)
+
+        # cif predictor
+        acoustic_embed, token_num, _, _, tp_alphas, _ = self.predictor(
+            encoder_out, mask=encoder_out_mask)
+        token_num = token_num.floor().to(speech_lengths.dtype)
+
+        # decoder
+        decoder_out, _, _ = self.decoder(encoder_out, encoder_out_mask,
+                                         acoustic_embed, token_num)
+        decoder_out = decoder_out.log_softmax(dim=-1)
+
+        return {
+            "encoder_out": encoder_out,
+            "encoder_out_mask": encoder_out_mask,
+            "decoder_out": decoder_out,
+            "tp_alphas": tp_alphas,
+            "decoder_out_lens": token_num
+        }
 
     def decode(self,
                methods: List[str],
@@ -329,9 +355,14 @@ class Paraformer(torch.nn.Module):
                num_decoding_left_chunks: int = -1,
                ctc_weight: float = 0,
                simulate_streaming: bool = False,
-               reverse_weight: float = 0) -> Dict[str, List[DecodeResult]]:
-        decoder_out, decoder_out_lens, tp_alphas = self.forward_paraformer(
-            speech, speech_lengths)
+               reverse_weight: float = 0,
+               context_graph=None,
+               blank_id: int = 0,
+               blank_penalty: float = 0.0) -> Dict[str, List[DecodeResult]]:
+        res = self._forward_paraformer(speech, speech_lengths)
+        encoder_out, encoder_mask, decoder_out, decoder_out_lens, tp_alphas = res[
+            'encoder_out'], res['encoder_out_mask'], res['decoder_out'], res[
+                'decoder_out_lens'], res['tp_alphas']
         peaks = self.forward_cif_peaks(tp_alphas, decoder_out_lens)
         results = {}
         if 'paraformer_greedy_search' in methods:
@@ -349,5 +380,15 @@ class Paraformer(torch.nn.Module):
                 beam_size=beam_size,
                 eos=self.eos)
             results['paraformer_beam_search'] = paraformer_beam_result
-
+        if 'ctc_greedy_search' in methods or 'ctc_prefix_beam_search' in methods:
+            ctc_probs = self.ctc_logprobs(encoder_out, blank_penalty, blank_id)
+            encoder_lens = encoder_mask.squeeze(1).sum(1)
+            if 'ctc_greedy_search' in methods:
+                results['ctc_greedy_search'] = ctc_greedy_search(
+                    ctc_probs, encoder_lens, blank_id)
+            if 'ctc_prefix_beam_search' in methods:
+                ctc_prefix_result = ctc_prefix_beam_search(
+                    ctc_probs, encoder_lens, beam_size, context_graph,
+                    blank_id)
+                results['ctc_prefix_beam_search'] = ctc_prefix_result
         return results

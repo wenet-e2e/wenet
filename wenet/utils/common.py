@@ -258,7 +258,7 @@ def reverse_pad_list(ys_pad: torch.Tensor,
 
 
 def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
-                ignore_label: int) -> float:
+                ignore_label: int) -> torch.Tensor:
     """Calculate accuracy.
 
     Args:
@@ -267,7 +267,7 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
         ignore_label (int): Ignore label id.
 
     Returns:
-        float: Accuracy value (0.0 - 1.0).
+        torch.Tensor: Accuracy value (0.0 - 1.0).
 
     """
     pad_pred = pad_outputs.view(pad_targets.size(0), pad_targets.size(1),
@@ -276,7 +276,7 @@ def th_accuracy(pad_outputs: torch.Tensor, pad_targets: torch.Tensor,
     numerator = torch.sum(
         pad_pred.masked_select(mask) == pad_targets.masked_select(mask))
     denominator = torch.sum(mask)
-    return float(numerator) / float(denominator)
+    return (numerator / denominator).detach()
 
 
 def get_subsample(config):
