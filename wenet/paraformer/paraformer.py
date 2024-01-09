@@ -28,7 +28,8 @@ from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.encoder import BaseEncoder
-from wenet.transformer.search import DecodeResult, ctc_greedy_search, ctc_prefix_beam_search
+from wenet.transformer.search import (DecodeResult, ctc_greedy_search,
+                                      ctc_prefix_beam_search)
 from wenet.utils.common import IGNORE_ID, add_sos_eos, th_accuracy
 from wenet.utils.mask import make_non_pad_mask
 
