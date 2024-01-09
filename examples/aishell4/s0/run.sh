@@ -158,11 +158,12 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     python3 wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
-      --num ${average_num}
+      --num ${average_num} \
+      --val_best
   fi
   # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
   # -1 for full chunk
-  decoding_chunk_size=
+  decoding_chunk_size=-1
   ctc_weight=0.5
   blank_penalty=0.0
   for test_set in ${test_sets}; do
