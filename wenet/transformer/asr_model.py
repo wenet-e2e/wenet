@@ -20,7 +20,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
-from wenet.transformer.encoder import TransformerEncoder
+from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.transformer.search import (ctc_greedy_search,
                                       ctc_prefix_beam_search,
@@ -38,7 +38,7 @@ class ASRModel(torch.nn.Module):
     def __init__(
         self,
         vocab_size: int,
-        encoder: TransformerEncoder,
+        encoder: BaseEncoder,
         decoder: TransformerDecoder,
         ctc: CTC,
         ctc_weight: float = 0.5,
@@ -46,7 +46,7 @@ class ASRModel(torch.nn.Module):
         reverse_weight: float = 0.0,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
-        special_tokens: dict = None,
+        special_tokens: Optional[dict] = None,
         apply_non_blank_embedding: bool = False,
     ):
         assert 0.0 <= ctc_weight <= 1.0, ctc_weight
@@ -100,12 +100,13 @@ class ASRModel(torch.nn.Module):
             loss_ctc, ctc_probs = self.ctc(encoder_out, encoder_out_lens, text,
                                            text_lengths)
         else:
-            loss_ctc = None
+            loss_ctc, ctc_probs = None, None
 
         # 2b. Attention-decoder branch
         # use non blank (token level) embedding for decoder
         if self.apply_non_blank_embedding:
             assert self.ctc_weight != 0
+            assert ctc_probs is not None
             encoder_out, encoder_mask = self.filter_blank_embedding(
                 ctc_probs, encoder_out)
         if self.ctc_weight != 1.0:
@@ -122,7 +123,12 @@ class ASRModel(torch.nn.Module):
         else:
             loss = self.ctc_weight * loss_ctc + (1 -
                                                  self.ctc_weight) * loss_att
-        return {"loss": loss, "loss_att": loss_att, "loss_ctc": loss_ctc}
+        return {
+            "loss": loss,
+            "loss_att": loss_att,
+            "loss_ctc": loss_ctc,
+            "th_accuracy": acc_att,
+        }
 
     @torch.jit.ignore(drop=True)
     def _forward_ctc(
@@ -168,7 +174,7 @@ class ASRModel(torch.nn.Module):
         encoder_mask: torch.Tensor,
         ys_pad: torch.Tensor,
         ys_pad_lens: torch.Tensor,
-    ) -> Tuple[torch.Tensor, float]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         ys_in_pad, ys_out_pad = add_sos_eos(ys_pad, self.sos, self.eos,
                                             self.ignore_id)
         ys_in_lens = ys_pad_lens + 1
@@ -221,6 +227,20 @@ class ASRModel(torch.nn.Module):
             )  # (B, maxlen, encoder_dim)
         return encoder_out, encoder_mask
 
+    @torch.jit.ignore(drop=True)
+    def ctc_logprobs(self,
+                     encoder_out: torch.Tensor,
+                     blank_penalty: float = 0.0,
+                     blank_id: int = 0):
+        if blank_penalty > 0.0:
+            logits = self.ctc.ctc_lo(encoder_out)
+            logits[:, :, blank_id] -= blank_penalty
+            ctc_probs = logits.log_softmax(dim=2)
+        else:
+            ctc_probs = self.ctc.log_softmax(encoder_out)
+
+        return ctc_probs
+
     def decode(
         self,
         methods: List[str],
@@ -267,12 +287,7 @@ class ASRModel(torch.nn.Module):
             speech, speech_lengths, decoding_chunk_size,
             num_decoding_left_chunks, simulate_streaming)
         encoder_lens = encoder_mask.squeeze(1).sum(1)
-        if blank_penalty > 0.0:
-            logits = self.ctc.ctc_lo(encoder_out)
-            logits[:, :, blank_id] -= blank_penalty
-            ctc_probs = logits.log_softmax(dim=2)
-        else:
-            ctc_probs = self.ctc.log_softmax(encoder_out)
+        ctc_probs = self.ctc_logprobs(encoder_out, blank_penalty, blank_id)
         results = {}
         if 'attention' in methods:
             results['attention'] = attention_beam_search(
