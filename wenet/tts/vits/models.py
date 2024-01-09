@@ -885,7 +885,6 @@ class VitsModel(nn.Module):
                 'loss_dur': loss_dur,
                 'loss_kl': loss_kl,
             }
-        print('optimizer_idx', optimizer_idx)
         return losses
 
     def infer(self, text: torch.Tensor):

@@ -70,6 +70,7 @@ class Executor:
                 else:
                     context = nullcontext
                 num_opt = len(optimizer) if isinstance(optimizer, list) else 1
+                loss_dict = {}
                 for opt_idx in range(num_opt):
                     batch_dict['optimizer_idx'] = opt_idx
                     with context():
@@ -84,6 +85,8 @@ class Executor:
                         scaler,
                         info_dict,
                     )
+                    loss_dict.update(info_dict['loss_dict'])
+                info_dict['loss_dict'] = loss_dict
                 save_interval = info_dict.get('save_interval', 10000)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
