@@ -546,6 +546,7 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
                 optimizer.step()
         optimizer.zero_grad()
         scheduler.step()
+        grad_norm = grad_norm.item()
 
     info_dict["lr"] = optimizer.param_groups[0]['lr']
     info_dict["grad_norm"] = grad_norm
