@@ -28,13 +28,13 @@ job_id=2024
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
 # faster on reading data and training.
-data_type=raw
+data_type=shard
 
 train_set=train
 
 train_config=conf/train_paraformer.yaml
 checkpoint=exp/paraformer/large/wenet_paraformer.pt
-dir=exp/finetune_paraformer
+dir=exp/finetune_paraformer_nonstreaming
 tensorboard_dir=tensorboard
 num_workers=8
 prefetch=500
@@ -46,6 +46,11 @@ average_num=5
 decode_modes="ctc_greedy_search ctc_prefix_beam_search paraformer_greedy_search"
 
 train_engine=torch_ddp
+
+# model+optimizer or model_only, model+optimizer is more time-efficient but
+# consumes more space, while model_only is the opposite
+deepspeed_config=../whisper/conf/ds_stage1.json
+deepspeed_save_states="model+optimizer"
 
 . tools/parse_options.sh || exit 1;
 
@@ -97,7 +102,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       --ddp.dist_backend $dist_backend \
       --num_workers ${num_workers} \
       --prefetch ${prefetch} \
-      --pin_memory
+      --pin_memory \
+      --deepspeed_config ${deepspeed_config} \
+      --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
@@ -119,7 +126,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
-    python wenet/bin/average_model.py \
+    python3 wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
       --num ${average_num} \
@@ -131,7 +138,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   decoding_chunk_size=
   ctc_weight=0.3
   reverse_weight=0.5
-  python wenet/bin/recognize.py --gpu 0 \
+  python3 wenet/bin/recognize.py --gpu 0 \
     --modes $decode_modes \
     --config $dir/train.yaml \
     --data_type $data_type \
@@ -145,7 +152,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     --result_dir $dir \
     ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
   for mode in ${decode_modes}; do
-    python tools/compute-wer.py --char=1 --v=1 \
+    python3 tools/compute-wer.py --char=1 --v=1 \
       data/test/text $dir/$mode/text > $dir/$mode/wer
   done
 fi
@@ -153,7 +160,7 @@ fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   # Export the best model you want
-  python wenet/bin/export_jit.py \
+  python3 wenet/bin/export_jit.py \
     --config $dir/train.yaml \
     --checkpoint $dir/avg_${average_num}.pt \
     --output_file $dir/final.zip \
