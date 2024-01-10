@@ -47,9 +47,9 @@ def test_init_model():
                 config['tokenizer_conf']['is_multilingual'] = True
                 config['tokenizer_conf']['num_languages'] = 100
             elif config['tokenizer'] == 'paraformer':
-                configs['tokenizer_conf'][
+                config['tokenizer_conf'][
                     'symbol_table_path'] = "test/resources/paraformer.words.txt"
-                configs['tokenizer_conf'][
+                config['tokenizer_conf'][
                     'seg_dict_path'] = "test/resources/paraformer.seg_dict.txt"
             else:
                 raise NotImplementedError
