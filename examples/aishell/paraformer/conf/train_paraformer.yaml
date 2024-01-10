@@ -54,6 +54,21 @@ model_conf:
   predictor_weight: 1.0
   sampling_ratio: 0.75
 
+predictor: paraformer_predictor
+predictor_conf:
+  cnn_groups: 1
+  idim: 512
+  l_order: 1
+  noise_threshold2: 0.01
+  r_order: 1
+  residual: false
+  smooth_factor2: 0.25
+  tail_threshold: 0.45
+  threshold: 1.0
+  upsample_times: 3
+  upsample_type: cnn_blstm
+  use_cif1_cnn: false
+
 dataset: asr
 dataset_conf:
     filter_conf:
