@@ -1,3 +1,5 @@
+input_dim: 560
+
 encoder: sanm_encoder
 encoder_conf:
   attention_dropout_rate: 0.1
