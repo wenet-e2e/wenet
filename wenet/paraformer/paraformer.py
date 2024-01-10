@@ -166,7 +166,8 @@ class Paraformer(ASRModel):
         text_lengths = batch['target_lengths'].to(device)
 
         # 0 encoder
-        encoder_out, encoder_out_mask = self.encoder(speech, speech_lengths)
+        encoder_out, encoder_out_mask = self._forward_encoder(
+            speech, speech_lengths)
 
         # 1 predictor
         ys_pad, ys_pad_lens = text, text_lengths
@@ -276,7 +277,7 @@ class Paraformer(ASRModel):
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-        decoding_chunk_size: int = -1,
+        decoding_chunk_size: int = 0,
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
