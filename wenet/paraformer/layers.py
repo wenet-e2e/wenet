@@ -202,11 +202,20 @@ class SanmEncoder(BaseEncoder):
         sanm_shfit: int = 0,
         gradient_checkpointing: bool = False,
     ):
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk, global_cmvn,
+        super().__init__(input_size,
+                         output_size,
+                         attention_heads,
+                         linear_units,
+                         num_blocks,
+                         dropout_rate,
+                         positional_dropout_rate,
+                         attention_dropout_rate,
+                         input_layer,
+                         pos_enc_layer_type,
+                         normalize_before,
+                         static_chunk_size,
+                         use_dynamic_chunk,
+                         global_cmvn,
                          use_dynamic_left_chunk,
                          gradient_checkpointing=gradient_checkpointing)
         del self.embed
@@ -281,8 +290,8 @@ class SanmEncoder(BaseEncoder):
         for layer in self.encoders0:
             xs, _, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         for layer in self.encoders:
-            xs, _, _, _ = ckpt.checkpoint(layer.__call__, xs,
-                                          chunk_masks, pos_emb, mask_pad)
+            xs, _, _, _ = ckpt.checkpoint(layer.__call__, xs, chunk_masks,
+                                          pos_emb, mask_pad)
         return xs
 
 
@@ -387,11 +396,19 @@ class SanmDecoder(TransformerDecoder):
         sanm_shfit: int = 0,
         gradient_checkpointing: bool = False,
     ):
-        super().__init__(vocab_size, encoder_output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, self_attention_dropout_rate,
-                         src_attention_dropout_rate, input_layer,
-                         use_output_layer, normalize_before, src_attention,
+        super().__init__(vocab_size,
+                         encoder_output_size,
+                         attention_heads,
+                         linear_units,
+                         num_blocks,
+                         dropout_rate,
+                         positional_dropout_rate,
+                         self_attention_dropout_rate,
+                         src_attention_dropout_rate,
+                         input_layer,
+                         use_output_layer,
+                         normalize_before,
+                         src_attention,
                          gradient_checkpointing=gradient_checkpointing)
         del self.embed
         self.embed = torch.nn.Sequential(
@@ -467,8 +484,8 @@ class SanmDecoder(TransformerDecoder):
             if i == 0:
                 x, _, _, _ = layer(x, tgt_mask, memory, memory_mask)
             else:
-                x, _, _, _ = ckpt.checkpoint(
-                    layer.__call__, x, tgt_mask, memory, memory_mask)
+                x, _, _, _ = ckpt.checkpoint(layer.__call__, x, tgt_mask,
+                                             memory, memory_mask)
         for layer in self.decoders3:
             x = layer(x)
         return x
