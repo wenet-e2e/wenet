@@ -28,13 +28,13 @@ job_id=2024
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
 # faster on reading data and training.
-data_type=shard
+data_type=raw
 
 train_set=train
 
 train_config=conf/train_paraformer.yaml
 checkpoint=exp/paraformer/large/wenet_paraformer.pt
-dir=exp/finetune_paraformer_nonstreaming
+dir=exp/finetune_paraformer
 tensorboard_dir=tensorboard
 num_workers=8
 prefetch=500
@@ -126,7 +126,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg_${average_num}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
-    python3 wenet/bin/average_model.py \
+    python wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
       --num ${average_num} \
@@ -138,7 +138,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   decoding_chunk_size=
   ctc_weight=0.3
   reverse_weight=0.5
-  python3 wenet/bin/recognize.py --gpu 0 \
+  python wenet/bin/recognize.py --gpu 0 \
     --modes $decode_modes \
     --config $dir/train.yaml \
     --data_type $data_type \
@@ -152,7 +152,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     --result_dir $dir \
     ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
   for mode in ${decode_modes}; do
-    python3 tools/compute-wer.py --char=1 --v=1 \
+    python tools/compute-wer.py --char=1 --v=1 \
       data/test/text $dir/$mode/text > $dir/$mode/wer
   done
 fi
@@ -160,7 +160,7 @@ fi
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   # Export the best model you want
-  python3 wenet/bin/export_jit.py \
+  python wenet/bin/export_jit.py \
     --config $dir/train.yaml \
     --checkpoint $dir/avg_${average_num}.pt \
     --output_file $dir/final.zip \
