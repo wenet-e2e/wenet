@@ -277,7 +277,7 @@ class Paraformer(ASRModel):
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-        decoding_chunk_size: int = -1,
+        decoding_chunk_size: int = 0,
         num_decoding_left_chunks: int = -1,
         simulate_streaming: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
