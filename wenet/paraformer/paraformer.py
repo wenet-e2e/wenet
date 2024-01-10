@@ -166,8 +166,7 @@ class Paraformer(ASRModel):
         text_lengths = batch['target_lengths'].to(device)
 
         # 0 encoder
-        encoder_out, encoder_out_mask = self._forward_encoder(
-            speech, speech_lengths)
+        encoder_out, encoder_out_mask = self.encoder(speech, speech_lengths)
 
         # 1 predictor
         ys_pad, ys_pad_lens = text, text_lengths
