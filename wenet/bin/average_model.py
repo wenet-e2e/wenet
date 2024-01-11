@@ -60,8 +60,9 @@ def main():
         if args.mode == "hybrid":
             yamls = glob.glob('{}/*.yaml'.format(args.src_path))
             yamls = [
-                f for f in yamls if not (os.path.basename(f).startswith('train')
-                                         or os.path.basename(f).startswith('init'))
+                f for f in yamls
+                if not (os.path.basename(f).startswith('train')
+                        or os.path.basename(f).startswith('init'))
             ]
         elif args.mode == "step":
             yamls = glob.glob('{}/step_*.yaml'.format(args.src_path))
