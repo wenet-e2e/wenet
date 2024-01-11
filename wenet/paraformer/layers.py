@@ -4,6 +4,9 @@
 import math
 from typing import Optional, Tuple
 import torch
+
+import torch.utils.checkpoint as ckpt
+
 from wenet.paraformer.attention import (DummyMultiHeadSANM,
                                         MultiHeadAttentionCross,
                                         MultiHeadedAttentionSANM)
@@ -197,13 +200,24 @@ class SanmEncoder(BaseEncoder):
         use_dynamic_left_chunk: bool = False,
         kernel_size: int = 11,
         sanm_shfit: int = 0,
+        gradient_checkpointing: bool = False,
     ):
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk)
+        super().__init__(input_size,
+                         output_size,
+                         attention_heads,
+                         linear_units,
+                         num_blocks,
+                         dropout_rate,
+                         positional_dropout_rate,
+                         attention_dropout_rate,
+                         input_layer,
+                         pos_enc_layer_type,
+                         normalize_before,
+                         static_chunk_size,
+                         use_dynamic_chunk,
+                         global_cmvn,
+                         use_dynamic_left_chunk,
+                         gradient_checkpointing=gradient_checkpointing)
         del self.embed
         self.embed = IdentitySubsampling(
             input_size,
@@ -274,13 +288,10 @@ class SanmEncoder(BaseEncoder):
                                     pos_emb: torch.Tensor,
                                     mask_pad: torch.Tensor) -> torch.Tensor:
         for layer in self.encoders0:
-            xs, _, _, _, _ = torch.utils.checkpoint(layer.__call__, xs,
-                                                    chunk_masks, mask_pad,
-                                                    pos_emb)
+            xs, _, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         for layer in self.encoders:
-            xs, _, _, _, _ = torch.utils.checkpoint(layer.__call__, xs,
-                                                    chunk_masks, mask_pad,
-                                                    pos_emb)
+            xs, _, _, _ = ckpt.checkpoint(layer.__call__, xs, chunk_masks,
+                                          pos_emb, mask_pad)
         return xs
 
 
@@ -383,12 +394,22 @@ class SanmDecoder(TransformerDecoder):
         att_layer_num: int = 16,
         kernel_size: int = 11,
         sanm_shfit: int = 0,
+        gradient_checkpointing: bool = False,
     ):
-        super().__init__(vocab_size, encoder_output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, self_attention_dropout_rate,
-                         src_attention_dropout_rate, input_layer,
-                         use_output_layer, normalize_before, src_attention)
+        super().__init__(vocab_size,
+                         encoder_output_size,
+                         attention_heads,
+                         linear_units,
+                         num_blocks,
+                         dropout_rate,
+                         positional_dropout_rate,
+                         self_attention_dropout_rate,
+                         src_attention_dropout_rate,
+                         input_layer,
+                         use_output_layer,
+                         normalize_before,
+                         src_attention,
+                         gradient_checkpointing=gradient_checkpointing)
         del self.embed
         self.embed = torch.nn.Sequential(
             torch.nn.Embedding(vocab_size, encoder_output_size))
@@ -433,13 +454,38 @@ class SanmDecoder(TransformerDecoder):
 
         ys_pad_mask = make_non_pad_mask(ys_pad_lens).unsqueeze(1)
         x = sematic_embeds
-        for layer in self.decoders:
-            x, _, _, _ = layer(x, ys_pad_mask, encoder_out, encoder_out_mask)
-
-        for layer in self.decoders3:
-            x = layer(x)
+        if self.gradient_checkpointing and self.training:
+            x = self.forward_layers_checkpointed(x, ys_pad_mask, encoder_out,
+                                                 encoder_out_mask)
+        else:
+            x = self.forward_layers(x, ys_pad_mask, encoder_out,
+                                    encoder_out_mask)
         if self.normalize_before:
             x = self.after_norm(x)
         if self.output_layer is not None:
             x = self.output_layer(x)
         return x, torch.tensor(0.0), ys_pad_lens
+
+    def forward_layers(self, x: torch.Tensor, tgt_mask: torch.Tensor,
+                       memory: torch.Tensor,
+                       memory_mask: torch.Tensor) -> torch.Tensor:
+        for layer in self.decoders:
+            x, _, _, _ = layer(x, tgt_mask, memory, memory_mask)
+        for layer in self.decoders3:
+            x = layer(x)
+        return x
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(self, x: torch.Tensor,
+                                    tgt_mask: torch.Tensor,
+                                    memory: torch.Tensor,
+                                    memory_mask: torch.Tensor) -> torch.Tensor:
+        for i, layer in enumerate(self.decoders):
+            if i == 0:
+                x, _, _, _ = layer(x, tgt_mask, memory, memory_mask)
+            else:
+                x, _, _, _ = ckpt.checkpoint(layer.__call__, x, tgt_mask,
+                                             memory, memory_mask)
+        for layer in self.decoders3:
+            x = layer(x)
+        return x

@@ -51,7 +51,6 @@ class Predictor(torch.nn.Module):
         smooth_factor2=0.25,
         noise_threshold2=0.01,
         upsample_times=3,
-        **kwargs,
     ):
         super().__init__()
         self.predictor = Cif(idim, l_order, r_order, threshold, dropout,
@@ -124,8 +123,7 @@ class Paraformer(ASRModel):
                  sampling_ratio: float = 0.75,
                  add_eos: bool = True,
                  special_tokens: Optional[Dict] = None,
-                 apply_non_blank_embedding: bool = False,
-                 **kwargs):
+                 apply_non_blank_embedding: bool = False):
         assert isinstance(encoder,
                           SanmEncoder), isinstance(decoder, SanmDecoder)
         super().__init__(vocab_size, encoder, decoder, ctc, ctc_weight,
@@ -174,7 +172,6 @@ class Paraformer(ASRModel):
         if self.add_eos:
             _, ys_pad = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
             ys_pad_lens = text_lengths + 1
-        # acoustic_embd, token_num, _, _, _, tp_token_num = self.predictor(
         acoustic_embd, token_num, _, _, _, tp_token_num = self.predictor(
             encoder_out, ys_pad, encoder_out_mask, self.ignore_id)
 
