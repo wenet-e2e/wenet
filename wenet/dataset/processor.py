@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import copy
 import librosa
 import logging
 import json
@@ -145,13 +146,25 @@ def parse_raw(data):
                     frame_offset=start_frame)
             else:
                 waveform, sample_rate = torchaudio.load(wav_file)
-            example = dict(key=key,
-                           txt=txt,
-                           wav=waveform,
-                           sample_rate=sample_rate)
+            example = copy.deepcopy(obj)  # copy and keep all the fields
+            example['wav'] = waveform  # overwrite wav
+            example['sample_rate'] = sample_rate
             yield example
         except Exception as ex:
             logging.warning('Failed to read {}'.format(wav_file))
+
+
+def parse_speaker(data, speaker_table_path):
+    speaker_dict = {}
+    with open(speaker_table_path, 'r', encoding='utf8') as fin:
+        for line in fin:
+            arr = line.strip().split()
+            speaker_dict[arr[0]] = int(arr[1])
+    for sample in data:
+        assert 'speaker' in sample
+        speaker = sample['speaker']
+        sample['speaker'] = speaker_dict.get(speaker, 0)
+        yield sample
 
 
 def filter(data,
@@ -628,8 +641,7 @@ def padding(data):
         padded_wavs = pad_sequence(sorted_wavs,
                                    batch_first=True,
                                    padding_value=0)
-
-        yield {
+        batch = {
             "keys": sorted_keys,
             "feats": padded_feats,
             "target": padding_labels,
@@ -638,3 +650,8 @@ def padding(data):
             "pcm": padded_wavs,
             "pcm_length": wav_lengths,
         }
+        if 'speaker' in sample[0]:
+            speaker = torch.tensor([sample[i]['speaker'] for i in order],
+                                   dtype=torch.int32)
+            batch['speaker'] = speaker
+        yield batch
