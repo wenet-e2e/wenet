@@ -57,7 +57,6 @@ def test_tokenize(paraformer_tokenizer):
         tokenizer.unk] == 8403
     for (i, txt) in enumerate(txts):
         tokens, labels = tokenizer.tokenize(txt)
-        print(tokens, labels)
         assert len(tokens) == len(expected[i]['tokens'])
         assert len(labels) == len(expected[i]['label'])
         assert labels == expected[i]['label']
@@ -101,3 +100,7 @@ def test_consistency(paraformer_tokenizer):
         paraformer_tokenizer.text2tokens(text))
     assert text == paraformer_tokenizer.detokenize(
         paraformer_tokenizer.tokenize(text)[1])[0]
+
+    text = "paraformer powered by wenet,太棒了"
+    assert text == paraformer_tokenizer.tokens2text(
+        paraformer_tokenizer.tokenize(text)[0])
