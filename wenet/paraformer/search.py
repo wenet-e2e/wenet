@@ -1,7 +1,6 @@
 import math
 from typing import Any, List, Optional, Tuple, Union
 import torch
-from whisper.tokenizer import string
 
 from wenet.transformer.search import DecodeResult
 from wenet.utils.mask import (make_non_pad_mask, mask_finished_preds,
@@ -107,8 +106,6 @@ def paraformer_beautify_result(tokens: List[str]) -> str:
                 alpha_blank = True
             else:
                 word_lists.append(ch)
-                if ch[-1] in string.punctuation:
-                    word_lists.append(' ')
                 alpha_blank = False
     return ''.join(word_lists).strip()
 
