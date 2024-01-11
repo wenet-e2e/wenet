@@ -1,7 +1,6 @@
 import pytest
 
 from wenet.utils.init_tokenizer import init_tokenizer
-from wenet.paraformer.search import paraformer_beautify_result
 
 
 def test_init_whisper_tokenizer():
@@ -63,7 +62,6 @@ def test_init_paraformer_tokenizer(symbol_table_path, seg_dict_path):
     configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
     configs['tokenizer_conf']['seg_dict_path'] = seg_dict_path
     tokenizer = init_tokenizer(configs)
-    text = "paraformer powered by wenet, 太棒了"
+    text = "paraformer powered by wenet,太棒了"
 
-    assert text == paraformer_beautify_result(
-        tokenizer.detokenize(tokenizer.text2tokens(text))[1])
+    assert text == tokenizer.tokens2text(tokenizer.tokenize(text)[0])
