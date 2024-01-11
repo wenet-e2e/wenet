@@ -70,6 +70,8 @@ class CTLModel(ASRModel):
     @torch.jit.ignore(drop=True)
     def forward(
         self,
+        batch: dict,
+        device: torch.device,
     ) -> Dict[str, Optional[torch.Tensor]]:
 
         speech = batch['feats'].to(device)
@@ -145,7 +147,8 @@ class CTLModel(ASRModel):
         elif loss_att is None:
             loss = loss_ctc
         else:
-            loss = self.ctc_weight * loss_ctc[0] + (1 - self.ctc_weight) * loss_att
+            loss = self.ctc_weight * loss_ctc[0] + (1 -
+                                                    self.ctc_weight) * loss_att
         return loss, encoder_out, encoder_out_lens, encoder_mask
 
     def forward_chunk(
@@ -193,7 +196,8 @@ class CTLModel(ASRModel):
         elif loss_att is None:
             loss = loss_ctc
         else:
-            loss = self.ctc_weight * loss_ctc[0] + (1 - self.ctc_weight) * loss_att
+            loss = self.ctc_weight * loss_ctc[0] + (1 -
+                                                    self.ctc_weight) * loss_att
         return loss, encoder_out, encoder_out_lens, encoder_mask
 
     def sample_negatives(self, y, num, padding_count=0, speech_lengths=None):
