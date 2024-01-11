@@ -46,8 +46,11 @@ def test_init_model():
             elif config['tokenizer'] == "whisper":
                 config['tokenizer_conf']['is_multilingual'] = True
                 config['tokenizer_conf']['num_languages'] = 100
+            elif config['tokenizer'] == 'paraformer':
+                # TODO(Mddct): fix in later pr
+                pass
             else:
-                raise NotImplementedError
+                raise NotImplementedError('error')
         else:
             config['tokenizer'] = "char"
             config['tokenizer_conf'] = {}
