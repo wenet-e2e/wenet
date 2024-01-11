@@ -102,6 +102,5 @@ def test_consistency(paraformer_tokenizer):
         paraformer_tokenizer.tokenize(text)[1])[0]
 
     text = "paraformer powered by wenet, 太棒了"
-    tokens = paraformer_tokenizer.tokenize(text)[0]
     assert text == paraformer_tokenizer.tokens2text(
         paraformer_tokenizer.tokenize(text)[0])
