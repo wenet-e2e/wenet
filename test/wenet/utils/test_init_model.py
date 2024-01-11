@@ -50,7 +50,7 @@ def test_init_model():
                 # TODO(Mddct): fix in later pr
                 pass
             else:
-                raise NotImplementedError('error')
+                raise NotImplementedError
         else:
             config['tokenizer'] = "char"
             config['tokenizer_conf'] = {}
