@@ -1,33 +1,19 @@
 import pytest
-import os
-from wenet.paraformer.convert_paraformer_to_wenet_config_and_ckpt import (
-    extract_dict, _download_fn)
 from wenet.utils.init_tokenizer import init_tokenizer
 
-import yaml
 
-
-@pytest.fixture()
+@pytest.fixture(params=[[
+    "test/resources/paraformer.words.txt",
+    "test/resources/paraformer.seg_dict.txt"
+]])
 def paraformer_tokenizer(request):
-    _ = request
-    download_root = os.path.join(os.path.expanduser("~"), ".cache")
-    seg_dict = 'seg_dict'
-    _download_fn(download_root, seg_dict)
-
-    config_name = 'config.yaml'
-    _download_fn(download_root, config_name, version='v1.2.4')
-    with open(os.path.join(download_root, config_name), 'r') as fin:
-        configs = yaml.load(fin, Loader=yaml.FullLoader)
-    wenet_units = os.path.join(download_root, 'units.txt')
-    extract_dict(configs, wenet_units)
-
+    symbol_table_path, seg_dict = request.param
     configs = {}
     configs['model'] = 'paraformer'
     configs['tokenizer'] = 'paraformer'
     configs['tokenizer_conf'] = {}
-    configs['tokenizer_conf']['symbol_table_path'] = wenet_units
-    configs['tokenizer_conf']['seg_dict_path'] = os.path.join(
-        download_root, seg_dict)
+    configs['tokenizer_conf']['symbol_table_path'] = symbol_table_path
+    configs['tokenizer_conf']['seg_dict_path'] = seg_dict
     return init_tokenizer(configs)
 
 
