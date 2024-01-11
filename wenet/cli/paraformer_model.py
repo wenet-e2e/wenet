@@ -6,7 +6,6 @@ import torchaudio.compliance.kaldi as kaldi
 
 from wenet.cli.hub import Hub
 from wenet.paraformer.search import (gen_timestamps_from_peak,
-                                     paraformer_beautify_result,
                                      paraformer_greedy_search)
 from wenet.text.paraformer_tokenizer import ParaformerTokenizer
 
@@ -53,8 +52,7 @@ class Paraformer:
         res = paraformer_greedy_search(decoder_out, token_num, cif_peaks)[0]
         result = {}
         result['confidence'] = res.confidence
-        result['text'] = paraformer_beautify_result(
-            self.tokenizer.detokenize(res.tokens)[1])
+        result['text'] = self.tokenizer.detokenize(res.tokens)[0]
         if tokens_info:
             tokens_info = []
             times = gen_timestamps_from_peak(res.times,

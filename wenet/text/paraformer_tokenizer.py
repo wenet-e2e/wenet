@@ -1,5 +1,6 @@
 from os import PathLike
 from typing import Dict, List, Optional, Union
+from wenet.paraformer.search import paraformer_beautify_result
 from wenet.text.char_tokenizer import CharTokenizer
 from wenet.text.tokenize_utils import tokenize_by_seg_dict
 
@@ -46,3 +47,6 @@ class ParaformerTokenizer(CharTokenizer):
             else:
                 tokens.extend(tokenize_by_seg_dict(self.seg_dict, part))
         return tokens
+
+    def tokens2text(self, tokens: List[str]) -> str:
+        return paraformer_beautify_result(tokens)
