@@ -19,8 +19,6 @@ import math
 import torchaudio
 import torch
 
-torchaudio.set_audio_backend("sox_io")
-
 
 def db2amp(db):
     return pow(10, db / 20)

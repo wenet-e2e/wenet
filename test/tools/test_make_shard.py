@@ -20,3 +20,7 @@ def test_save_load_consistently():
             new_wav, new_sr = torchaudio.load(f)
             assert new_sr == sr
             torch.allclose(new_wav, wav)
+
+
+def test_sox_set_buffer():
+    torchaudio.utils.sox_utils.set_buffer_size(16500)
