@@ -8,6 +8,9 @@ on:
 jobs:
   unit-test:
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -el {0}
     strategy:
       max-parallel: 20
       matrix:
@@ -24,6 +27,19 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
+      - name: Install and Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: false
+          auto-activate-base: true
+      - name: Create Conda Environment
+        run: |
+          set -eux
+          conda create -y -n wenet python=${{ matrix.python-version }}
+      - name: Activate Conda Environment
+        run: |
+          set -eux
+          conda activate wenet
       - name: Fetch Wenet
         uses: actions/checkout@v1
       - name: Checkout PR tip
@@ -39,6 +55,7 @@ jobs:
       - name: Install Wenet Dependencies
         run: |
           set -eux
+          conda install conda-forge::sox
           pip install -r requirements.txt
           sudo apt update && sudo apt install -y ffmpeg
       - name: Run Pytest
