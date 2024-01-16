@@ -57,6 +57,7 @@ android {
     }
     externalNativeBuild {
         cmake {
+            version "3.18.1"
             path "src/main/cpp/CMakeLists.txt"
         }
     }
@@ -67,17 +68,14 @@ android {
 }
 
 dependencies {
-
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation 'com.google.android.material:material:1.2.1'
     implementation 'androidx.constraintlayout:constraintlayout:2.0.4'
     testImplementation 'junit:junit:4.+'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
-
-    implementation 'org.pytorch:pytorch_android:1.10.0'
-    extractForNativeBuild 'org.pytorch:pytorch_android:1.10.0'
-
+    implementation 'org.pytorch:pytorch_android:1.13.0'
+    extractForNativeBuild 'org.pytorch:pytorch_android:1.13.0'
     implementation 'com.github.pengzhendong:wenet-openfst-android:1.0.2'
     extractForNativeBuild 'com.github.pengzhendong:wenet-openfst-android:1.0.2'
 }
