@@ -58,7 +58,6 @@ git clone https://github.com/wenet-e2e/wenet.git
 ``` sh
 conda create -n wenet python=3.8
 conda activate wenet
-conda install conda-forge::sox
 pip install -r requirements.txt
 pre-commit install  # for clean and tidy code
 ```
