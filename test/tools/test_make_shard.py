@@ -24,3 +24,8 @@ def test_save_load_consistently():
 
 def test_sox_set_buffer():
     torchaudio.utils.sox_utils.set_buffer_size(16500)
+
+
+def test_make_shards():
+    # TODO(MDdct): add make shards
+    pass
