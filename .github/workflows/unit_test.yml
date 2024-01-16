@@ -8,9 +8,6 @@ on:
 jobs:
   unit-test:
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
       max-parallel: 20
       matrix:
@@ -23,19 +20,10 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/setup.py') }}
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
           architecture: x64
-      - name: Install and Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          auto-update-conda: false
-          auto-activate-base: true
-      - name: Create Conda Environment
-        run: |
-          set -eux
-          conda create -y -n wenet python=${{ matrix.python-version }}
       - name: Fetch Wenet
         uses: actions/checkout@v1
       - name: Checkout PR tip
@@ -51,15 +39,11 @@ jobs:
       - name: Install Wenet Dependencies
         run: |
           set -eux
-          sudo apt update && sudo apt install -y ffmpeg
-          conda activate wenet
-          conda install conda-forge::sox
           pip install -r requirements.txt
+          sudo apt update && sudo apt install -y ffmpeg  libsox-dev
       - name: Run Pytest
         run: |
           set -eux
-          conda activate wenet
           pytest --version
           PYTHONPATH="${PYTHONPATH:-}:$(pwd)" pytest -q
           if [ $? != 0 ]; then exit 1; fi
-
