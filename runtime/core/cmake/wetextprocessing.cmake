@@ -4,7 +4,7 @@ if(NOT ANDROID)
     GIT_TAG        origin/master
   )
   FetchContent_MakeAvailable(wetextprocessing)
-  include_directories(${wetextprocessing_SOURCE_DIR}/runtime )
+  include_directories(${wetextprocessing_SOURCE_DIR}/runtime)
   add_subdirectory(${wetextprocessing_SOURCE_DIR}/runtime/utils)
   add_subdirectory(${wetextprocessing_SOURCE_DIR}/runtime/processor)
 else()
@@ -21,8 +21,8 @@ else()
     -DCMAKE_EXE_LINKER_FLAGS=-L${openfst_BINARY_DIR}/${ANDROID_ABI}
   )
   ExternalProject_Add(wetextprocessing
-    URL https://github.com/wenet-e2e/WeTextProcessing/archive/refs/tags/0.1.3.tar.gz
-    URL_HASH SHA256=2f1c81649b2f725a5825345356be9dccb9699965cf44c9f0e842f5c0d4b6ba61
+    GIT_REPOSITORY https://github.com/wenet-e2e/WeTextProcessing.git
+    GIT_TAG origin/master
     SOURCE_SUBDIR runtime
     CMAKE_ARGS ${ANDROID_CMAKE_ARGS}
     INSTALL_COMMAND ""
