@@ -6,6 +6,7 @@ include(ExternalProject)
 
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
+option(ITN "whether to use WeTextProcessing" ON)
 set(CMAKE_VERBOSE_MAKEFILE on)
 set(build_DIR ${CMAKE_SOURCE_DIR}/../../../build)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
@@ -13,6 +14,7 @@ string(REPLACE "-Wl,--exclude-libs,libgcc_real.a" "" CMAKE_EXE_LINKER_FLAGS "${C
 
 include(libtorch)
 include(openfst)
+include(wetextprocessing)
 
 include_directories(
   ${CMAKE_SOURCE_DIR}
@@ -24,6 +26,7 @@ add_subdirectory(frontend)
 add_subdirectory(post_processor)
 add_subdirectory(kaldi)  # kaldi: wfst based decoder
 add_subdirectory(decoder)
+add_dependencies(post_processor wetextprocessing)
 
 link_libraries(frontend decoder android)
 add_library(${TARGET} SHARED wenet.cc)
