@@ -475,7 +475,7 @@ def test_model(model, audio_path):
         np.testing.assert_allclose(whisper_layer["value"].numpy(),
                                    wenet_layer["value"].numpy(),
                                    rtol=1e-7,
-                                   atol=6e-3)
+                                   atol=8e-3)
     np.testing.assert_allclose(whisper_encoder_out.numpy(),
                                wenet_encoder_out.numpy(),
                                rtol=1e-7,

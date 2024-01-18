@@ -76,7 +76,7 @@ def tar_file_and_group(data):
     """
     for sample in data:
         assert 'stream' in sample
-        stream = tarfile.open(fileobj=sample['stream'], mode="r|*")
+        stream = tarfile.open(fileobj=sample['stream'], mode="r:*")
         prev_prefix = None
         example = {}
         valid = True
@@ -136,14 +136,13 @@ def parse_raw(data):
         try:
             if 'start' in obj:
                 assert 'end' in obj
-                sample_rate = torchaudio.backend.sox_io_backend.info(
-                    wav_file).sample_rate
+                sample_rate = torchaudio.info(wav_file).sample_rate
                 start_frame = int(obj['start'] * sample_rate)
                 end_frame = int(obj['end'] * sample_rate)
-                waveform, _ = torchaudio.backend.sox_io_backend.load(
-                    filepath=wav_file,
-                    num_frames=end_frame - start_frame,
-                    frame_offset=start_frame)
+                waveform, _ = torchaudio.load(filepath=wav_file,
+                                              num_frames=end_frame -
+                                              start_frame,
+                                              frame_offset=start_frame)
             else:
                 waveform, sample_rate = torchaudio.load(wav_file)
             example = copy.deepcopy(obj)  # copy and keep all the fields

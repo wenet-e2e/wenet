@@ -24,7 +24,6 @@ import multiprocessing
 
 import torch
 import torchaudio
-import torchaudio.backend.sox_io_backend as sox
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
@@ -52,51 +51,35 @@ def write_tar_file(data_list,
             if no_segments:
                 # read & resample
                 ts = time.time()
-                audio, sample_rate = sox.load(wav, normalize=False)
-                if sample_rate != resample:
-                    audio = torchaudio.transforms.Resample(
-                        sample_rate, resample)(audio.float())
-                    audio = audio.to(torch.int16)
+                audio, sample_rate = torchaudio.load(wav)
+                audio = torchaudio.transforms.Resample(sample_rate,
+                                                       resample)(audio)
                 read_time += (time.time() - ts)
-                # change format to wav
-                ts = time.time()
-                f = io.BytesIO()
-                sox.save(f, audio, resample, format="wav", bits_per_sample=16)
-                suffix = "wav"
-                f.seek(0)
-                data = f.read()
-                save_time += (time.time() - ts)
             else:
                 if wav != prev_wav:
                     ts = time.time()
-                    waveforms, sample_rate = sox.load(wav, normalize=False)
+                    waveforms, sample_rate = torchaudio.load(wav)
                     read_time += (time.time() - ts)
                     prev_wav = wav
                 start = int(start * sample_rate)
                 end = int(end * sample_rate)
                 audio = waveforms[:1, start:end]
+                audio = torchaudio.transforms.Resample(sample_rate,
+                                                       resample)(audio)
 
-                # resample
-                if sample_rate != resample:
-                    if not audio.is_floating_point():
-                        # normalize the audio before resample
-                        # because resample can't process int audio
-                        audio = audio / (1 << 15)
-                        audio = torchaudio.transforms.Resample(
-                            sample_rate, resample)(audio)
-                        audio = (audio * (1 << 15)).short()
-                    else:
-                        audio = torchaudio.transforms.Resample(
-                            sample_rate, resample)(audio)
-
-                ts = time.time()
-                f = io.BytesIO()
-                sox.save(f, audio, resample, format="wav", bits_per_sample=16)
-                # Save to wav for segments file
+            audio = (audio * (1 << 15))
+            audio = audio.to(torch.int16)
+            ts = time.time()
+            with io.BytesIO() as f:
+                torchaudio.save(f,
+                                audio,
+                                resample,
+                                format="wav",
+                                bits_per_sample=16)
                 suffix = "wav"
                 f.seek(0)
                 data = f.read()
-                save_time += (time.time() - ts)
+            save_time += (time.time() - ts)
 
             assert isinstance(txt, str)
             ts = time.time()
