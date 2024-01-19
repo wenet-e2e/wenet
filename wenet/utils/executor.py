@@ -81,14 +81,13 @@ class Executor:
                 save_interval = info_dict.get('save_interval', 100000000000000)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
-                    total_loss, num_seen_utts = self.cv(
-                        model, cv_data_loader, configs)
+                    loss_dict = self.cv(model, cv_data_loader, configs)
                     model.train()
                     info_dict.update({
                         "tag":
                         "step_{}".format(self.step),
-                        "cv_loss":
-                        total_loss / num_seen_utts,
+                        "loss_dict":
+                        loss_dict,
                         "save_time":
                         datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
                         "lr":
@@ -104,7 +103,7 @@ class Executor:
         '''
         model.eval()
         info_dict = copy.deepcopy(configs)
-        num_seen_utts, total_loss = 1, 0.0  # in order to avoid division by 0
+        num_seen_utts, loss_dict, total_acc = 1, {}, []  # avoid division by 0
         with torch.no_grad():
             for batch_idx, batch_dict in enumerate(cv_data_loader):
                 info_dict["tag"] = "CV"
@@ -116,12 +115,20 @@ class Executor:
                     continue
 
                 info_dict = batch_forward(model, batch_dict, None, info_dict)
-                loss = info_dict['loss_dict']['loss']
+                _dict = info_dict["loss_dict"]
 
-                if torch.isfinite(loss):
-                    num_seen_utts += num_utts
-                    total_loss += loss.item() * num_utts
+                num_seen_utts += num_utts
+                total_acc.append(_dict['th_accuracy']
+                                 if _dict['th_accuracy'] is not None else 0.0)
+                for loss_name, loss_value in _dict.items():
+                    if loss_value is not None and "loss" in loss_name \
+                            and torch.isfinite(loss_value):
+                        loss_value = loss_value.item()
+                        loss_dict[loss_name] = loss_dict.get(loss_name, 0) + \
+                            loss_value * num_utts
 
-                info_dict["history_loss"] = total_loss / num_seen_utts
                 log_per_step(writer=None, info_dict=info_dict)
-        return total_loss, num_seen_utts
+        for loss_name, loss_value in loss_dict.items():
+            loss_dict[loss_name] = loss_dict[loss_name] / num_seen_utts
+        loss_dict["acc"] = sum(total_acc) / len(total_acc)
+        return loss_dict

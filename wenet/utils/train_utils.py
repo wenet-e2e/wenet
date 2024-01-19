@@ -564,7 +564,6 @@ def log_per_step(writer, info_dict):
     accum_grad = info_dict.get('accum_grad', 1) if tag != "CV" else 1
     log_interval = info_dict.get('log_interval', 10)
     lr = info_dict.get("lr", 0.0)
-    history_loss = info_dict.get("history_loss", 0.0)
     is_gradient_accumulation_boundary = info_dict.get(
         "is_gradient_accumulation_boundary", False)
 
@@ -577,10 +576,13 @@ def log_per_step(writer, info_dict):
                               loss_dict['loss'] * accum_grad, step + 1)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
                               step + 1)
+            for name, value in loss_dict.items():
+                if name != 'loss' and value is not None:
+                    writer.add_scalar('train/{}'.format(name), value, step + 1)
     elif "step_" in tag and rank == 0 and writer is not None:
-        writer.add_scalar('global_step/cv_loss', info_dict["cv_loss"],
-                          step + 1)
         writer.add_scalar('global_step/lr', lr, step + 1)
+        for name, value in loss_dict.items():
+            writer.add_scalar('global_step/{}'.format(name), value, step + 1)
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
@@ -591,16 +593,16 @@ def log_per_step(writer, info_dict):
         if tag == "TRAIN":
             log_str += 'lr {:.8f} grad_norm {:.6f} rank {}'.format(
                 lr, info_dict['grad_norm'], rank)
-        elif tag == "CV":
-            log_str += 'history loss {:.6f} rank {}'.format(history_loss, rank)
         logging.debug(log_str)
 
 
 def log_per_epoch(writer, info_dict):
     epoch = info_dict["epoch"]
+    loss_dict = info_dict["loss_dict"]
     if int(os.environ.get('RANK', 0)) == 0:
-        writer.add_scalar('epoch/cv_loss', info_dict["cv_loss"], epoch)
         writer.add_scalar('epoch/lr', info_dict["lr"], epoch)
+        for name, value in loss_dict.items():
+            writer.add_scalar('epoch/{}'.format(name), value, epoch)
 
 
 def freeze_modules(model, args):

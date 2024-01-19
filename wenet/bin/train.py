@@ -145,19 +145,18 @@ def main():
 
         dist.barrier(
         )  # NOTE(xcsong): Ensure all ranks start CV at the same time.
-        total_loss, num_seen_utts = executor.cv(model, cv_data_loader, configs)
-        cv_loss = total_loss / num_seen_utts
+        loss_dict = executor.cv(model, cv_data_loader, configs)
 
         lr = optimizer.param_groups[0]['lr']
-        logging.info('Epoch {} CV info lr {} cv_loss {} rank {}'.format(
-            epoch, lr, cv_loss, rank))
+        logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
+            epoch, lr, loss_dict["loss"], rank, loss_dict["acc"]))
         info_dict = {
             'epoch': epoch,
             'lr': lr,
-            'cv_loss': cv_loss,
             'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             'tag': "epoch_{}".format(epoch),
+            'loss_dict': loss_dict,
             **configs
         }
         log_per_epoch(writer, info_dict=info_dict)
