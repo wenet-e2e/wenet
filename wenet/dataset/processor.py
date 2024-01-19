@@ -76,42 +76,49 @@ def tar_file_and_group(data):
     """
     for sample in data:
         assert 'stream' in sample
-        stream = tarfile.open(fileobj=sample['stream'], mode="r:*")
-        prev_prefix = None
-        example = {}
-        valid = True
-        for tarinfo in stream:
-            name = tarinfo.name
-            pos = name.rfind('.')
-            assert pos > 0
-            prefix, postfix = name[:pos], name[pos + 1:]
-            if prev_prefix is not None and prefix != prev_prefix:
+        try:
+            stream = tarfile.open(fileobj=sample['stream'], mode="r:*")
+            prev_prefix = None
+            example = {}
+            valid = True
+            for tarinfo in stream:
+                name = tarinfo.name
+                pos = name.rfind('.')
+                assert pos > 0
+                prefix, postfix = name[:pos], name[pos + 1:]
+                if prev_prefix is not None and prefix != prev_prefix:
+                    example['key'] = prev_prefix
+                    if valid:
+                        yield example
+                    example = {}
+                    valid = True
+                with stream.extractfile(tarinfo) as file_obj:
+                    try:
+                        if postfix == 'txt':
+                            example['txt'] = file_obj.read().decode(
+                                'utf8').strip()
+                        elif postfix in AUDIO_FORMAT_SETS:
+                            waveform, sample_rate = torchaudio.load(file_obj)
+                            example['wav'] = waveform
+                            example['sample_rate'] = sample_rate
+                        else:
+                            example[postfix] = file_obj.read()
+                    except Exception as ex:
+                        valid = False
+                        logging.warning('error to parse {}'.format(name))
+                prev_prefix = prefix
+            if prev_prefix is not None:
                 example['key'] = prev_prefix
-                if valid:
-                    yield example
-                example = {}
-                valid = True
-            with stream.extractfile(tarinfo) as file_obj:
-                try:
-                    if postfix == 'txt':
-                        example['txt'] = file_obj.read().decode('utf8').strip()
-                    elif postfix in AUDIO_FORMAT_SETS:
-                        waveform, sample_rate = torchaudio.load(file_obj)
-                        example['wav'] = waveform
-                        example['sample_rate'] = sample_rate
-                    else:
-                        example[postfix] = file_obj.read()
-                except Exception as ex:
-                    valid = False
-                    logging.warning('error to parse {}'.format(name))
-            prev_prefix = prefix
-        if prev_prefix is not None:
-            example['key'] = prev_prefix
-            yield example
-        stream.close()
-        if 'process' in sample:
-            sample['process'].communicate()
-        sample['stream'].close()
+                yield example
+        except Exception as ex:
+            logging.warning(
+                'In tar_file_and_group: {} when processing {}'.format(
+                    ex, sample['src']))
+        finally:
+            stream.close()
+            if 'process' in sample:
+                sample['process'].communicate()
+            sample['stream'].close()
 
 
 def parse_raw(data):
