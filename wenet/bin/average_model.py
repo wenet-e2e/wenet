@@ -71,7 +71,7 @@ def main():
         for y in yamls:
             with open(y, 'r') as f:
                 dic_yaml = yaml.load(f, Loader=yaml.FullLoader)
-                loss = dic_yaml['cv_loss']
+                loss = dic_yaml['loss_dict']['loss']
                 epoch = dic_yaml['epoch']
                 tag = dic_yaml['tag']
                 if epoch >= args.min_epoch and epoch <= args.max_epoch:
