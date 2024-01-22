@@ -211,7 +211,7 @@ class WenetRawDatasetSource(IterDataPipe):
     def __init__(self, filenames: str, prefetch: int = 500) -> None:
         super().__init__()
         self.dp = TextLineDataPipes(filenames).prefetch(
-            prefetch).shard_filter()
+            prefetch).sharding_filter()
 
     def __iter__(self):
         for d in self.dp:
@@ -229,3 +229,9 @@ class WenetShardDatasetSource(IterDataPipe):
     def __iter__(self):
         for d in self.dp:
             yield d
+
+
+if __name__ == '__main__':
+    dataset = WenetRawDatasetSource('test/resources/dataset/data.list')
+    for d in dataset:
+        print(d)
