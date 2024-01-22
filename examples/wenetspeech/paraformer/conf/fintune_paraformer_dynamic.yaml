@@ -1,0 +1,115 @@
+input_dim: 560
+
+encoder: sanm_encoder
+encoder_conf:
+  attention_dropout_rate: 0.1
+  attention_heads: 4
+  dropout_rate: 0.1
+  input_layer: paraformer_dummy
+  kernel_size: 11
+  linear_units: 2048
+  normalize_before: true
+  num_blocks: 50
+  output_size: 512
+  pos_enc_layer_type: abs_pos_paraformer
+  positional_dropout_rate: 0.1
+  sanm_shfit: 0
+  use_dynamic_chunk: true
+  gradient_checkpointing: true
+
+decoder: sanm_decoder
+decoder_conf:
+  att_layer_num: 16
+  attention_heads: 4
+  dropout_rate: 0.1
+  kernel_size: 11
+  linear_units: 2048
+  num_blocks: 16
+  positional_dropout_rate: 0.1
+  sanm_shfit: 0
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.1
+  gradient_checkpointing: true
+
+tokenizer: paraformer
+tokenizer_conf:
+  seg_dict_path: exp/paraformer/large/seg_dict
+  special_tokens:
+    <blank>: 0
+    <eos>: 2
+    <sos>: 1
+    <unk>: 8403
+  symbol_table_path: exp/paraformer/large/units.txt
+
+ctc: ctc
+ctc_conf:
+  ctc_blank_id: 0
+
+cmvn: global_cmvn
+cmvn_conf:
+  cmvn_file: exp/paraformer/large/global_cmvn
+  is_json_cmvn: true
+
+model: paraformer
+model_conf:
+  ctc_weight: 0.3
+  length_normalized_loss: false
+  lsm_weight: 0.1
+  sampling_ratio: 0.75
+
+predictor: paraformer_predictor
+predictor_conf:
+  cnn_groups: 1
+  idim: 512
+  l_order: 1
+  noise_threshold2: 0.01
+  r_order: 1
+  residual: false
+  smooth_factor2: 0.25
+  tail_threshold: 0.45
+  threshold: 1.0
+  upsample_times: 3
+
+dataset: asr
+dataset_conf:
+    filter_conf:
+        max_length: 40960
+        min_length: 30
+        token_max_length: 200
+        token_min_length: 1
+    resample_conf:
+        resample_rate: 16000
+    speed_perturb: true
+    fbank_conf:
+        num_mel_bins: 80
+        frame_shift: 10
+        frame_length: 25
+        dither: 0.1
+    spec_aug: true
+    spec_aug_conf:
+        num_t_mask: 2
+        num_f_mask: 2
+        max_t: 50
+        max_f: 10
+    shuffle: true
+    shuffle_conf:
+        shuffle_size: 5000
+    sort: true
+    sort_conf:
+        sort_size: 1000  # sort_size should be less than shuffle_size
+    batch_conf:
+        batch_type: 'dynamic' # static or dynamic
+        batch_size: 32
+        max_frames_in_batch: 36000
+
+grad_clip: 5
+accum_grad: 4
+max_epoch: 20
+log_interval: 100
+
+optim: adam
+optim_conf:
+  lr: 0.0005
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 100000
