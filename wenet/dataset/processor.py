@@ -76,6 +76,7 @@ def tar_file_and_group(data):
     """
     for sample in data:
         assert 'stream' in sample
+        stream = None
         try:
             stream = tarfile.open(fileobj=sample['stream'], mode="r:*")
             prev_prefix = None
@@ -115,7 +116,8 @@ def tar_file_and_group(data):
                 'In tar_file_and_group: {} when processing {}'.format(
                     ex, sample['src']))
         finally:
-            stream.close()
+            if stream is not None:
+                stream.close()
             if 'process' in sample:
                 sample['process'].communicate()
             sample['stream'].close()
