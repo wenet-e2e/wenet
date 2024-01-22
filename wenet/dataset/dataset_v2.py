@@ -52,13 +52,13 @@ class PrefetchDataPipes(IterDataPipe):
             self._iter = iter(self.dp)
         if self._prefetch_buffer_size > 0:
             assert self._buffer is not None
-            try:
-                if len(self._buffer) <= self._prefetch_buffer_size // 2:
+            if len(self._buffer) <= self._prefetch_buffer_size // 2:
+                try:
                     while (len(self._buffer) < self._prefetch_buffer_size):
                         self._buffer.append(next(self._iter))
-            except StopIteration as ex:
-                if len(self._buffer) == 0:
-                    raise StopIteration from ex
+                except StopIteration as ex:
+                    if len(self._buffer) == 0:
+                        return
             for elem in self._buffer:
                 yield elem
         else:
@@ -99,7 +99,7 @@ class IgnoreError(IterDataPipe):
                 elem = next(self.iter_dp)
                 yield elem
             except StopIteration as ex:
-                raise ex from StopIteration
+                break
             except Exception as ex:
                 if self.log:
                     logging.warning(str(ex))
@@ -128,10 +128,10 @@ class UrlOpenPipe(IterDataPipe):
                     process = Popen(cmd, shell=True, stdout=PIPE)
                     elem.update(process=process)
                     stream = process.stdout
-                    elem.update(stream=stream)
-                    yield elem
+                elem.update(stream=stream)
+                yield elem
             except Exception as ex:
-                raise UrlOpenError(str(ex))
+                raise UrlOpenError(str(ex)) from ex
 
 
 @functional_datapipe("tar_file_and_group")
@@ -144,24 +144,6 @@ class TarsDataPipes(IterDataPipe):
         self.dp = datapipe
 
     def __iter__(self):
-        for data in self.dp:
-            url = data['line']
-            try:
-                pr = urlparse(url)
-                # local file
-                if pr.scheme == '' or pr.scheme == 'file':
-                    stream = open(url, 'rb')
-                # network file, such as HTTP(HDFS/OSS/S3)/HTTPS/SCP
-                else:
-                    cmd = f'wget -q -O - {url}'
-                    process = Popen(cmd, shell=True, stdout=PIPE)
-                    sample.update(process=process)
-                    stream = process.stdout
-                    sample.update(stream=stream)
-                    yield sample
-            except Exception as ex:
-                logging.warning('Failed to open {}'.format(url))
-
         for sample in self.dp:
             try:
                 with tarfile.open(fileobj=sample['stream'],
@@ -223,7 +205,7 @@ class WenetShardDatasetSource(IterDataPipe):
     def __init__(self, filenames: str, prefetch: int = 500) -> None:
         super().__init__()
         self.dp = TextLineDataPipes(filenames).sharding_filter().url_opener(
-        ).ignore.error(log=True).tar_file_an_group().ignore_error(
+        ).ignore_error(log=True).tar_file_and_group().ignore_error(
             log=True).prefetch(prefetch)
 
     def __iter__(self):
@@ -232,6 +214,7 @@ class WenetShardDatasetSource(IterDataPipe):
 
 
 if __name__ == '__main__':
-    dataset = WenetRawDatasetSource('test/resources/dataset/data.list')
+    dataset = WenetShardDatasetSource(
+        'test/resources/dataset/data.shards.list')
     for d in dataset:
         print(d)
