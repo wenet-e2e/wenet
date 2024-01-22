@@ -146,7 +146,10 @@ class TarsDataPipes(IterDataPipe):
                 with tarfile.open(fileobj=sample['stream'],
                                   mode="r:*") as stream:
                     prev_prefix = None
-                    example = {}
+                    example = {
+                        'file_name': sample['file_name'],
+                        'tar_file_name': sample['line']
+                    }
                     valid = True
                     for tarinfo in stream:
                         name = tarinfo.name
@@ -157,7 +160,10 @@ class TarsDataPipes(IterDataPipe):
                             example['key'] = prev_prefix
                             if valid:
                                 yield example
-                            example = {}
+                            example = {
+                                'file_name': sample['file_name'],
+                                'tar_file_name': sample['line']
+                            }
                             valid = True
                         with stream.extractfile(tarinfo) as file_obj:
                             try:
