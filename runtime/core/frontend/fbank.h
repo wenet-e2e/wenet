@@ -30,6 +30,27 @@ namespace wenet {
 
 // This code is based on kaldi Fbank implementation, please see
 // https://github.com/kaldi-asr/kaldi/blob/master/src/feat/feature-fbank.cc
+
+enum class WindowType {
+  Povey,
+  Hanning,
+};
+
+enum class MelType {
+  HTK,
+  Slaney,
+};
+
+enum class NormalizationType {
+  KALDI,
+  Whisper,
+};
+
+enum class LogBase {
+  BaseE,
+  Base10,
+};
+
 class Fbank {
  public:
   void DumpVecToFileAsCSV(const std::vector<std::vector<float>>* feat,
@@ -77,9 +98,12 @@ class Fbank {
   }
 
   Fbank(int num_bins, int sample_rate, int frame_length, int frame_shift,
-        float low_freq = 0, bool povey_window = false, bool htk = false,
-        bool slaney_norm = true, bool pre_emphasis = false,
-        bool whisper_norm = true)
+        float low_freq = 20, bool pre_emphasis = true,
+        float log_floor = std::numeric_limits<float>::epsilon(),
+        LogBase log_base = LogBase::BaseE,
+        WindowType window_type = WindowType::Povey,
+        MelType mel_type = MelType::HTK,
+        NormalizationType norm_type = NormalizationType::Kaldi)
       : num_bins_(num_bins),
         sample_rate_(sample_rate),
         frame_length_(frame_length),
@@ -89,10 +113,10 @@ class Fbank {
         generator_(0),
         distribution_(0, 1.0),
         dither_(0.0),
-        htk_(htk),
-        slaney_norm_(slaney_norm),
         pre_emphasis_(pre_emphasis),
-        whisper_norm_(whisper_norm) {
+        log_floor_(log_floor),
+        log_base_(log_base),
+        norm_type_(norm_type) {
     fft_points_ = UpperPowerOfTwo(frame_length_);
     // generate bit reversal table and trigonometric function table
     const int fft_points_4 = fft_points_ / 4;
@@ -104,8 +128,8 @@ class Fbank {
     int num_fft_bins = fft_points_ / 2;
     float fft_bin_width = static_cast<float>(sample_rate_) / fft_points_;
     int high_freq = sample_rate_ / 2;
-    float mel_low_freq = MelScale(low_freq, htk);
-    float mel_high_freq = MelScale(high_freq, htk);
+    float mel_low_freq = MelScale(low_freq, mel_type);
+    float mel_high_freq = MelScale(high_freq, mel_type);
     float mel_freq_delta = (mel_high_freq - mel_low_freq) / (num_bins + 1);
     bins_.resize(num_bins_);
     center_freqs_.resize(num_bins_);
@@ -117,33 +141,36 @@ class Fbank {
       float left_mel = mel_low_freq + bin * mel_freq_delta,
             center_mel = mel_low_freq + (bin + 1) * mel_freq_delta,
             right_mel = mel_low_freq + (bin + 2) * mel_freq_delta;
-      center_freqs_[bin] = InverseMelScale(center_mel, htk);
+      center_freqs_[bin] = InverseMelScale(center_mel, mel_type);
       std::vector<float> this_bin(num_fft_bins);
       int first_index = -1, last_index = -1;
       for (int i = 0; i < num_fft_bins; ++i) {
         float freq = (fft_bin_width * i);  // Center frequency of this fft
         // bin.
-        float mel = MelScale(freq, htk);
+        float mel = MelScale(freq, mel_type);
         if (mel > left_mel && mel < right_mel) {
           float weight;
-          if (mel <= center_mel && !slaney_norm) {
-            weight = (mel - left_mel) / (center_mel - left_mel);
-          } else if (mel > center_mel && !slaney_norm) {
-            weight = (right_mel - mel) / (right_mel - center_mel);
-          } else if (mel <= center_mel && slaney_norm) {
-            weight =
-                (InverseMelScale(mel, htk) - InverseMelScale(left_mel, htk)) /
-                (InverseMelScale(center_mel, htk) -
-                 InverseMelScale(left_mel, htk));
-            weight *= 2.0 / (InverseMelScale(right_mel, htk) -
-                             InverseMelScale(left_mel, htk));
-          } else {
-            weight =
-                (InverseMelScale(right_mel, htk) - InverseMelScale(mel, htk)) /
-                (InverseMelScale(right_mel, htk) -
-                 InverseMelScale(center_mel, htk));
-            weight *= 2.0 / (InverseMelScale(right_mel, htk) -
-                             InverseMelScale(left_mel, htk));
+          if (mel_type == MelType::HTK) {
+            if (mel <= center_mel)
+              weight = (mel - left_mel) / (center_mel - left_mel);
+            else if (mel > center_mel)
+              weight = (right_mel - mel) / (right_mel - center_mel);
+          } else if (mel_type == MelType::Slaney) {
+            if (mel <= center_mel) {
+              weight = (InverseMelScale(mel, mel_type) -
+                        InverseMelScale(left_mel, mel_type)) /
+                       (InverseMelScale(center_mel, mel_type) -
+                        InverseMelScale(left_mel, mel_type));
+              weight *= 2.0 / (InverseMelScale(right_mel, mel_type) -
+                               InverseMelScale(left_mel, mel_type));
+            } else if (mel > center_mel) {
+              weight = (InverseMelScale(right_mel, mel_type) -
+                        InverseMelScale(mel, mel_type)) /
+                       (InverseMelScale(right_mel, mel_type) -
+                        InverseMelScale(center_mel, mel_type));
+              weight *= 2.0 / (InverseMelScale(right_mel, mel_type) -
+                               InverseMelScale(left_mel, mel_type));
+            }
           }
           this_bin[i] = weight;
           if (first_index == -1) first_index = i;
@@ -160,7 +187,7 @@ class Fbank {
       }
     }
     DumpVecToFileAsCSV(&filters, std::string("filters.csv"));
-    InitWindow(povey_window);
+    InitWindow(window_type);
   }
 
   void set_use_log(bool use_log) { use_log_ = use_log; }
@@ -173,14 +200,14 @@ class Fbank {
 
   int num_bins() const { return num_bins_; }
 
-  void InitWindow(bool povey_window) {
+  void InitWindow(WindowType window_type) {
     window_.resize(frame_length_);
-    if (povey_window) {
+    if (window_type == WindowType::Povey) {
       // povey window
       double a = M_2PI / (frame_length_ - 1);
       for (int i = 0; i < frame_length_; ++i)
         window_[i] = pow(0.5 - 0.5 * cos(a * i), 0.85);
-    } else {
+    } else if (window_type == WindowType::Hanning) {
       // periodic hanning window
       double a = M_2PI / (frame_length_);
       for (int i = 0; i < frame_length_; ++i)
@@ -189,10 +216,11 @@ class Fbank {
     DumpVecToFileAsCSV(&window_, std::string("window.csv"));
   }
 
-  static inline float InverseMelScale(float mel_freq, bool htk = false) {
-    if (htk) {
+  static inline float InverseMelScale(float mel_freq,
+                                      MelType mel_type = MelType::HTK) {
+    if (mel_type == MelType::HTK) {
       return 700.0f * (expf(mel_freq / 1127.0f) - 1.0f);
-    } else {
+    } else if (mel_type == MelType::Slaney) {
       float f_min = 0.0;
       float f_sp = 200.0 / 3.0;
       float min_log_hz = 1000.0;
@@ -207,10 +235,10 @@ class Fbank {
     }
   }
 
-  static inline float MelScale(float freq, bool htk = false) {
-    if (htk) {
+  static inline float MelScale(float freq, MelType mel_type = MelType::HTK) {
+    if (mel_type == MelType::HTK) {
       return 1127.0f * logf(1.0f + freq / 700.0f);
-    } else {
+    } else if (mel_type == MelType::Slaney) {
       float f_min = 0.0;
       float f_sp = 200.0 / 3.0;
       float min_log_hz = 1000.0;
@@ -326,12 +354,12 @@ class Fbank {
         }
         // optional use log
         if (use_log_) {
-          if (mel_energy < std::numeric_limits<float>::epsilon())
-            mel_energy = std::numeric_limits<float>::epsilon();
-          if (whisper_norm_)
-            mel_energy = log10(mel_energy);
-          else
+          if (mel_energy < log_floor_) mel_energy = log_floor_;
+
+          if (log_base_ == LogBase::BaseE)
             mel_energy = logf(mel_energy);
+          else if (log_base_ == LogBase::Base10)
+            mel_energy = log10(mel_energy);
         }
         if (max_mel_engery < mel_energy) max_mel_engery = mel_energy;
         (*feat)[i][j] = mel_energy;
@@ -339,7 +367,8 @@ class Fbank {
     }
     DumpVecToFileAsCSV(&psd, std::string("psd.csv"));
     DumpVecToFileAsCSV(feat, std::string("feat_before_norm.csv"));
-    if (whisper_norm_) WhisperNorm(feat, max_mel_engery);
+    if (norm_type_ == NormalizationType::Whisper)
+      WhisperNorm(feat, max_mel_engery);
 
     DumpVecToFileAsCSV(feat, std::string("feat_after_norm.csv"));
     // ReadVecFromCSV(feat, std::string("feat_std.csv"));
@@ -353,10 +382,11 @@ class Fbank {
   int fft_points_;
   bool use_log_;
   bool remove_dc_offset_;
-  bool htk_;
-  bool slaney_norm_;
   bool pre_emphasis_;
-  bool whisper_norm_;
+  float log_floor_;
+  LogBase log_base_;
+  NormalizationType norm_type_;
+
   std::vector<float> center_freqs_;
   std::vector<std::pair<int, std::vector<float>>> bins_;
   std::vector<float> window_;
