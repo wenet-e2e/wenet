@@ -25,6 +25,38 @@ class UrlOpenError(TarParseError):
         super().__init__(msg, *args)
 
 
+@functional_datapipe("sort")
+class SortDatPipes(IterDataPipe):
+
+    def __init__(self,
+                 dataset: IterDataPipe,
+                 buffer_size: int = 500,
+                 key_func=None,
+                 reverse=False) -> None:
+        self.buffer_size = buffer_size
+        super().__init__()
+        self.dp = dataset
+        self._buffer = []
+        self.key_func = key_func
+        self.reverse = reverse
+
+    def __iter__(self):
+        for elem in self.dp:
+            self._buffer.append(elem)
+            if len(self._buffer) >= self.buffer_size:
+                self._buffer.sort(key=self.key_func, reverse=self.reverse)
+                for x in self._buffer:
+                    yield x
+                del self._buffer
+                self._buffer = []
+        # The sample left over
+        self._buffer.sort(key=self.key_func, reverse=self.reverse)
+        for x in self._buffer:
+            yield x
+        del self._buffer
+        self._buffer = []
+
+
 @functional_datapipe("prefetch")
 class PrefetchDataPipes(IterDataPipe):
     """Performs prefetching"""
@@ -199,7 +231,6 @@ class TarsDataPipes(IterDataPipe):
                 msg = 'In tar_file_and_group: {} when processing '.format(ex)
                 raise TarParseError(msg) from ex
             finally:
-                stream.close()
                 if 'process' in sample:
                     sample['process'].communicate()
                 sample['stream'].close()
