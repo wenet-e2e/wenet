@@ -3,7 +3,13 @@ from wenet.dataset.datapipes import (WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
 from wenet.dataset.processor_v2 import (compute_fbank,
                                         compute_log_mel_spectrogram,
-                                        decode_wav, parse_json)
+                                        decode_wav, padding, parse_json)
+
+
+def fake_labels(sample):
+    sample['label'] = [1, 2, 3, 4]
+    return sample
+
 
 if __name__ == '__main__':
 
@@ -47,3 +53,18 @@ if __name__ == '__main__':
 
     for d in dataloader:
         print(d.keys())
+
+    dataset = WenetRawDatasetSource(["test/resources/dataset/data.list"] * 3,
+                                    prefetch=10)
+    dataset = dataset.map(parse_json)
+    dataset = dataset.map(decode_wav)
+    dataset = dataset.map(compute_log_mel_spectrogram)
+
+    dataset = dataset.map(fake_labels)
+    dataset = dataset.batch(batch_size=2, wrapper_class=padding)
+    dataloader = DataLoader(dataset,
+                            num_workers=2,
+                            persistent_workers=True,
+                            batch_size=None)
+    for d in dataloader:
+        print(d)

@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from tensorboardX.writer import logging
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
+from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
@@ -53,6 +54,36 @@ class SortDatPipes(IterDataPipe):
         self._buffer.sort(key=self.key_func, reverse=self.reverse)
         for x in self._buffer:
             yield x
+        del self._buffer
+        self._buffer = []
+
+
+@functional_datapipe("dynamic_batch")
+class DynamicBatchDataPipe(IterDataPipe):
+
+    def __init__(self, dataset: IterDataPipe, window_func,
+                 wrapper_class) -> None:
+        _check_unpickable_fn(window_func)
+        _check_unpickable_fn(wrapper_class)
+        super().__init__()
+        self.dp = dataset
+        assert window_func is not None
+        assert wrapper_class is not None
+        self.window_func = window_func
+        self._buffer = []
+        self._wrappr_class = wrapper_class
+
+    def __iter__(self):
+        for elem in self.dp:
+            if not self.window_func(elem):
+                self._buffer.append(elem)
+            else:
+                if len(self._buffer) > 0:
+                    yield self._wrappr_class(self._buffer)
+                del self._buffer
+                self._buffer = [elem]
+        if len(self._buffer) > 0:
+            yield self._wrappr_class(self._buffer)
         del self._buffer
         self._buffer = []
 
