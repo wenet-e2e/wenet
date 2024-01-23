@@ -27,7 +27,7 @@ class UrlOpenError(TarParseError):
 
 
 @functional_datapipe("sort")
-class SortDatPipes(IterDataPipe):
+class SortDataPipe(IterDataPipe):
 
     def __init__(self,
                  dataset: IterDataPipe,
@@ -89,7 +89,7 @@ class DynamicBatchDataPipe(IterDataPipe):
 
 
 @functional_datapipe("prefetch")
-class PrefetchDataPipes(IterDataPipe):
+class PrefetchDataPipe(IterDataPipe):
     """Performs prefetching"""
 
     def __init__(
@@ -132,7 +132,7 @@ class PrefetchDataPipes(IterDataPipe):
             yield from self.dp
 
 
-class TextLineDataPipes(IterDataPipe):
+class TextLineDataPipe(IterDataPipe):
     """ Streamming Text line
     """
 
@@ -206,7 +206,7 @@ class UrlOpenPipe(IterDataPipe):
 
 
 @functional_datapipe("tar_file_and_group")
-class TarsDataPipes(IterDataPipe):
+class TarsDataPipe(IterDataPipe):
     """ Decode wenet's tar , yield {'txt': "...", "raw": "..."}
     """
 
@@ -271,7 +271,7 @@ class WenetRawDatasetSource(IterDataPipe):
 
     def __init__(self, filenames: str, prefetch: int = 500) -> None:
         super().__init__()
-        self.dp = TextLineDataPipes(filenames).prefetch(
+        self.dp = TextLineDataPipe(filenames).prefetch(
             prefetch).sharding_filter()
 
     def __iter__(self):
@@ -283,7 +283,7 @@ class WenetTarShardDatasetSource(IterDataPipe):
 
     def __init__(self, filenames: str, prefetch: int = 500) -> None:
         super().__init__()
-        self.dp = TextLineDataPipes(filenames).sharding_filter().url_opener(
+        self.dp = TextLineDataPipe(filenames).sharding_filter().url_opener(
         ).ignore_error(log=True).tar_file_and_group().ignore_error(
             log=True).prefetch(prefetch)
 

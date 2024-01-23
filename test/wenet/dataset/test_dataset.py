@@ -1,7 +1,6 @@
 import pytest
 import torch
-from wenet.dataset.datapipes import WenetTarShardDatasetSource
-from wenet.dataset.dataset_v2 import WenetRawDatasetSource
+from wenet.dataset.datapipes import WenetRawDatasetSource
 from wenet.dataset.processor_v2 import compute_fbank, decode_wav, parse_json
 
 
@@ -9,6 +8,7 @@ from wenet.dataset.processor_v2 import compute_fbank, decode_wav, parse_json
     "test/resources/dataset/data.list",
 ])
 def test_WenetRawDatasetSource(data_list):
+
     dataset = WenetRawDatasetSource(data_list)
     expected = []
     with open(data_list, 'r') as fin:
