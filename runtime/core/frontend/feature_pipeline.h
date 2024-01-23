@@ -15,6 +15,7 @@
 #ifndef FRONTEND_FEATURE_PIPELINE_H_
 #define FRONTEND_FEATURE_PIPELINE_H_
 
+#include <limits>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -26,17 +27,47 @@
 
 namespace wenet {
 
+enum class FeatureType {
+  KALDI,
+  Whisper,
+};
+
 struct FeaturePipelineConfig {
   int num_bins;
   int sample_rate;
   int frame_length;
   int frame_shift;
+  float low_freq;
+  bool pre_emphasis;
+  float log_floor;
+  LogBase log_base;
+  WindowType window_type;
+  MelType mel_type;
+  NormalizationType norm_type;
 
-  FeaturePipelineConfig(int num_bins, int sample_rate)
+  FeaturePipelineConfig(int num_bins, int sample_rate,
+                        FeatureType feat_type = FeatureType::Kaldi)
       : num_bins(num_bins),                  // 80 dim fbank
         sample_rate(sample_rate) {           // 16k sample rate
     frame_length = sample_rate / 1000 * 25;  // frame length 25ms
     frame_shift = sample_rate / 1000 * 10;   // frame shift 10ms
+    if (feat_type == FeatureType::KALDI) {
+      low_freq = 20.0;
+      pre_emphasis = true;
+      log_floor = std::numeric_limits<float>::epsilon();
+      log_base = LogBase::BaseE;
+      window_type = WindowType::Povey;
+      mel_type = MelType::HTK;
+      norm_type = NormType::Kaldi;
+    } else if (feat_type == FeatureType::Whisper) {
+      low_freq = 0.0;
+      pre_emphasis = false;
+      log_floor = 1e-10;
+      log_base = LogBase::Base10;
+      window_type = WindowType::Povey;
+      mel_type = MelType::Slaney;
+      norm_type = NormType::Whisper;
+    }
   }
 
   void Info() const {
