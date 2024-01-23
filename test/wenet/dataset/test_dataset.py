@@ -1,6 +1,7 @@
 import pytest
 import torch
-from wenet.dataset.datapipes import WenetRawDatasetSource
+from wenet.dataset.datapipes import (WenetRawDatasetSource,
+                                     WenetTarShardDatasetSource)
 from wenet.dataset.processor_v2 import compute_fbank, decode_wav, parse_json
 
 
