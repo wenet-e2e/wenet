@@ -55,50 +55,6 @@ enum class LogBase {
 
 class Fbank {
  public:
-  void DumpVecToFileAsCSV(const std::vector<std::vector<float>>* feat,
-                          const std::string& filename) {
-    std::ofstream file(filename);
-    for (const auto& row : *feat) {
-      for (size_t i = 0; i < row.size(); ++i) {
-        file << row[i];
-        if (i < row.size() - 1) file << ",";
-      }
-      file << "\n";
-    }
-    file.close();
-    return;
-  }
-
-  void DumpVecToFileAsCSV(const std::vector<float>* feat,
-                          const std::string& filename) {
-    std::ofstream file(filename);
-    for (size_t i = 0; i < feat->size(); ++i) {
-      file << (*feat)[i];
-      if (i < feat->size() - 1) file << ",";
-    }
-
-    file.close();
-    return;
-  }
-
-  void ReadVecFromCSV(std::vector<std::vector<float>>* feat,
-                      const std::string& filename) {
-    std::ifstream file(filename);
-    std::string line;
-    int i = 0;
-    while (getline(file, line)) {
-      std::stringstream ss(line);
-      std::string value;
-      int j = 0;
-      while (getline(ss, value, ',')) {
-        (*feat)[i][j] = std::stof(value);
-        j += 1;
-      }
-      i += 1;
-    }
-    return;
-  }
-
   Fbank(int num_bins, int sample_rate, int frame_length, int frame_shift,
         float low_freq = 20, bool pre_emphasis = true,
         bool scaled_float_as_input = false,
@@ -190,7 +146,6 @@ class Fbank {
         bins_[bin].second[i] = this_bin[first_index + i];
       }
     }
-    DumpVecToFileAsCSV(&filters, std::string("filters.csv"));
     InitWindow(window_type);
   }
 
@@ -217,7 +172,6 @@ class Fbank {
       for (int i = 0; i < frame_length_; ++i)
         window_[i] = 0.5 * (1.0 - cos(i * a));
     }
-    DumpVecToFileAsCSV(&window_, std::string("window.csv"));
   }
 
   static inline float InverseMelScale(float mel_freq,
@@ -295,8 +249,6 @@ class Fbank {
               std::vector<std::vector<float>>* feat) {
     int num_samples = wave.size();
 
-    DumpVecToFileAsCSV(&wave, std::string("wav.csv"));
-
     if (num_samples < frame_length_) return 0;
     int num_frames = 1 + ((num_samples - frame_length_) / frame_shift_);
     feat->resize(num_frames);
@@ -371,12 +323,9 @@ class Fbank {
         (*feat)[i][j] = mel_energy;
       }
     }
-    DumpVecToFileAsCSV(&psd, std::string("psd.csv"));
-    DumpVecToFileAsCSV(feat, std::string("feat_before_norm.csv"));
     if (norm_type_ == NormalizationType::Whisper)
       WhisperNorm(feat, max_mel_engery);
 
-    DumpVecToFileAsCSV(feat, std::string("feat_after_norm.csv"));
     // ReadVecFromCSV(feat, std::string("feat_std.csv"));
     return num_frames;
   }
