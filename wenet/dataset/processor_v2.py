@@ -1,4 +1,5 @@
 import io
+import json
 import librosa
 import random
 
@@ -11,11 +12,18 @@ from wenet.text.base_tokenizer import BaseTokenizer
 # torchaudio.utils.sox_utils.set_buffer_size(16500)
 
 
+def parse_json(elem):
+    line = elem['line']
+    obj = json.loads(line)
+    obj['file_name'] = elem['file_name']
+    return dict(obj)
+
+
 def decode_wav(sample):
     """ Parse key/wav/txt from json line
 
         Args:
-            data: str, str is a json line has key/wav/txt
+            sample: str, str is a json line has key/wav/txt
 
         Returns:
             {key, wav, txt, sample_rate}
@@ -38,6 +46,7 @@ def decode_wav(sample):
                 wav_file = f.read()
         with io.BytesIO(wav_file) as file_obj:
             waveform, sample_rate = torchaudio.load(file_obj)
+            del wav_file
         del sample['wav']
         sample['wav'] = waveform  # overwrite wav
         sample['sample_rate'] = sample_rate
@@ -45,11 +54,11 @@ def decode_wav(sample):
 
 
 def resample(sample, resample_rate=16000):
-    """ Resample data.
+    """ Resample sample.
         Inplace operation.
 
         Args:
-            data: {key, wav, label, sample_rate}
+            sample: {key, wav, label, sample_rate}
             resample_rate: target resample rate
 
         Returns:
@@ -67,11 +76,11 @@ def resample(sample, resample_rate=16000):
 
 
 def speed_perturb(sample, speeds=None):
-    """ Apply speed perturb to the data.
+    """ Apply speed perturb to the sample.
         Inplace operation.
 
         Args:
-            data: {key, wav, label, sample_rate}
+            sample: {key, wav, label, sample_rate}
             speeds(List[float]): optional speed
 
         Returns:
@@ -101,15 +110,14 @@ def compute_fbank(sample,
     """ Extract fbank
 
         Args:
-            data: Iterable[{key, wav, label, sample_rate}]
+            sample: {key, wav, sample_rate, ...}
 
         Returns:
-            Iterable[{key, feat, label}]
+            {key, feat, wav, sample_rate, ...}
     """
     assert 'sample_rate' in sample
     assert 'wav' in sample
     assert 'key' in sample
-    assert 'label' in sample
     sample_rate = sample['sample_rate']
     waveform = sample['wav']
     waveform = waveform * (1 << 15)
@@ -136,18 +144,16 @@ def compute_mfcc(sample,
     """ Extract mfcc
 
         Args:
-            data: {key, wav, label, sample_rate}
+            sample: {key, wav, sample_rate, ...}
 
         Returns:
-            {key, feat, label}
+            {key, wav, feat, sample_rate, ...}
     """
     assert 'wav' in sample
     assert 'key' in sample
-    assert 'label' in sample
     sample_rate = sample['sample_rate']
     waveform = sample['wav']
     waveform = waveform * (1 << 15)
-    # Only keep key, feat, label
     mat = kaldi.mfcc(waveform,
                      num_mel_bins=num_mel_bins,
                      frame_length=frame_length,
@@ -171,15 +177,14 @@ def compute_log_mel_spectrogram(sample,
         - https://github.com/wenet-e2e/wenet/pull/2141#issuecomment-1811765040
 
         Args:
-            data: {key, wav, label, sample_rate}
+            sample: {key, wav, sample_rate, ...}
 
         Returns:
-            {key, feat, label}
+            {key, feat, wav, sample_rate, ...}
     """
     assert 'sample_rate' in sample
     assert 'wav' in sample
     assert 'key' in sample
-    assert 'label' in sample
     sample_rate = sample['sample_rate']
     waveform = sample['wav'].squeeze(0)  # (channel=1, sample) -> (sample,)
     if padding > 0:
@@ -201,7 +206,7 @@ def compute_log_mel_spectrogram(sample,
     log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
     log_spec = (log_spec + 4.0) / 4.0
     sample['feat'] = log_spec.transpose(0, 1)
-    yield sample
+    return sample
 
 
 def tokenize(sample, tokenizer: BaseTokenizer):
@@ -209,16 +214,16 @@ def tokenize(sample, tokenizer: BaseTokenizer):
         Inplace operation
 
         Args:
-            data: {key, wav, txt, sample_rate}
+            sample: {key, wav, txt, sample_rate, ...}
 
         Returns:
-            {key, wav, txt, tokens, label, sample_rate}
+            {key, wav, txt, tokens, label, sample_rate, ...}
     """
     assert 'txt' in sample
     tokens, label = tokenizer.tokenize(sample['txt'])
     sample['tokens'] = tokens
     sample['label'] = label
-    yield sample
+    return sample
 
 
 def spec_aug(sample, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
@@ -226,7 +231,7 @@ def spec_aug(sample, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
         Inplace operation
 
         Args:
-            data: Iterable[{key, feat, label}]
+            sample: {key, feat, ...}
             num_t_mask: number of time mask to apply
             num_f_mask: number of freq mask to apply
             max_t: max width of time mask
@@ -234,7 +239,7 @@ def spec_aug(sample, num_t_mask=2, num_f_mask=2, max_t=50, max_f=10, max_w=80):
             max_w: max width of time warp
 
         Returns
-            Iterable[{key, feat, label}]
+            {key, feat, ....}
     """
     assert 'feat' in sample
     x = sample['feat']
@@ -264,12 +269,12 @@ def spec_sub(sample, max_t=20, num_t_sub=3):
         ref: U2++, section 3.2.3 [https://arxiv.org/abs/2106.05642]
 
         Args:
-            data: Iterable[{key, feat, label}]
+            sample: Iterable{key, feat, ...}
             max_t: max width of time substitute
             num_t_sub: number of time substitute to apply
 
         Returns
-            {key, feat, label}
+            {key, feat, ...}
     """
     assert 'feat' in sample
     x = sample['feat']
@@ -292,11 +297,11 @@ def spec_trim(sample, max_t=20):
         ref: TrimTail [https://arxiv.org/abs/2211.00522]
 
         Args:
-            data: Iterable[{key, feat, label}]
+            sample: {key, feat, label}
             max_t: max width of length trimming
 
-        Returns
-            Iterable[{key, feat, label}]
+        Returns:
+            {key, feat, label}
     """
     assert 'feat' in sample
     x = sample['feat']
@@ -306,4 +311,4 @@ def spec_trim(sample, max_t=20):
     if length < max_frames / 2:
         y = x.clone().detach()[:max_frames - length]
         sample['feat'] = y
-    yield sample
+    return sample

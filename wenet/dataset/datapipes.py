@@ -203,7 +203,7 @@ class WenetRawDatasetSource(IterDataPipe):
             yield d
 
 
-class WenetShardDatasetSource(IterDataPipe):
+class WenetTarShardDatasetSource(IterDataPipe):
 
     def __init__(self, filenames: str, prefetch: int = 500) -> None:
         super().__init__()
