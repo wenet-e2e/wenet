@@ -39,6 +39,7 @@ struct FeaturePipelineConfig {
   int frame_shift;
   float low_freq;
   bool pre_emphasis;
+  bool scaled_float_as_input;
   float log_floor;
   LogBase log_base;
   WindowType window_type;
@@ -46,7 +47,7 @@ struct FeaturePipelineConfig {
   NormalizationType norm_type;
 
   FeaturePipelineConfig(int num_bins, int sample_rate,
-                        FeatureType feat_type = FeatureType::Kaldi)
+                        FeatureType feat_type = FeatureType::KALDI)
       : num_bins(num_bins),                  // 80 dim fbank
         sample_rate(sample_rate) {           // 16k sample rate
     frame_length = sample_rate / 1000 * 25;  // frame length 25ms
@@ -58,22 +59,28 @@ struct FeaturePipelineConfig {
       log_base = LogBase::BaseE;
       window_type = WindowType::Povey;
       mel_type = MelType::HTK;
-      norm_type = NormType::Kaldi;
+      norm_type = NormalizationType::KALDI;
+      scaled_float_as_input = false;
     } else if (feat_type == FeatureType::Whisper) {
       low_freq = 0.0;
       pre_emphasis = false;
       log_floor = 1e-10;
       log_base = LogBase::Base10;
-      window_type = WindowType::Povey;
+      window_type = WindowType::Hanning;
       mel_type = MelType::Slaney;
-      norm_type = NormType::Whisper;
+      scaled_float_as_input = true;
+      norm_type = NormalizationType::Whisper;
     }
   }
 
   void Info() const {
     LOG(INFO) << "feature pipeline config"
               << " num_bins " << num_bins << " frame_length " << frame_length
-              << " frame_shift " << frame_shift;
+              << " frame_shift " << frame_shift << " low_freq " << low_freq
+              << " preemphasis " << pre_emphasis << " log_floor " << log_floor
+              << " log_base " << int(log_base) << " window_type "
+              << int(window_type) << " mel_type " << int(mel_type)
+              << " norm_type " << int(norm_type);
   }
 };
 

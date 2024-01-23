@@ -62,10 +62,10 @@ DEFINE_int32(core_number, 1, "Core number of process");
 // FeaturePipelineConfig flags
 DEFINE_int32(num_bins, 80, "num mel bins for fbank feature");
 DEFINE_int32(sample_rate, 16000, "sample rate for audio");
-DEFINE_string(feat_type, "kaldi", "Type of feature extraction: kaldi, whisper")
+DEFINE_string(feat_type, "kaldi", "Type of feature extraction: kaldi, whisper");
 
-    // TLG fst
-    DEFINE_string(fst_path, "", "TLG fst path");
+// TLG fst
+DEFINE_string(fst_path, "", "TLG fst path");
 
 // ITN fst
 DEFINE_string(itn_model_dir, "",
@@ -119,17 +119,18 @@ namespace wenet {
 
 FeatureType StringToFeatureType(const std::string& feat_type_str) {
   if (feat_type_str == "kaldi")
-    return FeatureType::Kaldi;
+    return FeatureType::KALDI;
   else if (feat_type_str == "whisper")
     return FeatureType::Whisper;
   else
-    throw std::invalid_argument("Unsupported feat type!")
+    throw std::invalid_argument("Unsupported feat type!");
 }
 
 std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
   FeatureType feat_type = StringToFeatureType(FLAGS_feat_type);
   auto feature_config = std::make_shared<FeaturePipelineConfig>(
-      FLAGS_num_bins, FLAGS_sample_rate);
+      FLAGS_num_bins, FLAGS_sample_rate, feat_type);
+  feature_config->Info();
   return feature_config;
 }
 

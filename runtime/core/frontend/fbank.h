@@ -26,6 +26,8 @@
 #include "frontend/fft.h"
 #include "utils/log.h"
 
+#define S16_TO_FLOAT_SCALE 32768
+
 namespace wenet {
 
 // This code is based on kaldi Fbank implementation, please see
@@ -99,11 +101,12 @@ class Fbank {
 
   Fbank(int num_bins, int sample_rate, int frame_length, int frame_shift,
         float low_freq = 20, bool pre_emphasis = true,
+        bool scaled_float_as_input = false,
         float log_floor = std::numeric_limits<float>::epsilon(),
         LogBase log_base = LogBase::BaseE,
         WindowType window_type = WindowType::Povey,
         MelType mel_type = MelType::HTK,
-        NormalizationType norm_type = NormalizationType::Kaldi)
+        NormalizationType norm_type = NormalizationType::KALDI)
       : num_bins_(num_bins),
         sample_rate_(sample_rate),
         frame_length_(frame_length),
@@ -114,6 +117,7 @@ class Fbank {
         distribution_(0, 1.0),
         dither_(0.0),
         pre_emphasis_(pre_emphasis),
+        scaled_float_as_input_(scaled_float_as_input),
         log_floor_(log_floor),
         log_base_(log_base),
         norm_type_(norm_type) {
@@ -308,8 +312,10 @@ class Fbank {
       std::vector<float> data(wave.data() + i * frame_shift_,
                               wave.data() + i * frame_shift_ + frame_length_);
 
-      for (int j = 0; j < frame_length_; ++j) {
-        data[j] = data[j] / 32767.0;
+      if (scaled_float_as_input_) {
+        for (int j = 0; j < frame_length_; ++j) {
+          data[j] = data[j] / S16_TO_FLOAT_SCALE;
+        }
       }
 
       // optional add noise
@@ -383,6 +389,7 @@ class Fbank {
   bool use_log_;
   bool remove_dc_offset_;
   bool pre_emphasis_;
+  bool scaled_float_as_input_;
   float log_floor_;
   LogBase log_base_;
   NormalizationType norm_type_;
