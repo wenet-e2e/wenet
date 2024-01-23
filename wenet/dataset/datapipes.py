@@ -45,19 +45,26 @@ class PrefetchDataPipes(IterDataPipe):
             self._buffer = collections.deque(maxlen=self._prefetch_buffer_size)
 
     def __iter__(self):
-        if self._iter is None:
-            self._iter = iter(self.dp)
         if self._prefetch_buffer_size > 0:
+            if self._iter is None:
+                self._iter = iter(self.dp)
             assert self._buffer is not None
-            if len(self._buffer) <= self._prefetch_buffer_size // 2:
-                try:
-                    while (len(self._buffer) < self._prefetch_buffer_size):
-                        self._buffer.append(next(self._iter))
-                except StopIteration as ex:
-                    if len(self._buffer) == 0:
-                        return
-            for elem in self._buffer:
-                yield elem
+
+            while True:
+                if len(self._buffer) <= self._prefetch_buffer_size // 2:
+                    while len(self._buffer) < self._prefetch_buffer_size:
+                        try:
+                            self._buffer.append(next(self._iter))
+                        except StopIteration:
+                            if len(self._buffer) != 0:
+                                while len(self._buffer) > 0:
+                                    yield self._buffer.popleft()
+                            self._iter = None
+                            return
+                while len(self._buffer) > self._prefetch_buffer_size // 2:
+                    elem = self._buffer.popleft()
+                    yield elem
+
         else:
             yield from self.dp
 
@@ -96,7 +103,8 @@ class IgnoreError(IterDataPipe):
                 elem = next(self.iter_dp)
                 yield elem
             except StopIteration as ex:
-                break
+                self.iter_dp = None
+                return
             except Exception as ex:
                 if self.log:
                     logging.warning(str(ex))
@@ -112,6 +120,8 @@ class UrlOpenPipe(IterDataPipe):
 
     def __iter__(self):
         for elem in self.dp:
+            assert 'file_name' in elem
+            assert 'line' in elem
             try:
                 assert isinstance(elem, dict)
                 url = elem['line']
@@ -127,6 +137,7 @@ class UrlOpenPipe(IterDataPipe):
                     stream = process.stdout
                 elem.update(stream=stream)
                 yield elem
+                del elem
             except Exception as ex:
                 raise UrlOpenError(str(ex)) from ex
 
@@ -142,6 +153,9 @@ class TarsDataPipes(IterDataPipe):
 
     def __iter__(self):
         for sample in self.dp:
+            assert 'file_name' in sample
+            assert 'line' in sample
+            assert 'stream' in sample
             try:
                 with tarfile.open(fileobj=sample['stream'],
                                   mode="r:*") as stream:
