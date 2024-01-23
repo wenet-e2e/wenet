@@ -16,7 +16,7 @@ pyflakes==2.2.0
 torch==2.1.2
 torchaudio==2.1.2
 tqdm
-deepspeed
+deepspeed<0.13.0
 librosa
 openai-whisper
 pre-commit==3.5.0
