@@ -94,9 +94,6 @@ class Fbank {
     bins_.resize(num_bins_);
     center_freqs_.resize(num_bins_);
 
-    std::vector<std::vector<float>> filters(
-        num_bins, std::vector<float>(num_fft_bins, 0));
-
     for (int bin = 0; bin < num_bins; ++bin) {
       float left_mel = mel_low_freq + bin * mel_freq_delta,
             center_mel = mel_low_freq + (bin + 1) * mel_freq_delta,
@@ -135,7 +132,6 @@ class Fbank {
           this_bin[i] = weight;
           if (first_index == -1) first_index = i;
           last_index = i;
-          filters[bin][i] = weight;
         }
       }
       CHECK(first_index != -1 && last_index >= first_index);
@@ -255,9 +251,6 @@ class Fbank {
     std::vector<float> fft_real(fft_points_, 0), fft_img(fft_points_, 0);
     std::vector<float> power(fft_points_ / 2);
 
-    std::vector<std::vector<float>> psd(num_frames,
-                                        std::vector<float>(fft_points_ / 2, 0));
-
     float max_mel_engery = std::numeric_limits<float>::min();
 
     for (int i = 0; i < num_frames; ++i) {
@@ -298,7 +291,6 @@ class Fbank {
       for (int j = 0; j < fft_points_ / 2; ++j) {
         power[j] = fft_real[j] * fft_real[j] + fft_img[j] * fft_img[j];
         power[j] = power[j];
-        psd[i][j] = power[j];
       }
 
       (*feat)[i].resize(num_bins_);
