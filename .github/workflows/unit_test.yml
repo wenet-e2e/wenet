@@ -39,7 +39,7 @@ jobs:
       - name: Install Wenet Dependencies
         run: |
           set -eux
-          pip install -r requirements.txt && pip install --upgrade pip
+          pip install -r requirements.txt
           sudo apt update && sudo apt install -y ffmpeg  libsox-dev
       - name: Run Pytest
         run: |
