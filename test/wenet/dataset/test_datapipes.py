@@ -5,10 +5,14 @@ from torch.utils.data import datapipes
 from wenet.dataset.datapipes import SortDataPipe
 
 
+def key_func(elem):
+    return elem
+
+
 def test_sort_datapipe():
     N = 10
     dataset = datapipes.iter.IterableWrapper(range(N))
-    dataset = SortDataPipe(dataset, key_func=lambda elem: elem, reverse=True)
+    dataset = SortDataPipe(dataset, key_func=key_func, reverse=True)
     for (i, d) in enumerate(dataset):
         assert d == N - 1 - i
 

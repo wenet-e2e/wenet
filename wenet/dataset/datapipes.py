@@ -34,6 +34,8 @@ class SortDataPipe(IterDataPipe):
                  buffer_size: int = 500,
                  key_func=None,
                  reverse=False) -> None:
+        if key_func is not None:
+            _check_unpickable_fn(key_func)
         self.buffer_size = buffer_size
         super().__init__()
         self.dp = dataset
