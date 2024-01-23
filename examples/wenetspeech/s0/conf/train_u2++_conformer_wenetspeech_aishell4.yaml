@@ -1,0 +1,111 @@
+accum_grad: 4
+cmvn: global_cmvn
+cmvn_conf:
+  cmvn_file: data/train_l/global_cmvn
+  is_json_cmvn: true
+ctc: ctc
+ctc_conf:
+  ctc_blank_id: 0
+dataset: asr
+dataset_conf:
+  batch_conf:
+    batch_size: 32
+    batch_type: dynamic
+    max_frames_in_batch: 36000
+  fbank_conf:
+    dither: 1.0
+    frame_length: 25
+    frame_shift: 10
+    num_mel_bins: 80
+  filter_conf:
+    max_length: 4096
+    max_output_input_ratio: 0.25
+    min_length: 10
+    token_max_length: 200
+    token_min_length: 1
+  resample_conf:
+    resample_rate: 16000
+  shuffle: true
+  shuffle_conf:
+    shuffle_size: 5000
+  sort: true
+  sort_conf:
+    sort_size: 1000
+  spec_aug: true
+  spec_aug_conf:
+    max_f: 30
+    max_t: 50
+    num_f_mask: 2
+    num_t_mask: 2
+  spec_sub: true
+  spec_sub_conf:
+    max_t: 30
+    num_t_sub: 3
+  spec_trim: true
+  spec_trim_conf:
+    max_t: 30
+  speed_perturb: true
+decoder: bitransformer
+decoder_conf:
+  attention_heads: 8
+  dropout_rate: 0.1
+  gradient_checkpointing: true
+  linear_units: 2048
+  num_blocks: 3
+  positional_dropout_rate: 0.1
+  r_num_blocks: 3
+  self_attention_dropout_rate: 0.1
+  src_attention_dropout_rate: 0.1
+encoder: conformer
+encoder_conf:
+  activation_type: swish
+  attention_dropout_rate: 0.1
+  attention_heads: 8
+  causal: true
+  cnn_module_kernel: 15
+  cnn_module_norm: layer_norm
+  dropout_rate: 0.1
+  gradient_checkpointing: true
+  input_layer: conv2d
+  linear_units: 2048
+  normalize_before: true
+  num_blocks: 12
+  output_size: 512
+  pos_enc_layer_type: rel_pos
+  positional_dropout_rate: 0.1
+  selfattention_layer_type: rel_selfattn
+  use_cnn_module: true
+  use_dynamic_chunk: true
+  use_dynamic_left_chunk: false
+grad_clip: 5
+input_dim: 80
+log_interval: 100
+max_epoch: 60
+model: asr_model
+model_conf:
+  ctc_weight: 0.3
+  length_normalized_loss: false
+  lsm_weight: 0.1
+  reverse_weight: 0.3
+model_dir: exp/u2pp_conformer_train_l-aishell4
+optim: adam
+optim_conf:
+  lr: 0.001
+output_dim: 5549
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 100000
+tokenizer: char
+tokenizer_conf:
+  bpe_path: null
+  is_multilingual: false
+  non_lang_syms_path: null
+  num_languages: 1
+  special_tokens:
+    <blank>: 0
+    <eos>: 2
+    <sos>: 2
+    <unk>: 1
+  split_with_space: false
+  symbol_table_path: data/dict/lang_char.txt
+vocab_size: 5549
