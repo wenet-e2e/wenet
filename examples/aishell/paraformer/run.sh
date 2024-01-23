@@ -47,6 +47,11 @@ decode_modes="ctc_greedy_search ctc_prefix_beam_search paraformer_greedy_search"
 
 train_engine=torch_ddp
 
+# model+optimizer or model_only, model+optimizer is more time-efficient but
+# consumes more space, while model_only is the opposite
+deepspeed_config=../whisper/conf/ds_stage1.json
+deepspeed_save_states="model+optimizer"
+
 . tools/parse_options.sh || exit 1;
 
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
@@ -97,7 +102,9 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       --ddp.dist_backend $dist_backend \
       --num_workers ${num_workers} \
       --prefetch ${prefetch} \
-      --pin_memory
+      --pin_memory \
+      --deepspeed_config ${deepspeed_config} \
+      --deepspeed.save_states ${deepspeed_save_states}
 fi
 
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then

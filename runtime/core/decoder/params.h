@@ -130,7 +130,6 @@ std::shared_ptr<FeaturePipelineConfig> InitFeaturePipelineConfigFromFlags() {
   FeatureType feat_type = StringToFeatureType(FLAGS_feat_type);
   auto feature_config = std::make_shared<FeaturePipelineConfig>(
       FLAGS_num_bins, FLAGS_sample_rate, feat_type);
-  feature_config->Info();
   return feature_config;
 }
 

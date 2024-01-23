@@ -58,8 +58,18 @@ git clone https://github.com/wenet-e2e/wenet.git
 ``` sh
 conda create -n wenet python=3.8
 conda activate wenet
+conda install conda-forge::sox
 pip install -r requirements.txt
 pre-commit install  # for clean and tidy code
+
+# If you encounter sox compatibility issues
+RuntimeError: set_buffer_size requires sox extension which is not available.
+# ubuntu
+sudo apt-get install sox libsox-dev
+# centos
+sudo yum install sox sox-devel
+# conda env
+conda install  conda-forge::sox
 ```
 
 **Build for deployment**
@@ -100,8 +110,8 @@ Please scan the personal QR code on the right, and the guy is responsible for in
 
 ``` bibtex
 @inproceedings{yao2021wenet,
-  title={WeNet: Production oriented Streaming and Non-streaming End-to-End Speech Recognition Toolkit},
-  author={Yao, Zhuoyuan and Wu, Di and Wang, Xiong and Zhang, Binbin and Yu, Fan and Yang, Chao and Peng, Zhendong and Chen, Xiaoyu and Xie, Lei and Lei, Xin},
+title={WeNet: Production oriented Streaming and Non-streaming End-to-End Speech Recognition Toolkit},
+author={Yao, Zhuoyuan and Wu, Di and Wang, Xiong and Zhang, Binbin and Yu, Fan and Yang, Chao and Peng, Zhendong and Chen, Xiaoyu and Xie, Lei and Lei, Xin},
   booktitle={Proc. Interspeech},
   year={2021},
   address={Brno, Czech Republic },

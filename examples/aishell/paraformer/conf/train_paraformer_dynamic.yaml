@@ -15,6 +15,7 @@ encoder_conf:
   positional_dropout_rate: 0.1
   sanm_shfit: 0
   use_dynamic_chunk: true
+  gradient_checkpointing: true
 
 decoder: sanm_decoder
 decoder_conf:
@@ -28,6 +29,7 @@ decoder_conf:
   sanm_shfit: 0
   self_attention_dropout_rate: 0.1
   src_attention_dropout_rate: 0.1
+  gradient_checkpointing: true
 
 tokenizer: paraformer
 tokenizer_conf:
@@ -53,8 +55,6 @@ model_conf:
   ctc_weight: 0.3
   length_normalized_loss: false
   lsm_weight: 0.1
-  predictor_bias: 1
-  predictor_weight: 1.0
   sampling_ratio: 0.75
 
 predictor: paraformer_predictor
@@ -69,8 +69,6 @@ predictor_conf:
   tail_threshold: 0.45
   threshold: 1.0
   upsample_times: 3
-  upsample_type: cnn_blstm
-  use_cif1_cnn: false
 
 dataset: asr
 dataset_conf:

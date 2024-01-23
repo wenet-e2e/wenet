@@ -45,7 +45,8 @@ class CTC(torch.nn.Module):
 
         reduction_type = "sum" if reduce else "none"
         self.ctc_loss = torch.nn.CTCLoss(blank=blank_id,
-                                         reduction=reduction_type)
+                                         reduction=reduction_type,
+                                         zero_infinity=True)
 
     def forward(self, hs_pad: torch.Tensor, hlens: torch.Tensor,
                 ys_pad: torch.Tensor,

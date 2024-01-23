@@ -60,8 +60,9 @@ def main():
         if args.mode == "hybrid":
             yamls = glob.glob('{}/*.yaml'.format(args.src_path))
             yamls = [
-                f for f in yamls if not (os.path.basename(f).startswith('train')
-                                         or os.path.basename(f).startswith('init'))
+                f for f in yamls
+                if not (os.path.basename(f).startswith('train')
+                        or os.path.basename(f).startswith('init'))
             ]
         elif args.mode == "step":
             yamls = glob.glob('{}/step_*.yaml'.format(args.src_path))
@@ -70,7 +71,7 @@ def main():
         for y in yamls:
             with open(y, 'r') as f:
                 dic_yaml = yaml.load(f, Loader=yaml.FullLoader)
-                loss = dic_yaml['cv_loss']
+                loss = dic_yaml['loss_dict']['loss']
                 epoch = dic_yaml['epoch']
                 tag = dic_yaml['tag']
                 if epoch >= args.min_epoch and epoch <= args.max_epoch:

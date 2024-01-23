@@ -176,11 +176,11 @@ class Fbank {
       return 700.0f * (expf(mel_freq / 1127.0f) - 1.0f);
     } else if (mel_type == MelType::Slaney) {
       float f_min = 0.0;
-      float f_sp = 200.0 / 3.0;
+      float f_sp = 200.0f / 3.0f;
       float min_log_hz = 1000.0;
       float freq = f_min + f_sp * mel_freq;
       float min_log_mel = (min_log_hz - f_min) / f_sp;
-      float logstep = logf(6.4) / 27.0;
+      float logstep = logf(6.4) / 27.0f;
       if (mel_freq >= min_log_mel) {
         return min_log_hz * expf(logstep * (mel_freq - min_log_mel));
       } else {
@@ -194,11 +194,11 @@ class Fbank {
       return 1127.0f * logf(1.0f + freq / 700.0f);
     } else if (mel_type == MelType::Slaney) {
       float f_min = 0.0;
-      float f_sp = 200.0 / 3.0;
+      float f_sp = 200.0f / 3.0f;
       float min_log_hz = 1000.0;
       float mel = (freq - f_min) / f_sp;
       float min_log_mel = (min_log_hz - f_min) / f_sp;
-      float logstep = logf(6.4) / 27.0;
+      float logstep = logf(6.4) / 27.0f;
       if (freq >= min_log_hz) {
         return min_log_mel + logf(freq / min_log_hz) / logstep;
       } else {
@@ -290,7 +290,6 @@ class Fbank {
       // power
       for (int j = 0; j < fft_points_ / 2; ++j) {
         power[j] = fft_real[j] * fft_real[j] + fft_img[j] * fft_img[j];
-        power[j] = power[j];
       }
 
       (*feat)[i].resize(num_bins_);
@@ -318,7 +317,6 @@ class Fbank {
     if (norm_type_ == NormalizationType::Whisper)
       WhisperNorm(feat, max_mel_engery);
 
-    // ReadVecFromCSV(feat, std::string("feat_std.csv"));
     return num_frames;
   }
 

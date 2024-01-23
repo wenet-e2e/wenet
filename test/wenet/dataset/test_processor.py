@@ -1,4 +1,7 @@
+import json
 import pytest
+from torchaudio._extension import torchaudio
+from whisper import torch
 
 from wenet.dataset import processor
 from wenet.utils.init_tokenizer import init_tokenizer
@@ -154,3 +157,47 @@ def test_tokenize(symbol_table_path):
         assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
         assert (len(hyp["label"]) == len(ref["label"]))
         assert (all(h == r for h, r in zip(hyp["label"], ref["label"])))
+
+
+def _get_records(raw_file_path):
+    records = []
+    with open(raw_file_path, 'r') as f:
+        for line in f:
+            json_line = line.strip('\n')
+            records.append({'src': json_line})
+    return records
+
+
+@pytest.mark.parametrize("raw_file_path", ["test/resources/dataset/data.list"])
+def test_parse_raw(raw_file_path):
+
+    records = _get_records(raw_file_path)
+    raw_processor = processor.parse_raw(records)
+    for (ori, processed) in zip(records, raw_processor):
+        ori = json.loads(ori['src'])
+        assert ori['key'] == processed['key']
+        ori_waveform, ori_sample_rate = torchaudio.load(ori['wav'])
+        processed_waveform = processed['wav']
+        assert torch.allclose(ori_waveform, processed_waveform)
+        assert ori_sample_rate == processed['sample_rate']
+        assert processed['txt'] == ori['txt']
+
+
+@pytest.mark.parametrize(
+    "shard_path", ["test/resources/dataset/shards/shards_000000000.tar"])
+def test_tar_file_and_group(shard_path):
+    # TODO: paramemter
+    raw_file_path = 'test/resources/dataset/data.list'
+    records = _get_records(raw_file_path)
+
+    tar_iter = iter([{'stream': open(shard_path, 'rb')}])
+    tar_processor = processor.tar_file_and_group(tar_iter)
+    for (ori, processed) in zip(records, tar_processor):
+        print(processed)
+        ori = json.loads(ori['src'])
+        assert ori['key'] == processed['key']
+        ori_waveform, ori_sample_rate = torchaudio.load(ori['wav'])
+        processed_waveform = processed['wav']
+        assert torch.allclose(ori_waveform, processed_waveform)
+        assert ori_sample_rate == processed['sample_rate']
+        assert processed['txt'] == ori['txt']

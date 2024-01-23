@@ -177,10 +177,6 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  // for (auto& wav : waves) {
-  //   Decode(wav, false);
-  // }
-
   LOG(INFO) << "Total: decoded " << g_total_waves_dur << "ms audio taken "
             << g_total_decode_time << "ms.";
   LOG(INFO) << "RTF: " << std::setprecision(4)

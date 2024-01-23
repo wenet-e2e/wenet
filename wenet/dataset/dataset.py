@@ -146,6 +146,10 @@ def Dataset(data_type,
     else:
         dataset = Processor(dataset, processor.parse_raw)
 
+    speaker_conf = conf.get('speaker_conf', None)
+    if speaker_conf is not None:
+        dataset = Processor(dataset, processor.parse_speaker, **speaker_conf)
+
     dataset = Processor(dataset, processor.tokenize, tokenizer)
     filter_conf = conf.get('filter_conf', {})
     dataset = Processor(dataset, processor.filter, **filter_conf)
