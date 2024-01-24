@@ -77,7 +77,7 @@ class DynamicBatchDataPipe(IterDataPipe):
 
     def __iter__(self):
         for elem in self.dp:
-            if not self.window_func(elem):
+            if not self.window_func(elem, len(self._buffer)):
                 self._buffer.append(elem)
             else:
                 if len(self._buffer) > 0:

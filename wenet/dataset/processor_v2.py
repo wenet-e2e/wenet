@@ -363,3 +363,27 @@ def padding(data):
                                dtype=torch.int32)
         batch['speaker'] = speaker
     return batch
+
+
+def _dynamic_batch_window(sample, buffer_size):
+    assert isinstance(sample, dict)
+    assert 'feat' in sample
+    assert isinstance(sample['feat'], torch.Tensor)
+    assert hasattr(_dynamic_batch_window, 'longest_frames')
+    assert hasattr(_dynamic_batch_window, 'max_frames_in_batch')
+
+    max_frames_in_batch = _dynamic_batch_window.max_frames_in_batch
+    longest_frames = _dynamic_batch_window.longest_frames
+    new_sample_frames = sample['feat'].size(0)
+    longest_frames = max(longest_frames, new_sample_frames)
+    frames_after_padding = longest_frames * (buffer_size + 1)
+    if frames_after_padding > max_frames_in_batch:
+        _dynamic_batch_window.longest_frames = new_sample_frames
+        return True
+    return False
+
+
+def dynamic_batch_window_fn(max_frames_in_batch=12000):
+    _dynamic_batch_window.max_frames_in_batch = max_frames_in_batch
+    _dynamic_batch_window.longest_frames = 0
+    return _dynamic_batch_window
