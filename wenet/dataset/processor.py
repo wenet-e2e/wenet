@@ -421,25 +421,20 @@ def padding(data):
     return batch
 
 
-def _dynamic_batch_window(sample, buffer_size):
-    assert isinstance(sample, dict)
-    assert 'feat' in sample
-    assert isinstance(sample['feat'], torch.Tensor)
-    assert hasattr(_dynamic_batch_window, 'longest_frames')
-    assert hasattr(_dynamic_batch_window, 'max_frames_in_batch')
+class DynamicBatchWindow:
 
-    max_frames_in_batch = _dynamic_batch_window.max_frames_in_batch
-    longest_frames = _dynamic_batch_window.longest_frames
-    new_sample_frames = sample['feat'].size(0)
-    longest_frames = max(longest_frames, new_sample_frames)
-    frames_after_padding = longest_frames * (buffer_size + 1)
-    if frames_after_padding > max_frames_in_batch:
-        _dynamic_batch_window.longest_frames = new_sample_frames
-        return True
-    return False
+    def __init__(self, max_frames_in_batch=12000):
+        self.longest_frames = 0
+        self.max_frames_in_batch = max_frames_in_batch
 
-
-def dynamic_batch_window_fn(max_frames_in_batch=12000):
-    _dynamic_batch_window.max_frames_in_batch = max_frames_in_batch
-    _dynamic_batch_window.longest_frames = 0
-    return _dynamic_batch_window
+    def __call__(self, sample, buffer_size):
+        assert isinstance(sample, dict)
+        assert 'feat' in sample
+        assert isinstance(sample['feat'], torch.Tensor)
+        new_sample_frames = sample['feat'].size(0)
+        self.longest_frames = max(self.longest_frames, new_sample_frames)
+        frames_after_padding = self.longest_frames * (buffer_size + 1)
+        if frames_after_padding > self.max_frames_in_batch:
+            self.longest_frames = new_sample_frames
+            return True
+        return False

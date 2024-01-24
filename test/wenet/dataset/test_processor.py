@@ -1,4 +1,7 @@
 import pytest
+import torch
+from torch.utils.data import datapipes
+import torchaudio
 
 from wenet.dataset import processor
 from wenet.utils.init_tokenizer import init_tokenizer
@@ -154,3 +157,59 @@ def test_tokenize(symbol_table_path):
         assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
         assert (len(hyp["label"]) == len(ref["label"]))
         assert (all(h == r for h, r in zip(hyp["label"], ref["label"])))
+
+
+def test_filter():
+    input = [
+        {
+            'wav': torch.rand(1, 10 * 16000),
+            'sample_rate': 16000
+        },
+        {
+            'wav': torch.rand(1, 10000 * 16000),
+            'sample_rate': 16000
+        },
+    ]
+
+    dataset = datapipes.iter.IterableWrapper(input)
+    dataset = dataset.filter(
+        filter_fn=lambda elem: processor.filter(elem, max_length=1000))
+    expected = [input[0]]
+    result = []
+    for d in dataset:
+        result.append(d)
+
+    assert len(expected) == len(result)
+    for r, e in zip(result, expected):
+        assert r.keys() == e.keys()
+        assert torch.allclose(r['wav'], e['wav'])
+        assert r['sample_rate'] == e['sample_rate']
+
+
+@pytest.mark.parametrize("wav_file", [
+    "test/resources/aishell-BAC009S0724W0121.wav",
+    "test/resources/librispeech-1995-1837-0001.wav",
+])
+def test_compute_fbank(wav_file):
+    waveform, sample_rate = torchaudio.load(wav_file, normalize=False)
+    waveform = waveform.to(torch.float)
+    assert sample_rate == 16000
+    fbank_args = {
+        "num_mel_bins": 80,
+        "frame_length": 25,
+        "frame_shift": 10,
+        "dither": 0.0,
+        "energy_floor": 0.0,
+        "sample_frequency": 16000
+    }
+    mat = torchaudio.compliance.kaldi.fbank(waveform=waveform, **fbank_args)
+
+    fbank_args.pop("energy_floor")
+    fbank_args.pop("sample_frequency")
+    input = {
+        'wav': torchaudio.load(wav_file)[0],
+        'sample_rate': 16000,
+        'key': wav_file,
+    }
+    assert torch.allclose(
+        processor.compute_fbank(input, **fbank_args)['feat'], mat)

@@ -92,8 +92,7 @@ def Dataset(data_type,
     else:
         max_frames_in_batch = batch_conf.get('max_frames_in_batch', 12000)
         dataset = dataset.dynamic_batch(
-            processor.dynamic_batch_window_fn(
-                max_frames_in_batch=max_frames_in_batch),
+            processor.DynamicBatchWindow(max_frames_in_batch),
             wrapper_class=processor.padding,
         )
 

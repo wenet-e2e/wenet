@@ -1,4 +1,5 @@
 import pytest
+import torch
 from wenet.dataset.dataset import Dataset
 from wenet.text.char_tokenizer import CharTokenizer
 
@@ -53,5 +54,9 @@ def test_dataset(params):
                       data_list,
                       tokenizer=tokenizer,
                       conf=dataset_conf)
-    for d in dataset:
+    dataloader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=None,
+                                             num_workers=4,
+                                             persistent_workers=True)
+    for d in dataloader:
         pass

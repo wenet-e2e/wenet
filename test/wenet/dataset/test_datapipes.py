@@ -4,8 +4,8 @@ from torch.utils.data import datapipes
 
 from wenet.dataset.datapipes import (SortDataPipe, WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
-from wenet.dataset.processor import (decode_wav, dynamic_batch_window_fn,
-                                     padding, parse_json, compute_fbank)
+from wenet.dataset.processor import (DynamicBatchWindow, decode_wav, padding,
+                                     parse_json, compute_fbank)
 
 
 @pytest.mark.parametrize("data_list", [
@@ -99,8 +99,11 @@ def test_dynamic_batch_datapipe(data_list):
     dataset = dataset.map(fake_labels)
     max_frames_in_batch = 10000
     dataset = dataset.dynamic_batch(
-        dynamic_batch_window_fn(max_frames_in_batch=max_frames_in_batch),
-        padding)
+        window_class=DynamicBatchWindow(max_frames_in_batch),
+        wrapper_class=padding)
 
-    for d in dataset:
+    dataloader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=None,
+                                             num_workers=2)
+    for d in dataloader:
         assert d['feats'].size(1) <= max_frames_in_batch
