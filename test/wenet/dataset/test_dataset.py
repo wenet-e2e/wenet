@@ -19,7 +19,6 @@ def test_WenetRawDatasetSource(data_list):
     result = []
     for elem in dataset:
         result.append(elem)
-    print(result)
 
     assert len(result) == len(expected)
     for (i, elem) in enumerate(result):

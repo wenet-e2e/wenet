@@ -34,4 +34,4 @@ def test_dynamic_batch_datapipe(data_list):
         padding)
 
     for d in dataset:
-        assert d['feats'].size(0) <= max_frames_in_batch
+        assert d['feats'].size(1) <= max_frames_in_batch
