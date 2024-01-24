@@ -107,3 +107,26 @@ def test_dynamic_batch_datapipe(data_list):
                                              num_workers=2)
     for d in dataloader:
         assert d['feats'].size(1) <= max_frames_in_batch
+
+
+def test_shuffle_deterministic():
+    dataset = datapipes.iter.IterableWrapper(range(10))
+    dataset = dataset.shuffle()
+
+    generator = torch.Generator()
+    generator.manual_seed(100)
+    dataloader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=None,
+                                             num_workers=0,
+                                             generator=generator,
+                                             persistent_workers=False)
+
+    result = []
+    for epoch in range(2):
+        _ = epoch
+        for d in dataloader:
+            result.append(d)
+
+    expected = [2, 7, 8, 9, 4, 6, 3, 0, 5, 1, 1, 6, 0, 5, 9, 8, 3, 2, 7, 4]
+    for (r, h) in zip(result, expected):
+        assert r == h
