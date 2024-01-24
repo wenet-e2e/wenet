@@ -20,6 +20,7 @@ def Dataset(data_type,
         Args:
             data_type(str): raw/shard
             tokenizer (BaseTokenizer or None): tokenizer to tokenize
+            partition(bool): whether to do data partition in terms of rank
     """
     # NOTE(Mddct): partition is always true for datapipe
     _ = partition
