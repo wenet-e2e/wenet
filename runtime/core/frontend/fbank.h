@@ -24,7 +24,7 @@
 #include "frontend/fft.h"
 #include "utils/log.h"
 
-#define S16_ABS_MAX (2 << 15)
+#define S16_ABS_MAX (1 << 15)
 
 namespace wenet {
 
