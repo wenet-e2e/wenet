@@ -70,6 +70,8 @@ class Fbank {
         generator_(0),
         distribution_(0, 1.0),
         dither_(0.0),
+        low_freq_(low_freq),
+        high_freq_(sample_rate / 2),
         pre_emphasis_(pre_emphasis),
         scale_input_to_unit_(scale_input_to_unit),
         log_floor_(log_floor),
@@ -82,17 +84,20 @@ class Fbank {
     sintbl_.resize(fft_points_ + fft_points_4);
     make_sintbl(fft_points_, sintbl_.data());
     make_bitrev(fft_points_, bitrev_.data());
+    InitMelFilters(mel_type);
+    InitWindow(window_type);
+  }
 
+  void InitMelFilters(MelType mel_type) {
     int num_fft_bins = fft_points_ / 2;
     float fft_bin_width = static_cast<float>(sample_rate_) / fft_points_;
-    int high_freq = sample_rate_ / 2;
-    float mel_low_freq = MelScale(low_freq, mel_type);
-    float mel_high_freq = MelScale(high_freq, mel_type);
-    float mel_freq_delta = (mel_high_freq - mel_low_freq) / (num_bins + 1);
+    float mel_low_freq = MelScale(low_freq_, mel_type);
+    float mel_high_freq = MelScale(high_freq_, mel_type);
+    float mel_freq_delta = (mel_high_freq - mel_low_freq) / (num_bins_ + 1);
     bins_.resize(num_bins_);
     center_freqs_.resize(num_bins_);
 
-    for (int bin = 0; bin < num_bins; ++bin) {
+    for (int bin = 0; bin < num_bins_; ++bin) {
       float left_mel = mel_low_freq + bin * mel_freq_delta,
             center_mel = mel_low_freq + (bin + 1) * mel_freq_delta,
             right_mel = mel_low_freq + (bin + 2) * mel_freq_delta;
@@ -140,18 +145,7 @@ class Fbank {
         bins_[bin].second[i] = this_bin[first_index + i];
       }
     }
-    InitWindow(window_type);
   }
-
-  void set_use_log(bool use_log) { use_log_ = use_log; }
-
-  void set_remove_dc_offset(bool remove_dc_offset) {
-    remove_dc_offset_ = remove_dc_offset;
-  }
-
-  void set_dither(float dither) { dither_ = dither; }
-
-  int num_bins() const { return num_bins_; }
 
   void InitWindow(WindowType window_type) {
     window_.resize(frame_length_);
@@ -167,6 +161,16 @@ class Fbank {
         window_[i] = 0.5 * (1.0 - cos(i * a));
     }
   }
+
+  void set_use_log(bool use_log) { use_log_ = use_log; }
+
+  void set_remove_dc_offset(bool remove_dc_offset) {
+    remove_dc_offset_ = remove_dc_offset;
+  }
+
+  void set_dither(float dither) { dither_ = dither; }
+
+  int num_bins() const { return num_bins_; }
 
   static inline float InverseMelScale(float mel_freq,
                                       MelType mel_type = MelType::kHTK) {
@@ -331,7 +335,9 @@ class Fbank {
   bool remove_dc_offset_;
   bool pre_emphasis_;
   bool scale_input_to_unit_;
+  float low_freq_;
   float log_floor_;
+  float high_freq_;
   LogBase log_base_;
   NormalizationType norm_type_;
 
