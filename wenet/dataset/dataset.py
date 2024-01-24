@@ -133,7 +133,7 @@ def Dataset(data_type,
 
         Args:
             data_type(str): raw/shard
-            bpe_model(str): model for english bpe part
+            tokenizer (BaseTokenizer): tokenizer to tokenize
             partition(bool): whether to do data partition in terms of rank
     """
     assert data_type in ['raw', 'shard']
