@@ -16,10 +16,8 @@
 #define FRONTEND_FBANK_H_
 
 #include <cstring>
-#include <fstream>
 #include <limits>
 #include <random>
-#include <string>
 #include <utility>
 #include <vector>
 
