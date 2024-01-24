@@ -24,7 +24,7 @@
 #include "frontend/fft.h"
 #include "utils/log.h"
 
-#define S16_TO_FLOAT_SCALE 32768
+#define S16_ABS_MAX (2 << 15)
 
 namespace wenet {
 
@@ -32,35 +32,35 @@ namespace wenet {
 // https://github.com/kaldi-asr/kaldi/blob/master/src/feat/feature-fbank.cc
 
 enum class WindowType {
-  Povey,
-  Hanning,
+  kPovey = 0,
+  kHanning,
 };
 
 enum class MelType {
-  HTK,
-  Slaney,
+  kHTK = 0,
+  kSlaney,
 };
 
 enum class NormalizationType {
-  KALDI,
-  Whisper,
+  kKaldi = 0,
+  kWhisper,
 };
 
 enum class LogBase {
-  BaseE,
-  Base10,
+  kBaseE = 0,
+  kBase10,
 };
 
 class Fbank {
  public:
   Fbank(int num_bins, int sample_rate, int frame_length, int frame_shift,
         float low_freq = 20, bool pre_emphasis = true,
-        bool scaled_float_as_input = false,
+        bool scale_input_to_unit = false,
         float log_floor = std::numeric_limits<float>::epsilon(),
-        LogBase log_base = LogBase::BaseE,
-        WindowType window_type = WindowType::Povey,
-        MelType mel_type = MelType::HTK,
-        NormalizationType norm_type = NormalizationType::KALDI)
+        LogBase log_base = LogBase::kBaseE,
+        WindowType window_type = WindowType::kPovey,
+        MelType mel_type = MelType::kHTK,
+        NormalizationType norm_type = NormalizationType::kKaldi)
       : num_bins_(num_bins),
         sample_rate_(sample_rate),
         frame_length_(frame_length),
@@ -71,7 +71,7 @@ class Fbank {
         distribution_(0, 1.0),
         dither_(0.0),
         pre_emphasis_(pre_emphasis),
-        scaled_float_as_input_(scaled_float_as_input),
+        scale_input_to_unit_(scale_input_to_unit),
         log_floor_(log_floor),
         log_base_(log_base),
         norm_type_(norm_type) {
@@ -105,12 +105,12 @@ class Fbank {
         float mel = MelScale(freq, mel_type);
         if (mel > left_mel && mel < right_mel) {
           float weight;
-          if (mel_type == MelType::HTK) {
+          if (mel_type == MelType::kHTK) {
             if (mel <= center_mel)
               weight = (mel - left_mel) / (center_mel - left_mel);
             else if (mel > center_mel)
               weight = (right_mel - mel) / (right_mel - center_mel);
-          } else if (mel_type == MelType::Slaney) {
+          } else if (mel_type == MelType::kSlaney) {
             if (mel <= center_mel) {
               weight = (InverseMelScale(mel, mel_type) -
                         InverseMelScale(left_mel, mel_type)) /
@@ -155,12 +155,12 @@ class Fbank {
 
   void InitWindow(WindowType window_type) {
     window_.resize(frame_length_);
-    if (window_type == WindowType::Povey) {
+    if (window_type == WindowType::kPovey) {
       // povey window
       double a = M_2PI / (frame_length_ - 1);
       for (int i = 0; i < frame_length_; ++i)
         window_[i] = pow(0.5 - 0.5 * cos(a * i), 0.85);
-    } else if (window_type == WindowType::Hanning) {
+    } else if (window_type == WindowType::kHanning) {
       // periodic hanning window
       double a = M_2PI / (frame_length_);
       for (int i = 0; i < frame_length_; ++i)
@@ -169,10 +169,10 @@ class Fbank {
   }
 
   static inline float InverseMelScale(float mel_freq,
-                                      MelType mel_type = MelType::HTK) {
-    if (mel_type == MelType::HTK) {
+                                      MelType mel_type = MelType::kHTK) {
+    if (mel_type == MelType::kHTK) {
       return 700.0f * (expf(mel_freq / 1127.0f) - 1.0f);
-    } else if (mel_type == MelType::Slaney) {
+    } else if (mel_type == MelType::kSlaney) {
       float f_min = 0.0;
       float f_sp = 200.0f / 3.0f;
       float min_log_hz = 1000.0;
@@ -184,13 +184,15 @@ class Fbank {
       } else {
         return freq;
       }
+    } else {
+      throw std::invalid_argument("Unsupported mel type!");
     }
   }
 
-  static inline float MelScale(float freq, MelType mel_type = MelType::HTK) {
-    if (mel_type == MelType::HTK) {
+  static inline float MelScale(float freq, MelType mel_type = MelType::kHTK) {
+    if (mel_type == MelType::kHTK) {
       return 1127.0f * logf(1.0f + freq / 700.0f);
-    } else if (mel_type == MelType::Slaney) {
+    } else if (mel_type == MelType::kSlaney) {
       float f_min = 0.0;
       float f_sp = 200.0f / 3.0f;
       float min_log_hz = 1000.0;
@@ -202,6 +204,8 @@ class Fbank {
       } else {
         return mel;
       }
+    } else {
+      throw std::invalid_argument("Unsupported mel type!");
     }
   }
 
@@ -255,9 +259,9 @@ class Fbank {
       std::vector<float> data(wave.data() + i * frame_shift_,
                               wave.data() + i * frame_shift_ + frame_length_);
 
-      if (scaled_float_as_input_) {
+      if (scale_input_to_unit_) {
         for (int j = 0; j < frame_length_; ++j) {
-          data[j] = data[j] / S16_TO_FLOAT_SCALE;
+          data[j] = data[j] / S16_ABS_MAX;
         }
       }
 
@@ -303,16 +307,16 @@ class Fbank {
         if (use_log_) {
           if (mel_energy < log_floor_) mel_energy = log_floor_;
 
-          if (log_base_ == LogBase::BaseE)
+          if (log_base_ == LogBase::kBaseE)
             mel_energy = logf(mel_energy);
-          else if (log_base_ == LogBase::Base10)
+          else if (log_base_ == LogBase::kBase10)
             mel_energy = log10(mel_energy);
         }
         if (max_mel_engery < mel_energy) max_mel_engery = mel_energy;
         (*feat)[i][j] = mel_energy;
       }
     }
-    if (norm_type_ == NormalizationType::Whisper)
+    if (norm_type_ == NormalizationType::kWhisper)
       WhisperNorm(feat, max_mel_engery);
 
     return num_frames;
@@ -326,7 +330,7 @@ class Fbank {
   bool use_log_;
   bool remove_dc_offset_;
   bool pre_emphasis_;
-  bool scaled_float_as_input_;
+  bool scale_input_to_unit_;
   float log_floor_;
   LogBase log_base_;
   NormalizationType norm_type_;

@@ -28,8 +28,8 @@
 namespace wenet {
 
 enum class FeatureType {
-  KALDI,
-  Whisper,
+  kKaldi = 0,
+  kWhisper,
 };
 
 struct FeaturePipelineConfig {
@@ -39,7 +39,7 @@ struct FeaturePipelineConfig {
   int frame_shift;
   float low_freq;
   bool pre_emphasis;
-  bool scaled_float_as_input;
+  bool scale_input_to_unit;
   float log_floor;
   LogBase log_base;
   WindowType window_type;
@@ -47,29 +47,29 @@ struct FeaturePipelineConfig {
   NormalizationType norm_type;
 
   FeaturePipelineConfig(int num_bins, int sample_rate,
-                        FeatureType feat_type = FeatureType::KALDI)
+                        FeatureType feat_type = FeatureType::kKaldi)
       : num_bins(num_bins),                  // 80 dim fbank
         sample_rate(sample_rate) {           // 16k sample rate
     frame_length = sample_rate / 1000 * 25;  // frame length 25ms
     frame_shift = sample_rate / 1000 * 10;   // frame shift 10ms
-    if (feat_type == FeatureType::KALDI) {
+    if (feat_type == FeatureType::kKaldi) {
       low_freq = 20.0;
       pre_emphasis = true;
       log_floor = std::numeric_limits<float>::epsilon();
-      log_base = LogBase::BaseE;
-      window_type = WindowType::Povey;
-      mel_type = MelType::HTK;
-      norm_type = NormalizationType::KALDI;
-      scaled_float_as_input = false;
-    } else if (feat_type == FeatureType::Whisper) {
+      log_base = LogBase::kBaseE;
+      window_type = WindowType::kPovey;
+      mel_type = MelType::kHTK;
+      norm_type = NormalizationType::kKaldi;
+      scale_input_to_unit = false;
+    } else if (feat_type == FeatureType::kWhisper) {
       low_freq = 0.0;
       pre_emphasis = false;
       log_floor = 1e-10;
-      log_base = LogBase::Base10;
-      window_type = WindowType::Hanning;
-      mel_type = MelType::Slaney;
-      scaled_float_as_input = true;
-      norm_type = NormalizationType::Whisper;
+      log_base = LogBase::kBase10;
+      window_type = WindowType::kHanning;
+      mel_type = MelType::kSlaney;
+      scale_input_to_unit = true;
+      norm_type = NormalizationType::kWhisper;
     }
   }
 

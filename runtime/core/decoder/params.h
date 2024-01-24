@@ -119,9 +119,9 @@ namespace wenet {
 
 FeatureType StringToFeatureType(const std::string& feat_type_str) {
   if (feat_type_str == "kaldi")
-    return FeatureType::KALDI;
+    return FeatureType::kKaldi;
   else if (feat_type_str == "whisper")
-    return FeatureType::Whisper;
+    return FeatureType::kWhisper;
   else
     throw std::invalid_argument("Unsupported feat type!");
 }
