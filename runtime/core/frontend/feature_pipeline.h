@@ -15,6 +15,7 @@
 #ifndef FRONTEND_FEATURE_PIPELINE_H_
 #define FRONTEND_FEATURE_PIPELINE_H_
 
+#include <limits>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -26,22 +27,60 @@
 
 namespace wenet {
 
+enum class FeatureType {
+  kKaldi = 0,
+  kWhisper,
+};
+
 struct FeaturePipelineConfig {
   int num_bins;
   int sample_rate;
   int frame_length;
   int frame_shift;
-  FeaturePipelineConfig(int num_bins, int sample_rate)
+  float low_freq;
+  bool pre_emphasis;
+  bool scale_input_to_unit;
+  float log_floor;
+  LogBase log_base;
+  WindowType window_type;
+  MelType mel_type;
+  NormalizationType norm_type;
+
+  FeaturePipelineConfig(int num_bins, int sample_rate,
+                        FeatureType feat_type = FeatureType::kKaldi)
       : num_bins(num_bins),                  // 80 dim fbank
         sample_rate(sample_rate) {           // 16k sample rate
     frame_length = sample_rate / 1000 * 25;  // frame length 25ms
     frame_shift = sample_rate / 1000 * 10;   // frame shift 10ms
+    if (feat_type == FeatureType::kKaldi) {
+      low_freq = 20.0;
+      pre_emphasis = true;
+      log_floor = std::numeric_limits<float>::epsilon();
+      log_base = LogBase::kBaseE;
+      window_type = WindowType::kPovey;
+      mel_type = MelType::kHTK;
+      norm_type = NormalizationType::kKaldi;
+      scale_input_to_unit = false;
+    } else if (feat_type == FeatureType::kWhisper) {
+      low_freq = 0.0;
+      pre_emphasis = false;
+      log_floor = 1e-10;
+      log_base = LogBase::kBase10;
+      window_type = WindowType::kHanning;
+      mel_type = MelType::kSlaney;
+      scale_input_to_unit = true;
+      norm_type = NormalizationType::kWhisper;
+    }
   }
 
   void Info() const {
     LOG(INFO) << "feature pipeline config"
               << " num_bins " << num_bins << " frame_length " << frame_length
-              << " frame_shift " << frame_shift;
+              << " frame_shift " << frame_shift << " low_freq " << low_freq
+              << " preemphasis " << pre_emphasis << " log_floor " << log_floor
+              << " log_base " << int(log_base) << " window_type "
+              << int(window_type) << " mel_type " << int(mel_type)
+              << " norm_type " << int(norm_type);
   }
 };
 

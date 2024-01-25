@@ -23,7 +23,9 @@ FeaturePipeline::FeaturePipeline(const FeaturePipelineConfig& config)
     : config_(config),
       feature_dim_(config.num_bins),
       fbank_(config.num_bins, config.sample_rate, config.frame_length,
-             config.frame_shift),
+             config.frame_shift, config.low_freq, config.pre_emphasis,
+             config.scale_input_to_unit, config.log_floor, config.log_base,
+             config.window_type, config.mel_type, config.norm_type),
       num_frames_(0),
       input_finished_(false) {}
 
