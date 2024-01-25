@@ -7,8 +7,6 @@ from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
-AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
-
 
 class TarParseError(Exception):
 
@@ -211,6 +209,9 @@ class UrlOpenPipe(IterDataPipe):
 class TarsDataPipe(IterDataPipe):
     """ Decode wenet's tar , yield {'txt': "...", "raw": "..."}
     """
+
+    AUDIO_FORMAT_SETS = set(
+        ['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
     def __init__(self, datapipe: IterDataPipe) -> None:
         super().__init__()

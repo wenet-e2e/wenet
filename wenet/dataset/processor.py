@@ -10,7 +10,7 @@ import torchaudio.compliance.kaldi as kaldi
 import torch.nn.functional as F
 from wenet.text.base_tokenizer import BaseTokenizer
 
-# torchaudio.utils.sox_utils.set_buffer_size(16500)
+torchaudio.utils.sox_utils.set_buffer_size(16500)
 
 
 def parse_json(elem):
@@ -87,7 +87,6 @@ def speed_perturb(sample, speeds=None):
         Returns:
             key, wav, label, sample_rate}
     """
-    print(sample)
     if speeds is None:
         speeds = [0.9, 1.0, 1.1]
     assert 'sample_rate' in sample
@@ -138,7 +137,7 @@ def compute_fbank(sample,
 def sort_by_feats(sample):
     assert 'feat' in sample
     assert isinstance(sample['feat'], torch.Tensor)
-    return sample['feat'].size()
+    return sample['feat'].size(0)
 
 
 def compute_mfcc(sample,

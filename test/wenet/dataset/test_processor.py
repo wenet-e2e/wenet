@@ -1,3 +1,4 @@
+from functools import partial
 import pytest
 import torch
 from torch.utils.data import datapipes
@@ -172,8 +173,7 @@ def test_filter():
     ]
 
     dataset = datapipes.iter.IterableWrapper(input)
-    dataset = dataset.filter(
-        filter_fn=lambda elem: processor.filter(elem, max_length=1000))
+    dataset = dataset.filter(partial(processor.filter, max_length=1000))
     expected = [input[0]]
     result = []
     for d in dataset:
@@ -213,3 +213,45 @@ def test_compute_fbank(wav_file):
     }
     assert torch.allclose(
         processor.compute_fbank(input, **fbank_args)['feat'], mat)
+
+
+def test_sort_by_feats():
+    samples = [
+        {
+            "feat": torch.ones(1000, 80)
+        },
+        {
+            "feat": torch.ones(100, 80)
+        },
+        {
+            "feat": torch.ones(10, 80)
+        },
+        {
+            "feat": torch.ones(1, 80)
+        },
+    ]
+    expected = [
+        {
+            "feat": torch.ones(1, 80)
+        },
+        {
+            "feat": torch.ones(10, 80)
+        },
+        {
+            "feat": torch.ones(100, 80)
+        },
+        {
+            "feat": torch.ones(1000, 80)
+        },
+    ]
+
+    dataset = datapipes.iter.IterableWrapper(samples)
+    dataset = dataset.sort(key_func=processor.sort_by_feats)
+
+    results = []
+    for d in dataset:
+        results.append(d)
+    assert len(results) == len(samples)
+    assert all(
+        torch.allclose(r['feat'], h['feat'])
+        for (r, h) in zip(expected, results))
