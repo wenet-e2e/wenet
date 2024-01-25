@@ -28,13 +28,13 @@ job_id=2024
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
 # faster on reading data and training.
-data_type=raw
+data_type=shard
 
 train_set=train
 
-train_config=conf/train_paraformer.yaml
-checkpoint=exp/paraformer/large/wenet_paraformer.pt
-dir=exp/finetune_paraformer
+train_config=conf/train_paraformer_dynamic.yaml
+checkpoint=exp/paraformer/large/wenet_paraformer.init-ctc.init-embed.pt
+dir=exp/finetune_paraformer_dynamic
 tensorboard_dir=tensorboard
 num_workers=8
 prefetch=500
@@ -44,6 +44,12 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=5
 decode_modes="ctc_greedy_search ctc_prefix_beam_search paraformer_greedy_search"
+decode_device=0
+decoding_chunk_size=-1
+decode_batch=16
+ctc_weight=0.3
+reverse_weight=0.5
+max_epoch=100
 
 train_engine=torch_ddp
 
@@ -124,36 +130,37 @@ fi
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   # Test model, please specify the model you want to test by --checkpoint
   if [ ${average_checkpoint} == true ]; then
-    decode_checkpoint=$dir/avg_${average_num}.pt
+    decode_checkpoint=$dir/avg_${average_num}_maxepoch_${max_epoch}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
     python wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
       --num ${average_num} \
+      --max_epoch ${max_epoch} \
       --val_best
   fi
   # Please specify decoding_chunk_size for unified streaming and
   # non-streaming model. The default value is -1, which is full chunk
   # for non-streaming inference.
-  decoding_chunk_size=
-  ctc_weight=0.3
-  reverse_weight=0.5
-  python wenet/bin/recognize.py --gpu 0 \
+  base=$(basename $decode_checkpoint)
+  result_dir=$dir/${base}_chunk${decoding_chunk_size}_ctc${ctc_weight}_reverse${reverse_weight}
+  mkdir -p ${result_dir}
+  python wenet/bin/recognize.py --gpu ${decode_device} \
     --modes $decode_modes \
     --config $dir/train.yaml \
     --data_type $data_type \
     --test_data data/test/data.list \
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
-    --batch_size 16 \
+    --batch_size ${decode_batch} \
     --penalty 0.0 \
     --ctc_weight $ctc_weight \
     --reverse_weight $reverse_weight \
-    --result_dir $dir \
+    --result_dir $result_dir \
     ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
   for mode in ${decode_modes}; do
     python tools/compute-wer.py --char=1 --v=1 \
-      data/test/text $dir/$mode/text > $dir/$mode/wer
+      data/test/text $result_dir/$mode/text > $result_dir/$mode/wer
   done
 fi
 
