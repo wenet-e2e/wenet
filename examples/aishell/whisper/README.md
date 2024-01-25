@@ -14,10 +14,22 @@ mkdir -p exp/whisper/large-v3
 . ./path.sh && python wenet/whisper/convert_whisper_to_wenet_config_and_ckpt.py \
   --whisper_ckpt downloaded-large-v3.pt \
   --output_dir exp/whisper/large-v3
-python local/filter_ckpt.py \
-  --filter_list "encoder.embed.conv" \
+# remove conv1d2
+python local/modify_ckpt.py \
+  --remove_list "encoder.embed.conv" \
   --input_ckpt exp/whisper/large-v3/wenet_whisper.pt \
   --output_ckpt exp/whisper/large-v3/wenet_whisper.remove-subsample.pt
+# init ctc
+python local/modify_ckpt.py \
+  --add_list "{\"ctc.ctc_lo.weight\": \"decoder.embed.0.weight\"}" \
+  --input_ckpt exp/whisper/large-v3/wenet_whisper.pt \
+  --output_ckpt exp/whisper/large-v3/wenet_whisper.init-ctc.pt
+# remove conv1d2 and init ctc
+python local/modify_ckpt.py \
+  --remove_list "encoder.embed.conv" \
+  --add_list "{\"ctc.ctc_lo.weight\": \"decoder.embed.0.weight\"}" \
+  --input_ckpt exp/whisper/large-v3/wenet_whisper.pt \
+  --output_ckpt exp/whisper/large-v3/wenet_whisper.remove-subsample.init-ctc.pt
 ```
 
 # Performance Record
@@ -46,16 +58,16 @@ python local/filter_ckpt.py \
 | attention rescoring       | N/A |
 
 * Feature info: using log_mel_spectrogram feature, no cmvn, no speed perturb
-* Training info: bf16, deepspeed stage1, activation checkpointing, batch dynamic12000, acc_grad 4, 8 * 3090 gpu, 40 epochs (about 14 hours), conf/finetune_whisper_largev3.yaml
+* Training info: bf16, deepspeed stage1, activation checkpointing, batch dynamic12000, acc_grad 1, 8 * 3090 gpu, 80 epochs (about 43 hours), conf/finetune_whisper_largev3.yaml
 * Decoding info: ctc_weight 0.3, average_num 5
 * Git hash: TBD
 
 | decoding mode             | CER   |
 |---------------------------|-------|
-| attention decoder         | 4.06 % N=104765 C=100643 S=4006 D=116 I=128  |
-| ctc greedy search         | 8.33 % N=104765 C=96781 S=7776 D=208 I=747   |
-| ctc prefix beam search    | 8.34 % N=104765 C=96787 S=7775 D=203 I=760   |
-| attention rescoring       | 6.49 % N=104765 C=98199 S=6427 D=139 I=237   |
+| attention decoder         | 2.78 % N=104765 C=101943 S=2711 D=111 I=87  |
+| ctc greedy search         | 6.89 % N=104765 C=98386 S=6210 D=169 I=839  |
+| ctc prefix beam search    | 6.86 % N=104765 C=98410 S=6194 D=161 I=830  |
+| attention rescoring       | 5.00 % N=104765 C=99771 S=4874 D=120 I=245  |
 
 ## Whisper-largev3 (conv2d4, full-parameter tuning) Result
 
@@ -72,13 +84,13 @@ python local/filter_ckpt.py \
 | attention rescoring       | N/A |
 
 * Feature info: using log_mel_spectrogram feature, no cmvn, no speed perturb
-* Training info: bf16, deepspeed stage1, activation checkpointing, batch dynamic12000, acc_grad 4, 8 * 3090 gpu, 40 epochs (about 10 hours), conf/finetune_whisper_largev3_conv2d4.yaml
+* Training info: bf16, deepspeed stage1, activation checkpointing, batch dynamic12000, acc_grad 1, 8 * 3090 gpu, 80 epochs (about 36 hours), conf/finetune_whisper_largev3_conv2d4.yaml
 * Decoding info: ctc_weight 0.3, average_num 5
 * Git hash: TBD
 
 | decoding mode             | CER   |
 |---------------------------|-------|
-| attention decoder         | 3.83 % N=104765 C=100866 S=3784 D=115 I=109 |
-| ctc greedy search         | 6.87 % N=104765 C=98183 S=6408 D=174 I=620  |
-| ctc prefix beam search    | 6.87 % N=104765 C=98189 S=6402 D=174 I=619  |
-| attention rescoring       | 5.33 % N=104765 C=99354 S=5304 D=107 I=171  |
+| attention decoder         | 3.38 % N=104765 C=101336 S=3305 D=124 I=111 |
+| ctc greedy search         | 7.43 % N=104765 C=97759 S=6813 D=193 I=779  |
+| ctc prefix beam search    | 7.42 % N=104765 C=97767 S=6806 D=192 I=777  |
+| attention rescoring       | 5.65 % N=104765 C=99100 S=5538 D=127 I=259  |

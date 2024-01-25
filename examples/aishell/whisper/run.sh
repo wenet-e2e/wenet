@@ -17,7 +17,7 @@ export CUDA_VISIBLE_DEVICES="${gpu_list}"
 echo "CUDA_VISIBLE_DEVICES is ${CUDA_VISIBLE_DEVICES}"
 
 stage=0
-stop_stage=2
+stop_stage=1
 
 # You should change the following two parameters for multiple machine training,
 # see https://pytorch.org/docs/stable/elastic/run.html
@@ -28,19 +28,19 @@ job_id=2023
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
 # faster on reading data and training.
-data_type=raw
+data_type=shard
 
 train_set=train
 # Optional train_config
 # 1. Standard whisper largev3
 #        train_config=conf/finetune_whisper_largev3.yaml
-#        checkpoint=exp/whisper/large-v3/wenet_whisper.pt
+#        checkpoint=exp/whisper/large-v3/wenet_whisper.init-ctc.pt
 # 2. Whisper largev3 with randomly init conv2d4
 #        train_config=conf/finetune_whisper_largev3_conv2d4.yaml
-#        checkpoint=exp/whisper/large-v3/wenet_whisper.remove-subsample.pt
-train_config=conf/finetune_whisper_largev3_conv2d4.yaml
-checkpoint=exp/whisper/large-v3/wenet_whisper.remove-subsample.pt
-dir=exp/finetune_whisper_largev3_conv2d4
+#        checkpoint=exp/whisper/large-v3/wenet_whisper.remove-subsample.init-ctc.pt
+train_config=conf/finetune_whisper_largev3.yaml
+checkpoint=exp/whisper/large-v3/wenet_whisper.init-ctc.pt
+dir=exp/finetune_whisper_largev3_conv1d2
 tensorboard_dir=tensorboard
 num_workers=8
 prefetch=500
@@ -50,6 +50,11 @@ average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=5
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
+decode_device=0
+decoding_chunk_size=-1
+ctc_weight=0.3
+reverse_weight=0.0
+decode_batch=4
 
 train_engine=deepspeed
 
@@ -141,25 +146,25 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   # Please specify decoding_chunk_size for unified streaming and
   # non-streaming model. The default value is -1, which is full chunk
   # for non-streaming inference.
-  decoding_chunk_size=
-  ctc_weight=0.3
-  reverse_weight=0.5
-  python wenet/bin/recognize.py --gpu 0 \
+  base=$(basename $decode_checkpoint)
+  result_dir=$dir/${base}_chunk${decoding_chunk_size}_ctc${ctc_weight}_reverse${reverse_weight}
+  mkdir -p ${result_dir}
+  python wenet/bin/recognize.py --gpu ${decode_device} \
     --modes $decode_modes \
     --config $dir/train.yaml \
     --data_type $data_type \
     --test_data data/test/data.list \
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
-    --batch_size 16 \
+    --batch_size ${decode_batch} \
     --penalty 0.0 \
     --ctc_weight $ctc_weight \
     --reverse_weight $reverse_weight \
-    --result_dir $dir \
+    --result_dir $result_dir \
     ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
   for mode in ${decode_modes}; do
     python tools/compute-wer.py --char=1 --v=1 \
-      data/test/text $dir/$mode/text > $dir/$mode/wer
+      data/test/text $result_dir/$mode/text > $result_dir/$mode/wer
   done
 fi
 
