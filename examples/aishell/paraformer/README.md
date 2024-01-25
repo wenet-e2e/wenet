@@ -22,7 +22,7 @@ python local/modify_ckpt.py \
 
 ## Paraformer (full-parameter tuning) Result
 
-* Training info: batch size 28, ctc_weight: 0.3, acc_grad 4, 8 * v100 gpu, 40 epochs
+* Training info: torch_ddp fp32, batch size 28, ctc_weight: 0.3, acc_grad 1, 8 * 3090 gpu, 60 epochs (about 8h)
 * Decoding info: ctc_weight 0.3, average_num 5
 * Git hash: TBD
 
@@ -34,7 +34,7 @@ python local/modify_ckpt.py \
 
 ## Paraformer-dynamic training (full-parameter tuning) Result
 
-* Training info: batch size 28, ctc_weight: 0.3, acc_grad 4, 8 * v100 gpu, 43 epochs
+* Training info: torch_ddp fp32, batch size 28, ctc_weight: 0.3, acc_grad 1, 8 * 3090 gpu, 60 epochs (about 8h)
 * Decoding info: ctc_weight 0.3, average_num 5
 * Git hash: TBD
 
