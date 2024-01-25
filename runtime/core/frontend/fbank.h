@@ -24,12 +24,12 @@
 #include "frontend/fft.h"
 #include "utils/log.h"
 
-#define S16_ABS_MAX (1 << 15)
-
 namespace wenet {
 
 // This code is based on kaldi Fbank implementation, please see
 // https://github.com/kaldi-asr/kaldi/blob/master/src/feat/feature-fbank.cc
+
+static const int kS16AbsMax = 1 << 15;
 
 enum class WindowType {
   kPovey = 0,
@@ -265,7 +265,7 @@ class Fbank {
 
       if (scale_input_to_unit_) {
         for (int j = 0; j < frame_length_; ++j) {
-          data[j] = data[j] / S16_ABS_MAX;
+          data[j] = data[j] / kS16AbsMax;
         }
       }
 
