@@ -147,6 +147,7 @@ class TextLineDataPipe(IterDataPipe):
             for line in stream:
                 line = line.strip('\n')
                 yield {"file_name": fname, "line": line}
+            stream.close()
 
 
 @functional_datapipe("ignore_error")
@@ -210,14 +211,12 @@ class TarsDataPipe(IterDataPipe):
     """ Decode wenet's tar , yield {'txt': "...", "raw": "..."}
     """
 
-    AUDIO_FORMAT_SETS = set(
-        ['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
-
     def __init__(self, datapipe: IterDataPipe) -> None:
         super().__init__()
         self.dp = datapipe
 
     def __iter__(self):
+        from wenet.dataset.processor import AUDIO_FORMAT_SETS
         for sample in self.dp:
             assert 'file_name' in sample
             assert 'line' in sample
