@@ -2,9 +2,9 @@ input_dim: 560
 
 encoder: sanm_encoder
 encoder_conf:
-  attention_dropout_rate: 0.1
+  attention_dropout_rate: 0.0
   attention_heads: 4
-  dropout_rate: 0.1
+  dropout_rate: 0.0
   input_layer: paraformer_dummy
   kernel_size: 11
   linear_units: 2048
@@ -12,7 +12,7 @@ encoder_conf:
   num_blocks: 50
   output_size: 512
   pos_enc_layer_type: abs_pos_paraformer
-  positional_dropout_rate: 0.1
+  positional_dropout_rate: 0.0
   sanm_shfit: 0
   use_dynamic_chunk: true
   gradient_checkpointing: true
@@ -21,14 +21,14 @@ decoder: sanm_decoder
 decoder_conf:
   att_layer_num: 16
   attention_heads: 4
-  dropout_rate: 0.1
+  dropout_rate: 0.0
   kernel_size: 11
   linear_units: 2048
   num_blocks: 16
-  positional_dropout_rate: 0.1
+  positional_dropout_rate: 0.0
   sanm_shfit: 0
-  self_attention_dropout_rate: 0.1
-  src_attention_dropout_rate: 0.1
+  self_attention_dropout_rate: 0.0
+  src_attention_dropout_rate: 0.0
   gradient_checkpointing: true
 
 tokenizer: paraformer
@@ -103,7 +103,7 @@ dataset_conf:
 
 grad_clip: 5
 accum_grad: 1
-max_epoch: 45
+max_epoch: 60
 log_interval: 100
 
 optim: adam
@@ -111,4 +111,4 @@ optim_conf:
   lr: 0.0005
 scheduler: warmuplr
 scheduler_conf:
-  warmup_steps: 25000
+  warmup_steps: 12000
