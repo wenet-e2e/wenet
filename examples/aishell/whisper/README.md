@@ -94,3 +94,8 @@ python local/modify_ckpt.py \
 | ctc greedy search         | 7.43 % N=104765 C=97759 S=6813 D=193 I=779  |
 | ctc prefix beam search    | 7.42 % N=104765 C=97767 S=6806 D=192 I=777  |
 | attention rescoring       | 5.65 % N=104765 C=99100 S=5538 D=127 I=259  |
+
+# Frequently Asked Questions
+
+- Q: Why are there so many insertion errors in the decoding results of CTC?
+- A: Because Chinese characters are composed of multiple bytes, in Whisper's tokenizer, one Chinese character might be represented by multiple tokens (for example, 3 tokens). During the CTC decoding process, it's possible that only two of these tokens are decoded. This not only causes garbled text (see https://github.com/wenet-e2e/wenet/issues/2308 ) but also leads to insertion errors.
