@@ -14,14 +14,19 @@
 
 import argparse
 import torch
+import json
 
 
 def main():
     parser = argparse.ArgumentParser(description='filter out unused module')
-    parser.add_argument('--filter_list',
-                        required=True,
+    parser.add_argument('--remove_list',
+                        default="name1,name2",
                         type=str,
                         help='list of name filter, comma-separated')
+    parser.add_argument('--add_list',
+                        default="{\"key1\": \"value1\"}",
+                        type=str,
+                        help='dict of name adder')
     parser.add_argument('--input_ckpt',
                         required=True,
                         type=str,
@@ -34,10 +39,10 @@ def main():
 
     state = torch.load(args.input_ckpt, map_location="cpu")
     new_state = {}
-    filter_list = args.filter_list.split(',')
+    remove_list = args.remove_list.split(',')
     for k in state.keys():
         found = False
-        for prefix in filter_list:
+        for prefix in remove_list:
             if prefix in k:
                 print("skip {}".format(k))
                 found = True
@@ -45,6 +50,10 @@ def main():
         if found:
             continue
         new_state[k] = state[k]
+    add_list = json.loads(args.add_list)
+    for k, v in add_list.items():
+        print("init {} with {}".format(k, v))
+        new_state[k] = state[v]
     torch.save(new_state, args.output_ckpt)
 
 

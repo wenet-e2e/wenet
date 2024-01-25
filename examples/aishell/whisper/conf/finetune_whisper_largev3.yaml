@@ -3,7 +3,7 @@ encoder_conf:
   activation_type: gelu
   attention_dropout_rate: 0.0
   attention_heads: 20
-  dropout_rate: 0.1
+  dropout_rate: 0.0
   gradient_checkpointing: true
   input_layer: conv1d2  # NOTE(xcsong): conv1d2, conv2d, conv2d8
   key_bias: false
@@ -12,7 +12,7 @@ encoder_conf:
   num_blocks: 32
   output_size: 1280
   pos_enc_layer_type: abs_pos_whisper
-  positional_dropout_rate: 0.1
+  positional_dropout_rate: 0.0
   static_chunk_size: -1
   use_dynamic_chunk: false
   use_dynamic_left_chunk: false
@@ -21,14 +21,14 @@ decoder: transformer
 decoder_conf:
   activation_type: gelu
   attention_heads: 20
-  dropout_rate: 0.1
+  dropout_rate: 0.0
   gradient_checkpointing: true
   input_layer: embed_learnable_pe
   key_bias: false
   linear_units: 5120
   normalize_before: true
   num_blocks: 32
-  positional_dropout_rate: 0.1
+  positional_dropout_rate: 0.0
   self_attention_dropout_rate: 0.0
   src_attention: true
   src_attention_dropout_rate: 0.0
@@ -107,13 +107,13 @@ dataset_conf:
   speed_perturb: false
 
 grad_clip: 5
-accum_grad: 4
-max_epoch: 40
+accum_grad: 1
+max_epoch: 80
 log_interval: 100
 
 optim: adam
 optim_conf:
-  lr: 0.0005
+  lr: 0.00001
 scheduler: warmuplr
 scheduler_conf:
   warmup_steps: 12000
