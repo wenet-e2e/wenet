@@ -22,15 +22,14 @@ def Dataset(data_type,
             tokenizer (BaseTokenizer or None): tokenizer to tokenize
             partition(bool): whether to do data partition in terms of rank
     """
-    # NOTE(Mddct): partition is always true for datapipe
-    _ = partition
     assert conf is not None
     assert data_type in ['raw', 'shard']
     if data_type == 'raw':
-        dataset = WenetRawDatasetSource(data_list_file)
+        dataset = WenetRawDatasetSource(data_list_file, partition=partition)
         dataset = dataset.map(processor.parse_json)
     else:
-        dataset = WenetTarShardDatasetSource(data_list_file)
+        dataset = WenetTarShardDatasetSource(data_list_file,
+                                             partition=partition)
     dataset = dataset.map(processor.decode_wav)
 
     if tokenizer is not None:

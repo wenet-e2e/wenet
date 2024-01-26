@@ -3,8 +3,11 @@ from subprocess import PIPE, Popen
 import tarfile
 from urllib.parse import urlparse
 from tensorboardX.writer import logging
+import torch
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
+from torch.utils.data.datapipes.iter.sharding import (
+    SHARDING_PRIORITIES, ShardingFilterIterDataPipe)
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
 
@@ -132,6 +135,34 @@ class PrefetchDataPipe(IterDataPipe):
             yield from self.dp
 
 
+@functional_datapipe("shard")
+class ShardDataPipe(ShardingFilterIterDataPipe):
+
+    def __init__(self, dataset: IterDataPipe, partition: bool = False):
+        super().__init__(dataset, None)
+        self.partition = partition
+        self.dp = dataset
+
+    def apply_sharding(self, num_of_instances: int, instance_id: int,
+                       sharding_group: SHARDING_PRIORITIES):
+        if self.partition:
+            return super().apply_sharding(num_of_instances, instance_id,
+                                          sharding_group)
+        else:
+            # We can not handle uneven data for CV on DDP, so we don't
+            # sample data by rank, that means every GPU gets the same
+            # and all the CV data
+            info = torch.utils.data.get_worker_info()
+            assert info is not None
+            if info is None:
+                self.num_of_instances = 1
+                self.instance_id = 0
+            else:
+                n_workers_per_device = info.num_workers
+                self.num_of_instances = n_workers_per_device
+                self.instance_id = info.id
+
+
 class TextLineDataPipe(IterDataPipe):
     """ Streamming Text line
     """
@@ -153,9 +184,9 @@ class TextLineDataPipe(IterDataPipe):
 @functional_datapipe("ignore_error")
 class IgnoreError(IterDataPipe):
 
-    def __init__(self, datapipe: IterDataPipe, log: bool = True) -> None:
+    def __init__(self, dataset: IterDataPipe, log: bool = True) -> None:
         super().__init__()
-        self.dp = datapipe
+        self.dp = dataset
         self.iter_dp = None
         self.log = log
 
@@ -178,9 +209,9 @@ class IgnoreError(IterDataPipe):
 @functional_datapipe('url_opener')
 class UrlOpenPipe(IterDataPipe):
 
-    def __init__(self, datapipe: IterDataPipe) -> None:
+    def __init__(self, dataset: IterDataPipe) -> None:
         super().__init__()
-        self.dp = datapipe
+        self.dp = dataset
 
     def __iter__(self):
         for elem in self.dp:
@@ -211,9 +242,9 @@ class TarsDataPipe(IterDataPipe):
     """ Decode wenet's tar , yield {'txt': "...", "raw": "..."}
     """
 
-    def __init__(self, datapipe: IterDataPipe) -> None:
+    def __init__(self, dataset: IterDataPipe) -> None:
         super().__init__()
-        self.dp = datapipe
+        self.dp = dataset
 
     def __iter__(self):
         from wenet.dataset.processor import AUDIO_FORMAT_SETS
@@ -271,10 +302,13 @@ class TarsDataPipe(IterDataPipe):
 
 class WenetRawDatasetSource(IterDataPipe):
 
-    def __init__(self, filenames: str, prefetch: int = 500) -> None:
+    def __init__(self,
+                 filenames: str,
+                 prefetch: int = 500,
+                 partition=True) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).prefetch(
-            prefetch).sharding_filter()
+        self.dp = TextLineDataPipe(filenames).prefetch(prefetch).shard(
+            partition)
 
     def __iter__(self):
         for d in self.dp:
@@ -283,9 +317,12 @@ class WenetRawDatasetSource(IterDataPipe):
 
 class WenetTarShardDatasetSource(IterDataPipe):
 
-    def __init__(self, filenames: str, prefetch: int = 500) -> None:
+    def __init__(self,
+                 filenames: str,
+                 prefetch: int = 500,
+                 partition: bool = False) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).sharding_filter().url_opener(
+        self.dp = TextLineDataPipe(filenames).shard(partition).url_opener(
         ).ignore_error(log=True).tar_file_and_group().ignore_error(
             log=True).prefetch(prefetch)
 

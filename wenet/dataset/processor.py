@@ -29,7 +29,7 @@ def decode_wav(sample):
             sample: str, str is a json line has key/wav/txt
 
         Returns:
-            {key, wav, txt, sample_rate}
+            {key, wav, sample_rate, ...}
     """
     assert 'key' in sample
     assert 'wav' in sample
