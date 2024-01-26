@@ -130,8 +130,8 @@ class Transducer(ASRModel):
         # optional ctc
         loss_ctc: Optional[torch.Tensor] = None
         if self.ctc_weight != 0.0 and self.ctc is not None:
-            loss_ctc = self.ctc(encoder_out, encoder_out_lens, text,
-                                text_lengths)
+            loss_ctc, _ = self.ctc(encoder_out, encoder_out_lens, text,
+                                   text_lengths)
         else:
             loss_ctc = None
 
