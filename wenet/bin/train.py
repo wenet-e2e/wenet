@@ -127,7 +127,6 @@ def main():
     configs.pop("init_infos", None)
     final_epoch = None
     for epoch in range(start_epoch, configs.get('max_epoch', 100)):
-        train_dataset.set_epoch(epoch)
         configs['epoch'] = epoch
 
         lr = optimizer.param_groups[0]['lr']
