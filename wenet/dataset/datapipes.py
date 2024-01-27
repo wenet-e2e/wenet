@@ -153,7 +153,6 @@ class ShardDataPipe(ShardingFilterIterDataPipe):
             # sample data by rank, that means every GPU gets the same
             # and all the CV data
             info = torch.utils.data.get_worker_info()
-            assert info is not None
             if info is None:
                 self.num_of_instances = 1
                 self.instance_id = 0
