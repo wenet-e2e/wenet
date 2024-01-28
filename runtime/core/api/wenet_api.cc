@@ -121,7 +121,7 @@ class Recognizer {
       context_config_->context_score = context_score_;
       auto context_graph =
           std::make_shared<wenet::ContextGraph>(*context_config_);
-      context_graph->BuildContextGraph(context_, resource_->symbol_table);
+      context_graph->BuildContextGraph(context_, resource_->unit_table);
       resource_->context_graph = context_graph;
     }
 
