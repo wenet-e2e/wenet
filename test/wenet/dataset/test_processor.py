@@ -5,6 +5,7 @@ from torch.utils.data import datapipes
 import torchaudio
 
 from wenet.dataset import processor
+from wenet.dataset.datapipes import SortDataPipe  # noqa
 from wenet.utils.init_tokenizer import init_tokenizer
 
 

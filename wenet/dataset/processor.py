@@ -42,18 +42,19 @@ def decode_wav(sample):
     assert 'wav' in sample
     assert 'txt' in sample
     wav_file = sample['wav']
+    if isinstance(wav_file, str):
+        with open(wav_file, 'rb') as f:
+            wav_file = f.read()
     if 'start' in sample:
         assert 'end' in sample
         sample_rate = torchaudio.info(wav_file).sample_rate
         start_frame = int(sample['start'] * sample_rate)
         end_frame = int(sample['end'] * sample_rate)
-        waveform, _ = torchaudio.load(filepath=wav_file,
-                                      num_frames=end_frame - start_frame,
-                                      frame_offset=start_frame)
+        with io.BytesIO(wav_file) as file_obj:
+            waveform, _ = torchaudio.load(filepath=file_obj,
+                                          num_frames=end_frame - start_frame,
+                                          frame_offset=start_frame)
     else:
-        if isinstance(wav_file, str):
-            with open(wav_file, 'rb') as f:
-                wav_file = f.read()
         with io.BytesIO(wav_file) as file_obj:
             waveform, sample_rate = torchaudio.load(file_obj)
             # del wav_file
