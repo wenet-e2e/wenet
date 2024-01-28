@@ -4,6 +4,7 @@ from wenet.dataset import processor
 from wenet.dataset.datapipes import (WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
 from wenet.text.base_tokenizer import BaseTokenizer
+from wenet.utils.file_utils import read_symbol_table
 
 
 def Dataset(data_type,
@@ -31,6 +32,13 @@ def Dataset(data_type,
         dataset = WenetTarShardDatasetSource(data_list_file,
                                              partition=partition)
     dataset = dataset.map(processor.decode_wav)
+
+    speaker_conf = conf.get('speaker_conf', None)
+    if speaker_conf is not None:
+        assert 'speaker_table_path' in speaker_conf
+        speaker_table = read_symbol_table(speaker_conf['speaker_table_path'])
+        dataset = dataset.map(
+            partition(processor.parse_speaker, speaker_dict=speaker_table))
 
     if tokenizer is not None:
         dataset = dataset.map(partial(processor.tokenize, tokenizer=tokenizer))

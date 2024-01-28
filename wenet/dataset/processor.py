@@ -22,6 +22,13 @@ def parse_json(elem):
     return dict(obj)
 
 
+def parse_speaker(sample, speaker_dict):
+    assert 'speaker' in sample
+    speaker = sample['speaker']
+    sample['speaker'] = speaker_dict.get(speaker, 0)
+    return sample
+
+
 def decode_wav(sample):
     """ Parse key/wav/txt from json line
 
