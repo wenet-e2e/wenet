@@ -14,9 +14,7 @@
 
 import collections
 from collections.abc import Callable
-from subprocess import PIPE, Popen
 import tarfile
-from urllib.parse import urlparse
 from tensorboardX.writer import logging
 import torch
 from torch.utils.data import IterDataPipe, functional_datapipe
@@ -25,6 +23,8 @@ from torch.utils.data.datapipes.iter import Mapper
 from torch.utils.data.datapipes.iter.sharding import (
     SHARDING_PRIORITIES, ShardingFilterIterDataPipe)
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
+
+from wenet.dataset.processor import parse_url
 
 
 @functional_datapipe("map_ignore_error")
@@ -209,37 +209,6 @@ class TextLineDataPipe(IterDataPipe):
             stream.close()
 
 
-@functional_datapipe('url_opener')
-class UrlOpenPipe(IterDataPipe):
-
-    def __init__(self, dataset: IterDataPipe) -> None:
-        super().__init__()
-        self.dp = dataset
-
-    def __iter__(self):
-        for elem in self.dp:
-            assert 'file_name' in elem
-            assert 'line' in elem
-            assert isinstance(elem, dict)
-            url = elem['line']
-            try:
-                pr = urlparse(url)
-                # local file
-                if pr.scheme == '' or pr.scheme == 'file':
-                    stream = open(url, 'rb')
-                    # network file, such as HTTP(HDFS/OSS/S3)/HTTPS/SCP
-                else:
-                    cmd = f'wget -q -O - {url}'
-                    process = Popen(cmd, shell=True, stdout=PIPE)
-                    elem.update(process=process)
-                    stream = process.stdout
-                elem.update(stream=stream)
-                yield elem
-                del elem
-            except Exception as ex:
-                logging.warning('Failed to open {}'.format(url))
-
-
 @functional_datapipe("tar_file_and_group")
 class TarsDataPipe(IterDataPipe):
     """ Decode wenet's tar , yield {'txt': "...", "raw": "..."}
@@ -328,7 +297,8 @@ class WenetTarShardDatasetSource(IterDataPipe):
                  partition: bool = False) -> None:
         super().__init__()
         self.dp = TextLineDataPipe(filenames).shard(
-            partition).url_opener().tar_file_and_group().prefetch(prefetch)
+            partition).map_ignore_error(
+                parse_url).tar_file_and_group().prefetch(prefetch)
 
     def __iter__(self):
         for d in self.dp:

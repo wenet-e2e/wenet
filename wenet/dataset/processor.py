@@ -15,6 +15,8 @@
 
 import io
 import json
+from subprocess import PIPE, Popen
+from urllib.parse import urlparse
 import librosa
 import random
 
@@ -30,11 +32,44 @@ torchaudio.utils.sox_utils.set_buffer_size(16500)
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
 
+class UrlOpenError(Exception):
+
+    def __init__(self, msg: str, *args: object) -> None:
+        super().__init__(*args)
+        self.err_msg = msg
+
+    def __str__(self) -> str:
+        return self.err_msg
+
+
 def parse_json(elem):
     line = elem['line']
     obj = json.loads(line)
     obj['file_name'] = elem['file_name']
     return dict(obj)
+
+
+def parse_url(elem):
+    assert 'file_name' in elem
+    assert 'line' in elem
+    assert isinstance(elem, dict)
+    url = elem['line']
+    try:
+        pr = urlparse(url)
+        # local file
+        if pr.scheme == '' or pr.scheme == 'file':
+            stream = open(url, 'rb')
+            # network file, such as HTTP(HDFS/OSS/S3)/HTTPS/SCP
+        else:
+            cmd = f'wget -q -O - {url}'
+            process = Popen(cmd, shell=True, stdout=PIPE)
+            elem.update(process=process)
+            stream = process.stdout
+        elem.update(stream=stream)
+        return elem
+    except Exception as ex:
+        err_msg = 'Failed to open {}'.format(url)
+        raise UrlOpenError(err_msg) from ex
 
 
 def parse_speaker(sample, speaker_dict):
