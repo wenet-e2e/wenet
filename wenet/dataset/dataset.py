@@ -46,7 +46,7 @@ def Dataset(data_type,
     else:
         dataset = WenetTarShardDatasetSource(data_list_file,
                                              partition=partition)
-    dataset = dataset.map(processor.decode_wav)
+    dataset = dataset.map_ignore_error(processor.decode_wav)
 
     speaker_conf = conf.get('speaker_conf', None)
     if speaker_conf is not None:

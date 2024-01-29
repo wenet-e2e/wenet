@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import collections
+from collections.abc import Callable
 from subprocess import PIPE, Popen
 import tarfile
 from urllib.parse import urlparse
@@ -20,25 +21,39 @@ from tensorboardX.writer import logging
 import torch
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
+from torch.utils.data.datapipes.iter import Mapper
 from torch.utils.data.datapipes.iter.sharding import (
     SHARDING_PRIORITIES, ShardingFilterIterDataPipe)
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
 
-class TarParseError(Exception):
+@functional_datapipe("map_ignore_error")
+class MapperIgnoreErrorDataPipe(Mapper):
 
-    def __init__(self, msg: str, *args: object) -> None:
-        super().__init__(*args)
-        self.err_msg = msg
+    def __init__(self,
+                 dataset: IterDataPipe,
+                 fn: Callable,
+                 input_col=None,
+                 output_col=None,
+                 log_error: bool = True) -> None:
+        super().__init__(dataset, fn, input_col, output_col)
+        self._iter = None
+        self.log_error = log_error
 
-    def __str__(self) -> str:
-        return self.err_msg
+    def __iter__(self):
+        if self._iter is None:
+            self._iter = iter(self.datapipe)
 
-
-class UrlOpenError(TarParseError):
-
-    def __init__(self, msg: str, *args: object) -> None:
-        super().__init__(msg, *args)
+        while True:
+            try:
+                elem = next(self._iter)
+                yield self._apply_fn(elem)
+            except StopIteration:
+                self._iter = None
+                return
+            except Exception as ex:
+                if self.log_error:
+                    logging.warning(str(ex))
 
 
 @functional_datapipe("sort")
@@ -194,31 +209,6 @@ class TextLineDataPipe(IterDataPipe):
             stream.close()
 
 
-@functional_datapipe("ignore_error")
-class IgnoreError(IterDataPipe):
-
-    def __init__(self, dataset: IterDataPipe, log: bool = True) -> None:
-        super().__init__()
-        self.dp = dataset
-        self.iter_dp = None
-        self.log = log
-
-    def __iter__(self):
-        if self.iter_dp is None:
-            self.iter_dp = iter(self.dp)
-        while True:
-            try:
-                elem = next(self.iter_dp)
-                yield elem
-            except StopIteration as ex:
-                self.iter_dp = None
-                return
-            except Exception as ex:
-                if self.log:
-                    logging.warning(str(ex))
-                continue
-
-
 @functional_datapipe('url_opener')
 class UrlOpenPipe(IterDataPipe):
 
@@ -230,9 +220,9 @@ class UrlOpenPipe(IterDataPipe):
         for elem in self.dp:
             assert 'file_name' in elem
             assert 'line' in elem
+            assert isinstance(elem, dict)
+            url = elem['line']
             try:
-                assert isinstance(elem, dict)
-                url = elem['line']
                 pr = urlparse(url)
                 # local file
                 if pr.scheme == '' or pr.scheme == 'file':
@@ -247,7 +237,7 @@ class UrlOpenPipe(IterDataPipe):
                 yield elem
                 del elem
             except Exception as ex:
-                raise UrlOpenError(str(ex)) from ex
+                logging.warning('Failed to open {}'.format(url))
 
 
 @functional_datapipe("tar_file_and_group")
@@ -299,14 +289,16 @@ class TarsDataPipe(IterDataPipe):
                                     example[postfix] = file_obj.read()
                             except Exception as ex:
                                 valid = False
-                                raise TarParseError(name + str(ex)) from ex
+                                logging.warning(
+                                    'error to parse {}'.format(name))
                             prev_prefix = prefix
                     if prev_prefix is not None:
                         example['key'] = prev_prefix
                         yield example
             except Exception as ex:
-                msg = 'In tar_file_and_group: {} when processing '.format(ex)
-                raise TarParseError(msg) from ex
+                msg = 'In tar_file_and_group: {} when processing {}'.format(
+                    ex, sample['line'])
+                logging.warning(msg)
             finally:
                 if 'process' in sample:
                     sample['process'].communicate()
@@ -335,9 +327,8 @@ class WenetTarShardDatasetSource(IterDataPipe):
                  prefetch: int = 500,
                  partition: bool = False) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).shard(partition).url_opener(
-        ).ignore_error(log=True).tar_file_and_group().ignore_error(
-            log=True).prefetch(prefetch)
+        self.dp = TextLineDataPipe(filenames).shard(
+            partition).url_opener().tar_file_and_group().prefetch(prefetch)
 
     def __iter__(self):
         for d in self.dp:

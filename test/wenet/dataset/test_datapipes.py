@@ -1,6 +1,7 @@
 import pytest
 import torch
 from torch.utils.data import datapipes
+from torch.utils.data.datapipes.iter import IterableWrapper
 
 from wenet.dataset.datapipes import (SortDataPipe, WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
@@ -130,3 +131,21 @@ def test_shuffle_deterministic():
     expected = [2, 7, 8, 9, 4, 6, 3, 0, 5, 1, 1, 6, 0, 5, 9, 8, 3, 2, 7, 4]
     for (r, h) in zip(result, expected):
         assert r == h
+
+
+def _read_file(filename):
+    if filename == 'b.txt':
+        raise NotImplementedError('not found')
+    return filename
+
+
+def test_map_ignore_error_datapipe():
+    file_list = ['a.txt', 'b.txt', 'c.txt']
+
+    dataset = IterableWrapper(iter(file_list)).map_ignore_error(_read_file)
+    result = []
+    for d in dataset:
+        result.append(d)
+    expected = ['a.txt', 'c.txt']
+    assert len(result) == len(expected)
+    all(h == r for (h, r) in zip(result, expected))
