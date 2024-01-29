@@ -15,7 +15,7 @@
 import collections
 from collections.abc import Callable
 import tarfile
-from tensorboardX.writer import logging
+import logging
 import torch
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
