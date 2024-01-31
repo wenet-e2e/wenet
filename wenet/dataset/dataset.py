@@ -1,4 +1,5 @@
-# Copyright (c) 2021 Mobvoi Inc. (authors: Binbin Zhang)
+# Copyright (c) 2021 Wenet Community. (authors: Binbin Zhang)
+#               2023 Wenet Community. (authors: Dinghao Zhou)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,118 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import random
-
-import torch
-import torch.distributed as dist
-from torch.utils.data import IterableDataset
-
-import wenet.dataset.processor as processor
+from functools import partial
+from typing import Optional
+from wenet.dataset import processor
+from wenet.dataset.datapipes import (WenetRawDatasetSource,
+                                     WenetTarShardDatasetSource)
 from wenet.text.base_tokenizer import BaseTokenizer
-from wenet.utils.file_utils import read_lists
-
-
-class Processor(IterableDataset):
-
-    def __init__(self, source, f, *args, **kw):
-        assert callable(f)
-        self.source = source
-        self.f = f
-        self.args = args
-        self.kw = kw
-
-    def set_epoch(self, epoch):
-        self.source.set_epoch(epoch)
-
-    def __iter__(self):
-        """ Return an iterator over the source dataset processed by the
-            given processor.
-        """
-        assert self.source is not None
-        assert callable(self.f)
-        return self.f(iter(self.source), *self.args, **self.kw)
-
-    def apply(self, f):
-        assert callable(f)
-        return Processor(self, f, *self.args, **self.kw)
-
-
-class DistributedSampler:
-
-    def __init__(self, shuffle=True, partition=True):
-        self.epoch = -1
-        self.update()
-        self.shuffle = shuffle
-        self.partition = partition
-
-    def update(self):
-        assert dist.is_available()
-        if dist.is_initialized():
-            self.rank = dist.get_rank()
-            self.world_size = dist.get_world_size()
-        else:
-            self.rank = 0
-            self.world_size = 1
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info is None:
-            self.worker_id = 0
-            self.num_workers = 1
-        else:
-            self.worker_id = worker_info.id
-            self.num_workers = worker_info.num_workers
-        return dict(rank=self.rank,
-                    world_size=self.world_size,
-                    worker_id=self.worker_id,
-                    num_workers=self.num_workers)
-
-    def set_epoch(self, epoch):
-        self.epoch = epoch
-
-    def sample(self, data):
-        """ Sample data according to rank/world_size/num_workers
-
-            Args:
-                data(List): input data list
-
-            Returns:
-                List: data list after sample
-        """
-        data = list(range(len(data)))
-        # TODO(Binbin Zhang): fix this
-        # We can not handle uneven data for CV on DDP, so we don't
-        # sample data by rank, that means every GPU gets the same
-        # and all the CV data
-        if self.partition:
-            if self.shuffle:
-                random.Random(self.epoch).shuffle(data)
-            data = data[self.rank::self.world_size]
-        data = data[self.worker_id::self.num_workers]
-        return data
-
-
-class DataList(IterableDataset):
-
-    def __init__(self, lists, shuffle=True, partition=True):
-        self.lists = lists
-        self.sampler = DistributedSampler(shuffle, partition)
-
-    def set_epoch(self, epoch):
-        self.sampler.set_epoch(epoch)
-
-    def __iter__(self):
-        sampler_info = self.sampler.update()
-        indexes = self.sampler.sample(self.lists)
-        for index in indexes:
-            # yield dict(src=src)
-            data = dict(src=self.lists[index])
-            data.update(sampler_info)
-            yield data
+from wenet.utils.file_utils import read_symbol_table
 
 
 def Dataset(data_type,
             data_list_file,
-            tokenizer: BaseTokenizer,
-            conf,
+            tokenizer: Optional[BaseTokenizer] = None,
+            conf=None,
             partition=True):
     """ Construct dataset from arguments
 
@@ -133,70 +35,87 @@ def Dataset(data_type,
 
         Args:
             data_type(str): raw/shard
-            tokenizer (BaseTokenizer): tokenizer to tokenize
+            tokenizer (BaseTokenizer or None): tokenizer to tokenize
             partition(bool): whether to do data partition in terms of rank
     """
+    assert conf is not None
     assert data_type in ['raw', 'shard']
-    lists = read_lists(data_list_file)
-    shuffle = conf.get('shuffle', True)
-    dataset = DataList(lists, shuffle=shuffle, partition=partition)
-    if data_type == 'shard':
-        dataset = Processor(dataset, processor.url_opener)
-        dataset = Processor(dataset, processor.tar_file_and_group)
+    if data_type == 'raw':
+        dataset = WenetRawDatasetSource(data_list_file, partition=partition)
+        dataset = dataset.map(processor.parse_json)
     else:
-        dataset = Processor(dataset, processor.parse_raw)
+        dataset = WenetTarShardDatasetSource(data_list_file,
+                                             partition=partition)
+    dataset = dataset.map_ignore_error(processor.decode_wav)
 
     speaker_conf = conf.get('speaker_conf', None)
     if speaker_conf is not None:
-        dataset = Processor(dataset, processor.parse_speaker, **speaker_conf)
+        assert 'speaker_table_path' in speaker_conf
+        speaker_table = read_symbol_table(speaker_conf['speaker_table_path'])
+        dataset = dataset.map(
+            partition(processor.parse_speaker, speaker_dict=speaker_table))
 
-    dataset = Processor(dataset, processor.tokenize, tokenizer)
+    if tokenizer is not None:
+        dataset = dataset.map(partial(processor.tokenize, tokenizer=tokenizer))
+
     filter_conf = conf.get('filter_conf', {})
-    dataset = Processor(dataset, processor.filter, **filter_conf)
+    dataset = dataset.filter(partial(processor.filter, **filter_conf))
 
     resample_conf = conf.get('resample_conf', {})
-    dataset = Processor(dataset, processor.resample, **resample_conf)
+    dataset = dataset.map(partial(processor.resample, **resample_conf))
 
     speed_perturb = conf.get('speed_perturb', False)
     if speed_perturb:
-        dataset = Processor(dataset, processor.speed_perturb)
+        dataset = dataset.map(partial(processor.speed_perturb))
 
     feats_type = conf.get('feats_type', 'fbank')
     assert feats_type in ['fbank', 'mfcc', 'log_mel_spectrogram']
     if feats_type == 'fbank':
         fbank_conf = conf.get('fbank_conf', {})
-        dataset = Processor(dataset, processor.compute_fbank, **fbank_conf)
+        dataset = dataset.map(partial(processor.compute_fbank, **fbank_conf))
     elif feats_type == 'mfcc':
         mfcc_conf = conf.get('mfcc_conf', {})
-        dataset = Processor(dataset, processor.compute_mfcc, **mfcc_conf)
+        dataset = dataset.map(partial(processor.compute_mfcc, **mfcc_conf))
     elif feats_type == 'log_mel_spectrogram':
         log_mel_spectrogram_conf = conf.get('log_mel_spectrogram_conf', {})
-        dataset = Processor(dataset, processor.compute_log_mel_spectrogram,
-                            **log_mel_spectrogram_conf)
-
+        dataset = dataset.map(
+            partial(processor.compute_log_mel_spectrogram,
+                    **log_mel_spectrogram_conf))
     spec_aug = conf.get('spec_aug', True)
     spec_sub = conf.get('spec_sub', False)
     spec_trim = conf.get('spec_trim', False)
     if spec_aug:
         spec_aug_conf = conf.get('spec_aug_conf', {})
-        dataset = Processor(dataset, processor.spec_aug, **spec_aug_conf)
+        dataset = dataset.map(partial(processor.spec_aug, **spec_aug_conf))
     if spec_sub:
         spec_sub_conf = conf.get('spec_sub_conf', {})
-        dataset = Processor(dataset, processor.spec_sub, **spec_sub_conf)
+        dataset = dataset.map(partial(processor.spec_sub, **spec_sub_conf))
     if spec_trim:
         spec_trim_conf = conf.get('spec_trim_conf', {})
-        dataset = Processor(dataset, processor.spec_trim, **spec_trim_conf)
+        dataset = dataset.map(partial(processor.spec_trim, **spec_trim_conf))
 
+    shuffle = conf.get('shuffle', True)
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})
-        dataset = Processor(dataset, processor.shuffle, **shuffle_conf)
+        dataset = dataset.shuffle(buffer_size=shuffle_conf['shuffle_size'])
 
     sort = conf.get('sort', True)
     if sort:
         sort_conf = conf.get('sort_conf', {})
-        dataset = Processor(dataset, processor.sort, **sort_conf)
+        dataset = dataset.sort(buffer_size=sort_conf['sort_size'],
+                               key_func=processor.sort_by_feats)
 
     batch_conf = conf.get('batch_conf', {})
-    dataset = Processor(dataset, processor.batch, **batch_conf)
-    dataset = Processor(dataset, processor.padding)
+    batch_type = batch_conf.get('batch_type', 'static')
+    if batch_type == 'static':
+        assert 'batch_size' in batch_conf
+        batch_size = batch_conf.get('batch_size', 16)
+        dataset = dataset.batch(batch_size, wrapper_class=processor.padding)
+    else:
+        max_frames_in_batch = batch_conf.get('max_frames_in_batch', 12000)
+        dataset = dataset.dynamic_batch(
+            processor.DynamicBatchWindow(max_frames_in_batch),
+            wrapper_class=processor.padding,
+        )
+
     return dataset

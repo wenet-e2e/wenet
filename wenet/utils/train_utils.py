@@ -236,7 +236,9 @@ def check_modify_and_save_config(args, configs, symbol_table):
     return configs
 
 
-def init_dataset_and_dataloader(args, configs, tokenizer):
+def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
+    generator = torch.Generator()
+    generator.manual_seed(seed)
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
     cv_conf['speed_perturb'] = False
@@ -261,12 +263,14 @@ def init_dataset_and_dataloader(args, configs, tokenizer):
                                    pin_memory=args.pin_memory,
                                    num_workers=args.num_workers,
                                    persistent_workers=True,
+                                   generator=generator,
                                    prefetch_factor=args.prefetch)
     cv_data_loader = DataLoader(cv_dataset,
                                 batch_size=None,
                                 pin_memory=args.pin_memory,
                                 num_workers=args.num_workers,
                                 persistent_workers=True,
+                                generator=generator,
                                 prefetch_factor=args.prefetch)
     return train_dataset, cv_dataset, train_data_loader, cv_data_loader
 
