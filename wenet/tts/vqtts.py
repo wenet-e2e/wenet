@@ -62,12 +62,26 @@ class TransformerDecoderOnly(nn.Module):
         ])
         self.norm = nn.LayerNorm(d_model, eps=1e-5)
 
-    def forward(self, x: torch.Tensor, mask: torch.Tensor,
-                pos_emb: torch.Tensor):
-        for layer in self.encoders:
-            x, mask, _, _ = layer(x, mask, pos_emb)
+    def forward(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor,
+        pos_emb: torch.Tensor,
+        kv_cache: torch.Tensor = None,
+    ):
+        """
+        Args:
+            kv_cache: List[torch.Tensor], list size is num layers
+        """
+        cache = []
+        for i, layer in enumerate(self.encoders):
+            if kv_cache is None:
+                x, mask, c, _ = layer(x, mask, pos_emb)
+            else:
+                x, mask, c, _ = layer(x, mask, pos_emb, att_cache=kv_cache[i])
+            cache.append(c)
         x = self.norm(x)
-        return x
+        return x, cache
 
 
 class VQTTS(nn.Module):
@@ -112,19 +126,8 @@ class VQTTS(nn.Module):
         )
         self.ignore_id = -1
 
-    def forward(self, batch: dict, device: torch.device):
-        '''
-        Let's assume:
-            B: batch_size
-            T: text_length
-            C: codes_length
-        '''
-        text = batch['target'].to(device)
-        text_lengths = batch['target_lengths'].to(device)
-        wavs = batch['pcm']
-        wavs_lengths = batch['pcm_length']
-        B = text.size(0)
-        # 1. on-the-fly quantization
+    def quantize(self, wavs, wavs_lengths, device):
+        B = wavs.size(0)
         codes = []
         for i in range(B):
             wav = wavs[i, :wavs_lengths[i]].to(device).unsqueeze(0)
@@ -141,11 +144,36 @@ class VQTTS(nn.Module):
         codes = pad_sequence(codes,
                              batch_first=True,
                              padding_value=self.code_eos)
+        return codes, codes_lengths
+
+    def codes_embedding(self, codes_in):
+        # Sum all VQ embedding
+        codes_emb = []
+        for i in range(self.num_codebooks):
+            codes_emb.append(self.audio_embedding[i](codes_in[:, :, i]))
+        codes_emb = torch.stack(codes_emb, dim=3)
+        codes_emb = codes_emb.sum(dim=3)  # (B, C, D)
+        return codes_emb
+
+    def compute(self, batch: dict, device: torch.device):
+        '''
+        Let's assume:
+            B: batch_size
+            T: text_length
+            C: codes_length
+        '''
+        text = batch['target'].to(device)
+        text_lengths = batch['target_lengths'].to(device)
+        wavs = batch['pcm']
+        wavs_lengths = batch['pcm_length']
+        B = text.size(0)
+        # on-the-fly quantization
+        codes, codes_lengths = self.quantize(wavs, wavs_lengths, device)
+
         text_lengths = text_lengths + 1
         text_mask = make_pad_mask(text_lengths)  # (B, T)
         text_in, text_label = add_sos_eos(text, self.text_sos, self.text_eos,
                                           self.ignore_id)
-        T = text_in.size(1)
         # [sos, codes, eos]
         codes = F.pad(codes.transpose(1, 2), (1, 1), value=self.code_sos)
         codes = codes.transpose(1, 2)
@@ -155,13 +183,7 @@ class VQTTS(nn.Module):
         codes_mask = make_pad_mask(codes_lengths)  # (B, C)
         codes_label = codes_label.masked_fill(codes_mask.unsqueeze(-1),
                                               self.ignore_id)
-        C = codes_in.size(1)
-        # Sum all VQ embedding
-        codes_emb = []
-        for i in range(self.num_codebooks):
-            codes_emb.append(self.audio_embedding[i](codes_in[:, :, i]))
-        codes_emb = torch.stack(codes_emb, dim=3)
-        codes_emb = codes_emb.sum(dim=3)  # (B, C, D)
+        codes_emb = self.codes_embedding(codes_in)
         # Mask
         token_mask = torch.cat((~text_mask, ~codes_mask),
                                dim=1).unsqueeze(1)  # (B, 1, T+C)
@@ -171,8 +193,15 @@ class VQTTS(nn.Module):
         text_emb = self.text_embedding(text_in)  # (B, T, D)
         all_emb = torch.cat((text_emb, codes_emb), dim=1)  # (B, T+C, D)
         all_emb, pos_emb = self.pos_encoding(all_emb)
-        output = self.model(all_emb, mask, pos_emb)
+        output, kv_cache = self.model(all_emb, mask, pos_emb)
         logits = self.output(output)
+        return logits, kv_cache, text_label, codes_label
+
+    def forward(self, batch: dict, device: torch.device):
+        logits, _, text_label, codes_label = self.compute(batch, device)
+        B = text_label.size(0)
+        T = text_label.size(1)
+        C = codes_label.size(1)
         text_logits = logits[:, :T, :self.vocab_size]  # (B, T, ...)
         loss_text = F.cross_entropy(
             text_logits.reshape(-1, self.vocab_size),
@@ -186,7 +215,12 @@ class VQTTS(nn.Module):
             codes_label.reshape(-1),
             ignore_index=self.ignore_id,
         )
-        # Compute code accuracy
+        # Compute Accuracy
+        pred = text_logits.argmax(2)
+        correct = pred.eq(text_label)
+        correct[text_label == self.ignore_id] = 0
+        correct = correct.sum()
+        acc_text = correct / (text_label != self.ignore_id).sum()
         _, indices = codes_logits.topk(5, dim=-1)
         correct = indices.eq(codes_label.unsqueeze(-1))
         correct[codes_label == self.ignore_id] = 0
@@ -198,5 +232,39 @@ class VQTTS(nn.Module):
             'loss': loss,
             'loss_text': loss_text,
             'loss_codes': loss_codes,
+            'acc_text': acc_text,
             'acc_codes': acc_codes,
         }
+
+    def infer(self, batch: dict, device: torch.device):
+        self.codec.eval()
+        logits, kv_cache, text_label, codes_label = self.compute(batch, device)
+        T = text_label.size(1)
+        C = codes_label.size(1)
+        offset = logits.size(1)
+        pred = logits[:, T:,
+                      self.vocab_size:].reshape(1, C, self.num_codebooks,
+                                                self.codebook_size).argmax(-1)
+        # print(torch.cat((codes_label, pred), dim=-1))
+        codes_logit = logits[:, -1, self.vocab_size:]
+        # Autogressive generate
+        # max_steps = 5
+        # for i in range(max_steps):
+        #     # if we get eos, done
+        #     codes_logit = codes_logit.reshape(self.num_codebooks,
+        #                                       self.codebook_size)
+        #     print(codes_logit)
+        #     pred = codes_logit.argmax(1)
+        #     print('prediction', pred)
+        #     if (pred == self.code_eos).any():
+        #         break
+        #     pred = pred.unsqueeze(0).unsqueeze(0)
+        #     codes_emb = self.codes_embedding(pred)  # (1, 1, D)
+        #     codes_emb, pos_emb = self.pos_encoding(codes_emb, offset)
+        #     mask = torch.ones((1, 1, 1), dtype=torch.bool, device=device)
+        #     output, kv_cache = self.model(codes_emb, mask, pos_emb, kv_cache)
+        #     logits = self.output(output)
+        #     code_logit = logits[:, :, self.vocab_size:]
+        #     offset += 1
+        wav = self.codec.decode([(pred.transpose(1, 2), None)])
+        return wav, self.codec.sample_rate
