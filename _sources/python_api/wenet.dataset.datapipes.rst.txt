@@ -1,0 +1,7 @@
+wenet.dataset.datapipes module
+==============================
+
+.. automodule:: wenet.dataset.datapipes
+   :members:
+   :undoc-members:
+   :show-inheritance:
