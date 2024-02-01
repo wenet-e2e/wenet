@@ -255,6 +255,7 @@ class ASRModel(torch.nn.Module):
         context_graph: ContextGraph = None,
         blank_id: int = 0,
         blank_penalty: float = 0.0,
+        length_penalty: float = 0.0,
     ) -> Dict[str, List[DecodeResult]]:
         """ Decode input speech
 
@@ -291,7 +292,7 @@ class ASRModel(torch.nn.Module):
         results = {}
         if 'attention' in methods:
             results['attention'] = attention_beam_search(
-                self, encoder_out, encoder_mask, beam_size)
+                self, encoder_out, encoder_mask, beam_size, length_penalty)
         if 'ctc_greedy_search' in methods:
             results['ctc_greedy_search'] = ctc_greedy_search(
                 ctc_probs, encoder_lens, blank_id)

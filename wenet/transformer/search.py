@@ -252,6 +252,7 @@ def attention_beam_search(
     encoder_out: torch.Tensor,
     encoder_mask: torch.Tensor,
     beam_size: int = 10,
+    length_penalty: float = 0.0,
 ) -> List[DecodeResult]:
     device = encoder_out.device
     batch_size = encoder_out.shape[0]
@@ -336,7 +337,8 @@ def attention_beam_search(
 
     # 3. Select best of best
     scores = scores.view(batch_size, beam_size)
-    # TODO: length normalization
+    lengths = hyps.ne(model.eos).sum(dim=1).view(batch_size, beam_size).float()
+    scores = scores / lengths.pow(length_penalty)
     best_scores, best_index = scores.max(dim=-1)
     best_hyps_index = best_index + torch.arange(
         batch_size, dtype=torch.long, device=device) * beam_size
