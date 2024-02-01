@@ -15,6 +15,7 @@
 import copy
 import datetime
 import logging
+import sys
 from contextlib import nullcontext
 
 # if your python version < 3.7 use the below one
@@ -78,7 +79,7 @@ class Executor:
                 info_dict = update_parameter_and_lr(model, optimizer,
                                                     scheduler, scaler,
                                                     info_dict)
-                save_interval = info_dict.get('save_interval', 100000000000000)
+                save_interval = info_dict.get('save_interval', sys.maxsize)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
                     loss_dict = self.cv(model, cv_data_loader, configs)
