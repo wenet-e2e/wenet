@@ -97,7 +97,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['tokenizer_conf']['non_lang_syms_path'] = None
     configs['tokenizer_conf']['special_tokens'] = {}
     configs['tokenizer_conf']['special_tokens']['sot'] = tokenizer.sot
-    configs['tokenizer_conf']['special_tokens']['eot'] = tokenizer.sot
+    configs['tokenizer_conf']['special_tokens']['eot'] = tokenizer.eot
     configs['tokenizer_conf']['special_tokens'][
         'sot_prev'] = tokenizer.sot_prev
     configs['tokenizer_conf']['special_tokens'][
