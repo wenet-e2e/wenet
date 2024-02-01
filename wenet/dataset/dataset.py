@@ -94,6 +94,9 @@ def Dataset(data_type,
         spec_trim_conf = conf.get('spec_trim_conf', {})
         dataset = dataset.map(partial(processor.spec_trim, **spec_trim_conf))
 
+    dataset = dataset.map(processor.detect_language)
+    dataset = dataset.map(processor.detect_task)
+
     shuffle = conf.get('shuffle', True)
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})

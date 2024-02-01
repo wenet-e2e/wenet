@@ -156,7 +156,7 @@ def add_sos_eos(ys_pad: torch.Tensor, sos: int, eos: int,
 
 
 def add_whisper_tokens(special_tokens, ys_pad: torch.Tensor, ignore_id: int,
-                       task: str, no_timestamp: bool, language: str,
+                       tasks: List[str], no_timestamp: bool, langs: List[str],
                        use_prev: bool) -> Tuple[torch.Tensor, torch.Tensor]:
     """Add whisper-style tokens.
 
@@ -175,13 +175,16 @@ def add_whisper_tokens(special_tokens, ys_pad: torch.Tensor, ignore_id: int,
         special_tokens: get IDs of special tokens
         ignore_id (int): index of padding
         no_timestamp (bool): whether to add timestamps tokens
-        language (str): language tag
+        tasks (List[str]): list of task tags
+        langs (List[str]): list of language tags
 
     Returns:
         ys_in (torch.Tensor) : (B, Lmax + ?)
         ys_out (torch.Tensor) : (B, Lmax + ?)
 
     """
+    assert len(langs) == ys_pad.size(0)
+    assert len(tasks) == ys_pad.size(0)
     if use_prev:
         # i.e., hotword list
         _prev = [special_tokens["sot_prev"]]
@@ -191,41 +194,46 @@ def add_whisper_tokens(special_tokens, ys_pad: torch.Tensor, ignore_id: int,
     else:
         _prev = []
 
-    language_id = special_tokens["sot"] + 1 + WHISPER_LANGS.index(language)
-    if task == "transcribe":
-        task_id = special_tokens["transcribe"]
-    elif task == "translate":
-        task_id = special_tokens["translate"]
-    elif task == "vad":
-        task_id = special_tokens["no_speech"]
-    else:
-        raise NotImplementedError("unsupported task {}".format(task))
-    _sot = _prev + [special_tokens["sot"], language_id, task_id]
+    _sot = []
+    for task, lang in zip(tasks, langs):
+        if task == "transcribe":
+            task_id = special_tokens["transcribe"]
+        elif task == "translate":
+            task_id = special_tokens["translate"]
+        elif task == "vad":
+            task_id = special_tokens["no_speech"]
+        else:
+            raise NotImplementedError("unsupported task {}".format(task))
+        language_id = special_tokens["sot"] + 1 + WHISPER_LANGS.index(lang)
+        prefix = _prev + [special_tokens["sot"], language_id, task_id]
+        if task == "transcribe" or task == "translate":
+            if no_timestamp:
+                prefix.append(special_tokens["no_timestamps"])
+            else:
+                prefix.append(special_tokens["timestamp_begin"])
+                # add subsequent tokens
+                # ...
+                raise NotImplementedError
+        elif task == "vad":
+            prefix.append(special_tokens["no_speech"])
+        else:
+            raise NotImplementedError
+        prefix = torch.tensor(prefix,
+                              dtype=torch.long,
+                              requires_grad=False,
+                              device=ys_pad.device)
+        _sot.append(prefix)
+
     _eot = torch.tensor([special_tokens["eot"]],
                         dtype=torch.long,
                         requires_grad=False,
                         device=ys_pad.device)
     ys = [y[y != ignore_id] for y in ys_pad]  # parse padded ys
 
-    if task == "transcribe" or task == "translate":
-        if no_timestamp:
-            _sot.append(special_tokens["no_timestamps"])
-        else:
-            _sot.append(special_tokens["timestamp_begin"])
-            # add subsequent tokens
-            # ...
-            raise NotImplementedError
-    elif task == "vad":
-        _sot.append(special_tokens["no_speech"])
-    else:
-        raise NotImplementedError
-
-    _sot = torch.tensor(_sot,
-                        dtype=torch.long,
-                        requires_grad=False,
-                        device=ys_pad.device)
-    ys_in = [torch.cat([_sot, y], dim=0) for y in ys]
-    ys_out = [torch.cat([_sot[1:], y, _eot], dim=0) for y in ys]
+    ys_in = [torch.cat([prefix, y], dim=0) for prefix, y in zip(_sot, ys)]
+    ys_out = [
+        torch.cat([prefix[1:], y, _eot], dim=0) for prefix, y in zip(_sot, ys)
+    ]
     return pad_list(ys_in, special_tokens["eot"]), pad_list(ys_out, ignore_id)
 
 

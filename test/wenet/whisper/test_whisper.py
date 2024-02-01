@@ -362,9 +362,9 @@ def test_model(model, audio_path):
             configs['tokenizer_conf']['special_tokens'],
             torch.tensor([dummy_tokens], dtype=torch.long),
             ignore_id=-1,
-            task=task,
+            tasks=[task],
             no_timestamp=True,
-            language=language,
+            langs=[language],
             use_prev=False)
         L = wenet_tokens.size(1)
         tgt_mask = ~make_pad_mask(torch.tensor([L], dtype=torch.long),

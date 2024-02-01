@@ -17,6 +17,7 @@ import io
 import json
 from subprocess import PIPE, Popen
 from urllib.parse import urlparse
+import langid
 import librosa
 import random
 
@@ -76,6 +77,22 @@ def parse_speaker(sample, speaker_dict):
     assert 'speaker' in sample
     speaker = sample['speaker']
     sample['speaker'] = speaker_dict.get(speaker, 0)
+    return sample
+
+
+def detect_language(sample):
+    assert 'txt' in sample
+    # i.e., ('zh', -90.74214363098145)
+    sample['lang'] = langid.classify(sample['txt'])[0]
+    return sample
+
+
+def detect_task(sample):
+    # TODO(xcsong): Currently, the task is hard-coded to 'transcribe'.
+    #   In the future, we could dynamically determine the task based on
+    #   the contents of sample. For instance, if a sample contains both
+    #   'txt_en' and 'txt_zh', the task should be set to 'translate'.
+    sample['task'] = "transcribe"
     return sample
 
 
@@ -452,6 +469,8 @@ def padding(data):
         torch.tensor(sample[i]['label'], dtype=torch.int64) for i in order
     ]
     sorted_wavs = [sample[i]['wav'].squeeze(0) for i in order]
+    langs = [sample[i]['lang'] for i in order]
+    tasks = [sample[i]['task'] for i in order]
     label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
                                  dtype=torch.int32)
     wav_lengths = torch.tensor([x.size(0) for x in sorted_wavs],
@@ -472,6 +491,8 @@ def padding(data):
         "target_lengths": label_lengths,
         "pcm": padded_wavs,
         "pcm_length": wav_lengths,
+        "langs": langs,
+        "tasks": tasks,
     }
     if 'speaker' in sample[0]:
         speaker = torch.tensor([sample[i]['speaker'] for i in order],
