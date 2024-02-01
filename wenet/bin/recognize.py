@@ -48,7 +48,7 @@ def get_args():
                         type=int,
                         default=10,
                         help='beam size for search')
-    parser.add_argument('--penalty',
+    parser.add_argument('--length_penalty',
                         type=float,
                         default=0.0,
                         help='length penalty')
@@ -256,7 +256,8 @@ def main():
                 reverse_weight=args.reverse_weight,
                 context_graph=context_graph,
                 blank_id=blank_id,
-                blank_penalty=args.blank_penalty)
+                blank_penalty=args.blank_penalty,
+                length_penalty=args.length_penalty)
             for i, key in enumerate(keys):
                 for mode, hyps in results.items():
                     tokens = hyps[i].tokens
