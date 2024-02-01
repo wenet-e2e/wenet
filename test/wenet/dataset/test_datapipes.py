@@ -6,7 +6,8 @@ from torch.utils.data.datapipes.iter import IterableWrapper
 from wenet.dataset.datapipes import (SortDataPipe, WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
 from wenet.dataset.processor import (DynamicBatchWindow, decode_wav, padding,
-                                     parse_json, compute_fbank)
+                                     parse_json, compute_fbank,
+                                     detect_language, detect_task)
 
 
 @pytest.mark.parametrize("data_list", [
@@ -98,6 +99,8 @@ def test_dynamic_batch_datapipe(data_list):
     dataset = dataset.map(decode_wav)
     dataset = dataset.map(compute_fbank)
     dataset = dataset.map(fake_labels)
+    dataset = dataset.map(detect_language)
+    dataset = dataset.map(detect_task)
     max_frames_in_batch = 10000
     dataset = dataset.dynamic_batch(
         window_class=DynamicBatchWindow(max_frames_in_batch),
