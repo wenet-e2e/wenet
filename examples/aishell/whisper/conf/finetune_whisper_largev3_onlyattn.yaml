@@ -42,7 +42,7 @@ tokenizer_conf:
   non_lang_syms_path: null
   num_languages: 100
   special_tokens:
-    eot: 50258
+    eot: 50257
     no_speech: 50363
     no_timestamps: 50364
     sot: 50258
