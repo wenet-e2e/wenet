@@ -265,12 +265,11 @@ def attention_beam_search(
         running_size, maxlen, encoder_dim)  # (B*N, maxlen, encoder_dim)
     encoder_mask = encoder_mask.unsqueeze(1).repeat(1, beam_size, 1, 1).view(
         running_size, 1, maxlen)  # (B*N, 1, max_len)
-    tasks, langs = infos["tasks"], infos["langs"]
-    tasks = [t for t in tasks for _ in range(beam_size)]
-    langs = [l for l in langs for _ in range(beam_size)]
-
     if getattr(model, 'special_tokens', None) is not None \
             and "transcribe" in model.special_tokens:
+        tasks, langs = infos["tasks"], infos["langs"]
+        tasks = [t for t in tasks for _ in range(beam_size)]
+        langs = [l for l in langs for _ in range(beam_size)]
         hyps = torch.ones([running_size, 0], dtype=torch.long,
                           device=device)  # (B*N, 0)
         hyps, _ = add_whisper_tokens(model.special_tokens,
@@ -375,7 +374,6 @@ def attention_rescoring(
     assert encoder_outs.shape[0] == len(ctc_prefix_results)
     batch_size = encoder_outs.shape[0]
     results = []
-    tasks, langs = infos["tasks"], infos["langs"]
     for b in range(batch_size):
         encoder_out = encoder_outs[b, :encoder_lens[b], :].unsqueeze(0)
         hyps = ctc_prefix_results[b].nbest
@@ -389,13 +387,14 @@ def attention_rescoring(
         if getattr(model, 'special_tokens', None) is not None \
                 and "transcribe" in model.special_tokens:
             prev_len = hyps_pad.size(1)
-            hyps_pad, _ = add_whisper_tokens(model.special_tokens,
-                                             hyps_pad,
-                                             model.ignore_id,
-                                             tasks=[tasks[b]] * len(hyps),
-                                             no_timestamp=True,
-                                             langs=[langs[b]] * len(hyps),
-                                             use_prev=False)
+            hyps_pad, _ = add_whisper_tokens(
+                model.special_tokens,
+                hyps_pad,
+                model.ignore_id,
+                tasks=[infos["tasks"][b]] * len(hyps),
+                no_timestamp=True,
+                langs=[infos["langs"][b]] * len(hyps),
+                use_prev=False)
             cur_len = hyps_pad.size(1)
             hyps_lens = hyps_lens + cur_len - prev_len
             prefix_len = 4
