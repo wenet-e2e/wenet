@@ -111,6 +111,14 @@ def Dataset(data_type,
         assert 'batch_size' in batch_conf
         batch_size = batch_conf.get('batch_size', 16)
         dataset = dataset.batch(batch_size, wrapper_class=processor.padding)
+    elif batch_type == 'bucket':
+        assert 'bucket_boundaries' in batch_conf
+        assert 'bucket_batch_sizes' in batch_conf
+        dataset = dataset.bucket_by_sequence_length(
+            processor.feats_length_fn,
+            batch_conf['bucket_boundaries'],
+            batch_conf['bucket_batch_sizes'],
+            wrapper_class=processor.padding)
     else:
         max_frames_in_batch = batch_conf.get('max_frames_in_batch', 12000)
         dataset = dataset.dynamic_batch(
