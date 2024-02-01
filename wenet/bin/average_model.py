@@ -15,6 +15,7 @@
 import os
 import argparse
 import glob
+import sys
 
 import yaml
 import torch
@@ -38,9 +39,17 @@ def get_args():
                         type=int,
                         help='min epoch used for averaging model')
     parser.add_argument('--max_epoch',
-                        default=65536,
+                        default=sys.maxsize,
                         type=int,
                         help='max epoch used for averaging model')
+    parser.add_argument('--min_step',
+                        default=0,
+                        type=int,
+                        help='min step used for averaging model')
+    parser.add_argument('--max_step',
+                        default=sys.maxsize,
+                        type=int,
+                        help='max step used for averaging model')
     parser.add_argument('--mode',
                         default="hybrid",
                         choices=["hybrid", "epoch", "step"],
@@ -73,16 +82,18 @@ def main():
                 dic_yaml = yaml.load(f, Loader=yaml.FullLoader)
                 loss = dic_yaml['loss_dict']['loss']
                 epoch = dic_yaml['epoch']
+                step = dic_yaml['step']
                 tag = dic_yaml['tag']
-                if epoch >= args.min_epoch and epoch <= args.max_epoch:
-                    val_scores += [[epoch, loss, tag]]
+                if epoch >= args.min_epoch and epoch <= args.max_epoch \
+                        and step >= args.min_step and step <= args.max_step:
+                    val_scores += [[epoch, step, loss, tag]]
         sorted_val_scores = sorted(val_scores,
-                                   key=lambda x: x[1],
+                                   key=lambda x: x[2],
                                    reverse=False)
-        print("best val (epoch, loss, tag) = " +
+        print("best val (epoch, step, loss, tag) = " +
               str(sorted_val_scores[:args.num]))
         path_list = [
-            args.src_path + '/{}.pt'.format(score[2])
+            args.src_path + '/{}.pt'.format(score[-1])
             for score in sorted_val_scores[:args.num]
         ]
     else:
