@@ -236,35 +236,79 @@ class VQTTS(nn.Module):
             'acc_codes': acc_codes,
         }
 
-    def infer(self, batch: dict, device: torch.device):
+    # Copy from https://github.com/facebookresearch/llama/blob/main/llama/generation.py#L398C1-L421C22
+    def sample_top_p(self, probs, p):
+        """
+        Perform top-p (nucleus) sampling on a probability distribution.
+
+        Args:
+            probs (torch.Tensor): Probability distribution tensor.
+            p (float): Probability threshold for top-p sampling.
+
+        Returns:
+            torch.Tensor: Sampled token indices.
+
+        Note:
+            Top-p sampling selects the smallest set of tokens whose cumulative probability mass
+            exceeds the threshold p. The distribution is renormalized based on the selected tokens.
+
+        """
+        probs_sort, probs_idx = torch.sort(probs, dim=-1, descending=True)
+        probs_sum = torch.cumsum(probs_sort, dim=-1)
+        mask = probs_sum - probs_sort > p
+        probs_sort[mask] = 0.0
+        probs_sort.div_(probs_sort.sum(dim=-1, keepdim=True))
+        next_token = torch.multinomial(probs_sort, num_samples=1)
+        next_token = torch.gather(probs_idx, -1, next_token)
+        return next_token
+
+    def infer(self,
+              batch: dict,
+              device: torch.device,
+              temperature=1.0,
+              top_p=0.9,
+              repeatition_penalty=1.5):
         self.codec.eval()
-        logits, kv_cache, text_label, codes_label = self.compute(batch, device)
-        T = text_label.size(1)
-        C = codes_label.size(1)
+        logits, kv_cache, _, _ = self.compute(batch, device)
         offset = logits.size(1)
-        pred = logits[:, T:,
-                      self.vocab_size:].reshape(1, C, self.num_codebooks,
-                                                self.codebook_size).argmax(-1)
-        # print(torch.cat((codes_label, pred), dim=-1))
         codes_logit = logits[:, -1, self.vocab_size:]
         # Autogressive generate
-        # max_steps = 5
-        # for i in range(max_steps):
-        #     # if we get eos, done
-        #     codes_logit = codes_logit.reshape(self.num_codebooks,
-        #                                       self.codebook_size)
-        #     print(codes_logit)
-        #     pred = codes_logit.argmax(1)
-        #     print('prediction', pred)
-        #     if (pred == self.code_eos).any():
-        #         break
-        #     pred = pred.unsqueeze(0).unsqueeze(0)
-        #     codes_emb = self.codes_embedding(pred)  # (1, 1, D)
-        #     codes_emb, pos_emb = self.pos_encoding(codes_emb, offset)
-        #     mask = torch.ones((1, 1, 1), dtype=torch.bool, device=device)
-        #     output, kv_cache = self.model(codes_emb, mask, pos_emb, kv_cache)
-        #     logits = self.output(output)
-        #     code_logit = logits[:, :, self.vocab_size:]
-        #     offset += 1
-        wav = self.codec.decode([(pred.transpose(1, 2), None)])
+        max_steps = 200
+        codes_pred = []
+        for i in range(max_steps):
+            codes_logit = codes_logit.reshape(self.num_codebooks,
+                                              self.codebook_size)
+            win_size = 16
+            if len(codes_pred) < win_size:
+                window = codes_pred
+            else:
+                window = codes_pred[len(codes_pred) - win_size:]
+            # Add repeatition penalty
+            if len(window) > 0 and repeatition_penalty != 1.0:
+                prev_tokens = torch.cat(window, dim=1).squeeze(0)
+                prev_tokens = prev_tokens.transpose(0, 1)
+                score = torch.gather(codes_logit, dim=1, index=prev_tokens)
+                score = torch.where(score < 0, score * repeatition_penalty,
+                                    score / repeatition_penalty)
+                codes_logit.scatter_(dim=1, index=prev_tokens, src=score)
+            # Top-p sampling
+            codes_prob = torch.softmax(codes_logit / temperature, dim=-1)
+            # print('############')
+            pred = self.sample_top_p(codes_prob, top_p)
+            pred = pred.reshape(-1)
+            print('step', i, 'prediction', pred)
+            # if we get eos, done
+            if (pred == self.code_eos).any():
+                break
+            pred = pred.unsqueeze(0).unsqueeze(0)
+            codes_pred.append(pred)
+            codes_emb = self.codes_embedding(pred)  # (1, 1, D)
+            codes_emb, pos_emb = self.pos_encoding(codes_emb, offset)
+            mask = torch.ones((1, 1, 1), dtype=torch.bool, device=device)
+            output, kv_cache = self.model(codes_emb, mask, pos_emb, kv_cache)
+            logits = self.output(output)
+            codes_logit = logits[:, -1, self.vocab_size:]
+            offset += 1
+        codes_pred = torch.cat(codes_pred, dim=1)
+        wav = self.codec.decode([(codes_pred.transpose(1, 2), None)])
         return wav, self.codec.sample_rate
