@@ -1,3 +1,5 @@
+from functools import partial
+import langid
 import pytest
 import torch
 from torch.utils.data import datapipes
@@ -5,8 +7,8 @@ from torch.utils.data.datapipes.iter import IterableWrapper
 
 from wenet.dataset.datapipes import (SortDataPipe, WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
-from wenet.dataset.processor import (DynamicBatchWindow, decode_wav, padding,
-                                     parse_json, compute_fbank,
+from wenet.dataset.processor import (DynamicBatchWindow, LangID, decode_wav,
+                                     padding, parse_json, compute_fbank,
                                      detect_language, detect_task)
 
 
@@ -90,6 +92,22 @@ def fake_labels(sample):
     return sample
 
 
+def test_langid():
+    txts = [
+        "Questo è un testo di prova.",
+        "hello world",
+        "中国北京天安门",
+        "使用GPS进行定位",
+        "Hi, 你好",
+    ]
+    wenet_langid = LangID()
+    for txt in txts:
+        lid, confidence = wenet_langid(txt)
+        expected_lid, expected_confidence = langid.classify(txt)
+        assert lid == expected_lid
+        assert confidence == expected_confidence
+
+
 @pytest.mark.parametrize("data_list", ["test/resources/dataset/data.list"])
 def test_dynamic_batch_datapipe(data_list):
     assert isinstance(data_list, str)
@@ -99,7 +117,7 @@ def test_dynamic_batch_datapipe(data_list):
     dataset = dataset.map(decode_wav)
     dataset = dataset.map(compute_fbank)
     dataset = dataset.map(fake_labels)
-    dataset = dataset.map(detect_language)
+    dataset = dataset.map(partial(detect_language, langid=LangID()))
     dataset = dataset.map(detect_task)
     max_frames_in_batch = 10000
     dataset = dataset.dynamic_batch(

@@ -17,8 +17,8 @@ import io
 import json
 from subprocess import PIPE, Popen
 from urllib.parse import urlparse
-import langid
 import librosa
+import numpy as np
 import random
 
 import torch
@@ -28,7 +28,7 @@ import torchaudio.compliance.kaldi as kaldi
 import torch.nn.functional as F
 from wenet.text.base_tokenizer import BaseTokenizer
 
-torchaudio.utils.sox_utils.set_buffer_size(16500)
+# torchaudio.utils.sox_utils.set_buffer_size(16500)
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
@@ -41,6 +41,45 @@ class UrlOpenError(Exception):
 
     def __str__(self) -> str:
         return self.err_msg
+
+
+class LangID():
+
+    def __init__(self) -> None:
+        self.instance = None
+        self._build_instance()
+
+    def _build_instance(self):
+        if self.instance is None:
+            import langid
+            self.instance = langid.langid.LanguageIdentifier.from_modelstring(
+                langid.langid.model, norm_probs=False)
+
+    def nb_classprobs(self, fv):
+        pdc = np.matmul(np.expand_dims(fv, 0), self.instance.nb_ptc)
+        pdc = pdc.squeeze(0)
+        pd = pdc + self.instance.nb_pc
+        return pd
+
+    def __call__(self, text: str):
+        # return self.instance.classify(text)[0]
+        out = self.instance.instance2fv(text)
+        probs = self.nb_classprobs(out)
+        cl = probs.argmax()
+        conf = float(probs[cl])
+        pred = str(self.instance.nb_classes[cl])
+        return pred, conf
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['instance']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        recovery = {'instance': None}
+        self.__dict__.update(recovery)
+        self._build_instance()
 
 
 def parse_json(elem):
@@ -80,10 +119,10 @@ def parse_speaker(sample, speaker_dict):
     return sample
 
 
-def detect_language(sample, limited_langs=('zh', 'en')):
+def detect_language(sample, langid, limited_langs=('zh', 'en')):
     assert 'txt' in sample
     # i.e., ('zh', -90.74214363098145)
-    sample['lang'] = langid.classify(sample['txt'])[0]
+    sample['lang'] = langid(sample['txt'])[0]
     # NOTE(xcsong): Because language classification may not be very accurate
     #   (for example, Chinese being classified as Japanese), our workaround,
     #   given we know for certain that the training data only consists of
