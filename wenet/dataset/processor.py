@@ -80,10 +80,17 @@ def parse_speaker(sample, speaker_dict):
     return sample
 
 
-def detect_language(sample):
+def detect_language(sample, limited_langs=('zh', 'en')):
     assert 'txt' in sample
     # i.e., ('zh', -90.74214363098145)
     sample['lang'] = langid.classify(sample['txt'])[0]
+    # NOTE(xcsong): Because language classification may not be very accurate
+    #   (for example, Chinese being classified as Japanese), our workaround,
+    #   given we know for certain that the training data only consists of
+    #   Chinese and English, is to limit the classification results to reduce
+    #   the impact of misclassification.
+    if sample['lang'] not in limited_langs:
+        sample['lang'] = 'zh'
     return sample
 
 
