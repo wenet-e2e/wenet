@@ -45,5 +45,5 @@ jobs:
         run: |
           set -eux
           pytest --version
-          PYTHONPATH="${PYTHONPATH:-}:$(pwd)" pytest -q
+          PYTHONPATH="${PYTHONPATH:-}:$(pwd)" pytest
           if [ $? != 0 ]; then exit 1; fi
