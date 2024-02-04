@@ -200,6 +200,11 @@ def sort_by_feats(sample):
     return sample['feat'].size(0)
 
 
+def feats_length_fn(sample) -> int:
+    assert 'feat' in sample
+    return sample['feat'].size(0)
+
+
 def compute_mfcc(sample,
                  num_mel_bins=23,
                  frame_length=25,

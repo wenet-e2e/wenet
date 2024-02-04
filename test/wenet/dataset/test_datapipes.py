@@ -110,6 +110,38 @@ def test_dynamic_batch_datapipe(data_list):
         assert d['feats'].size(1) <= max_frames_in_batch
 
 
+def test_bucket_batch_datapipe():
+    dataset = datapipes.iter.IterableWrapper(range(10))
+
+    def _seq_len_fn(elem):
+        if elem < 5:
+            return 2
+        elif elem >= 5 and elem < 7:
+            return 4
+        else:
+            return 8
+
+    dataset = dataset.bucket_by_sequence_length(
+        _seq_len_fn,
+        bucket_boundaries=[3, 5],
+        bucket_batch_sizes=[3, 2, 2],
+    )
+    expected = [
+        [0, 1, 2],
+        [5, 6],
+        [7, 8],
+        [3, 4],
+        [9],
+    ]
+    result = []
+    for d in dataset:
+        result.append(d)
+    assert len(result) == len(expected)
+    for (r, h) in zip(expected, result):
+        assert len(r) == len(h)
+        assert all(rr == hh for (rr, hh) in zip(r, h))
+
+
 def test_shuffle_deterministic():
     dataset = datapipes.iter.IterableWrapper(range(10))
     dataset = dataset.shuffle()

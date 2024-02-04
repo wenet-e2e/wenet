@@ -14,8 +14,10 @@
 
 import collections
 from collections.abc import Callable
+import sys
 import tarfile
 import logging
+from typing import List
 import torch
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
@@ -54,6 +56,94 @@ class MapperIgnoreErrorDataPipe(Mapper):
             except Exception as ex:
                 if self.log_error:
                     logging.warning(str(ex))
+
+
+@functional_datapipe('bucket_by_sequence_length')
+class BucketBySequenceLengthDataPipe(IterDataPipe):
+
+    def __init__(
+        self,
+        dataset: IterDataPipe,
+        elem_length_func,
+        bucket_boundaries: List[int],
+        bucket_batch_sizes: List[int],
+        wrapper_class=None,
+    ) -> None:
+        super().__init__()
+        _check_unpickable_fn(elem_length_func)
+        assert len(bucket_batch_sizes) == len(bucket_boundaries) + 1
+        self.bucket_batch_sizes = bucket_batch_sizes
+        self.bucket_boundaries = bucket_boundaries + [sys.maxsize]
+        self.elem_length_func = elem_length_func
+
+        self._group_dp = GroupByWindowDataPipe(dataset,
+                                               self._element_to_bucket_id,
+                                               self._window_size_func,
+                                               wrapper_class=wrapper_class)
+
+    def __iter__(self):
+        yield from self._group_dp
+
+    def _element_to_bucket_id(self, elem):
+        seq_len = self.elem_length_func(elem)
+        bucket_id = 0
+        for (i, b) in enumerate(self.bucket_boundaries):
+            if seq_len < b:
+                bucket_id = i
+                break
+        return bucket_id
+
+    def _window_size_func(self, bucket_id):
+        return self.bucket_batch_sizes[bucket_id]
+
+
+@functional_datapipe("group_by_window")
+class GroupByWindowDataPipe(datapipes.iter.Grouper):
+
+    def __init__(
+        self,
+        dataset: IterDataPipe,
+        key_func,
+        window_size_func,
+        wrapper_class=None,
+    ):
+        super().__init__(dataset,
+                         key_func,
+                         keep_key=False,
+                         group_size=None,
+                         drop_remaining=False)
+        _check_unpickable_fn(window_size_func)
+        self.dp = dataset
+        self.window_size_func = window_size_func
+        if wrapper_class is not None:
+            _check_unpickable_fn(wrapper_class)
+            del self.wrapper_class
+            self.wrapper_class = wrapper_class
+
+    def __iter__(self):
+        for x in self.datapipe:
+            key = self.group_key_fn(x)
+
+            self.buffer_elements[key].append(x)
+            self.curr_buffer_size += 1
+
+            group_size = self.window_size_func(key)
+            if group_size == len(self.buffer_elements[key]):
+                result = self.wrapper_class(self.buffer_elements[key])
+                yield result
+                self.curr_buffer_size -= len(self.buffer_elements[key])
+                del self.buffer_elements[key]
+
+            if self.curr_buffer_size == self.max_buffer_size:
+                result_to_yield = self._remove_biggest_key()
+                if result_to_yield is not None:
+                    result = self.wrapper_class(result_to_yield)
+                    yield result
+
+        for key in tuple(self.buffer_elements.keys()):
+            result = self.wrapper_class(self.buffer_elements.pop(key))
+            self.curr_buffer_size -= len(result)
+            yield result
 
 
 @functional_datapipe("sort")
