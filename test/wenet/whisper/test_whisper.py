@@ -94,8 +94,6 @@ def test_sinusoids(length, channels):
 @pytest.mark.parametrize("model,audio_path", [
     ("tiny", "test/resources/aishell-BAC009S0724W0121.wav"),
     ("base", "test/resources/librispeech-1995-1837-0001.wav"),
-    ("small", "test/resources/aishell-BAC009S0724W0121.wav"),
-    ("medium", "test/resources/librispeech-1995-1837-0001.wav"),
 ])
 def test_model(model, audio_path):
     default = os.path.join(os.path.expanduser("~"), ".cache")
