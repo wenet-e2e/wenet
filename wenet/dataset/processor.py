@@ -135,7 +135,7 @@ def decode_wav(sample):
     else:
         with io.BytesIO(wav_file) as file_obj:
             waveform, sample_rate = torchaudio.load(file_obj)
-            # del wav_file
+    # del wav_file
     del sample['wav']
     sample['wav'] = waveform  # overwrite wav
     sample['sample_rate'] = sample_rate
