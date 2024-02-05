@@ -110,8 +110,11 @@ class ASRModel(torch.nn.Module):
             encoder_out, encoder_mask = self.filter_blank_embedding(
                 ctc_probs, encoder_out)
         if self.ctc_weight != 1.0:
-            loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
-                                                    text, text_lengths)
+            loss_att, acc_att = self._calc_att_loss(
+                encoder_out, encoder_mask, text, text_lengths, {
+                    "langs": batch["langs"],
+                    "tasks": batch["tasks"]
+                })
         else:
             loss_att = None
             acc_att = None
@@ -174,6 +177,7 @@ class ASRModel(torch.nn.Module):
         encoder_mask: torch.Tensor,
         ys_pad: torch.Tensor,
         ys_pad_lens: torch.Tensor,
+        infos: Dict[str, List[str]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         ys_in_pad, ys_out_pad = add_sos_eos(ys_pad, self.sos, self.eos,
                                             self.ignore_id)
@@ -256,6 +260,7 @@ class ASRModel(torch.nn.Module):
         blank_id: int = 0,
         blank_penalty: float = 0.0,
         length_penalty: float = 0.0,
+        infos: Dict[str, List[str]] = None,
     ) -> Dict[str, List[DecodeResult]]:
         """ Decode input speech
 
@@ -292,7 +297,8 @@ class ASRModel(torch.nn.Module):
         results = {}
         if 'attention' in methods:
             results['attention'] = attention_beam_search(
-                self, encoder_out, encoder_mask, beam_size, length_penalty)
+                self, encoder_out, encoder_mask, beam_size, length_penalty,
+                infos)
         if 'ctc_greedy_search' in methods:
             results['ctc_greedy_search'] = ctc_greedy_search(
                 ctc_probs, encoder_lens, blank_id)
@@ -314,7 +320,7 @@ class ASRModel(torch.nn.Module):
                     ctc_probs, encoder_out)
             results['attention_rescoring'] = attention_rescoring(
                 self, ctc_prefix_result, encoder_out, encoder_lens, ctc_weight,
-                reverse_weight)
+                reverse_weight, infos)
         return results
 
     @torch.jit.export

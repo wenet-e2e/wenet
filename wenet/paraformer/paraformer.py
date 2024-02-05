@@ -218,9 +218,14 @@ class Paraformer(ASRModel):
         }
 
     def _calc_att_loss(
-            self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
-            ys_pad: torch.Tensor, ys_pad_emb: torch.Tensor,
-            ys_pad_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        self,
+        encoder_out: torch.Tensor,
+        encoder_mask: torch.Tensor,
+        ys_pad: torch.Tensor,
+        ys_pad_emb: torch.Tensor,
+        ys_pad_lens: torch.Tensor,
+        infos: Dict[str, List[str]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         decoder_out, _, _ = self.decoder(encoder_out, encoder_mask, ys_pad_emb,
                                          ys_pad_lens)
         loss_att = self.criterion_att(decoder_out, ys_pad)

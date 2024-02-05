@@ -14,13 +14,12 @@
 
 import math
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from wenet.utils.common import (add_sos_eos, log_add, WHISPER_LANGS,
-                                add_whisper_tokens)
+from wenet.utils.common import (add_sos_eos, log_add, add_whisper_tokens)
 from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
@@ -253,6 +252,7 @@ def attention_beam_search(
     encoder_mask: torch.Tensor,
     beam_size: int = 10,
     length_penalty: float = 0.0,
+    infos: Dict[str, List[str]] = None,
 ) -> List[DecodeResult]:
     device = encoder_out.device
     batch_size = encoder_out.shape[0]
@@ -265,17 +265,20 @@ def attention_beam_search(
         running_size, maxlen, encoder_dim)  # (B*N, maxlen, encoder_dim)
     encoder_mask = encoder_mask.unsqueeze(1).repeat(1, beam_size, 1, 1).view(
         running_size, 1, maxlen)  # (B*N, 1, max_len)
-
     if getattr(model, 'special_tokens', None) is not None \
             and "transcribe" in model.special_tokens:
-        hyps = torch.ones([running_size, 4], dtype=torch.long,
-                          device=device)  # (B*N, 4)
-        # TODO(xcsong): add args for language, task, etc
-        hyps[:, 0] = model.special_tokens["sot"]
-        hyps[:,
-             1] = model.special_tokens["sot"] + 1 + WHISPER_LANGS.index("zh")
-        hyps[:, 2] = model.special_tokens["transcribe"]
-        hyps[:, 3] = model.special_tokens["no_timestamps"]
+        tasks, langs = infos["tasks"], infos["langs"]
+        tasks = [t for t in tasks for _ in range(beam_size)]
+        langs = [l for l in langs for _ in range(beam_size)]
+        hyps = torch.ones([running_size, 0], dtype=torch.long,
+                          device=device)  # (B*N, 0)
+        hyps, _ = add_whisper_tokens(model.special_tokens,
+                                     hyps,
+                                     model.ignore_id,
+                                     tasks=tasks,
+                                     no_timestamp=True,
+                                     langs=langs,
+                                     use_prev=False)
     else:
         hyps = torch.ones([running_size, 1], dtype=torch.long,
                           device=device).fill_(model.sos)  # (B*N, 1)
@@ -360,6 +363,7 @@ def attention_rescoring(
     encoder_lens: torch.Tensor,
     ctc_weight: float = 0.0,
     reverse_weight: float = 0.0,
+    infos: Dict[str, List[str]] = None,
 ) -> List[DecodeResult]:
     """
         Args:
@@ -382,15 +386,15 @@ def attention_rescoring(
                                  dtype=torch.long)  # (beam_size,)
         if getattr(model, 'special_tokens', None) is not None \
                 and "transcribe" in model.special_tokens:
-            # TODO(xcsong): add args for language, task, etc
             prev_len = hyps_pad.size(1)
-            hyps_pad, _ = add_whisper_tokens(model.special_tokens,
-                                             hyps_pad,
-                                             model.ignore_id,
-                                             task="transcribe",
-                                             no_timestamp=True,
-                                             language="zh",
-                                             use_prev=False)
+            hyps_pad, _ = add_whisper_tokens(
+                model.special_tokens,
+                hyps_pad,
+                model.ignore_id,
+                tasks=[infos["tasks"][b]] * len(hyps),
+                no_timestamp=True,
+                langs=[infos["langs"][b]] * len(hyps),
+                use_prev=False)
             cur_len = hyps_pad.size(1)
             hyps_lens = hyps_lens + cur_len - prev_len
             prefix_len = 4
