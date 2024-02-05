@@ -17,7 +17,8 @@ import io
 import json
 from subprocess import PIPE, Popen
 from urllib.parse import urlparse
-import langid
+from langid.langid import LanguageIdentifier, model
+import logging
 import librosa
 import random
 
@@ -31,6 +32,10 @@ from wenet.text.base_tokenizer import BaseTokenizer
 torchaudio.utils.sox_utils.set_buffer_size(16500)
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
+
+lid = LanguageIdentifier.from_modelstring(model, norm_probs=True)
+
+logging.getLogger('langid').setLevel(logging.INFO)
 
 
 class UrlOpenError(Exception):
@@ -80,17 +85,16 @@ def parse_speaker(sample, speaker_dict):
     return sample
 
 
-def detect_language(sample, limited_langs=('zh', 'en')):
+def detect_language(sample, limited_langs):
     assert 'txt' in sample
-    # i.e., ('zh', -90.74214363098145)
-    sample['lang'] = langid.classify(sample['txt'])[0]
     # NOTE(xcsong): Because language classification may not be very accurate
     #   (for example, Chinese being classified as Japanese), our workaround,
     #   given we know for certain that the training data only consists of
     #   Chinese and English, is to limit the classification results to reduce
     #   the impact of misclassification.
-    if sample['lang'] not in limited_langs:
-        sample['lang'] = 'zh'
+    lid.set_languages(limited_langs)
+    # i.e., ('zh', 0.9999999909903544)
+    sample['lang'] = lid.classify(sample['txt'])[0]
     return sample
 
 
