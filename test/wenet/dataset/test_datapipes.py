@@ -2,6 +2,7 @@ import pytest
 import torch
 from torch.utils.data import datapipes
 from torch.utils.data.datapipes.iter import IterableWrapper
+from functools import partial
 
 from wenet.dataset.datapipes import (SortDataPipe, WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
@@ -99,7 +100,7 @@ def test_dynamic_batch_datapipe(data_list):
     dataset = dataset.map(decode_wav)
     dataset = dataset.map(compute_fbank)
     dataset = dataset.map(fake_labels)
-    dataset = dataset.map(detect_language)
+    dataset = dataset.map(partial(detect_language, limited_langs=['zh', 'en']))
     dataset = dataset.map(detect_task)
     max_frames_in_batch = 10000
     dataset = dataset.dynamic_batch(
