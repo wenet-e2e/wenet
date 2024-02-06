@@ -40,7 +40,7 @@ jobs:
         run: |
           set -eux
           pip install -r requirements.txt
-          sudo apt update && sudo apt install -y ffmpeg  libsox-dev
+          sudo apt update && sudo apt install -y ffmpeg  libsox-dev libsndfile1
       - name: Run Pytest
         run: |
           set -eux
