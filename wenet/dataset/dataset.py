@@ -53,7 +53,7 @@ def Dataset(data_type,
         assert 'speaker_table_path' in speaker_conf
         speaker_table = read_symbol_table(speaker_conf['speaker_table_path'])
         dataset = dataset.map(
-            partition(processor.parse_speaker, speaker_dict=speaker_table))
+            partial(processor.parse_speaker, speaker_dict=speaker_table))
 
     if tokenizer is not None:
         dataset = dataset.map(partial(processor.tokenize, tokenizer=tokenizer))
