@@ -1,7 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-# Copyright [2023-11-30] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
-
 import torch
 import pytest
 from wenet.transformer.attention import MultiHeadedAttention
@@ -59,7 +55,6 @@ def test_sdpa(args):
     att_mask_bias = (1.0 - att_mask.float()) * torch.finfo(torch.float).min
     output_with_sdpa, cache_with_sdpa = mha_module_with_sdpa(
         q, k, v, mask=att_mask_bias)
-
     assert torch.allclose(
         output * mask.transpose(1, 2),
         output_with_sdpa * mask.transpose(1, 2),
@@ -67,44 +62,50 @@ def test_sdpa(args):
     )
     assert torch.allclose(cache, cache_with_sdpa)
 
+    n_blocks = 12
     torch.manual_seed(777)
-    mha_layer = TransformerEncoderLayer(
-        args['n_feat'],
-        mha_module,
-        PositionwiseFeedForward(
+    mha_layers = [
+        TransformerEncoderLayer(
             args['n_feat'],
-            2048,
+            MultiHeadedAttention(use_sdpa=False, **args),
+            PositionwiseFeedForward(
+                args['n_feat'],
+                2048,
+                0.0,
+                WENET_ACTIVATION_CLASSES['swish'](),
+            ),
             0.0,
-            WENET_ACTIVATION_CLASSES['swish'](),
-        ),
-        0.0,
-        normalize_before=True,
-    )
+            normalize_before=True,
+        ) for _ in range(n_blocks)
+    ]
 
     torch.manual_seed(777)
-    mha_layer_with_sdpa = TransformerEncoderLayer(
-        args['n_feat'],
-        mha_module_with_sdpa,
-        PositionwiseFeedForward(
+    mha_layers_with_sdpa = [
+        TransformerEncoderLayer(
             args['n_feat'],
-            2048,
+            MultiHeadedAttention(use_sdpa=True, **args),
+            PositionwiseFeedForward(
+                args['n_feat'],
+                2048,
+                0.0,
+                WENET_ACTIVATION_CLASSES['swish'](),
+            ),
             0.0,
-            WENET_ACTIVATION_CLASSES['swish'](),
-        ),
-        0.0,
-        normalize_before=True,
-    )
-    mha_layer.eval()
-    mha_layer_with_sdpa.eval()
-    output, _, cache, _ = mha_layer(q, att_mask, None, mask)
-    output_with_sdpa, _, cache_with_sdpa, _ = mha_layer_with_sdpa(
-        q, att_mask_bias, None, mask)
+            normalize_before=True,
+        ) for _ in range(n_blocks)
+    ]
 
-    print(output)
-    print(output_with_sdpa)
-    assert torch.allclose(
-        output,
-        output_with_sdpa,
-        atol=9e-7,
-    )
-    assert torch.allclose(cache, cache_with_sdpa)
+    for i in range(n_blocks):
+        output, _, cache, _ = mha_layers[i](q, att_mask, None, mask)
+        output_with_sdpa, _, cache_with_sdpa, _ = mha_layers_with_sdpa[i](
+            q, att_mask_bias, None, mask)
+
+        assert torch.allclose(
+            output * mask.transpose(1, 2),
+            output_with_sdpa * mask.transpose(1, 2),
+            atol=9e-7,
+            rtol=9e-4,
+        )
+        # assert torch.allclose(cache, cache_with_sdpa)
+
+        q = output

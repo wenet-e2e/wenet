@@ -91,8 +91,6 @@ class TransformerEncoderLayer(nn.Module):
         if self.normalize_before:
             x = self.norm1(x)
         x_att, new_att_cache = self.self_attn(x, x, x, mask, cache=att_cache)
-        if mask_pad.size(2) > 0:
-            x_att = x_att * mask_pad.transpose(1, 2)
         x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm1(x)
@@ -206,8 +204,6 @@ class ConformerEncoderLayer(nn.Module):
             x = self.norm_mha(x)
         x_att, new_att_cache = self.self_attn(x, x, x, mask, pos_emb,
                                               att_cache)
-        if mask_pad.size(2) > 0:
-            x_att = x_att * mask_pad.transpose(1, 2)
         x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm_mha(x)
