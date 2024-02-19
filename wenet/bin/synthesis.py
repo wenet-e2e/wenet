@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import yaml
+import shutil
 
 import torch
 import torchaudio
@@ -69,6 +70,8 @@ def main():
             wav_file = obj['wav']
             txt = obj['txt']
             # stxt = obj['syn']
+            txt = txt + ' ' + 'jin1 tian1 tian1 qi4 zen3 me yang4'
+            # txt = txt + ' ' + txt
             print(key, wav_file, txt)
             wav, sample_rate = torchaudio.load(wav_file)
             ref_text = torch.tensor(tokenizer.tokenize(txt)[1],
@@ -82,14 +85,16 @@ def main():
                                                    dtype=torch.long)
             with torch.no_grad():
                 gen_wav, sample_rate = model.infer(batch, device)
-            save_path = os.path.join(args.result_dir, '{}.wav'.format(key))
+            shutil.copy(wav_file, args.result_dir)
+            save_path = os.path.join(args.result_dir,
+                                     '{}.vqtts.wav'.format(key))
             torchaudio.save(save_path,
                             gen_wav.squeeze(0),
                             sample_rate,
                             encoding='PCM_S',
                             bits_per_sample=16)
             print('Save to ' + save_path)
-            break
+            # break
 
 
 if __name__ == '__main__':

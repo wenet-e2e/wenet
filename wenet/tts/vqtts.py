@@ -273,7 +273,7 @@ class VQTTS(nn.Module):
         offset = logits.size(1)
         codes_logit = logits[:, -1, self.vocab_size:]
         # Autogressive generate
-        max_steps = 200
+        max_steps = 100
         codes_pred = []
         for i in range(max_steps):
             codes_logit = codes_logit.reshape(self.num_codebooks,
@@ -299,7 +299,8 @@ class VQTTS(nn.Module):
             print('step', i, 'prediction', pred)
             # if we get eos, done
             if (pred == self.code_eos).any():
-                break
+                # break
+                continue
             pred = pred.unsqueeze(0).unsqueeze(0)
             codes_pred.append(pred)
             codes_emb = self.codes_embedding(pred)  # (1, 1, D)
@@ -309,6 +310,12 @@ class VQTTS(nn.Module):
             logits = self.output(output)
             codes_logit = logits[:, -1, self.vocab_size:]
             offset += 1
-        codes_pred = torch.cat(codes_pred, dim=1)
+        if len(codes_pred) != 0:
+            codes_pred = torch.cat(codes_pred, dim=1)
+        else:
+            codes_pred = torch.zeros((1, 1, self.num_codebooks),
+                                     dtype=torch.long,
+                                     device=device)
+        # print(codes_pred.size())
         wav = self.codec.decode([(codes_pred.transpose(1, 2), None)])
         return wav, self.codec.sample_rate
