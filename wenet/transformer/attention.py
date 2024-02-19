@@ -204,7 +204,7 @@ class MultiHeadedAttention(nn.Module):
                 q,
                 k,
                 v,
-                attn_mask=mask,
+                attn_mask=mask.unsqueeze(1),
                 dropout_p=self.dropout_rate,
                 scale=1 / math.sqrt(self.d_k),
             )
