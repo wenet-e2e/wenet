@@ -11,7 +11,7 @@ try:
     from fairseq2.memory import MemoryBlock
 except ImportError:
     import os
-    os.system('pip install --no-input fairseq2')
+    os.system('pip install --no-input fairseq2 torchaudio==2.1.1')
     import fairseq2  # noqa
     from fairseq2.data.audio import AudioDecoder, WaveformToFbankConverter
     from fairseq2.memory import MemoryBlock
