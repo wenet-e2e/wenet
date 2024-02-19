@@ -355,6 +355,7 @@ class TransformerEncoder(BaseEncoder):
         key_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
+        use_sdpa: bool = False,
     ):
         """ Construct TransformerEncoder
 
@@ -373,7 +374,7 @@ class TransformerEncoder(BaseEncoder):
                 WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
                                                     output_size,
                                                     attention_dropout_rate,
-                                                    key_bias),
+                                                    key_bias, use_sdpa),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate, activation),
                 dropout_rate, normalize_before) for _ in range(num_blocks)
