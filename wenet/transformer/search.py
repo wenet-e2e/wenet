@@ -19,7 +19,8 @@ from typing import List, Optional, Dict
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from wenet.utils.common import (add_sos_eos, log_add, add_whisper_tokens)
+from wenet.utils.common import (add_sos_eos, log_add, add_whisper_tokens,
+                                mask_to_bias)
 from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
@@ -289,6 +290,8 @@ def attention_beam_search(
                                        ]).unsqueeze(1).to(device)  # (B*N, 1)
     end_flag = torch.zeros_like(scores, dtype=torch.bool, device=device)
     cache: Optional[List[torch.Tensor]] = None
+    if model.decoder.use_sdpa:
+        encoder_mask = mask_to_bias(encoder_mask, encoder_out.dtype)
     # 2. Decoder forward step by step
     for i in range(prefix_len, maxlen + 1):
         # Stop if all batch and all beam produce eos
@@ -297,6 +300,8 @@ def attention_beam_search(
         # 2.1 Forward decoder step
         hyps_mask = subsequent_mask(i).unsqueeze(0).repeat(
             running_size, 1, 1).to(device)  # (B*N, i, i)
+        if model.decoder.use_sdpa:
+            hyps_mask = mask_to_bias(hyps_mask, encoder_out.dtype)
         # logp: (B*N, vocab)
         logp, cache = model.decoder.forward_one_step(encoder_out, encoder_mask,
                                                      hyps, hyps_mask, cache)

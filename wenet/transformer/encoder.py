@@ -31,7 +31,7 @@ from wenet.utils.class_utils import (
 )
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
-from wenet.utils.common import get_tensor_dtype_min
+from wenet.utils.common import mask_to_bias
 
 
 class BaseEncoder(torch.nn.Module):
@@ -154,12 +154,7 @@ class BaseEncoder(torch.nn.Module):
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
         if self.use_sdpa:
-            dtype = xs.dtype
-            chunk_masks = chunk_masks.to(dtype)
-            # attention mask bias
-            # NOTE(Mddct): torch.finfo jit issues
-            #     chunk_masks = (1.0 - chunk_masks) * torch.finfo(dtype).min
-            chunk_masks = (1.0 - chunk_masks) * get_tensor_dtype_min(xs)
+            chunk_masks = mask_to_bias(chunk_masks, xs.dtype)
         if self.gradient_checkpointing and self.training:
             xs = self.forward_layers_checkpointed(xs, chunk_masks, pos_emb,
                                                   mask_pad)

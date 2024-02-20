@@ -309,20 +309,31 @@ def log_add(*args) -> float:
     return a_max + lsp
 
 
-def get_tensor_dtype_min(
-    x: torch.Tensor,
+def get_dtype_min(
+    dtype: torch.dtype,
     eps16: float = torch.finfo(torch.float16).min,
     eps32: float = torch.finfo(torch.float32).min,
     eps64: float = torch.finfo(torch.float64).min,
     epsbf16: float = torch.finfo(torch.bfloat16).min,
 ):
-    if x.dtype == torch.float16:
+    if dtype == torch.float16:
         return eps16
-    elif x.dtype == torch.float32:
+    elif dtype == torch.float32:
         return eps32
-    elif x.dtype == torch.float64:
+    elif dtype == torch.float64:
         return eps64
-    elif x.dtype == torch.bfloat16:
+    elif dtype == torch.bfloat16:
         return epsbf16
     else:
-        raise RuntimeError(f"expected x to be floating-point, got {x.dtype}")
+        raise RuntimeError(f"expected x to be floating-point, got {dtype}")
+
+
+def mask_to_bias(mask: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
+    return mask
+    assert mask.dtype == torch.bool
+    mask = mask.to(dtype)
+    # attention mask bias
+    # NOTE(Mddct): torch.finfo jit issues
+    #     chunk_masks = (1.0 - chunk_masks) * torch.finfo(dtype).min
+    mask = (1.0 - mask) * get_dtype_min(dtype)
+    return mask
