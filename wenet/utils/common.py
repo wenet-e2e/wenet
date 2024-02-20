@@ -307,3 +307,22 @@ def log_add(*args) -> float:
     a_max = max(args)
     lsp = math.log(sum(math.exp(a - a_max) for a in args))
     return a_max + lsp
+
+
+def get_tensor_dtype_min(
+    x: torch.Tensor,
+    eps16: float = torch.finfo(torch.float16).min,
+    eps32: float = torch.finfo(torch.float32).min,
+    eps64: float = torch.finfo(torch.float64).min,
+    epsbf16: float = torch.finfo(torch.bfloat16).min,
+):
+    if x.dtype == torch.float16:
+        return eps16
+    elif x.dtype == torch.float32:
+        return eps32
+    elif x.dtype == torch.float64:
+        return eps64
+    elif x.dtype == torch.bfloat16:
+        return epsbf16
+    else:
+        raise RuntimeError(f"expected x to be floating-point, got {x.dtype}")
