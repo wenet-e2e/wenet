@@ -176,7 +176,7 @@ def test_rel_position_multi_head_attention_sdpa(args):
     rel_mha_layers = [
         ConformerEncoderLayer(
             args['n_feat'],
-            MultiHeadedAttention(use_sdpa=False, **args),
+            RelPositionMultiHeadedAttention(use_sdpa=False, **args),
             PositionwiseFeedForward(
                 args['n_feat'],
                 2048,
@@ -194,7 +194,7 @@ def test_rel_position_multi_head_attention_sdpa(args):
     rel_mha_layers_with_sdpa = [
         ConformerEncoderLayer(
             args['n_feat'],
-            MultiHeadedAttention(use_sdpa=True, **args),
+            RelPositionMultiHeadedAttention(use_sdpa=True, **args),
             PositionwiseFeedForward(
                 args['n_feat'],
                 2048,
@@ -209,9 +209,9 @@ def test_rel_position_multi_head_attention_sdpa(args):
     ]
 
     for i in range(n_blocks):
-        output, _, cache, _ = rel_mha_layers[i](q, att_mask, None, mask)
+        output, _, cache, _ = rel_mha_layers[i](q, att_mask, pos_emb, mask)
         output_with_sdpa, _, cache_with_sdpa, _ = rel_mha_layers_with_sdpa[i](
-            q, att_mask_bias, None, mask)
+            q, att_mask_bias, pos_emb, mask)
 
         assert torch.allclose(
             output * mask.transpose(1, 2),
