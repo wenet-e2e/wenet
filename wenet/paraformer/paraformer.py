@@ -355,19 +355,23 @@ class Paraformer(ASRModel):
             "decoder_out_lens": token_num
         }
 
-    def decode(self,
-               methods: List[str],
-               speech: torch.Tensor,
-               speech_lengths: torch.Tensor,
-               beam_size: int,
-               decoding_chunk_size: int = -1,
-               num_decoding_left_chunks: int = -1,
-               ctc_weight: float = 0,
-               simulate_streaming: bool = False,
-               reverse_weight: float = 0,
-               context_graph=None,
-               blank_id: int = 0,
-               blank_penalty: float = 0.0) -> Dict[str, List[DecodeResult]]:
+    def decode(
+        self,
+        methods: List[str],
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        beam_size: int,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        ctc_weight: float = 0,
+        simulate_streaming: bool = False,
+        reverse_weight: float = 0,
+        context_graph=None,
+        blank_id: int = 0,
+        blank_penalty: float = 0.0,
+        length_penalty: float = 0.0,
+        infos: Dict[str, List[str]] = None,
+    ) -> Dict[str, List[DecodeResult]]:
         res = self._forward_paraformer(speech, speech_lengths,
                                        decoding_chunk_size,
                                        num_decoding_left_chunks)
