@@ -164,8 +164,6 @@ def test_rel_position_multi_head_attention_sdpa(args):
     att_mask_bias = (1.0 - att_mask.float()) * torch.finfo(torch.float).min
     output_with_sdpa, cache_with_sdpa = rel_mha_module_with_sdpa(
         q, k, v, mask=att_mask_bias, pos_emb=pos_emb)
-    print(output)
-    print(output_with_sdpa)
     assert torch.allclose(
         output * mask.transpose(1, 2),
         output_with_sdpa * mask.transpose(1, 2),
