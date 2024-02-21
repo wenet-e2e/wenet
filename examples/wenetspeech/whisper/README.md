@@ -47,7 +47,7 @@ python local/modify_ckpt.py \
 * Feature info: using log_mel_spectrogram feature, no cmvn
 * Training info: bf16, deepspeed stage1, activation checkpointing, batch dynamic12000, acc_grad 8, 8 * 3090 gpu, 40k steps (about 5 days), conf/finetune_whisper_largev3.yaml
 * Decoding info: ctc_weight 0.0, average_num 5
-* PR link: TBD
+* PR link: https://github.com/wenet-e2e/wenet/pull/2356
 
 |   decoding_method   |  Dev | Test\_Net | Test\_Meeting |
 |:-------------------:|:----:|:---------:|:-------------:|
