@@ -163,7 +163,7 @@ def init_model(args, configs):
     # If specify checkpoint, load some info from checkpoint
     if hasattr(args, 'checkpoint') and args.checkpoint is not None:
         infos = load_checkpoint(model, args.checkpoint)
-    elif hasattr(args, 'checkpoint') and args.enc_init is not None:
+    elif hasattr(args, 'enc_init') and args.enc_init is not None:
         infos = load_trained_modules(model, args)
     else:
         infos = {}
