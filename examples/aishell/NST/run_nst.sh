@@ -183,7 +183,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       --checkpoint $decode_checkpoint \
       --beam_size 10 \
       --batch_size 1 \
-      --penalty 0.0 \
+      --blank_penalty 0.0 \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
       --result_file $test_dir/text \
@@ -208,7 +208,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
       --checkpoint $decode_checkpoint \
       --beam_size 10 \
       --batch_size 1 \
-      --penalty 0.0 \
+      --blank_penalty 0.0 \
       --ctc_weight $ctc_weight \
       --reverse_weight $reverse_weight \
       --result_file $dev_dir/text \
@@ -266,7 +266,7 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
     --batch_size 1 \
-    --penalty 0.0 \
+    --blank_penalty 0.0 \
     --ctc_weight $ctc_weight \
     --reverse_weight $reverse_weight \
     --result_file data/train/${dir_split}data_sublist${job_num}/${hypo_name} \

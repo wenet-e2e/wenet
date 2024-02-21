@@ -153,7 +153,7 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
     --batch_size ${decode_batch} \
-    --penalty 0.0 \
+    --blank_penalty 0.0 \
     --ctc_weight $ctc_weight \
     --reverse_weight $reverse_weight \
     --result_dir $result_dir \

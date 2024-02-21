@@ -198,7 +198,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --checkpoint $decode_checkpoint \
       --beam_size 20 \
       --batch_size 32 \
-      --penalty 0.0 \
+      --blank_penalty 0.0 \
       --result_dir $result_dir \
       --ctc_weight $ctc_weight \
       ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}

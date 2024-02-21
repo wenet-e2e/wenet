@@ -267,7 +267,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
           --checkpoint $decode_checkpoint \
           --beam_size 10 \
           --batch_size 1 \
-          --penalty 0.0 \
+          --blank_penalty 0.0 \
           --dict $dict \
           --result_file $test_dir/text_bpe \
           --ctc_weight $ctc_weight \
