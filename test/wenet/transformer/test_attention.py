@@ -1,8 +1,10 @@
 import torch
 import pytest
-from wenet.transformer.attention import MultiHeadedAttention, RelPositionMultiHeadedAttention
+from wenet.transformer.attention import (MultiHeadedAttention,
+                                         RelPositionMultiHeadedAttention)
 from wenet.transformer.embedding import RelPositionalEncoding
-from wenet.transformer.encoder_layer import ConformerEncoderLayer, TransformerEncoderLayer
+from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
+                                             TransformerEncoderLayer)
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
 
