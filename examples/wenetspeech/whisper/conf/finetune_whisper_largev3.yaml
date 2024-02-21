@@ -1,0 +1,120 @@
+encoder: transformer
+encoder_conf:
+  activation_type: gelu
+  attention_dropout_rate: 0.0
+  attention_heads: 20
+  dropout_rate: 0.0
+  gradient_checkpointing: true
+  input_layer: conv1d2  # NOTE(xcsong): conv1d2, conv2d, conv2d8
+  key_bias: false
+  linear_units: 5120
+  normalize_before: true
+  num_blocks: 32
+  output_size: 1280
+  pos_enc_layer_type: abs_pos_whisper
+  positional_dropout_rate: 0.0
+  static_chunk_size: -1
+  use_dynamic_chunk: false
+  use_dynamic_left_chunk: false
+
+decoder: transformer
+decoder_conf:
+  activation_type: gelu
+  attention_heads: 20
+  dropout_rate: 0.0
+  gradient_checkpointing: true
+  input_layer: embed_learnable_pe
+  key_bias: false
+  linear_units: 5120
+  normalize_before: true
+  num_blocks: 32
+  positional_dropout_rate: 0.0
+  self_attention_dropout_rate: 0.0
+  src_attention: true
+  src_attention_dropout_rate: 0.0
+  tie_word_embedding: true
+  use_output_layer: true
+
+tokenizer: whisper
+tokenizer_conf:
+  bpe_path: null
+  is_multilingual: true
+  non_lang_syms_path: null
+  num_languages: 100
+  special_tokens:
+    eot: 50257
+    no_speech: 50363
+    no_timestamps: 50364
+    sot: 50258
+    sot_prev: 50362
+    timestamp_begin: 50365
+    transcribe: 50360
+    translate: 50359
+  split_with_space: false
+  symbol_table_path: null
+
+ctc: ctc
+ctc_conf:
+  ctc_blank_id: 50363
+
+cmvn: null
+cmvn_conf:
+  cmvn_file: null
+  is_json_cmvn: null
+
+model: whisper
+model_conf:
+  ctc_weight: 0.3
+  length_normalized_loss: false
+  lsm_weight: 0.1
+
+dataset: asr
+dataset_conf:
+  batch_conf:
+    batch_size: 26
+    batch_type: dynamic
+    max_frames_in_batch: 12000
+  feats_type: log_mel_spectrogram
+  filter_conf:
+    max_length: 3000
+    min_length: 0
+    token_max_length: 448
+    token_min_length: 1
+  log_mel_spectrogram_conf:
+    hop_length: 160
+    n_fft: 400
+    num_mel_bins: 128
+    padding: 0
+  resample_conf:
+    resample_rate: 16000
+  shuffle: true
+  shuffle_conf:
+    shuffle_size: 1500
+  sort: true
+  sort_conf:
+    sort_size: 500
+  spec_aug: true
+  spec_aug_conf:
+    max_f: 10
+    max_t: 50
+    num_f_mask: 2
+    num_t_mask: 2
+  spec_sub: true
+  spec_sub_conf:
+    max_t: 30
+    num_t_sub: 3
+  spec_trim: false
+  speed_perturb: false
+
+grad_clip: 5
+accum_grad: 8
+max_epoch: 1  # NOTE(xcsong): Configure the epoch in run.sh
+log_interval: 100
+save_interval: 1000  # NOTE(xcsong): we use step_save instead of epoch_save for large datasets
+
+optim: adam
+optim_conf:
+  lr: 0.00001
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 12000
