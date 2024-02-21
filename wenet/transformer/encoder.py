@@ -452,6 +452,7 @@ class ConformerEncoder(BaseEncoder):
             output_size,
             attention_dropout_rate,
             key_bias,
+            use_sdpa,
         )
         # feed-forward module definition
         positionwise_layer_args = (
