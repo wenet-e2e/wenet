@@ -31,6 +31,7 @@ from wenet.utils.class_utils import (
 )
 from wenet.utils.mask import make_pad_mask
 from wenet.utils.mask import add_optional_chunk_mask
+from wenet.utils.common import mask_to_bias
 
 
 class BaseEncoder(torch.nn.Module):
@@ -53,6 +54,7 @@ class BaseEncoder(torch.nn.Module):
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
         gradient_checkpointing: bool = False,
+        use_sdpa: bool = False,
     ):
         """
         Args:
@@ -84,6 +86,7 @@ class BaseEncoder(torch.nn.Module):
             key_bias: whether use bias in attention.linear_k, False for whisper models.
             gradient_checkpointing: rerunning a forward-pass segment for each
                 checkpointed segment during backward.
+            use_sdpa: whether to use SDPA, currently only support transformer for now
         """
         super().__init__()
         self._output_size = output_size
@@ -103,6 +106,7 @@ class BaseEncoder(torch.nn.Module):
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
         self.gradient_checkpointing = gradient_checkpointing
+        self.use_sdpa = use_sdpa
 
     def output_size(self) -> int:
         return self._output_size
@@ -149,6 +153,8 @@ class BaseEncoder(torch.nn.Module):
                                               decoding_chunk_size,
                                               self.static_chunk_size,
                                               num_decoding_left_chunks)
+        if self.use_sdpa:
+            chunk_masks = mask_to_bias(chunk_masks, xs.dtype)
         if self.gradient_checkpointing and self.training:
             xs = self.forward_layers_checkpointed(xs, chunk_masks, pos_emb,
                                                   mask_pad)
@@ -355,6 +361,7 @@ class TransformerEncoder(BaseEncoder):
         key_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
+        use_sdpa: bool = False,
     ):
         """ Construct TransformerEncoder
 
@@ -365,7 +372,8 @@ class TransformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, gradient_checkpointing)
+                         use_dynamic_left_chunk, gradient_checkpointing,
+                         use_sdpa)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
@@ -373,7 +381,7 @@ class TransformerEncoder(BaseEncoder):
                 WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
                                                     output_size,
                                                     attention_dropout_rate,
-                                                    key_bias),
+                                                    key_bias, use_sdpa),
                 PositionwiseFeedForward(output_size, linear_units,
                                         dropout_rate, activation),
                 dropout_rate, normalize_before) for _ in range(num_blocks)
@@ -433,7 +441,7 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, gradient_checkpointing)
+                         use_dynamic_left_chunk, gradient_checkpointing, False)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition

@@ -36,7 +36,8 @@ class MultiHeadedAttention(nn.Module):
                  n_head: int,
                  n_feat: int,
                  dropout_rate: float,
-                 key_bias: bool = True):
+                 key_bias: bool = True,
+                 use_sdpa: bool = False):
         """Construct an MultiHeadedAttention object."""
         super().__init__()
         assert n_feat % n_head == 0
@@ -48,6 +49,9 @@ class MultiHeadedAttention(nn.Module):
         self.linear_v = nn.Linear(n_feat, n_feat)
         self.linear_out = nn.Linear(n_feat, n_feat)
         self.dropout = nn.Dropout(p=dropout_rate)
+
+        self.use_sdpa = use_sdpa
+        self.dropout_rate = dropout_rate
 
     def forward_qkv(
         self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor
@@ -192,8 +196,22 @@ class MultiHeadedAttention(nn.Module):
         #   non-trivial to calculate `next_cache_start` here.
         new_cache = torch.cat((k, v), dim=-1)
 
-        scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
-        return self.forward_attention(v, scores, mask), new_cache
+        if not self.use_sdpa:
+            scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
+            return self.forward_attention(v, scores, mask), new_cache
+        else:
+            output = torch.nn.functional.scaled_dot_product_attention(
+                q,
+                k,
+                v,
+                attn_mask=mask.unsqueeze(1),
+                dropout_p=self.dropout_rate,
+                scale=1 / math.sqrt(self.d_k),
+            )
+            output = (output.transpose(1, 2).contiguous().view(
+                query.size(0), -1,
+                self.h * self.d_k))  # (batch, time1, d_model)
+            return self.linear_out(output), new_cache
 
 
 class RelPositionMultiHeadedAttention(MultiHeadedAttention):
