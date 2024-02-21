@@ -306,7 +306,7 @@ if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
         --checkpoint $decode_checkpoint \
         --beam_size 10 \
         --batch_size 1 \
-        --penalty 0.0 \
+        --blank_penalty 0.0 \
         --dict $dict \
         --ctc_weight $ctc_weight \
         ${enable_bpe:+--bpe_model $bpecode} \

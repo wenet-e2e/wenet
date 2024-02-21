@@ -201,7 +201,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
     --batch_size 32 \
-    --penalty 0.0 \
+    --blank_penalty 0.0 \
     --ctc_weight $ctc_weight \
     --reverse_weight $reverse_weight \
     --result_dir $dir \
@@ -282,7 +282,7 @@ if [ ${stage} -le 8 ] && [ ${stop_stage} -ge 8 ]; then
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
     --batch_size 16 \
-    --penalty 0.0 \
+    --blank_penalty 0.0 \
     --dict $dict \
     --word data/local/hlg/words.txt \
     --hlg data/local/hlg/HLG.pt \
