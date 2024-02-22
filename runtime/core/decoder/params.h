@@ -88,7 +88,7 @@ DEFINE_int32(min_active, 200, "min active states in ctc wfst search");
 DEFINE_double(beam, 16.0, "beam in ctc wfst search");
 DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
 DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
-DEFINE_int32(blank_id, 1.0,
+DEFINE_int32(blank_id, 0.0,
              "blank token idx for ctc wfst search and ctc prefix beam search");
 DEFINE_double(blank_skip_thresh, 1.0,
               "blank skip thresh for ctc wfst search, 1.0 means no skip");

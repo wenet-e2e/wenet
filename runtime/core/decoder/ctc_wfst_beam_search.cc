@@ -88,7 +88,7 @@ void CtcWfstBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
           std::max_element(logp[i].begin(), logp[i].end()) - logp[i].begin();
       // Optional, adding one blank frame if we has skipped it in two same
       // symbols
-      if (cur_best != opts_.blank_scale && is_last_frame_blank_ &&
+      if (cur_best != opts_.blank && is_last_frame_blank_ &&
           cur_best == last_best_) {
         decodable_.AcceptLoglikes(last_frame_prob_);
         decoder_.AdvanceDecoding(&decodable_, 1);

@@ -153,7 +153,7 @@ std::string ProcessBlank(const std::string& str, bool lowercase) {
       std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
       std::wstring wsresult = converter.from_bytes(result);
       for (auto& c : wsresult) {
-        c = lowercase ? tolower(c, loc) : toupper(c, loc);
+        c = lowercase ? tolower(c, loc) : c;
       }
       result = converter.to_bytes(wsresult);
     } catch (std::exception& e) {
