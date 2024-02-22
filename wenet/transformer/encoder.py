@@ -22,9 +22,9 @@ import torch.utils.checkpoint as ckpt
 from wenet.transformer.convolution import ConvolutionModule
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.encoder_layer import ConformerEncoderLayer
-from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import (
     WENET_EMB_CLASSES,
+    WENET_MLP_CLASSES,
     WENET_SUBSAMPLE_CLASSES,
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
@@ -341,28 +341,27 @@ class BaseEncoder(torch.nn.Module):
 class TransformerEncoder(BaseEncoder):
     """Transformer encoder module."""
 
-    def __init__(
-        self,
-        input_size: int,
-        output_size: int = 256,
-        attention_heads: int = 4,
-        linear_units: int = 2048,
-        num_blocks: int = 6,
-        dropout_rate: float = 0.1,
-        positional_dropout_rate: float = 0.1,
-        attention_dropout_rate: float = 0.0,
-        input_layer: str = "conv2d",
-        pos_enc_layer_type: str = "abs_pos",
-        normalize_before: bool = True,
-        static_chunk_size: int = 0,
-        use_dynamic_chunk: bool = False,
-        global_cmvn: torch.nn.Module = None,
-        use_dynamic_left_chunk: bool = False,
-        key_bias: bool = True,
-        activation_type: str = "relu",
-        gradient_checkpointing: bool = False,
-        use_sdpa: bool = False,
-    ):
+    def __init__(self,
+                 input_size: int,
+                 output_size: int = 256,
+                 attention_heads: int = 4,
+                 linear_units: int = 2048,
+                 num_blocks: int = 6,
+                 dropout_rate: float = 0.1,
+                 positional_dropout_rate: float = 0.1,
+                 attention_dropout_rate: float = 0.0,
+                 input_layer: str = "conv2d",
+                 pos_enc_layer_type: str = "abs_pos",
+                 normalize_before: bool = True,
+                 static_chunk_size: int = 0,
+                 use_dynamic_chunk: bool = False,
+                 global_cmvn: torch.nn.Module = None,
+                 use_dynamic_left_chunk: bool = False,
+                 key_bias: bool = True,
+                 activation_type: str = "relu",
+                 gradient_checkpointing: bool = False,
+                 use_sdpa: bool = False,
+                 mlp_type: str = 'position_wise_feed_forward'):
         """ Construct TransformerEncoder
 
         See Encoder for the meaning of each parameter.
@@ -375,6 +374,7 @@ class TransformerEncoder(BaseEncoder):
                          use_dynamic_left_chunk, gradient_checkpointing,
                          use_sdpa)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
+        mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
@@ -382,9 +382,9 @@ class TransformerEncoder(BaseEncoder):
                                                     output_size,
                                                     attention_dropout_rate,
                                                     key_bias, use_sdpa),
-                PositionwiseFeedForward(output_size, linear_units,
-                                        dropout_rate, activation),
-                dropout_rate, normalize_before) for _ in range(num_blocks)
+                mlp_class(output_size, linear_units, dropout_rate,
+                          activation), dropout_rate, normalize_before)
+            for _ in range(num_blocks)
         ])
 
 
@@ -419,6 +419,7 @@ class ConformerEncoder(BaseEncoder):
         key_bias: bool = True,
         gradient_checkpointing: bool = False,
         use_sdpa: bool = False,
+        mlp_type: str = 'position_wise_feed_forward',
     ):
         """Construct ConformerEncoder
 
@@ -465,14 +466,14 @@ class ConformerEncoder(BaseEncoder):
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
                                   cnn_module_norm, causal)
 
+        mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(
                 output_size,
                 WENET_ATTENTION_CLASSES[selfattention_layer_type](
                     *encoder_selfattn_layer_args),
-                PositionwiseFeedForward(*positionwise_layer_args),
-                PositionwiseFeedForward(
-                    *positionwise_layer_args) if macaron_style else None,
+                mlp_class(*positionwise_layer_args),
+                mlp_class(*positionwise_layer_args) if macaron_style else None,
                 ConvolutionModule(
                     *convolution_layer_args) if use_cnn_module else None,
                 dropout_rate,

@@ -20,11 +20,11 @@ import torch.utils.checkpoint as ckpt
 import logging
 
 from wenet.transformer.decoder_layer import DecoderLayer
-from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import (
     WENET_EMB_CLASSES,
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
+    WENET_MLP_CLASSES,
 )
 from wenet.utils.common import mask_to_bias
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
@@ -75,6 +75,7 @@ class TransformerDecoder(torch.nn.Module):
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
+        mlp_type: str = 'position_wise_feed_forward',
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -95,6 +96,7 @@ class TransformerDecoder(torch.nn.Module):
         else:
             self.output_layer = torch.nn.Identity()
         self.num_blocks = num_blocks
+        mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
@@ -104,8 +106,8 @@ class TransformerDecoder(torch.nn.Module):
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
                     key_bias, use_sdpa) if src_attention else None,
-                PositionwiseFeedForward(attention_dim, linear_units,
-                                        dropout_rate, activation),
+                mlp_class(attention_dim, linear_units, dropout_rate,
+                          activation),
                 dropout_rate,
                 normalize_before,
             ) for _ in range(self.num_blocks)
@@ -298,6 +300,7 @@ class BiTransformerDecoder(torch.nn.Module):
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
+        mlp_type: str = 'position_wise_feed_forward',
     ):
 
         super().__init__()
@@ -318,7 +321,8 @@ class BiTransformerDecoder(torch.nn.Module):
             key_bias=key_bias,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
-            use_sdpa=use_sdpa)
+            use_sdpa=use_sdpa,
+            mlp_type=mlp_type)
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -336,7 +340,8 @@ class BiTransformerDecoder(torch.nn.Module):
             key_bias=key_bias,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
-            use_sdpa=use_sdpa)
+            use_sdpa=use_sdpa,
+            mlp_type=mlp_type)
 
     def forward(
         self,

@@ -3,6 +3,8 @@
 # Copyright [2023-11-28] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 import torch
 from wenet.paraformer.embedding import ParaformerPositinoalEncoding
+from wenet.transformer.positionwise_feed_forward import (
+    GatedVariantsMLP, MoEFFNLayer, PositionwiseFeedForward)
 
 from wenet.transformer.swish import Swish
 from wenet.transformer.subsampling import (
@@ -65,4 +67,10 @@ WENET_ATTENTION_CLASSES = {
     "selfattn": MultiHeadedAttention,
     "rel_selfattn": RelPositionMultiHeadedAttention,
     "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
+}
+
+WENET_MLP_CLASSES = {
+    'position_wise_feed_forward': PositionwiseFeedForward,
+    'moe': MoEFFNLayer,
+    'gated': GatedVariantsMLP
 }
