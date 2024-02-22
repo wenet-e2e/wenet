@@ -16,6 +16,8 @@
 
 import torch
 
+from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
+
 
 class PositionwiseFeedForward(torch.nn.Module):
     """Positionwise feed forward layer.
@@ -113,3 +115,38 @@ class MoEFFNLayer(torch.nn.Module):
             output[batch_idx] += weights[batch_idx, ith_expert, None] * expert(
                 xs[batch_idx])
         return output.view(B, L, D)
+
+
+class GatedVariantsMLP(torch.nn.Module):
+    """ https://arxiv.org/pdf/2002.05202.pdf
+    """
+
+    def __init__(
+        self,
+        idim: int,
+        hidden_units: int,
+        dropout_rate: float,
+        activation: torch.nn.Module = WENET_ACTIVATION_CLASSES['gelu'],
+    ):
+        """Construct a PositionwiseFeedForward object."""
+        super(GatedVariantsMLP, self).__init__()
+        self.gate = torch.nn.Linear(idim, hidden_units)
+        self.activation = activation
+        # w_1 as up proj
+        self.w_1 = torch.nn.Linear(idim, hidden_units)
+        self.dropout = torch.nn.Dropout(dropout_rate)
+        # w_2 as down proj
+        self.w_2 = torch.nn.Linear(hidden_units, idim)
+
+    def forward(self, x):
+        """Foward function.
+        Args:
+            xs: input tensor (B, L, D)
+        Returns:
+            output tensor, (B, L, D)
+
+        """
+        gate = self.activation(self.gate(x))
+        up = self.w_1(x)
+        fuse = gate * up
+        return self.w_2(fuse)
