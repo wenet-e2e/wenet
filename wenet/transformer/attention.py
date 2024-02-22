@@ -21,6 +21,8 @@ from typing import Tuple
 import torch
 from torch import nn
 
+from wenet.utils.common import get_dtype_min
+
 
 class MultiHeadedAttention(nn.Module):
     """Multi-Head Attention layer.
@@ -227,9 +229,10 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                  n_head: int,
                  n_feat: int,
                  dropout_rate: float,
-                 key_bias: bool = True):
+                 key_bias: bool = True,
+                 use_sdpa: bool = True):
         """Construct an RelPositionMultiHeadedAttention object."""
-        super().__init__(n_head, n_feat, dropout_rate, key_bias)
+        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)
         # linear transformation for positional encoding
         self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d
@@ -330,20 +333,39 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         # (batch, head, time1, d_k)
         q_with_bias_v = (q + self.pos_bias_v).transpose(1, 2)
 
-        # compute attention score
-        # first compute matrix a and matrix c
-        # as described in https://arxiv.org/abs/1901.02860 Section 3.3
-        # (batch, head, time1, time2)
-        matrix_ac = torch.matmul(q_with_bias_u, k.transpose(-2, -1))
-
         # compute matrix b and matrix d
         # (batch, head, time1, time2)
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
         # Remove rel_shift since it is useless in speech recognition,
         # and it requires special attention for streaming.
         # matrix_bd = self.rel_shift(matrix_bd)
+        if not self.use_sdpa:
+            # compute attention score
+            # first compute matrix a and matrix c
+            # as described in https://arxiv.org/abs/1901.02860 Section 3.3
+            # (batch, head, time1, time2)
+            matrix_ac = torch.matmul(q_with_bias_u, k.transpose(-2, -1))
 
-        scores = (matrix_ac + matrix_bd) / math.sqrt(
-            self.d_k)  # (batch, head, time1, time2)
+            scores = (matrix_ac + matrix_bd) / math.sqrt(
+                self.d_k)  # (batch, head, time1, time2)
 
-        return self.forward_attention(v, scores, mask), new_cache
+            return self.forward_attention(v, scores, mask), new_cache
+        else:
+            # NOTE(Mddct): we need mask bias, not boolean mask
+            assert mask.dtype != torch.bool
+            mask = mask.unsqueeze(1)
+            # matrix_bd as a mask bias
+            mask = torch.where(mask == get_dtype_min(mask.dtype), mask,
+                               matrix_bd / math.sqrt(self.d_k))
+            output = torch.nn.functional.scaled_dot_product_attention(
+                q_with_bias_u,
+                k,
+                v,
+                attn_mask=mask,
+                dropout_p=self.dropout_rate,
+                scale=1 / math.sqrt(self.d_k),
+            )
+            output = (output.transpose(1, 2).contiguous().view(
+                query.size(0), -1,
+                self.h * self.d_k))  # (batch, time1, d_model)
+            return self.linear_out(output), new_cache

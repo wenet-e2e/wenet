@@ -418,6 +418,7 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_norm: str = "batch_norm",
         key_bias: bool = True,
         gradient_checkpointing: bool = False,
+        use_sdpa: bool = False,
     ):
         """Construct ConformerEncoder
 
@@ -441,7 +442,8 @@ class ConformerEncoder(BaseEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, gradient_checkpointing, False)
+                         use_dynamic_left_chunk, gradient_checkpointing,
+                         use_sdpa)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition
@@ -450,6 +452,7 @@ class ConformerEncoder(BaseEncoder):
             output_size,
             attention_dropout_rate,
             key_bias,
+            use_sdpa,
         )
         # feed-forward module definition
         positionwise_layer_args = (
