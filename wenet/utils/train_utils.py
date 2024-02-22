@@ -280,9 +280,11 @@ def wrap_cuda_model(args, model):
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     if hasattr(model, 'encoder'):
         grad_ckpt = getattr(model.encoder, 'gradient_checkpointing', False)
+        if hasattr(model, 'decoder'):
+            grad_ckpt = (grad_ckpt or getattr(model.decoder,
+                                              'gradient_checkpointing', False))
     else:
         grad_ckpt = False
-    # TODO(xcsong): could one GPU use ddp? and int(os.environ.get('WORLD_SIZE', 1)) > 1
     if args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
         model.cuda()
