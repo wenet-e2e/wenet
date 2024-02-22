@@ -230,7 +230,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                  n_feat: int,
                  dropout_rate: float,
                  key_bias: bool = True,
-                 use_sdpa: bool = True):
+                 use_sdpa: bool = False):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)
         # linear transformation for positional encoding
