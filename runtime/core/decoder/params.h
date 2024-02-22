@@ -88,6 +88,8 @@ DEFINE_int32(min_active, 200, "min active states in ctc wfst search");
 DEFINE_double(beam, 16.0, "beam in ctc wfst search");
 DEFINE_double(lattice_beam, 10.0, "lattice beam in ctc wfst search");
 DEFINE_double(acoustic_scale, 1.0, "acoustic scale for ctc wfst search");
+DEFINE_int32(blank_id, 1.0,
+             "blank token idx for ctc wfst search and ctc prefix beam search");
 DEFINE_double(blank_skip_thresh, 1.0,
               "blank skip thresh for ctc wfst search, 1.0 means no skip");
 DEFINE_double(blank_scale, 1.0, "blank scale for ctc wfst search");
@@ -145,6 +147,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->ctc_wfst_search_opts.beam = FLAGS_beam;
   decode_config->ctc_wfst_search_opts.lattice_beam = FLAGS_lattice_beam;
   decode_config->ctc_wfst_search_opts.acoustic_scale = FLAGS_acoustic_scale;
+  decode_config->ctc_wfst_search_opts.blank = FLAGS_blank_id;
   decode_config->ctc_wfst_search_opts.blank_skip_thresh =
       FLAGS_blank_skip_thresh;
   decode_config->ctc_wfst_search_opts.blank_scale = FLAGS_blank_scale;
@@ -152,6 +155,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->ctc_wfst_search_opts.nbest = FLAGS_nbest;
   decode_config->ctc_prefix_search_opts.first_beam_size = FLAGS_nbest;
   decode_config->ctc_prefix_search_opts.second_beam_size = FLAGS_nbest;
+  decode_config->ctc_prefix_search_opts.blank = FLAGS_blank_id;
   return decode_config;
 }
 
