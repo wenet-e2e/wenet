@@ -70,6 +70,11 @@ void TorchAsrModel::Read(const std::string& model_path) {
   CHECK_EQ(o5.isBool(), true);
   is_bidirectional_decoder_ = o5.toBool();
 
+  //add
+  torch::jit::setGraphExecutorOptimize(false);
+  torch::jit::FusionStrategy static0 = { {torch::jit::FusionBehavior::STATIC, 0} };
+  torch::jit::setFusionStrategy(static0);
+
   VLOG(1) << "Torch Model Info:";
   VLOG(1) << "\tsubsampling_rate " << subsampling_rate_;
   VLOG(1) << "\tright context " << right_context_;
