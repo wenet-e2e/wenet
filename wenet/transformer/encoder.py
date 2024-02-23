@@ -361,7 +361,8 @@ class TransformerEncoder(BaseEncoder):
                  activation_type: str = "relu",
                  gradient_checkpointing: bool = False,
                  use_sdpa: bool = False,
-                 mlp_type: str = 'position_wise_feed_forward'):
+                 mlp_type: str = 'position_wise_feed_forward',
+                 bias: bool = True):
         """ Construct TransformerEncoder
 
         See Encoder for the meaning of each parameter.
@@ -381,10 +382,17 @@ class TransformerEncoder(BaseEncoder):
                 WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
                                                     output_size,
                                                     attention_dropout_rate,
-                                                    key_bias, use_sdpa),
-                mlp_class(output_size, linear_units, dropout_rate,
-                          activation), dropout_rate, normalize_before)
-            for _ in range(num_blocks)
+                                                    key_bias,
+                                                    use_sdpa,
+                                                    bias=bias),
+                mlp_class(output_size,
+                          linear_units,
+                          dropout_rate,
+                          activation,
+                          bias=bias),
+                dropout_rate,
+                normalize_before,
+            ) for _ in range(num_blocks)
         ])
 
 
@@ -420,6 +428,7 @@ class ConformerEncoder(BaseEncoder):
         gradient_checkpointing: bool = False,
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
+        bias: bool = True,
     ):
         """Construct ConformerEncoder
 
@@ -454,6 +463,7 @@ class ConformerEncoder(BaseEncoder):
             attention_dropout_rate,
             key_bias,
             use_sdpa,
+            bias,
         )
         # feed-forward module definition
         positionwise_layer_args = (
@@ -461,6 +471,7 @@ class ConformerEncoder(BaseEncoder):
             linear_units,
             dropout_rate,
             activation,
+            bias,
         )
         # convolution module definition
         convolution_layer_args = (output_size, cnn_module_kernel, activation,

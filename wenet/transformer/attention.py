@@ -39,17 +39,18 @@ class MultiHeadedAttention(nn.Module):
                  n_feat: int,
                  dropout_rate: float,
                  key_bias: bool = True,
-                 use_sdpa: bool = False):
+                 use_sdpa: bool = False,
+                 bias: bool = True):
         """Construct an MultiHeadedAttention object."""
         super().__init__()
         assert n_feat % n_head == 0
         # We assume d_v always equals d_k
         self.d_k = n_feat // n_head
         self.h = n_head
-        self.linear_q = nn.Linear(n_feat, n_feat)
+        self.linear_q = nn.Linear(n_feat, n_feat, bias=bias)
         self.linear_k = nn.Linear(n_feat, n_feat, bias=key_bias)
-        self.linear_v = nn.Linear(n_feat, n_feat)
-        self.linear_out = nn.Linear(n_feat, n_feat)
+        self.linear_v = nn.Linear(n_feat, n_feat, bias=bias)
+        self.linear_out = nn.Linear(n_feat, n_feat, bias=bias)
         self.dropout = nn.Dropout(p=dropout_rate)
 
         self.use_sdpa = use_sdpa
@@ -230,9 +231,15 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                  n_feat: int,
                  dropout_rate: float,
                  key_bias: bool = True,
-                 use_sdpa: bool = False):
+                 use_sdpa: bool = False,
+                 bias: bool = True):
         """Construct an RelPositionMultiHeadedAttention object."""
-        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)
+        super().__init__(n_head,
+                         n_feat,
+                         dropout_rate,
+                         key_bias,
+                         use_sdpa,
+                         bias=bias)
         # linear transformation for positional encoding
         self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d
@@ -369,3 +376,14 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 query.size(0), -1,
                 self.h * self.d_k))  # (batch, time1, d_model)
             return self.linear_out(output), new_cache
+
+
+class MultiQueryAttention(MultiHeadedAttention):
+
+    def __init__(self,
+                 n_head: int,
+                 n_feat: int,
+                 dropout_rate: float,
+                 key_bias: bool = True,
+                 use_sdpa: bool = False):
+        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)

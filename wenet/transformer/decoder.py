@@ -76,6 +76,7 @@ class TransformerDecoder(torch.nn.Module):
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
+        bias: bool = True,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -92,7 +93,9 @@ class TransformerDecoder(torch.nn.Module):
         self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
         self.use_output_layer = use_output_layer
         if use_output_layer:
-            self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
+            self.output_layer = torch.nn.Linear(attention_dim,
+                                                vocab_size,
+                                                bias=bias)
         else:
             self.output_layer = torch.nn.Identity()
         self.num_blocks = num_blocks
@@ -101,13 +104,28 @@ class TransformerDecoder(torch.nn.Module):
             DecoderLayer(
                 attention_dim,
                 WENET_ATTENTION_CLASSES["selfattn"](
-                    attention_heads, attention_dim,
-                    self_attention_dropout_rate, key_bias, use_sdpa),
+                    attention_heads,
+                    attention_dim,
+                    self_attention_dropout_rate,
+                    key_bias,
+                    use_sdpa,
+                    bias=bias,
+                ),
                 WENET_ATTENTION_CLASSES["selfattn"](
-                    attention_heads, attention_dim, src_attention_dropout_rate,
-                    key_bias, use_sdpa) if src_attention else None,
-                mlp_class(attention_dim, linear_units, dropout_rate,
-                          activation),
+                    attention_heads,
+                    attention_dim,
+                    src_attention_dropout_rate,
+                    key_bias,
+                    use_sdpa,
+                    bias=bias,
+                ) if src_attention else None,
+                mlp_class(
+                    attention_dim,
+                    linear_units,
+                    dropout_rate,
+                    activation,
+                    bias=bias,
+                ),
                 dropout_rate,
                 normalize_before,
             ) for _ in range(self.num_blocks)
@@ -301,6 +319,7 @@ class BiTransformerDecoder(torch.nn.Module):
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
+        bias: bool = True,
     ):
 
         super().__init__()
@@ -322,7 +341,8 @@ class BiTransformerDecoder(torch.nn.Module):
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa,
-            mlp_type=mlp_type)
+            mlp_type=mlp_type,
+            bias=bias)
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -341,7 +361,8 @@ class BiTransformerDecoder(torch.nn.Module):
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa,
-            mlp_type=mlp_type)
+            mlp_type=mlp_type,
+            bias=bias)
 
     def forward(
         self,
