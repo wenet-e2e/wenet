@@ -25,6 +25,7 @@ from wenet.utils.class_utils import (
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
     WENET_MLP_CLASSES,
+    WENET_NORM_CLASSES,
 )
 from wenet.utils.common import mask_to_bias
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
@@ -77,6 +78,8 @@ class TransformerDecoder(torch.nn.Module):
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
         bias: bool = True,
+        layer_norm_type: str = 'layer_norm',
+        eps: float = 1e-5,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -90,7 +93,8 @@ class TransformerDecoder(torch.nn.Module):
         )
 
         self.normalize_before = normalize_before
-        self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
+        self.after_norm = WENET_NORM_CLASSES[layer_norm_type](attention_dim,
+                                                              eps=eps)
         self.use_output_layer = use_output_layer
         if use_output_layer:
             self.output_layer = torch.nn.Linear(attention_dim,
@@ -128,6 +132,8 @@ class TransformerDecoder(torch.nn.Module):
                 ),
                 dropout_rate,
                 normalize_before,
+                layer_norm_type,
+                eps,
             ) for _ in range(self.num_blocks)
         ])
 
@@ -320,6 +326,8 @@ class BiTransformerDecoder(torch.nn.Module):
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
         bias: bool = True,
+        layer_norm_type: str = 'layer_norm',
+        eps: float = 1e-5,
     ):
 
         super().__init__()
@@ -342,7 +350,10 @@ class BiTransformerDecoder(torch.nn.Module):
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa,
             mlp_type=mlp_type,
-            bias=bias)
+            bias=bias,
+            layer_norm_type=layer_norm_type,
+            eps=eps,
+        )
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -362,7 +373,10 @@ class BiTransformerDecoder(torch.nn.Module):
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa,
             mlp_type=mlp_type,
-            bias=bias)
+            bias=bias,
+            layer_norm_type=layer_norm_type,
+            eps=eps,
+        )
 
     def forward(
         self,

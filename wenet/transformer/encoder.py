@@ -25,6 +25,7 @@ from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.utils.class_utils import (
     WENET_EMB_CLASSES,
     WENET_MLP_CLASSES,
+    WENET_NORM_CLASSES,
     WENET_SUBSAMPLE_CLASSES,
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
@@ -55,6 +56,8 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_left_chunk: bool = False,
         gradient_checkpointing: bool = False,
         use_sdpa: bool = False,
+        layer_norm_type: str = 'layer_norm',
+        eps: float = 1e-5,
     ):
         """
         Args:
@@ -101,7 +104,9 @@ class BaseEncoder(torch.nn.Module):
         )
 
         self.normalize_before = normalize_before
-        self.after_norm = torch.nn.LayerNorm(output_size, eps=1e-5)
+        assert layer_norm_type in ['layer_norm', 'rms_norm']
+        self.after_norm = WENET_NORM_CLASSES[layer_norm_type](output_size,
+                                                              eps=eps)
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
@@ -341,28 +346,32 @@ class BaseEncoder(torch.nn.Module):
 class TransformerEncoder(BaseEncoder):
     """Transformer encoder module."""
 
-    def __init__(self,
-                 input_size: int,
-                 output_size: int = 256,
-                 attention_heads: int = 4,
-                 linear_units: int = 2048,
-                 num_blocks: int = 6,
-                 dropout_rate: float = 0.1,
-                 positional_dropout_rate: float = 0.1,
-                 attention_dropout_rate: float = 0.0,
-                 input_layer: str = "conv2d",
-                 pos_enc_layer_type: str = "abs_pos",
-                 normalize_before: bool = True,
-                 static_chunk_size: int = 0,
-                 use_dynamic_chunk: bool = False,
-                 global_cmvn: torch.nn.Module = None,
-                 use_dynamic_left_chunk: bool = False,
-                 key_bias: bool = True,
-                 activation_type: str = "relu",
-                 gradient_checkpointing: bool = False,
-                 use_sdpa: bool = False,
-                 mlp_type: str = 'position_wise_feed_forward',
-                 bias: bool = True):
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int = 256,
+        attention_heads: int = 4,
+        linear_units: int = 2048,
+        num_blocks: int = 6,
+        dropout_rate: float = 0.1,
+        positional_dropout_rate: float = 0.1,
+        attention_dropout_rate: float = 0.0,
+        input_layer: str = "conv2d",
+        pos_enc_layer_type: str = "abs_pos",
+        normalize_before: bool = True,
+        static_chunk_size: int = 0,
+        use_dynamic_chunk: bool = False,
+        global_cmvn: torch.nn.Module = None,
+        use_dynamic_left_chunk: bool = False,
+        key_bias: bool = True,
+        activation_type: str = "relu",
+        gradient_checkpointing: bool = False,
+        use_sdpa: bool = False,
+        mlp_type: str = 'position_wise_feed_forward',
+        bias: bool = True,
+        layer_norm_type: str = 'layer_norm',
+        eps: float = 1e-5,
+    ):
         """ Construct TransformerEncoder
 
         See Encoder for the meaning of each parameter.
@@ -373,7 +382,7 @@ class TransformerEncoder(BaseEncoder):
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa)
+                         use_sdpa, layer_norm_type, eps)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
@@ -392,6 +401,8 @@ class TransformerEncoder(BaseEncoder):
                           bias=bias),
                 dropout_rate,
                 normalize_before,
+                layer_norm_type=layer_norm_type,
+                eps=eps,
             ) for _ in range(num_blocks)
         ])
 
@@ -429,6 +440,8 @@ class ConformerEncoder(BaseEncoder):
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
         bias: bool = True,
+        layer_norm_type: str = 'layer_norm',
+        eps: float = 1e-5,
     ):
         """Construct ConformerEncoder
 
@@ -447,13 +460,27 @@ class ConformerEncoder(BaseEncoder):
             causal (bool): whether to use causal convolution or not.
             key_bias: whether use bias in attention.linear_k, False for whisper models.
         """
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa)
+        super().__init__(
+            input_size,
+            output_size,
+            attention_heads,
+            linear_units,
+            num_blocks,
+            dropout_rate,
+            positional_dropout_rate,
+            attention_dropout_rate,
+            input_layer,
+            pos_enc_layer_type,
+            normalize_before,
+            static_chunk_size,
+            use_dynamic_chunk,
+            global_cmvn,
+            use_dynamic_left_chunk,
+            gradient_checkpointing,
+            use_sdpa,
+            layer_norm_type,
+            eps,
+        )
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition
@@ -485,9 +512,11 @@ class ConformerEncoder(BaseEncoder):
                     *encoder_selfattn_layer_args),
                 mlp_class(*positionwise_layer_args),
                 mlp_class(*positionwise_layer_args) if macaron_style else None,
-                ConvolutionModule(
-                    *convolution_layer_args) if use_cnn_module else None,
+                ConvolutionModule(*convolution_layer_args, eps=eps)
+                if use_cnn_module else None,
                 dropout_rate,
                 normalize_before,
+                layer_norm_type=layer_norm_type,
+                eps=eps,
             ) for _ in range(num_blocks)
         ])
