@@ -301,6 +301,7 @@ class BiTransformerDecoder(torch.nn.Module):
     ):
 
         super().__init__()
+        self.use_sdpa = use_sdpa
         self.tie_word_embedding = tie_word_embedding
         self.left_decoder = TransformerDecoder(
             vocab_size,
