@@ -16,7 +16,7 @@
 """Multi-Head Attention layer definition."""
 
 import math
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 from torch import nn
@@ -26,6 +26,8 @@ from wenet.utils.common import get_dtype_min
 
 class MultiHeadedAttention(nn.Module):
     """Multi-Head Attention layer.
+    if n_kv_head != None and n_kv_head != n_head
+    see: https://arxiv.org/pdf/1911.02150.pdf
 
     Args:
         n_head (int): The number of heads.
@@ -34,23 +36,40 @@ class MultiHeadedAttention(nn.Module):
 
     """
 
-    def __init__(self,
-                 n_head: int,
-                 n_feat: int,
-                 dropout_rate: float,
-                 key_bias: bool = True,
-                 use_sdpa: bool = False,
-                 bias: bool = True):
+    def __init__(
+        self,
+        n_head: int,
+        n_feat: int,
+        dropout_rate: float,
+        key_bias: bool = True,
+        use_sdpa: bool = False,
+        bias: bool = True,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
+    ):
         """Construct an MultiHeadedAttention object."""
         super().__init__()
-        assert n_feat % n_head == 0
+
+        self.inner_dim = n_feat if head_dim is None else head_dim * n_head
+        if n_kv_head is not None:
+            assert head_dim is not None
+            self.inner_kv_dim = head_dim * n_kv_head
+            n_kv_head = n_kv_head
+        else:
+            self.inner_kv_dim = self.inner_dim
+            n_kv_head = n_head
+        if self.inner_dim == n_feat:
+            assert n_feat % n_head == 0
         # We assume d_v always equals d_k
-        self.d_k = n_feat // n_head
+        self.d_k = self.inner_dim // n_head
+        assert self.d_k == self.inner_kv_dim // n_kv_head
         self.h = n_head
-        self.linear_q = nn.Linear(n_feat, n_feat, bias=bias)
-        self.linear_k = nn.Linear(n_feat, n_feat, bias=key_bias)
-        self.linear_v = nn.Linear(n_feat, n_feat, bias=bias)
-        self.linear_out = nn.Linear(n_feat, n_feat, bias=bias)
+        self.h_kv = n_head if n_kv_head is None else n_kv_head
+
+        self.linear_q = nn.Linear(n_feat, self.inner_dim, bias=bias)
+        self.linear_k = nn.Linear(n_feat, self.inner_kv_dim, bias=key_bias)
+        self.linear_v = nn.Linear(n_feat, self.inner_kv_dim, bias=bias)
+        self.linear_out = nn.Linear(self.inner_dim, n_feat, bias=bias)
         self.dropout = nn.Dropout(p=dropout_rate)
 
         self.use_sdpa = use_sdpa
@@ -70,18 +89,18 @@ class MultiHeadedAttention(nn.Module):
             torch.Tensor: Transformed query tensor, size
                 (#batch, n_head, time1, d_k).
             torch.Tensor: Transformed key tensor, size
-                (#batch, n_head, time2, d_k).
+                (#batch, n_kv_head, time2, d_k).
             torch.Tensor: Transformed value tensor, size
-                (#batch, n_head, time2, d_k).
+                (#batch, n_kv_head, time2, d_k).
 
         """
         n_batch = query.size(0)
         q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
-        k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
-        v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
+        k = self.linear_k(key).view(n_batch, -1, self.h_kv, self.d_k)
+        v = self.linear_v(value).view(n_batch, -1, self.h_kv, self.d_k)
         q = q.transpose(1, 2)  # (batch, head, time1, d_k)
-        k = k.transpose(1, 2)  # (batch, head, time2, d_k)
-        v = v.transpose(1, 2)  # (batch, head, time2, d_k)
+        k = k.transpose(1, 2)  # (batch, head_kv, time2, d_k)
+        v = v.transpose(1, 2)  # (batch, head_kv, time2, d_k)
 
         return q, k, v
 
@@ -198,6 +217,17 @@ class MultiHeadedAttention(nn.Module):
         # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
         #   non-trivial to calculate `next_cache_start` here.
         new_cache = torch.cat((k, v), dim=-1)
+        if self.h_kv != self.h:
+            k = torch.repeat_interleave(
+                k,
+                self.h // self.h_kv,
+                dim=1,
+            )
+            v = torch.repeat_interleave(
+                v,
+                self.h // self.h_kv,
+                dim=1,
+            )
 
         if not self.use_sdpa:
             scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
@@ -226,22 +256,28 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         dropout_rate (float): Dropout rate.
     """
 
-    def __init__(self,
-                 n_head: int,
-                 n_feat: int,
-                 dropout_rate: float,
-                 key_bias: bool = True,
-                 use_sdpa: bool = False,
-                 bias: bool = True):
+    def __init__(
+        self,
+        n_head: int,
+        n_feat: int,
+        dropout_rate: float,
+        key_bias: bool = True,
+        use_sdpa: bool = False,
+        bias: bool = True,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
+    ):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head,
                          n_feat,
                          dropout_rate,
-                         key_bias,
-                         use_sdpa,
+                         n_kv_head=n_kv_head,
+                         key_bias=key_bias,
+                         use_sdpa=use_sdpa,
+                         head_dim=head_dim,
                          bias=bias)
         # linear transformation for positional encoding
-        self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
+        self.linear_pos = nn.Linear(n_feat, self.inner_dim, bias=False)
         # these two learnable bias are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3
         self.pos_bias_u = nn.Parameter(torch.Tensor(self.h, self.d_k))
@@ -327,6 +363,18 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                                                  dim=-1)
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
+        if self.h_kv != self.h:
+            k = torch.repeat_interleave(
+                k,
+                self.h // self.h_kv,
+                dim=1,
+            )
+            v = torch.repeat_interleave(
+                v,
+                self.h // self.h_kv,
+                dim=1,
+            )
+
         # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
         #   non-trivial to calculate `next_cache_start` here.
         new_cache = torch.cat((k, v), dim=-1)
@@ -376,14 +424,3 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 query.size(0), -1,
                 self.h * self.d_k))  # (batch, time1, d_model)
             return self.linear_out(output), new_cache
-
-
-class MultiQueryAttention(MultiHeadedAttention):
-
-    def __init__(self,
-                 n_head: int,
-                 n_feat: int,
-                 dropout_rate: float,
-                 key_bias: bool = True,
-                 use_sdpa: bool = False):
-        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)

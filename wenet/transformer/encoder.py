@@ -14,7 +14,7 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Encoder definition."""
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 import torch.utils.checkpoint as ckpt
@@ -371,6 +371,8 @@ class TransformerEncoder(BaseEncoder):
         bias: bool = True,
         layer_norm_type: str = 'layer_norm',
         eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
         """ Construct TransformerEncoder
 
@@ -388,12 +390,16 @@ class TransformerEncoder(BaseEncoder):
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
-                WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
-                                                    output_size,
-                                                    attention_dropout_rate,
-                                                    key_bias,
-                                                    use_sdpa,
-                                                    bias=bias),
+                WENET_ATTENTION_CLASSES["selfattn"](
+                    attention_heads,
+                    output_size,
+                    attention_dropout_rate,
+                    key_bias=key_bias,
+                    use_sdpa=use_sdpa,
+                    bias=bias,
+                    n_kv_head=n_kv_head,
+                    head_dim=head_dim,
+                ),
                 mlp_class(output_size,
                           linear_units,
                           dropout_rate,
@@ -442,6 +448,8 @@ class ConformerEncoder(BaseEncoder):
         bias: bool = True,
         layer_norm_type: str = 'layer_norm',
         eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
         """Construct ConformerEncoder
 
@@ -491,6 +499,8 @@ class ConformerEncoder(BaseEncoder):
             key_bias,
             use_sdpa,
             bias,
+            n_kv_head,
+            head_dim,
         )
         # feed-forward module definition
         positionwise_layer_args = (

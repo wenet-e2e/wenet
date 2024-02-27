@@ -80,6 +80,8 @@ class TransformerDecoder(torch.nn.Module):
         bias: bool = True,
         layer_norm_type: str = 'layer_norm',
         eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -114,6 +116,8 @@ class TransformerDecoder(torch.nn.Module):
                     key_bias,
                     use_sdpa,
                     bias=bias,
+                    n_kv_head=n_kv_head,
+                    head_dim=head_dim,
                 ),
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads,
@@ -122,6 +126,8 @@ class TransformerDecoder(torch.nn.Module):
                     key_bias,
                     use_sdpa,
                     bias=bias,
+                    n_kv_head=n_kv_head,
+                    head_dim=head_dim,
                 ) if src_attention else None,
                 mlp_class(
                     attention_dim,
@@ -328,6 +334,8 @@ class BiTransformerDecoder(torch.nn.Module):
         bias: bool = True,
         layer_norm_type: str = 'layer_norm',
         eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
 
         super().__init__()
@@ -353,6 +361,8 @@ class BiTransformerDecoder(torch.nn.Module):
             bias=bias,
             layer_norm_type=layer_norm_type,
             eps=eps,
+            n_kv_head=n_kv_head,
+            head_dim=head_dim,
         )
 
         self.right_decoder = TransformerDecoder(
@@ -376,6 +386,8 @@ class BiTransformerDecoder(torch.nn.Module):
             bias=bias,
             layer_norm_type=layer_norm_type,
             eps=eps,
+            n_kv_head=n_kv_head,
+            head_dim=head_dim,
         )
 
     def forward(
