@@ -149,8 +149,8 @@ class ConformerEncoderLayer(nn.Module):
         self.feed_forward = feed_forward
         self.feed_forward_macaron = feed_forward_macaron
         self.conv_module = conv_module
-        self.norm_ff = nn.LayerNorm(size, eps=eps)  # for the FNN module
-        self.norm_mha = nn.LayerNorm(size, eps=eps)  # for the MHA module
+        self.norm_ff = WENET_NORM_CLASSES[layer_norm_type](size, eps=eps)
+        self.norm_mha = WENET_NORM_CLASSES[layer_norm_type](size, eps=eps)
         if feed_forward_macaron is not None:
             self.norm_ff_macaron = WENET_NORM_CLASSES[layer_norm_type](size,
                                                                        eps=eps)
