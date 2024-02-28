@@ -43,6 +43,7 @@
 * Feature info: using fbank feature, with dither 1.0, with cmvn
 * Training info: lr 0.001, batch size dynamic36000, 8 gpus on 3090, acc_grad 4, 130k steps, 4.6 days
 * Decoding info: ctc_weight 0.5, reverse_weight 0.0, average_num 5, blank penalty 0.0, length penalty 0.0
+* PR link: https://github.com/wenet-e2e/wenet/pull/2371
 
 | Decoding mode - Chunk size    | Dev  | Test\_Net | Test\_Meeting |
 |:-----------------------------:|:----:|:---------:|:-------------:|
