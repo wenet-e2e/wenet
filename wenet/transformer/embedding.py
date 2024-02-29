@@ -209,15 +209,15 @@ def precompute_freqs_cis(dim: int,
     return freqs_cis
 
 
-# copy from:https://github.com/google/gemma_pytorch/blob/main/gemma/model.py#L95
+# modified from:
+#     https://github.com/google/gemma_pytorch/blob/main/gemma/model.py#L95
 def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
     """Applies the rotary embedding to the query and key tensors."""
     x_ = torch.view_as_complex(
-        torch.stack(torch.chunk(x.transpose(1, 2).float(), 2, dim=-1), dim=-1))
+        torch.stack(torch.chunk(x.float(), 2, dim=-1), dim=-1))
     x_out = torch.view_as_real(x_ * freqs_cis).type_as(x)
     x_out = torch.cat(torch.chunk(x_out, 2, dim=-1), dim=-2)
-    x_out = x_out.reshape(x_out.shape[0], x_out.shape[1], x_out.shape[2],
-                          -1).transpose(1, 2)
+    x_out = x_out.reshape(x_out.shape[0], x_out.shape[1], x_out.shape[2], -1)
     return x_out
 
 
@@ -225,13 +225,16 @@ class RopePositionalEncoding(PositionalEncoding):
 
     def __init__(self,
                  d_model: int,
+                 pos_dim: int,
                  dropout_rate: float,
                  max_len: int = 1500,
                  rope_theta=10000.0):
+        # NOTE(Mddct): pos_dim == attention_dim // attention_head
         super().__init__(d_model, dropout_rate=dropout_rate, max_len=max_len)
         delattr(self, 'pe')
-        self.pe = precompute_freqs_cis(d_model, max_len * 2, rope_theta)
+        self.pe = precompute_freqs_cis(pos_dim, max_len * 2, rope_theta)
         self.dropout_rate = dropout_rate
+        self.expand = False
 
     def forward(
         self,
@@ -240,7 +243,11 @@ class RopePositionalEncoding(PositionalEncoding):
                       torch.Tensor] = 0) -> Tuple[torch.Tensor, torch.Tensor]:
 
         self.pe = self.pe.to(x.device)
+        if not self.expand:
+            self.pe = self.pe.unsqueeze(0)
+            self.expand = True
         pos_emb = self.position_encoding(offset, x.size(1), False)
+        pos_emb = pos_emb.unsqueeze(1)  # [1, 1, seq, head_dim//2]
         # NOTE(Mddct): some model don't scale
         # TODO(Mddct): fix
         x = x * self.xscale
