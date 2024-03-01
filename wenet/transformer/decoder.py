@@ -259,8 +259,9 @@ class TransformerDecoder(torch.nn.Module):
             y, cache: NN output value and cache per `self.decoders`.
             y.shape` is (batch, maxlen_out, token)
         """
-        x = self.embed[0:1](tgt)
-        x, pos_emb = self.embed[1:2](x, offset)
+        x = self.embed[0](tgt)
+        x, _ = self.embed[1](x, offset)
+        pos_emb = self.embed[1].position_encoding(offset, 1, False)
         new_cache = []
         for i, decoder in enumerate(self.decoders):
             if cache is None:
@@ -452,6 +453,7 @@ class BiTransformerDecoder(torch.nn.Module):
         tgt: torch.Tensor,
         tgt_mask: torch.Tensor,
         cache: Optional[List[torch.Tensor]] = None,
+        offset: Union[int, torch.Tensor] = 0,
     ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
         """Forward one step.
             This is only used for decoding.
@@ -468,7 +470,7 @@ class BiTransformerDecoder(torch.nn.Module):
             y.shape` is (batch, maxlen_out, token)
         """
         return self.left_decoder.forward_one_step(memory, memory_mask, tgt,
-                                                  tgt_mask, cache)
+                                                  tgt_mask, cache, offset)
 
     def tie_or_clone_weights(self, jit_mode: bool = True):
         """Tie or clone module weights (between word_emb and output_layer)

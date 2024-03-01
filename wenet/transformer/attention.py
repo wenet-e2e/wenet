@@ -481,6 +481,11 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
 
         """
         q, k, v = self.forward_qkv(query, key, value)
+        # NOTE(Mddct): In order to make the code easier to read,
+        #    these two lines are not placed in MultiHeadedAttention.
+        q = apply_rotary_emb(q, freqs_cis=pos_emb)
+        k = apply_rotary_emb(k, freqs_cis=pos_emb)
+
         # see above
         if cache.size(0) > 0:
             key_cache, value_cache = torch.split(cache,
@@ -488,13 +493,8 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                                                  dim=-1)
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
-
-        # NOTE(Mddct): In order to make the code easier to read,
-        #    these two lines are not placed in MultiHeadedAttention.
-        q = apply_rotary_emb(q, freqs_cis=pos_emb)
-        k = apply_rotary_emb(k, freqs_cis=pos_emb)
-
         new_cache = torch.cat((k, v), dim=-1)
+
         if self.h_kv != self.h:
             k = torch.repeat_interleave(
                 k,
