@@ -18,13 +18,16 @@
 #include <algorithm>
 #include <memory>
 #include <stdexcept>
-#include <utility>
 
 #include "torch/script.h"
 #ifndef IOS
 #include "torch/torch.h"
 #endif
 #include <torch/csrc/jit/passes/tensorexpr_fuser.h>
+#include <cstring>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace wenet {
 
@@ -71,7 +74,8 @@ void TorchAsrModel::Read(const std::string& model_path) {
   is_bidirectional_decoder_ = o5.toBool();
 
   torch::jit::setGraphExecutorOptimize(false);
-  torch::jit::FusionStrategy static0 = {{torch::jit::FusionBehavior::STATIC, 0}};
+  torch::jit::FusionStrategy static0 = {
+      {torch::jit::FusionBehavior::STATIC, 0}};
   torch::jit::setFusionStrategy(static0);
 
   VLOG(1) << "Torch Model Info:";
