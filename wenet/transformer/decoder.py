@@ -13,7 +13,7 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Decoder definition."""
-from typing import Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional
 
 import torch
 import torch.utils.checkpoint as ckpt
@@ -196,8 +196,8 @@ class TransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         tgt: torch.Tensor,
         tgt_mask: torch.Tensor,
-        cache: Optional[List[torch.Tensor]] = None,
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        cache: Dict[str, torch.Tensor],
+    ) -> torch.Tensor:
         """Forward one step.
             This is only used for decoding.
         Args:
@@ -213,25 +213,40 @@ class TransformerDecoder(torch.nn.Module):
             y.shape` is (batch, maxlen_out, token)
         """
         x, _ = self.embed(tgt)
-        new_cache = []
+
+        self_att_cache_list = []
+        cross_att_cache_list = []
         for i, decoder in enumerate(self.decoders):
-            if cache is None:
-                c = None
-            else:
-                c = cache[i]
+            self_att_cache = cache['self_att_cache'][:, i] if cache[
+                'self_att_cache'] is not None else None
+            cross_att_cache = cache['cross_att_cache'][:, i] if cache[
+                'cross_att_cache_list'] is not None else None
+            c = {
+                'self_att_cache': self_att_cache,
+                'cross_att_cache': cross_att_cache,
+            }
+
             x, tgt_mask, memory, memory_mask = decoder(x,
                                                        tgt_mask,
                                                        memory,
                                                        memory_mask,
                                                        cache=c)
-            new_cache.append(x)
+            # cache is updated
+            self_att_cache_list.append(c['self_att_cache'].unsqueeze(1))
+            cross_att_cache_list.append(c['cross_att_cache'].unsqueeze(1))
+        new_self_att_cache = torch.cat(self_att_cache_list, dim=1)
+        new_cross_att_cache = torch.cat(cross_att_cache_list, dim=1)
+        # update cache dict
+        cache['self_att_cache'] = new_self_att_cache
+        cache['cross_att_cache'] = new_cross_att_cache
+
         if self.normalize_before:
             y = self.after_norm(x[:, -1])
         else:
             y = x[:, -1]
         if self.use_output_layer:
             y = torch.log_softmax(self.output_layer(y), dim=-1)
-        return y, new_cache
+        return y
 
     def tie_or_clone_weights(self, jit_mode: bool = True):
         """Tie or clone module weights (between word_emb and output_layer)

@@ -55,6 +55,16 @@ class MultiHeadedAttention(nn.Module):
         self.use_sdpa = use_sdpa
         self.dropout_rate = dropout_rate
 
+    def _forward_linearx(self, n_batch: int, x: torch.Tensor, name):
+        if name == 'q':
+            out = self.linear_q(x).view(n_batch, -1, self.h, self.d_k)
+        elif name == 'k':
+            out = self.linear_k(x).view(n_batch, -1, self.h, self.d_k)
+        else:
+            assert name == 'v'
+            out = self.linear_v(x).view(n_batch, -1, self.h, self.d_k)
+        return out.transpose(1, 2)  # (batch, head, time1, d_k)
+
     def forward_qkv(
         self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -75,12 +85,12 @@ class MultiHeadedAttention(nn.Module):
 
         """
         n_batch = query.size(0)
-        q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
-        k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
-        v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
-        q = q.transpose(1, 2)  # (batch, head, time1, d_k)
-        k = k.transpose(1, 2)  # (batch, head, time2, d_k)
-        v = v.transpose(1, 2)  # (batch, head, time2, d_k)
+        q = self._forward_linearx(n_batch, query,
+                                  'q')  # (batch, head, time1, d_k)
+        k = self._forward_linearx(n_batch, key,
+                                  'k')  # (batch, head, time2, d_k)
+        v = self._forward_linearx(n_batch, value,
+                                  'v')  # (batch, head, time2, d_k)
 
         return q, k, v
 
@@ -138,7 +148,8 @@ class MultiHeadedAttention(nn.Module):
         value: torch.Tensor,
         mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         pos_emb: torch.Tensor = torch.empty(0),
-        cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+        cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        kv_from_cache: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute scaled dot product attention.
 
@@ -170,7 +181,11 @@ class MultiHeadedAttention(nn.Module):
                 and `head * d_k == size`
 
         """
-        q, k, v = self.forward_qkv(query, key, value)
+        if not kv_from_cache:
+            q, k, v = self.forward_qkv(query, key, value)
+        else:
+            q = self._forward_linearx(query.size(0), query, 'q')
+            k, v = torch.split(cache, cache.size(-1) // 2, dim=-1)
 
         # NOTE(xcsong):
         #   when export onnx model, for 1st chunk, we feed
@@ -188,7 +203,7 @@ class MultiHeadedAttention(nn.Module):
         # >>> torch.equal(b, c)        # True
         # >>> d = torch.split(a, 2, dim=-1)
         # >>> torch.equal(d[0], d[1])  # True
-        if cache.size(0) > 0:
+        if cache.size(0) > 0 and not kv_from_cache:
             key_cache, value_cache = torch.split(cache,
                                                  cache.size(-1) // 2,
                                                  dim=-1)

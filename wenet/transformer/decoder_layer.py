@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Decoder self-attention layer definition."""
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import torch
 from torch import nn
@@ -65,7 +65,7 @@ class DecoderLayer(nn.Module):
         tgt_mask: torch.Tensor,
         memory: torch.Tensor,
         memory_mask: torch.Tensor,
-        cache: Optional[torch.Tensor] = None
+        cache: Optional[Dict[str, Optional[torch.Tensor]]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute decoded features.
 
@@ -87,26 +87,35 @@ class DecoderLayer(nn.Module):
             torch.Tensor: Encoded memory mask (#batch, maxlen_in).
 
         """
+        if cache is not None:
+            att_cache = cache['self_att_cache']
+            cross_att_cache = cache['cross_att_cache']
+        else:
+            att_cache, cross_att_cache = None, None
+
         residual = tgt
         if self.normalize_before:
             tgt = self.norm1(tgt)
 
-        if cache is None:
+        if att_cache is None:
             tgt_q = tgt
             tgt_q_mask = tgt_mask
+            att_cache = torch.empty(0, 0, 0, 0)
         else:
-            # compute only the last frame query keeping dim: max_time_out -> 1
-            assert cache.shape == (
-                tgt.shape[0],
-                tgt.shape[1] - 1,
-                self.size,
-            ), "{cache.shape} == {(tgt.shape[0], tgt.shape[1] - 1, self.size)}"
             tgt_q = tgt[:, -1:, :]
             residual = residual[:, -1:, :]
             tgt_q_mask = tgt_mask[:, -1:, :]
 
-        x = residual + self.dropout(
-            self.self_attn(tgt_q, tgt, tgt, tgt_q_mask)[0])
+        x, new_att_cache = self.self_attn(
+            tgt_q,
+            tgt_q,
+            tgt_q,
+            tgt_q_mask,
+            cache=att_cache,
+        )
+        if cache is not None:
+            cache['self_att_cache'] = new_att_cache
+        x = residual + self.dropout(x)
         if not self.normalize_before:
             x = self.norm1(x)
 
@@ -114,8 +123,18 @@ class DecoderLayer(nn.Module):
             residual = x
             if self.normalize_before:
                 x = self.norm2(x)
-            x = residual + self.dropout(
-                self.src_attn(x, memory, memory, memory_mask)[0])
+            if cross_att_cache is None:
+                cross_att_cache = torch.empty(0, 0, 0, 0)
+            x, new_cross_cache = self.src_attn(
+                x,
+                memory,
+                memory,
+                memory_mask,
+                cache=cross_att_cache,
+                kv_from_cache=True if cross_att_cache.size(0) > 0 else False)
+            if cache is not None:
+                cache['cross_att_cache'] = new_cross_cache
+            x = residual + self.dropout(x)
             if not self.normalize_before:
                 x = self.norm2(x)
 
@@ -125,8 +144,5 @@ class DecoderLayer(nn.Module):
         x = residual + self.dropout(self.feed_forward(x))
         if not self.normalize_before:
             x = self.norm3(x)
-
-        if cache is not None:
-            x = torch.cat([cache, x], dim=1)
 
         return x, tgt_mask, memory, memory_mask

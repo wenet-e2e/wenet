@@ -14,7 +14,7 @@
 
 import math
 from collections import defaultdict
-from typing import List, Optional, Dict
+from typing import List, Dict
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
@@ -289,7 +289,10 @@ def attention_beam_search(
     scores = scores.to(device).repeat([batch_size
                                        ]).unsqueeze(1).to(device)  # (B*N, 1)
     end_flag = torch.zeros_like(scores, dtype=torch.bool, device=device)
-    cache: Optional[List[torch.Tensor]] = None
+    cache = {
+        'self_att_cache': None,
+        'cross_att_cache': None,
+    }
     if model.decoder.use_sdpa:
         encoder_mask = mask_to_bias(encoder_mask, encoder_out.dtype)
     # 2. Decoder forward step by step
@@ -303,8 +306,8 @@ def attention_beam_search(
         if model.decoder.use_sdpa:
             hyps_mask = mask_to_bias(hyps_mask, encoder_out.dtype)
         # logp: (B*N, vocab)
-        logp, cache = model.decoder.forward_one_step(encoder_out, encoder_mask,
-                                                     hyps, hyps_mask, cache)
+        logp = model.decoder.forward_one_step(encoder_out, encoder_mask, hyps,
+                                              hyps_mask, cache)
         # 2.2 First beam prune: select topk best prob at current time
         top_k_logp, top_k_index = logp.topk(beam_size)  # (B*N, N)
         top_k_logp = mask_finished_scores(top_k_logp, end_flag)
@@ -318,9 +321,10 @@ def attention_beam_search(
         base_cache_index = (torch.arange(batch_size, device=device).view(
             -1, 1).repeat([1, beam_size]) * beam_size).view(-1)  # (B*N)
         cache_index = base_cache_index + cache_index
-        cache = [
-            torch.index_select(c, dim=0, index=cache_index) for c in cache
-        ]
+        cache = {
+            name: torch.index_select(value, dim=0, index=cache_index)
+            for (name, value) in cache
+        }
         scores = scores.view(-1, 1)  # (B*N, 1)
         # 2.4. Compute base index in top_k_index,
         # regard top_k_index as (B*N*N),regard offset_k_index as (B*N),
