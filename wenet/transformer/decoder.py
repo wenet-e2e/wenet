@@ -220,7 +220,7 @@ class TransformerDecoder(torch.nn.Module):
             self_att_cache = cache['self_att_cache'][:, i] if cache[
                 'self_att_cache'] is not None else None
             cross_att_cache = cache['cross_att_cache'][:, i] if cache[
-                'cross_att_cache_list'] is not None else None
+                'cross_att_cache'] is not None else None
             c = {
                 'self_att_cache': self_att_cache,
                 'cross_att_cache': cross_att_cache,

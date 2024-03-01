@@ -323,7 +323,7 @@ def attention_beam_search(
         cache_index = base_cache_index + cache_index
         cache = {
             name: torch.index_select(value, dim=0, index=cache_index)
-            for (name, value) in cache
+            for (name, value) in cache.items()
         }
         scores = scores.view(-1, 1)  # (B*N, 1)
         # 2.4. Compute base index in top_k_index,
