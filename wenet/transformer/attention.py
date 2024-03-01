@@ -55,7 +55,7 @@ class MultiHeadedAttention(nn.Module):
         self.use_sdpa = use_sdpa
         self.dropout_rate = dropout_rate
 
-    def _forward_linearx(self, n_batch: int, x: torch.Tensor, name):
+    def _forward_linearx(self, n_batch: int, x: torch.Tensor, name: str):
         if name == 'q':
             out = self.linear_q(x).view(n_batch, -1, self.h, self.d_k)
         elif name == 'k':
