@@ -310,10 +310,10 @@ def compute_log_mel_spectrogram(sample,
         waveform = F.pad(waveform, (0, padding))
     if pad_or_trim:
         length = max_duration * sample_rate
-        if waveform.size(1) >= length:
-            waveform = waveform[:, :length]
+        if waveform.size(0) >= length:
+            waveform = waveform[:length]
         else:
-            waveform = F.pad(waveform, (0, length - waveform.size(1)))
+            waveform = F.pad(waveform, (0, length - waveform.size(0)))
 
     window = torch.hann_window(n_fft)
     stft = torch.stft(waveform,
