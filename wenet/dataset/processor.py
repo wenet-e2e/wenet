@@ -107,22 +107,6 @@ def detect_task(sample):
     return sample
 
 
-def pad_or_trim_wav(sample, max_duration=30):
-    assert "wav" in sample
-    assert 'sample_rate' in sample
-    assert sample['sample_rate'] == 16000
-    length = max_duration * 16000
-    wav = sample['wav']
-    assert isinstance(wav, torch.Tensor)
-    if wav.size(1) >= length:
-        sample['wav'] = wav[:, :length]
-    else:
-        pad_zeros = [[0.0] * (length - wav.size(1))]
-        pad_zeros = torch.tensor(pad_zeros).detach()
-        sample['wav'] = torch.cat([wav, pad_zeros], dim=-1)
-    return sample
-
-
 def decode_wav(sample):
     """ Parse key/wav/txt from json line
 
@@ -303,13 +287,16 @@ def compute_log_mel_spectrogram(sample,
                                 n_fft=400,
                                 hop_length=160,
                                 num_mel_bins=80,
-                                padding=0):
+                                padding=0,
+                                pad_or_trim: bool = False,
+                                max_duration: int = 30):
     """ Extract log mel spectrogram, modified from openai-whisper, see:
         - https://github.com/openai/whisper/blob/main/whisper/audio.py
         - https://github.com/wenet-e2e/wenet/pull/2141#issuecomment-1811765040
 
         Args:
             sample: {key, wav, sample_rate, ...}
+            max_duration: valid when pad_or_trim is True (orign whisper style)
 
         Returns:
             {key, feat, wav, sample_rate, ...}
@@ -321,6 +308,13 @@ def compute_log_mel_spectrogram(sample,
     waveform = sample['wav'].squeeze(0)  # (channel=1, sample) -> (sample,)
     if padding > 0:
         waveform = F.pad(waveform, (0, padding))
+    if pad_or_trim:
+        length = max_duration * sample_rate
+        if waveform.size(1) >= length:
+            waveform = waveform[:, :length]
+        else:
+            waveform = F.pad(waveform, (0, length - waveform.size(1)))
+
     window = torch.hann_window(n_fft)
     stft = torch.stft(waveform,
                       n_fft,
