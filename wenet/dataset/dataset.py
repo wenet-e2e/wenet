@@ -47,6 +47,9 @@ def Dataset(data_type,
         dataset = WenetTarShardDatasetSource(data_list_file,
                                              partition=partition)
     dataset = dataset.map_ignore_error(processor.decode_wav)
+    wav_conf = conf.get('wav_conf', None)
+    if wav_conf is not None and wav_conf.get('pad_or_trim', False):
+        dataset = dataset.map(processor.pad_or_trim_wav)
 
     speaker_conf = conf.get('speaker_conf', None)
     if speaker_conf is not None:

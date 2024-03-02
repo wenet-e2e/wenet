@@ -107,6 +107,22 @@ def detect_task(sample):
     return sample
 
 
+def pad_or_trim_wav(sample, max_duration=30):
+    assert "wav" in sample
+    assert 'sample_rate' in sample
+    assert sample['sample_rate'] == 16000
+    length = max_duration * 16000
+    wav = sample['wav']
+    assert isinstance(wav, torch.Tensor)
+    if wav.size(1) >= length:
+        sample['wav'] = wav[:, :length]
+    else:
+        pad_zeros = [[0.0] * (length - wav.size(1))]
+        pad_zeros = torch.tensor(pad_zeros).detach()
+        sample['wav'] = torch.cat([wav, pad_zeros], dim=-1)
+    return sample
+
+
 def decode_wav(sample):
     """ Parse key/wav/txt from json line
 
