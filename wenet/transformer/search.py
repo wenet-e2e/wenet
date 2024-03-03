@@ -290,8 +290,8 @@ def attention_beam_search(
                                        ]).unsqueeze(1).to(device)  # (B*N, 1)
     end_flag = torch.zeros_like(scores, dtype=torch.bool, device=device)
     cache = {
-        'self_att_cache': None,
-        'cross_att_cache': None,
+        'self_att_cache': {},
+        'cross_att_cache': {},
     }
     if model.decoder.use_sdpa:
         encoder_mask = mask_to_bias(encoder_mask, encoder_out.dtype)
@@ -321,10 +321,21 @@ def attention_beam_search(
         base_cache_index = (torch.arange(batch_size, device=device).view(
             -1, 1).repeat([1, beam_size]) * beam_size).view(-1)  # (B*N)
         cache_index = base_cache_index + cache_index
-        cache = {
-            name: torch.index_select(value, dim=0, index=cache_index)
-            for (name, value) in cache.items()
+        # cache = {
+        #     name: torch.index_select(value, dim=0, index=cache_index)
+        #     for (name, value) in cache.items()
+        # }
+        assert cache['self_att_cache'] is not None
+        assert cache['cross_att_cache'] is not None
+        cache['self_att_cache'] = {
+            i_layer: torch.index_select(value, dim=0, index=cache_index)
+            for (i_layer, value) in cache['self_att_cache'].items()
         }
+        cache['cross_att_cache'] = {
+            i_layer: torch.index_select(value, dim=0, index=cache_index)
+            for (i_layer, value) in cache['cross_att_cache'].items()
+        }
+
         scores = scores.view(-1, 1)  # (B*N, 1)
         # 2.4. Compute base index in top_k_index,
         # regard top_k_index as (B*N*N),regard offset_k_index as (B*N),
