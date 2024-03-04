@@ -46,6 +46,7 @@ class Whisper(ASRModel):
         assert reverse_weight == 0.0
         self.sos = special_tokens["sot"]
         self.eos = special_tokens["eot"]
+        self.decode_maxlen = self.decoder.embed[1].max_len
 
     # TODO(xcsong): time align
     def set_alignment_heads(self, dump: bytes):
