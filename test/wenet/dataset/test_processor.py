@@ -1,9 +1,11 @@
-import json
+from functools import partial
 import pytest
-from torchaudio._extension import torchaudio
-from whisper import torch
+import torch
+from torch.utils.data import datapipes
+import torchaudio
 
 from wenet.dataset import processor
+from wenet.dataset.datapipes import SortDataPipe  # noqa
 from wenet.utils.init_tokenizer import init_tokenizer
 
 
@@ -151,7 +153,7 @@ def test_tokenize(symbol_table_path):
         configs['tokenizer'] = 'char'
 
     tokenizer = init_tokenizer(configs)
-    outs = processor.tokenize(txts, tokenizer)
+    outs = [processor.tokenize(txt, tokenizer) for txt in txts]
     for (hyp, ref) in zip(outs, refs):
         assert (len(hyp["tokens"]) == len(ref["tokens"]))
         assert (all(h == r for h, r in zip(hyp["tokens"], ref["tokens"])))
@@ -159,45 +161,98 @@ def test_tokenize(symbol_table_path):
         assert (all(h == r for h, r in zip(hyp["label"], ref["label"])))
 
 
-def _get_records(raw_file_path):
-    records = []
-    with open(raw_file_path, 'r') as f:
-        for line in f:
-            json_line = line.strip('\n')
-            records.append({'src': json_line})
-    return records
+def test_filter():
+    input = [
+        {
+            'wav': torch.rand(1, 10 * 16000),
+            'sample_rate': 16000
+        },
+        {
+            'wav': torch.rand(1, 10000 * 16000),
+            'sample_rate': 16000
+        },
+    ]
+
+    dataset = datapipes.iter.IterableWrapper(input)
+    dataset = dataset.filter(partial(processor.filter, max_length=1000))
+    expected = [input[0]]
+    result = []
+    for d in dataset:
+        result.append(d)
+
+    assert len(expected) == len(result)
+    for r, e in zip(result, expected):
+        assert r.keys() == e.keys()
+        assert torch.allclose(r['wav'], e['wav'])
+        assert r['sample_rate'] == e['sample_rate']
 
 
-@pytest.mark.parametrize("raw_file_path", ["test/resources/dataset/data.list"])
-def test_parse_raw(raw_file_path):
+@pytest.mark.parametrize("wav_file", [
+    "test/resources/aishell-BAC009S0724W0121.wav",
+    "test/resources/librispeech-1995-1837-0001.wav",
+])
+def test_compute_fbank(wav_file):
+    waveform, sample_rate = torchaudio.load(wav_file, normalize=False)
+    waveform = waveform.to(torch.float)
+    assert sample_rate == 16000
+    fbank_args = {
+        "num_mel_bins": 80,
+        "frame_length": 25,
+        "frame_shift": 10,
+        "dither": 0.0,
+        "energy_floor": 0.0,
+        "sample_frequency": 16000
+    }
+    mat = torchaudio.compliance.kaldi.fbank(waveform=waveform, **fbank_args)
 
-    records = _get_records(raw_file_path)
-    raw_processor = processor.parse_raw(records)
-    for (ori, processed) in zip(records, raw_processor):
-        ori = json.loads(ori['src'])
-        assert ori['key'] == processed['key']
-        ori_waveform, ori_sample_rate = torchaudio.load(ori['wav'])
-        processed_waveform = processed['wav']
-        assert torch.allclose(ori_waveform, processed_waveform)
-        assert ori_sample_rate == processed['sample_rate']
-        assert processed['txt'] == ori['txt']
+    fbank_args.pop("energy_floor")
+    fbank_args.pop("sample_frequency")
+    input = {
+        'wav': torchaudio.load(wav_file)[0],
+        'sample_rate': 16000,
+        'key': wav_file,
+    }
+    assert torch.allclose(
+        processor.compute_fbank(input, **fbank_args)['feat'], mat)
 
 
-@pytest.mark.parametrize(
-    "shard_path", ["test/resources/dataset/shards/shards_000000000.tar"])
-def test_tar_file_and_group(shard_path):
-    # TODO: paramemter
-    raw_file_path = 'test/resources/dataset/data.list'
-    records = _get_records(raw_file_path)
+def test_sort_by_feats():
+    samples = [
+        {
+            "feat": torch.ones(1000, 80)
+        },
+        {
+            "feat": torch.ones(100, 80)
+        },
+        {
+            "feat": torch.ones(10, 80)
+        },
+        {
+            "feat": torch.ones(1, 80)
+        },
+    ]
+    expected = [
+        {
+            "feat": torch.ones(1, 80)
+        },
+        {
+            "feat": torch.ones(10, 80)
+        },
+        {
+            "feat": torch.ones(100, 80)
+        },
+        {
+            "feat": torch.ones(1000, 80)
+        },
+    ]
 
-    tar_iter = iter([{'stream': open(shard_path, 'rb')}])
-    tar_processor = processor.tar_file_and_group(tar_iter)
-    for (ori, processed) in zip(records, tar_processor):
-        print(processed)
-        ori = json.loads(ori['src'])
-        assert ori['key'] == processed['key']
-        ori_waveform, ori_sample_rate = torchaudio.load(ori['wav'])
-        processed_waveform = processed['wav']
-        assert torch.allclose(ori_waveform, processed_waveform)
-        assert ori_sample_rate == processed['sample_rate']
-        assert processed['txt'] == ori['txt']
+    dataset = datapipes.iter.IterableWrapper(samples)
+    dataset = dataset.sort(key_func=processor.sort_by_feats)
+
+    results = []
+    for d in dataset:
+        results.append(d)
+    assert len(results) == len(samples)
+    assert all(
+        torch.allclose(r['feat'], h['feat'])
+        for (r, h) in zip(expected, results))

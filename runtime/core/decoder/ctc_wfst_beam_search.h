@@ -55,6 +55,7 @@ struct CtcWfstBeamSearchOptions : public kaldi::LatticeFasterDecoderConfig {
   // search
   float blank_skip_thresh = 0.98;
   float blank_scale = 1.0;
+  int blank = 0;
 };
 
 class CtcWfstBeamSearch : public SearchInterface {

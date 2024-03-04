@@ -175,7 +175,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     --checkpoint $decode_checkpoint \
     --beam_size 10 \
     --batch_size 32 \
-    --penalty 0.0 \
+    --blank_penalty 0.0 \
     --ctc_weight $rescore_ctc_weight \
     --transducer_weight $rescore_transducer_weight \
     --attn_weight $rescore_attn_weight \

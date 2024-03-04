@@ -13,10 +13,11 @@ flake8-pyi==20.5.0
 mccabe
 pycodestyle==2.6.0
 pyflakes==2.2.0
-torch==2.1.2
-torchaudio==2.1.2
+torch>=2.1.2
+torchaudio>=2.1.2
 tqdm
 deepspeed<0.13.0
 librosa
 openai-whisper
 pre-commit==3.5.0
+langid

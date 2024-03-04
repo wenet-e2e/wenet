@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# Copyright 2021  Mobvoi Inc(Author: Di Wu, Binbin Zhang)
-#                 NPU, ASLP Group (Author: Qijie Shao)
-
+# Copyright 2019 Mobvoi Inc. All Rights Reserved.
 . ./path.sh || exit 1;
 
 # Automatically detect number of gpus
@@ -28,129 +26,66 @@ else
 fi
 echo "Parsed device_ids: ${device_ids[@]}"
 
-stage=4
-stop_stage=5
+stage=0
+stop_stage=2
 
 # You should change the following two parameters for multiple machine training,
 # see https://pytorch.org/docs/stable/elastic/run.html
 HOST_NODE_ADDR="localhost:0"
 num_nodes=1
+job_id=2024
 
-# Use your own data path. You need to download the WenetSpeech dataset by yourself.
-wenetspeech_data_dir=/ssd/nfs07/binbinzhang/wenetspeech
-# Make sure you have 1.2T for ${shards_dir}
-shards_dir=/ssd/nfs06/unified_data/wenetspeech_shards
+# data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
+# `shard` is used for large dataset which is over 1k hours, and `shard` is
+# faster on reading data and training.
+data_type=shard
 
-# WenetSpeech training set
-set=L
-train_set=train_`echo $set | tr 'A-Z' 'a-z'`
+train_set=train_l
 dev_set=dev
 test_sets="test_net test_meeting"
 
-# NOTE(xcsong): we use step_save instead of epoch_save for large datasets
 epoch=100
+train_config=conf/finetune_whisper_largev3.yaml
+checkpoint=exp/whisper/large-v3/wenet_whisper.init-ctc.pt
+dir=exp/finetune_whisper_largev3
+tensorboard_dir=tensorboard
+num_workers=1
+prefetch=500
 
-train_config=conf/train_u2++_conformer.yaml
-checkpoint=
-dir=exp/u2pp_conformer
-
-cmvn_sampling_divisor=20 # 20 means 5% of the training data to estimate cmvn
-
-decode_checkpoint=
+# use average_checkpoint will get better result
 average_checkpoint=true
+decode_checkpoint=$dir/final.pt
 average_num=5
 average_mode=step
 max_step=88888888
 decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
-
-train_engine=torch_ddp
-
-deepspeed_config=../whisper/conf/ds_stage1.json
-deepspeed_save_states="model+optimizer"
-
-dict=data/dict/lang_char.txt
-decoding_chunk_size=
+decoding_chunk_size=-1
 ctc_weight=0.5
 reverse_weight=0.0
 blank_penalty=0.0
 length_penalty=0.0
-decode_batch=16
+decode_batch=4
+
+train_engine=deepspeed
+
+# model+optimizer or model_only, model+optimizer is more time-efficient but
+# consumes more space, while model_only is the opposite
+deepspeed_config=conf/ds_stage1.json
+deepspeed_save_states="model+optimizer"
 
 . tools/parse_options.sh || exit 1;
 
-set -u
-set -o pipefail
-
-# Data download
-if [ ${stage} -le -1 ] && [ ${stop_stage} -ge -1 ]; then
-    echo "Please follow https://github.com/wenet-e2e/WenetSpeech to download the data."
-    exit 0;
-fi
-
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
-  echo "Data preparation"
-  local/wenetspeech_data_prep.sh \
-    --train-subset $set \
-    $wenetspeech_data_dir \
-    data || exit 1;
-fi
-
-if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
-    echo "Make a dictionary"
-    echo "dictionary: ${dict}"
-    mkdir -p $(dirname $dict)
-    echo "<blank> 0" > ${dict} # 0 will be used for "blank" in CTC
-    echo "<unk> 1" >> ${dict} # <unk> must be 1
-    echo "<sos/eos> 2" >> $dict
-    echo "▁ 3" >> ${dict} # ▁ is for space
-    tools/text2token.py -s 1 -n 1 --space "▁" data/${train_set}/text \
-        | cut -f 2- -d" " | tr " " "\n" \
-        | sort | uniq | grep -a -v -e '^\s*$' \
-        | grep -v "▁" \
-        | awk '{print $0 " " NR+3}' >> ${dict} \
-        || exit 1;
-fi
-
-if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
-  echo "Compute cmvn"
-  # Here we use all the training data, you can sample some some data to save time
-  # BUG!!! We should use the segmented data for CMVN
-  full_size=`cat data/${train_set}/wav.scp | wc -l`
-  sampling_size=$((full_size / cmvn_sampling_divisor))
-  shuf -n $sampling_size data/$train_set/wav.scp \
-    > data/$train_set/wav.scp.sampled
-  python3 tools/compute_cmvn_stats.py \
-  --num_workers 16 \
-  --train_config $train_config \
-  --in_scp data/$train_set/wav.scp.sampled \
-  --out_cmvn data/$train_set/global_cmvn
-fi
-
-if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
-  echo "Making shards, please wait..."
-  RED='\033[0;31m'
-  NOCOLOR='\033[0m'
-  echo -e "It requires ${RED}1.2T ${NOCOLOR}space for $shards_dir, please make sure you have enough space"
-  echo -e "It takes about ${RED}12 ${NOCOLOR}hours with 32 threads"
-  for x in $dev_set $test_sets ${train_set}; do
-    dst=$shards_dir/$x
-    mkdir -p $dst
-    tools/make_shard_list.py --resample 16000 --num_utts_per_shard 1000 \
-      --num_threads 32 --segments data/$x/segments \
-      data/$x/wav.scp data/$x/text \
-      $(realpath $dst) data/$x/data.list
-  done
-fi
-
-if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
-  echo "Start training"
   mkdir -p $dir
   num_gpus=$(echo $CUDA_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "nccl" if it works, otherwise use "gloo"
+  # NOTE(xcsong): deepspeed fails with gloo, see
+  #   https://github.com/microsoft/DeepSpeed/issues/2818
   dist_backend="nccl"
-  # train.py will write $train_config to $dir/train.yaml with model input
-  # and output dimension, train.yaml will be used for inference or model
-  # export later
+
+  # train.py rewrite $train_config to $dir/train.yaml with model input
+  # and output dimension, and $dir/train.yaml will be used for inference
+  # and export.
   if [ ${train_engine} == "deepspeed" ]; then
     echo "$0: using deepspeed"
   else
@@ -170,39 +105,75 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "${train_data} already exists."
   fi
 
+  # NOTE(xcsong): Both ddp & deepspeed can be launched by torchrun
+  # NOTE(xcsong): To unify single-node & multi-node training, we add
+  #               all related args. You should change `nnodes` &
+  #               `rdzv_endpoint` for multi-node, see
+  #               https://pytorch.org/docs/stable/elastic/run.html#usage
+  #               https://github.com/wenet-e2e/wenet/pull/2055#issuecomment-1766055406
+  #               `rdzv_id` - A user-defined id that uniquely identifies the worker group for a job.
+  #                           This id is used by each node to join as a member of a particular worker group.
+  #               `rdzv_endpoint` - The rendezvous backend endpoint; usually in form <host>:<port>.
+  # NOTE(xcsong): In multi-node training, some clusters require special NCCL variables to set prior to training.
+  #               For example: `NCCL_IB_DISABLE=1` + `NCCL_SOCKET_IFNAME=enp` + `NCCL_DEBUG=INFO`
+  #               without NCCL_IB_DISABLE=1
+  #                   RuntimeError: NCCL error in: ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:1269, internal error, NCCL Version xxx
+  #               without NCCL_SOCKET_IFNAME=enp  (IFNAME could be get by `ifconfig`)
+  #                   RuntimeError: The server socket has failed to listen on any local network address. The server socket has failed to bind to [::]:xxx
+  #               ref: https://github.com/google/jax/issues/13559#issuecomment-1343573764
   echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
-  torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
-           --rdzv_id=2023 --rdzv_backend="c10d" \
+  torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus \
+           --rdzv_id=$job_id --rdzv_backend="c10d" --rdzv_endpoint=$HOST_NODE_ADDR \
     wenet/bin/train.py \
       --train_engine ${train_engine} \
       --config $train_config \
-      --data_type "shard" \
+      --data_type  $data_type \
       --train_data ${train_data} \
       --cv_data data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
+      --tensorboard_dir ${tensorboard_dir} \
       --ddp.dist_backend $dist_backend \
-      --num_workers 2 \
+      --num_workers ${num_workers} \
+      --prefetch ${prefetch} \
       --pin_memory \
+      --timeout 1200 \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
 fi
 
-if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
-  echo "Test model"
+if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
+  if [ "$deepspeed_save_states" = "model+optimizer" ]; then
+    for subdir in $(find "$dir" -maxdepth 1 -type d | grep -v "^$dir$")
+    do
+      if [ $(find "$subdir" -mindepth 1 -type d | wc -l) -eq 0 ]; then
+        # NOTE(xcsong): zero_to_fp32.py is automatically generated by deepspeed
+        tag=$(basename "$subdir")
+        echo "$tag"
+        python3 ${dir}/zero_to_fp32.py \
+          ${dir} ${dir}/${tag}.pt -t ${tag}
+        rm -rf ${dir}/${tag}
+      fi
+    done
+  fi
+fi
+
+if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
+  # Test model, please specify the model you want to test by --checkpoint
   if [ ${average_checkpoint} == true ]; then
     decode_checkpoint=$dir/avg${average_num}_mode${average_mode}_max${max_step}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
     python wenet/bin/average_model.py \
-        --dst_model $decode_checkpoint \
-        --src_path $dir  \
-        --num ${average_num} \
-        --mode ${average_mode} \
-        --max_step ${max_step} \
-        --val_best
+      --dst_model $decode_checkpoint \
+      --src_path $dir  \
+      --num ${average_num} \
+      --mode ${average_mode} \
+      --max_step ${max_step} \
+      --val_best
   fi
-  # Specify decoding_chunk_size if it's a unified dynamic chunk trained model
-  # -1 for full chunk
+  # Please specify decoding_chunk_size for unified streaming and
+  # non-streaming model. The default value is -1, which is full chunk
+  # for non-streaming inference.
   i=0
   for testset in ${test_sets} ${dev_set}; do
   {
@@ -214,7 +185,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
     python wenet/bin/recognize.py --gpu ${device_id} \
       --modes $decode_modes \
       --config $dir/train.yaml \
-      --data_type "shard" \
+      --data_type $data_type \
       --test_data data/$testset/data.list \
       --checkpoint $decode_checkpoint \
       --beam_size 10 \
@@ -226,7 +197,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
       --result_dir $result_dir \
       ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size} &
     ((i++))
-    if [[ $device_id -eq $((num_gpus - 1)) ]]; then
+    if [[ $device_id -eq $((num_gpu - 1)) ]]; then
       wait
     fi
   }
@@ -245,10 +216,12 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
   done
 fi
 
-if [ ${stage} -le 6 ] && [ ${stop_stage} -ge 6 ]; then
-  echo "Export the best model you want"
+
+if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
+  # Export the best model you want
   python wenet/bin/export_jit.py \
     --config $dir/train.yaml \
     --checkpoint $dir/avg_${average_num}.pt \
-    --output_file $dir/final.zip
+    --output_file $dir/final.zip \
+    --output_quant_file $dir/final_quant.zip
 fi

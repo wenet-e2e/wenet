@@ -124,8 +124,10 @@ class Transducer(ASRModel):
         # optional attention decoder
         loss_att: Optional[torch.Tensor] = None
         if self.attention_decoder_weight != 0.0 and self.decoder is not None:
-            loss_att, _ = self._calc_att_loss(encoder_out, encoder_mask, text,
-                                              text_lengths)
+            loss_att, acc_att = self._calc_att_loss(encoder_out, encoder_mask,
+                                                    text, text_lengths)
+        else:
+            acc_att = None
 
         # optional ctc
         loss_ctc: Optional[torch.Tensor] = None
@@ -145,6 +147,7 @@ class Transducer(ASRModel):
             'loss_att': loss_att,
             'loss_ctc': loss_ctc,
             'loss_rnnt': loss_rnnt,
+            'th_accuracy': acc_att,
         }
 
     def init_bs(self):

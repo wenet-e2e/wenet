@@ -16,7 +16,7 @@
 
 import torch
 
-from typing import Tuple
+from typing import Tuple, Dict, List
 
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
@@ -46,6 +46,7 @@ class Whisper(ASRModel):
         assert reverse_weight == 0.0
         self.sos = special_tokens["sot"]
         self.eos = special_tokens["eot"]
+        self.decode_maxlen = self.decoder.embed[1].max_len
 
     # TODO(xcsong): time align
     def set_alignment_heads(self, dump: bytes):
@@ -65,15 +66,15 @@ class Whisper(ASRModel):
         encoder_mask: torch.Tensor,
         ys_pad: torch.Tensor,
         ys_pad_lens: torch.Tensor,
+        infos: Dict[str, List[str]],
     ) -> Tuple[torch.Tensor, float]:
-        # TODO(xcsong): add args for no_timestamp, language, etc
         prev_len = ys_pad.size(1)
         ys_in_pad, ys_out_pad = add_whisper_tokens(self.special_tokens,
                                                    ys_pad,
                                                    self.ignore_id,
-                                                   task="transcribe",
+                                                   tasks=infos['tasks'],
                                                    no_timestamp=True,
-                                                   language="zh",
+                                                   langs=infos['langs'],
                                                    use_prev=False)
         cur_len = ys_in_pad.size(1)
         ys_in_lens = ys_pad_lens + cur_len - prev_len

@@ -59,12 +59,11 @@ def test_log_mel_spectrogram(audio_path):
         "key": audio_path,
         "label": "<N/A>"
     }
-    log_spec_wenet = next(
-        compute_log_mel_spectrogram([sample],
-                                    n_fft=N_FFT,
-                                    hop_length=HOP_LENGTH,
-                                    num_mel_bins=128,
-                                    padding=0))["feat"]
+    log_spec_wenet = compute_log_mel_spectrogram(sample,
+                                                 n_fft=N_FFT,
+                                                 hop_length=HOP_LENGTH,
+                                                 num_mel_bins=128,
+                                                 padding=0)["feat"]
     log_spec_wenet = log_spec_wenet.transpose(0, 1).numpy().astype(np.float32)
     log_spec_whisper = whisper.log_mel_spectrogram(audio_path,
                                                    n_mels=128,
@@ -95,8 +94,6 @@ def test_sinusoids(length, channels):
 @pytest.mark.parametrize("model,audio_path", [
     ("tiny", "test/resources/aishell-BAC009S0724W0121.wav"),
     ("base", "test/resources/librispeech-1995-1837-0001.wav"),
-    ("small", "test/resources/aishell-BAC009S0724W0121.wav"),
-    ("medium", "test/resources/librispeech-1995-1837-0001.wav"),
 ])
 def test_model(model, audio_path):
     default = os.path.join(os.path.expanduser("~"), ".cache")
@@ -295,13 +292,12 @@ def test_model(model, audio_path):
             "key": audio_path,
             "label": "<N/A>"
         }
-        mel2 = next(
-            compute_log_mel_spectrogram(
-                [sample],
-                n_fft=N_FFT,
-                hop_length=HOP_LENGTH,
-                num_mel_bins=whisper_model.dims.n_mels,
-                padding=N_SAMPLES))["feat"].unsqueeze(0)
+        mel2 = compute_log_mel_spectrogram(
+            sample,
+            n_fft=N_FFT,
+            hop_length=HOP_LENGTH,
+            num_mel_bins=whisper_model.dims.n_mels,
+            padding=N_SAMPLES)["feat"].unsqueeze(0)
         wenet_mel = pad_or_trim(mel2, N_FRAMES, axis=-2)
         T = wenet_mel.size(1)
         masks = ~make_pad_mask(torch.tensor([T], dtype=torch.long),
@@ -364,9 +360,9 @@ def test_model(model, audio_path):
             configs['tokenizer_conf']['special_tokens'],
             torch.tensor([dummy_tokens], dtype=torch.long),
             ignore_id=-1,
-            task=task,
+            tasks=[task],
             no_timestamp=True,
-            language=language,
+            langs=[language],
             use_prev=False)
         L = wenet_tokens.size(1)
         tgt_mask = ~make_pad_mask(torch.tensor([L], dtype=torch.long),

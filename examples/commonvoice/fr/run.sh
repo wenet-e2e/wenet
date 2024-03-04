@@ -196,7 +196,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
           --checkpoint $decode_checkpoint \
           --beam_size 20 \
           --batch_size 1 \
-          --penalty 0.0 \
+          --blank_penalty 0.0 \
           --dict $dict \
           --result_file $test_dir/text_bpe \
           --ctc_weight $ctc_weight \

@@ -26,6 +26,7 @@ from wenet.utils.class_utils import (
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
 )
+from wenet.utils.common import mask_to_bias
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
 
 
@@ -73,6 +74,7 @@ class TransformerDecoder(torch.nn.Module):
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
+        use_sdpa: bool = False,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -98,10 +100,10 @@ class TransformerDecoder(torch.nn.Module):
                 attention_dim,
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim,
-                    self_attention_dropout_rate, key_bias),
+                    self_attention_dropout_rate, key_bias, use_sdpa),
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
-                    key_bias) if src_attention else None,
+                    key_bias, use_sdpa) if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
                                         dropout_rate, activation),
                 dropout_rate,
@@ -111,6 +113,7 @@ class TransformerDecoder(torch.nn.Module):
 
         self.gradient_checkpointing = gradient_checkpointing
         self.tie_word_embedding = tie_word_embedding
+        self.use_sdpa = use_sdpa
 
     def forward(
         self,
@@ -152,6 +155,10 @@ class TransformerDecoder(torch.nn.Module):
                             device=tgt_mask.device).unsqueeze(0)
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
+        if self.use_sdpa:
+            tgt_mask = mask_to_bias(tgt_mask, tgt.dtype)
+            memory_mask = mask_to_bias(memory_mask, memory_mask.dtype)
+
         x, _ = self.embed(tgt)
         if self.gradient_checkpointing and self.training:
             x = self.forward_layers_checkpointed(x, tgt_mask, memory,
@@ -290,9 +297,11 @@ class BiTransformerDecoder(torch.nn.Module):
         key_bias: bool = True,
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
+        use_sdpa: bool = False,
     ):
 
         super().__init__()
+        self.use_sdpa = use_sdpa
         self.tie_word_embedding = tie_word_embedding
         self.left_decoder = TransformerDecoder(
             vocab_size,
@@ -309,7 +318,8 @@ class BiTransformerDecoder(torch.nn.Module):
             normalize_before,
             key_bias=key_bias,
             gradient_checkpointing=gradient_checkpointing,
-            tie_word_embedding=tie_word_embedding)
+            tie_word_embedding=tie_word_embedding,
+            use_sdpa=use_sdpa)
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -326,7 +336,8 @@ class BiTransformerDecoder(torch.nn.Module):
             normalize_before,
             key_bias=key_bias,
             gradient_checkpointing=gradient_checkpointing,
-            tie_word_embedding=tie_word_embedding)
+            tie_word_embedding=tie_word_embedding,
+            use_sdpa=use_sdpa)
 
     def forward(
         self,

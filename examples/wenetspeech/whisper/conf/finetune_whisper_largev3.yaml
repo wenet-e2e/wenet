@@ -5,7 +5,7 @@ encoder_conf:
   attention_heads: 20
   dropout_rate: 0.0
   gradient_checkpointing: true
-  input_layer: conv2d  # NOTE(xcsong): conv1d2, conv2d, conv2d8
+  input_layer: conv1d2  # NOTE(xcsong): conv1d2, conv2d, conv2d8
   key_bias: false
   linear_units: 5120
   normalize_before: true
@@ -55,7 +55,7 @@ tokenizer_conf:
 
 ctc: ctc
 ctc_conf:
-  ctc_blank_id: 50256
+  ctc_blank_id: 50363
 
 cmvn: null
 cmvn_conf:
@@ -64,7 +64,7 @@ cmvn_conf:
 
 model: whisper
 model_conf:
-  ctc_weight: 0.0
+  ctc_weight: 0.3
   length_normalized_loss: false
   lsm_weight: 0.1
 
@@ -104,12 +104,13 @@ dataset_conf:
     max_t: 30
     num_t_sub: 3
   spec_trim: false
-  speed_perturb: true
+  speed_perturb: false
 
 grad_clip: 5
-accum_grad: 1
-max_epoch: 30
+accum_grad: 8
+max_epoch: 1  # NOTE(xcsong): Configure the epoch in run.sh
 log_interval: 100
+save_interval: 1000  # NOTE(xcsong): we use step_save instead of epoch_save for large datasets
 
 optim: adam
 optim_conf:

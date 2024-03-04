@@ -77,7 +77,7 @@ void CtcWfstBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
   }
   // Every time we get the log posterior, we decode it all before return
   for (int i = 0; i < logp.size(); i++) {
-    float blank_score = std::exp(logp[i][0]);
+    float blank_score = std::exp(logp[i][opts_.blank]);
     if (blank_score > opts_.blank_skip_thresh * opts_.blank_scale) {
       VLOG(3) << "skipping frame " << num_frames_ << " score " << blank_score;
       is_last_frame_blank_ = true;
@@ -88,7 +88,8 @@ void CtcWfstBeamSearch::Search(const std::vector<std::vector<float>>& logp) {
           std::max_element(logp[i].begin(), logp[i].end()) - logp[i].begin();
       // Optional, adding one blank frame if we has skipped it in two same
       // symbols
-      if (cur_best != 0 && is_last_frame_blank_ && cur_best == last_best_) {
+      if (cur_best != opts_.blank && is_last_frame_blank_ &&
+          cur_best == last_best_) {
         decodable_.AcceptLoglikes(last_frame_prob_);
         decoder_.AdvanceDecoding(&decodable_, 1);
         decoded_frames_mapping_.push_back(num_frames_ - 1);
@@ -168,7 +169,7 @@ void CtcWfstBeamSearch::ConvertToInputs(const std::vector<int>& alignment,
   if (time != nullptr) time->clear();
   for (int cur = 0; cur < alignment.size(); ++cur) {
     // ignore blank
-    if (alignment[cur] - 1 == 0) continue;
+    if (alignment[cur] - 1 == opts_.blank) continue;
     // merge continuous same label
     if (cur > 0 && alignment[cur] == alignment[cur - 1]) continue;
 

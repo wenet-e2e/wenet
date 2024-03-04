@@ -218,9 +218,14 @@ class Paraformer(ASRModel):
         }
 
     def _calc_att_loss(
-            self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
-            ys_pad: torch.Tensor, ys_pad_emb: torch.Tensor,
-            ys_pad_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        self,
+        encoder_out: torch.Tensor,
+        encoder_mask: torch.Tensor,
+        ys_pad: torch.Tensor,
+        ys_pad_emb: torch.Tensor,
+        ys_pad_lens: torch.Tensor,
+        infos: Dict[str, List[str]] = None,
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         decoder_out, _, _ = self.decoder(encoder_out, encoder_mask, ys_pad_emb,
                                          ys_pad_lens)
         loss_att = self.criterion_att(decoder_out, ys_pad)
@@ -350,19 +355,23 @@ class Paraformer(ASRModel):
             "decoder_out_lens": token_num
         }
 
-    def decode(self,
-               methods: List[str],
-               speech: torch.Tensor,
-               speech_lengths: torch.Tensor,
-               beam_size: int,
-               decoding_chunk_size: int = -1,
-               num_decoding_left_chunks: int = -1,
-               ctc_weight: float = 0,
-               simulate_streaming: bool = False,
-               reverse_weight: float = 0,
-               context_graph=None,
-               blank_id: int = 0,
-               blank_penalty: float = 0.0) -> Dict[str, List[DecodeResult]]:
+    def decode(
+        self,
+        methods: List[str],
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        beam_size: int,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        ctc_weight: float = 0,
+        simulate_streaming: bool = False,
+        reverse_weight: float = 0,
+        context_graph=None,
+        blank_id: int = 0,
+        blank_penalty: float = 0.0,
+        length_penalty: float = 0.0,
+        infos: Dict[str, List[str]] = None,
+    ) -> Dict[str, List[DecodeResult]]:
         res = self._forward_paraformer(speech, speech_lengths,
                                        decoding_chunk_size,
                                        num_decoding_left_chunks)
