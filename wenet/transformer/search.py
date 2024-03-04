@@ -292,6 +292,8 @@ def attention_beam_search(
     cache: Optional[List[torch.Tensor]] = None
     if model.decoder.use_sdpa:
         encoder_mask = mask_to_bias(encoder_mask, encoder_out.dtype)
+    if hasattr(model, 'decode_maxlen'):
+        maxlen = model.decode_maxlen
     # 2. Decoder forward step by step
     for i in range(prefix_len, maxlen + 1):
         # Stop if all batch and all beam produce eos
