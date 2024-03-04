@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 # Copyright [2023-11-28] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 import torch
+from torch.nn import BatchNorm1d, LayerNorm
 from wenet.paraformer.embedding import ParaformerPositinoalEncoding
+from wenet.transformer.norm import RMSNorm
+from wenet.transformer.positionwise_feed_forward import (
+    GatedVariantsMLP, MoEFFNLayer, PositionwiseFeedForward)
 
 from wenet.transformer.swish import Swish
 from wenet.transformer.subsampling import (
@@ -17,11 +21,13 @@ from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
 from wenet.transformer.embedding import (PositionalEncoding,
                                          RelPositionalEncoding,
+                                         RopePositionalEncoding,
                                          WhisperPositionalEncoding,
                                          LearnablePositionalEncoding,
                                          NoPositionalEncoding)
 from wenet.transformer.attention import (MultiHeadedAttention,
-                                         RelPositionMultiHeadedAttention)
+                                         RelPositionMultiHeadedAttention,
+                                         RopeMultiHeadedAttention)
 from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
 
 WENET_ACTIVATION_CLASSES = {
@@ -59,10 +65,24 @@ WENET_EMB_CLASSES = {
     "abs_pos_whisper": WhisperPositionalEncoding,
     "embed_learnable_pe": LearnablePositionalEncoding,
     "abs_pos_paraformer": ParaformerPositinoalEncoding,
+    "rope": RopePositionalEncoding,
 }
 
 WENET_ATTENTION_CLASSES = {
     "selfattn": MultiHeadedAttention,
     "rel_selfattn": RelPositionMultiHeadedAttention,
     "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
+    "rope_selfattn": RopeMultiHeadedAttention,
+}
+
+WENET_MLP_CLASSES = {
+    'position_wise_feed_forward': PositionwiseFeedForward,
+    'moe': MoEFFNLayer,
+    'gated': GatedVariantsMLP
+}
+
+WENET_NORM_CLASSES = {
+    'layer_norm': LayerNorm,
+    'batch_norm': BatchNorm1d,
+    'rms_norm': RMSNorm,
 }
