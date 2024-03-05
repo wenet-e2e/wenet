@@ -316,7 +316,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         # (batch, ..., head, time1, d_k)
         q_with_bias_u = (q + self.pos_bias_u).transpose(-2, -3)
         # (batch, ..., head, time1, d_k)
-        q_with_bias_v = (q + self.pos_bias_v).transpose(-2, 3)
+        q_with_bias_v = (q + self.pos_bias_v).transpose(-2, -3)
 
         # compute matrix b and matrix d
         # (batch, head, time1, time2)
