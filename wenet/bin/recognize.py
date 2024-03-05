@@ -289,6 +289,8 @@ def main():
                         logging.info('{} {}'.format(mode.ljust(max_format_len),
                                                     line))
                         files[mode].write(line + '\n')
+                if use_cuda:
+                    torch.cuda.empty_cache()
         for mode, f in files.items():
             f.close()
 
