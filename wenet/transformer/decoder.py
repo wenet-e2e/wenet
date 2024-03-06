@@ -13,7 +13,7 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Decoder definition."""
-from typing import Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional
 
 import torch
 import torch.utils.checkpoint as ckpt
@@ -101,7 +101,7 @@ class TransformerDecoder(torch.nn.Module):
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim,
                     self_attention_dropout_rate, key_bias, use_sdpa),
-                WENET_ATTENTION_CLASSES["selfattn"](
+                WENET_ATTENTION_CLASSES["crossattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
                     key_bias, use_sdpa) if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
@@ -196,8 +196,8 @@ class TransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         tgt: torch.Tensor,
         tgt_mask: torch.Tensor,
-        cache: Optional[List[torch.Tensor]] = None,
-    ) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+        cache: Dict[str, Dict[str, torch.Tensor]],
+    ) -> torch.Tensor:
         """Forward one step.
             This is only used for decoding.
         Args:
@@ -213,25 +213,39 @@ class TransformerDecoder(torch.nn.Module):
             y.shape` is (batch, maxlen_out, token)
         """
         x, _ = self.embed(tgt)
-        new_cache = []
+        update_cross_att_cache = True
+        if len(cache['cross_att_cache']) != 0:
+            assert len(cache['cross_att_cache']) == self.num_blocks
+            update_cross_att_cache = False
         for i, decoder in enumerate(self.decoders):
-            if cache is None:
-                c = None
-            else:
-                c = cache[i]
+            layer_i = 'layer_{}'.format(i)
+            self_att_cache = cache['self_att_cache'].get(layer_i, None)
+            cross_att_cache = cache['cross_att_cache'].get(layer_i, None)
+            c = {
+                'self_att_cache': self_att_cache,
+                'cross_att_cache': cross_att_cache,
+            }
+
             x, tgt_mask, memory, memory_mask = decoder(x,
                                                        tgt_mask,
                                                        memory,
                                                        memory_mask,
                                                        cache=c)
-            new_cache.append(x)
+
+            # update cache dict
+            assert c['self_att_cache'] is not None
+            assert c['cross_att_cache'] is not None
+            cache['self_att_cache'][layer_i] = c['self_att_cache']
+            if update_cross_att_cache:
+                cache['cross_att_cache'][layer_i] = c['cross_att_cache']
+
         if self.normalize_before:
             y = self.after_norm(x[:, -1])
         else:
             y = x[:, -1]
         if self.use_output_layer:
             y = torch.log_softmax(self.output_layer(y), dim=-1)
-        return y, new_cache
+        return y
 
     def tie_or_clone_weights(self, jit_mode: bool = True):
         """Tie or clone module weights (between word_emb and output_layer)
