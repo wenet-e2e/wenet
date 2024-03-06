@@ -110,6 +110,8 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['predictor_conf'] = configs.pop('predictor_conf')
     configs['predictor_conf']['cnn_groups'] = 1
     configs['predictor_conf']['residual'] = False
+    del configs['predictor_conf']['upsample_type']
+    del configs['predictor_conf']['use_cif1_cnn']
     # This type not use
     del configs['encoder_conf']['selfattention_layer_type'], configs[
         'encoder_conf']['pos_enc_class']
@@ -150,6 +152,10 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['dataset_conf']['batch_conf']['batch_type'] = 'dynamic'
     configs['dataset_conf']['batch_conf']['batch_size'] = 26
     configs['dataset_conf']['batch_conf']['max_frames_in_batch'] = 12000
+
+    configs['model_conf']['add_eos'] = configs['model_conf']['predictor_bias']
+    del configs['model_conf']['predictor_bias']
+    del configs['model_conf']['predictor_weight']
 
     configs['grad_clip'] = 5
     configs['accum_grad'] = 1
@@ -213,9 +219,10 @@ def _download_fn(output_dir,
                  renmae: Optional[str] = None,
                  version: str = 'master'):
     url = "https://www.modelscope.cn/api/v1/"\
-        "models/damo/"\
+        "models/iic/"\
         "speech_paraformer-large-vad-punc_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
         "/repo?Revision={}&FilePath=".format(version) + name
+    print(url)
     # "speech_paraformer-large_asr_nat-zh-cn-16k-common-vocab8404-pytorch"\
     if renmae is None:
         output_file = os.path.join(output_dir, name)
@@ -266,7 +273,7 @@ def may_get_assets_and_refine_args(args):
         if not os.path.exists(args.paraformer_seg_dict):
             _download_fn(assets_dir, seg_dict)
     if args.paraformer_model is None:
-        model_name = 'model.pb'
+        model_name = 'model.pt'
         args.paraformer_model = os.path.join(assets_dir, "model.pt")
         if not os.path.exists(args.paraformer_model):
             _download_fn(assets_dir, model_name, "model.pt")
