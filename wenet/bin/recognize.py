@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument('--dtype',
                         type=str,
                         default='float32',
-                        choices=['float16', 'flaot32', 'bfloat16'],
+                        choices=['float16', 'float32', 'bfloat16'],
                         help='model\'s dtype')
     parser.add_argument('--num_workers',
                         default=0,

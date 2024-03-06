@@ -55,33 +55,44 @@ class MultiHeadedAttention(nn.Module):
         self.use_sdpa = use_sdpa
         self.dropout_rate = dropout_rate
 
+    def _forward_linearx(self, name: str, x: torch.Tensor) -> torch.Tensor:
+        assert x.ndim >= 3
+        if name == 'query':
+            x = self.linear_q(x)
+        elif name == 'key':
+            x = self.linear_k(x)
+        else:
+            assert name == 'value'
+            x = self.linear_v(x)
+        # split last dim
+        x_shape = x.size()
+        x_shape = x_shape[:-1] + torch.Size([self.h, self.d_k])
+        x = x.view(x_shape)
+        x = x.transpose(-3, -2)  # (batch, ...,  head, time, d_k)
+        return x
+
     def forward_qkv(
         self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Transform query, key and value.
 
         Args:
-            query (torch.Tensor): Query tensor (#batch, time1, size).
-            key (torch.Tensor): Key tensor (#batch, time2, size).
-            value (torch.Tensor): Value tensor (#batch, time2, size).
+            query (torch.Tensor): Query tensor (#batch, ..., time1, size).
+            key (torch.Tensor): Key tensor (#batch, ..., time2, size).
+            value (torch.Tensor): Value tensor (#batch, ..., time2, size).
 
         Returns:
             torch.Tensor: Transformed query tensor, size
-                (#batch, n_head, time1, d_k).
+                (#batch, ..., n_head, time1, d_k).
             torch.Tensor: Transformed key tensor, size
-                (#batch, n_head, time2, d_k).
+                (#batch, ..., n_head, time2, d_k).
             torch.Tensor: Transformed value tensor, size
-                (#batch, n_head, time2, d_k).
+                (#batch, ..., n_head, time2, d_k).
 
         """
-        n_batch = query.size(0)
-        q = self.linear_q(query).view(n_batch, -1, self.h, self.d_k)
-        k = self.linear_k(key).view(n_batch, -1, self.h, self.d_k)
-        v = self.linear_v(value).view(n_batch, -1, self.h, self.d_k)
-        q = q.transpose(1, 2)  # (batch, head, time1, d_k)
-        k = k.transpose(1, 2)  # (batch, head, time2, d_k)
-        v = v.transpose(1, 2)  # (batch, head, time2, d_k)
-
+        q = self._forward_linearx('query', query)
+        k = self._forward_linearx('key', key)
+        v = self._forward_linearx('value', value)
         return q, k, v
 
     def forward_attention(
@@ -94,26 +105,25 @@ class MultiHeadedAttention(nn.Module):
 
         Args:
             value (torch.Tensor): Transformed value, size
-                (#batch, n_head, time2, d_k).
+                (#batch, ..., n_head, time2, d_k).
             scores (torch.Tensor): Attention score, size
-                (#batch, n_head, time1, time2).
+                (#batch, ..., n_head, time1, time2).
             mask (torch.Tensor): Mask, size (#batch, 1, time2) or
-                (#batch, time1, time2), (0, 0, 0) means fake mask.
+                (#batch, ..., time1, time2), (0, ..., 0, 0) means fake mask.
 
         Returns:
             torch.Tensor: Transformed value (#batch, time1, d_model)
                 weighted by the attention score (#batch, time1, time2).
 
         """
-        n_batch = value.size(0)
         # NOTE(xcsong): When will `if mask.size(2) > 0` be True?
         #   1. onnx(16/4) [WHY? Because we feed real cache & real mask for the
         #           1st chunk to ease the onnx export.]
         #   2. pytorch training
-        if mask.size(2) > 0:  # time2 > 0
-            mask = mask.unsqueeze(1).eq(0)  # (batch, 1, *, time2)
+        if mask.size(-1) > 0:  # time2 > 0
+            mask = mask.unsqueeze(-3).eq(0)  # (batch, .., 1, *, time2)
             # For last chunk, time2 might be larger than scores.size(-1)
-            mask = mask[:, :, :, :scores.size(-1)]  # (batch, 1, *, time2)
+            mask = mask[..., :scores.size(-1)]  # (batch, 1, *, time2)
             scores = scores.masked_fill(mask, -float('inf'))
             attn = torch.softmax(scores, dim=-1).masked_fill(
                 mask, 0.0)  # (batch, head, time1, time2)
@@ -121,15 +131,15 @@ class MultiHeadedAttention(nn.Module):
         #   1. onnx(16/-1, -1/-1, 16/0)
         #   2. jit (16/-1, -1/-1, 16/0, 16/4)
         else:
-            attn = torch.softmax(scores, dim=-1)  # (batch, head, time1, time2)
+            attn = torch.softmax(scores,
+                                 dim=-1)  # (batch, ..., head, time1, time2)
 
         p_attn = self.dropout(attn)
-        x = torch.matmul(p_attn, value)  # (batch, head, time1, d_k)
-        x = (x.transpose(1, 2).contiguous().view(n_batch, -1,
-                                                 self.h * self.d_k)
-             )  # (batch, time1, d_model)
-
-        return self.linear_out(x)  # (batch, time1, d_model)
+        x = torch.matmul(p_attn, value)  # (batch, ...,  head, time1, d_k)
+        x = x.transpose(-3, -2).contiguous()  # [batch, ..., time1, head, d_k]
+        x_shape = x.size()[:-2] + torch.Size([self.h * self.d_k])
+        x = x.view(x_shape)  # (batch, ..., time1, d_model)
+        return self.linear_out(x)  # (batch, ...,  time1, d_model)
 
     def forward(
         self,
@@ -369,3 +379,67 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 query.size(0), -1,
                 self.h * self.d_k))  # (batch, time1, d_model)
             return self.linear_out(output), new_cache
+
+
+class MultiHeadedCrossAttention(MultiHeadedAttention):
+
+    def __init__(self,
+                 n_head: int,
+                 n_feat: int,
+                 dropout_rate: float,
+                 key_bias: bool = True,
+                 use_sdpa: bool = False):
+        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)
+
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        pos_emb: torch.Tensor = torch.empty(0),
+        cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        del pos_emb
+        if cache.size(0) > 0:
+            assert not self.training
+            q = self._forward_linearx('query', query)
+            k, v = torch.split(cache, cache.size(-1) // 2, dim=-1)
+
+        else:
+            q, k, v = self.forward_qkv(query, key, value)
+        new_cache = torch.cat((k, v), dim=-1)
+
+        B = query.size(0)
+        Beams = 1
+        if B != k.size(0):
+            assert not self.training
+            Beams = B // k.size(0)
+            B = k.size(0)
+            q = q.view(B, Beams, q.size(-3), q.size(-2), q.size(-1))
+            k = k.unsqueeze(1)
+            v = v.unsqueeze(1)
+            mask = mask.unsqueeze(1)
+
+        if not self.use_sdpa:
+            scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
+            output = self.forward_attention(v, scores, mask)
+        else:
+            output = torch.nn.functional.scaled_dot_product_attention(
+                q,
+                k,
+                v,
+                attn_mask=mask.unsqueeze(1),
+                dropout_p=self.dropout_rate,
+                scale=1 / math.sqrt(self.d_k),
+            )
+            output = output.transpose(-2, -3).contiguous()
+            output_shape = output.size()[:-2] + torch.Size([self.h * self.d_k])
+            output = output.view(output_shape)  # (batch, ...,  time1, d_model)
+            output = self.linear_out(output)
+
+        if query.size(0) != B:
+            assert not self.training
+            output_shape = torch.Size([B * Beams]) + output.size()[2:]
+            output = output.view(output_shape)
+        return output, new_cache
