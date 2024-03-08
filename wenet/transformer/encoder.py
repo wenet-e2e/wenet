@@ -25,6 +25,7 @@ from wenet.transformer.encoder_layer import ConformerEncoderLayer
 from wenet.utils.class_utils import (
     WENET_EMB_CLASSES,
     WENET_MLP_CLASSES,
+    WENET_NORM_CLASSES,
     WENET_SUBSAMPLE_CLASSES,
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
@@ -55,6 +56,7 @@ class BaseEncoder(torch.nn.Module):
         use_dynamic_left_chunk: bool = False,
         gradient_checkpointing: bool = False,
         use_sdpa: bool = False,
+        layer_norm_type: str = 'layer_norm',
     ):
         """
         Args:
@@ -103,7 +105,8 @@ class BaseEncoder(torch.nn.Module):
         )
 
         self.normalize_before = normalize_before
-        self.after_norm = torch.nn.LayerNorm(output_size, eps=1e-5)
+        self.after_norm = WENET_NORM_CLASSES[layer_norm_type](output_size,
+                                                              eps=1e-5)
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
@@ -368,6 +371,7 @@ class TransformerEncoder(BaseEncoder):
         gradient_checkpointing: bool = False,
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
+        layer_norm_type: str = 'layer_norm',
     ):
         """ Construct TransformerEncoder
 
@@ -379,19 +383,21 @@ class TransformerEncoder(BaseEncoder):
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa)
+                         use_sdpa, layer_norm_type)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
-            TransformerEncoderLayer(
-                output_size,
-                WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
-                                                    output_size,
-                                                    attention_dropout_rate,
-                                                    query_bias, key_bias,
-                                                    value_bias, use_sdpa),
-                mlp_class(output_size, linear_units, dropout_rate, activation,
-                          mlp_bias), dropout_rate, normalize_before)
+            TransformerEncoderLayer(output_size,
+                                    WENET_ATTENTION_CLASSES["selfattn"](
+                                        attention_heads, output_size,
+                                        attention_dropout_rate, query_bias,
+                                        key_bias, value_bias, use_sdpa),
+                                    mlp_class(output_size, linear_units,
+                                              dropout_rate, activation,
+                                              mlp_bias),
+                                    dropout_rate,
+                                    normalize_before,
+                                    layer_norm_type=layer_norm_type)
             for _ in range(num_blocks)
         ])
 

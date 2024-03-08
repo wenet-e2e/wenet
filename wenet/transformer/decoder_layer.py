@@ -18,6 +18,8 @@ from typing import Dict, Optional, Tuple
 import torch
 from torch import nn
 
+from wenet.utils.class_utils import WENET_NORM_CLASSES
+
 
 class DecoderLayer(nn.Module):
     """Single decoder layer module.
@@ -46,6 +48,7 @@ class DecoderLayer(nn.Module):
         feed_forward: nn.Module,
         dropout_rate: float,
         normalize_before: bool = True,
+        layer_norm_type: str = 'layer_norm',
     ):
         """Construct an DecoderLayer object."""
         super().__init__()
@@ -53,9 +56,9 @@ class DecoderLayer(nn.Module):
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
-        self.norm1 = nn.LayerNorm(size, eps=1e-5)
-        self.norm2 = nn.LayerNorm(size, eps=1e-5)
-        self.norm3 = nn.LayerNorm(size, eps=1e-5)
+        self.norm1 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
+        self.norm2 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
+        self.norm3 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
         self.dropout = nn.Dropout(dropout_rate)
         self.normalize_before = normalize_before
 

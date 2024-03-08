@@ -25,6 +25,7 @@ from wenet.utils.class_utils import (
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
     WENET_MLP_CLASSES,
+    WENET_NORM_CLASSES,
 )
 from wenet.utils.common import mask_to_bias
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
@@ -81,6 +82,7 @@ class TransformerDecoder(torch.nn.Module):
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
         mlp_type: str = 'position_wise_feed_forward',
+        layer_norm_type: str = 'layer_norm',
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -94,7 +96,8 @@ class TransformerDecoder(torch.nn.Module):
         )
 
         self.normalize_before = normalize_before
-        self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
+        self.after_norm = WENET_NORM_CLASSES[layer_norm_type](attention_dim,
+                                                              eps=1e-5)
         self.use_output_layer = use_output_layer
         if use_output_layer:
             self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
