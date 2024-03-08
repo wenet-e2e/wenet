@@ -20,11 +20,11 @@ import torch.utils.checkpoint as ckpt
 import logging
 
 from wenet.transformer.decoder_layer import DecoderLayer
-from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import (
     WENET_EMB_CLASSES,
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
+    WENET_MLP_CLASSES,
 )
 from wenet.utils.common import mask_to_bias
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
@@ -80,6 +80,7 @@ class TransformerDecoder(torch.nn.Module):
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
+        mlp_type: str = 'position_wise_feed_forward',
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -100,6 +101,8 @@ class TransformerDecoder(torch.nn.Module):
         else:
             self.output_layer = torch.nn.Identity()
         self.num_blocks = num_blocks
+
+        mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
@@ -111,8 +114,8 @@ class TransformerDecoder(torch.nn.Module):
                     attention_heads, attention_dim, src_attention_dropout_rate,
                     query_bias, key_bias, value_bias, use_sdpa)
                 if src_attention else None,
-                PositionwiseFeedForward(attention_dim, linear_units,
-                                        dropout_rate, activation, mlp_bias),
+                mlp_class(attention_dim, linear_units, dropout_rate,
+                          activation, mlp_bias),
                 dropout_rate,
                 normalize_before,
             ) for _ in range(self.num_blocks)
