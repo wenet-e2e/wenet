@@ -38,7 +38,9 @@ class MultiHeadedAttention(nn.Module):
                  n_head: int,
                  n_feat: int,
                  dropout_rate: float,
+                 query_bias: bool = True,
                  key_bias: bool = True,
+                 value_bias: bool = True,
                  use_sdpa: bool = False):
         """Construct an MultiHeadedAttention object."""
         super().__init__()
@@ -46,9 +48,9 @@ class MultiHeadedAttention(nn.Module):
         # We assume d_v always equals d_k
         self.d_k = n_feat // n_head
         self.h = n_head
-        self.linear_q = nn.Linear(n_feat, n_feat)
+        self.linear_q = nn.Linear(n_feat, n_feat, bias=query_bias)
         self.linear_k = nn.Linear(n_feat, n_feat, bias=key_bias)
-        self.linear_v = nn.Linear(n_feat, n_feat)
+        self.linear_v = nn.Linear(n_feat, n_feat, bias=value_bias)
         self.linear_out = nn.Linear(n_feat, n_feat)
         self.dropout = nn.Dropout(p=dropout_rate)
 
@@ -239,10 +241,13 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                  n_head: int,
                  n_feat: int,
                  dropout_rate: float,
+                 query_bias: bool = True,
                  key_bias: bool = True,
+                 value_bias: bool = True,
                  use_sdpa: bool = False):
         """Construct an RelPositionMultiHeadedAttention object."""
-        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)
+        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
+                         value_bias, use_sdpa)
         # linear transformation for positional encoding
         self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d
@@ -387,9 +392,12 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
                  n_head: int,
                  n_feat: int,
                  dropout_rate: float,
+                 query_bias: bool = True,
                  key_bias: bool = True,
+                 value_bias: bool = True,
                  use_sdpa: bool = False):
-        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)
+        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
+                         value_bias, use_sdpa)
 
     def forward(
         self,
