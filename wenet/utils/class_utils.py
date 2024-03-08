@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 # Copyright [2023-11-28] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 import torch
+from torch.nn import BatchNorm1d, LayerNorm
 from wenet.paraformer.embedding import ParaformerPositinoalEncoding
+from wenet.transformer.norm import RMSNorm
+from wenet.transformer.positionwise_feed_forward import (
+    GatedVariantsMLP, MoEFFNLayer, PositionwiseFeedForward)
 
 from wenet.transformer.swish import Swish
 from wenet.transformer.subsampling import (
@@ -23,7 +27,8 @@ from wenet.transformer.embedding import (PositionalEncoding,
 from wenet.transformer.attention import (MultiHeadedAttention,
                                          MultiHeadedCrossAttention,
                                          RelPositionMultiHeadedAttention)
-from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
+from wenet.efficient_conformer.attention import (
+    GroupedRelPositionMultiHeadedAttention)
 
 WENET_ACTIVATION_CLASSES = {
     "hardtanh": torch.nn.Hardtanh,
@@ -67,4 +72,16 @@ WENET_ATTENTION_CLASSES = {
     "rel_selfattn": RelPositionMultiHeadedAttention,
     "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
     "crossattn": MultiHeadedCrossAttention,
+}
+
+WENET_MLP_CLASSES = {
+    'position_wise_feed_forward': PositionwiseFeedForward,
+    'moe': MoEFFNLayer,
+    'gated': GatedVariantsMLP
+}
+
+WENET_NORM_CLASSES = {
+    'layer_norm': LayerNorm,
+    'batch_norm': BatchNorm1d,
+    'rms_norm': RMSNorm
 }

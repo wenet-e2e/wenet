@@ -20,11 +20,12 @@ import torch.utils.checkpoint as ckpt
 import logging
 
 from wenet.transformer.decoder_layer import DecoderLayer
-from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.class_utils import (
     WENET_EMB_CLASSES,
     WENET_ATTENTION_CLASSES,
     WENET_ACTIVATION_CLASSES,
+    WENET_MLP_CLASSES,
+    WENET_NORM_CLASSES,
 )
 from wenet.utils.common import mask_to_bias
 from wenet.utils.mask import (subsequent_mask, make_pad_mask)
@@ -48,7 +49,9 @@ class TransformerDecoder(torch.nn.Module):
             False: use layer_norm after each sub-block of a layer.
         src_attention: if false, encoder-decoder cross attention is not
                        applied, such as CIF model
+        query_bias: whether use bias in attention.linear_q
         key_bias: whether use bias in attention.linear_k, False for whisper models.
+        value_bias: whether use bias in attention.linear_v
         gradient_checkpointing: rerunning a forward-pass segment for each
             checkpointed segment during backward.
         tie_word_embedding: Tie or clone module weights depending of whether we are
@@ -70,11 +73,17 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         src_attention: bool = True,
+        query_bias: bool = True,
         key_bias: bool = True,
+        value_bias: bool = True,
+        mlp_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
+        mlp_type: str = 'position_wise_feed_forward',
+        layer_norm_type: str = 'layer_norm',
+        norm_eps: float = 1e-5,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -87,27 +96,35 @@ class TransformerDecoder(torch.nn.Module):
                                            positional_dropout_rate),
         )
 
+        assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.normalize_before = normalize_before
-        self.after_norm = torch.nn.LayerNorm(attention_dim, eps=1e-5)
+        self.after_norm = WENET_NORM_CLASSES[layer_norm_type](attention_dim,
+                                                              eps=norm_eps)
         self.use_output_layer = use_output_layer
         if use_output_layer:
             self.output_layer = torch.nn.Linear(attention_dim, vocab_size)
         else:
             self.output_layer = torch.nn.Identity()
         self.num_blocks = num_blocks
+
+        mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.decoders = torch.nn.ModuleList([
             DecoderLayer(
                 attention_dim,
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim,
-                    self_attention_dropout_rate, key_bias, use_sdpa),
+                    self_attention_dropout_rate, query_bias, key_bias,
+                    value_bias, use_sdpa),
                 WENET_ATTENTION_CLASSES["crossattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
-                    key_bias, use_sdpa) if src_attention else None,
-                PositionwiseFeedForward(attention_dim, linear_units,
-                                        dropout_rate, activation),
+                    query_bias, key_bias, value_bias, use_sdpa)
+                if src_attention else None,
+                mlp_class(attention_dim, linear_units, dropout_rate,
+                          activation, mlp_bias),
                 dropout_rate,
                 normalize_before,
+                layer_norm_type,
+                norm_eps,
             ) for _ in range(self.num_blocks)
         ])
 
@@ -308,10 +325,15 @@ class BiTransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
+        query_bias: bool = True,
         key_bias: bool = True,
+        value_bias: bool = True,
+        mlp_bias: bool = True,
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
+        layer_norm_type: str = 'layer_norm',
+        norm_eps: float = 1e-5,
     ):
 
         super().__init__()
@@ -330,10 +352,15 @@ class BiTransformerDecoder(torch.nn.Module):
             input_layer,
             use_output_layer,
             normalize_before,
+            query_bias=query_bias,
             key_bias=key_bias,
+            value_bias=value_bias,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
-            use_sdpa=use_sdpa)
+            use_sdpa=use_sdpa,
+            layer_norm_type=layer_norm_type,
+            norm_eps=norm_eps,
+        )
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -348,10 +375,16 @@ class BiTransformerDecoder(torch.nn.Module):
             input_layer,
             use_output_layer,
             normalize_before,
+            query_bias=query_bias,
             key_bias=key_bias,
+            value_bias=value_bias,
+            mlp_bias=mlp_bias,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
-            use_sdpa=use_sdpa)
+            use_sdpa=use_sdpa,
+            layer_norm_type=layer_norm_type,
+            norm_eps=norm_eps,
+        )
 
     def forward(
         self,

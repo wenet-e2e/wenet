@@ -19,17 +19,22 @@ from typing import Tuple
 import torch
 from torch import nn
 
+from wenet.utils.class_utils import WENET_NORM_CLASSES
+
 
 class ConvolutionModule(nn.Module):
     """ConvolutionModule in Conformer model."""
 
-    def __init__(self,
-                 channels: int,
-                 kernel_size: int = 15,
-                 activation: nn.Module = nn.ReLU(),
-                 norm: str = "batch_norm",
-                 causal: bool = False,
-                 bias: bool = True):
+    def __init__(
+        self,
+        channels: int,
+        kernel_size: int = 15,
+        activation: nn.Module = nn.ReLU(),
+        norm: str = "batch_norm",
+        causal: bool = False,
+        bias: bool = True,
+        norm_eps: float = 1e-5,
+    ):
         """Construct an ConvolutionModule object.
         Args:
             channels (int): The number of channels of conv layers.
@@ -68,13 +73,14 @@ class ConvolutionModule(nn.Module):
             bias=bias,
         )
 
-        assert norm in ['batch_norm', 'layer_norm']
+        assert norm in ['batch_norm', 'layer_norm', 'rms_norm']
         if norm == "batch_norm":
             self.use_layer_norm = False
-            self.norm = nn.BatchNorm1d(channels)
+            self.norm = WENET_NORM_CLASSES['batch_norm'](channels,
+                                                         eps=norm_eps)
         else:
             self.use_layer_norm = True
-            self.norm = nn.LayerNorm(channels)
+            self.norm = WENET_NORM_CLASSES[norm](channels, eps=norm_eps)
 
         self.pointwise_conv2 = nn.Conv1d(
             channels,
