@@ -52,6 +52,7 @@ class TransformerEncoderLayer(nn.Module):
         super().__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
+        assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.norm1 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
         self.norm2 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
         self.dropout = nn.Dropout(dropout_rate)
@@ -144,6 +145,7 @@ class ConformerEncoderLayer(nn.Module):
         super().__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
+        assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.feed_forward_macaron = feed_forward_macaron
         self.conv_module = conv_module
         self.norm_ff = WENET_NORM_CLASSES[layer_norm_type](

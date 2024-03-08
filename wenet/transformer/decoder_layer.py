@@ -56,6 +56,7 @@ class DecoderLayer(nn.Module):
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
+        assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.norm1 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
         self.norm2 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
         self.norm3 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)

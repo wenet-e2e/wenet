@@ -70,7 +70,7 @@ class ConvolutionModule(nn.Module):
             bias=bias,
         )
 
-        assert norm in ['batch_norm', 'layer_norm']
+        assert norm in ['batch_norm', 'layer_norm', 'rms_norm']
         if norm == "batch_norm":
             self.use_layer_norm = False
             self.norm = WENET_NORM_CLASSES['batch_norm'](channels)

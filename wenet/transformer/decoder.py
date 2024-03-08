@@ -95,6 +95,7 @@ class TransformerDecoder(torch.nn.Module):
                                            positional_dropout_rate),
         )
 
+        assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.normalize_before = normalize_before
         self.after_norm = WENET_NORM_CLASSES[layer_norm_type](attention_dim,
                                                               eps=1e-5)
