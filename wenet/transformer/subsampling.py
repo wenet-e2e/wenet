@@ -374,6 +374,11 @@ class StackNFramesSubsampling(BaseSubsampling):
             torch.Tensor: positional encoding
         """
         b, s, _ = x.size()
+        mat = sample['feat']
+        # assume x is fbank
+        std, mean = torch.std_mean(x, dim=0)
+        x = mat.subtract(mean).divide(std)
+
         seq_len = x_mask.sum(-1).view(b)
         r = s % self.stride
         s -= r

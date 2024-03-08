@@ -16,6 +16,7 @@ from wenet.transformer.subsampling import (
     Conv2dSubsampling4,
     Conv2dSubsampling6,
     Conv2dSubsampling8,
+    StackNFramesSubsampling,
 )
 from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
@@ -54,7 +55,8 @@ WENET_SUBSAMPLE_CLASSES = {
     "dwconv2d4": DepthwiseConv2dSubsampling4,
     "conv2d6": Conv2dSubsampling6,
     "conv2d8": Conv2dSubsampling8,
-    'paraformer_dummy': torch.nn.Identity
+    'paraformer_dummy': torch.nn.Identity,
+    'stack_n_frames': StackNFramesSubsampling,
 }
 
 WENET_EMB_CLASSES = {

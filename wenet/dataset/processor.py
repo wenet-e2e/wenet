@@ -222,22 +222,6 @@ def compute_fbank(sample,
     return sample
 
 
-def compute_w2vbert_fbank(sample,
-                          num_mel_bins=23,
-                          frame_length=25,
-                          frame_shift=10,
-                          dither=0.0):
-    """ Extract Pretrain w2vbert(4.5M hours) fbank
-    """
-    sample = compute_fbank(sample, num_mel_bins, frame_length, frame_shift,
-                           dither)
-    mat = sample['feat']
-    std, mean = torch.std_mean(mat, dim=0)
-    mat = mat.subtract(mean).divide(std)
-    sample['feat'] = mat
-    return sample
-
-
 def sort_by_feats(sample):
     assert 'feat' in sample
     assert isinstance(sample['feat'], torch.Tensor)
