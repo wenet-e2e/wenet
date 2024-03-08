@@ -19,6 +19,8 @@ from typing import Tuple
 import torch
 from torch import nn
 
+from wenet.utils.class_utils import WENET_NORM_CLASSES
+
 
 class ConvolutionModule(nn.Module):
     """ConvolutionModule in Conformer model."""
@@ -68,13 +70,13 @@ class ConvolutionModule(nn.Module):
             bias=bias,
         )
 
-        assert norm in ['batch_norm', 'layer_norm']
+        assert norm in ['batch_norm', 'layer_norm', 'rms_norm']
         if norm == "batch_norm":
             self.use_layer_norm = False
-            self.norm = nn.BatchNorm1d(channels)
+            self.norm = WENET_NORM_CLASSES['batch_norm'](channels)
         else:
             self.use_layer_norm = True
-            self.norm = nn.LayerNorm(channels)
+            self.norm = WENET_NORM_CLASSES[norm](channels)
 
         self.pointwise_conv2 = nn.Conv1d(
             channels,
