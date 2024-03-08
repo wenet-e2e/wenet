@@ -47,14 +47,15 @@ class TransformerEncoderLayer(nn.Module):
         dropout_rate: float,
         normalize_before: bool = True,
         layer_norm_type: str = 'layer_norm',
+        norm_eps: float = 1e-5,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
         assert layer_norm_type in ['layer_norm', 'rms_norm']
-        self.norm1 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
-        self.norm2 = WENET_NORM_CLASSES[layer_norm_type](size, eps=1e-5)
+        self.norm1 = WENET_NORM_CLASSES[layer_norm_type](size, eps=norm_eps)
+        self.norm2 = WENET_NORM_CLASSES[layer_norm_type](size, eps=norm_eps)
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
@@ -140,6 +141,7 @@ class ConformerEncoderLayer(nn.Module):
         dropout_rate: float = 0.1,
         normalize_before: bool = True,
         layer_norm_type: str = 'layer_norm',
+        norm_eps: float = 1e-5,
     ):
         """Construct an EncoderLayer object."""
         super().__init__()
@@ -149,20 +151,20 @@ class ConformerEncoderLayer(nn.Module):
         self.feed_forward_macaron = feed_forward_macaron
         self.conv_module = conv_module
         self.norm_ff = WENET_NORM_CLASSES[layer_norm_type](
-            size, eps=1e-5)  # for the FNN module
+            size, eps=norm_eps)  # for the FNN module
         self.norm_mha = WENET_NORM_CLASSES[layer_norm_type](
-            size, eps=1e-5)  # for the MHA module
+            size, eps=norm_eps)  # for the MHA module
         if feed_forward_macaron is not None:
             self.norm_ff_macaron = WENET_NORM_CLASSES[layer_norm_type](
-                size, eps=1e-5)
+                size, eps=norm_eps)
             self.ff_scale = 0.5
         else:
             self.ff_scale = 1.0
         if self.conv_module is not None:
             self.norm_conv = WENET_NORM_CLASSES[layer_norm_type](
-                size, eps=1e-5)  # for the CNN module
+                size, eps=norm_eps)  # for the CNN module
             self.norm_final = WENET_NORM_CLASSES[layer_norm_type](
-                size, eps=1e-5)  # for the final output of the block
+                size, eps=norm_eps)  # for the final output of the block
         self.dropout = nn.Dropout(dropout_rate)
         self.size = size
         self.normalize_before = normalize_before
