@@ -23,6 +23,7 @@ Submodules
    wenet.transformer.encoder
    wenet.transformer.encoder_layer
    wenet.transformer.label_smoothing_loss
+   wenet.transformer.norm
    wenet.transformer.positionwise_feed_forward
    wenet.transformer.search
    wenet.transformer.subsampling
