@@ -48,7 +48,9 @@ class TransformerDecoder(torch.nn.Module):
             False: use layer_norm after each sub-block of a layer.
         src_attention: if false, encoder-decoder cross attention is not
                        applied, such as CIF model
+        query_bias: whether use bias in attention.linear_q
         key_bias: whether use bias in attention.linear_k, False for whisper models.
+        value_bias: whether use bias in attention.linear_v
         gradient_checkpointing: rerunning a forward-pass segment for each
             checkpointed segment during backward.
         tie_word_embedding: Tie or clone module weights depending of whether we are
@@ -70,7 +72,10 @@ class TransformerDecoder(torch.nn.Module):
         use_output_layer: bool = True,
         normalize_before: bool = True,
         src_attention: bool = True,
+        query_bias: bool = True,
         key_bias: bool = True,
+        value_bias: bool = True,
+        mlp_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
@@ -100,12 +105,14 @@ class TransformerDecoder(torch.nn.Module):
                 attention_dim,
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim,
-                    self_attention_dropout_rate, key_bias, use_sdpa),
+                    self_attention_dropout_rate, query_bias, key_bias,
+                    value_bias, use_sdpa),
                 WENET_ATTENTION_CLASSES["crossattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
-                    key_bias, use_sdpa) if src_attention else None,
+                    query_bias, key_bias, value_bias, use_sdpa)
+                if src_attention else None,
                 PositionwiseFeedForward(attention_dim, linear_units,
-                                        dropout_rate, activation),
+                                        dropout_rate, activation, mlp_bias),
                 dropout_rate,
                 normalize_before,
             ) for _ in range(self.num_blocks)
@@ -308,7 +315,10 @@ class BiTransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
+        query_bias: bool = True,
         key_bias: bool = True,
+        value_bias: bool = True,
+        mlp_bias: bool = True,
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
@@ -330,7 +340,9 @@ class BiTransformerDecoder(torch.nn.Module):
             input_layer,
             use_output_layer,
             normalize_before,
+            query_bias=query_bias,
             key_bias=key_bias,
+            value_bias=value_bias,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa)
@@ -348,7 +360,10 @@ class BiTransformerDecoder(torch.nn.Module):
             input_layer,
             use_output_layer,
             normalize_before,
+            query_bias=query_bias,
             key_bias=key_bias,
+            value_bias=value_bias,
+            mlp_bias=mlp_bias,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa)

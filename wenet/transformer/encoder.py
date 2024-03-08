@@ -83,7 +83,9 @@ class BaseEncoder(torch.nn.Module):
             global_cmvn (Optional[torch.nn.Module]): Optional GlobalCMVN module
             use_dynamic_left_chunk (bool): whether use dynamic left chunk in
                 dynamic chunk training
+            query_bias: whether use bias in attention.linear_q
             key_bias: whether use bias in attention.linear_k, False for whisper models.
+            value_bias: whether use bias in attention.linear_v
             gradient_checkpointing: rerunning a forward-pass segment for each
                 checkpointed segment during backward.
             use_sdpa: whether to use SDPA, currently only support transformer for now
@@ -358,7 +360,10 @@ class TransformerEncoder(BaseEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        query_bias: bool = True,
         key_bias: bool = True,
+        value_bias: bool = True,
+        mlp_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
         use_sdpa: bool = False,
@@ -381,9 +386,10 @@ class TransformerEncoder(BaseEncoder):
                 WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
                                                     output_size,
                                                     attention_dropout_rate,
-                                                    key_bias, use_sdpa),
+                                                    query_bias, key_bias,
+                                                    value_bias, use_sdpa),
                 PositionwiseFeedForward(output_size, linear_units,
-                                        dropout_rate, activation),
+                                        dropout_rate, activation, mlp_bias),
                 dropout_rate, normalize_before) for _ in range(num_blocks)
         ])
 
@@ -416,7 +422,11 @@ class ConformerEncoder(BaseEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        query_bias: bool = True,
         key_bias: bool = True,
+        value_bias: bool = True,
+        mlp_bias: bool = True,
+        conv_bias: bool = True,
         gradient_checkpointing: bool = False,
         use_sdpa: bool = False,
     ):
@@ -451,7 +461,9 @@ class ConformerEncoder(BaseEncoder):
             attention_heads,
             output_size,
             attention_dropout_rate,
+            query_bias,
             key_bias,
+            value_bias,
             use_sdpa,
         )
         # feed-forward module definition
@@ -460,10 +472,11 @@ class ConformerEncoder(BaseEncoder):
             linear_units,
             dropout_rate,
             activation,
+            mlp_bias,
         )
         # convolution module definition
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  cnn_module_norm, causal)
+                                  cnn_module_norm, causal, conv_bias)
 
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(

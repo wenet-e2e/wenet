@@ -36,13 +36,14 @@ class PositionwiseFeedForward(torch.nn.Module):
             hidden_units: int,
             dropout_rate: float,
             activation: torch.nn.Module = torch.nn.ReLU(),
+            bias: bool = True,
     ):
         """Construct a PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
-        self.w_1 = torch.nn.Linear(idim, hidden_units)
+        self.w_1 = torch.nn.Linear(idim, hidden_units, bias=bias)
         self.activation = activation
         self.dropout = torch.nn.Dropout(dropout_rate)
-        self.w_2 = torch.nn.Linear(hidden_units, idim)
+        self.w_2 = torch.nn.Linear(hidden_units, idim, bias=bias)
 
     def forward(self, xs: torch.Tensor) -> torch.Tensor:
         """Forward function.
@@ -80,9 +81,11 @@ class MoEFFNLayer(torch.nn.Module):
             hidden_units: int,
             dropout_rate: float,
             activation: torch.nn.Module = torch.nn.ReLU(),
+            bias: bool = False,
     ):
         super(MoEFFNLayer, self).__init__()
-        self.gate = torch.nn.Linear(idim, n_expert, bias=False)
+        bias = False
+        self.gate = torch.nn.Linear(idim, n_expert, bias=bias)
         self.experts = torch.nn.ModuleList(
             PositionwiseFeedForward(idim, hidden_units, dropout_rate,
                                     activation) for _ in range(n_expert))
