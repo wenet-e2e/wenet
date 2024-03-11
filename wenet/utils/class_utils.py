@@ -16,6 +16,7 @@ from wenet.transformer.subsampling import (
     Conv2dSubsampling4,
     Conv2dSubsampling6,
     Conv2dSubsampling8,
+    StackNFramesSubsampling,
 )
 from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
@@ -26,7 +27,8 @@ from wenet.transformer.embedding import (PositionalEncoding,
                                          NoPositionalEncoding)
 from wenet.transformer.attention import (MultiHeadedAttention,
                                          MultiHeadedCrossAttention,
-                                         RelPositionMultiHeadedAttention)
+                                         RelPositionMultiHeadedAttention,
+                                         ShawRelPositionMultiHeadedAttention)
 from wenet.efficient_conformer.attention import (
     GroupedRelPositionMultiHeadedAttention)
 
@@ -54,7 +56,8 @@ WENET_SUBSAMPLE_CLASSES = {
     "dwconv2d4": DepthwiseConv2dSubsampling4,
     "conv2d6": Conv2dSubsampling6,
     "conv2d8": Conv2dSubsampling8,
-    'paraformer_dummy': torch.nn.Identity
+    'paraformer_dummy': torch.nn.Identity,
+    'stack_n_frames': StackNFramesSubsampling,
 }
 
 WENET_EMB_CLASSES = {
@@ -72,6 +75,7 @@ WENET_ATTENTION_CLASSES = {
     "rel_selfattn": RelPositionMultiHeadedAttention,
     "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
     "crossattn": MultiHeadedCrossAttention,
+    'shaw_rel_selfattn': ShawRelPositionMultiHeadedAttention
 }
 
 WENET_MLP_CLASSES = {

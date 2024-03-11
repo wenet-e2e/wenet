@@ -451,3 +451,84 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
             output_shape = torch.Size([B * Beams]) + output.size()[2:]
             output = output.view(output_shape)
         return output, new_cache
+
+
+class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
+    """ https://arxiv.org/pdf/1803.02155.pdf
+    """
+
+    def __init__(self,
+                 n_head: int,
+                 n_feat: int,
+                 dropout_rate: float,
+                 query_bias: bool = True,
+                 key_bias: bool = True,
+                 value_bias: bool = True,
+                 use_sdpa: bool = False):
+
+        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
+                         value_bias, use_sdpa)
+        # TODO(Mddct): 64 8 1 as args
+        self.max_right_rel_pos = 64
+        self.max_left_rel_pos = 8
+        self.rel_k_embed = torch.nn.Embedding(
+            self.max_left_rel_pos + self.max_right_rel_pos + 1, self.d_k)
+
+    def _relative_indices(self, length: int, device: torch.device):
+        indices = torch.arange(length, device=device).unsqueeze(0)
+        rel_indices = indices - indices.transpose(0, 1)
+        rel_indices = torch.clamp(rel_indices, -self.max_left_rel_pos,
+                                  self.max_right_rel_pos)
+        return rel_indices + self.max_left_rel_pos
+
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        pos_emb: torch.Tensor = torch.empty(0),
+        cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        del pos_emb
+        q, k, v = self.forward_qkv(query, key, value)
+        if cache.size(0) > 0:
+            key_cache, value_cache = torch.split(cache,
+                                                 cache.size(-1) // 2,
+                                                 dim=-1)
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        new_cache = torch.cat((k, v), dim=-1)
+
+        rel_k = self.rel_k_embed(
+            self._relative_indices(k.size(2), query.device))  # (t2, t2, d_k)
+        rel_k = rel_k[-q.size(2):]  # (t1, t2, d_k)
+        # b,h,t1,dk
+        rel_k = rel_k.unsqueeze(0).unsqueeze(0)  # (1, 1, t1, t2, d_k)
+        q_expand = q.unsqueeze(3)  # (batch, h, t1, 1, d_k)
+        rel_att_weights = (rel_k * q_expand).sum(-1).squeeze(
+            -1)  # (batch, h, t1, t2)
+
+        if not self.use_sdpa:
+            scores = (torch.matmul(q, k.transpose(-2, -1)) +
+                      rel_att_weights) / math.sqrt(self.d_k)
+            return self.forward_attention(v, scores, mask), new_cache
+        else:
+            # NOTE(Mddct): we need mask bias, not boolean mask
+            assert mask.dtype != torch.bool
+            mask = mask.unsqueeze(1)
+            # matrix_bd as a mask bias
+            mask = torch.where(mask == get_dtype_min(mask.dtype), mask,
+                               rel_att_weights / math.sqrt(self.d_k))
+            output = torch.nn.functional.scaled_dot_product_attention(
+                q,
+                k,
+                v,
+                attn_mask=mask,
+                dropout_p=self.dropout_rate,
+                scale=1 / math.sqrt(self.d_k),
+            )
+            output = (output.transpose(1, 2).contiguous().view(
+                query.size(0), -1,
+                self.h * self.d_k))  # (batch, time1, d_model)
+            return self.linear_out(output), new_cache

@@ -18,6 +18,8 @@ from typing import Tuple, Union
 
 import torch
 
+from wenet.utils.mask import make_pad_mask
+
 
 class BaseSubsampling(torch.nn.Module):
 
@@ -332,3 +334,57 @@ class Conv2dSubsampling8(BaseSubsampling):
         x = self.linear(x.transpose(1, 2).contiguous().view(b, t, c * f))
         x, pos_emb = self.pos_enc(x, offset)
         return x, pos_emb, x_mask[:, :, 2::2][:, :, 2::2][:, :, 2::2]
+
+
+class StackNFramesSubsampling(BaseSubsampling):
+
+    def __init__(self,
+                 idim: int,
+                 odim: int,
+                 dropout_rate: float,
+                 pos_enc_class: torch.nn.Module,
+                 stride: int = 2):
+
+        super().__init__()
+        del dropout_rate
+        self.pos_enc_class = pos_enc_class
+        self.stride = stride
+        self.idim = idim
+
+        self.norm = torch.nn.LayerNorm(idim * stride, eps=1e-5)
+        self.out = torch.nn.Linear(idim * stride, odim)
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        x_mask: torch.Tensor,
+        offset: Union[int, torch.Tensor] = 0
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Subsample x.
+
+        Args:
+            x (torch.Tensor): Input tensor (#batch, time, idim).
+            x_mask (torch.Tensor): Input mask (#batch, 1, time).
+
+        Returns:
+            torch.Tensor: Subsampled tensor (#batch, time', odim),
+                where time' = time // stride.
+            torch.Tensor: Subsampled mask (#batch, 1, time'),
+                where time' = time // stride.
+            torch.Tensor: positional encoding
+        """
+        with torch.no_grad():
+            b, s, _ = x.size()
+
+            seq_len = x_mask.sum(-1).view(b)
+            r = s % self.stride
+            s -= r
+            x = x[:, :s, :]
+            seq_len = torch.where(seq_len > s, s, seq_len)
+            seq_len = seq_len // self.stride
+            new_mask = ~make_pad_mask(seq_len, max_len=s // self.stride)
+            x = x.view(b, s // self.stride, self.idim * self.stride)
+            _, pos_emb = self.pos_enc_class(x, offset)
+            x = self.norm(x)
+            x = self.out(x)
+        return x, pos_emb, new_mask.unsqueeze(1)
