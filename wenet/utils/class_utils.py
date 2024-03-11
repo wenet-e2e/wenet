@@ -75,7 +75,7 @@ WENET_ATTENTION_CLASSES = {
     "rel_selfattn": RelPositionMultiHeadedAttention,
     "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
     "crossattn": MultiHeadedCrossAttention,
-    'rel_selfattn_v2': ShawRelPositionMultiHeadedAttention
+    'shaw_rel_selfattn': ShawRelPositionMultiHeadedAttention
 }
 
 WENET_MLP_CLASSES = {

@@ -35,7 +35,7 @@ def convert_to_wenet_yaml(wenet_yaml_path: str):
     configs['encoder_conf']['static_chunk_size'] = -1
     configs['encoder_conf']['activation_type'] = "swish"
     configs['encoder_conf']['conv_bias'] = False
-    configs['encoder_conf']['selfattention_layer_type'] = 'rel_selfattn_v2'
+    configs['encoder_conf']['selfattention_layer_type'] = 'shaw_rel_selfattn'
     configs['encoder_conf']['cnn_module_kernel'] = 31
     configs['encoder_conf']['cnn_module_norm'] = 'layer_norm'
 
