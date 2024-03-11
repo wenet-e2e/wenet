@@ -175,7 +175,7 @@ def ctc_prefix_beam_search(
                         next_score1.ns = log_add(next_score1.ns,
                                                  prefix_score.ns + prob)
                         if next_score1.v_ns < prefix_score.v_ns + prob:
-                            next_score1.vs_ns = prefix_score.v_ns + prob
+                            next_score1.v_ns = prefix_score.v_ns + prob
                             if next_score1.cur_token_prob < prob:
                                 next_score1.cur_token_prob = prob
                                 next_score1.times_ns = prefix_score.times_ns.copy(
