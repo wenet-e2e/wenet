@@ -14,7 +14,7 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Encoder definition."""
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 import torch.utils.checkpoint as ckpt
@@ -375,6 +375,8 @@ class TransformerEncoder(BaseEncoder):
         mlp_type: str = 'position_wise_feed_forward',
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
         """ Construct TransformerEncoder
 
@@ -396,7 +398,8 @@ class TransformerEncoder(BaseEncoder):
                                                     output_size,
                                                     attention_dropout_rate,
                                                     query_bias, key_bias,
-                                                    value_bias, use_sdpa),
+                                                    value_bias, use_sdpa,
+                                                    n_kv_head, head_dim),
                 mlp_class(output_size, linear_units, dropout_rate, activation,
                           mlp_bias),
                 dropout_rate,
@@ -445,6 +448,8 @@ class ConformerEncoder(BaseEncoder):
         mlp_type: str = 'position_wise_feed_forward',
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
         """Construct ConformerEncoder
 
@@ -481,6 +486,8 @@ class ConformerEncoder(BaseEncoder):
             key_bias,
             value_bias,
             use_sdpa,
+            n_kv_head,
+            head_dim,
         )
         # feed-forward module definition
         positionwise_layer_args = (
