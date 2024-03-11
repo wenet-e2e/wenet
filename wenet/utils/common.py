@@ -329,7 +329,6 @@ def get_dtype_min(
 
 
 def mask_to_bias(mask: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
-    return mask
     assert mask.dtype == torch.bool
     mask = mask.to(dtype)
     # attention mask bias
