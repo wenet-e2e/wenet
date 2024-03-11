@@ -30,6 +30,11 @@ class MultiHeadedAttention(nn.Module):
     see: https://arxiv.org/pdf/1911.02150.pdf
          https://arxiv.org/pdf/2305.13245.pdf
 
+    Example:
+        case 1: n_kv_head == None, head_dim == None, MultiHead attention (MHSA)
+        case 2: n_kv_head=1, n_head = 16, MultiQuery attention (MQA)
+        case 3: nv_kv_head=2, n_head = 16, GroupedQuery attention (GQA)
+
     Args:
         n_head (int): The number of heads.
         n_feat (int): The number of features.
@@ -62,7 +67,7 @@ class MultiHeadedAttention(nn.Module):
         self.d_k = n_feat // n_head
         assert self.d_k == self.inner_kv_dim // n_kv_head
         self.h = n_head
-        self.h_kv = n_head if n_kv_head is None else n_kv_head
+        self.h_kv = n_kv_head
 
         self.linear_q = nn.Linear(n_feat, self.inner_dim, bias=query_bias)
         self.linear_k = nn.Linear(n_feat, self.inner_kv_dim, bias=key_bias)
@@ -76,8 +81,8 @@ class MultiHeadedAttention(nn.Module):
     def _forward_linearx(self, name: str, x: torch.Tensor) -> torch.Tensor:
         assert x.ndim >= 3
         if name == 'query':
-            x_shape = x.size()
             x = self.linear_q(x)
+            x_shape = x.size()
             x_shape = x_shape[:-1] + torch.Size([self.h, self.d_k])
         elif name == 'key':
             x = self.linear_k(x)
@@ -236,12 +241,12 @@ class MultiHeadedAttention(nn.Module):
             k = torch.repeat_interleave(
                 k,
                 self.h // self.h_kv,
-                dim=1,
+                dim=-3,
             )
             v = torch.repeat_interleave(
                 v,
                 self.h // self.h_kv,
-                dim=1,
+                dim=-3,
             )
 
         if not self.use_sdpa:
@@ -381,12 +386,12 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             k = torch.repeat_interleave(
                 k,
                 self.h // self.h_kv,
-                dim=1,
+                dim=-3,
             )
             v = torch.repeat_interleave(
                 v,
                 self.h // self.h_kv,
-                dim=1,
+                dim=-3,
             )
 
         n_batch_pos = pos_emb.size(0)
@@ -475,12 +480,12 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
             k = torch.repeat_interleave(
                 k,
                 self.h // self.h_kv,
-                dim=1,
+                dim=-3,
             )
             v = torch.repeat_interleave(
                 v,
                 self.h // self.h_kv,
-                dim=1,
+                dim=-3,
             )
 
         B = query.size(0)
