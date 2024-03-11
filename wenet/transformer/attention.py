@@ -454,6 +454,8 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
 
 
 class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
+    """ https://arxiv.org/pdf/1803.02155.pdf
+    """
 
     def __init__(self,
                  n_head: int,
