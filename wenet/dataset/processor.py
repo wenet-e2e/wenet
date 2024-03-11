@@ -29,7 +29,7 @@ import torchaudio.compliance.kaldi as kaldi
 import torch.nn.functional as F
 from wenet.text.base_tokenizer import BaseTokenizer
 
-torchaudio.utils.sox_utils.set_buffer_size(16500)
+# torchaudio.utils.sox_utils.set_buffer_size(16500)
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
@@ -218,6 +218,22 @@ def compute_fbank(sample,
                       dither=dither,
                       energy_floor=0.0,
                       sample_frequency=sample_rate)
+    sample['feat'] = mat
+    return sample
+
+
+def compute_w2vbert_fbank(sample,
+                          num_mel_bins=23,
+                          frame_length=25,
+                          frame_shift=10,
+                          dither=0.0):
+    """ Extract Pretrain w2vbert(4.5M hours) fbank
+    """
+    sample = compute_fbank(sample, num_mel_bins, frame_length, frame_shift,
+                           dither)
+    mat = sample['feat']
+    std, mean = torch.std_mean(mat, dim=0)
+    mat = mat.subtract(mean).divide(std)
     sample['feat'] = mat
     return sample
 

@@ -11,6 +11,11 @@ def convert_to_wenet_yaml(wenet_yaml_path: str):
     # whisper token nums
     configs['output_dim'] = 51866
 
+    configs = {}
+    configs['input_dim'] = 80
+    # whisper token nums
+    configs['output_dim'] = 1024
+
     configs['encoder'] = 'conformer'
     configs['encoder_conf'] = {}
     configs['encoder_conf']['causal'] = True
@@ -30,6 +35,21 @@ def convert_to_wenet_yaml(wenet_yaml_path: str):
     configs['encoder_conf']['static_chunk_size'] = -1
     configs['encoder_conf']['activation_type'] = "swish"
     configs['encoder_conf']['conv_bias'] = False
+    configs['encoder_conf']['selfattention_layer_type'] = 'rel_selfattn_v2'
+    configs['encoder_conf']['cnn_module_kernel'] = 31
+    configs['encoder_conf']['cnn_module_norm'] = 'layer_norm'
+
+    # dummy decoder
+    # TODO(Mddct): To use whisper's decoder here
+    configs['decoder'] = 'transformer'
+    configs['decoder_conf'] = {}
+    configs['decoder_conf']['attention_head'] = 16
+    configs['decoder_conf']['linear_units'] = 4096
+    configs['decoder_conf']['num_blocks'] = 6
+    configs['decoder_conf']['dropout_rate'] = 0.1
+    configs['decoder_conf']['positional_dropout_rate'] = 0.1
+    configs['decoder_conf']['self_attention_dropout_rate'] = 0.0
+    configs['decoder_conf']['src_attention_dropout_rate'] = 0.0
 
     configs['cmvn'] = None
     configs['cmvn_conf'] = {}
@@ -104,13 +124,14 @@ def convert_to_wenet_state_dict(w2vbert_conformer_state_dict,
     wenet_state_dict = {}
     for name in conformer_state_dict.keys():
         old_name = name
+        name = name.replace('encoder.layers', 'encoder.encoders')
         name = name.replace("ffn1_layer_norm", "norm_ff_macaron")
         name = name.replace("self_attn_layer_norm", "norm_mha")
         name = name.replace("conv_layer_norm", "norm_conv")
         name = name.replace("ffn2_layer_norm", "norm_ff")
         name = name.replace("self_attn.q_proj", "self_attn.linear_q")
         name = name.replace("self_attn.k_proj", "self_attn.linear_k")
-        name = name.replace("self_attn.v_proj", "self_attn_linear_v")
+        name = name.replace("self_attn.v_proj", "self_attn.linear_v")
         name = name.replace("self_attn.output_proj", "self_attn.linear_out")
         name = name.replace("self_attn.sdpa.rel_k_embed",
                             "self_attn.rel_k_embed")
@@ -124,12 +145,12 @@ def convert_to_wenet_state_dict(w2vbert_conformer_state_dict,
         name = name.replace("ffn1.inner_proj", "feed_forward_macaron.w_1")
         name = name.replace("ffn1.output_proj", "feed_forward_macaron.w_2")
         name = name.replace("ffn2.inner_proj", "feed_forward.w_1")
-        name = name.replace("fn2.output_proj", "feed_forward.w_2")
+        name = name.replace("ffn2.output_proj", "feed_forward.w_2")
+        name = name.replace("encoder_frontend.model_dim_proj",
+                            "encoder.embed.out")
         name = name.replace("encoder_frontend.post_extract_layer_norm",
-                            "embed.layer_nrom")
-        name = name.replace("encoder_frontend.model_dim_proj", "embed.out")
+                            "encoder.embed.norm")
         name = name.replace(".layer_norm.", ".norm_final.")
-
         wenet_state_dict[name] = conformer_state_dict[old_name]
 
     print("Saving fp32 ckpt to {}...".format(wenet_state_dict_path))

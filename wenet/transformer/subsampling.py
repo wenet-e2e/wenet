@@ -18,7 +18,7 @@ from typing import Tuple, Union
 
 import torch
 
-from wenet.utils.mask import make_non_pad_mask
+from wenet.utils.mask import make_pad_mask
 
 
 class BaseSubsampling(torch.nn.Module):
@@ -351,7 +351,7 @@ class StackNFramesSubsampling(BaseSubsampling):
         self.stride = stride
         self.idim = idim
 
-        self.layer_norm = torch.nn.LayerNorm(idim * stride, eps=1e-5)
+        self.norm = torch.nn.LayerNorm(idim * stride, eps=1e-5)
         self.out = torch.nn.Linear(idim * stride, odim)
 
     def forward(
@@ -373,22 +373,18 @@ class StackNFramesSubsampling(BaseSubsampling):
                 where time' = time // stride.
             torch.Tensor: positional encoding
         """
-        b, s, _ = x.size()
-        mat = sample['feat']
-        # assume x is fbank
-        std, mean = torch.std_mean(x, dim=0)
-        x = mat.subtract(mean).divide(std)
+        with torch.no_grad():
+            b, s, _ = x.size()
 
-        seq_len = x_mask.sum(-1).view(b)
-        r = s % self.stride
-        s -= r
-        x = x[:, :s, :]
-        seq_len = torch.where(seq_len > s, s, seq_len)
-        num_frames = s // self.stride
-        x = x.view(b, num_frames, self.idim * self.stride)
-        new_mask = make_non_pad_mask(seq_len)
-        _, pos_emb = self.pos_enc(x, offset)
-        x = self.layer_norm(x)
-        _, pos_emb = self.pos_enc_class(x, offset)
-        x = self.out(x)
-        return x, pos_emb, new_mask
+            seq_len = x_mask.sum(-1).view(b)
+            r = s % self.stride
+            s -= r
+            x = x[:, :s, :]
+            seq_len = torch.where(seq_len > s, s, seq_len)
+            seq_len = seq_len // self.stride
+            new_mask = ~make_pad_mask(seq_len, max_len=s // self.stride)
+            x = x.view(b, s // self.stride, self.idim * self.stride)
+            _, pos_emb = self.pos_enc_class(x, offset)
+            x = self.norm(x)
+            x = self.out(x)
+        return x, pos_emb, new_mask.unsqueeze(1)

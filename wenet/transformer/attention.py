@@ -453,15 +453,19 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
         return output, new_cache
 
 
-class IndicesRelPositionMultiHeadedAttention(MultiHeadedAttention):
+class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
 
     def __init__(self,
                  n_head: int,
                  n_feat: int,
                  dropout_rate: float,
+                 query_bias: bool = True,
                  key_bias: bool = True,
+                 value_bias: bool = True,
                  use_sdpa: bool = False):
-        super().__init__(n_head, n_feat, dropout_rate, key_bias, use_sdpa)
+
+        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
+                         value_bias, use_sdpa)
         # TODO(Mddct): 64 8 1 as args
         self.max_right_rel_pos = 64
         self.max_left_rel_pos = 8
@@ -495,14 +499,13 @@ class IndicesRelPositionMultiHeadedAttention(MultiHeadedAttention):
         new_cache = torch.cat((k, v), dim=-1)
 
         rel_k = self.rel_k_embed(
-            self._relative_indices(key.size(1), query.device))  # (t2, t2, d_k)
+            self._relative_indices(k.size(2), query.device))  # (t2, t2, d_k)
         rel_k = rel_k[-q.size(2):]  # (t1, t2, d_k)
         # b,h,t1,dk
         rel_k = rel_k.unsqueeze(0).unsqueeze(0)  # (1, 1, t1, t2, d_k)
         q_expand = q.unsqueeze(3)  # (batch, h, t1, 1, d_k)
         rel_att_weights = (rel_k * q_expand).sum(-1).squeeze(
             -1)  # (batch, h, t1, t2)
-        print(rel_att_weights.size())
 
         if not self.use_sdpa:
             scores = (torch.matmul(q, k.transpose(-2, -1)) +
