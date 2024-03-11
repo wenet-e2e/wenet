@@ -66,7 +66,7 @@ class MultiHeadedAttention(nn.Module):
         self.linear_q = nn.Linear(n_feat, self.inner_dim, bias=query_bias)
         self.linear_k = nn.Linear(n_feat, self.inner_kv_dim, bias=key_bias)
         self.linear_v = nn.Linear(n_feat, self.inner_kv_dim, bias=value_bias)
-        self.linear_out = nn.Linear(n_feat, n_feat)
+        self.linear_out = nn.Linear(self.inner_dim, n_feat, bias=query_bias)
         self.dropout = nn.Dropout(p=dropout_rate)
 
         self.use_sdpa = use_sdpa
