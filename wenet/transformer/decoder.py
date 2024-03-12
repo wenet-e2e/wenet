@@ -175,8 +175,8 @@ class TransformerDecoder(torch.nn.Module):
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
         if self.use_sdpa:
-            tgt_mask = mask_to_bias(tgt_mask, memory_mask.dtype)
-            memory_mask = mask_to_bias(memory_mask, memory_mask.dtype)
+            tgt_mask = mask_to_bias(tgt_mask, memory.dtype)
+            memory_mask = mask_to_bias(memory_mask, memory.dtype)
 
         x, _ = self.embed(tgt)
         if self.gradient_checkpointing and self.training:
