@@ -440,7 +440,7 @@ def attention_rescoring(
             # add ctc score
             score += ctc_scores[i] * ctc_weight
             if score > best_score:
-                best_score = score
+                best_score = score.item()
                 best_index = i
             tokens_confidences.append(tc)
         results.append(
