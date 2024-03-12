@@ -84,6 +84,8 @@ class TransformerDecoder(torch.nn.Module):
         mlp_type: str = 'position_wise_feed_forward',
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -114,11 +116,11 @@ class TransformerDecoder(torch.nn.Module):
                 WENET_ATTENTION_CLASSES["selfattn"](
                     attention_heads, attention_dim,
                     self_attention_dropout_rate, query_bias, key_bias,
-                    value_bias, use_sdpa),
+                    value_bias, use_sdpa, n_kv_head, head_dim),
                 WENET_ATTENTION_CLASSES["crossattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
-                    query_bias, key_bias, value_bias, use_sdpa)
-                if src_attention else None,
+                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
+                    head_dim) if src_attention else None,
                 mlp_class(attention_dim, linear_units, dropout_rate,
                           activation, mlp_bias),
                 dropout_rate,
@@ -173,8 +175,8 @@ class TransformerDecoder(torch.nn.Module):
         # tgt_mask: (B, L, L)
         tgt_mask = tgt_mask & m
         if self.use_sdpa:
-            tgt_mask = mask_to_bias(tgt_mask, tgt.dtype)
-            memory_mask = mask_to_bias(memory_mask, memory_mask.dtype)
+            tgt_mask = mask_to_bias(tgt_mask, memory.dtype)
+            memory_mask = mask_to_bias(memory_mask, memory.dtype)
 
         x, _ = self.embed(tgt)
         if self.gradient_checkpointing and self.training:
@@ -334,6 +336,8 @@ class BiTransformerDecoder(torch.nn.Module):
         use_sdpa: bool = False,
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
     ):
 
         super().__init__()
@@ -360,6 +364,8 @@ class BiTransformerDecoder(torch.nn.Module):
             use_sdpa=use_sdpa,
             layer_norm_type=layer_norm_type,
             norm_eps=norm_eps,
+            n_kv_head=n_kv_head,
+            head_dim=head_dim,
         )
 
         self.right_decoder = TransformerDecoder(
@@ -384,6 +390,8 @@ class BiTransformerDecoder(torch.nn.Module):
             use_sdpa=use_sdpa,
             layer_norm_type=layer_norm_type,
             norm_eps=norm_eps,
+            n_kv_head=n_kv_head,
+            head_dim=head_dim,
         )
 
     def forward(

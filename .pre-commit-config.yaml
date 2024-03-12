@@ -16,6 +16,7 @@ repos:
     rev: 'v17.0.6'
     hooks:
     - id: clang-format
+      args: ['--style=file']
       exclude: 'runtime/ios/WenetDemo/WenetDemo/wenet/.*\.h$|.*\.(json|java|js|m|mm|proto)'
   - repo: https://github.com/cpplint/cpplint
     rev: '1.6.1'

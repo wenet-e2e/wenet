@@ -1,7 +1,8 @@
 import torch
 import pytest
 from wenet.transformer.attention import (MultiHeadedAttention,
-                                         RelPositionMultiHeadedAttention)
+                                         RelPositionMultiHeadedAttention,
+                                         ShawRelPositionMultiHeadedAttention)
 from wenet.transformer.embedding import RelPositionalEncoding
 from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
                                              TransformerEncoderLayer)
@@ -221,3 +222,23 @@ def test_rel_position_multi_head_attention_sdpa(args):
         )
         assert torch.allclose(cache, cache_with_sdpa)
         q = output
+
+
+def test_shaw_rel_position_multihead_attention():
+    torch.manual_seed(777)
+    module = ShawRelPositionMultiHeadedAttention(8, 256, 0.0, use_sdpa=False)
+
+    torch.manual_seed(777)
+    module_sdpa = ShawRelPositionMultiHeadedAttention(8,
+                                                      256,
+                                                      0.0,
+                                                      use_sdpa=True)
+    q = torch.rand(2, 10, 256)
+    k = torch.rand(2, 10, 256)
+    v = torch.rand(2, 10, 256)
+    pos_emb = torch.zeros(0, 0, 0)
+    mask = torch.ones(2, 10, 10)
+    out, _ = module(q, k, v, mask, pos_emb)
+    out_sdpa, _ = module_sdpa(q, k, v, mask, pos_emb)
+
+    torch.allclose(out, out_sdpa)
