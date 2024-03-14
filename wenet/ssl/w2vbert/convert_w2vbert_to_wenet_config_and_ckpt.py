@@ -43,7 +43,7 @@ def convert_to_wenet_yaml(wenet_yaml_path: str):
     # TODO(Mddct): To use whisper's decoder here
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
-    configs['decoder_conf']['attention_head'] = 16
+    configs['decoder_conf']['attention_heads'] = 16
     configs['decoder_conf']['linear_units'] = 4096
     configs['decoder_conf']['num_blocks'] = 6
     configs['decoder_conf']['dropout_rate'] = 0.1
@@ -91,14 +91,20 @@ def convert_to_wenet_yaml(wenet_yaml_path: str):
     configs['dataset_conf']['sort_conf'] = {}
     configs['dataset_conf']['sort_conf']['sort_size'] = 500
     configs['dataset_conf']['feats_type'] = "fbank"
+    configs['dataset_conf']['fbank_conf']['num_mel_bins'] = 80
+    configs['dataset_conf']['fbank_conf']['frame_shift'] = 10
+    configs['dataset_conf']['fbank_conf']['frame_length'] = 25
+    configs['dataset_conf']['fbank_conf']['dither'] = 0.1
+
     configs['dataset_conf']['batch_conf'] = {}
     configs['dataset_conf']['batch_conf']['batch_type'] = 'dynamic'
-    configs['dataset_conf']['batch_conf']['batch_size'] = 26
     configs['dataset_conf']['batch_conf']['max_frames_in_batch'] = 12000
 
+    # TODO: Tokenizer or not
+
     configs['grad_clip'] = 5
-    configs['accum_grad'] = 4
-    configs['max_epoch'] = 100
+    configs['accum_grad'] = 1
+    configs['max_epoch'] = 40
     configs['log_interval'] = 100
 
     configs['optim'] = "adam"
