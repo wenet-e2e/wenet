@@ -469,6 +469,7 @@ def save_model(model, info_dict):
     rank = int(os.environ.get('RANK', 0))
     tag = info_dict["tag"]
     model_dir = info_dict["model_dir"]
+    save_model_path = os.path.join(model_dir, '{}.pt'.format(tag))
     # save ckpt
     if info_dict["train_engine"] == "deepspeed":
         # NOTE(xcsong): All ranks should call this API, but only rank 0
@@ -484,13 +485,12 @@ def save_model(model, info_dict):
                                                                model_dir, tag),
                                                            tag=tag)
                 os.system("rm -rf {}/{}".format(model_dir, tag))
+
+    elif info_dict['train_engine'] == "torch_fsdp":
+        fsdp_save_model(model, save_model_path, info_dict)
     elif rank == 0:
         # NOTE(xcsong): For torch_ddp, only rank-0 should call this.
-        save_model_path = os.path.join(model_dir, '{}.pt'.format(tag))
-        if info_dict['train_engine'] == "torch_fsdp":
-            fsdp_save_model(model, save_model_path, info_dict)
-        else:
-            save_checkpoint(model, save_model_path, info_dict)
+        save_checkpoint(model, save_model_path, info_dict)
     # save yaml
     if rank == 0:
         with open("{}/{}.yaml".format(model_dir, tag), 'w') as fout:

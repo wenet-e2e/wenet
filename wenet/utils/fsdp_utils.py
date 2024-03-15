@@ -5,7 +5,7 @@ from torch.distributed.fsdp import (FullyShardedDataParallel as FSDP,
 
 from torch.distributed.fsdp.wrap import (_or_policy, lambda_auto_wrap_policy,
                                          transformer_auto_wrap_policy)
-from wenet.utils.checkpoint import save_checkpoint
+from wenet.utils.checkpoint import save_state_dict_and_infos
 
 from wenet.utils.init_model import (WENET_DECODER_CLASSES,
                                     WENET_ENCODER_CLASSES)
@@ -48,4 +48,6 @@ def fsdp_save_model(model, save_model_path, info_dict):
     rank = int(os.environ.get('RANK', 0))
     with FSDP.state_dict_type(model, StateDictType.FULL_STATE_DICT,
                               fullstate_save_policy):
-        save_checkpoint(model, save_model_path, info_dict)
+        state_dict = model.state_dict()
+        if rank == 0:
+            save_state_dict_and_infos(state_dict, save_model_path, info_dict)
