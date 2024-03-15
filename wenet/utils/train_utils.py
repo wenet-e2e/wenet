@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from contextlib import nullcontext
 import copy
 import deepspeed
 import json
@@ -104,6 +105,14 @@ def add_dataset_args(parser):
                         default=100,
                         type=int,
                         help='prefetch number')
+    parser.add_argument(
+        '--dtype',
+        dest='training dtype',
+        default='fp32',
+        choices=['fp32', 'fp16', 'bf16'],
+        help='when amp is used, dtype is automatically set to fp16.\
+        this arg has no effect when deepspeed is enabled.')
+
     return parser
 
 
@@ -139,12 +148,6 @@ def add_deepspeed_args(parser):
                         default='model_only',
                         choices=['model_only', 'model+optimizer'],
                         help='save model/optimizer states')
-    parser.add_argument('--dtype',
-                        dest='training dtype',
-                        default='fp32',
-                        choices=['fp32', 'fp16', 'bf16'],
-                        help='model compute dtype')
-
     # DeepSpeed automaticly add '--deepspeed' and '--deepspeed_config' to parser
     parser = deepspeed.add_config_arguments(parser)
     return parser
@@ -191,13 +194,12 @@ def init_distributed(args):
 
 
 def check_modify_and_save_config(args, configs, symbol_table):
-    if args.train_engine == "torch_ddp":
+    if args.train_engine in ["torch_ddp", "torch_fsdp"]:
         if args.use_amp:
             configs["dtype"] = "fp16"
+            args.dtype = 'fp16'
         else:
-            configs["dtype"] = "fp32"
-    elif args.train_engine == "torch_fsdp":
-        configs["dtype"] = args.dtype
+            configs["dtype"] = args.dtype
     elif args.train_engine == "deepspeed":
         # NOTE(xcsong): DeepSpeed does not support uneven data. When using custom
         #   dataset, we need to manually ensure that the data is evenly distributed
@@ -318,18 +320,12 @@ def wrap_cuda_model(args, model, configs=None):
         grad_ckpt = getattr(model.encoder, 'gradient_checkpointing', False)
     else:
         grad_ckpt = False
-    # TODO(xcsong): could one GPU use ddp? and int(os.environ.get('WORLD_SIZE', 1)) > 1
     if args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=not grad_ckpt)
         device = torch.device("cuda")
-        if args.fp16_grad_sync:
-            from torch.distributed.algorithms.ddp_comm_hooks import (
-                default as comm_hooks, )
-            model.register_comm_hook(state=None,
-                                     hook=comm_hooks.fp16_compress_hook)
     elif args.train_engine == "deepspeed":  # deepspeed
         # NOTE(xcsong): look in detail how the memory estimator API works:
         #   https://deepspeed.readthedocs.io/en/latest/memory.html#discussion
@@ -377,9 +373,16 @@ def wrap_cuda_model(args, model, configs=None):
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
         )
+
         device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
+    if args.engine in ["torch_fsdp", "torch_ddp"]:
+        if args.fp16_grad_sync:
+            from torch.distributed.algorithms.ddp_comm_hooks import (
+                default as comm_hooks, )
+            model.register_comm_hook(state=None,
+                                     hook=comm_hooks.fp16_compress_hook)
 
     return model, device
 
@@ -461,7 +464,10 @@ def init_scaler(args):
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
     elif args.train_engine == 'torch_fsdp':
-        scaler = sharded_grad_scaler.ShardedGradScaler()
+        # why bf16 don't need scaler:
+        # https://discuss.pytorch.org/t/why-bf16-do-not-need-loss-scaling/176596
+        scaler = sharded_grad_scaler.ShardedGradScaler(
+            enabled=args.dtype in ['fp16'])
     return scaler
 
 
@@ -504,7 +510,9 @@ def wenet_join(group_join, info_dict):
     rank = int(os.environ.get('RANK', 0))
     train_engine = info_dict.get('train_engine', "torch_ddp")
 
-    if info_dict["batch_idx"] == 0 or train_engine == "torch_ddp":
+    if info_dict["batch_idx"] == 0 or train_engine in [
+            "torch_ddp", "torch_fsdp"
+    ]:
         # NOTE(xcsong): skip first batch because its processing time includes
         #   dataloader initialization time, which may exceed 30 seconds
         return False
@@ -551,7 +559,8 @@ def batch_forward(model, batch, scaler, info_dict):
         # autocast context
         # The more details about amp can be found in
         # https://pytorch.org/docs/stable/notes/amp_examples.html
-        with torch.cuda.amp.autocast(scaler is not None):
+        autocast = torch.cuda.amp.autocast if scaler is not None else nullcontext
+        with autocast():
             loss_dict = model(batch, device)
     info_dict['loss_dict'] = loss_dict
 
@@ -571,9 +580,9 @@ def batch_backward(model, scaler, info_dict):
         #               `scale_loss_wrt_accum_grad + loss.backward()`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         scaled_loss = model.backward(loss)
-    elif train_engine == "torch_ddp":
+    else:
         scaled_loss = loss / accum_grad
-        if use_amp:
+        if scaler is not None:
             scaler.scale(scaled_loss).backward()
         else:
             scaled_loss.backward()
@@ -612,7 +621,7 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
         grad_norm = model.get_global_grad_norm()
     elif (batch_idx + 1) % accum_grad == 0:
         # Use mixed precision training
-        if use_amp:
+        if scaler is not None:
             scaler.unscale_(optimizer)
             grad_norm = clip_grad_norm_(model.parameters(), clip)
             # Must invoke scaler.update() if unscale_() is used in
