@@ -364,7 +364,6 @@ def wrap_cuda_model(args, model, configs=None):
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
         )
-
         device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))

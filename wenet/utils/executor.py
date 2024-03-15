@@ -63,8 +63,9 @@ class Executor:
                 # Disable gradient synchronizations across DDP processes.
                 # Within this context, gradients will be accumulated on module
                 # variables, which will later be synchronized.
-                if info_dict.get("train_engine", "torch_ddp") == "torch_ddp" and \
-                        (batch_idx + 1) % info_dict["accum_grad"] != 0:
+                if info_dict.get("train_engine", "torch_ddp") in [
+                        "torch_ddp", "torch_fsdp"
+                ] and (batch_idx + 1) % info_dict["accum_grad"] != 0:
                     context = model.no_sync
                 # Used for single gpu training and DDP gradient synchronization
                 # processes.
