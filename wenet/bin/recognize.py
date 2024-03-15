@@ -45,8 +45,8 @@ def get_args():
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--dtype',
                         type=str,
-                        default='float32',
-                        choices=['float16', 'float32', 'bfloat16'],
+                        default='fp32',
+                        choices=['fp16', 'fp32', 'bf16'],
                         help='model\'s dtype')
     parser.add_argument('--num_workers',
                         default=0,
@@ -228,9 +228,9 @@ def main():
     model = model.to(device)
     model.eval()
     dtype = torch.float32
-    if args.dtype == 'float16':
+    if args.dtype == 'fp16':
         dtype = torch.float16
-    elif args.dtype == 'bfloat16':
+    elif args.dtype == 'bf16':
         dtype = torch.bfloat16
     logging.info("compute dtype is {}".format(dtype))
 
