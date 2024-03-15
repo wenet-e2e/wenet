@@ -359,7 +359,7 @@ def wrap_cuda_model(args, model, configs=None):
             sharding_strategy=sharding_strategy,
             limit_all_gathers=True,
             use_orig_params=True,
-            sync_module_states=args.fsdo_sync_module_states,
+            sync_module_states=args.fsdp_sync_module_states,
             # init_distributed is called (torch.cuda.set_device),
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
@@ -550,7 +550,9 @@ def batch_forward(model, batch, scaler, info_dict):
         # autocast context
         # The more details about amp can be found in
         # https://pytorch.org/docs/stable/notes/amp_examples.html
-        autocast = torch.cuda.amp.autocast if scaler is not None else nullcontext
+        autocast = torch.cuda.amp.autocast if (
+            scaler is not None
+            or info_dict['train_engine'] == 'torch_fsdp') else nullcontext
         with autocast():
             loss_dict = model(batch, device)
     info_dict['loss_dict'] = loss_dict
