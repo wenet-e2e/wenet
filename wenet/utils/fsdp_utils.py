@@ -17,7 +17,6 @@ def wenet_fsdp_wrap_policy():
     # TODO(Mddct):
     #     1 wrap transducer's predictor and joint
     #     2 wrap paraformer's cif
-
     wrap_policy = partial(transformer_auto_wrap_policy,
                           transformer_layer_cls=to_wrap_class)
 

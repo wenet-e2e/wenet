@@ -41,8 +41,15 @@ def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--train_engine',
                         default='torch_ddp',
-                        choices=['torch_ddp', 'deepspeed'],
+                        choices=['torch_ddp', 'torch_fsdp', 'deepspeed'],
                         help='Engine for paralleled training')
+    parser.add_argument(
+        '--dtype',
+        default='fp32',
+        choices=['fp32', 'fp16', 'bf16'],
+        help='when amp is used, dtype is automatically set to fp16.\
+        this arg has no effect when deepspeed is enabled.')
+
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)
     parser = add_ddp_args(parser)

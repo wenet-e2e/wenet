@@ -105,14 +105,6 @@ def add_dataset_args(parser):
                         default=100,
                         type=int,
                         help='prefetch number')
-    parser.add_argument(
-        '--dtype',
-        dest='training dtype',
-        default='fp32',
-        choices=['fp32', 'fp16', 'bf16'],
-        help='when amp is used, dtype is automatically set to fp16.\
-        this arg has no effect when deepspeed is enabled.')
-
     return parser
 
 
@@ -169,9 +161,8 @@ def add_fsdp_args(parser):
         rank 0 to ensure that they are replicated across ranks',
     )
     parser.add_argument(
-        '--fstp_sharding_strategy',
-        dest='zero1 or zero1+zeros2 or zeros3',
-        default='model_only',
+        '--fsdp_sharding_strategy',
+        default='grad_op',
         choices=['full', 'grad_op', 'no_shard'],
         help='FULL_SHARD, SHARD_GRAD_OP, NO_SHARD, see FSDP api')
     return parser
@@ -357,7 +348,7 @@ def wrap_cuda_model(args, model, configs=None):
         }[args.fsdp_sharding_strategy]
         model = FSDP(
             model,
-            auto_wrap_policy=wenet_fsdp_wrap_policy,
+            auto_wrap_policy=wenet_fsdp_wrap_policy(),
             cpu_offload=CPUOffload(offload_params=True)
             if args.fsdp_cpu_offload is True else None,
             mixed_precision=MixedPrecision(
@@ -368,7 +359,7 @@ def wrap_cuda_model(args, model, configs=None):
             sharding_strategy=sharding_strategy,
             limit_all_gathers=True,
             use_orig_params=True,
-            sync_module_states=args.sync_module_states,
+            sync_module_states=args.fsdo_sync_module_states,
             # init_distributed is called (torch.cuda.set_device),
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
@@ -377,7 +368,7 @@ def wrap_cuda_model(args, model, configs=None):
         device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
-    if args.engine in ["torch_fsdp", "torch_ddp"]:
+    if args.train_engine in ["torch_fsdp", "torch_ddp"]:
         if args.fp16_grad_sync:
             from torch.distributed.algorithms.ddp_comm_hooks import (
                 default as comm_hooks, )
