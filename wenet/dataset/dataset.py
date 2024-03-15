@@ -111,6 +111,7 @@ def Dataset(data_type,
 
     batch_conf = conf.get('batch_conf', {})
     batch_type = batch_conf.get('batch_type', 'static')
+    assert batch_type in ['static', 'bucket', 'dynamic']
     if batch_type == 'static':
         assert 'batch_size' in batch_conf
         batch_size = batch_conf.get('batch_size', 16)
