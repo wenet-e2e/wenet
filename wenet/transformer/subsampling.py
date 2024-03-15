@@ -373,18 +373,17 @@ class StackNFramesSubsampling(BaseSubsampling):
                 where time' = time // stride.
             torch.Tensor: positional encoding
         """
-        with torch.no_grad():
-            b, s, _ = x.size()
+        b, s, _ = x.size()
 
-            seq_len = x_mask.sum(-1).view(b)
-            r = s % self.stride
-            s -= r
-            x = x[:, :s, :]
-            seq_len = torch.where(seq_len > s, s, seq_len)
-            seq_len = seq_len // self.stride
-            new_mask = ~make_pad_mask(seq_len, max_len=s // self.stride)
-            x = x.view(b, s // self.stride, self.idim * self.stride)
-            _, pos_emb = self.pos_enc_class(x, offset)
-            x = self.norm(x)
-            x = self.out(x)
+        seq_len = x_mask.sum(-1).view(b)
+        r = s % self.stride
+        s -= r
+        x = x[:, :s, :]
+        seq_len = torch.where(seq_len > s, s, seq_len)
+        seq_len = seq_len // self.stride
+        new_mask = ~make_pad_mask(seq_len, max_len=s // self.stride)
+        x = x.view(b, s // self.stride, self.idim * self.stride)
+        _, pos_emb = self.pos_enc_class(x, offset)
+        x = self.norm(x)
+        x = self.out(x)
         return x, pos_emb, new_mask.unsqueeze(1)

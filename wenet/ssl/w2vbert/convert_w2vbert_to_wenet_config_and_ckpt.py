@@ -44,6 +44,7 @@ def convert_to_wenet_yaml(wenet_yaml_path: str):
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
     configs['decoder_conf']['attention_heads'] = 16
+    configs['encoder_conf']['gradient_checkpointing'] = True
     configs['decoder_conf']['linear_units'] = 4096
     configs['decoder_conf']['num_blocks'] = 6
     configs['decoder_conf']['dropout_rate'] = 0.1
