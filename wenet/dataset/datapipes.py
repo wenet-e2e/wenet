@@ -14,6 +14,7 @@
 
 import collections
 from collections.abc import Callable
+import copy
 import sys
 import tarfile
 import logging
@@ -252,6 +253,23 @@ class PrefetchDataPipe(IterDataPipe):
 
         else:
             yield from self.dp
+
+
+@functional_datapipe("repeat")
+class RepeatDatapipe(IterDataPipe):
+
+    def __init__(self, dataset: IterDataPipe, count: int = -1):
+        super().__init__()
+        self.dp = dataset
+        self.count = count
+
+    def __iter__(self):
+        i = 0
+        while self.count == -1 or i < self.count:
+            for elem in self.dp:
+                new_elem = copy.copy(elem)
+                yield new_elem
+            i += 1
 
 
 @functional_datapipe("shard")
