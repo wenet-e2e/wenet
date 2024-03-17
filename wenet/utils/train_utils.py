@@ -162,9 +162,10 @@ def add_fsdp_args(parser):
     )
     parser.add_argument(
         '--fsdp_sharding_strategy',
-        default='grad_op',
-        choices=['full', 'grad_op', 'no_shard'],
-        help='FULL_SHARD, SHARD_GRAD_OP, NO_SHARD, see FSDP api')
+        default='zero2',
+        # TODO(Mddct): pipeline and model parallel (3-D parallelism)
+        choices=['no_shard', 'zero1', 'zero2', 'zero3'],
+        help='NO_SHARD, zero1, SHARD_GRAD_OP, FULL_SHARD, see FSDP api')
     return parser
 
 
@@ -342,13 +343,17 @@ def wrap_cuda_model(args, model, configs=None):
         }[configs['dtype']]
 
         sharding_strategy = {
-            'full': ShardingStrategy.FULL_SHARD,
-            'grad_op': ShardingStrategy.SHARD_GRAD_OP,
-            'no_shar': ShardingStrategy.NO_SHARD,
+            'zero1': ShardingStrategy.SHARD_GRAD_OP,
+            'zero2': ShardingStrategy.SHARD_GRAD_OP,
+            'zero3': ShardingStrategy.FULL_SHARD,
+            'no_shard': ShardingStrategy.NO_SHARD,
         }[args.fsdp_sharding_strategy]
+        wrap_policy = None
+        if args.fsdp_sharding_strategy not in ['zero1', 'no_shard']:
+            wrap_policy = wenet_fsdp_wrap_policy()
         model = FSDP(
             model,
-            auto_wrap_policy=wenet_fsdp_wrap_policy(),
+            auto_wrap_policy=wrap_policy,
             cpu_offload=CPUOffload(offload_params=True)
             if args.fsdp_cpu_offload is True else None,
             mixed_precision=MixedPrecision(
@@ -500,9 +505,7 @@ def wenet_join(group_join, info_dict):
     rank = int(os.environ.get('RANK', 0))
     train_engine = info_dict.get('train_engine', "torch_ddp")
 
-    if info_dict["batch_idx"] == 0 or train_engine in [
-            "torch_ddp", "torch_fsdp"
-    ]:
+    if info_dict["batch_idx"] == 0 or train_engine == "torch_ddp":
         # NOTE(xcsong): skip first batch because its processing time includes
         #   dataloader initialization time, which may exceed 30 seconds
         return False
