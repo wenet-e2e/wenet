@@ -661,8 +661,9 @@ def log_per_step(writer, info_dict):
     rank = int(os.environ.get('RANK', 0))
 
     if tag == "TRAIN" and rank == 0 and writer is not None:
-        if (train_engine == "deepspeed" and is_gradient_accumulation_boundary) or \
-           (train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0):
+        if (train_engine == "deepspeed" and is_gradient_accumulation_boundary
+            ) or (train_engine in ["torch_ddp", "torch_fsdp"] and
+                  (batch_idx + 1) % accum_grad == 0):
             writer.add_scalar('train/train_loss',
                               loss_dict['loss'] * accum_grad, step + 1)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
