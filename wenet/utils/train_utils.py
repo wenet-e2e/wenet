@@ -247,6 +247,7 @@ def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
         configs['dataset_conf']['cycle'] = configs.get('max_epoch', 100)
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
+    cv_conf['dataset_conf']['cycle'] = 1
     cv_conf['speed_perturb'] = False
     cv_conf['spec_aug'] = False
     cv_conf['spec_sub'] = False
