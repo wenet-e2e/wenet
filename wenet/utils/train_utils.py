@@ -618,7 +618,10 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
         # Use mixed precision training
         if scaler is not None:
             scaler.unscale_(optimizer)
-            grad_norm = clip_grad_norm_(model.parameters(), clip)
+            if isinstance(scaler, torch.cuda.amp.GradScaler):
+                grad_norm = clip_grad_norm_(model.parameters(), clip)
+            else:
+                grad_norm = model.clip_grad_norm_(clip)
             # Must invoke scaler.update() if unscale_() is used in
             # the iteration to avoid the following error:
             #   RuntimeError: unscale_() has already been called
