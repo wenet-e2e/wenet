@@ -40,12 +40,17 @@ def Dataset(data_type,
     """
     assert conf is not None
     assert data_type in ['raw', 'shard']
+    # cycle dataset
+    cycle = conf.get('cycle', 1)
     if data_type == 'raw':
-        dataset = WenetRawDatasetSource(data_list_file, partition=partition)
+        dataset = WenetRawDatasetSource(data_list_file,
+                                        partition=partition,
+                                        cycle=cycle)
         dataset = dataset.map(processor.parse_json)
     else:
         dataset = WenetTarShardDatasetSource(data_list_file,
-                                             partition=partition)
+                                             partition=partition,
+                                             cycle=cycle)
     dataset = dataset.map_ignore_error(processor.decode_wav)
 
     speaker_conf = conf.get('speaker_conf', None)
@@ -111,6 +116,7 @@ def Dataset(data_type,
 
     batch_conf = conf.get('batch_conf', {})
     batch_type = batch_conf.get('batch_type', 'static')
+    assert batch_type in ['static', 'bucket', 'dynamic']
     if batch_type == 'static':
         assert 'batch_size' in batch_conf
         batch_size = batch_conf.get('batch_size', 16)
