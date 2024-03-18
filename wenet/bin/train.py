@@ -124,9 +124,13 @@ def main():
 
     # Start training loop
     start_epoch = configs["init_infos"].get('epoch', 0) + int("epoch_" in tag)
+    # if save_interval in configs, steps mode else epoch mode
+    end_epoch = configs.get('max_epoch',
+                            100) if "save_interval" not in configs else 1
+    assert start_epoch <= end_epoch
     configs.pop("init_infos", None)
     final_epoch = None
-    for epoch in range(start_epoch, configs.get('max_epoch', 100)):
+    for epoch in range(start_epoch, end_epoch):
         configs['epoch'] = epoch
 
         lr = optimizer.param_groups[0]['lr']

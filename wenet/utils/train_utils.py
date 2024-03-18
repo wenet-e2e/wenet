@@ -241,8 +241,13 @@ def check_modify_and_save_config(args, configs, symbol_table):
 def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
     generator = torch.Generator()
     generator.manual_seed(seed)
+
+    # if save_interval in configs, steps mode else epoch mode
+    if "save_interval" in configs:
+        configs['dataset_conf']['cycle'] = configs.get('max_epoch', 100)
     train_conf = configs['dataset_conf']
     cv_conf = copy.deepcopy(train_conf)
+    cv_conf['cycle'] = 1
     cv_conf['speed_perturb'] = False
     cv_conf['spec_aug'] = False
     cv_conf['spec_sub'] = False

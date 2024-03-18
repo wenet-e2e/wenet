@@ -4,7 +4,8 @@ from torch.utils.data import datapipes
 from torch.utils.data.datapipes.iter import IterableWrapper
 from functools import partial
 
-from wenet.dataset.datapipes import (SortDataPipe, WenetRawDatasetSource,
+from wenet.dataset.datapipes import (RepeatDatapipe, SortDataPipe,
+                                     WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
 from wenet.dataset.processor import (DynamicBatchWindow, decode_wav, padding,
                                      parse_json, compute_fbank,
@@ -185,3 +186,41 @@ def test_map_ignore_error_datapipe():
     expected = ['a.txt', 'c.txt']
     assert len(result) == len(expected)
     all(h == r for (h, r) in zip(result, expected))
+
+
+def test_repeat():
+    source = [1, 2, 3]
+    epoch = 2
+
+    dataset = IterableWrapper(source)
+    dataset = RepeatDatapipe(dataset, epoch)
+    expected = [1, 2, 3] * epoch
+
+    result = []
+    for elem in dataset:
+        result.append(elem)
+    assert len(result) == len(expected)
+    assert all(h == r for (h, r) in zip(result, expected))
+
+    source = [{"1.wav": "we"}, {"2.wav": "net"}, {"3.wav": "better"}]
+    expected = [[{
+        "1.wav": "we"
+    }, {
+        "2.wav": "net"
+    }], [{
+        "3.wav": "better"
+    }, {
+        "1.wav": "we"
+    }], [{
+        "2.wav": "net"
+    }, {
+        "3.wav": "better"
+    }]]
+    dataset = IterableWrapper(source)
+    dataset = RepeatDatapipe(dataset, epoch).batch(2)
+    result = []
+    for elem in dataset:
+        result.append(elem)
+
+    assert len(result) == len(expected)
+    all(h == r for h, r in zip(result, expected))
