@@ -28,7 +28,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if(NOT MSVC)
   # Keep the same with openfst, -fPIC or -fpic
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -fPIC")
 else()
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
