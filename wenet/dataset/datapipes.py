@@ -264,8 +264,11 @@ class RepeatDatapipe(IterDataPipe):
         self.count = count
 
     def __iter__(self):
+        if self.count == 1:
+            yield from self.dp
+            return
         i = 0
-        while self.count == -1 or i < self.count:
+        while self.count < 0 or i < self.count:
             for elem in self.dp:
                 new_elem = copy.copy(elem)
                 yield new_elem
@@ -387,10 +390,11 @@ class WenetRawDatasetSource(IterDataPipe):
     def __init__(self,
                  filenames: str,
                  prefetch: int = 500,
-                 partition=True) -> None:
+                 partition=True,
+                 cycle: int = 1) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).prefetch(prefetch).shard(
-            partition)
+        self.dp = TextLineDataPipe(filenames).repeat(cycle).prefetch(
+            prefetch).shard(partition)
 
     def __iter__(self):
         for d in self.dp:
@@ -402,9 +406,10 @@ class WenetTarShardDatasetSource(IterDataPipe):
     def __init__(self,
                  filenames: str,
                  prefetch: int = 500,
-                 partition: bool = False) -> None:
+                 partition: bool = False,
+                 cycle: int = 1) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).shard(
+        self.dp = TextLineDataPipe(filenames).repeat(cycle).shard(
             partition).map_ignore_error(
                 parse_url).tar_file_and_group().prefetch(prefetch)
 
