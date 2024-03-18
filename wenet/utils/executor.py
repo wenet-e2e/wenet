@@ -109,7 +109,7 @@ class Executor:
         ''' Cross validation on
         '''
         if self.cv_step_timer is None:
-            self.cv_step_timer = StepTimer(self.step)
+            self.cv_step_timer = StepTimer(0.0)
         else:
             self.cv_step_timer.last_iteration = 0.0
         model.eval()
