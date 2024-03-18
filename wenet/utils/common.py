@@ -15,6 +15,7 @@
 """Unility functions for Transformer."""
 
 import math
+import time
 from typing import List, Tuple
 
 import torch
@@ -336,3 +337,22 @@ def mask_to_bias(mask: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
     #     chunk_masks = (1.0 - chunk_masks) * torch.finfo(dtype).min
     mask = (1.0 - mask) * get_dtype_min(dtype)
     return mask
+
+
+class StepTimer:
+    """Utility class for measuring steps/second."""
+
+    def __init__(self, step=0.0):
+        self.last_iteration = step
+        self.start()
+
+    def start(self):
+        self.last_time = time.time()
+
+    def steps_per_second(self, cur_step, restart=True):
+        value = ((float(cur_step) - self.last_iteration) /
+                 (time.time() - self.last_time))
+        if restart:
+            self.start()
+            self.last_iteration = float(cur_step)
+        return value
