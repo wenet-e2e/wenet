@@ -21,6 +21,7 @@ from contextlib import nullcontext
 # if your python version < 3.7 use the below one
 # from contextlib import suppress as nullcontext
 import torch
+from wenet.utils.common import StepTimer
 
 from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
                                      update_parameter_and_lr, log_per_step,
@@ -29,13 +30,17 @@ from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
 
 class Executor:
 
-    def __init__(self):
-        self.step = 0
+    def __init__(self, global_step: int = 0):
+        self.step = global_step
+        self.train_step_timer = None
+        self.cv_step_timer = None
 
     def train(self, model, optimizer, scheduler, train_data_loader,
               cv_data_loader, writer, configs, scaler, group_join):
         ''' Train one epoch
         '''
+        if self.train_step_timer is None:
+            self.train_step_timer = StepTimer(self.step)
         model.train()
         info_dict = copy.deepcopy(configs)
         logging.info('using accumulate grad, new batch size is {} times'
@@ -95,13 +100,18 @@ class Executor:
                         optimizer.param_groups[0]['lr']
                     })
                     save_model(model, info_dict)
-                log_per_step(writer, info_dict)
+                log_per_step(writer, info_dict, timer=self.train_step_timer)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
+
 
     def cv(self, model, cv_data_loader, configs):
         ''' Cross validation on
         '''
+        if self.cv_step_timer is None:
+            self.cv_step_timer = StepTimer(0.0)
+        else:
+            self.cv_step_timer.last_iteration = 0.0
         model.eval()
         info_dict = copy.deepcopy(configs)
         num_seen_utts, loss_dict, total_acc = 1, {}, []  # avoid division by 0
@@ -110,6 +120,7 @@ class Executor:
                 info_dict["tag"] = "CV"
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
+                info_dict["cv_step"] = batch_idx
 
                 num_utts = batch_dict["target_lengths"].size(0)
                 if num_utts == 0:
@@ -128,7 +139,9 @@ class Executor:
                         loss_dict[loss_name] = loss_dict.get(loss_name, 0) + \
                             loss_value * num_utts
 
-                log_per_step(writer=None, info_dict=info_dict)
+                log_per_step(writer=None,
+                             info_dict=info_dict,
+                             timer=self.cv_step_timer)
         for loss_name, loss_value in loss_dict.items():
             loss_dict[loss_name] = loss_dict[loss_name] / num_seen_utts
         loss_dict["acc"] = sum(total_acc) / len(total_acc)

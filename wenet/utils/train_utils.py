@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import copy
+from typing import Optional
 import deepspeed
 import json
 import logging
@@ -35,6 +36,7 @@ from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
+from wenet.utils.common import StepTimer
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
 
@@ -558,7 +560,7 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
     return info_dict
 
 
-def log_per_step(writer, info_dict):
+def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
     tag = info_dict["tag"]
     step = info_dict["step"]
     batch_idx = info_dict["batch_idx"]
@@ -589,8 +591,15 @@ def log_per_step(writer, info_dict):
             writer.add_scalar('global_step/{}'.format(name), value, step + 1)
 
     if (batch_idx + 1) % log_interval == 0:
-        log_str = '{} Batch {}/{} loss {:.6f} '.format(
-            tag, epoch, batch_idx + 1, loss_dict['loss'] * accum_grad)
+        log_str = '{} | '.format(tag)
+        if timer is not None:
+            timer_step = step
+            if info_dict.get("cv_step", None) is not None:
+                timer_step = info_dict['cv_step']
+            steps_per_second = timer.steps_per_second(timer_step)
+            log_str += 'steps/sec {:.1f}| '.format(steps_per_second)
+        log_str += 'Batch {}/{} loss {:.6f} '.format(
+            epoch, batch_idx + 1, loss_dict['loss'] * accum_grad)
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value)
