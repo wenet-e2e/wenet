@@ -109,7 +109,7 @@ class Executor:
         ''' Cross validation on
         '''
         if self.cv_step_timer is None:
-            self.cv_step_timer = StepTimer()
+            self.cv_step_timer = StepTimer(self.step)
         else:
             self.cv_step_timer.last_iteration = 0.0
         model.eval()
@@ -120,6 +120,7 @@ class Executor:
                 info_dict["tag"] = "CV"
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
+                info_dict["cv_step"] = batch_idx
 
                 num_utts = batch_dict["target_lengths"].size(0)
                 if num_utts == 0:
