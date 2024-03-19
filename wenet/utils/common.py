@@ -310,21 +310,9 @@ def log_add(*args) -> float:
     return a_max + lsp
 
 
-def get_dtype_min(
-    dtype: torch.dtype,
-    eps16: float = torch.finfo(torch.float16).min,
-    eps32: float = torch.finfo(torch.float32).min,
-    eps64: float = torch.finfo(torch.float64).min,
-    epsbf16: float = torch.finfo(torch.bfloat16).min,
-):
-    if dtype == torch.float16:
-        return eps16
-    elif dtype == torch.float32:
-        return eps32
-    elif dtype == torch.float64:
-        return eps64
-    elif dtype == torch.bfloat16:
-        return epsbf16
+def get_dtype_min(dtype: torch.dtype, ):
+    if dtype in [torch.float32, torch.bfloat16, torch.float16]:
+        return -1e+10
     else:
         raise RuntimeError(f"expected x to be floating-point, got {dtype}")
 
