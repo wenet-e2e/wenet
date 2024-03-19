@@ -44,7 +44,7 @@ def Dataset(data_type,
     cycle = conf.get('cycle', 1)
     list_shuffle = conf.get('list_shuffle', False)
     list_shuffle_size = conf.get('list_shuffle_size', 10000)
-    
+
     if data_type == 'raw':
         dataset = WenetRawDatasetSource(data_list_file,
                                         partition=partition,
