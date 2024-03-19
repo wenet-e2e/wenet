@@ -42,14 +42,21 @@ def Dataset(data_type,
     assert data_type in ['raw', 'shard']
     # cycle dataset
     cycle = conf.get('cycle', 1)
+    list_shuffle = conf.get('list_shuffle', False)
+    list_shuffle_size = conf.get('list_shuffle_size', 10000)
+    
     if data_type == 'raw':
         dataset = WenetRawDatasetSource(data_list_file,
                                         partition=partition,
+                                        shuffle=list_shuffle,
+                                        shuffle_size=list_shuffle_size,
                                         cycle=cycle)
         dataset = dataset.map(processor.parse_json)
     else:
         dataset = WenetTarShardDatasetSource(data_list_file,
                                              partition=partition,
+                                             shuffle=list_shuffle,
+                                             shuffle_size=list_shuffle_size,
                                              cycle=cycle)
     dataset = dataset.map_ignore_error(processor.decode_wav)
 
