@@ -394,7 +394,7 @@ class WenetRawDatasetSource(IterDataPipe):
                  cycle: int = 1) -> None:
         super().__init__()
         self.dp = TextLineDataPipe(filenames).repeat(cycle).prefetch(
-            prefetch).shard(partition)
+            prefetch).shuffle().shard(partition)
 
     def __iter__(self):
         for d in self.dp:
@@ -409,7 +409,7 @@ class WenetTarShardDatasetSource(IterDataPipe):
                  partition: bool = False,
                  cycle: int = 1) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).repeat(cycle).shard(
+        self.dp = TextLineDataPipe(filenames).repeat(cycle).shuffle().shard(
             partition).map_ignore_error(
                 parse_url).tar_file_and_group().prefetch(prefetch)
 
