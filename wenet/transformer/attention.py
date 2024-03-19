@@ -425,8 +425,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             assert mask.dtype != torch.bool
             mask = mask.unsqueeze(1)
             # matrix_bd as a mask bias
-            mask = torch.where(mask == get_dtype_min(mask.dtype), mask,
-                               matrix_bd / math.sqrt(self.d_k))
+            mask = (matrix_bd + mask) / math.sqrt(self.d_k)
             output = torch.nn.functional.scaled_dot_product_attention(
                 q_with_bias_u,
                 k,
