@@ -201,6 +201,7 @@ def main():
     test_conf['spec_trim'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
+    test_conf['cycle'] = 1
     if 'fbank_conf' in test_conf:
         test_conf['fbank_conf']['dither'] = 0.0
     elif 'mfcc_conf' in test_conf:
