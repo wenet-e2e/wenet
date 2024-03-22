@@ -5,18 +5,36 @@ from torch.distributed.fsdp import (FullyShardedDataParallel as FSDP,
 
 from torch.distributed.fsdp.wrap import (_or_policy, lambda_auto_wrap_policy,
                                          transformer_auto_wrap_policy)
+from wenet.branchformer.encoder_layer import BranchformerEncoderLayer
+from wenet.e_branchformer.encoder_layer import EBranchformerEncoderLayer
+from wenet.efficient_conformer.encoder_layer import StrideConformerEncoderLayer
+from wenet.paraformer.layers import AliParaformerEncoderLayer, SanmDecoderLayer
+from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
+from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
+                                             TransformerEncoderLayer)
+from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.utils.checkpoint import save_state_dict_and_infos
 
-from wenet.utils.init_model import (WENET_DECODER_CLASSES,
-                                    WENET_ENCODER_CLASSES)
+WENET_LAYERS_CLASSES = {
+    'transformer_encoder_laer': TransformerEncoderLayer,
+    'transformer_decoder_layer': DecoderLayer,
+    'conformer_encoder_layer': ConformerEncoderLayer,
+    'paraformer_encoder_layer': AliParaformerEncoderLayer,
+    'paraformer_decoder_layer': SanmDecoderLayer,
+    'squeezeformer_encoder_layer': SqueezeformerEncoderLayer,
+    'ebranchformer_encoder_layer': EBranchformerEncoderLayer,
+    'efficient_conformer_encoder_layer': StrideConformerEncoderLayer,
+    'branchformer_encoder_layer': BranchformerEncoderLayer,
+
+    # TODO(Mddct):
+    #     1 wrap transducer's predictor and joint
+    #     2 wrap paraformer's cif and ignore lstm
+}
 
 
 def wenet_fsdp_wrap_policy():
-    to_wrap_class = set(WENET_ENCODER_CLASSES.values())
-    to_wrap_class.update(set(WENET_DECODER_CLASSES.values()))
-    # TODO(Mddct):
-    #     1 wrap transducer's predictor and joint
-    #     2 wrap paraformer's cif
+    to_wrap_class = set()
+    to_wrap_class.update(set(WENET_LAYERS_CLASSES.values()))
     wrap_policy = partial(transformer_auto_wrap_policy,
                           transformer_layer_cls=to_wrap_class)
 
