@@ -118,7 +118,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['encoder_conf']['pos_enc_layer_type'] = 'abs_pos_paraformer'
 
     configs['ctc_conf'] = {}
-    configs['ctc_conf']['ctc_blank_id'] = 0.3
+    configs['ctc_conf']['ctc_blank_id'] = 0
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
