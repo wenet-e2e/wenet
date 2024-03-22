@@ -7,7 +7,7 @@ mkdir -p ${output_dir}
   --output_dir ${output_dir}
 # init ctc and embed(used in sampler)
 python local/modify_ckpt.py \
-  --add_list "{\"ctc.ctc_lo.weight\": \"embed.0.weight\"}" \
+  --add_list "{\"ctc.ctc_lo.weight\": \"embed.weight\"}" \
   --input_ckpt exp/paraformer/large/wenet_paraformer.pt \
   --output_ckpt exp/paraformer/large/wenet_paraformer.init-ctc.init-embed.pt
 ```
