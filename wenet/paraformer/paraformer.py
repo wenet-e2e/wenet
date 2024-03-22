@@ -141,9 +141,7 @@ class Paraformer(ASRModel):
         self.sampler = sampler
         self.sampling_ratio = sampling_ratio
         if sampler:
-            self.embed = self.decoder.embed
-        else:
-            del self.decoder.embed
+            self.embed = torch.nn.Embedding(vocab_size, encoder.output_size())
         # NOTE(Mddct): add eos in tail of labels for predictor
         # eg:
         #    gt:         你 好 we@@ net
