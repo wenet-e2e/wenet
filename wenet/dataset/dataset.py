@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from functools import partial
+import sys
 from typing import Optional
 from wenet.dataset import processor
 from wenet.dataset.datapipes import (WenetRawDatasetSource,
@@ -42,14 +43,25 @@ def Dataset(data_type,
     assert data_type in ['raw', 'shard']
     # cycle dataset
     cycle = conf.get('cycle', 1)
+    # stage1 shuffle: source
+    list_shuffle = conf.get('list_shuffle', True)
+    list_shuffle_size = sys.maxsize
+    if list_shuffle:
+        list_shuffle_conf = conf.get('list_shuffle_conf', {})
+        list_shuffle_size = list_shuffle_conf.get('shuffle_size',
+                                                  list_shuffle_size)
     if data_type == 'raw':
         dataset = WenetRawDatasetSource(data_list_file,
                                         partition=partition,
+                                        shuffle=list_shuffle,
+                                        shuffle_size=list_shuffle_size,
                                         cycle=cycle)
         dataset = dataset.map(processor.parse_json)
     else:
         dataset = WenetTarShardDatasetSource(data_list_file,
                                              partition=partition,
+                                             shuffle=list_shuffle,
+                                             shuffle_size=list_shuffle_size,
                                              cycle=cycle)
     dataset = dataset.map_ignore_error(processor.decode_wav)
 

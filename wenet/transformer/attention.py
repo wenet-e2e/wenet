@@ -21,8 +21,6 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
-from wenet.utils.common import get_dtype_min
-
 
 class MultiHeadedAttention(nn.Module):
     """Multi-Head Attention layer.
@@ -425,8 +423,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             assert mask.dtype != torch.bool
             mask = mask.unsqueeze(1)
             # matrix_bd as a mask bias
-            mask = torch.where(mask == get_dtype_min(mask.dtype), mask,
-                               matrix_bd / math.sqrt(self.d_k))
+            mask = (matrix_bd + mask) / math.sqrt(self.d_k)
             output = torch.nn.functional.scaled_dot_product_attention(
                 q_with_bias_u,
                 k,
@@ -590,8 +587,7 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
             assert mask.dtype != torch.bool
             mask = mask.unsqueeze(1)
             # matrix_bd as a mask bias
-            mask = torch.where(mask == get_dtype_min(mask.dtype), mask,
-                               rel_att_weights / math.sqrt(self.d_k))
+            mask = (rel_att_weights + mask) / math.sqrt(self.d_k)
             output = torch.nn.functional.scaled_dot_product_attention(
                 q,
                 k,
