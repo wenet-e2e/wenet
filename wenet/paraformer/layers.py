@@ -410,11 +410,7 @@ class SanmDecoder(TransformerDecoder):
                          normalize_before,
                          src_attention,
                          gradient_checkpointing=gradient_checkpointing)
-        del self.embed
-        self.embed = torch.nn.Sequential(
-            torch.nn.Embedding(vocab_size, encoder_output_size))
-
-        del self.decoders
+        del self.embed, self.decoders
         self.decoders = torch.nn.ModuleList([
             SanmDecoderLayer(
                 encoder_output_size,

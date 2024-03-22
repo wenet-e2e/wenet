@@ -118,7 +118,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['encoder_conf']['pos_enc_layer_type'] = 'abs_pos_paraformer'
 
     configs['ctc_conf'] = {}
-    configs['ctc_conf']['ctc_blank_id'] = 0
+    configs['ctc_conf']['ctc_blank_id'] = 0.3
 
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
@@ -186,6 +186,8 @@ def convert_to_wenet_state_dict(args, wenet_model_path):
             wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
         elif wenet_name.startswith('predictor.blstm'):
             wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
+        elif wenet_name == 'decoder.embed.0.weight':
+            wenet_name = 'embed.weight'
 
         wenet_state_dict[wenet_name] = checkpoint[name].float()
 
