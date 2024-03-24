@@ -17,6 +17,7 @@ import datetime
 import logging
 import sys
 from contextlib import nullcontext
+from typing import Optional
 
 # if your python version < 3.7 use the below one
 # from contextlib import suppress as nullcontext
@@ -87,8 +88,11 @@ class Executor:
                 save_interval = info_dict.get('save_interval', sys.maxsize)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
-                    loss_dict = self.cv(model, cv_data_loader, configs)
-                    model.train()
+                    cv_interval = info_dict.get('cv_interval', save_interval)
+                    loss_dict: Optional[dict] = None
+                    if self.step % cv_interval == 0:
+                        loss_dict = self.cv(model, cv_data_loader, configs)
+                        model.train()
                     info_dict.update({
                         "tag":
                         "step_{}".format(self.step),
@@ -103,7 +107,6 @@ class Executor:
                 log_per_step(writer, info_dict, timer=self.train_step_timer)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
-
 
     def cv(self, model, cv_data_loader, configs):
         ''' Cross validation on
