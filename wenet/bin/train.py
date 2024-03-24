@@ -179,6 +179,7 @@ def main():
             final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
+    dist.destroy_process_group()
 
 
 if __name__ == '__main__':
