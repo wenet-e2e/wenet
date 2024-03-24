@@ -88,6 +88,9 @@ class Executor:
                 save_interval = info_dict.get('save_interval', sys.maxsize)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                    import torch.distributed as dist
+                    # Ensure all ranks start CV at the same time in step mode
+                    dist.barrier()
                     loss_dict = self.cv(model, cv_data_loader, configs)
                     model.train()
                     info_dict.update({
@@ -101,6 +104,8 @@ class Executor:
                         optimizer.param_groups[0]['lr']
                     })
                     save_model(model, info_dict)
+                    # Ensure all ranks start Train at the same time in step mode
+                    dist.barrier()
                 log_per_step(writer, info_dict, timer=self.train_step_timer)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
