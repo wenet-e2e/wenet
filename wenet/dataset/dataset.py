@@ -65,6 +65,9 @@ def Dataset(data_type,
                                              cycle=cycle)
     dataset = dataset.map_ignore_error(processor.decode_wav)
 
+    singal_channel_conf = conf.get('singal_channel_conf', {})
+    dataset = dataset.map(partial(processor.singal_channel, **singal_channel_conf))
+
     speaker_conf = conf.get('speaker_conf', None)
     if speaker_conf is not None:
         assert 'speaker_table_path' in speaker_conf
