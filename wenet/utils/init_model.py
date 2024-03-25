@@ -17,7 +17,7 @@ import torch
 from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
-from wenet.paraformer.paraformer import Paraformer, Predictor
+from wenet.paraformer.paraformer import Paraformer
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -64,7 +64,6 @@ WENET_PREDICTOR_CLASSES = {
     "embedding": EmbeddingPredictor,
     "conv": ConvPredictor,
     "cif_predictor": Cif,
-    "paraformer_predictor": Predictor,
 }
 
 WENET_JOINT_CLASSES = {
@@ -96,29 +95,32 @@ def init_model(args, configs):
     input_dim = configs['input_dim']
     vocab_size = configs['output_dim']
 
-    encoder_type = configs.get('encoder', 'conformer')
-    decoder_type = configs.get('decoder', 'bitransformer')
-    ctc_type = configs.get('ctc', 'ctc')
-
-    encoder = WENET_ENCODER_CLASSES[encoder_type](
-        input_dim,
-        global_cmvn=global_cmvn,
-        **configs['encoder_conf'],
-        **configs['encoder_conf']['efficient_conf']
-        if 'efficient_conf' in configs['encoder_conf'] else {})
-
-    decoder = WENET_DECODER_CLASSES[decoder_type](vocab_size,
-                                                  encoder.output_size(),
-                                                  **configs['decoder_conf'])
-
-    ctc = WENET_CTC_CLASSES[ctc_type](
-        vocab_size,
-        encoder.output_size(),
-        blank_id=configs['ctc_conf']['ctc_blank_id']
-        if 'ctc_conf' in configs else 0)
-
     model_type = configs.get('model', 'asr_model')
-    if model_type == "transducer":
+    if model_type in ['asr_model', 'paraformer', 'transducer']:
+        encoder_type = configs.get('encoder', 'conformer')
+        decoder_type = configs.get('decoder', 'bitransformer')
+        ctc_type = configs.get('ctc', 'ctc')
+
+        encoder = WENET_ENCODER_CLASSES[encoder_type](
+            input_dim,
+            global_cmvn=global_cmvn,
+            **configs['encoder_conf'],
+            **configs['encoder_conf']['efficient_conf']
+            if 'efficient_conf' in configs['encoder_conf'] else {})
+
+        decoder = WENET_DECODER_CLASSES[decoder_type](
+            vocab_size, encoder.output_size(), **configs['decoder_conf'])
+
+        ctc = WENET_CTC_CLASSES[ctc_type](
+            vocab_size,
+            encoder.output_size(),
+            blank_id=configs['ctc_conf']['ctc_blank_id']
+            if 'ctc_conf' in configs else 0)
+
+    if model_type == 'vqtts':
+        from wenet.tts.vqtts import VQTTS
+        model = VQTTS(vocab_size, **configs['model_conf'])
+    elif model_type == "transducer":
         predictor_type = configs.get('predictor', 'rnn')
         joint_type = configs.get('joint', 'transducer_joint')
         predictor = WENET_PREDICTOR_CLASSES[predictor_type](
@@ -171,7 +173,7 @@ def init_model(args, configs):
     print(configs)
 
     # Tie emb.weight to decoder.output_layer.weight
-    if model.decoder.tie_word_embedding:
+    if hasattr(model, 'decoder') and model.decoder.tie_word_embedding:
         model.decoder.tie_or_clone_weights(jit_mode=args.jit)
 
     return model, configs
