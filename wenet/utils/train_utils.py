@@ -16,6 +16,8 @@
 from contextlib import nullcontext
 import copy
 from typing import Optional
+
+from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import apply_activation_checkpointing
 import deepspeed
 import json
 import logging
@@ -166,8 +168,8 @@ def add_fsdp_args(parser):
         '--fsdp_sharding_strategy',
         default='zero2',
         # TODO(Mddct): pipeline and model parallel (3-D parallelism)
-        choices=['no_shard', 'zero1', 'zero2', 'zero3'],
-        help='NO_SHARD, zero1, SHARD_GRAD_OP, FULL_SHARD, see FSDP api')
+        choices=['no_shard', 'model', 'zero2', 'zero3'],
+        help='NO_SHARD, WRAP_ENC_DEC, SHARD_GRAD_OP, FULL_SHARD, see FSDP api')
     return parser
 
 
@@ -350,14 +352,12 @@ def wrap_cuda_model(args, model, configs=None):
         }[configs['dtype']]
 
         sharding_strategy = {
-            'zero1': ShardingStrategy.SHARD_GRAD_OP,
+            'model': ShardingStrategy.SHARD_GRAD_OP,
             'zero2': ShardingStrategy.SHARD_GRAD_OP,
             'zero3': ShardingStrategy.FULL_SHARD,
             'no_shard': ShardingStrategy.NO_SHARD,
         }[args.fsdp_sharding_strategy]
-        wrap_policy = None
-        if args.fsdp_sharding_strategy not in ['zero1', 'no_shard']:
-            wrap_policy = wenet_fsdp_wrap_policy()
+        wrap_policy = wenet_fsdp_wrap_policy(mode=args.fsdp_sharding_strategy)
         model = FSDP(
             model,
             auto_wrap_policy=wrap_policy,
@@ -376,6 +376,9 @@ def wrap_cuda_model(args, model, configs=None):
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
         )
+        if args.fsdp_enable_gradient_checkpointing:
+            # NOTE(Mddct): we should disable gradient checkpoint in train.yaml
+            apply_activation_checkpointing(model)
         device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
