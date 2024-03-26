@@ -17,7 +17,6 @@ from contextlib import nullcontext
 import copy
 from typing import Optional
 
-from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import apply_activation_checkpointing
 import deepspeed
 import json
 import logging
@@ -376,9 +375,6 @@ def wrap_cuda_model(args, model, configs=None):
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
         )
-        if args.fsdp_enable_gradient_checkpointing:
-            # NOTE(Mddct): we should disable gradient checkpoint in train.yaml
-            apply_activation_checkpointing(model)
         device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
