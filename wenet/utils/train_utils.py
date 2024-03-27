@@ -558,7 +558,7 @@ def batch_forward(model, batch, scaler, info_dict):
         # autocast context
         # The more details about amp can be found in
         # https://pytorch.org/docs/stable/notes/amp_examples.html
-        if dtype is not None:
+        if dtype is not None and info_dict.get("tag", "train") == "train":
             assert scaler is not None
         autocast = torch.cuda.amp.autocast if dtype is not None else nullcontext
         with autocast():
