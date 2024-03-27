@@ -14,7 +14,6 @@ option(HTTP "whether to build with http" OFF)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
-option(ITN "whether to use WeTextProcessing" ON)
 
 set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -g")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
@@ -48,9 +47,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
 
-if(ITN)
-  include(wetextprocessing)
-endif()
+include(wetextprocessing)
 
 # Build all libraries
 add_subdirectory(utils)
