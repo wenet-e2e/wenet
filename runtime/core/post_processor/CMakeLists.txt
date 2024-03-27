@@ -1,9 +1,5 @@
 add_library(post_processor STATIC
   post_processor.cc
 )
-if(ITN)
-  target_link_libraries(post_processor PUBLIC utils wetext_processor wetext_utils)
-else()
-  target_link_libraries(post_processor PUBLIC utils)
-endif()
+target_link_libraries(post_processor PUBLIC utils wetext_processor wetext_utils)
 
