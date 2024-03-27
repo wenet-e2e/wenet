@@ -253,6 +253,7 @@ def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
     cv_conf['spec_sub'] = False
     cv_conf['spec_trim'] = False
     cv_conf['shuffle'] = False
+    cv_conf['list_shuffle'] = False
 
     configs['vocab_size'] = tokenizer.vocab_size()
     train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
