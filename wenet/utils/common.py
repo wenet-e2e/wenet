@@ -321,6 +321,13 @@ def mask_to_bias(mask: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
     return mask
 
 
+def get_nested_attribute(obj, attr_path):
+    attributes = attr_path.split('.')
+    for attr in attributes:
+        obj = getattr(obj, attr)
+    return obj
+
+
 class StepTimer:
     """Utility class for measuring steps/second."""
 
