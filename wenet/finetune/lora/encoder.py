@@ -16,7 +16,7 @@
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Encoder definition with lora."""
 
-from typing import List
+from typing import Optional, List
 
 import torch
 
@@ -61,10 +61,12 @@ class LoRATransformerEncoder(TransformerEncoder):
         mlp_type: str = 'position_wise_feed_forward',
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
         lora_rank: int = 8,
         lora_alpha: int = 8,
         lora_dropout: float = 0.0,
-        lora_list: List[str] = ['q', 'k', 'v', 'o'],
+        lora_list: Optional[List[str]] = None,
     ):
         """ Construct TransformerEncoder
 
@@ -75,8 +77,10 @@ class LoRATransformerEncoder(TransformerEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa, layer_norm_type, norm_eps)
+                         use_dynamic_left_chunk, query_bias, key_bias,
+                         value_bias, mlp_bias, activation_type,
+                         gradient_checkpointing, use_sdpa, mlp_type,
+                         layer_norm_type, norm_eps, n_kv_head, head_dim)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
@@ -87,6 +91,7 @@ class LoRATransformerEncoder(TransformerEncoder):
                                                          attention_dropout_rate,
                                                          query_bias, key_bias,
                                                          value_bias, use_sdpa,
+                                                         n_kv_head, head_dim,
                                                          lora_rank, lora_alpha,
                                                          lora_dropout,
                                                          lora_list),
@@ -138,10 +143,12 @@ class LoRAConformerEncoder(ConformerEncoder):
         mlp_type: str = 'position_wise_feed_forward',
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
         lora_rank: int = 8,
         lora_alpha: int = 8,
         lora_dropout: float = 0.0,
-        lora_list: List[str] = ['q', 'k', 'v', 'o'],
+        lora_list: Optional[List[str]] = None,
     ):
         """Construct ConformerEncoder
 
@@ -165,8 +172,13 @@ class LoRAConformerEncoder(ConformerEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa, layer_norm_type, norm_eps)
+                         use_dynamic_left_chunk, positionwise_conv_kernel_size,
+                         macaron_style, selfattention_layer_type,
+                         activation_type, use_cnn_module, cnn_module_kernel,
+                         causal, cnn_module_norm, query_bias, key_bias,
+                         value_bias, mlp_bias, conv_bias,
+                         gradient_checkpointing, use_sdpa, mlp_type,
+                         layer_norm_type, norm_eps, n_kv_head, head_dim)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition
@@ -178,6 +190,8 @@ class LoRAConformerEncoder(ConformerEncoder):
             key_bias,
             value_bias,
             use_sdpa,
+            n_kv_head,
+            head_dim,
             lora_rank,
             lora_alpha,
             lora_dropout,

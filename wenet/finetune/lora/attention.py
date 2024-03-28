@@ -16,7 +16,7 @@
 # limitations under the License.
 """Multi-Head Attention layer definition with lora."""
 
-from typing import List
+from typing import Optional, List
 
 import torch
 from torch import nn
@@ -43,10 +43,12 @@ class LoRAMultiHeadedAttention(MultiHeadedAttention):
                  key_bias: bool = True,
                  value_bias: bool = True,
                  use_sdpa: bool = False,
+                 n_kv_head: Optional[int] = None,
+                 head_dim: Optional[int] = None,
                  lora_rank: int = 8,
                  lora_alpha: int = 8,
                  lora_dropout: float = 0.0,
-                 lora_list: List[str] = ['q', 'k', 'v', 'o']):
+                 lora_list: Optional[List[str]] = None):
         """Construct an MultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa)
@@ -90,10 +92,12 @@ class LoRARelPositionMultiHeadedAttention(LoRAMultiHeadedAttention,
                  key_bias: bool = True,
                  value_bias: bool = True,
                  use_sdpa: bool = False,
+                 n_kv_head: Optional[int] = None,
+                 head_dim: Optional[int] = None,
                  lora_rank: int = 8,
                  lora_alpha: int = 8,
                  lora_dropout: float = 0.0,
-                 lora_list: List[str] = ['q', 'k', 'v', 'o']):
+                 lora_list: Optional[List[str]] = None):
         """Construct an RelPositionMultiHeadedAttention object."""
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, lora_rank, lora_alpha,

@@ -130,6 +130,7 @@ def add_lora_args(parser):
                         default=0,
                         type=float,
                         help="lora dropout param.")
+    return parser
 
 
 def add_ddp_args(parser):
