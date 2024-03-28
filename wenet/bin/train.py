@@ -133,9 +133,9 @@ def main():
     for epoch in range(start_epoch, end_epoch):
         configs['epoch'] = epoch
 
-        lr = optimizer.param_groups[0]['lr']
+        lrs = [group['lr'] for group in optimizer.param_groups]
         logging.info('Epoch {} TRAIN info lr {} rank {}'.format(
-            epoch, lr, rank))
+            epoch, lrs, rank))
 
         dist.barrier(
         )  # NOTE(xcsong): Ensure all ranks start Train at the same time.
@@ -150,12 +150,12 @@ def main():
         )  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         loss_dict = executor.cv(model, cv_data_loader, configs)
 
-        lr = optimizer.param_groups[0]['lr']
+        lrs = optimizer.param_groups[0]['lr']
         logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-            epoch, lr, loss_dict["loss"], rank, loss_dict["acc"]))
+            epoch, lrs, loss_dict["loss"], rank, loss_dict["acc"]))
         info_dict = {
             'epoch': epoch,
-            'lr': lr,
+            'lrs': lrs,
             'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             'tag': "epoch_{}".format(epoch),

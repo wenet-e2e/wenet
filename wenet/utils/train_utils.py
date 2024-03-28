@@ -333,17 +333,20 @@ def init_optimizer_and_scheduler(args, configs, model):
         assert len(modules_m) + 1 == len(lr)
         special_param_ids = set()
         rest_params = []
+        subs_params = []
         for (i, m_str) in enumerate(modules_m):
             sub_module = get_nested_attribute(model, m_str)
-            groups.append({'params': [sub_module.parameters()], 'lr': lr[i]})
-            special_param_ids.add(id(sub_module.paramemters()))
-        # other model's paramemters
+            for _, sub_params in sub_module.named_parameters():
+                subs_params.append(sub_params)
+                special_param_ids.add(id(sub_params))
+            groups.append({'params': subs_params, 'lr': lr[i]})
+        # other model's parameters
         for _, param in model.named_parameters():
             if id(param) not in special_param_ids:
                 rest_params.append(param)
         groups.append({'params': rest_params, 'lr': lr[-1]})
 
-    params = groups if len(groups) > 0 else model.paramemters()
+    params = groups if len(groups) > 0 else model.parameters()
     optim_conf = copy.deepcopy(configs['optim_conf'])
     if 'modules' in optim_conf:
         del optim_conf['modules']
@@ -584,7 +587,7 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
         scheduler.step()
         grad_norm = grad_norm.item()
 
-    info_dict["lr"] = optimizer.param_groups[0]['lr']
+    info_dict["lrs"] = [group['lr'] for group in optimizer.param_groups]
     info_dict["grad_norm"] = grad_norm
 
     return info_dict
@@ -599,7 +602,7 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
     train_engine = info_dict.get("train_engine", "torch_ddp")
     accum_grad = info_dict.get('accum_grad', 1) if tag != "CV" else 1
     log_interval = info_dict.get('log_interval', 10)
-    lr = info_dict.get("lr", 0.0)
+    lrs = info_dict.get("lrs", [0.0])
     is_gradient_accumulation_boundary = info_dict.get(
         "is_gradient_accumulation_boundary", False)
 
@@ -616,7 +619,8 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
                 if name != 'loss' and value is not None:
                     writer.add_scalar('train/{}'.format(name), value, step + 1)
     elif "step_" in tag and rank == 0 and writer is not None:
-        writer.add_scalar('global_step/lr', lr, step + 1)
+        for i, lr in enumerate(lrs):
+            writer.add_scalar('global_step/lr_{}'.format(i), lr, step + 1)
         for name, value in loss_dict.items():
             writer.add_scalar('global_step/{}'.format(name), value, step + 1)
 
@@ -634,8 +638,9 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value)
         if tag == "TRAIN":
-            log_str += 'lr {:.8f} grad_norm {:.6f} rank {}'.format(
-                lr, info_dict['grad_norm'], rank)
+            log_str += 'lr {} grad_norm {:.6f} rank {}'.format(
+                " ".join(["{:.4e}".format(lr) for lr in lrs]),
+                info_dict['grad_norm'], rank)
         logging.debug(log_str)
 
 
@@ -643,7 +648,8 @@ def log_per_epoch(writer, info_dict):
     epoch = info_dict["epoch"]
     loss_dict = info_dict["loss_dict"]
     if int(os.environ.get('RANK', 0)) == 0:
-        writer.add_scalar('epoch/lr', info_dict["lr"], epoch)
+        for i, lr in enumerate(info_dict["lrs"]):
+            writer.add_scalar('epoch/lr_{}'.format(i), lr, epoch)
         for name, value in loss_dict.items():
             writer.add_scalar('epoch/{}'.format(name), value, epoch)
 
