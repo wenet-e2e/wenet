@@ -171,6 +171,11 @@ def get_args():
                         default=0.0,
                         help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
+
+    parser.add_argument('--use_lora',
+                        type=bool,
+                        default=False,
+                        help='''Whether to use lora for biasing''')
     args = parser.parse_args()
     print(args)
     return args

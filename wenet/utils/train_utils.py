@@ -105,6 +105,33 @@ def add_dataset_args(parser):
     return parser
 
 
+def add_lora_args(parser):
+    parser.add_argument("--use_lora",
+                        default=False,
+                        type=bool,
+                        help="whether use the lora finetune.")
+    parser.add_argument("--only_optimize_lora",
+                        default=False,
+                        type=bool,
+                        help="freeze all other paramters and only optimize \
+                        LoRA-related prameters.")
+    parser.add_argument("--lora_list",
+                        default=['o', 'q', 'k', 'v'],
+                        help="lora module list.")
+    parser.add_argument("--lora_rank",
+                        default=8,
+                        type=int,
+                        help="lora rank num.")
+    parser.add_argument("--lora_alpha",
+                        default=8,
+                        type=int,
+                        help="lora scale param, scale=lora_alpha/lora_rank.")
+    parser.add_argument("--lora_dropout",
+                        default=0,
+                        type=float,
+                        help="lora dropout param.")
+
+
 def add_ddp_args(parser):
     parser.add_argument('--ddp.dist_backend',
                         dest='dist_backend',
@@ -202,6 +229,12 @@ def check_modify_and_save_config(args, configs, symbol_table):
             'accum_grad']
         assert ds_configs["gradient_clipping"] == configs['grad_clip']
         assert ds_configs["steps_per_print"] == configs['log_interval']
+
+    if args.use_lora:
+        configs['encoder_conf']['lora_list'] = args.lora_list
+        configs['encoder_conf']['lora_rank'] = args.lora_rank
+        configs['encoder_conf']['lora_alpha'] = args.lora_alpha
+        configs['encoder_conf']['lora_dropout'] = args.lora_dropout
 
     if 'input_dim' not in configs:
         if 'fbank_conf' in configs['dataset_conf']:
