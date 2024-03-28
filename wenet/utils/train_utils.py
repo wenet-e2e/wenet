@@ -337,7 +337,7 @@ def init_optimizer_and_scheduler(args, configs, model):
             sub_module = get_nested_attribute(model, m_str)
             groups.append({'params': [sub_module.parameters()], 'lr': lr[i]})
             special_param_ids.add(id(sub_module.paramemters()))
-        # other model's paraformers
+        # other model's paramemters
         for _, param in model.named_parameters():
             if id(param) not in special_param_ids:
                 rest_params.append(param)
@@ -347,6 +347,8 @@ def init_optimizer_and_scheduler(args, configs, model):
     optim_conf = copy.deepcopy(configs['optim_conf'])
     if 'modules' in optim_conf:
         del optim_conf['modules']
+    if isinstance(lr, List):
+        optim_conf['lr'] = lr[-1]
     if configs['optim'] == 'adam':
         optimizer = optim.Adam(params, **optim_conf)
     elif configs['optim'] == 'adamw':
