@@ -34,7 +34,7 @@ from wenet.utils.train_utils import (
     add_trace_args, init_distributed, init_dataset_and_dataloader,
     check_modify_and_save_config, init_optimizer_and_scheduler,
     trace_and_print_model, wrap_cuda_model, init_summarywriter, save_model,
-    log_per_epoch)
+    log_per_epoch, add_lora_args)
 
 
 def get_args():
@@ -46,6 +46,7 @@ def get_args():
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)
     parser = add_ddp_args(parser)
+    parser = add_lora_args(parser)
     parser = add_deepspeed_args(parser)
     parser = add_trace_args(parser)
     args = parser.parse_args()
