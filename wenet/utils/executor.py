@@ -96,14 +96,13 @@ class Executor:
                         loss_dict,
                         "save_time":
                         datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                        "lr":
-                        optimizer.param_groups[0]['lr']
+                        "lrs":
+                        [group['lr'] for group in optimizer.param_groups]
                     })
                     save_model(model, info_dict)
                 log_per_step(writer, info_dict, timer=self.train_step_timer)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
-
 
     def cv(self, model, cv_data_loader, configs):
         ''' Cross validation on

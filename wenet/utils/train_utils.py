@@ -618,11 +618,8 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             for name, value in loss_dict.items():
                 if name != 'loss' and value is not None:
                     writer.add_scalar('train/{}'.format(name), value, step + 1)
-    elif "step_" in tag and rank == 0 and writer is not None:
-        for i, lr in enumerate(lrs):
-            writer.add_scalar('global_step/lr_{}'.format(i), lr, step + 1)
-        for name, value in loss_dict.items():
-            writer.add_scalar('global_step/{}'.format(name), value, step + 1)
+            for i, lr in enumerate(lrs):
+                writer.add_scalar('train/lr_{}'.format(i), lr, step + 1)
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} | '.format(tag)

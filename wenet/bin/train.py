@@ -150,7 +150,7 @@ def main():
         )  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         loss_dict = executor.cv(model, cv_data_loader, configs)
 
-        lrs = optimizer.param_groups[0]['lr']
+        lrs = [group['lr'] for group in optimizer.param_groups]
         logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
             epoch, lrs, loss_dict["loss"], rank, loss_dict["acc"]))
         info_dict = {
