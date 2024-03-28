@@ -15,7 +15,7 @@
 # Modified from ESPnet(https://github.com/espnet/espnet)
 #               NeMo(https://github.com/NVIDIA/NeMo)
 
-from typing import Union
+from typing import List, Union
 
 import math
 import warnings
@@ -43,7 +43,7 @@ class WarmupLR(_LRScheduler):
     def __init__(
         self,
         optimizer: torch.optim.Optimizer,
-        warmup_steps: Union[int, float] = 25000,
+        warmup_steps: Union[int, float, List[Union[int, float]]] = 25000,
         last_epoch: int = -1,
     ):
         self.warmup_steps = warmup_steps
@@ -51,6 +51,9 @@ class WarmupLR(_LRScheduler):
         # __init__() must be invoked before setting field
         # because step() is also invoked in __init__()
         super().__init__(optimizer, last_epoch)
+        if isinstance(warmup_steps, (int, float)):
+            self.warmup_steps = [warmup_steps] * len(self.base_lrs)
+        assert isinstance(self.warmup_steps, List)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(warmup_steps={self.warmup_steps})"
@@ -61,9 +64,9 @@ class WarmupLR(_LRScheduler):
             return [lr * step_num**-0.5 for lr in self.base_lrs]
         else:
             return [
-                lr * self.warmup_steps**0.5 *
-                min(step_num**-0.5, step_num * self.warmup_steps**-1.5)
-                for lr in self.base_lrs
+                lr * self.warmup_steps[i]**0.5 *
+                min(step_num**-0.5, step_num * self.warmup_steps[i]**-1.5)
+                for (i, lr) in enumerate(self.base_lrs)
             ]
 
     def set_step(self, step: int):

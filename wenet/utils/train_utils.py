@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import copy
-from typing import Optional
+from typing import List, Optional
 import deepspeed
 import json
 import logging
@@ -36,7 +36,7 @@ from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.common import StepTimer
+from wenet.utils.common import StepTimer, get_nested_attribute
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
 
@@ -325,10 +325,32 @@ def wrap_cuda_model(args, model):
 
 
 def init_optimizer_and_scheduler(args, configs, model):
+    groups = []
+    lr = configs['optim_conf'].get('lr')
+    if isinstance(lr, List):
+        modules_m = configs['optim_conf']['modules']
+        assert isinstance(modules_m, List)
+        assert len(modules_m) + 1 == len(lr)
+        special_param_ids = set()
+        rest_params = []
+        for (i, m_str) in enumerate(modules_m):
+            sub_module = get_nested_attribute(model, m_str)
+            groups.append({'params': [sub_module.parameters()], 'lr': lr[i]})
+            special_param_ids.add(id(sub_module.paramemters()))
+        # other model's paraformers
+        for _, param in model.named_parameters():
+            if id(param) not in special_param_ids:
+                rest_params.append(param)
+        groups.append({'params': rest_params, 'lr': lr[-1]})
+
+    params = groups if len(groups) > 0 else model.paramemters()
+    optim_conf = copy.deepcopy(configs['optim_conf'])
+    if 'modules' in optim_conf:
+        del optim_conf['modules']
     if configs['optim'] == 'adam':
-        optimizer = optim.Adam(model.parameters(), **configs['optim_conf'])
+        optimizer = optim.Adam(params, **optim_conf)
     elif configs['optim'] == 'adamw':
-        optimizer = optim.AdamW(model.parameters(), **configs['optim_conf'])
+        optimizer = optim.AdamW(params, **optim_conf)
     else:
         raise ValueError("unknown optimizer: " + configs['optim'])
 
