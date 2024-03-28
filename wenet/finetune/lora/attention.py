@@ -59,10 +59,13 @@ class LoRAMultiHeadedAttention(MultiHeadedAttention):
         self.linear_out = lora.Linear(
             n_feat, n_feat, r=lora_rank, lora_alpha=lora_alpha,
             lora_dropout=lora_dropout
-        ) if "o" in lora_list else nn.Linear(n_feat, n_feat)
+        ) if lora_list and "o" in lora_list else nn.Linear(n_feat, n_feat)
 
-        lora_qkv_dict = {"q": "q" in lora_list, "k": "k" in lora_list,
-                         "v": "v" in lora_list}
+        lora_qkv_dict = {
+            "q": lora_list and "q" in lora_list,
+            "k": lora_list and "k" in lora_list,
+            "v": lora_list and "v" in lora_list
+        }
         bias_dict = {"q": query_bias, "k": key_bias, "v": value_bias}
 
         for key, value in lora_qkv_dict.items():
