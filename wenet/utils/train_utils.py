@@ -607,10 +607,11 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
         "is_gradient_accumulation_boundary", False)
 
     rank = int(os.environ.get('RANK', 0))
-
+    # TRAIN
     if tag == "TRAIN" and rank == 0 and writer is not None:
-        if (train_engine == "deepspeed" and is_gradient_accumulation_boundary) or \
-           (train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0):
+        if (train_engine == "deepspeed" and is_gradient_accumulation_boundary
+            ) or (train_engine == "torch_ddp" and
+                  (batch_idx + 1) % accum_grad == 0):
             writer.add_scalar('train/train_loss',
                               loss_dict['loss'] * accum_grad, step + 1)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
@@ -618,10 +619,15 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             for name, value in loss_dict.items():
                 if name != 'loss' and value is not None:
                     writer.add_scalar('train/{}'.format(name), value, step + 1)
+            # lr
             for i, lr in enumerate(lrs):
                 writer.add_scalar('train/lr_{}'.format(i), lr, step + 1)
 
-    if (batch_idx + 1) % log_interval == 0:
+    elif "step_" in tag and rank == 0 and writer is not None:
+        # CV
+        for name, value in loss_dict.items():
+            writer.add_scalar('cv/{}'.format(name), value, step + 1)
+    if "step_" not in tag and (batch_idx + 1) % log_interval == 0:
         log_str = '{} | '.format(tag)
         if timer is not None:
             timer_step = step
