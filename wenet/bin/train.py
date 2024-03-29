@@ -24,6 +24,7 @@ import yaml
 import torch.distributed as dist
 
 from torch.distributed.elastic.multiprocessing.errors import record
+from wenet.utils.common import lrs_to_str
 
 from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
@@ -135,7 +136,7 @@ def main():
 
         lrs = [group['lr'] for group in optimizer.param_groups]
         logging.info('Epoch {} Step {} TRAIN info lr {} rank {}'.format(
-            epoch, executor.step, lrs, rank))
+            epoch, executor.step, lrs_to_str(lrs), rank))
 
         dist.barrier(
         )  # NOTE(xcsong): Ensure all ranks start Train at the same time.

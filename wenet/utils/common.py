@@ -328,6 +328,10 @@ def get_nested_attribute(obj, attr_path):
     return obj
 
 
+def lrs_to_str(lrs: List):
+    return " ".join(["{:.4e}".format(lr) for lr in lrs])
+
+
 class StepTimer:
     """Utility class for measuring steps/second."""
 

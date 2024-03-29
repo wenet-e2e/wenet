@@ -36,7 +36,7 @@ from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.common import StepTimer, get_nested_attribute
+from wenet.utils.common import StepTimer, get_nested_attribute, lrs_to_str
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
 
@@ -629,8 +629,8 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             writer.add_scalar('cv/{}'.format(name), value, step + 1)
         logging.info(
             'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-                epoch, step, " ".join(["{:.4e}".format(lr) for lr in lrs]),
-                loss_dict["loss"], rank, loss_dict["acc"]))
+                epoch, step, lrs_to_str(lrs), loss_dict["loss"], rank,
+                loss_dict["acc"]))
 
     if "step_" not in tag and (batch_idx + 1) % log_interval == 0:
         log_str = '{} | '.format(tag)
@@ -647,8 +647,7 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
                 log_str += '{} {:.6f} '.format(name, value)
         if tag == "TRAIN":
             log_str += 'lr {} grad_norm {:.6f} rank {}'.format(
-                " ".join(["{:.4e}".format(lr) for lr in lrs]),
-                info_dict['grad_norm'], rank)
+                lrs_to_str(lrs), info_dict['grad_norm'], rank)
         logging.debug(log_str)
 
 
@@ -660,8 +659,8 @@ def log_per_epoch(writer, info_dict):
     step = info_dict["step"]
     logging.info(
         'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-            epoch, step, " ".join(["{:.4e}".format(lr) for lr in lrs]),
-            loss_dict["loss"], rank, loss_dict["acc"]))
+            epoch, step, lrs_to_str, loss_dict["loss"], rank,
+            loss_dict["acc"]))
 
     if int(os.environ.get('RANK', 0)) == 0:
         for i, lr in enumerate(info_dict["lrs"]):
