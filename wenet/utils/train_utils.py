@@ -590,7 +590,9 @@ def log_per_step(writer, info_dict):
 
     if (batch_idx + 1) % log_interval == 0:
         log_str = '{} Batch {}/{} loss {:.6f} '.format(
-            tag, epoch, batch_idx + 1, loss_dict['loss'] * accum_grad)
+            tag, epoch,
+            batch_idx + 1 if 'save_interval' not in info_dict else step + 1,
+            loss_dict['loss'] * accum_grad)
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value)
