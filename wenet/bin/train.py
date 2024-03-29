@@ -115,7 +115,7 @@ def main():
 
     # Get executor
     tag = configs["init_infos"].get("tag", "init")
-    executor = Executor(global_step=configs["init_infos"].get('step', 0) +
+    executor = Executor(global_step=configs["init_infos"].get('step', -1) +
                         int("step_" in tag))
 
     # Init scaler, used for pytorch amp mixed precision training
