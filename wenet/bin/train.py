@@ -150,18 +150,16 @@ def main():
         )  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         loss_dict = executor.cv(model, cv_data_loader, configs)
 
-        lrs = [group['lr'] for group in optimizer.param_groups]
-        logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-            epoch, lrs, loss_dict["loss"], rank, loss_dict["acc"]))
         info_dict = {
             'epoch': epoch,
-            'lrs': lrs,
+            'lrs': [group['lr'] for group in optimizer.param_groups],
             'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             'tag': "epoch_{}".format(epoch),
             'loss_dict': loss_dict,
             **configs
         }
+        # epoch cv: tensorboard && log
         log_per_epoch(writer, info_dict=info_dict)
         save_model(model, info_dict=info_dict)
 

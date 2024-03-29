@@ -650,6 +650,12 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
 def log_per_epoch(writer, info_dict):
     epoch = info_dict["epoch"]
     loss_dict = info_dict["loss_dict"]
+    lrs = info_dict['lrs']
+    rank = int(os.environ.get('RANK', 0))
+    logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
+        epoch, " ".join(["{:.4e}".format(lr) for lr in lrs]),
+        loss_dict["loss"], rank, loss_dict["acc"]))
+
     if int(os.environ.get('RANK', 0)) == 0:
         for i, lr in enumerate(info_dict["lrs"]):
             writer.add_scalar('epoch/lr_{}'.format(i), lr, epoch)
