@@ -627,6 +627,11 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
         # CV
         for name, value in loss_dict.items():
             writer.add_scalar('cv/{}'.format(name), value, step + 1)
+        logging.info(
+            'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
+                epoch, step, " ".join(["{:.4e}".format(lr) for lr in lrs]),
+                loss_dict["loss"], rank, loss_dict["acc"]))
+
     if "step_" not in tag and (batch_idx + 1) % log_interval == 0:
         log_str = '{} | '.format(tag)
         if timer is not None:
@@ -652,9 +657,11 @@ def log_per_epoch(writer, info_dict):
     loss_dict = info_dict["loss_dict"]
     lrs = info_dict['lrs']
     rank = int(os.environ.get('RANK', 0))
-    logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-        epoch, " ".join(["{:.4e}".format(lr) for lr in lrs]),
-        loss_dict["loss"], rank, loss_dict["acc"]))
+    step = info_dict["step"]
+    logging.info(
+        'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
+            epoch, step, " ".join(["{:.4e}".format(lr) for lr in lrs]),
+            loss_dict["loss"], rank, loss_dict["acc"]))
 
     if int(os.environ.get('RANK', 0)) == 0:
         for i, lr in enumerate(info_dict["lrs"]):
