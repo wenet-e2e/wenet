@@ -103,9 +103,7 @@ class Executor:
                     })
                     save_model(model, info_dict)
                     # write final cv: tensorboard
-                    log_per_step(writer,
-                                 info_dict,
-                                 timer=self.train_step_timer)
+                    log_per_step(writer, info_dict)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
 

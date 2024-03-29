@@ -659,7 +659,7 @@ def log_per_epoch(writer, info_dict):
     step = info_dict["step"]
     logging.info(
         'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-            epoch, step, lrs_to_str, loss_dict["loss"], rank,
+            epoch, step, lrs_to_str(lrs), loss_dict["loss"], rank,
             loss_dict["acc"]))
 
     if int(os.environ.get('RANK', 0)) == 0:
