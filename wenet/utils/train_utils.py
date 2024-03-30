@@ -41,7 +41,9 @@ from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.fsdp_utils import fsdp_save_model, wenet_fsdp_wrap_policy
+from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
+                                    apply_fsdp_checkpointing,
+                                    wenet_fsdp_wrap_policy)
 from wenet.utils.common import StepTimer
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
@@ -357,6 +359,7 @@ def wrap_cuda_model(args, model, configs=None):
             'no_shard': ShardingStrategy.NO_SHARD,
         }[args.fsdp_sharding_strategy]
         wrap_policy = wenet_fsdp_wrap_policy(mode=args.fsdp_sharding_strategy)
+        layer_types = check_gradient_checkpoint(model)
         model = FSDP(
             model,
             auto_wrap_policy=wrap_policy,
@@ -375,6 +378,7 @@ def wrap_cuda_model(args, model, configs=None):
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
         )
+        apply_fsdp_checkpointing(model, layer_types)
         device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
