@@ -333,9 +333,9 @@ def init_optimizer_and_scheduler(args, configs, model):
         assert len(modules_m) + 1 == len(lr)
         special_param_ids = set()
         rest_params = []
-        subs_params = []
         for (i, m_str) in enumerate(modules_m):
             sub_module = get_nested_attribute(model, m_str)
+            subs_params = []
             for _, sub_params in sub_module.named_parameters():
                 subs_params.append(sub_params)
                 special_param_ids.add(id(sub_params))
