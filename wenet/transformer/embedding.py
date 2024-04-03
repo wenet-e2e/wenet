@@ -21,6 +21,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
+from wenet.utils.rope_utils import precompute_freqs_cis
+
 
 class PositionalEncoding(torch.nn.Module):
     """Positional encoding.
@@ -194,3 +196,42 @@ class NoPositionalEncoding(torch.nn.Module):
     def position_encoding(self, offset: Union[int, torch.Tensor],
                           size: int) -> torch.Tensor:
         return torch.zeros(1, size, self.d_model)
+
+
+class RopePositionalEncoding(PositionalEncoding):
+
+    def __init__(self,
+                 d_model: int,
+                 head_dim: int,
+                 dropout_rate: float,
+                 max_len: int = 1500,
+                 rope_theta=10000.0):
+        # NOTE(Mddct): pos_dim == attention_dim // attention_head
+        super().__init__(d_model, dropout_rate=dropout_rate, max_len=max_len)
+        delattr(self, 'pe')
+
+        pe = precompute_freqs_cis(head_dim, max_len * 2, rope_theta)
+        self.register_buffer("pe", pe.unsqueeze(0))
+        self.dropout_rate = dropout_rate
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        offset: Union[int,
+                      torch.Tensor] = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        pos_emb = self.position_encoding(offset, x.size(1), False)
+        pos_emb = pos_emb.unsqueeze(1)  # [1, 1, seq, head_dim//2]
+        # NOTE(Mddct): some model don't scale
+        # TODO(Mddct): fix
+        x = x * self.xscale
+        # NOTE(Mddct) dropout don't suuport complex float for pos_emb
+        return self.dropout(x), self.dropout_complex(pos_emb)
+
+    def dropout_complex(self, x):
+        mask = torch.nn.functional.dropout(
+            torch.ones_like(x.real),
+            training=self.training,
+            p=self.dropout_rate,
+        )
+        return x * mask
