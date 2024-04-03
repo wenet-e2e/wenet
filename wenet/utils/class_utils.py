@@ -22,6 +22,7 @@ from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
 from wenet.transformer.embedding import (PositionalEncoding,
                                          RelPositionalEncoding,
+                                         RopePositionalEncoding,
                                          WhisperPositionalEncoding,
                                          LearnablePositionalEncoding,
                                          NoPositionalEncoding)
@@ -68,6 +69,7 @@ WENET_EMB_CLASSES = {
     "abs_pos_whisper": WhisperPositionalEncoding,
     "embed_learnable_pe": LearnablePositionalEncoding,
     "abs_pos_paraformer": ParaformerPositinoalEncoding,
+    'rope_pos': RopePositionalEncoding,
 }
 
 WENET_ATTENTION_CLASSES = {
