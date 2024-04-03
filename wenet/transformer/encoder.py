@@ -104,7 +104,7 @@ class BaseEncoder(torch.nn.Module):
         self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
             input_size, output_size, dropout_rate,
             pos_emb_class(output_size, positional_dropout_rate)
-            if pos_enc_layer_type != 'rope' else pos_emb_class(
+            if pos_enc_layer_type != 'rope_pos' else pos_emb_class(
                 output_size, output_size //
                 attention_heads, positional_dropout_rate))
 
