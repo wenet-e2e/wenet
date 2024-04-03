@@ -1,5 +1,4 @@
-// Copyright 2022 Horizon Robotics. All Rights Reserved.
-// Author: binbin.zhang@horizon.ai (Binbin Zhang)
+// Copyright 2022 Binbin Zhang (binbzha@qq.com)
 
 #include "decoder/asr_model.h"
 
