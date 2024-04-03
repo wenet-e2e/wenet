@@ -206,7 +206,6 @@ class RopePositionalEncoding(PositionalEncoding):
                  dropout_rate: float,
                  max_len: int = 1500,
                  rope_theta=10000.0):
-        # NOTE(Mddct): pos_dim == attention_dim // attention_head
         super().__init__(d_model, dropout_rate=dropout_rate, max_len=max_len)
         delattr(self, 'pe')
 
