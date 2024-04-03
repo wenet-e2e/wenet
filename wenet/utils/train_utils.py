@@ -1,5 +1,5 @@
 # Copyright (c) 2021 Mobvoi Inc. (authors: Binbin Zhang)
-#               2023 Horizon Inc. (authors: Xingchen Song)
+#               2023 Tsinghua Univ. (authors: Xingchen Song)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
