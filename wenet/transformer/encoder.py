@@ -380,6 +380,7 @@ class TransformerEncoder(BaseEncoder):
         norm_eps: float = 1e-5,
         n_kv_head: Optional[int] = None,
         head_dim: Optional[int] = None,
+        selfattention_layer_type: str = "selfattn",
     ):
         """ Construct TransformerEncoder
 
@@ -392,17 +393,17 @@ class TransformerEncoder(BaseEncoder):
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk, gradient_checkpointing,
                          use_sdpa, layer_norm_type, norm_eps)
+
+        assert selfattention_layer_type in ['selfattn', 'rope_abs_selfattn']
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
-                WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
-                                                    output_size,
-                                                    attention_dropout_rate,
-                                                    query_bias, key_bias,
-                                                    value_bias, use_sdpa,
-                                                    n_kv_head, head_dim),
+                WENET_ATTENTION_CLASSES[selfattention_layer_type](
+                    attention_heads, output_size, attention_dropout_rate,
+                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
+                    head_dim),
                 mlp_class(output_size, linear_units, dropout_rate, activation,
                           mlp_bias),
                 dropout_rate,
