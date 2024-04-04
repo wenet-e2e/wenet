@@ -1,0 +1,7 @@
+wenet.utils.rope\_utils module
+==============================
+
+.. automodule:: wenet.utils.rope_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
