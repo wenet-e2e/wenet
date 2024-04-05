@@ -15,6 +15,7 @@
 
 from contextlib import nullcontext
 import copy
+from functools import partial
 from typing import Optional
 
 import deepspeed
@@ -564,7 +565,8 @@ def batch_forward(model, batch, scaler, info_dict):
         # https://pytorch.org/docs/stable/notes/amp_examples.html
         if dtype is not None and info_dict.get("tag", "train") == "train":
             assert scaler is not None
-        autocast = torch.cuda.amp.autocast if dtype is not None else nullcontext
+        autocast = partial(torch.cuda.amp.autocast,
+                           dtype=dtype) if dtype is not None else nullcontext
         with autocast():
             loss_dict = model(batch, device)
     info_dict['loss_dict'] = loss_dict
