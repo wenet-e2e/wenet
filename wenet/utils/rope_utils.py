@@ -26,20 +26,8 @@ def google_apply_rotary_emb(x: torch.Tensor,
     return x_out
 
 
-def reshape_for_broadcast(freqs_cis: torch.Tensor, x: torch.Tensor):
-    ndim = x.ndim
-    assert 0 <= 1 < ndim
-    assert freqs_cis.shape[2:] == (x.shape[1], x.shape[-1])
-    # 2 is seq_len in wenet
-    shape = [
-        d if i == 2 or i == ndim - 1 else 1 for i, d in enumerate(x.shape)
-    ]
-    return freqs_cis.view(*shape)
-
-
 def llama_apply_rotary_emb(x: torch.Tensor,
                            freqs_cis: torch.Tensor) -> torch.Tensor:
     x_ = torch.view_as_complex(x.float().reshape(*x.shape[:-1], -1, 2))
-    freqs_cis = reshape_for_broadcast(freqs_cis, x_)
     x_out = torch.view_as_real(x_ * freqs_cis).flatten(3)
     return x_out.type_as(x)
