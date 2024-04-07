@@ -28,7 +28,7 @@ class CausalLM(torch.nn.Module):
         if tie_word_embedding:
             self.out.weight = self.embed.weight
 
-        self.decoders = decoder
+        self.decoder = decoder
         self.sos = (vocab_size - 1 if special_tokens is None else
                     special_tokens.get("<sos>", vocab_size - 1))
         self.eos = (vocab_size - 1 if special_tokens is None else
@@ -66,8 +66,8 @@ class CausalLM(torch.nn.Module):
         att_mask = causal_mask & tgt_mask  # (B, L, L)
 
         embeding = self.embed(ys_in_pad)
-        decoder_out = self.out(self.decoders(embeding,
-                                             att_mask))  # (B, L, vocab_size)
+        decoder_out = self.out(self.decoder(embeding,
+                                            att_mask))  # (B, L, vocab_size)
 
         loss = self.criterion_att(decoder_out, ys_out_pad)
         acc = th_accuracy(decoder_out.view(-1, self.vocab_size),

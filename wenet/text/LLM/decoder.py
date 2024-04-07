@@ -1,7 +1,5 @@
 import torch
 
-import torch.utils.checkpoint as ckpt
-
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
                                      WENET_ATTENTION_CLASSES,
@@ -59,27 +57,16 @@ class DecoderOnly(torch.nn.Module):
         self.use_sdpa = use_sdpa
 
     def forward(self, input: torch.Tensor, att_mask: torch.Tensor):
-        xs = self.embed(input)
-        xs, pos_emb = self.pos_enc(xs)
+        xs, pos_emb = self.pos_enc(input)
         tgt_mask = att_mask
         if self.use_sdpa:
             tgt_mask = mask_to_bias(tgt_mask, xs.dtype)
-        if not self.gradient_checkpoint:
-            decoder_out, _, _, _ = self.decoders(xs,
-                                                 tgt_mask,
-                                                 pos_emb,
-                                                 mask_pad=None)
-        else:
-            assert self.training
-            decoder_out = xs
-            for layer in self.decoders:
-                decoder_out, _, _, _ = ckpt.checkpoint(
-                    layer.__call__,
-                    decoder_out,
-                    tgt_mask,
-                    pos_emb,
-                )
-
+        decoder_out, _, _, _ = self.decoders(
+            xs,
+            tgt_mask,
+            pos_emb,
+            mask_pad=None,
+        )
         return decoder_out
 
     @property
