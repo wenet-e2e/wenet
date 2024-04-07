@@ -152,6 +152,12 @@ def add_deepspeed_args(parser):
 
 def add_fsdp_args(parser):
     parser.add_argument(
+        '--dtype',
+        default='fp32',
+        choices=['fp32', 'fp16', 'bf16'],
+        help='when amp is used, dtype is automatically set to fp16.\
+        this arg has no effect when deepspeed is enabled.')
+    parser.add_argument(
         '--fsdp_cpu_offload',
         default=False,
         type=bool,
@@ -170,7 +176,12 @@ def add_fsdp_args(parser):
         default='zero2',
         # TODO(Mddct): pipeline and model parallel (3-D parallelism)
         choices=['no_shard', 'model', 'zero2', 'zero3'],
-        help='NO_SHARD, WRAP_ENC_DEC, SHARD_GRAD_OP, FULL_SHARD, see FSDP api')
+        help='Sharding strategy for FSDP. Choose from the following options:\n'
+        '  - "no_shard": Equivalent to DistributedDataParallel (DDP).\n'
+        '  - "model": WENET_ENC_DEC strategy, equivalent to DeepSpeed zero1.\n'
+        '  - "zero2": SHARD_GRAD_OP strategy, equivalent to DeepSpeed zero2.\n'
+        '  - "zero3": FULL_SHARD strategy, equivalent to DeepSpeed zero3.\n'
+        'For more information, refer to the FSDP API documentation.')
     return parser
 
 
@@ -492,8 +503,7 @@ def save_model(model, info_dict):
                                   client_state=info_dict)
             if info_dict["save_states"] == "model_only" and rank == 0:
                 convert_zero_checkpoint_to_fp32_state_dict(model_dir,
-                                                           "{}/{}.pt".format(
-                                                               model_dir, tag),
+                                                           save_model_path,
                                                            tag=tag)
                 os.system("rm -rf {}/{}".format(model_dir, tag))
 
@@ -585,7 +595,7 @@ def batch_backward(model, scaler, info_dict):
         #               `scale_loss_wrt_accum_grad + loss.backward()`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         scaled_loss = model.backward(loss)
-    else:
+    elif train_engine in ["torch_ddp", "torch_fsdp"]:
         scaled_loss = loss / accum_grad
         if scaler is not None:
             # fp16 (amp and fsdp)
@@ -594,6 +604,9 @@ def batch_backward(model, scaler, info_dict):
             # float32  (ddp and fsdp)
             # bf16 (fsdp)
             scaled_loss.backward()
+    else:
+        assert False
+
     info_dict['loss_dict']['loss'] = scaled_loss
     for loss_name, loss_value in info_dict['loss_dict'].items():
         if loss_value is not None:

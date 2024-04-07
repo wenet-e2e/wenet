@@ -17,7 +17,7 @@ from wenet.utils.checkpoint import save_state_dict_and_infos
 from wenet.utils.init_model import WENET_DECODER_CLASSES, WENET_ENCODER_CLASSES
 
 WENET_ENCODER_LAYERS_CLASSES = {
-    'transformer_encoder_laer': TransformerEncoderLayer,
+    'transformer_encoder_layer': TransformerEncoderLayer,
     'conformer_encoder_layer': ConformerEncoderLayer,
     'paraformer_encoder_layer': AliParaformerEncoderLayer,
     'squeezeformer_encoder_layer': SqueezeformerEncoderLayer,
@@ -93,6 +93,9 @@ def check_gradient_checkpoint(model):
 
 
 def apply_fsdp_checkpointing(model, ckpt_layer_types: tuple):
+    # NOTE(Mddct):  torch.utils.checkpoint is currently incompatible with
+    # wenet's model mode. Using this writing method, Please refer to
+    # https://github.com/meta-llama/llama-recipes/blob/main/src/llama_recipes/policies/activation_checkpointing_functions.py#L21
     if len(ckpt_layer_types) == 0:
         return
     from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
