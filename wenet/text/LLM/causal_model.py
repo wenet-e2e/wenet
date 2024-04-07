@@ -6,7 +6,7 @@ from wenet.utils.common import IGNORE_ID, add_sos_eos, th_accuracy
 from wenet.utils.mask import make_non_pad_mask, subsequent_mask
 
 
-class CasualLM(torch.nn.Module):
+class CausalLM(torch.nn.Module):
 
     def __init__(
         self,
@@ -63,7 +63,7 @@ class CasualLM(torch.nn.Module):
         causal_mask = subsequent_mask(tgt_mask.size(-1),
                                       device=tgt_mask.device).unsqueeze(
                                           0)  # (1,L,L)
-        att_mask = causal_mask & m  # (B, L, L)
+        att_mask = causal_mask & tgt_mask  # (B, L, L)
 
         embeding = self.embed(ys_in_pad)
         decoder_out = self.out(self.decoders(embeding,
