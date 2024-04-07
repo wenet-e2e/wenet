@@ -563,7 +563,7 @@ def batch_forward(model, batch, scaler, info_dict):
         torch.cuda.amp.autocast(enabled=scaler is not None),
         "torch_fsdp":
         torch.cuda.amp.autocast(enabled=True, dtype=dtype)
-        if dtype is not None else nullcontext
+        if dtype is not None else nullcontext()
     }[train_engine]
     with autocast:
         loss_dict = model(batch, device)
