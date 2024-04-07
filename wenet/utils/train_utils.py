@@ -595,7 +595,8 @@ def batch_backward(model, scaler, info_dict):
         #               `scale_loss_wrt_accum_grad + loss.backward()`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         scaled_loss = model.backward(loss)
-    elif train_engine in ["torch_ddp", "torch_fsdp"]:
+    else:
+        assert train_engine in ["torch_ddp", "torch_fsdp"]
         scaled_loss = loss / accum_grad
         if scaler is not None:
             # fp16 (amp and fsdp)
@@ -604,8 +605,6 @@ def batch_backward(model, scaler, info_dict):
             # float32  (ddp and fsdp)
             # bf16 (fsdp)
             scaled_loss.backward()
-    else:
-        assert False
 
     info_dict['loss_dict']['loss'] = scaled_loss
     for loss_name, loss_value in info_dict['loss_dict'].items():
