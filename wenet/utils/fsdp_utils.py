@@ -36,6 +36,8 @@ WENET_DECODER_LAYERS_CLASSES = {
 
 
 def wenet_fsdp_wrap_policy(mode):
+    # different wrap methods
+    # please refer： https://openmmlab.medium.com/its-2023-is-pytorch-s-fsdp-the-best-choice-for-training-large-models-fe8d2848832f # noqa
     assert mode in ['no_shard', 'model', 'zero2', 'zero3']
     if mode == 'no_shard':
         return None
@@ -95,7 +97,7 @@ def check_gradient_checkpoint(model):
 def apply_fsdp_checkpointing(model, ckpt_layer_types: tuple):
     # NOTE(Mddct):  torch.utils.checkpoint is currently incompatible with
     # wenet's model mode. Using this writing method, Please refer to
-    # https://github.com/meta-llama/llama-recipes/blob/main/src/llama_recipes/policies/activation_checkpointing_functions.py#L21
+    # https://github.com/meta-llama/llama-recipes/blob/main/src/llama_recipes/policies/activation_checkpointing_functions.py#L21 # noqa
     if len(ckpt_layer_types) == 0:
         return
     from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
