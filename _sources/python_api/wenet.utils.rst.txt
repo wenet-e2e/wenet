@@ -21,6 +21,7 @@ Submodules
    wenet.utils.ctc_utils
    wenet.utils.executor
    wenet.utils.file_utils
+   wenet.utils.fsdp_utils
    wenet.utils.init_model
    wenet.utils.init_tokenizer
    wenet.utils.mask

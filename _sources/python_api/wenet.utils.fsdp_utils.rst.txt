@@ -1,0 +1,7 @@
+wenet.utils.fsdp\_utils module
+==============================
+
+.. automodule:: wenet.utils.fsdp_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
