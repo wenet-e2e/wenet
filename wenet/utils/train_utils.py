@@ -1,5 +1,5 @@
 # Copyright (c) 2021 Mobvoi Inc. (authors: Binbin Zhang)
-#               2023 Horizon Inc. (authors: Xingchen Song)
+#               2023 Tsinghua Univ. (authors: Xingchen Song)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from contextlib import nullcontext
 import copy
 from typing import Optional
+
 import deepspeed
 import json
 import logging
@@ -28,6 +30,9 @@ import torch.distributed as dist
 from tensorboardX import SummaryWriter
 from torch.utils.data import DataLoader
 from torch.nn.utils import clip_grad_norm_
+from torch.distributed.fsdp import (FullyShardedDataParallel as FSDP,
+                                    CPUOffload, MixedPrecision,
+                                    sharded_grad_scaler, ShardingStrategy)
 from deepspeed.runtime.zero.stage_1_and_2 import (
     estimate_zero2_model_states_mem_needs_all_live)
 from deepspeed.runtime.zero.stage3 import (
@@ -36,6 +41,9 @@ from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
+from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
+                                    apply_fsdp_checkpointing,
+                                    wenet_fsdp_wrap_policy)
 from wenet.utils.common import StepTimer
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
@@ -170,13 +178,48 @@ def add_deepspeed_args(parser):
     return parser
 
 
+def add_fsdp_args(parser):
+    parser.add_argument(
+        '--dtype',
+        default='fp32',
+        choices=['fp32', 'fp16', 'bf16'],
+        help='when amp is used, dtype is automatically set to fp16.\
+        this arg has no effect when deepspeed is enabled.')
+    parser.add_argument(
+        '--fsdp_cpu_offload',
+        default=False,
+        type=bool,
+        help='whether to offload parameters to CPU',
+    )
+    parser.add_argument(
+        '--fsdp_sync_module_states',
+        type=bool,
+        default=True,
+        help='\
+        each FSDP module will broadcast module parameters and buffers from \
+        rank 0 to ensure that they are replicated across ranks',
+    )
+    parser.add_argument(
+        '--fsdp_sharding_strategy',
+        default='zero2',
+        # TODO(Mddct): pipeline and model parallel (3-D parallelism)
+        choices=['no_shard', 'model', 'zero2', 'zero3'],
+        help='Sharding strategy for FSDP. Choose from the following options:\n'
+        '  - "no_shard": Equivalent to DistributedDataParallel (DDP).\n'
+        '  - "model": WENET_ENC_DEC strategy, equivalent to DeepSpeed zero1.\n'
+        '  - "zero2": SHARD_GRAD_OP strategy, equivalent to DeepSpeed zero2.\n'
+        '  - "zero3": FULL_SHARD strategy, equivalent to DeepSpeed zero3.\n'
+        'For more information, refer to the FSDP API documentation.')
+    return parser
+
+
 def init_distributed(args):
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     local_rank = int(os.environ.get('LOCAL_RANK', 0))
     rank = int(os.environ.get('RANK', 0))
     logging.info('training on multiple gpus, this gpu {}'.format(local_rank) +
                  ', rank {}, world_size {}'.format(rank, world_size))
-    if args.train_engine == "torch_ddp":
+    if args.train_engine in ["torch_ddp", "torch_fsdp"]:
         torch.cuda.set_device(local_rank)
         dist.init_process_group(args.dist_backend)
     elif args.train_engine == "deepspeed":
@@ -187,11 +230,12 @@ def init_distributed(args):
 
 
 def check_modify_and_save_config(args, configs, symbol_table):
-    if args.train_engine == "torch_ddp":
+    if args.train_engine in ["torch_ddp", "torch_fsdp"]:
         if args.use_amp:
             configs["dtype"] = "fp16"
+            args.dtype = 'fp16'
         else:
-            configs["dtype"] = "fp32"
+            configs["dtype"] = args.dtype
     elif args.train_engine == "deepspeed":
         # NOTE(xcsong): DeepSpeed does not support uneven data. When using custom
         #   dataset, we need to manually ensure that the data is evenly distributed
@@ -317,25 +361,19 @@ def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
     return train_dataset, cv_dataset, train_data_loader, cv_data_loader
 
 
-def wrap_cuda_model(args, model):
+def wrap_cuda_model(args, model, configs=None):
     local_world_size = int(os.environ.get('LOCAL_WORLD_SIZE', 1))
     world_size = int(os.environ.get('WORLD_SIZE', 1))
     if hasattr(model, 'encoder'):
         grad_ckpt = getattr(model.encoder, 'gradient_checkpointing', False)
     else:
         grad_ckpt = False
-    # TODO(xcsong): could one GPU use ddp? and int(os.environ.get('WORLD_SIZE', 1)) > 1
     if args.train_engine == "torch_ddp":  # native pytorch ddp
         assert (torch.cuda.is_available())
         model.cuda()
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=not grad_ckpt)
         device = torch.device("cuda")
-        if args.fp16_grad_sync:
-            from torch.distributed.algorithms.ddp_comm_hooks import (
-                default as comm_hooks, )
-            model.register_comm_hook(state=None,
-                                     hook=comm_hooks.fp16_compress_hook)
     elif args.train_engine == "deepspeed":  # deepspeed
         # NOTE(xcsong): look in detail how the memory estimator API works:
         #   https://deepspeed.readthedocs.io/en/latest/memory.html#discussion
@@ -352,8 +390,50 @@ def wrap_cuda_model(args, model):
                 num_nodes=world_size // local_world_size)
         device = None  # Init device later
         pass  # Init DeepSpeed later
+    elif args.train_engine == 'torch_fsdp':
+        assert configs is not None
+        mixed_precision_dtype = {
+            'fp32': torch.float32,
+            "fp16": torch.float16,
+            "bf16": torch.bfloat16,
+        }[configs['dtype']]
+
+        sharding_strategy = {
+            'model': ShardingStrategy.SHARD_GRAD_OP,
+            'zero2': ShardingStrategy.SHARD_GRAD_OP,
+            'zero3': ShardingStrategy.FULL_SHARD,
+            'no_shard': ShardingStrategy.NO_SHARD,
+        }[args.fsdp_sharding_strategy]
+        wrap_policy = wenet_fsdp_wrap_policy(mode=args.fsdp_sharding_strategy)
+        layer_types = check_gradient_checkpoint(model)
+        model = FSDP(
+            model,
+            auto_wrap_policy=wrap_policy,
+            cpu_offload=CPUOffload(offload_params=True)
+            if args.fsdp_cpu_offload is True else None,
+            mixed_precision=MixedPrecision(
+                param_dtype=mixed_precision_dtype,
+                reduce_dtype=mixed_precision_dtype,
+                buffer_dtype=mixed_precision_dtype,
+            ),
+            sharding_strategy=sharding_strategy,
+            limit_all_gathers=True,
+            use_orig_params=True,
+            sync_module_states=args.fsdp_sync_module_states,
+            # init_distributed is called (torch.cuda.set_device),
+            # we should set device_id, see FSDP api
+            device_id=torch.cuda.current_device(),
+        )
+        apply_fsdp_checkpointing(model, layer_types)
+        device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
+    if args.train_engine in ["torch_fsdp", "torch_ddp"]:
+        if args.fp16_grad_sync:
+            from torch.distributed.algorithms.ddp_comm_hooks import (
+                default as comm_hooks, )
+            model.register_comm_hook(state=None,
+                                     hook=comm_hooks.fp16_compress_hook)
 
     return model, device
 
@@ -430,10 +510,23 @@ def init_summarywriter(args):
     return writer
 
 
+def init_scaler(args):
+    scaler = None
+    if args.use_amp:
+        scaler = torch.cuda.amp.GradScaler()
+    elif args.train_engine == 'torch_fsdp':
+        # why bf16 don't need scaler:
+        # https://discuss.pytorch.org/t/why-bf16-do-not-need-loss-scaling/176596
+        if args.dtype in ['fp16']:
+            scaler = sharded_grad_scaler.ShardedGradScaler(enabled=True)
+    return scaler
+
+
 def save_model(model, info_dict):
     rank = int(os.environ.get('RANK', 0))
     tag = info_dict["tag"]
     model_dir = info_dict["model_dir"]
+    save_model_path = os.path.join(model_dir, '{}.pt'.format(tag))
     # save ckpt
     if info_dict["train_engine"] == "deepspeed":
         # NOTE(xcsong): All ranks should call this API, but only rank 0
@@ -445,13 +538,14 @@ def save_model(model, info_dict):
                                   client_state=info_dict)
             if info_dict["save_states"] == "model_only" and rank == 0:
                 convert_zero_checkpoint_to_fp32_state_dict(model_dir,
-                                                           "{}/{}.pt".format(
-                                                               model_dir, tag),
+                                                           save_model_path,
                                                            tag=tag)
                 os.system("rm -rf {}/{}".format(model_dir, tag))
+
+    elif info_dict['train_engine'] == "torch_fsdp":
+        fsdp_save_model(model, save_model_path, info_dict)
     elif rank == 0:
         # NOTE(xcsong): For torch_ddp, only rank-0 should call this.
-        save_model_path = os.path.join(model_dir, '{}.pt'.format(tag))
         save_checkpoint(model, save_model_path, info_dict)
     # save yaml
     if rank == 0:
@@ -502,21 +596,24 @@ def batch_forward(model, batch, scaler, info_dict):
     else:  # fp32
         dtype = None
 
-    if train_engine == "deepspeed":
-        # deepspeed
-        with torch.cuda.amp.autocast(enabled=dtype is not None,
-                                     dtype=dtype,
-                                     cache_enabled=False):
-            loss_dict = model(batch, device)
-    else:
-        # torch_ddp
-        # autocast context
-        # The more details about amp can be found in
-        # https://pytorch.org/docs/stable/notes/amp_examples.html
-        with torch.cuda.amp.autocast(scaler is not None):
-            loss_dict = model(batch, device)
-    info_dict['loss_dict'] = loss_dict
+    # autocast context
+    # The more details about amp can be found in
+    # https://pytorch.org/docs/stable/notes/amp_examples.html
+    autocast = {
+        "deepspeed":
+        torch.cuda.amp.autocast(enabled=dtype is not None,
+                                dtype=dtype,
+                                cache_enabled=False),
+        "torch_ddp":
+        torch.cuda.amp.autocast(enabled=scaler is not None),
+        "torch_fsdp":
+        torch.cuda.amp.autocast(enabled=True, dtype=dtype)
+        if dtype is not None else nullcontext()
+    }[train_engine]
+    with autocast:
+        loss_dict = model(batch, device)
 
+    info_dict['loss_dict'] = loss_dict
     return info_dict
 
 
@@ -533,12 +630,17 @@ def batch_backward(model, scaler, info_dict):
         #               `scale_loss_wrt_accum_grad + loss.backward()`
         #   ref: https://www.deepspeed.ai/tutorials/megatron/#using-the-training-api
         scaled_loss = model.backward(loss)
-    elif train_engine == "torch_ddp":
+    else:
+        assert train_engine in ["torch_ddp", "torch_fsdp"]
         scaled_loss = loss / accum_grad
-        if use_amp:
+        if scaler is not None:
+            # fp16 (amp and fsdp)
             scaler.scale(scaled_loss).backward()
         else:
+            # float32  (ddp and fsdp)
+            # bf16 (fsdp)
             scaled_loss.backward()
+
     info_dict['loss_dict']['loss'] = scaled_loss
     for loss_name, loss_value in info_dict['loss_dict'].items():
         if loss_value is not None:
@@ -574,9 +676,14 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
         grad_norm = model.get_global_grad_norm()
     elif (batch_idx + 1) % accum_grad == 0:
         # Use mixed precision training
-        if use_amp:
+        # fp16 (ddp fsdp)
+        if scaler is not None:
             scaler.unscale_(optimizer)
-            grad_norm = clip_grad_norm_(model.parameters(), clip)
+            if train_engine == "torch_ddp":
+                grad_norm = clip_grad_norm_(model.parameters(), clip)
+            else:
+                # fsdp
+                grad_norm = model.clip_grad_norm_(clip)
             # Must invoke scaler.update() if unscale_() is used in
             # the iteration to avoid the following error:
             #   RuntimeError: unscale_() has already been called
@@ -587,7 +694,10 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
             scaler.step(optimizer)
             scaler.update()
         else:
-            grad_norm = clip_grad_norm_(model.parameters(), clip)
+            if train_engine == "torch_ddp":
+                grad_norm = clip_grad_norm_(model.parameters(), clip)
+            else:
+                grad_norm = model.clip_grad_norm_(clip)
             if torch.isfinite(grad_norm):
                 optimizer.step()
         optimizer.zero_grad()
@@ -616,8 +726,9 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
     rank = int(os.environ.get('RANK', 0))
 
     if tag == "TRAIN" and rank == 0 and writer is not None:
-        if (train_engine == "deepspeed" and is_gradient_accumulation_boundary) or \
-           (train_engine == "torch_ddp" and (batch_idx + 1) % accum_grad == 0):
+        if (train_engine == "deepspeed" and is_gradient_accumulation_boundary
+            ) or (train_engine in ["torch_ddp", "torch_fsdp"] and
+                  (batch_idx + 1) % accum_grad == 0):
             writer.add_scalar('train/train_loss',
                               loss_dict['loss'] * accum_grad, step + 1)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
@@ -639,7 +750,9 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             steps_per_second = timer.steps_per_second(timer_step)
             log_str += 'steps/sec {:.1f}| '.format(steps_per_second)
         log_str += 'Batch {}/{} loss {:.6f} '.format(
-            epoch, batch_idx + 1, loss_dict['loss'] * accum_grad)
+            epoch,
+            batch_idx + 1 if 'save_interval' not in info_dict else step + 1,
+            loss_dict['loss'] * accum_grad)
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
                 log_str += '{} {:.6f} '.format(name, value)
