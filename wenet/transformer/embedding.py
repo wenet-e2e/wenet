@@ -234,3 +234,33 @@ class RopePositionalEncoding(PositionalEncoding):
             p=self.dropout_rate,
         )
         return x * mask
+
+
+class W2vbertPositionalEncoding(PositionalEncoding):
+
+    def __init__(self,
+                 d_model: int,
+                 dropout_rate: float,
+                 max_len: int = 5000,
+                 reverse: bool = False):
+        super().__init__(d_model, dropout_rate, max_len, reverse)
+        delattr(self, 'pe')
+        self.max_right_rel_pos = 64
+        self.max_left_rel_pos = 8
+        pe = self._relative_indices
+        self.register_buffer('pe', pe)
+
+    def _relative_indices(self, length: torch.Tensor):
+        indices = torch.arange(length).unsqueeze(0)
+        rel_indices = indices - indices.transpose(0, 1)
+        rel_indices = torch.clamp(rel_indices, -self.max_left_rel_pos,
+                                  self.max_right_rel_pos)
+        return rel_indices + self.max_left_rel_pos
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        offset: Union[int,
+                      torch.Tensor] = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+        _ = offset
+        return x, self.pe
