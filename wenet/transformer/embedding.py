@@ -247,7 +247,7 @@ class W2vbertPositionalEncoding(PositionalEncoding):
         delattr(self, 'pe')
         self.max_right_rel_pos = 64
         self.max_left_rel_pos = 8
-        pe = self._relative_indices
+        pe = self._relative_indices(max_len)
         self.register_buffer('pe', pe)
 
     def _relative_indices(self, length: torch.Tensor):
@@ -256,6 +256,12 @@ class W2vbertPositionalEncoding(PositionalEncoding):
         rel_indices = torch.clamp(rel_indices, -self.max_left_rel_pos,
                                   self.max_right_rel_pos)
         return rel_indices + self.max_left_rel_pos
+
+    def position_encoding(self,
+                          offset: Union[int, torch.Tensor],
+                          size: int,
+                          apply_dropout: bool = True) -> torch.Tensor:
+        return self.pe
 
     def forward(
         self,

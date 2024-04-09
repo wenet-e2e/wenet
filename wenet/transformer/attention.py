@@ -563,7 +563,7 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
             v = torch.cat([value_cache, v], dim=2)
         new_cache = torch.cat((k, v), dim=-1)
 
-        pos_emb = pos_emb[:k.size(2)]
+        pos_emb = pos_emb[:k.size(2), :k.size(2)]
         rel_k = self.rel_k_embed(pos_emb)  # (t2, t2, d_k)
         rel_k = rel_k[-q.size(2):]  # (t1, t2, d_k)
         # b,h,t1,dk

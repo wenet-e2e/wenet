@@ -20,12 +20,10 @@ from wenet.transformer.subsampling import (
 )
 from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
-from wenet.transformer.embedding import (PositionalEncoding,
-                                         RelPositionalEncoding,
-                                         RopePositionalEncoding,
-                                         WhisperPositionalEncoding,
-                                         LearnablePositionalEncoding,
-                                         NoPositionalEncoding)
+from wenet.transformer.embedding import (
+    PositionalEncoding, RelPositionalEncoding, RopePositionalEncoding,
+    W2vbertPositionalEncoding, WhisperPositionalEncoding,
+    LearnablePositionalEncoding, NoPositionalEncoding)
 from wenet.transformer.attention import (MultiHeadedAttention,
                                          MultiHeadedCrossAttention,
                                          RelPositionMultiHeadedAttention,
@@ -71,6 +69,7 @@ WENET_EMB_CLASSES = {
     "embed_learnable_pe": LearnablePositionalEncoding,
     "abs_pos_paraformer": ParaformerPositinoalEncoding,
     'rope_pos': RopePositionalEncoding,
+    "w2vbert_pos": W2vbertPositionalEncoding,
 }
 
 WENET_ATTENTION_CLASSES = {
