@@ -171,6 +171,11 @@ def get_args():
                         default=0.0,
                         help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
+
+    parser.add_argument('--use_lora',
+                        type=bool,
+                        default=False,
+                        help='''Whether to use lora for biasing''')
     args = parser.parse_args()
     print(args)
     return args
@@ -201,6 +206,8 @@ def main():
     test_conf['spec_trim'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
+    test_conf['cycle'] = 1
+    test_conf['list_shuffle'] = False
     if 'fbank_conf' in test_conf:
         test_conf['fbank_conf']['dither'] = 0.0
     elif 'mfcc_conf' in test_conf:

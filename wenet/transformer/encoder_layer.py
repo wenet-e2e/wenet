@@ -95,7 +95,12 @@ class TransformerEncoderLayer(nn.Module):
         residual = x
         if self.normalize_before:
             x = self.norm1(x)
-        x_att, new_att_cache = self.self_attn(x, x, x, mask, cache=att_cache)
+        x_att, new_att_cache = self.self_attn(x,
+                                              x,
+                                              x,
+                                              mask,
+                                              pos_emb,
+                                              cache=att_cache)
         x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm1(x)

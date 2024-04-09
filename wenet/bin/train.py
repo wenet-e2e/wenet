@@ -30,23 +30,26 @@ from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.train_utils import (
-    add_model_args, add_dataset_args, add_ddp_args, add_deepspeed_args,
-    add_trace_args, init_distributed, init_dataset_and_dataloader,
-    check_modify_and_save_config, init_optimizer_and_scheduler,
-    trace_and_print_model, wrap_cuda_model, init_summarywriter, save_model,
-    log_per_epoch)
+    add_fsdp_args, add_model_args, add_dataset_args, add_ddp_args,
+    add_deepspeed_args, add_trace_args, init_distributed,
+    init_dataset_and_dataloader, check_modify_and_save_config,
+    init_optimizer_and_scheduler, init_scaler, trace_and_print_model,
+    wrap_cuda_model, init_summarywriter, save_model, log_per_epoch,
+    add_lora_args)
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--train_engine',
                         default='torch_ddp',
-                        choices=['torch_ddp', 'deepspeed'],
+                        choices=['torch_ddp', 'torch_fsdp', 'deepspeed'],
                         help='Engine for paralleled training')
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)
     parser = add_ddp_args(parser)
+    parser = add_lora_args(parser)
     parser = add_deepspeed_args(parser)
+    parser = add_fsdp_args(parser)
     parser = add_trace_args(parser)
     args = parser.parse_args()
     if args.train_engine == "deepspeed":
@@ -96,7 +99,7 @@ def main():
     writer = init_summarywriter(args)
 
     # Dispatch model from cpu to gpu
-    model, device = wrap_cuda_model(args, model)
+    model, device = wrap_cuda_model(args, model, configs)
 
     # Get optimizer & scheduler
     model, optimizer, scheduler = init_optimizer_and_scheduler(
@@ -118,9 +121,7 @@ def main():
                         int("step_" in tag))
 
     # Init scaler, used for pytorch amp mixed precision training
-    scaler = None
-    if args.use_amp:
-        scaler = torch.cuda.amp.GradScaler()
+    scaler = init_scaler(args)
 
     # Start training loop
     start_epoch = configs["init_infos"].get('epoch', 0) + int("epoch_" in tag)
@@ -173,6 +174,7 @@ def main():
             final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
+    dist.destroy_process_group()
 
 
 if __name__ == '__main__':

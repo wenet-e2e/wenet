@@ -21,7 +21,7 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
-from wenet.utils.common import get_dtype_min
+from wenet.utils.rope_utils import llama_apply_rotary_emb
 
 
 class MultiHeadedAttention(nn.Module):
@@ -425,8 +425,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
             assert mask.dtype != torch.bool
             mask = mask.unsqueeze(1)
             # matrix_bd as a mask bias
-            mask = torch.where(mask == get_dtype_min(mask.dtype), mask,
-                               matrix_bd / math.sqrt(self.d_k))
+            mask = (matrix_bd + mask) / math.sqrt(self.d_k)
             output = torch.nn.functional.scaled_dot_product_attention(
                 q_with_bias_u,
                 k,
@@ -590,13 +589,110 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
             assert mask.dtype != torch.bool
             mask = mask.unsqueeze(1)
             # matrix_bd as a mask bias
-            mask = torch.where(mask == get_dtype_min(mask.dtype), mask,
-                               rel_att_weights / math.sqrt(self.d_k))
+            mask = (rel_att_weights + mask) / math.sqrt(self.d_k)
             output = torch.nn.functional.scaled_dot_product_attention(
                 q,
                 k,
                 v,
                 attn_mask=mask,
+                dropout_p=self.dropout_rate,
+                scale=1 / math.sqrt(self.d_k),
+            )
+            output = (output.transpose(1, 2).contiguous().view(
+                query.size(0), -1,
+                self.h * self.d_k))  # (batch, time1, d_model)
+            return self.linear_out(output), new_cache
+
+
+class RopeMultiHeadedAttention(MultiHeadedAttention):
+
+    def __init__(self,
+                 n_head: int,
+                 n_feat: int,
+                 dropout_rate: float,
+                 query_bias: bool = True,
+                 key_bias: bool = True,
+                 value_bias: bool = True,
+                 use_sdpa: bool = False,
+                 n_kv_head: Optional[int] = None,
+                 head_dim: Optional[int] = None):
+        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
+                         value_bias, use_sdpa, n_kv_head, head_dim)
+
+    def forward(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        pos_emb: torch.Tensor = torch.empty(0),
+        cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Compute rope scaled dot product attention.
+
+        Args:
+            query (torch.Tensor): Query tensor (#batch, time1, size).
+            key (torch.Tensor): Key tensor (#batch, time2, size).
+            value (torch.Tensor): Value tensor (#batch, time2, size).
+            mask (torch.Tensor): Mask tensor (#batch, 1, time2) or
+                (#batch, time1, time2).
+                1.When applying cross attention between decoder and encoder,
+                the batch padding mask for input is in (#batch, 1, T) shape.
+                2.When applying self attention of encoder,
+                the mask is in (#batch, T, T)  shape.
+                3.When applying self attention of decoder,
+                the mask is in (#batch, L, L)  shape.
+                4.If the different position in decoder see different block
+                of the encoder, such as Mocha, the passed in mask could be
+                in (#batch, L, T) shape. But there is no such case in current
+                Wenet.
+            cache (torch.Tensor): Cache tensor (1, head, cache_t, d_k * 2),
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
+
+
+        Returns:
+            torch.Tensor: Output tensor (#batch, time1, d_model).
+            torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
+                where `cache_t == chunk_size * num_decoding_left_chunks`
+                and `head * d_k == size`
+
+        """
+        q, k, v = self.forward_qkv(query, key, value)
+        # NOTE(Mddct): In order to make the code easier to read,
+        #    these two lines are not placed in MultiHeadedAttention.
+        q = llama_apply_rotary_emb(q, pos_emb)
+        k = llama_apply_rotary_emb(k, pos_emb)
+        # see above
+        if cache.size(0) > 0:
+            key_cache, value_cache = torch.split(cache,
+                                                 cache.size(-1) // 2,
+                                                 dim=-1)
+            k = torch.cat([key_cache, k], dim=2)
+            v = torch.cat([value_cache, v], dim=2)
+        new_cache = torch.cat((k, v), dim=-1)
+
+        if self.h_kv != self.h:
+            k = torch.repeat_interleave(
+                k,
+                self.h // self.h_kv,
+                dim=1,
+            )
+            v = torch.repeat_interleave(
+                v,
+                self.h // self.h_kv,
+                dim=1,
+            )
+
+        if not self.use_sdpa:
+            scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
+            return self.forward_attention(v, scores, mask), new_cache
+        else:
+            output = torch.nn.functional.scaled_dot_product_attention(
+                q,
+                k,
+                v,
+                attn_mask=mask.unsqueeze(1),
                 dropout_p=self.dropout_rate,
                 scale=1 / math.sqrt(self.d_k),
             )

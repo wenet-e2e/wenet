@@ -141,6 +141,26 @@ def decode_wav(sample):
     sample['sample_rate'] = sample_rate
     return sample
 
+def singal_channel(sample, channel=0):
+    """ Choose a channel of sample.
+        Inplace operation.
+
+        Args:
+            sample: {key, wav, label, sample_rate}
+            channel: target channel index
+
+        Returns:
+            {key, wav, label, sample_rate}
+    """
+    assert 'wav' in sample
+    waveform = sample['wav']
+    channel_nums = waveform.size(0)
+    assert channel < channel_nums
+    if channel_nums != 1:
+        waveform = waveform[channel, :].unsqueeze(0)
+    sample['wav'] = waveform
+    return sample
+
 
 def resample(sample, resample_rate=16000):
     """ Resample sample.

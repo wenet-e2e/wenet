@@ -18,7 +18,7 @@ import torch
 import torch.distributed as dist
 from torch.utils.data import IterableDataset
 
-import wenet.dataset.processor as processor
+import wenet.dataset.deprecated.processor as processor
 from wenet.text.base_tokenizer import BaseTokenizer
 from wenet.utils.file_utils import read_lists
 

@@ -38,6 +38,7 @@ def get_args():
 
 def main():
     args = get_args()
+    args.jit = True
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
     # No need gpu for model export

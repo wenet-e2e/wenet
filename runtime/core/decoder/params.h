@@ -157,6 +157,7 @@ std::shared_ptr<DecodeOptions> InitDecodeOptionsFromFlags() {
   decode_config->ctc_prefix_search_opts.second_beam_size = FLAGS_nbest;
   decode_config->ctc_prefix_search_opts.blank = FLAGS_blank_id;
   decode_config->ctc_endpoint_config.blank = FLAGS_blank_id;
+  decode_config->ctc_endpoint_config.blank_scale = FLAGS_blank_scale;
   return decode_config;
 }
 
