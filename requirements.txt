@@ -18,7 +18,7 @@ cpplint==1.6.1
 torch>=2.1.2
 torchaudio>=2.1.2
 tqdm
-deepspeed<0.13.0
+deepspeed>=0.14.0
 librosa
 openai-whisper
 pre-commit==3.5.0
