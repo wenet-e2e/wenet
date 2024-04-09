@@ -35,6 +35,7 @@ class LoRAMultiHeadedAttention(MultiHeadedAttention):
         dropout_rate (float): Dropout rate.
 
     """
+
     def __init__(self,
                  n_head: int,
                  n_feat: int,
@@ -57,7 +58,10 @@ class LoRAMultiHeadedAttention(MultiHeadedAttention):
         self.d_k = n_feat // n_head
         self.h = n_head
         self.linear_out = lora.Linear(
-            n_feat, n_feat, r=lora_rank, lora_alpha=lora_alpha,
+            n_feat,
+            n_feat,
+            r=lora_rank,
+            lora_alpha=lora_alpha,
             lora_dropout=lora_dropout
         ) if lora_list and "o" in lora_list else nn.Linear(n_feat, n_feat)
 
@@ -69,12 +73,15 @@ class LoRAMultiHeadedAttention(MultiHeadedAttention):
         bias_dict = {"q": query_bias, "k": key_bias, "v": value_bias}
 
         for key, value in lora_qkv_dict.items():
-            setattr(self, f"linear_{key}",
-                    lora.Linear(n_feat, n_feat, r=lora_rank,
-                                lora_alpha=lora_alpha,
-                                lora_dropout=lora_dropout,
-                                bias=bias_dict[key])
-                    if value else nn.Linear(n_feat, n_feat, bias_dict[key]))
+            setattr(
+                self, f"linear_{key}",
+                lora.Linear(n_feat,
+                            n_feat,
+                            r=lora_rank,
+                            lora_alpha=lora_alpha,
+                            lora_dropout=lora_dropout,
+                            bias=bias_dict[key]) if value else nn.Linear(
+                                n_feat, n_feat, bias_dict[key]))
         self.dropout = nn.Dropout(p=dropout_rate)
 
 
@@ -87,6 +94,7 @@ class LoRARelPositionMultiHeadedAttention(LoRAMultiHeadedAttention,
         n_feat (int): The number of features.
         dropout_rate (float): Dropout rate.
     """
+
     def __init__(self,
                  n_head: int,
                  n_feat: int,
