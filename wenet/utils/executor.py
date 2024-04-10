@@ -31,7 +31,7 @@ from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
 class Executor:
 
     def __init__(self, global_step: int = 0):
-        self.step = global_step
+        self.step = global_step + 1
         self.train_step_timer = None
         self.cv_step_timer = None
 
@@ -88,8 +88,9 @@ class Executor:
                 # write training: tensorboard && log
                 log_per_step(writer, info_dict, timer=self.train_step_timer)
                 save_interval = info_dict.get('save_interval', sys.maxsize)
-                if self.step % save_interval == 0 and self.step != 0 \
-                        and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                if (self.step +
+                        1) % save_interval == 0 and self.step != 0 and (
+                            batch_idx + 1) % info_dict["accum_grad"] == 0:
                     import torch.distributed as dist
                     # Ensure all ranks start CV at the same time in step mode
                     dist.barrier()

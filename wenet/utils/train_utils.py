@@ -757,20 +757,19 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             ) or (train_engine in ["torch_ddp", "torch_fsdp"] and
                   (batch_idx + 1) % accum_grad == 0):
             writer.add_scalar('train/train_loss',
-                              loss_dict['loss'] * accum_grad, step + 1)
-            writer.add_scalar('train/grad_norm', info_dict['grad_norm'],
-                              step + 1)
+                              loss_dict['loss'] * accum_grad, step)
+            writer.add_scalar('train/grad_norm', info_dict['grad_norm'], step)
             for name, value in loss_dict.items():
                 if name != 'loss' and value is not None:
-                    writer.add_scalar('train/{}'.format(name), value, step + 1)
+                    writer.add_scalar('train/{}'.format(name), value, step)
             # lr
             for i, lr in enumerate(lrs):
-                writer.add_scalar('train/lr_{}'.format(i), lr, step + 1)
+                writer.add_scalar('train/lr_{}'.format(i), lr, step)
 
     elif "step_" in tag and rank == 0 and writer is not None:
         # CV
         for name, value in loss_dict.items():
-            writer.add_scalar('cv/{}'.format(name), value, step + 1)
+            writer.add_scalar('cv/{}'.format(name), value, step)
         logging.info(
             'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
                 epoch, step, lrs_to_str(lrs), loss_dict["loss"], rank,
