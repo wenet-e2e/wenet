@@ -442,6 +442,7 @@ def init_optimizer_and_scheduler(args, configs, model):
     groups = []
     lr = configs['optim_conf'].get('lr')
     if isinstance(lr, List):
+        assert configs['scheduler'] == 'warmuplr'
         modules_m = configs['optim_conf']['modules']
         assert isinstance(modules_m, List)
         assert len(modules_m) + 1 == len(lr)
