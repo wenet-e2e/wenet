@@ -41,6 +41,7 @@ def load_checkpoint(model: torch.nn.Module, path: str) -> dict:
 
 
 def save_state_dict_and_infos(state_dict, path: str, infos=None):
+    logging.info('Checkpoint: save to checkpoint %s' % path)
     torch.save(state_dict, path)
     info_path = re.sub('.pt$', '.yaml', path)
     if infos is None:
@@ -56,7 +57,6 @@ def save_checkpoint(model: torch.nn.Module, path: str, infos=None):
     Args:
         infos (dict or None): any info you want to save.
     '''
-    logging.info('Checkpoint: save to checkpoint %s' % path)
     if isinstance(model, torch.nn.DataParallel):
         state_dict = model.module.state_dict()
     elif isinstance(model, torch.nn.parallel.DistributedDataParallel):
