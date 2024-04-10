@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Horizon Robotics. (authors: Binbin Zhang)
+# Copyright (c) 2022 Binbin Zhang (binbzha@qq.com)
 #               2022 Chengdong Liang (liangchengdong@mail.nwpu.edu.cn)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

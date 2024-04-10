@@ -68,8 +68,9 @@ class Executor:
                 # Disable gradient synchronizations across DDP processes.
                 # Within this context, gradients will be accumulated on module
                 # variables, which will later be synchronized.
-                if info_dict.get("train_engine", "torch_ddp") == "torch_ddp" and \
-                        (batch_idx + 1) % info_dict["accum_grad"] != 0:
+                if info_dict.get("train_engine", "torch_ddp") in [
+                        "torch_ddp", "torch_fsdp"
+                ] and (batch_idx + 1) % info_dict["accum_grad"] != 0:
                     context = model.no_sync
                 # Used for single gpu training and DDP gradient synchronization
                 # processes.
@@ -89,6 +90,9 @@ class Executor:
                 save_interval = info_dict.get('save_interval', sys.maxsize)
                 if self.step % save_interval == 0 and self.step != 0 \
                         and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                    import torch.distributed as dist
+                    # Ensure all ranks start CV at the same time in step mode
+                    dist.barrier()
                     loss_dict = self.cv(model, cv_data_loader, configs)
                     model.train()
                     info_dict.update({
@@ -104,6 +108,8 @@ class Executor:
                     save_model(model, info_dict)
                     # write final cv: tensorboard
                     log_per_step(writer, info_dict)
+                    # Ensure all ranks start Train at the same time in step mode
+                    dist.barrier()
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
 

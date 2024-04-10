@@ -5,7 +5,6 @@ import sys
 
 import torchaudio
 
-
 scp = sys.argv[1]
 dur_scp = sys.argv[2]
 

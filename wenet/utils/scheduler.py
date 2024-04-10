@@ -57,17 +57,20 @@ class WarmupLR(_LRScheduler):
     def get_lr(self):
         step_num = self.last_epoch + 1
         warmup_steps = self.warmup_steps
-        if not isinstance(self.warmup_steps, List):
+        if not isinstance(warmup_steps, List):
             warmup_steps = [self.warmup_steps] * len(self.base_lrs)
-        lrs = []
-        for (i, lr) in enumerate(self.base_lrs):
-            if warmup_steps[i] == 0:
-                lrs.append([lr * step_num**-0.5 for lr in self.base_lrs])
-            else:
-                lrs.append(
-                    lr * warmup_steps[i]**0.5 *
-                    min(step_num**-0.5, step_num * warmup_steps[i]**-1.5))
-        return lrs
+
+        def initlr_fn(lr):
+            return lr * step_num**-0.5
+
+        def warmuplr_fn(lr, warmup_step):
+            return lr * warmup_step**0.5 * min(step_num**-0.5,
+                                               step_num * warmup_step**-1.5)
+
+        return [
+            initlr_fn(lr) if warmup_steps[i] == 0 else warmuplr_fn(
+                lr, warmup_steps[i]) for (i, lr) in enumerate(self.base_lrs)
+        ]
 
     def set_step(self, step: int):
         self.last_epoch = step

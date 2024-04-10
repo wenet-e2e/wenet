@@ -21,6 +21,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
+from wenet.utils.rope_utils import precompute_freqs_cis
+
 
 class PositionalEncoding(torch.nn.Module):
     """Positional encoding.
@@ -194,3 +196,62 @@ class NoPositionalEncoding(torch.nn.Module):
     def position_encoding(self, offset: Union[int, torch.Tensor],
                           size: int) -> torch.Tensor:
         return torch.zeros(1, size, self.d_model)
+
+
+class RopePositionalEncoding(PositionalEncoding):
+
+    def __init__(self,
+                 d_model: int,
+                 head_dim: int,
+                 dropout_rate: float,
+                 max_len: int = 1500,
+                 rope_theta=10000.0):
+        super().__init__(d_model, dropout_rate=dropout_rate, max_len=max_len)
+        delattr(self, 'pe')
+        self.max_len = max_len * 2
+        pe = precompute_freqs_cis(head_dim, self.max_len, rope_theta)
+        self.register_buffer("pe", torch.view_as_real(pe.unsqueeze(0)))
+        self.dropout_rate = dropout_rate
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        offset: Union[int,
+                      torch.Tensor] = 0) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        pos_emb = self.position_encoding(offset, x.size(1), True)
+        pos_emb = pos_emb.unsqueeze(1)  # [1, 1, seq, head_dim//2]
+        # NOTE(Mddct): some model don't scale
+        # TODO(Mddct): fix
+        x = x * self.xscale
+        return self.dropout(x), pos_emb
+
+    def position_encoding(self,
+                          offset: Union[int, torch.Tensor],
+                          size: int,
+                          apply_dropout: bool = True) -> torch.Tensor:
+
+        pe = torch.view_as_complex(self.pe)
+        if isinstance(offset, int):
+            assert offset + size <= self.max_len
+            pos_emb = pe[:, offset:offset + size]
+        else:
+            assert torch.max(offset) + size <= self.max_len
+            index = offset.unsqueeze(1) + torch.arange(0, size).to(
+                offset.device)  # B X T
+            flag = index > 0
+            # remove negative offset
+            index = index * flag
+            pos_emb = F.embedding(index, pe[0])  # B X T X head_dim//2
+        if apply_dropout:
+            # NOTE(Mddct) dropout don't suuport complex float for pos_emb
+            pos_emb = self.dropout_complex(pos_emb)
+        return pos_emb
+
+    def dropout_complex(self, x):
+        mask = torch.nn.functional.dropout(
+            torch.ones_like(x.real),
+            training=self.training,
+            p=self.dropout_rate,
+        )
+        return x * mask

@@ -97,13 +97,16 @@ class BaseEncoder(torch.nn.Module):
         self._output_size = output_size
 
         self.global_cmvn = global_cmvn
+        pos_emb_class = WENET_EMB_CLASSES[pos_enc_layer_type]
+        # NOTE(Mddct): head_dim == output_size // attention_heads for most of
+        #    speech tasks,  but for other task (LLM),
+        #    head_dim == hidden_size * attention_heads. refactor later
         self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
-            input_size,
-            output_size,
-            dropout_rate,
-            WENET_EMB_CLASSES[pos_enc_layer_type](output_size,
-                                                  positional_dropout_rate),
-        )
+            input_size, output_size, dropout_rate,
+            pos_emb_class(output_size, positional_dropout_rate)
+            if pos_enc_layer_type != 'rope_pos' else pos_emb_class(
+                output_size, output_size //
+                attention_heads, positional_dropout_rate))
 
         assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.normalize_before = normalize_before
@@ -377,6 +380,7 @@ class TransformerEncoder(BaseEncoder):
         norm_eps: float = 1e-5,
         n_kv_head: Optional[int] = None,
         head_dim: Optional[int] = None,
+        selfattention_layer_type: str = "selfattn",
     ):
         """ Construct TransformerEncoder
 
@@ -389,17 +393,17 @@ class TransformerEncoder(BaseEncoder):
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk, gradient_checkpointing,
                          use_sdpa, layer_norm_type, norm_eps)
+
+        assert selfattention_layer_type in ['selfattn', 'rope_abs_selfattn']
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
-                WENET_ATTENTION_CLASSES["selfattn"](attention_heads,
-                                                    output_size,
-                                                    attention_dropout_rate,
-                                                    query_bias, key_bias,
-                                                    value_bias, use_sdpa,
-                                                    n_kv_head, head_dim),
+                WENET_ATTENTION_CLASSES[selfattention_layer_type](
+                    attention_heads, output_size, attention_dropout_rate,
+                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
+                    head_dim),
                 mlp_class(output_size, linear_units, dropout_rate, activation,
                           mlp_bias),
                 dropout_rate,
