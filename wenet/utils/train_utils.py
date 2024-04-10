@@ -772,7 +772,7 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             writer.add_scalar('cv/{}'.format(name), value, step)
         logging.info(
             'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-                epoch, step, lrs_to_str(lrs), loss_dict["loss"], rank,
+                epoch, step + 1, lrs_to_str(lrs), loss_dict["loss"], rank,
                 loss_dict["acc"]))
 
     if "step_" not in tag and (batch_idx + 1) % log_interval == 0:
