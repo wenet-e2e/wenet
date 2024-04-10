@@ -219,13 +219,13 @@ class RopePositionalEncoding(PositionalEncoding):
         offset: Union[int,
                       torch.Tensor] = 0) -> Tuple[torch.Tensor, torch.Tensor]:
 
-        pos_emb = self.position_encoding(offset, x.size(1), False)
+        pos_emb = self.position_encoding(offset, x.size(1), True)
         pos_emb = pos_emb.unsqueeze(1)  # [1, 1, seq, head_dim//2]
         # NOTE(Mddct): some model don't scale
         # TODO(Mddct): fix
         x = x * self.xscale
         # NOTE(Mddct) dropout don't suuport complex float for pos_emb
-        return self.dropout(x), self.dropout_complex(pos_emb)
+        return self.dropout(x), pos_emb
 
     def position_encoding(self,
                           offset: Union[int, torch.Tensor],
@@ -246,7 +246,7 @@ class RopePositionalEncoding(PositionalEncoding):
             pos_emb = F.embedding(index, pe[0])  # B X T X head_dim//2
 
             if apply_dropout:
-                pos_emb = self.dropout(pos_emb)
+                pos_emb = self.dropout_complex(pos_emb)
         return pos_emb
 
     def dropout_complex(self, x):
