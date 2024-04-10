@@ -224,7 +224,6 @@ class RopePositionalEncoding(PositionalEncoding):
         # NOTE(Mddct): some model don't scale
         # TODO(Mddct): fix
         x = x * self.xscale
-        # NOTE(Mddct) dropout don't suuport complex float for pos_emb
         return self.dropout(x), pos_emb
 
     def position_encoding(self,
@@ -244,9 +243,9 @@ class RopePositionalEncoding(PositionalEncoding):
             # remove negative offset
             index = index * flag
             pos_emb = F.embedding(index, pe[0])  # B X T X head_dim//2
-
-            if apply_dropout:
-                pos_emb = self.dropout_complex(pos_emb)
+        if apply_dropout:
+            # NOTE(Mddct) dropout don't suuport complex float for pos_emb
+            pos_emb = self.dropout_complex(pos_emb)
         return pos_emb
 
     def dropout_complex(self, x):
