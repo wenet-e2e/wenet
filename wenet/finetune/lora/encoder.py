@@ -86,15 +86,10 @@ class LoRATransformerEncoder(TransformerEncoder):
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 output_size,
-                WENET_LORA_ATTENTION_CLASSES["selfattn"](attention_heads,
-                                                         output_size,
-                                                         attention_dropout_rate,
-                                                         query_bias, key_bias,
-                                                         value_bias, use_sdpa,
-                                                         n_kv_head, head_dim,
-                                                         lora_rank, lora_alpha,
-                                                         lora_dropout,
-                                                         lora_list),
+                WENET_LORA_ATTENTION_CLASSES["selfattn"](
+                    attention_heads, output_size, attention_dropout_rate,
+                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
+                    head_dim, lora_rank, lora_alpha, lora_dropout, lora_list),
                 mlp_class(output_size, linear_units, dropout_rate, activation,
                           mlp_bias),
                 dropout_rate,
@@ -167,18 +162,17 @@ class LoRAConformerEncoder(ConformerEncoder):
             causal (bool): whether to use causal convolution or not.
             key_bias: whether use bias in attention.linear_k, False for whisper models.
         """
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, positionwise_conv_kernel_size,
-                         macaron_style, selfattention_layer_type,
-                         activation_type, use_cnn_module, cnn_module_kernel,
-                         causal, cnn_module_norm, query_bias, key_bias,
-                         value_bias, mlp_bias, conv_bias,
-                         gradient_checkpointing, use_sdpa, mlp_type,
-                         layer_norm_type, norm_eps, n_kv_head, head_dim)
+        super().__init__(
+            input_size, output_size, attention_heads, linear_units, num_blocks,
+            dropout_rate, positional_dropout_rate, attention_dropout_rate,
+            input_layer, pos_enc_layer_type, normalize_before,
+            static_chunk_size, use_dynamic_chunk, global_cmvn,
+            use_dynamic_left_chunk, positionwise_conv_kernel_size,
+            macaron_style, selfattention_layer_type, activation_type,
+            use_cnn_module, cnn_module_kernel, causal, cnn_module_norm,
+            query_bias, key_bias, value_bias, mlp_bias, conv_bias,
+            gradient_checkpointing, use_sdpa, mlp_type, layer_norm_type,
+            norm_eps, n_kv_head, head_dim)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition
