@@ -31,7 +31,7 @@ from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
 class Executor:
 
     def __init__(self, global_step: int = 0):
-        self.step = global_step
+        self.step = global_step + 1
         self.train_step_timer = None
         self.cv_step_timer = None
 
@@ -85,9 +85,12 @@ class Executor:
                 info_dict = update_parameter_and_lr(model, optimizer,
                                                     scheduler, scaler,
                                                     info_dict)
+                # write training: tensorboard && log
+                log_per_step(writer, info_dict, timer=self.train_step_timer)
                 save_interval = info_dict.get('save_interval', sys.maxsize)
-                if self.step % save_interval == 0 and self.step != 0 \
-                        and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                if (self.step +
+                        1) % save_interval == 0 and self.step != 0 and (
+                            batch_idx + 1) % info_dict["accum_grad"] == 0:
                     import torch.distributed as dist
                     # Ensure all ranks start CV at the same time in step mode
                     dist.barrier()
@@ -100,13 +103,14 @@ class Executor:
                         loss_dict,
                         "save_time":
                         datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                        "lr":
-                        optimizer.param_groups[0]['lr']
+                        "lrs":
+                        [group['lr'] for group in optimizer.param_groups]
                     })
                     save_model(model, info_dict)
+                    # write final cv: tensorboard
+                    log_per_step(writer, info_dict)
                     # Ensure all ranks start Train at the same time in step mode
                     dist.barrier()
-                log_per_step(writer, info_dict, timer=self.train_step_timer)
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
 
@@ -143,7 +147,7 @@ class Executor:
                         loss_value = loss_value.item()
                         loss_dict[loss_name] = loss_dict.get(loss_name, 0) + \
                             loss_value * num_utts
-
+                # write cv: log
                 log_per_step(writer=None,
                              info_dict=info_dict,
                              timer=self.cv_step_timer)

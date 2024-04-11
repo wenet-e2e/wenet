@@ -24,6 +24,7 @@ import yaml
 import torch.distributed as dist
 
 from torch.distributed.elastic.multiprocessing.errors import record
+from wenet.utils.common import lrs_to_str
 
 from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
@@ -117,8 +118,7 @@ def main():
 
     # Get executor
     tag = configs["init_infos"].get("tag", "init")
-    executor = Executor(global_step=configs["init_infos"].get('step', -1) +
-                        int("step_" in tag))
+    executor = Executor(global_step=configs["init_infos"].get('step', -1))
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = init_scaler(args)
@@ -134,9 +134,9 @@ def main():
     for epoch in range(start_epoch, end_epoch):
         configs['epoch'] = epoch
 
-        lr = optimizer.param_groups[0]['lr']
-        logging.info('Epoch {} TRAIN info lr {} rank {}'.format(
-            epoch, lr, rank))
+        lrs = [group['lr'] for group in optimizer.param_groups]
+        logging.info('Epoch {} Step {} TRAIN info lr {} rank {}'.format(
+            epoch, executor.step, lrs_to_str(lrs), rank))
 
         dist.barrier(
         )  # NOTE(xcsong): Ensure all ranks start Train at the same time.
@@ -150,19 +150,16 @@ def main():
         dist.barrier(
         )  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         loss_dict = executor.cv(model, cv_data_loader, configs)
-
-        lr = optimizer.param_groups[0]['lr']
-        logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-            epoch, lr, loss_dict["loss"], rank, loss_dict["acc"]))
         info_dict = {
             'epoch': epoch,
-            'lr': lr,
+            'lrs': [group['lr'] for group in optimizer.param_groups],
             'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             'tag': "epoch_{}".format(epoch),
             'loss_dict': loss_dict,
             **configs
         }
+        # epoch cv: tensorboard && log
         log_per_epoch(writer, info_dict=info_dict)
         save_model(model, info_dict=info_dict)
 
