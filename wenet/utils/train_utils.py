@@ -752,7 +752,7 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
         "is_gradient_accumulation_boundary", False)
 
     rank = int(os.environ.get('RANK', 0))
-    # TRAIN
+    # TRAIN Tensorboard
     if tag == "TRAIN" and rank == 0 and writer is not None:
         if (train_engine == "deepspeed" and is_gradient_accumulation_boundary
             ) or (train_engine in ["torch_ddp", "torch_fsdp"] and
@@ -766,17 +766,18 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             # lr
             for i, lr in enumerate(lrs):
                 writer.add_scalar('train/lr_{}'.format(i), lr, step)
-
+    # CV Tensorboard
     elif "step_" in tag and rank == 0 and writer is not None:
-        # CV
         for name, value in loss_dict.items():
             writer.add_scalar('cv/{}'.format(name), value, step)
         logging.info(
             'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
                 epoch, step + 1, lrs_to_str(lrs), loss_dict["loss"], rank,
                 loss_dict["acc"]))
+        return
 
-    if "step_" not in tag and (batch_idx + 1) % log_interval == 0:
+    # TRAIN & CV, Shell log (stdout)
+    if (batch_idx + 1) % log_interval == 0:
         log_str = '{} | '.format(tag)
         if timer is not None:
             timer_step = step
