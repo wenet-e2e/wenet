@@ -3,7 +3,7 @@ import torch
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
                                      WENET_ATTENTION_CLASSES,
-                                     WENET_MLP_CLASSES)
+                                     WENET_EMB_CLASSES, WENET_MLP_CLASSES)
 from wenet.utils.common import mask_to_bias
 
 
@@ -30,11 +30,13 @@ class DecoderOnly(torch.nn.Module):
         layer_norm_type: str = 'rms_norm',
         norm_eps: float = 1e-5,
         selfattention_layer_type: str = "selfattn",
+        pos_enc_layer_type: str = "rope_pos",
         use_sdpa: bool = False,
     ) -> None:
         super().__init__()
 
         assert selfattention_layer_type in ['selfattn', 'rope_abs_selfattn']
+        self.pos_enc = WENET_EMB_CLASSES[pos_enc_layer_type]
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.decoders = torch.nn.ModuleList([
@@ -56,8 +58,11 @@ class DecoderOnly(torch.nn.Module):
         self.gradient_checkpoint = gradient_checkpointing
         self.use_sdpa = use_sdpa
 
-    def forward(self, input: torch.Tensor, att_mask: torch.Tensor):
-        xs, pos_emb = self.pos_enc(input)
+    def forward(self,
+                input: torch.Tensor,
+                att_mask: torch.Tensor,
+                input_position: Union[int, torch.Tensor] = 0):
+        xs, pos_emb = self.pos_enc(input, offset=input_position)
         tgt_mask = att_mask
         if self.use_sdpa:
             tgt_mask = mask_to_bias(tgt_mask, xs.dtype)
