@@ -24,29 +24,33 @@ import yaml
 import torch.distributed as dist
 
 from torch.distributed.elastic.multiprocessing.errors import record
+from wenet.utils.common import lrs_to_str
 
 from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.train_utils import (
-    add_model_args, add_dataset_args, add_ddp_args, add_deepspeed_args,
-    add_trace_args, init_distributed, init_dataset_and_dataloader,
-    check_modify_and_save_config, init_optimizer_and_scheduler,
-    trace_and_print_model, wrap_cuda_model, init_summarywriter, save_model,
-    log_per_epoch)
+    add_fsdp_args, add_model_args, add_dataset_args, add_ddp_args,
+    add_deepspeed_args, add_trace_args, init_distributed,
+    init_dataset_and_dataloader, check_modify_and_save_config,
+    init_optimizer_and_scheduler, init_scaler, trace_and_print_model,
+    wrap_cuda_model, init_summarywriter, save_model, log_per_epoch,
+    add_lora_args)
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='training your network')
     parser.add_argument('--train_engine',
                         default='torch_ddp',
-                        choices=['torch_ddp', 'deepspeed'],
+                        choices=['torch_ddp', 'torch_fsdp', 'deepspeed'],
                         help='Engine for paralleled training')
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)
     parser = add_ddp_args(parser)
+    parser = add_lora_args(parser)
     parser = add_deepspeed_args(parser)
+    parser = add_fsdp_args(parser)
     parser = add_trace_args(parser)
     args = parser.parse_args()
     if args.train_engine == "deepspeed":
@@ -96,7 +100,7 @@ def main():
     writer = init_summarywriter(args)
 
     # Dispatch model from cpu to gpu
-    model, device = wrap_cuda_model(args, model)
+    model, device = wrap_cuda_model(args, model, configs)
 
     # Get optimizer & scheduler
     model, optimizer, scheduler = init_optimizer_and_scheduler(
@@ -114,13 +118,10 @@ def main():
 
     # Get executor
     tag = configs["init_infos"].get("tag", "init")
-    executor = Executor(global_step=configs["init_infos"].get('step', -1) +
-                        int("step_" in tag))
+    executor = Executor(global_step=configs["init_infos"].get('step', -1))
 
     # Init scaler, used for pytorch amp mixed precision training
-    scaler = None
-    if args.use_amp:
-        scaler = torch.cuda.amp.GradScaler()
+    scaler = init_scaler(args)
 
     # Start training loop
     start_epoch = configs["init_infos"].get('epoch', 0) + int("epoch_" in tag)
@@ -133,9 +134,9 @@ def main():
     for epoch in range(start_epoch, end_epoch):
         configs['epoch'] = epoch
 
-        lr = optimizer.param_groups[0]['lr']
-        logging.info('Epoch {} TRAIN info lr {} rank {}'.format(
-            epoch, lr, rank))
+        lrs = [group['lr'] for group in optimizer.param_groups]
+        logging.info('Epoch {} Step {} TRAIN info lr {} rank {}'.format(
+            epoch, executor.step, lrs_to_str(lrs), rank))
 
         dist.barrier(
         )  # NOTE(xcsong): Ensure all ranks start Train at the same time.
@@ -149,19 +150,16 @@ def main():
         dist.barrier(
         )  # NOTE(xcsong): Ensure all ranks start CV at the same time.
         loss_dict = executor.cv(model, cv_data_loader, configs)
-
-        lr = optimizer.param_groups[0]['lr']
-        logging.info('Epoch {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-            epoch, lr, loss_dict["loss"], rank, loss_dict["acc"]))
         info_dict = {
             'epoch': epoch,
-            'lr': lr,
+            'lrs': [group['lr'] for group in optimizer.param_groups],
             'step': executor.step,
             'save_time': datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
             'tag': "epoch_{}".format(epoch),
             'loss_dict': loss_dict,
             **configs
         }
+        # epoch cv: tensorboard && log
         log_per_epoch(writer, info_dict=info_dict)
         save_model(model, info_dict=info_dict)
 
@@ -173,6 +171,7 @@ def main():
             final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
+    dist.destroy_process_group()
 
 
 if __name__ == '__main__':

@@ -141,6 +141,7 @@ def decode_wav(sample):
     sample['sample_rate'] = sample_rate
     return sample
 
+
 def singal_channel(sample, channel=0):
     """ Choose a channel of sample.
         Inplace operation.

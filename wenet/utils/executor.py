@@ -31,7 +31,7 @@ from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
 class Executor:
 
     def __init__(self, global_step: int = 0):
-        self.step = global_step
+        self.step = global_step + 1
         self.train_step_timer = None
         self.cv_step_timer = None
 
@@ -68,8 +68,9 @@ class Executor:
                 # Disable gradient synchronizations across DDP processes.
                 # Within this context, gradients will be accumulated on module
                 # variables, which will later be synchronized.
-                if info_dict.get("train_engine", "torch_ddp") == "torch_ddp" and \
-                        (batch_idx + 1) % info_dict["accum_grad"] != 0:
+                if info_dict.get("train_engine", "torch_ddp") in [
+                        "torch_ddp", "torch_fsdp"
+                ] and (batch_idx + 1) % info_dict["accum_grad"] != 0:
                     context = model.no_sync
                 # Used for single gpu training and DDP gradient synchronization
                 # processes.
@@ -84,9 +85,15 @@ class Executor:
                 info_dict = update_parameter_and_lr(model, optimizer,
                                                     scheduler, scaler,
                                                     info_dict)
+                # write training: tensorboard && log
+                log_per_step(writer, info_dict, timer=self.train_step_timer)
                 save_interval = info_dict.get('save_interval', sys.maxsize)
-                if self.step % save_interval == 0 and self.step != 0 \
-                        and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                if (self.step +
+                        1) % save_interval == 0 and self.step != 0 and (
+                            batch_idx + 1) % info_dict["accum_grad"] == 0:
+                    import torch.distributed as dist
+                    # Ensure all ranks start CV at the same time in step mode
+                    dist.barrier()
                     loss_dict = self.cv(model, cv_data_loader, configs)
                     model.train()
                     info_dict.update({
@@ -96,14 +103,16 @@ class Executor:
                         loss_dict,
                         "save_time":
                         datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                        "lr":
-                        optimizer.param_groups[0]['lr']
+                        "lrs":
+                        [group['lr'] for group in optimizer.param_groups]
                     })
                     save_model(model, info_dict)
-                log_per_step(writer, info_dict, timer=self.train_step_timer)
+                    # write final cv: tensorboard
+                    log_per_step(writer, info_dict)
+                    # Ensure all ranks start Train at the same time in step mode
+                    dist.barrier()
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
-
 
     def cv(self, model, cv_data_loader, configs):
         ''' Cross validation on
@@ -138,7 +147,7 @@ class Executor:
                         loss_value = loss_value.item()
                         loss_dict[loss_name] = loss_dict.get(loss_name, 0) + \
                             loss_value * num_utts
-
+                # write cv: log
                 log_per_step(writer=None,
                              info_dict=info_dict,
                              timer=self.cv_step_timer)
