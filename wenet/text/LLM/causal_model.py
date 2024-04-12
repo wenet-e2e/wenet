@@ -53,12 +53,13 @@ class CausalLM(torch.nn.Module):
 
         text = batch['text'].to(device)
         text_length = batch['text_lengths'].to(device)
-
+        # TODO(Mddct) fix for sft
         ys_in_pad, ys_out_pad = add_sos_eos(text, self.sos, self.eos,
                                             self.ignore_id)
         ys_in_lens = text_length + 1
 
         # TODO: fix maxlength for pading to max
+        # TODO: to support sft format
         tgt_mask = make_non_pad_mask(ys_in_lens).unsqueeze(1).to(
             text.device)  # (B, 1, L)
         causal_mask = subsequent_mask(tgt_mask.size(-1),
