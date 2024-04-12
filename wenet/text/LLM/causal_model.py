@@ -3,8 +3,8 @@ import torch
 from wenet.text.LLM.decoder import DecoderOnly
 from wenet.text.LLM.sampler import sampler
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
-from wenet.utils.common import IGNORE_ID, add_sos_eos, th_accuracy
-from wenet.utils.mask import make_non_pad_mask, subsequent_mask
+from wenet.utils.common import IGNORE_ID, th_accuracy
+from wenet.utils.mask import subsequent_mask
 
 
 class CausalLM(torch.nn.Module):
@@ -52,28 +52,20 @@ class CausalLM(torch.nn.Module):
     ) -> Dict[str, Optional[torch.Tensor]]:
 
         text = batch['text'].to(device)
-        text_length = batch['text_lengths'].to(device)
-        # TODO(Mddct) fix for sft
-        ys_in_pad, ys_out_pad = add_sos_eos(text, self.sos, self.eos,
-                                            self.ignore_id)
-        ys_in_lens = text_length + 1
+        target = batch['target'].to(device)
+        mask = batch['mask'].to(device)  # (B,L)
+        mask = mask.unsqueeze(1)  # (B,1,L)
 
-        # TODO: fix maxlength for pading to max
-        # TODO: to support sft format
-        tgt_mask = make_non_pad_mask(ys_in_lens).unsqueeze(1).to(
-            text.device)  # (B, 1, L)
-        causal_mask = subsequent_mask(tgt_mask.size(-1),
-                                      device=tgt_mask.device).unsqueeze(
-                                          0)  # (1,L,L)
-        att_mask = causal_mask & tgt_mask  # (B, L, L)
+        causal_mask = subsequent_mask(
+            mask.size(-1), device=mask.device).unsqueeze(0)  # (1,L,L)
+        att_mask = causal_mask & mask  # (B, L, L)
 
-        embeding = self.embed(ys_in_pad)
+        embeding = self.embed(text)
         decoder_out = self.out(self.decoder(embeding,
                                             att_mask)[0])  # (B, L, vocab_size)
-
-        loss = self.criterion_att(decoder_out, ys_out_pad)
+        loss = self.criterion_att(decoder_out, target)
         acc = th_accuracy(decoder_out.view(-1, self.vocab_size),
-                          ys_out_pad,
+                          target,
                           ignore_label=self.ignore_id)
 
         # TODO: ppl
