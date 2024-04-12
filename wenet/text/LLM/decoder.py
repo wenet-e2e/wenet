@@ -1,3 +1,4 @@
+from typing import Optional, Tuple, Union
 import torch
 
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
@@ -26,17 +27,21 @@ class DecoderOnly(torch.nn.Module):
         mlp_bias: bool = True,
         activation_type: str = "gelu",
         gradient_checkpointing: bool = False,
+        max_position_embeding: int = 8192,
         mlp_type: str = '',
         layer_norm_type: str = 'rms_norm',
         norm_eps: float = 1e-5,
         selfattention_layer_type: str = "selfattn",
-        pos_enc_layer_type: str = "rope_pos",
         use_sdpa: bool = False,
     ) -> None:
         super().__init__()
 
         assert selfattention_layer_type in ['selfattn', 'rope_abs_selfattn']
-        self.pos_enc = WENET_EMB_CLASSES[pos_enc_layer_type]
+        self.pos_enc = WENET_EMB_CLASSES["rope_pos"](
+            hidden_size,
+            head_dim,
+            max_len=max_position_embeding,
+            dropout_rate=dropout_rate)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.decoders = torch.nn.ModuleList([
@@ -54,25 +59,29 @@ class DecoderOnly(torch.nn.Module):
                 norm_eps=norm_eps,
             ) for _ in range(num_blocks)
         ])
+        self.n_kv_head = n_kv_head
+        self.head_dim = head_dim
         self._hidden_size = hidden_size
         self.gradient_checkpoint = gradient_checkpointing
         self.use_sdpa = use_sdpa
 
-    def forward(self,
-                input: torch.Tensor,
-                att_mask: torch.Tensor,
-                input_position: Union[int, torch.Tensor] = 0):
+    def forward(
+        self,
+        input: torch.Tensor,
+        att_mask: torch.Tensor,
+        input_position: Union[int, torch.Tensor] = 0,
+        kv_cache: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Union[torch.Tensor, None]]:
         xs, pos_emb = self.pos_enc(input, offset=input_position)
         tgt_mask = att_mask
         if self.use_sdpa:
             tgt_mask = mask_to_bias(tgt_mask, xs.dtype)
-        decoder_out, _, _, _ = self.decoders(
-            xs,
-            tgt_mask,
-            pos_emb,
-            mask_pad=None,
-        )
-        return decoder_out
+        decoder_out, _, kv_cache, _ = self.decoders(xs,
+                                                    tgt_mask,
+                                                    pos_emb,
+                                                    mask_pad=None,
+                                                    cache=kv_cache)
+        return decoder_out, kv_cache
 
     @property
     def hidden_size(self):
