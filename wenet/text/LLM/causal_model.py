@@ -13,9 +13,9 @@ class CausalLM(torch.nn.Module):
         self,
         vocab_size: int,
         decoder: DecoderOnly,
+        special_tokens: dict,
         tie_word_embedding: bool = False,
         linear_bias: bool = False,
-        special_tokens: Optional[dict] = None,
         ignore_id: int = IGNORE_ID,
         lsm_weight: float = 0.0,
         length_normalized_loss: bool = False,
@@ -30,11 +30,9 @@ class CausalLM(torch.nn.Module):
             self.out.weight = self.embed.weight
 
         self.decoder = decoder
-        self.sos = (vocab_size - 1 if special_tokens is None else
-                    special_tokens.get("<sos>", vocab_size - 1))
-        self.eos = (vocab_size - 1 if special_tokens is None else
-                    special_tokens.get("<eos>", vocab_size - 1))
-
+        self.sos = special_tokens['sos']
+        self.eos = special_tokens['eos']
+        self.vocab_size = vocab_size
         self.criterion_att = LabelSmoothingLoss(
             size=vocab_size,
             padding_idx=ignore_id,
@@ -71,6 +69,8 @@ class CausalLM(torch.nn.Module):
         # TODO: ppl
         return {"loss": loss, "ppl": None, "th_accuracy": acc}
 
+    @torch.jit.ignore(drop=True)
+    @torch.no_grad()
     def generate(
         self,
         prompts_tokens: List[List[int]],
