@@ -41,7 +41,8 @@ from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
 from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.common import StepTimer, get_nested_attribute, lrs_to_str
+from wenet.utils.common import (StepTimer, get_nested_attribute, lrs_to_str,
+                                tensor_to_scalar)
 from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
                                     apply_fsdp_checkpointing,
                                     wenet_fsdp_wrap_policy)
@@ -672,7 +673,7 @@ def batch_backward(model, scaler, info_dict):
     info_dict['loss_dict']['loss'] = scaled_loss
     for loss_name, loss_value in info_dict['loss_dict'].items():
         if loss_value is not None:
-            info_dict['loss_dict'][loss_name] = loss_value.item()
+            info_dict['loss_dict'][loss_name] = tensor_to_scalar(loss_value)
 
     return info_dict
 
@@ -730,10 +731,9 @@ def update_parameter_and_lr(model, optimizer, scheduler, scaler, info_dict):
                 optimizer.step()
         optimizer.zero_grad()
         scheduler.step()
-        grad_norm = grad_norm.item()
 
     info_dict["lrs"] = [group['lr'] for group in optimizer.param_groups]
-    info_dict["grad_norm"] = grad_norm
+    info_dict["grad_norm"] = tensor_to_scalar(grad_norm)
 
     return info_dict
 
@@ -758,22 +758,26 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             ) or (train_engine in ["torch_ddp", "torch_fsdp"] and
                   (batch_idx + 1) % accum_grad == 0):
             writer.add_scalar('train/train_loss',
-                              loss_dict['loss'] * accum_grad, step)
+                              tensor_to_scalar(loss_dict['loss']) * accum_grad,
+                              step)
             writer.add_scalar('train/grad_norm', info_dict['grad_norm'], step)
             for name, value in loss_dict.items():
                 if name != 'loss' and value is not None:
-                    writer.add_scalar('train/{}'.format(name), value, step)
+                    writer.add_scalar('train/{}'.format(name),
+                                      tensor_to_scalar(value), step)
             # lr
             for i, lr in enumerate(lrs):
                 writer.add_scalar('train/lr_{}'.format(i), lr, step)
     # CV Tensorboard
     elif "step_" in tag and rank == 0 and writer is not None:
         for name, value in loss_dict.items():
-            writer.add_scalar('cv/{}'.format(name), value, step)
+            writer.add_scalar('cv/{}'.format(name), tensor_to_scalar(value),
+                              step)
         logging.info(
             'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-                epoch, step + 1, lrs_to_str(lrs), loss_dict["loss"], rank,
-                loss_dict["acc"]))
+                epoch, step + 1, lrs_to_str(lrs),
+                tensor_to_scalar(loss_dict["loss"]), rank,
+                tensor_to_scalar(loss_dict["acc"])))
         return
 
     # TRAIN & CV, Shell log (stdout)
@@ -788,10 +792,10 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
         log_str += 'Batch {}/{} loss {:.6f} '.format(
             epoch,
             batch_idx + 1 if 'save_interval' not in info_dict else step + 1,
-            loss_dict['loss'] * accum_grad)
+            tensor_to_scalar(loss_dict['loss']) * accum_grad)
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:
-                log_str += '{} {:.6f} '.format(name, value)
+                log_str += '{} {:.6f} '.format(name, tensor_to_scalar(value))
         if tag == "TRAIN":
             log_str += 'lr {} grad_norm {:.6f} rank {}'.format(
                 lrs_to_str(lrs), info_dict['grad_norm'], rank)
@@ -806,14 +810,15 @@ def log_per_epoch(writer, info_dict):
     step = info_dict["step"]
     logging.info(
         'Epoch {} Step {} CV info lr {} cv_loss {} rank {} acc {}'.format(
-            epoch, step, lrs_to_str(lrs), loss_dict["loss"], rank,
-            loss_dict["acc"]))
+            epoch, step, lrs_to_str(lrs), tensor_to_scalar(loss_dict["loss"]),
+            rank, tensor_to_scalar(loss_dict["acc"])))
 
     if int(os.environ.get('RANK', 0)) == 0:
         for i, lr in enumerate(info_dict["lrs"]):
             writer.add_scalar('epoch/lr_{}'.format(i), lr, epoch)
         for name, value in loss_dict.items():
-            writer.add_scalar('epoch/{}'.format(name), value, epoch)
+            writer.add_scalar('epoch/{}'.format(name), tensor_to_scalar(value),
+                              epoch)
 
 
 def freeze_modules(model, args):
