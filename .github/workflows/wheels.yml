@@ -21,13 +21,13 @@ jobs:
       # Used to host cibuildwheel
       - uses: actions/setup-python@v3
         with:
-          python-version: '3.6'
+          python-version: '3.10'
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.11.2
         env:
           CIBW_BUILD_VERBOSITY: 1
-          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-*"
+          CIBW_BUILD: "cp36-* cp37-* cp38-* cp39-* cp310-*"
           # Disable building PyPy wheels on all platforms
           # Skip 32-bit builds
           CIBW_SKIP: "pp* *-win32 *-manylinux_i686 *-musllinux_*"
