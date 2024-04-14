@@ -59,30 +59,31 @@ def convert_to_wenet_state_dict(w2vbert_conformer_state_dict,
         if 'self_attn.qkv_proj' in name:
             # att weight
             i_layer = name.split('.')[2]
-            linear_q_name = 'decoder.decoders.' + i_layer + '.linear_q.weight'
-            linear_k_name = 'decoder.decoders.' + i_layer + '.linear_k.weight'
-            linear_v_name = 'decoder.decoders.' + i_layer + '.linear_v.weight'
+            layer_prefix = 'decoder.decoders.' + i_layer
+            linear_q_name = layer_prefix + '.self_attn.linear_q.weight'
+            linear_k_name = layer_prefix + '.self_attn.linear_k.weight'
+            linear_v_name = layer_prefix + '.self_attn.linear_v.weight'
 
-            linear_q_value = conformer_state_dict[
-                old_name][:, :config.num_attention_heads]
-            linear_k_value = conformer_state_dict[
-                old_name][:, config.num_attention_heads:config.
-                          num_key_value_heads]
-            linear_v_value = conformer_state_dict[
-                old_name][:, config.num_attention_heads +
-                          config.num_key_value_heads:]
+            start = 0
+            offset = config.num_attention_heads * config.head_dim
+            linear_q_value = conformer_state_dict[old_name][start:offset, :]
+            start = offset
+            offset = offset + config.head_dim * config.num_key_value_heads
+            linear_k_value = conformer_state_dict[old_name][start:offset, :]
+            start = offset
+            linear_v_value = conformer_state_dict[old_name][start:, :]
             wenet_state_dict[linear_q_name] = linear_q_value
             wenet_state_dict[linear_k_name] = linear_k_value
             wenet_state_dict[linear_v_name] = linear_v_value
         elif name == 'freqs_cis':
             # rope position embeding
-            name = 'decoders.pos_enc.pe'
+            name = 'decoder.pos_enc.pe'
             pe = torch.view_as_real(
                 conformer_state_dict[old_name].unsqueeze(0))
             wenet_state_dict[name] = pe
         else:
             # att out dim
-            name = name.replace('self_attn.o_proj', 'linear_out')
+            name = name.replace('self_attn.o_proj', 'self_attn.linear_out')
 
             # mlp
             name = name.replace('mlp.gate_proj', 'feed_forward.gate')
@@ -94,10 +95,10 @@ def convert_to_wenet_state_dict(w2vbert_conformer_state_dict,
             # before mlp ln: (rms norm)
             name = name.replace('post_attention_layernorm', 'norm2')
             # final norm
-            name = name.replace('model.norm.weight', 'decoders.final_norm')
+            name = name.replace('model.norm.weight',
+                                'decoder.final_norm.weight')
 
             wenet_state_dict[name] = conformer_state_dict[old_name]
-
     # NOTE(Mddct): tie weight
     wenet_state_dict['out.weight'] = wenet_state_dict['embed.weight']
     print("Saving {} ckpt to {}...".format(config.dtype,
@@ -136,8 +137,8 @@ def main():
         config = get_config_for_7b()
     os.makedirs(args.output_dir, exist_ok=True)
 
-    wenet_ckpt_path = os.path.join(args.output_dir,
-                                   'wenet_gemma_{}.pt'.format(model_size))
+    wenet_ckpt_path = os.path.join(
+        args.output_dir, 'wenet_' + os.path.basename(args.gemma_ckpt))
     convert_to_wenet_state_dict(
         checkpoint["model_state_dict"],
         wenet_ckpt_path,

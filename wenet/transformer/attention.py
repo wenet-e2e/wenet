@@ -21,7 +21,7 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
-from wenet.utils.rope_utils import llama_apply_rotary_emb
+from wenet.utils.rope_utils import WENET_APPLY_ROTARY_EMB
 
 
 class MultiHeadedAttention(nn.Module):
@@ -615,9 +615,11 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                  value_bias: bool = True,
                  use_sdpa: bool = False,
                  n_kv_head: Optional[int] = None,
-                 head_dim: Optional[int] = None):
+                 head_dim: Optional[int] = None,
+                 style='google'):
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, n_kv_head, head_dim)
+        self.style = style
 
     def forward(
         self,
@@ -661,10 +663,12 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         q, k, v = self.forward_qkv(query, key, value)
         # NOTE(Mddct): In order to make the code easier to read,
         #    these two lines are not placed in MultiHeadedAttention.
-        q = llama_apply_rotary_emb(q, pos_emb)
-        k = llama_apply_rotary_emb(k, pos_emb)
+        # q = llama_apply_rotary_emb(q, pos_emb)
+        # k = llama_apply_rotary_emb(k, pos_emb)
+        q = WENET_APPLY_ROTARY_EMB[self.style](q, pos_emb)
+        k = WENET_APPLY_ROTARY_EMB[self.style](k, pos_emb)
         # see above
-        if cache.size(0) > 0 and not self.training:
+        if cache.size(0) > 0:
             key_cache, value_cache = torch.split(cache,
                                                  cache.size(-1) // 2,
                                                  dim=-1)

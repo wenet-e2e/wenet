@@ -191,7 +191,7 @@ def init_causal_llm(configs):
 def init_model(args, configs):
 
     model_type = configs.get('model', 'asr_model')
-    if model_type == 'causal_llm':
+    if model_type == 'causal_lm':
         model, configs = init_causal_llm(configs)
     else:
         model, configs = init_speech_model(args, configs)

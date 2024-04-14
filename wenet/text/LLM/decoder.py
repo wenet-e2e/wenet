@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 import torch
 import torch.utils.checkpoint as ckpt
 
@@ -28,6 +28,7 @@ class DecoderOnly(torch.nn.Module):
         value_bias: bool = False,
         mlp_bias: bool = False,
         activation_type: str = "gelu",
+        gelu_approximate: Union[str, None] = None,
         max_position_embeding: int = 8192,
         mlp_type: str = 'gated',
         layer_norm_type: str = 'rms_norm',
@@ -44,8 +45,14 @@ class DecoderOnly(torch.nn.Module):
             head_dim,
             max_len=max_position_embeding,
             dropout_rate=dropout_rate)
-        activation = WENET_ACTIVATION_CLASSES[activation_type]()
+        if activation_type == "gelu" and gelu_approximate is not None:
+            activation = WENET_ACTIVATION_CLASSES['gelu'](
+                approximate=gelu_approximate)
+        else:
+            activation = WENET_ACTIVATION_CLASSES[activation_type]()
+
         mlp_class = WENET_MLP_CLASSES[mlp_type]
+        self.num_blocks = num_blocks
         # TODO: support lora & refactor lora
         self.decoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
@@ -60,7 +67,7 @@ class DecoderOnly(torch.nn.Module):
                 normalize_before,
                 layer_norm_type=layer_norm_type,
                 norm_eps=norm_eps,
-            ) for _ in range(num_blocks)
+            ) for _ in range(self.num_blocks)
         ])
         self.pre_norm = normalize_before
         self.final_norm: Optional[torch.nn.Module] = None
@@ -78,33 +85,47 @@ class DecoderOnly(torch.nn.Module):
         input: torch.Tensor,
         att_mask: torch.Tensor,
         input_position: Union[int, torch.Tensor] = 0,
-        kv_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-    ) -> Tuple[torch.Tensor, Union[torch.Tensor, None]]:
-        xs, pos_emb = self.pos_enc(input, offset=input_position)
+        kv_caches: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
+    ) -> Tuple[torch.Tensor, Union[List[Tuple[torch.Tensor, torch.Tensor]],
+                                   None]]:
+        _, pos_emb = self.pos_enc(input, offset=input_position)
+        xs = input
         if self.use_sdpa:
             att_mask = mask_to_bias(att_mask, xs.dtype)
 
         if self.gradient_checkpointing and self.training:
             xs = self.forward_layers_checkpointed(xs, att_mask, pos_emb)
         else:
-            xs, kv_cache = self.forward_layers(xs, att_mask, pos_emb, kv_cache)
+            xs, kv_caches = self.forward_layers(xs, att_mask, pos_emb,
+                                                kv_caches)
         if self.pre_norm and self.final_norm is not None:
             xs = self.final_norm(xs)
-        return xs, kv_cache
+        return xs, kv_caches
 
     def forward_layers(
         self,
         xs: torch.Tensor,
         att_mask: torch.Tensor,
         pos_emb: torch.Tensor,
-        kv_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        for layer in self.decoders:
-            xs, _, kv_cache, _ = layer(xs,
-                                       att_mask,
-                                       pos_emb,
-                                       att_cache=kv_cache)
-        return xs, kv_cache
+        kv_caches: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
+    ) -> Tuple[torch.Tensor, Union[List[Tuple[torch.Tensor, torch.Tensor]],
+                                   None]]:
+        if self.training:
+            for (i, layer) in enumerate(self.decoders):
+                xs, _, _, _ = layer(xs, att_mask, pos_emb)
+            new_kv_caches = kv_caches
+        else:
+            assert kv_caches is not None
+            new_kv_caches = []
+            for (i, layer) in enumerate(self.decoders):
+                xs, _, new_kv_cache, _ = layer(xs,
+                                               att_mask,
+                                               pos_emb,
+                                               att_cache=torch.cat(
+                                                   kv_caches[i], dim=-1))
+                new_kv_caches.append(new_kv_cache)
+
+        return xs, new_kv_caches
 
     @torch.jit.ignore(drop=True)
     def forward_layers_checkpointed(self, xs: torch.Tensor,
