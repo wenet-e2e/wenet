@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -15,9 +15,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -92,11 +92,11 @@
            <div itemprop="articleBody">
              
   <section id="lm-for-wenet">
-<h1>LM for WeNet<a class="headerlink" href="#lm-for-wenet" title="Permalink to this heading"></a></h1>
+<h1>LM for WeNet<a class="headerlink" href="#lm-for-wenet" title="Link to this heading"></a></h1>
 <p>WeNet uses n-gram based statistical language model and the WFST framework to support the custom language model.
 And LM is only supported in runtime of WeNet.</p>
 <section id="motivation">
-<h2>Motivation<a class="headerlink" href="#motivation" title="Permalink to this heading"></a></h2>
+<h2>Motivation<a class="headerlink" href="#motivation" title="Link to this heading"></a></h2>
 <p>Why n-gram based LM? This may be the first question many people will ask.
 Now that LM based on RNN and Transformer is in full swing, why does WeNet go backward?
 The reason is simple, it is for productivity.
@@ -120,7 +120,7 @@ The difference to traditional speech recognition are:</p>
 </ol>
 </section>
 <section id="system-design">
-<h2>System Design<a class="headerlink" href="#system-design" title="Permalink to this heading"></a></h2>
+<h2>System Design<a class="headerlink" href="#system-design" title="Link to this heading"></a></h2>
 <p>The whole system is shown in the bellowing picture. There are two ways to generate N-best.</p>
 <p><img alt="LM System Design" src="_images/lm_system.png" /></p>
 <ol class="simple">
@@ -139,7 +139,7 @@ We can see there is no phonemes and there is no need to design pronunciation on 
 <p>The second is the decoder, which is the same as the traditional decoder, which uses the standard Viterbi beam search algorithm in decoding.</p>
 </section>
 <section id="implementation">
-<h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this heading"></a></h2>
+<h2>Implementation<a class="headerlink" href="#implementation" title="Link to this heading"></a></h2>
 <p>WeNet draws on the decoder and related tools in Kaldi to support LM and WFST based decoding.
 For ease of using and keeping independence, we directly migrated the code related to decoding in Kaldi to <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/core/kaldi">this directory</a> in WeNet runtime.
 And modify and organize according to the following principles:</p>
@@ -156,13 +156,13 @@ such as arpa2fst, fstdeterminizestar, fsttablecompose, fstminimizeencoded, and o
 So all the tools related to LM are built-in tools and can be used out of the box.</p>
 </section>
 <section id="results">
-<h2>Results<a class="headerlink" href="#results" title="Permalink to this heading"></a></h2>
+<h2>Results<a class="headerlink" href="#results" title="Link to this heading"></a></h2>
 <p>We get consistent gain (3%~10%) on different datasets,
 including aishell, aishell2, and librispeech,
 please go to the corresponding example dataset for the details.</p>
 </section>
 <section id="how-to-use">
-<h2>How to use?<a class="headerlink" href="#how-to-use" title="Permalink to this heading"></a></h2>
+<h2>How to use?<a class="headerlink" href="#how-to-use" title="Link to this heading"></a></h2>
 <p>Here is an example from aishell, which shows how to prepare the dictionary, how to train the LM,
 how to build the graph, and how to decode with the runtime.</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># 7.1 Prepare dict</span>

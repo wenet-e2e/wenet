@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -15,9 +15,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -95,7 +95,7 @@
            <div itemprop="articleBody">
              
   <section id="runtime-for-wenet">
-<h1>Runtime for WeNet<a class="headerlink" href="#runtime-for-wenet" title="Permalink to this heading"></a></h1>
+<h1>Runtime for WeNet<a class="headerlink" href="#runtime-for-wenet" title="Link to this heading"></a></h1>
 <p>WeNet runtime uses <a class="reference external" href="https://arxiv.org/pdf/2102.01547.pdf">Unified Two Pass (U2)</a> framework for inference. U2 has the following advantages:</p>
 <ul class="simple">
 <li><p><strong>Unified</strong>: U2 unified the streaming and non-streaming model in a simple way, and our runtime is also unified. Therefore you can easily balance the latency and accuracy by changing chunk_size (described in the following section).</p></li>
@@ -104,7 +104,7 @@
 <li><p><strong>Other benefits</strong>: In practice, we find U2 is more stable on long-form speech than standard transformer which usually fails or degrades a lot on long-form speech; and we can easily get the word-level time stamps by CTC spikes in U2. Both of these aspects are favored for industry adoption.</p></li>
 </ul>
 <section id="platforms-supported">
-<h2>Platforms Supported<a class="headerlink" href="#platforms-supported" title="Permalink to this heading"></a></h2>
+<h2>Platforms Supported<a class="headerlink" href="#platforms-supported" title="Link to this heading"></a></h2>
 <p>The WeNet runtime supports the following platforms.</p>
 <ul class="simple">
 <li><p>Server</p>
@@ -120,9 +120,9 @@
 </ul>
 </section>
 <section id="architecture-and-implementation">
-<h2>Architecture and Implementation<a class="headerlink" href="#architecture-and-implementation" title="Permalink to this heading"></a></h2>
+<h2>Architecture and Implementation<a class="headerlink" href="#architecture-and-implementation" title="Link to this heading"></a></h2>
 <section id="architecture">
-<h3>Architecture<a class="headerlink" href="#architecture" title="Permalink to this heading"></a></h3>
+<h3>Architecture<a class="headerlink" href="#architecture" title="Link to this heading"></a></h3>
 <p>The following picture shows how U2 works.</p>
 <p><img alt="U2" src="_images/u2.gif" /></p>
 <p>When input is not finished, the input frames $x_t$ are fed into the <em>Shared Encoder</em> module frame by frame to get the encoder output $e_t$, then $e_t$ is transformed by the <em>CTC Activation</em> module (typically, it’s just a linear transform with a log_softmax) to get the CTC prob $y_t$ at current frame, and $y_t$ is further used by the <em>CTC prefix beam search</em> module to generate n-best results at current time $t$, and the best result is used as partial result of the U2 system.</p>
@@ -130,7 +130,7 @@
 <p>We can group $C$ continuous frames $x_t, x_{t+1}, x_{t+C}$ as one chunk for the <em>Shared Encoder</em> module, and $C$ is called chunk_size in the U2 framework. The chunk_size will affect the attention computation in the <em>Shared Encoder</em> module. When chunk_size is infinite, it is a non-streaming case. The system gives the best accuracy with infinite latency. When chunk_size is limited (typically less than 1s), it is a streaming case. The system has limited latency and also gives promising accuracy. So the developer can balance the accuracy and latency and setting a proper chunk_size.</p>
 </section>
 <section id="interface-design">
-<h3>Interface Design<a class="headerlink" href="#interface-design" title="Permalink to this heading"></a></h3>
+<h3>Interface Design<a class="headerlink" href="#interface-design" title="Link to this heading"></a></h3>
 <p>We use LibTorch to implement U2 runtime in WeNet, and we export several interfaces in PyTorch python code
 by &#64;torch.jit.export (see <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/wenet/transformer/asr_model.py">asr_model.py</a>),
 which are required and used in C++ runtime in <a class="reference external" href="https://github.com/wenet-e2e/wenet/tree/main/runtime/libtorch/decoder/torch_asr_model.cc">torch_asr_model.cc</a>.
@@ -174,7 +174,7 @@ Here we just list the interface and give a brief introduction.</p>
 </tbody>
 </table></section>
 <section id="cache-in-details">
-<h3>Cache in Details<a class="headerlink" href="#cache-in-details" title="Permalink to this heading"></a></h3>
+<h3>Cache in Details<a class="headerlink" href="#cache-in-details" title="Link to this heading"></a></h3>
 <p>For streaming scenario, the <em>Shared Encoder</em> module works in an incremental way. The current chunk computation requries the inputs and outputs of all the history chunks. We implement the incremental computation by using caches. Overall, two types of cache are used in our runtime.</p>
 <ul class="simple">
 <li><p>att_cache: the attention cache of the <em>Shared Encoder</em>(Conformer/Transformer) module.</p></li>
@@ -190,7 +190,7 @@ The following picture shows how it works, where the blue color is for the overla
 </section>
 </section>
 <section id="references">
-<h2>References<a class="headerlink" href="#references" title="Permalink to this heading"></a></h2>
+<h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
 <ol class="simple">
 <li><p><a class="reference external" href="https://distill.pub/2017/ctc/">Sequence Modeling With CTC</a></p></li>
 <li><p><a class="reference external" href="https://arxiv.org/pdf/1408.2873.pdf">First-Pass Large Vocabulary Continuous Speech Recognition using Bi-Directional Recurrent DNNs</a></p></li>

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -15,9 +15,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -92,7 +92,7 @@
            <div itemprop="articleBody">
              
   <section id="context-biasing">
-<h1>Context Biasing<a class="headerlink" href="#context-biasing" title="Permalink to this heading"></a></h1>
+<h1>Context Biasing<a class="headerlink" href="#context-biasing" title="Link to this heading"></a></h1>
 <p>In the practical application of ASR, the recognition effect of commonly used words is better, but for some unique words, the recognition accuracy may be low. Contextual biasing is the problem of injecting prior knowledge into an ASR system during inference, for example a user’s favorite songs, contacts, apps or location. Conventional ASR systems perform contextual biasing by building an n-gram finite state transducer (FST) from a list of biasing phrases, which is composed on-the-fly with the decoder graph during decoding. This helps to bias the recognition result towards the n-grams contained in the contextual FST, and thus improves accuracy in certain scenarios.</p>
 <p>In WeNet, we compute the biasing scores $P_C(\mathbf y)$, which are interpolated with the base model $P(\mathbf y|\mathbf x)$ using shallow-fusion during beam search, including CTC prefix beam search and CTC WFST beam search.</p>
 <p>$$
@@ -100,7 +100,7 @@
 $$</p>
 <p>where, $\lambda$ is a tunable hyperparameter controlling how much the contextual LM influences the overall model score during beam search.</p>
 <section id="context-graph">
-<h2>Context Graph<a class="headerlink" href="#context-graph" title="Permalink to this heading"></a></h2>
+<h2>Context Graph<a class="headerlink" href="#context-graph" title="Link to this heading"></a></h2>
 <p>If we want to improve the score of the word “cat”, and the biasing score $\lambda,\mathrm{log},P_C(\mathbf y)$ of each character is 0.25. The context graph can be constructed as follow:</p>
 <p><img alt="context graph" src="_images/context_graph.png" /></p>
 <p>In the decoding process, when the corresponding prefix is matched, the corresponding score reward will be obtained. In order to avoid artificially boosting prefixes which match early on but do not match the entire phrase, we add a special failure arc which removes the boosted score.</p>
@@ -135,11 +135,11 @@ $$</p>
 </div>
 </section>
 <section id="ctc-prefix-beam-search">
-<h2>CTC Prefix Beam Search<a class="headerlink" href="#ctc-prefix-beam-search" title="Permalink to this heading"></a></h2>
+<h2>CTC Prefix Beam Search<a class="headerlink" href="#ctc-prefix-beam-search" title="Link to this heading"></a></h2>
 <p>In the process of CTC prefix beam search, each prefix needs to record the hot word matching information. After appending the current output character, if the prefix changes, call the above function <code class="docutils literal notranslate"><span class="pre">GetNextState</span></code> to update the state and score of the hot word. If it is the start or end of a hot word, it is also necessary to record the position, which are used to insert the start tag and end tag in the result, such as: “The &lt;context&gt;cat&lt;/context&gt; is in the bag”.</p>
 </section>
 <section id="ctc-wfst-beam-search">
-<h2>CTC WFST Beam Search<a class="headerlink" href="#ctc-wfst-beam-search" title="Permalink to this heading"></a></h2>
+<h2>CTC WFST Beam Search<a class="headerlink" href="#ctc-wfst-beam-search" title="Link to this heading"></a></h2>
 <p>WeNet adopts the Lattice Faster Online Decoder from Kaldi for WFST beam search. We have to modify the <code class="docutils literal notranslate"><span class="pre">lattice-faster-decoder.cc</span></code> to support context biasing.</p>
 <p>WFST beam search decodes in the TLG graph according to the CTC outputs. If we bias the input label of the TLG, we need to compose the context graph with the Token graph. Finally, we decide to bias TLG’s output towards the contextual fst. We need to modify the <code class="docutils literal notranslate"><span class="pre">ProcessEmitting</span></code> and <code class="docutils literal notranslate"><span class="pre">ProcessNonemitting</span></code> functions as follow:</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="n">Elem</span><span class="w"> </span><span class="o">*</span><span class="n">e_next</span><span class="w"> </span><span class="o">=</span>
@@ -172,7 +172,7 @@ $$</p>
 </div>
 </section>
 <section id="pruning">
-<h2>Pruning<a class="headerlink" href="#pruning" title="Permalink to this heading"></a></h2>
+<h2>Pruning<a class="headerlink" href="#pruning" title="Link to this heading"></a></h2>
 <p>The backoff arc will return the accumulated scores to a single ForwardLink. It leads to the cost of that ForwardLink is too large. We have to remove the cost returned by backoff arc before pruning.</p>
 <div class="highlight-c++ notranslate"><div class="highlight"><pre><span></span><span class="kt">void</span><span class="w"> </span><span class="n">LatticeFasterDecoderTpl</span><span class="o">&lt;</span><span class="n">FST</span><span class="p">,</span><span class="w"> </span><span class="n">Token</span><span class="o">&gt;::</span><span class="n">PruneForwardLinks</span><span class="p">(</span>
 <span class="w">    </span><span class="n">int32</span><span class="w"> </span><span class="n">frame_plus_one</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="o">*</span><span class="n">extra_costs_changed</span><span class="p">,</span><span class="w"> </span><span class="kt">bool</span><span class="w"> </span><span class="o">*</span><span class="n">links_pruned</span><span class="p">,</span>
@@ -195,7 +195,7 @@ $$</p>
 </div>
 </section>
 <section id="usage">
-<h2>Usage<a class="headerlink" href="#usage" title="Permalink to this heading"></a></h2>
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
 <ol class="simple">
 <li><p>Specify the <code class="docutils literal notranslate"><span class="pre">--context_path</span></code> to a text file.</p>
 <ul class="simple">

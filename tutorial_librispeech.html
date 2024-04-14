@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en">
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
@@ -15,9 +15,9 @@
   
         <script src="_static/jquery.js?v=5d32c60e"></script>
         <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/documentation_options.js?v=5929fcd5"></script>
         <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
@@ -99,10 +99,10 @@
            <div itemprop="articleBody">
              
   <section id="tutorial-on-librispeech">
-<h1>Tutorial on LibriSpeech<a class="headerlink" href="#tutorial-on-librispeech" title="Permalink to this heading"></a></h1>
+<h1>Tutorial on LibriSpeech<a class="headerlink" href="#tutorial-on-librispeech" title="Link to this heading"></a></h1>
 <p>If you meet any problems when going through this tutorial, please feel free to ask in github <a class="reference external" href="https://github.com/mobvoi/wenet/issues">issues</a>. Thanks for any kind of feedback.</p>
 <section id="first-experiment">
-<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Permalink to this heading"></a></h2>
+<h2>First Experiment<a class="headerlink" href="#first-experiment" title="Link to this heading"></a></h2>
 <p>We provide a recipe <code class="docutils literal notranslate"><span class="pre">example/librispeech/s0/run.sh</span></code> on librispeech data.</p>
 <p>The recipe is simple and we suggest you run each stage one by one manually and check the result to understand the whole process.</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">example</span><span class="o">/</span><span class="n">librispeech</span><span class="o">/</span><span class="n">s0</span>
@@ -122,7 +122,7 @@
 </pre></div>
 </div>
 <section id="stage-1-download-data">
-<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Permalink to this heading"></a></h3>
+<h3>Stage -1: Download data<a class="headerlink" href="#stage-1-download-data" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">data_url</span><span class="o">=</span>www.openslr.org/resources/12
 <span class="nv">datadir</span><span class="o">=</span>/export/data/en-asr-data/OpenSLR/
 <span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span>-1<span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span>-1<span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
@@ -136,7 +136,7 @@
 <p>This stage downloads the librispeech data to the local path <code class="docutils literal notranslate"><span class="pre">$data</span></code>. This may take several hours. If you have already downloaded the data, please change the <code class="docutils literal notranslate"><span class="pre">$data</span></code> variable in <code class="docutils literal notranslate"><span class="pre">run.sh</span></code> and start from <code class="docutils literal notranslate"><span class="pre">--stage</span> <span class="pre">0</span></code>.</p>
 </section>
 <section id="stage-0-prepare-training-data">
-<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Permalink to this heading"></a></h3>
+<h3>Stage 0: Prepare Training data<a class="headerlink" href="#stage-0-prepare-training-data" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">wave_data</span><span class="o">=</span>data
 <span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="w">  </span><span class="k">for</span><span class="w"> </span>part<span class="w"> </span><span class="k">in</span><span class="w"> </span>dev-clean<span class="w"> </span>test-clean<span class="w"> </span>dev-other<span class="w"> </span>test-other<span class="w"> </span>train-clean-100<span class="w"> </span>train-clean-360<span class="w"> </span>train-other-500<span class="p">;</span><span class="w"> </span><span class="k">do</span>
@@ -166,7 +166,7 @@
 <p>If you want to train using your customized data, just organize the data into two files <code class="docutils literal notranslate"><span class="pre">wav.scp</span></code> and <code class="docutils literal notranslate"><span class="pre">text</span></code>, and start from <code class="docutils literal notranslate"><span class="pre">stage</span> <span class="pre">1</span></code>.</p>
 </section>
 <section id="stage-1-extract-optinal-cmvn-features">
-<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Permalink to this heading"></a></h3>
+<h3>Stage 1: Extract optinal cmvn features<a class="headerlink" href="#stage-1-extract-optinal-cmvn-features" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="w">  </span><span class="c1">### Task dependent. You have to design training and dev sets by yourself.</span>
 <span class="w">  </span><span class="c1">### But you can utilize Kaldi recipes in most cases</span>
@@ -198,7 +198,7 @@ so we first merge them to get our final training data.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute_cmvn_stats.py</span></code> is used to extract global cmvn(cepstral mean and variance normalization) statistics. These statistics will be used to normalize the acoustic features. Setting <code class="docutils literal notranslate"><span class="pre">cmvn=false</span></code> will skip this step.</p>
 </section>
 <section id="stage-2-generate-label-token-dictionary">
-<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Permalink to this heading"></a></h3>
+<h3>Stage 2: Generate label token dictionary<a class="headerlink" href="#stage-2-generate-label-token-dictionary" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="nv">dict</span><span class="o">=</span><span class="nv">$wave_data</span>/lang_char/<span class="si">${</span><span class="nv">train_set</span><span class="si">}</span>_<span class="si">${</span><span class="nv">bpemode</span><span class="si">}${</span><span class="nv">nbpe</span><span class="si">}</span>_units.txt
 <span class="nv">bpemodel</span><span class="o">=</span><span class="nv">$wave_data</span>/lang_char/<span class="si">${</span><span class="nv">train_set</span><span class="si">}</span>_<span class="si">${</span><span class="nv">bpemode</span><span class="si">}${</span><span class="nv">nbpe</span><span class="si">}</span>
 <span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;dictionary: </span><span class="si">${</span><span class="nv">dict</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -249,7 +249,7 @@ ZZ 5000
 </ul>
 </section>
 <section id="stage-3-prepare-wenet-data-format">
-<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Permalink to this heading"></a></h3>
+<h3>Stage 3: Prepare WeNet data format<a class="headerlink" href="#stage-3-prepare-wenet-data-format" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">3</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="w">  </span><span class="c1"># Prepare wenet required data</span>
 <span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Prepare data, prepare required format&quot;</span>
@@ -279,7 +279,7 @@ Please see <a class="reference external" href="https://github.com/wenet-e2e/wene
 for how to use <code class="docutils literal notranslate"><span class="pre">shard</span></code> style <code class="docutils literal notranslate"><span class="pre">data.list</span></code> if you want to apply WeNet on big data set(more than 5k).</p>
 </section>
 <section id="stage-4-neural-network-training">
-<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Permalink to this heading"></a></h3>
+<h3>Stage 4: Neural Network training<a class="headerlink" href="#stage-4-neural-network-training" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">4</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="w">  </span><span class="c1"># Training</span>
 <span class="w">  </span>mkdir<span class="w"> </span>-p<span class="w"> </span><span class="nv">$dir</span>
@@ -344,7 +344,7 @@ You could use tensorboard to monitor the loss.</p>
 </div>
 </section>
 <section id="stage-5-recognize-wav-using-the-trained-model">
-<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Permalink to this heading"></a></h3>
+<h3>Stage 5: Recognize wav using the trained model<a class="headerlink" href="#stage-5-recognize-wav-using-the-trained-model" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">5</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="c1"># Test model, please specify the model you want to test by --checkpoint</span>
 <span class="w">  </span><span class="nv">cmvn_opts</span><span class="o">=</span>
@@ -430,7 +430,7 @@ You could use tensorboard to monitor the loss.</p>
 <p><code class="docutils literal notranslate"><span class="pre">tools/compute-wer.py</span></code> will calculate the word (or char) error rate of the result.</p>
 </section>
 <section id="stage-6-optional-export-the-trained-model">
-<h3>Stage 6(Optional): Export the trained model<a class="headerlink" href="#stage-6-optional-export-the-trained-model" title="Permalink to this heading"></a></h3>
+<h3>Stage 6(Optional): Export the trained model<a class="headerlink" href="#stage-6-optional-export-the-trained-model" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">6</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="w">  </span><span class="c1"># Export the best model you want</span>
 <span class="w">  </span>python<span class="w"> </span>wenet/bin/export_jit.py<span class="w"> </span><span class="se">\</span>
@@ -445,7 +445,7 @@ The exported model files can be easily used for C++ inference in our runtime.
 It is required if you want to integrate language model(LM), as shown in Stage 7.</p>
 </section>
 <section id="stage-7-optional-add-lm-and-test-it-with-runtime">
-<h3>Stage 7(Optional): Add LM and test it with runtime<a class="headerlink" href="#stage-7-optional-add-lm-and-test-it-with-runtime" title="Permalink to this heading"></a></h3>
+<h3>Stage 7(Optional): Add LM and test it with runtime<a class="headerlink" href="#stage-7-optional-add-lm-and-test-it-with-runtime" title="Link to this heading"></a></h3>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stage</span><span class="si">}</span><span class="w"> </span>-le<span class="w"> </span><span class="m">7</span><span class="w"> </span><span class="o">]</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">[</span><span class="w"> </span><span class="si">${</span><span class="nv">stop_stage</span><span class="si">}</span><span class="w"> </span>-ge<span class="w"> </span><span class="m">7</span><span class="w"> </span><span class="o">]</span><span class="p">;</span><span class="w"> </span><span class="k">then</span>
 <span class="w">  </span><span class="nv">lm</span><span class="o">=</span>data/local/lm
 <span class="w">  </span><span class="nv">lexicon</span><span class="o">=</span>data/local/dict/lexicon.txt
