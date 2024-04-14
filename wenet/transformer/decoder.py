@@ -271,6 +271,8 @@ class TransformerDecoder(torch.nn.Module):
             depending of whether we are using TorchScript or not"""
         if not self.use_output_layer:
             return
+        if not self.tie_word_embedding:
+            return
         if jit_mode:
             logging.info("clone emb.weight to output.weight")
             self.output_layer.weight = torch.nn.Parameter(

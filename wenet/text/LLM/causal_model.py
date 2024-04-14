@@ -26,9 +26,6 @@ class CausalLM(torch.nn.Module):
         self.out = torch.nn.Linear(decoder.hidden_size,
                                    vocab_size,
                                    bias=linear_bias)
-        if tie_word_embedding:
-            self.out.weight = self.embed.weight
-
         self.decoder = decoder
         self.sos = special_tokens['sos']
         self.eos = special_tokens['eos']
@@ -39,7 +36,7 @@ class CausalLM(torch.nn.Module):
             smoothing=lsm_weight,
             normalize_length=length_normalized_loss,
         )
-
+        self.tie_word_embedding = tie_word_embedding
         self.ignore_id = ignore_id
 
     @torch.jit.ignore(drop=True)
@@ -68,6 +65,15 @@ class CausalLM(torch.nn.Module):
 
         # TODO: ppl
         return {"loss": loss, "ppl": None, "th_accuracy": acc}
+
+    def tie_or_clone_weights(self, jit_mode: bool):
+        if not self.tie_word_embedding:
+            return
+        if jit_mode:
+            self.out.weight = torch.nn.Parameter(self.embed.weight.clone())
+        else:
+            self.out.weight = self.embed.weight
+            # TODO(Mddct): whether to deal bias for other llm model
 
     @torch.jit.ignore(drop=True)
     @torch.no_grad()

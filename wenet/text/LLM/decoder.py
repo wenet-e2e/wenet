@@ -1,5 +1,6 @@
 from typing import Optional, Tuple, Union
 import torch
+import torch.utils.checkpoint as ckpt
 
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
@@ -31,8 +32,9 @@ class DecoderOnly(torch.nn.Module):
         mlp_type: str = 'gated',
         layer_norm_type: str = 'rms_norm',
         norm_eps: float = 1e-5,
-        selfattention_layer_type: str = "selfattn",
+        selfattention_layer_type: str = "rope_abs_selfattn",
         use_sdpa: bool = False,
+        gradient_checkpointing: bool = False,
     ) -> None:
         super().__init__()
 
@@ -44,6 +46,7 @@ class DecoderOnly(torch.nn.Module):
             dropout_rate=dropout_rate)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         mlp_class = WENET_MLP_CLASSES[mlp_type]
+        # TODO: support lora & refactor lora
         self.decoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
                 hidden_size,
@@ -59,14 +62,16 @@ class DecoderOnly(torch.nn.Module):
                 norm_eps=norm_eps,
             ) for _ in range(num_blocks)
         ])
-        self.n_kv_head = n_kv_head
-        self.head_dim = head_dim
-        self._hidden_size = hidden_size
-        self.use_sdpa = use_sdpa
         self.pre_norm = normalize_before
         self.final_norm: Optional[torch.nn.Module] = None
         if self.pre_norm:
             self.final_norm = WENET_NORM_CLASSES[layer_norm_type](hidden_size)
+
+        self.n_kv_head = n_kv_head
+        self.head_dim = head_dim
+        self._hidden_size = hidden_size
+        self.use_sdpa = use_sdpa
+        self.gradient_checkpointing = gradient_checkpointing
 
     def forward(
         self,
@@ -76,18 +81,39 @@ class DecoderOnly(torch.nn.Module):
         kv_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
     ) -> Tuple[torch.Tensor, Union[torch.Tensor, None]]:
         xs, pos_emb = self.pos_enc(input, offset=input_position)
-        tgt_mask = att_mask
         if self.use_sdpa:
-            tgt_mask = mask_to_bias(tgt_mask, xs.dtype)
+            att_mask = mask_to_bias(att_mask, xs.dtype)
+
+        if self.gradient_checkpointing and self.training:
+            xs = self.forward_layers_checkpointed(xs, att_mask, pos_emb)
+        else:
+            xs, kv_cache = self.forward_layers(xs, att_mask, pos_emb, kv_cache)
+        if self.pre_norm and self.final_norm is not None:
+            xs = self.final_norm(xs)
+        return xs, kv_cache
+
+    def forward_layers(
+        self,
+        xs: torch.Tensor,
+        att_mask: torch.Tensor,
+        pos_emb: torch.Tensor,
+        kv_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         for layer in self.decoders:
             xs, _, kv_cache, _ = layer(xs,
-                                       tgt_mask,
+                                       att_mask,
                                        pos_emb,
                                        att_cache=kv_cache)
-        decoder_out = xs
-        if self.pre_norm and self.final_norm is not None:
-            decoder_out = self.final_norm(decoder_out)
-        return decoder_out, kv_cache
+        return xs, kv_cache
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(self, xs: torch.Tensor,
+                                    att_mask: torch.Tensor,
+                                    pos_emb: torch.Tensor) -> torch.Tensor:
+        for layer in self.encoders:
+            xs, _, _, _ = ckpt.checkpoint(layer.__call__, xs, att_mask,
+                                          pos_emb)
+        return xs
 
     @property
     def hidden_size(self):

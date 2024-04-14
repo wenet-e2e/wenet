@@ -94,7 +94,7 @@ def convert_to_wenet_state_dict(w2vbert_conformer_state_dict,
             # before mlp ln: (rms norm)
             name = name.replace('post_attention_layernorm', 'norm2')
             # final norm
-            name = name.replace('model.norm.weight', 'decoders.norm2')
+            name = name.replace('model.norm.weight', 'decoders.final_norm')
 
             wenet_state_dict[name] = conformer_state_dict[old_name]
 

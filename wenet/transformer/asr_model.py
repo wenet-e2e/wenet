@@ -245,6 +245,9 @@ class ASRModel(torch.nn.Module):
 
         return ctc_probs
 
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        self.decoder.tie_or_clone_weights(jit_mode)
+
     def decode(
         self,
         methods: List[str],
