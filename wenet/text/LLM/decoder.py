@@ -88,8 +88,7 @@ class DecoderOnly(torch.nn.Module):
         kv_caches: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
     ) -> Tuple[torch.Tensor, Union[List[Tuple[torch.Tensor, torch.Tensor]],
                                    None]]:
-        _, pos_emb = self.pos_enc(input, offset=input_position)
-        xs = input
+        xs, pos_emb = self.pos_enc(input, offset=input_position)
         if self.use_sdpa:
             att_mask = mask_to_bias(att_mask, xs.dtype)
 

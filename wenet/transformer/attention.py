@@ -663,8 +663,6 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         q, k, v = self.forward_qkv(query, key, value)
         # NOTE(Mddct): In order to make the code easier to read,
         #    these two lines are not placed in MultiHeadedAttention.
-        # q = llama_apply_rotary_emb(q, pos_emb)
-        # k = llama_apply_rotary_emb(k, pos_emb)
         q = WENET_APPLY_ROTARY_EMB[self.style](q, pos_emb)
         k = WENET_APPLY_ROTARY_EMB[self.style](k, pos_emb)
         # see above
@@ -674,7 +672,8 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                                                  dim=-1)
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
-        new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
+        new_cache = torch.cat(
+            (k, v), dim=-1) if not self.training else torch.empty(0, 0, 0, 0)
 
         if self.h_kv != self.h:
             k = torch.repeat_interleave(
