@@ -351,3 +351,9 @@ class StepTimer:
             self.start()
             self.last_iteration = float(cur_step)
         return value
+
+
+def tensor_to_scalar(x):
+    if torch.is_tensor(x):
+        return x.item()
+    return x
