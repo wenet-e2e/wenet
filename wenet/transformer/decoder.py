@@ -76,16 +76,18 @@ class TransformerDecoder(torch.nn.Module):
         query_bias: bool = True,
         key_bias: bool = True,
         value_bias: bool = True,
-        mlp_bias: bool = True,
         activation_type: str = "relu",
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
-        mlp_type: str = 'position_wise_feed_forward',
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
         n_kv_head: Optional[int] = None,
         head_dim: Optional[int] = None,
+        mlp_type: str = 'position_wise_feed_forward',
+        mlp_bias: bool = True,
+        n_expert: int = 8,
+        n_expert_activated: int = 2,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -121,8 +123,13 @@ class TransformerDecoder(torch.nn.Module):
                     attention_heads, attention_dim, src_attention_dropout_rate,
                     query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
                     head_dim) if src_attention else None,
-                mlp_class(attention_dim, linear_units, dropout_rate,
-                          activation, mlp_bias),
+                mlp_class(attention_dim,
+                          linear_units,
+                          dropout_rate,
+                          activation,
+                          mlp_bias,
+                          n_expert=n_expert,
+                          n_expert_activated=n_expert_activated),
                 dropout_rate,
                 normalize_before,
                 layer_norm_type,
@@ -327,10 +334,11 @@ class BiTransformerDecoder(torch.nn.Module):
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,
+        src_attention: bool = True,
         query_bias: bool = True,
         key_bias: bool = True,
         value_bias: bool = True,
-        mlp_bias: bool = True,
+        activation_type: str = "relu",
         gradient_checkpointing: bool = False,
         tie_word_embedding: bool = False,
         use_sdpa: bool = False,
@@ -338,6 +346,10 @@ class BiTransformerDecoder(torch.nn.Module):
         norm_eps: float = 1e-5,
         n_kv_head: Optional[int] = None,
         head_dim: Optional[int] = None,
+        mlp_type: str = 'position_wise_feed_forward',
+        mlp_bias: bool = True,
+        n_expert: int = 8,
+        n_expert_activated: int = 2,
     ):
 
         super().__init__()
@@ -356,9 +368,11 @@ class BiTransformerDecoder(torch.nn.Module):
             input_layer,
             use_output_layer,
             normalize_before,
+            src_attention=src_attention,
             query_bias=query_bias,
             key_bias=key_bias,
             value_bias=value_bias,
+            activation_type=activation_type,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa,
@@ -366,7 +380,10 @@ class BiTransformerDecoder(torch.nn.Module):
             norm_eps=norm_eps,
             n_kv_head=n_kv_head,
             head_dim=head_dim,
-        )
+            mlp_type=mlp_type,
+            mlp_bias=mlp_bias,
+            n_expert=n_expert,
+            n_expert_activated=n_expert_activated)
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -381,10 +398,11 @@ class BiTransformerDecoder(torch.nn.Module):
             input_layer,
             use_output_layer,
             normalize_before,
+            src_attention=src_attention,
             query_bias=query_bias,
             key_bias=key_bias,
             value_bias=value_bias,
-            mlp_bias=mlp_bias,
+            activation_type=activation_type,
             gradient_checkpointing=gradient_checkpointing,
             tie_word_embedding=tie_word_embedding,
             use_sdpa=use_sdpa,
@@ -392,7 +410,10 @@ class BiTransformerDecoder(torch.nn.Module):
             norm_eps=norm_eps,
             n_kv_head=n_kv_head,
             head_dim=head_dim,
-        )
+            mlp_type=mlp_type,
+            mlp_bias=mlp_bias,
+            n_expert=n_expert,
+            n_expert_activated=n_expert_activated)
 
     def forward(
         self,
