@@ -166,6 +166,8 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['dataset_conf']['batch_conf']['batch_type'] = 'dynamic'
     configs['dataset_conf']['batch_conf']['batch_size'] = 26
     configs['dataset_conf']['batch_conf']['max_frames_in_batch'] = 12000
+    configs['dataset_conf']['language_conf'] = {}
+    configs['dataset_conf']['language_conf']['limited_langs'] = ['zh']
 
     configs['grad_clip'] = 5
     configs['accum_grad'] = 4
