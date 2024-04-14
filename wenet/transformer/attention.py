@@ -234,7 +234,9 @@ class MultiHeadedAttention(nn.Module):
             v = torch.cat([value_cache, v], dim=2)
         # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
         #   non-trivial to calculate `next_cache_start` here.
-        new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
+        # new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
+        new_cache = torch.cat(
+            (k, v), dim=-1) if not self.training else torch.zeros(0, 0, 0, 0)
 
         # for multi query or multi group attention
         if self.h_kv != self.h:
@@ -379,7 +381,8 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
 
         # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
         #   non-trivial to calculate `next_cache_start` here.
-        new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
+        new_cache = torch.cat(
+            (k, v), dim=-1) if not self.training else torch.zeros(0, 0, 0, 0)
 
         # for multi query or multi groups attention
         if self.h_kv != self.h:
@@ -472,7 +475,8 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
 
         else:
             q, k, v = self.forward_qkv(query, key, value)
-        new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
+        new_cache = torch.cat(
+            (k, v), dim=-1) if not self.training else torch.zeros(0, 0, 0, 0)
 
         # for multi query or multi groups attention
         if self.h_kv != self.h:
@@ -569,7 +573,8 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
                                                  dim=-1)
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
-        new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
+        new_cache = torch.cat(
+            (k, v), dim=-1) if not self.training else torch.zeros(0, 0, 0, 0)
 
         rel_k = self.rel_k_embed(
             self._relative_indices(k.size(2), query.device))  # (t2, t2, d_k)
@@ -670,7 +675,8 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                                                  dim=-1)
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
-        new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
+        new_cache = torch.cat(
+            (k, v), dim=-1) if not self.training else torch.zeros(0, 0, 0, 0)
 
         if self.h_kv != self.h:
             k = torch.repeat_interleave(
