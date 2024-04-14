@@ -31,12 +31,14 @@ class PositionwiseFeedForward(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            idim: int,
-            hidden_units: int,
-            dropout_rate: float,
-            activation: torch.nn.Module = torch.nn.ReLU(),
-            bias: bool = True,
+        self,
+        idim: int,
+        hidden_units: int,
+        dropout_rate: float,
+        activation: torch.nn.Module = torch.nn.ReLU(),
+        bias: bool = True,
+        *dummy_args,
+        **dummy_kwargs,
     ):
         """Construct a PositionwiseFeedForward object."""
         super(PositionwiseFeedForward, self).__init__()
@@ -66,7 +68,7 @@ class MoEFFNLayer(torch.nn.Module):
                   https://github.com/mistralai/mistral-src/blob/b46d6/moe_one_file_ref.py#L203-L219
     Args:
         n_expert: number of expert.
-        n_expert_per_token: The actual number of experts used for each frame
+        n_expert_activated: The actual number of experts used for each frame
         idim (int): Input dimenstion.
         hidden_units (int): The number of hidden units.
         dropout_rate (float): Dropout rate.
@@ -74,22 +76,23 @@ class MoEFFNLayer(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            n_expert: int,
-            n_expert_per_token: int,
-            idim: int,
-            hidden_units: int,
-            dropout_rate: float,
-            activation: torch.nn.Module = torch.nn.ReLU(),
-            bias: bool = False,
+        self,
+        idim: int,
+        hidden_units: int,
+        dropout_rate: float,
+        activation: torch.nn.Module = torch.nn.ReLU(),
+        bias: bool = False,
+        n_expert: int = 8,
+        n_expert_activated: int = 2,
     ):
         super(MoEFFNLayer, self).__init__()
-        bias = False
-        self.gate = torch.nn.Linear(idim, n_expert, bias=bias)
+        self.gate = torch.nn.Linear(idim, n_expert, bias=False)
         self.experts = torch.nn.ModuleList(
-            PositionwiseFeedForward(idim, hidden_units, dropout_rate,
-                                    activation) for _ in range(n_expert))
-        self.n_expert_per_token = n_expert_per_token
+            PositionwiseFeedForward(
+                idim, hidden_units, dropout_rate, activation, bias=bias)
+            for _ in range(n_expert))
+        self.n_expert = n_expert
+        self.n_expert_activated = n_expert_activated
 
     def forward(self, xs: torch.Tensor) -> torch.Tensor:
         """Foward function.
@@ -103,18 +106,18 @@ class MoEFFNLayer(torch.nn.Module):
         )  # batch size, sequence length, embedding dimension (idim)
         xs = xs.view(-1, D)  # (B*L, D)
         router = self.gate(xs)  # (B*L, n_expert)
-        logits, indices = torch.topk(
-            router, self.n_expert_per_token
-        )  # probs:(B*L, n_expert), indices: (B*L, n_expert)
+        logits, selected_experts = torch.topk(
+            router, self.n_expert_activated
+        )  # probs:(B*L, n_expert_activated), selected_exp: (B*L, n_expert_activated)
         weights = torch.nn.functional.softmax(
             logits, dim=1,
-            dtype=torch.float).to(dtype=xs.dtype)  # (B*L, n_expert_per_token)
+            dtype=torch.float).to(dtype=xs.dtype)  # (B*L, n_expert_activated)
         output = torch.zeros_like(xs)  # (B*L, D)
         for i, expert in enumerate(self.experts):
-            mask = indices == i
-            batch_idx, ith_expert = torch.where(mask)
-            output[batch_idx] += weights[batch_idx, ith_expert, None] * expert(
-                xs[batch_idx])
+            mask = selected_experts == i
+            token_ids, ith_expert = torch.where(mask)
+            output[token_ids] += weights[token_ids, ith_expert, None] * expert(
+                xs[token_ids])
         return output.view(B, L, D)
 
 
@@ -123,12 +126,14 @@ class GatedVariantsMLP(torch.nn.Module):
     """
 
     def __init__(
-            self,
-            idim: int,
-            hidden_units: int,
-            dropout_rate: float,
-            activation: torch.nn.Module = torch.nn.GELU(),
-            bias: bool = True,
+        self,
+        idim: int,
+        hidden_units: int,
+        dropout_rate: float,
+        activation: torch.nn.Module = torch.nn.GELU(),
+        bias: bool = True,
+        *dummy_args,
+        **dummy_kwargs,
     ):
         """Construct a PositionwiseFeedForward object."""
         super(GatedVariantsMLP, self).__init__()
@@ -140,7 +145,7 @@ class GatedVariantsMLP(torch.nn.Module):
         # w_2 as down proj
         self.w_2 = torch.nn.Linear(hidden_units, idim, bias=bias)
 
-    def forward(self, x):
+    def forward(self, x) -> torch.Tensor:
         """Foward function.
         Args:
             xs: input tensor (B, L, D)
