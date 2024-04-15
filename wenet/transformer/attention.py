@@ -192,7 +192,6 @@ class MultiHeadedAttention(nn.Module):
             # >>> torch.equal(b, c)        # True
             # >>> d = torch.split(a, 2, dim=-1)
             # >>> torch.equal(d[0], d[1])  # True
-            print(cache)
             key_cache, value_cache = cache
             if key_cache.size(0) > 0:
                 k = torch.cat([key_cache, k], dim=2)
