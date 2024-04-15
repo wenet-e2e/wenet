@@ -175,6 +175,7 @@ class MultiHeadedAttention(nn.Module):
                          k: torch.Tensor,
                          v: torch.Tensor,
                          cache: T_CACHE = torch.zeros((0, 0, 0, 0))):
+        new_cache: T_CACHE
         if not self.training:
             if isinstance(cache, torch.Tensor):
                 # NOTE(xcsong):
