@@ -64,7 +64,7 @@ class MultiHeadedAttention(nn.Module):
             self.inner_kv_dim = self.inner_dim
             n_kv_head = n_head
         # We assume d_v always equals d_k
-        self.d_k = n_feat // n_head
+        self.d_k = self.inner_dim // n_head
         assert self.d_k == self.inner_kv_dim // n_kv_head
         self.h = n_head
         self.h_kv = n_kv_head
