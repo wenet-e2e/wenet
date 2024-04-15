@@ -3,7 +3,7 @@ import pytest
 from wenet.transformer.attention import (MultiHeadedAttention,
                                          RelPositionMultiHeadedAttention,
                                          ShawRelPositionMultiHeadedAttention)
-from wenet.transformer.embedding import RelPositionalEncoding
+from wenet.transformer.embedding import RelPositionalEncoding, W2vbertPositionalEncoding
 from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
                                              TransformerEncoderLayer)
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
@@ -233,10 +233,11 @@ def test_shaw_rel_position_multihead_attention():
                                                       256,
                                                       0.0,
                                                       use_sdpa=True)
+    pos_emb_class = W2vbertPositionalEncoding(256, 0.1, 5000)
     q = torch.rand(2, 10, 256)
     k = torch.rand(2, 10, 256)
     v = torch.rand(2, 10, 256)
-    pos_emb = torch.zeros(0, 0, 0)
+    q, pos_emb = pos_emb_class(q)
     mask = torch.ones(2, 10, 10)
     out, _ = module(q, k, v, mask, pos_emb)
     out_sdpa, _ = module_sdpa(q, k, v, mask, pos_emb)
