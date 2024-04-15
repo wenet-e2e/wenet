@@ -15,7 +15,7 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Encoder definition."""
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 
@@ -43,6 +43,21 @@ class DualTransformerEncoder(TransformerEncoder):
         use_dynamic_chunk: bool = False,
         global_cmvn: torch.nn.Module = None,
         use_dynamic_left_chunk: bool = False,
+        query_bias: bool = True,
+        key_bias: bool = True,
+        value_bias: bool = True,
+        activation_type: str = "relu",
+        gradient_checkpointing: bool = False,
+        use_sdpa: bool = False,
+        layer_norm_type: str = 'layer_norm',
+        norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
+        selfattention_layer_type: str = "selfattn",
+        mlp_type: str = 'position_wise_feed_forward',
+        mlp_bias: bool = True,
+        n_expert: int = 8,
+        n_expert_activated: int = 2,
     ):
         """ Construct DualTransformerEncoder
         Support both the full context mode and the streaming mode separately
@@ -52,7 +67,11 @@ class DualTransformerEncoder(TransformerEncoder):
                          positional_dropout_rate, attention_dropout_rate,
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk)
+                         use_dynamic_left_chunk, query_bias, key_bias,
+                         value_bias, activation_type, gradient_checkpointing,
+                         use_sdpa, layer_norm_type, norm_eps, n_kv_head,
+                         head_dim, selfattention_layer_type, mlp_type,
+                         mlp_bias, n_expert, n_expert_activated)
 
     def forward_full(
         self,
@@ -102,19 +121,36 @@ class DualConformerEncoder(ConformerEncoder):
         cnn_module_kernel: int = 15,
         causal: bool = False,
         cnn_module_norm: str = "batch_norm",
+        query_bias: bool = True,
+        key_bias: bool = True,
+        value_bias: bool = True,
+        conv_bias: bool = True,
+        gradient_checkpointing: bool = False,
+        use_sdpa: bool = False,
+        layer_norm_type: str = 'layer_norm',
+        norm_eps: float = 1e-5,
+        n_kv_head: Optional[int] = None,
+        head_dim: Optional[int] = None,
+        mlp_type: str = 'position_wise_feed_forward',
+        mlp_bias: bool = True,
+        n_expert: int = 8,
+        n_expert_activated: int = 2,
     ):
         """ Construct DualConformerEncoder
         Support both the full context mode and the streaming mode separately
         """
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, positionwise_conv_kernel_size,
-                         macaron_style, selfattention_layer_type,
-                         activation_type, use_cnn_module, cnn_module_kernel,
-                         causal, cnn_module_norm)
+        super().__init__(
+            input_size, output_size, attention_heads, linear_units, num_blocks,
+            dropout_rate, positional_dropout_rate, attention_dropout_rate,
+            input_layer, pos_enc_layer_type, normalize_before,
+            static_chunk_size, use_dynamic_chunk, global_cmvn,
+            use_dynamic_left_chunk, positionwise_conv_kernel_size,
+            macaron_style, selfattention_layer_type, activation_type,
+            use_cnn_module, cnn_module_kernel, causal, cnn_module_norm,
+            query_bias, key_bias, value_bias, conv_bias,
+            gradient_checkpointing, use_sdpa, layer_norm_type, norm_eps,
+            n_kv_head, head_dim, mlp_type, mlp_bias, n_expert,
+            n_expert_activated)
 
     def forward_full(
         self,
