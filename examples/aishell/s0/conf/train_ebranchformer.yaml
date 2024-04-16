@@ -18,7 +18,7 @@ encoder_conf:
     activation_type: 'swish'
     causal: false
     pos_enc_layer_type: 'rel_pos'
-    attention_layer_type: 'rel_selfattn'
+    self_attention_layer_type: 'rel_selfattn'
 
 # decoder related
 decoder: transformer
