@@ -47,12 +47,12 @@ train_set=train_`echo $set | tr 'A-Z' 'a-z'`
 dev_set=dev
 test_sets="test_net test_meeting"
 
-# NOTE(xcsong): we use step_save instead of epoch_save for large datasets
-epoch=100
-
 train_config=conf/train_u2++_conformer.yaml
 checkpoint=
 dir=exp/u2pp_conformer
+tensorboard_dir=tensorboard
+num_workers=8
+prefetch=10
 
 cmvn_sampling_divisor=20 # 20 means 5% of the training data to estimate cmvn
 
@@ -157,19 +157,6 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "$0: using torch ddp"
   fi
 
-  # repeat data.list, we use step_save instead of epoch_save for large datasets
-  train_data=data/$train_set/data.list.repeat${epoch}
-  if [ ! -f "${train_data}" ]; then
-    echo "repeat data/$train_set/data.list ${epoch} times"
-    for (( i=1; i<=$epoch; i++ ))
-    do
-        cat "data/$train_set/data.list" >> "${train_data}"
-    done
-    echo "save new data.list in ${train_data}, it will be used for training"
-  else
-    echo "${train_data} already exists."
-  fi
-
   echo "$0: num_nodes is $num_nodes, proc_per_node is $num_gpus"
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_gpus --rdzv_endpoint=$HOST_NODE_ADDR \
            --rdzv_id=2023 --rdzv_backend="c10d" \
@@ -177,13 +164,16 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type "shard" \
-      --train_data ${train_data} \
+      --train_data data/$train_set/data.list \
       --cv_data data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
+      --tensorboard_dir ${tensorboard_dir} \
       --ddp.dist_backend $dist_backend \
-      --num_workers 2 \
+      --num_workers ${num_workers} \
+      --prefetch ${prefetch} \
       --pin_memory \
+      --timeout 1200 \
       --deepspeed_config ${deepspeed_config} \
       --deepspeed.save_states ${deepspeed_save_states}
 fi
