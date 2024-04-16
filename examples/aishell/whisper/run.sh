@@ -43,7 +43,7 @@ checkpoint=exp/whisper/large-v3/wenet_whisper.init-ctc.pt
 dir=exp/finetune_whisper_largev3_conv1d2
 tensorboard_dir=tensorboard
 num_workers=8
-prefetch=500
+prefetch=10
 
 # use average_checkpoint will get better result
 average_checkpoint=true
