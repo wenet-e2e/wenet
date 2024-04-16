@@ -34,7 +34,7 @@ class BranchformerEncoder(BaseEncoder):
         output_size: int = 256,
         use_attn: bool = True,
         attention_heads: int = 4,
-        attention_layer_type: str = "rel_selfattn",
+        selfattention_layer_type: str = "rel_selfattn",
         pos_enc_layer_type: str = "rel_pos",
         use_cgmlp: bool = True,
         cgmlp_linear_units: int = 2048,
@@ -49,7 +49,6 @@ class BranchformerEncoder(BaseEncoder):
         positional_dropout_rate: float = 0.1,
         attention_dropout_rate: float = 0.0,
         input_layer: str = "conv2d",
-        padding_idx: int = -1,
         stochastic_depth_rate: Union[float, List[float]] = 0.0,
         static_chunk_size: int = 0,
         use_dynamic_chunk: bool = False,
@@ -84,6 +83,7 @@ class BranchformerEncoder(BaseEncoder):
             dropout_rate,
             use_linear_after_conv,
             gate_activation,
+            causal,
         )
 
         if isinstance(stochastic_depth_rate, float):
@@ -109,7 +109,7 @@ class BranchformerEncoder(BaseEncoder):
 
         self.encoders = torch.nn.ModuleList([
             BranchformerEncoderLayer(
-                output_size, WENET_ATTENTION_CLASSES[attention_layer_type](
+                output_size, WENET_ATTENTION_CLASSES[selfattention_layer_type](
                     *encoder_selfattn_layer_args) if use_attn else None,
                 cgmlp_layer(*cgmlp_layer_args) if use_cgmlp else None,
                 dropout_rate, merge_method, cgmlp_weight[lnum],
