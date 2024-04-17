@@ -5,7 +5,7 @@ encoder_conf:
     output_size: 256
     use_attn: true
     attention_heads: 4
-    attention_layer_type: rel_selfattn
+    selfattention_layer_type: rel_selfattn
     pos_enc_layer_type: rel_pos
     use_cgmlp: true
     cgmlp_linear_units: 2048
