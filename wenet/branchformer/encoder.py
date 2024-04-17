@@ -166,7 +166,7 @@ class LayerDropModuleList(torch.nn.ModuleList):
         1 can work with ddp when layer's gradient checkpoint disabled
         2 can't work with ddp when layer's gradient checkpoint enables
         3 can work with fsdp
-        3 can work with deepspeed
+        4 can work with deepspeed
     """
 
     def __init__(self, p: List[float], modules=None):
