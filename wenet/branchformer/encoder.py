@@ -134,13 +134,6 @@ class BranchformerEncoder(BaseEncoder):
                 ) for lnum in range(num_blocks)
             ])
 
-    @torch.jit.ignore(drop=True)
-    def forward_layers_checkpointed(self, xs: torch.Tensor,
-                                    chunk_masks: torch.Tensor,
-                                    pos_emb: torch.Tensor,
-                                    mask_pad: torch.Tensor) -> torch.Tensor:
-        return self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
-
 
 # modify from : https://github.com/facebookresearch/fairseq/blob/main/fairseq/modules/layer_drop.py # noqa
 class LayerDropModuleList(torch.nn.ModuleList):
