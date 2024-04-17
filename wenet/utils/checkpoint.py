@@ -25,7 +25,7 @@ import datetime
 
 def load_checkpoint(model: torch.nn.Module, path: str) -> dict:
     logging.info('Checkpoint: loading from checkpoint %s' % path)
-    checkpoint = torch.load(path, map_location='cpu')
+    checkpoint = torch.load(path, map_location='cpu', mmap=True)
     missing_keys, unexpected_keys = model.load_state_dict(checkpoint,
                                                           strict=False)
     for key in missing_keys:

@@ -18,6 +18,7 @@ from typing import Dict, Tuple, List, Optional
 import torch
 import torch.utils.checkpoint as ckpt
 import logging
+from wenet.transformer.attention import T_CACHE
 
 from wenet.transformer.decoder_layer import DecoderLayer
 from wenet.utils.class_utils import (
@@ -222,7 +223,7 @@ class TransformerDecoder(torch.nn.Module):
         memory_mask: torch.Tensor,
         tgt: torch.Tensor,
         tgt_mask: torch.Tensor,
-        cache: Dict[str, Dict[str, torch.Tensor]],
+        cache: Dict[str, Dict[str, T_CACHE]],
     ) -> torch.Tensor:
         """Forward one step.
             This is only used for decoding.

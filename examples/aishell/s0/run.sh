@@ -55,7 +55,7 @@ dir=exp/conformer
 tensorboard_dir=tensorboard
 checkpoint=
 num_workers=8
-prefetch=500
+prefetch=10
 
 # use average_checkpoint will get better result
 average_checkpoint=true

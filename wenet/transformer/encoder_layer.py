@@ -19,6 +19,7 @@ from typing import Optional, Tuple
 
 import torch
 from torch import nn
+from wenet.transformer.attention import T_CACHE
 
 from wenet.utils.class_utils import WENET_NORM_CLASSES
 
@@ -66,9 +67,10 @@ class TransformerEncoderLayer(nn.Module):
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        att_cache: T_CACHE = (torch.zeros(
+            (0, 0, 0, 0)), torch.zeros((0, 0, 0, 0))),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, T_CACHE, torch.Tensor]:
         """Compute encoded features.
 
         Args:
@@ -180,9 +182,10 @@ class ConformerEncoderLayer(nn.Module):
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        att_cache: T_CACHE = (torch.zeros(
+            (0, 0, 0, 0)), torch.zeros((0, 0, 0, 0))),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, T_CACHE, torch.Tensor]:
         """Compute encoded features.
 
         Args:

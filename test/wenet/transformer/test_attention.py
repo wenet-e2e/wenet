@@ -64,7 +64,8 @@ def test_multi_head_attention_sdpa(args):
         output_with_sdpa * mask.transpose(1, 2),
         atol=9e-7,
     )
-    assert torch.allclose(cache, cache_with_sdpa)
+    assert torch.allclose(cache[0], cache_with_sdpa[0])
+    assert torch.allclose(cache[1], cache_with_sdpa[1])
 
     n_blocks = 12
     torch.manual_seed(777)
@@ -110,7 +111,8 @@ def test_multi_head_attention_sdpa(args):
             atol=9e-7,
             rtol=9e-4,
         )
-        assert torch.allclose(cache, cache_with_sdpa)
+        assert torch.allclose(cache[0], cache_with_sdpa[0])
+        assert torch.allclose(cache[1], cache_with_sdpa[1])
 
         q = output
 
@@ -170,7 +172,8 @@ def test_rel_position_multi_head_attention_sdpa(args):
         output_with_sdpa * mask.transpose(1, 2),
         atol=9e-7,
     )
-    assert torch.allclose(cache, cache_with_sdpa)
+    assert torch.allclose(cache[0], cache_with_sdpa[0])
+    assert torch.allclose(cache[1], cache_with_sdpa[1])
 
     n_blocks = 12
     torch.manual_seed(777)
@@ -220,7 +223,8 @@ def test_rel_position_multi_head_attention_sdpa(args):
             atol=9e-7,
             rtol=9e-4,
         )
-        assert torch.allclose(cache, cache_with_sdpa)
+        assert torch.allclose(cache[0], cache_with_sdpa[0])
+        assert torch.allclose(cache[1], cache_with_sdpa[1])
         q = output
 
 

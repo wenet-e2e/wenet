@@ -17,6 +17,7 @@ from typing import Dict, Optional, Tuple
 
 import torch
 from torch import nn
+from wenet.transformer.attention import T_CACHE
 
 from wenet.utils.class_utils import WENET_NORM_CLASSES
 
@@ -70,7 +71,7 @@ class DecoderLayer(nn.Module):
         tgt_mask: torch.Tensor,
         memory: torch.Tensor,
         memory_mask: torch.Tensor,
-        cache: Optional[Dict[str, Optional[torch.Tensor]]] = None
+        cache: Optional[Dict[str, Optional[T_CACHE]]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute decoded features.
 
@@ -105,7 +106,7 @@ class DecoderLayer(nn.Module):
         if att_cache is None:
             tgt_q = tgt
             tgt_q_mask = tgt_mask
-            att_cache = torch.empty(0, 0, 0, 0)
+            att_cache = (torch.empty(0, 0, 0, 0), torch.empty(0, 0, 0, 0))
         else:
             tgt_q = tgt[:, -1:, :]
             residual = residual[:, -1:, :]
@@ -129,7 +130,8 @@ class DecoderLayer(nn.Module):
             if self.normalize_before:
                 x = self.norm2(x)
             if cross_att_cache is None:
-                cross_att_cache = torch.empty(0, 0, 0, 0)
+                cross_att_cache = (torch.empty(0, 0, 0,
+                                               0), torch.empty(0, 0, 0, 0))
             x, new_cross_cache = self.src_attn(x,
                                                memory,
                                                memory,

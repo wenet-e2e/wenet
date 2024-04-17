@@ -263,12 +263,20 @@ class BaseEncoder(torch.nn.Module):
             # NOTE(xcsong): Before layer.forward
             #   shape(att_cache[i:i + 1]) is (1, head, cache_t1, d_k * 2),
             #   shape(cnn_cache[i])       is (b=1, hidden-dim, cache_t2)
-            xs, _, new_att_cache, new_cnn_cache = layer(
+            if elayers == 0:
+                kv_cache = (att_cache, att_cache)
+            else:
+                i_kv_cache = att_cache[i:i + 1]
+                size = att_cache.size(-1) // 2
+                kv_cache = (i_kv_cache[:, :, :, :size], i_kv_cache[:, :, :,
+                                                                   size:])
+            xs, _, new_kv_cache, new_cnn_cache = layer(
                 xs,
                 att_mask,
                 pos_emb,
-                att_cache=att_cache[i:i + 1] if elayers > 0 else att_cache,
+                att_cache=kv_cache,
                 cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache)
+            new_att_cache = torch.cat(new_kv_cache, dim=-1)
             # NOTE(xcsong): After layer.forward
             #   shape(new_att_cache) is (1, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
