@@ -46,7 +46,6 @@ class BranchformerEncoderLayer(torch.nn.Module):
         cgmlp_weight: float = 0.5,
         attn_branch_drop_rate: float = 0.0,
         stochastic_depth_rate: float = 0.0,
-        gradient_checkpointing: bool = False,
     ):
         super().__init__()
         assert (attn is not None) or (
@@ -106,7 +105,6 @@ class BranchformerEncoderLayer(torch.nn.Module):
                 raise ValueError(f"unknown merge method: {merge_method}")
         else:
             self.merge_proj = torch.nn.Identity()
-        self.gradient_checkpointing = gradient_checkpointing
 
     def _forward(
         self,
