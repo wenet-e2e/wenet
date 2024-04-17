@@ -23,6 +23,7 @@ from wenet.e_branchformer.encoder_layer import EBranchformerEncoderLayer
 from wenet.branchformer.cgmlp import ConvolutionalGatingMLP
 from wenet.transformer.encoder import ConformerEncoder
 from wenet.utils.class_utils import (
+    WENET_ACTIVATION_CLASSES,
     WENET_ATTENTION_CLASSES,
     WENET_MLP_CLASSES,
 )
@@ -111,6 +112,15 @@ class EBranchformerEncoder(ConformerEncoder):
             attention_heads,
             output_size,
             attention_dropout_rate,
+            attention_heads,
+            output_size,
+            attention_dropout_rate,
+            query_bias,
+            key_bias,
+            value_bias,
+            use_sdpa,
+            n_kv_head,
+            head_dim,
         )
 
         cgmlp_layer = ConvolutionalGatingMLP
@@ -120,12 +130,12 @@ class EBranchformerEncoder(ConformerEncoder):
 
         # feed-forward module definition
         mlp_class = WENET_MLP_CLASSES[mlp_type]
-        # feed-forward module definition
+        activation = WENET_ACTIVATION_CLASSES[activation_type]()
         positionwise_layer_args = (
             output_size,
             linear_units,
             dropout_rate,
-            activation_type,
+            activation,
             mlp_bias,
             n_expert,
             n_expert_activated,
