@@ -19,6 +19,8 @@ import torch
 import torch.nn as nn
 from typing import Optional, Tuple
 
+from wenet.transformer.attention import T_CACHE
+
 
 class BranchformerEncoderLayer(torch.nn.Module):
     """Branchformer encoder layer module.
@@ -112,10 +114,11 @@ class BranchformerEncoderLayer(torch.nn.Module):
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        att_cache: T_CACHE = (torch.zeros(
+            (0, 0, 0, 0)), torch.zeros(0, 0, 0, 0)),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         stoch_layer_coeff: float = 1.0
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, T_CACHE, torch.Tensor]:
         # Two branches
         x1 = x
         x2 = x
@@ -207,9 +210,10 @@ class BranchformerEncoderLayer(torch.nn.Module):
         mask: torch.Tensor,
         pos_emb: torch.Tensor,
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        att_cache: T_CACHE = (torch.zeros(
+            (0, 0, 0, 0)), torch.zeros(0, 0, 0, 0)),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, T_CACHE, torch.Tensor]:
         """Compute encoded features.
 
         Args:
