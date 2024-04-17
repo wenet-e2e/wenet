@@ -16,6 +16,7 @@
 """Encoder definition."""
 
 import torch
+
 from typing import List, Optional, Union
 
 from wenet.branchformer.encoder_layer import BranchformerEncoderLayer
@@ -117,12 +118,63 @@ class BranchformerEncoder(BaseEncoder):
                 f"Length of attn_branch_drop_rate ({len(attn_branch_drop_rate)}) "
                 f"should be equal to num_blocks ({num_blocks})")
 
-        self.encoders = torch.nn.ModuleList([
-            BranchformerEncoderLayer(
-                output_size, WENET_ATTENTION_CLASSES[selfattention_layer_type](
-                    *encoder_selfattn_layer_args) if use_attn else None,
-                cgmlp_layer(*cgmlp_layer_args) if use_cgmlp else None,
-                dropout_rate, merge_method, cgmlp_weight[lnum],
-                attn_branch_drop_rate[lnum], stochastic_depth_rate[lnum])
-            for lnum in range(num_blocks)
-        ])
+        self.encoders = LayerDropModuleList(
+            p=stochastic_depth_rate,
+            modules=[
+                BranchformerEncoderLayer(
+                    output_size,
+                    WENET_ATTENTION_CLASSES[selfattention_layer_type](
+                        *encoder_selfattn_layer_args) if use_attn else None,
+                    cgmlp_layer(*cgmlp_layer_args) if use_cgmlp else None,
+                    dropout_rate, merge_method, cgmlp_weight[lnum],
+                    attn_branch_drop_rate[lnum], stochastic_depth_rate[lnum],
+                    gradient_checkpointing) for lnum in range(num_blocks)
+            ])
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(self, xs: torch.Tensor,
+                                    chunk_masks: torch.Tensor,
+                                    pos_emb: torch.Tensor,
+                                    mask_pad: torch.Tensor) -> torch.Tensor:
+        return self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
+
+
+# modify from : https://github.com/facebookresearch/fairseq/blob/main/fairseq/modules/layer_drop.py # noqa
+class LayerDropModuleList(torch.nn.ModuleList):
+    """
+    A LayerDrop implementation based on :class:`torch.nn.ModuleList`.
+
+    We refresh the choice of which layers to drop every time we iterate
+    over the LayerDropModuleList instance. During evaluation we always
+    iterate over all layers.
+
+    Usage::
+
+        layers = LayerDropList(p=0.5, modules=[layer1, layer2, layer3])
+        for layer in layers:  # this might iterate over layers 1 and 3
+            x = layer(x)
+        for layer in layers:  # this might iterate over all layers
+            x = layer(x)
+        for layer in layers:  # this might not iterate over any layers
+            x = layer(x)
+
+    Args:
+        p (float): probability of dropping out each layer
+        modules (iterable, optional): an iterable of modules to add
+
+    Limitations:
+        1 can  work with ddp when layer's gradient checkpoint disabled
+        2 can't work with ddp when layer's gradient checkpoint enables
+        3 can work with fsdp
+    """
+
+    def __init__(self, p: List[float], modules=None):
+        super().__init__(modules)
+        assert len(p) == len(self)
+        self.p = p
+
+    def __iter__(self):
+        dropout_probs = torch.empty(len(self)).uniform_()
+        for i, m in enumerate(super().__iter__()):
+            if not self.training or (dropout_probs[i] > self.p[i]):
+                yield m
