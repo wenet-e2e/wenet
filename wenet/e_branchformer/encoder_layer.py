@@ -88,7 +88,7 @@ class EBranchformerEncoderLayer(torch.nn.Module):
         self.merge_proj = torch.nn.Linear(size + size, size)
         self.stochastic_depth_rate = stochastic_depth_rate
 
-    def forward(
+    def _forward(
         self,
         x: torch.Tensor,
         mask: torch.Tensor,
@@ -96,39 +96,8 @@ class EBranchformerEncoderLayer(torch.nn.Module):
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        stoch_layer_coeff: float = 1.0
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Compute encoded features.
-
-        Args:
-            x (Union[Tuple, torch.Tensor]): Input tensor  (#batch, time, size).
-            mask (torch.Tensor): Mask tensor for the input (#batch, time, time).
-            pos_emb (torch.Tensor): positional encoding, must not be None
-                for BranchformerEncoderLayer.
-            mask_pad (torch.Tensor): batch padding mask used for conv module.
-                (#batch, 1，time), (0, 0, 0) means fake mask.
-            att_cache (torch.Tensor): Cache tensor of the KEY & VALUE
-                (#batch=1, head, cache_t1, d_k * 2), head * d_k == size.
-            cnn_cache (torch.Tensor): Convolution cache in cgmlp layer
-                (#batch=1, size, cache_t2)
-
-        Returns:
-            torch.Tensor: Output tensor (#batch, time, size).
-            torch.Tensor: Mask tensor (#batch, time, time.
-            torch.Tensor: att_cache tensor,
-                (#batch=1, head, cache_t1 + time, d_k * 2).
-            torch.Tensor: cnn_cahce tensor (#batch, size, cache_t2).
-        """
-
-        stoch_layer_coeff = 1.0
-        skip_layer = False
-        # with stochastic depth, residual connection `x + f(x)` becomes
-        # `x <- x + 1 / (1 - p) * f(x)` at training time.
-        if self.training and self.stochastic_depth_rate > 0:
-            skip_layer = torch.rand(1).item() < self.stochastic_depth_rate
-            stoch_layer_coeff = 1.0 / (1 - self.stochastic_depth_rate)
-
-        if skip_layer:
-            return x, mask, att_cache, cnn_cache
 
         if self.feed_forward_macaron is not None:
             residual = x
@@ -173,3 +142,42 @@ class EBranchformerEncoderLayer(torch.nn.Module):
         x = self.norm_final(x)
 
         return x, mask, new_att_cache, new_cnn_cache
+
+    def forward(
+        self,
+        x: torch.Tensor,
+        mask: torch.Tensor,
+        pos_emb: torch.Tensor,
+        mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+        cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Compute encoded features.
+
+        Args:
+            x (Union[Tuple, torch.Tensor]): Input tensor  (#batch, time, size).
+            mask (torch.Tensor): Mask tensor for the input (#batch, time, time).
+            pos_emb (torch.Tensor): positional encoding, must not be None
+                for BranchformerEncoderLayer.
+            mask_pad (torch.Tensor): batch padding mask used for conv module.
+                (#batch, 1，time), (0, 0, 0) means fake mask.
+            att_cache (torch.Tensor): Cache tensor of the KEY & VALUE
+                (#batch=1, head, cache_t1, d_k * 2), head * d_k == size.
+            cnn_cache (torch.Tensor): Convolution cache in cgmlp layer
+                (#batch=1, size, cache_t2)
+
+        Returns:
+            torch.Tensor: Output tensor (#batch, time, size).
+            torch.Tensor: Mask tensor (#batch, time, time.
+            torch.Tensor: att_cache tensor,
+                (#batch=1, head, cache_t1 + time, d_k * 2).
+            torch.Tensor: cnn_cahce tensor (#batch, size, cache_t2).
+        """
+
+        stoch_layer_coeff = 1.0
+        # with stochastic depth, residual connection `x + f(x)` becomes
+        # `x <- x + 1 / (1 - p) * f(x)` at training time.
+        if self.training:
+            stoch_layer_coeff = 1.0 / (1 - self.stochastic_depth_rate)
+        return self._forward(x, mask, pos_emb, mask_pad, att_cache, cnn_cache,
+                             stoch_layer_coeff)

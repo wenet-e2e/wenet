@@ -18,6 +18,7 @@
 
 import torch
 from typing import List, Optional, Union
+from wenet.branchformer.encoder import LayerDropModuleList
 
 from wenet.e_branchformer.encoder_layer import EBranchformerEncoderLayer
 from wenet.branchformer.cgmlp import ConvolutionalGatingMLP
@@ -145,18 +146,27 @@ class EBranchformerEncoder(ConformerEncoder):
                 f"Length of stochastic_depth_rate ({len(stochastic_depth_rate)}) "
                 f"should be equal to num_blocks ({num_blocks})")
 
-        self.encoders = torch.nn.ModuleList([
-            EBranchformerEncoderLayer(
-                output_size,
-                WENET_ATTENTION_CLASSES[selfattention_layer_type](
-                    *encoder_selfattn_layer_args),
-                cgmlp_layer(*cgmlp_layer_args),
-                mlp_class(*positionwise_layer_args) if use_ffn else None,
-                mlp_class(*positionwise_layer_args)
-                if use_ffn and macaron_style else None,
-                dropout_rate,
-                merge_conv_kernel=merge_conv_kernel,
-                causal=causal,
-                stochastic_depth_rate=stochastic_depth_rate[lnum],
-            ) for lnum in range(num_blocks)
-        ])
+        self.encoders = LayerDropModuleList(
+            p=stochastic_depth_rate,
+            modules=[
+                EBranchformerEncoderLayer(
+                    output_size,
+                    WENET_ATTENTION_CLASSES[selfattention_layer_type](
+                        *encoder_selfattn_layer_args),
+                    cgmlp_layer(*cgmlp_layer_args),
+                    mlp_class(*positionwise_layer_args) if use_ffn else None,
+                    mlp_class(*positionwise_layer_args)
+                    if use_ffn and macaron_style else None,
+                    dropout_rate,
+                    merge_conv_kernel=merge_conv_kernel,
+                    causal=causal,
+                    stochastic_depth_rate=stochastic_depth_rate[lnum],
+                ) for lnum in range(num_blocks)
+            ])
+
+    @torch.jit.ignore(drop=True)
+    def forward_layers_checkpointed(self, xs: torch.Tensor,
+                                    chunk_masks: torch.Tensor,
+                                    pos_emb: torch.Tensor,
+                                    mask_pad: torch.Tensor) -> torch.Tensor:
+        return self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
