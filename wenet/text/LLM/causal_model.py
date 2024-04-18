@@ -104,10 +104,7 @@ class CausalLM(torch.nn.Module):
                     self.decoder.head_dim)
             k_cache = torch.zeros(size=size, dtype=dtype, device=device)
             v_cache = torch.zeros(size=size, dtype=dtype, device=device)
-            # kv_caches.append((k_cache, v_cache))
-            # TODO(Mddct): wenet concat k v cache in dims=-1, refactor later to
-            #     reduce memory fragment
-            kv_caches = torch.cat([k_cache, v_cache], dim=-1)
+            kv_caches = (k_cache, v_cache)
 
         # prepare inputs
         token_ids_tensor = torch.full((batch_size, max_prompt_len),
@@ -172,6 +169,7 @@ class CausalLM(torch.nn.Module):
             token_ids_tensor.index_copy_(1, output_index, output_token_ids)
 
             input_token_ids_tensor = output_token_ids
+            input_token_embeding = self.embed(input_token_ids_tensor)
             input_positions_tensor = output_index.unsqueeze(dim=-1)
             curr_mask_tensor = mask_tensor.index_select(
                 2, input_positions_tensor)
