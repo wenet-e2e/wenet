@@ -217,7 +217,7 @@ class Wav2vec2Model(torch.nn.Module):
                 _reset_parameter(conv1)
                 _reset_parameter(conv2)
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward(
         self,
         batch: Dict,

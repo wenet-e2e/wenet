@@ -148,7 +148,7 @@ class Paraformer(ASRModel):
         #    labels:     你 好 we@@ net eos
         self.add_eos = add_eos
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward(
         self,
         batch: Dict,
@@ -232,7 +232,7 @@ class Paraformer(ASRModel):
                               ignore_label=self.ignore_id)
         return loss_att, acc_att
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def _sampler(self, encoder_out, encoder_out_mask, ys_pad, ys_pad_lens,
                  pre_acoustic_embeds):
         device = encoder_out.device
