@@ -24,14 +24,17 @@ import datetime
 
 
 def load_checkpoint(model: torch.nn.Module, path: str) -> dict:
-    logging.info('Checkpoint: loading from checkpoint %s' % path)
+    rank = int(os.environ.get('RANK', 0))
+    logging.info('[Rank {}] Checkpoint: loading from checkpoint {}'.format(
+        rank, path))
     checkpoint = torch.load(path, map_location='cpu', mmap=True)
     missing_keys, unexpected_keys = model.load_state_dict(checkpoint,
                                                           strict=False)
-    for key in missing_keys:
-        logging.info("missing tensor: {}".format(key))
-    for key in unexpected_keys:
-        logging.info("unexpected tensor: {}".format(key))
+    if rank == 0:
+        for key in missing_keys:
+            logging.info("missing tensor: {}".format(key))
+        for key in unexpected_keys:
+            logging.info("unexpected tensor: {}".format(key))
     info_path = re.sub('.pt$', '.yaml', path)
     configs = {}
     if os.path.exists(info_path):
@@ -41,7 +44,9 @@ def load_checkpoint(model: torch.nn.Module, path: str) -> dict:
 
 
 def save_state_dict_and_infos(state_dict, path: str, infos=None):
-    logging.info('Checkpoint: save to checkpoint %s' % path)
+    rank = int(os.environ.get('RANK', 0))
+    logging.info('[Rank {}] Checkpoint: save to checkpoint {}'.format(
+        rank, path))
     torch.save(state_dict, path)
     info_path = re.sub('.pt$', '.yaml', path)
     if infos is None:
@@ -67,6 +72,7 @@ def save_checkpoint(model: torch.nn.Module, path: str, infos=None):
 
 
 def filter_modules(model_state_dict, modules):
+    rank = int(os.environ.get('RANK', 0))
     new_mods = []
     incorrect_mods = []
     mods_model = model_state_dict.keys()
@@ -75,7 +81,7 @@ def filter_modules(model_state_dict, modules):
             new_mods += [mod]
         else:
             incorrect_mods += [mod]
-    if incorrect_mods:
+    if incorrect_mods and rank == 0:
         logging.warning(
             "module(s) %s don't match or (partially match) "
             "available modules in model.",

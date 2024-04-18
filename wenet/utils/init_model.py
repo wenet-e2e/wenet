@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import torch
 
 from wenet.finetune.lora.utils import mark_only_lora_as_trainable
@@ -180,7 +181,8 @@ def init_model(args, configs):
     if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:
         mark_only_lora_as_trainable(model, bias='lora_only')
 
-    print(configs)
+    if int(os.environ.get('RANK', 0)) == 0:
+        print(configs)
 
     # Tie emb.weight to decoder.output_layer.weight
     if model.decoder.tie_word_embedding:
