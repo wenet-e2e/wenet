@@ -291,7 +291,7 @@ class SanmEncoder(BaseEncoder):
             xs, _, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         for layer in self.encoders:
             xs, _, _, _ = ckpt.checkpoint(layer.__call__, xs, chunk_masks,
-                                          pos_emb, mask_pad)
+                                          pos_emb, mask_pad, use_reentrant=False)
         return xs
 
 
@@ -481,7 +481,7 @@ class SanmDecoder(TransformerDecoder):
                 x, _, _, _ = layer(x, tgt_mask, memory, memory_mask)
             else:
                 x, _, _, _ = ckpt.checkpoint(layer.__call__, x, tgt_mask,
-                                             memory, memory_mask)
+                                             memory, memory_mask, use_reentrant=False)
         for layer in self.decoders3:
             x = layer(x)
         return x

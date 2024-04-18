@@ -192,7 +192,7 @@ class BaseEncoder(torch.nn.Module):
         for layer in self.encoders:
             xs, chunk_masks, _, _ = ckpt.checkpoint(layer.__call__, xs,
                                                     chunk_masks, pos_emb,
-                                                    mask_pad)
+                                                    mask_pad, use_reentrant=False)
         return xs
 
     def forward_chunk(
