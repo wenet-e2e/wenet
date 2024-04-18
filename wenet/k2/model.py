@@ -54,7 +54,7 @@ class K2Model(ASRModel):
         if self.lfmmi_dir != '':
             self.load_lfmmi_resource()
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def _forward_ctc(
             self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
             text: torch.Tensor,
@@ -63,7 +63,7 @@ class K2Model(ASRModel):
                                                     text)
         return loss_ctc, ctc_probs
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def load_lfmmi_resource(self):
         try:
             import icefall
@@ -94,7 +94,7 @@ class K2Model(ASRModel):
                 assert len(arr) == 2
                 self.word_table[int(arr[1])] = arr[0]
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def _calc_lfmmi_loss(self, encoder_out, encoder_mask, text):
         try:
             import k2
