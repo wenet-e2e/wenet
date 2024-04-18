@@ -15,7 +15,7 @@
 """Positionwise feed forward layer definition."""
 
 import torch
-
+import torch.nn.functional as F
 
 class PositionwiseFeedForward(torch.nn.Module):
     """Positionwise feed forward layer.
@@ -84,6 +84,7 @@ class MoEFFNLayer(torch.nn.Module):
         bias: bool = False,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        gate_type: str = 'normal',
     ):
         super(MoEFFNLayer, self).__init__()
         self.gate = torch.nn.Linear(idim, n_expert, bias=False)
@@ -93,6 +94,9 @@ class MoEFFNLayer(torch.nn.Module):
             for _ in range(n_expert))
         self.n_expert = n_expert
         self.n_expert_activated = n_expert_activated
+        self.gate_type= gate_type
+        if self.gate_type == 'noisy':
+            self.noisy_gate = torch.nn.Linear(idim, n_expert, bias=False)
 
     def forward(self, xs: torch.Tensor) -> torch.Tensor:
         """Foward function.
@@ -106,6 +110,10 @@ class MoEFFNLayer(torch.nn.Module):
         )  # batch size, sequence length, embedding dimension (idim)
         xs = xs.view(-1, D)  # (B*L, D)
         router = self.gate(xs)  # (B*L, n_expert)
+        if self.gate_type == 'noisy':
+            noisy_router = self.noisy_gate(xs)
+            noisy_router = torch.randn_like(router)*F.softplus(noisy_router)
+            router = router + noisy_router
         logits, selected_experts = torch.topk(
             router, self.n_expert_activated
         )  # probs:(B*L, n_expert_activated), selected_exp: (B*L, n_expert_activated)

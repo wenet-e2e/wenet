@@ -184,15 +184,18 @@ class BaseEncoder(torch.nn.Module):
             xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         return xs
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward_layers_checkpointed(self, xs: torch.Tensor,
                                     chunk_masks: torch.Tensor,
                                     pos_emb: torch.Tensor,
                                     mask_pad: torch.Tensor) -> torch.Tensor:
         for layer in self.encoders:
-            xs, chunk_masks, _, _ = ckpt.checkpoint(layer.__call__, xs,
-                                                    chunk_masks, pos_emb,
-                                                    mask_pad, use_reentrant=False)
+            xs, chunk_masks, _, _ = ckpt.checkpoint(layer.__call__,
+                                                    xs,
+                                                    chunk_masks,
+                                                    pos_emb,
+                                                    mask_pad,
+                                                    use_reentrant=False)
         return xs
 
     def forward_chunk(
@@ -391,6 +394,7 @@ class TransformerEncoder(BaseEncoder):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        gate_type: str = 'normal',
     ):
         """ Construct TransformerEncoder
 
@@ -420,7 +424,8 @@ class TransformerEncoder(BaseEncoder):
                           activation,
                           mlp_bias,
                           n_expert=n_expert,
-                          n_expert_activated=n_expert_activated),
+                          n_expert_activated=n_expert_activated,
+                          gate_type=gate_type),
                 dropout_rate,
                 normalize_before,
                 layer_norm_type=layer_norm_type,
@@ -471,6 +476,7 @@ class ConformerEncoder(BaseEncoder):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        gate_type: str = 'normal',
     ):
         """Construct ConformerEncoder
 
@@ -519,6 +525,7 @@ class ConformerEncoder(BaseEncoder):
             mlp_bias,
             n_expert,
             n_expert_activated,
+            gate_type,
         )
         # convolution module definition
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
