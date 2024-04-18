@@ -163,10 +163,3 @@ class EBranchformerEncoder(ConformerEncoder):
                     stochastic_depth_rate=stochastic_depth_rate[lnum],
                 ) for lnum in range(num_blocks)
             ])
-
-    @torch.jit.ignore(drop=True)
-    def forward_layers_checkpointed(self, xs: torch.Tensor,
-                                    chunk_masks: torch.Tensor,
-                                    pos_emb: torch.Tensor,
-                                    mask_pad: torch.Tensor) -> torch.Tensor:
-        return self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
