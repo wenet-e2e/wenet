@@ -1,6 +1,7 @@
 from typing import List, Optional, Tuple, Union
 import torch
 import torch.utils.checkpoint as ckpt
+from wenet.transformer.attention import T_CACHE
 
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
@@ -85,9 +86,8 @@ class DecoderOnly(torch.nn.Module):
         input: torch.Tensor,
         att_mask: torch.Tensor,
         input_position: Union[int, torch.Tensor] = 0,
-        kv_caches: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
-    ) -> Tuple[torch.Tensor, Union[List[Tuple[torch.Tensor, torch.Tensor]],
-                                   None]]:
+        kv_caches: Optional[List[T_CACHE]] = None,
+    ) -> Tuple[torch.Tensor, Union[List[T_CACHE], None]]:
         xs, pos_emb = self.pos_enc(input, offset=input_position)
         if self.use_sdpa:
             att_mask = mask_to_bias(att_mask, xs.dtype)
@@ -106,9 +106,8 @@ class DecoderOnly(torch.nn.Module):
         xs: torch.Tensor,
         att_mask: torch.Tensor,
         pos_emb: torch.Tensor,
-        kv_caches: Optional[List[Tuple[torch.Tensor, torch.Tensor]]] = None,
-    ) -> Tuple[torch.Tensor, Union[List[Tuple[torch.Tensor, torch.Tensor]],
-                                   None]]:
+        kv_caches: Optional[List[T_CACHE]] = None,
+    ) -> Tuple[torch.Tensor, Union[List[T_CACHE], None]]:
         if self.training:
             for (i, layer) in enumerate(self.decoders):
                 xs, _, _, _ = layer(xs, att_mask, pos_emb)
@@ -120,8 +119,7 @@ class DecoderOnly(torch.nn.Module):
                 xs, _, new_kv_cache, _ = layer(xs,
                                                att_mask,
                                                pos_emb,
-                                               att_cache=torch.cat(
-                                                   kv_caches[i], dim=-1))
+                                               att_cache=kv_caches[i])
                 new_kv_caches.append(new_kv_cache)
 
         return xs, new_kv_caches
