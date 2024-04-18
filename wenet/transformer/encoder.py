@@ -547,4 +547,3 @@ class ConformerEncoder(BaseEncoder):
                 norm_eps=norm_eps,
             ) for _ in range(num_blocks)
         ])
-        
