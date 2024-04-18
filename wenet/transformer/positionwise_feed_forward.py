@@ -94,7 +94,7 @@ class MoEFFNLayer(torch.nn.Module):
             for _ in range(n_expert))
         self.n_expert = n_expert
         self.n_expert_activated = n_expert_activated
-        self.gate_type= gate_type
+        self.gate_type = gate_type
         if self.gate_type == 'noisy':
             self.noisy_gate = torch.nn.Linear(idim, n_expert, bias=False)
 
@@ -112,7 +112,7 @@ class MoEFFNLayer(torch.nn.Module):
         router = self.gate(xs)  # (B*L, n_expert)
         if self.gate_type == 'noisy':
             noisy_router = self.noisy_gate(xs)
-            noisy_router = torch.randn_like(router)*F.softplus(noisy_router)
+            noisy_router = torch.randn_like(router) * F.softplus(noisy_router)
             router = router + noisy_router
         logits, selected_experts = torch.topk(
             router, self.n_expert_activated
