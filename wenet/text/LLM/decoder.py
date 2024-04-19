@@ -37,6 +37,7 @@ class DecoderOnly(torch.nn.Module):
         selfattention_layer_type: str = "rope_abs_selfattn",
         use_sdpa: bool = False,
         gradient_checkpointing: bool = False,
+        rope_theta: float = 10000.0,
     ) -> None:
         super().__init__()
 
@@ -45,7 +46,8 @@ class DecoderOnly(torch.nn.Module):
             hidden_size,
             head_dim,
             max_len=max_position_embeding,
-            dropout_rate=dropout_rate)
+            dropout_rate=dropout_rate,
+            rope_theta=rope_theta)
         if activation_type == "gelu" and gelu_approximate is not None:
             activation = WENET_ACTIVATION_CLASSES['gelu'](
                 approximate=gelu_approximate)
