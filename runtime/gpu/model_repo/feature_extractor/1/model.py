@@ -173,20 +173,20 @@ class TritonPythonModel:
                     speech[i, 0:f_l, :] = f.astype(self.output0_dtype)
                 speech_lengths[i][0] = f_l
                 idx += 1
-                # put speech feature on device will cause empty output
-                # we will follow this issue and now temporarily put it on cpu
-                if self.device == "cuda":
-                    speech = speech.cpu()
-                    speech_lengths = speech_lengths.cpu()
+            # put speech feature on device will cause empty output
+            # we will follow this issue and now temporarily put it on cpu
+            if self.device == "cuda":
+                speech = speech.cpu()
+                speech_lengths = speech_lengths.cpu()
 
-                    out0 = pb_utils.Tensor.from_dlpack("speech", to_dlpack(speech))
-                    out1 = pb_utils.Tensor.from_dlpack("speech_lengths",
-                                                       to_dlpack(speech_lengths))
-                else:
-                    out0 = pb_utils.Tensor("speech", speech)
-                    out1 = pb_utils.Tensor("speech_lengths", speech_lengths)
+                out0 = pb_utils.Tensor.from_dlpack("speech", to_dlpack(speech))
+                out1 = pb_utils.Tensor.from_dlpack("speech_lengths",
+                                                   to_dlpack(speech_lengths))
+            else:
+                out0 = pb_utils.Tensor("speech", speech)
+                out1 = pb_utils.Tensor("speech_lengths", speech_lengths)
 
-                inference_response = pb_utils.InferenceResponse(
-                    output_tensors=[out0, out1])
-                responses.append(inference_response)
-            return responses
+            inference_response = pb_utils.InferenceResponse(
+                output_tensors=[out0, out1])
+            responses.append(inference_response)
+        return responses
