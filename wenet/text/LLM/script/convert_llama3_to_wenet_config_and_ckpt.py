@@ -74,8 +74,8 @@ def convert_to_wenet_state_dict(Llama3_state_dict, wenet_state_dict_path,
 
             # mlp
             name = name.replace('feed_forward.w1', 'feed_forward.gate')
-            name = name.replace('feed_forward.w2', 'feed_forward.w_1')
-            name = name.replace('feed_forward.w3', 'feed_forward.w_2')
+            name = name.replace('feed_forward.w3', 'feed_forward.w_1')
+            name = name.replace('feed_forward.w2', 'feed_forward.w_2')
 
             # before mlp ln: (rms norm)
             name = name.replace('ffn_norm', 'norm2')
