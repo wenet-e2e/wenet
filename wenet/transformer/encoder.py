@@ -184,15 +184,18 @@ class BaseEncoder(torch.nn.Module):
             xs, chunk_masks, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         return xs
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward_layers_checkpointed(self, xs: torch.Tensor,
                                     chunk_masks: torch.Tensor,
                                     pos_emb: torch.Tensor,
                                     mask_pad: torch.Tensor) -> torch.Tensor:
         for layer in self.encoders:
-            xs, chunk_masks, _, _ = ckpt.checkpoint(layer.__call__, xs,
-                                                    chunk_masks, pos_emb,
-                                                    mask_pad)
+            xs, chunk_masks, _, _ = ckpt.checkpoint(layer.__call__,
+                                                    xs,
+                                                    chunk_masks,
+                                                    pos_emb,
+                                                    mask_pad,
+                                                    use_reentrant=False)
         return xs
 
     def forward_chunk(

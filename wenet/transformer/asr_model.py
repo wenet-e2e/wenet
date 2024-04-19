@@ -74,7 +74,7 @@ class ASRModel(torch.nn.Module):
             normalize_length=length_normalized_loss,
         )
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward(
         self,
         batch: dict,
@@ -133,7 +133,7 @@ class ASRModel(torch.nn.Module):
             "th_accuracy": acc_att,
         }
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def _forward_ctc(
             self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
             text: torch.Tensor,
@@ -231,7 +231,7 @@ class ASRModel(torch.nn.Module):
             )  # (B, maxlen, encoder_dim)
         return encoder_out, encoder_mask
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def ctc_logprobs(self,
                      encoder_out: torch.Tensor,
                      blank_penalty: float = 0.0,
