@@ -9,7 +9,7 @@ import torch
 class LlamaConfig:
     vocab_size: int = 256000
     # The maximum sequence length that this model might ever be used with.
-    max_position_embeddings: int = 2048
+    max_position_embeddings: int = 8192
     # The number of blocks in the model.
     num_hidden_layers: int = 32
     # The number of attention heads used in the attention layers of the model.
@@ -35,7 +35,12 @@ def get_config_for_8b() -> LlamaConfig:
 
 
 def get_config_for_70b() -> LlamaConfig:
-    raise NotImplementedError('not implement')
+    return LlamaConfig(
+        num_hidden_layers=80,
+        hidden_size=8192,
+        num_attention_heads=64,
+        intermediate_size=28672,
+    )
 
 
 def convert_to_wenet_state_dict(Llama3_state_dict, wenet_state_dict_path,
