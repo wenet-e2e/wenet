@@ -4,7 +4,7 @@ from wenet.LLM.decoder import DecoderOnly
 from wenet.LLM.sampler import sampler
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import IGNORE_ID, th_accuracy
-from wenet.utils.mask import subsequent_mask
+from wenet.utils.mask import make_non_pad_mask, subsequent_mask
 
 
 class CausalLM(torch.nn.Module):
@@ -46,12 +46,13 @@ class CausalLM(torch.nn.Module):
         batch: dict,
         device: torch.device,
     ) -> Dict[str, Optional[torch.Tensor]]:
-
-        text = batch['text'].to(device)
+        """ Forward for training
+        """
+        text = batch['feats'].to(device)
         target = batch['target'].to(device)
-        mask = batch['mask'].to(device)  # (B,L)
-        mask = mask.unsqueeze(1)  # (B,1,L)
+        text_length = batch['feats_lengths'].to(device)
 
+        mask = make_non_pad_mask(text_length).unsqueeze(1)  # (B,1,L)
         causal_mask = subsequent_mask(
             mask.size(-1), device=mask.device).unsqueeze(0)  # (1,L,L)
         att_mask = causal_mask & mask  # (B, L, L)
@@ -94,14 +95,13 @@ class CausalLM(torch.nn.Module):
         batch_size = len(prompts_tokens)
         min_prompt_len = min(len(p) for p in prompts_tokens)
         max_prompt_len = max(len(p) for p in prompts_tokens)
-        # NOTE(Mddct): 1 is sos
-        max_seq_len = max_prompt_len + 1 + output_len
+        max_seq_len = max_prompt_len + output_len
         assert max_seq_len <= self.decoder.pos_enc.max_len
 
         # build KV caches
         kv_caches = []
         for _ in range(self.config.num_hidden_layers):
-            size = (batch_size, self.decoder.n_kv_head, min_prompt_len + 1,
+            size = (batch_size, self.decoder.n_kv_head, min_prompt_len,
                     self.decoder.head_dim)
             k_cache = torch.zeros(size=size, dtype=dtype, device=device)
             v_cache = torch.zeros(size=size, dtype=dtype, device=device)
@@ -127,8 +127,6 @@ class CausalLM(torch.nn.Module):
         input_token_ids_tensor = torch.cat([sos, token_ids_tensor],
                                            dim=-1).to(device)
         prompt_mask_tensor = token_ids_tensor != IGNORE_ID
-        min_prompt_len = min_prompt_len + 1
-        max_prompt_len = max_prompt_len + 1
         input_positions_tensor = torch.arange(0,
                                               min_prompt_len,
                                               dtype=torch.int64).to(device)

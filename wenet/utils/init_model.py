@@ -20,8 +20,8 @@ from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.paraformer import Paraformer, Predictor
-from wenet.text.LLM.causal_model import CausalLM
-from wenet.text.LLM.decoder import DecoderOnly
+from wenet.LLM.causal_model import CausalLM
+from wenet.LLM.decoder import DecoderOnly
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
