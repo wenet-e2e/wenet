@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional, Union
 import torch
-from wenet.text.LLM.decoder import DecoderOnly
-from wenet.text.LLM.sampler import sampler
+from wenet.LLM.decoder import DecoderOnly
+from wenet.LLM.sampler import sampler
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import IGNORE_ID, th_accuracy
 from wenet.utils.mask import subsequent_mask
@@ -26,6 +26,7 @@ class CausalLM(torch.nn.Module):
         self.out = torch.nn.Linear(decoder.hidden_size,
                                    vocab_size,
                                    bias=linear_bias)
+
         self.decoder = decoder
         self.sos = special_tokens['sos']
         self.eos = special_tokens['eos']
