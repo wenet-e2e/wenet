@@ -1,8 +1,39 @@
 import argparse
 import os
 import torch
+import yaml
 
-from wenet.LLM.script.config import Config, llama3_config_for_70b, llama3_config_for_8b
+from wenet.LLM.script.config import (Config, llama3_config_for_70b,
+                                     llama3_config_for_8b)
+from wenet.LLM.script.convert_gemma_to_wenet_config_and_ckpt import (
+    wenet_llm_dataset_and_train_conf)
+
+
+def convert_to_wenet_yaml(config: Config, wenet_yaml_path: str):
+    configs = {}
+    configs['output_dim'] = config.vocab_size
+
+    configs['decoder'] = 'decoder_only'
+    configs['decoder_conf'] = config.to_wenet_config()
+    configs['decoder_conf']['dropout_rate'] = 0.0
+    configs['decoder_conf']['attention_dropout_rate'] = 0.0
+    configs['decoder_conf']['positional_dropout_rate'] = 0.0
+    configs['decoder_conf']['gradient_checkpointing'] = True
+    configs['decoder_conf']['normalize_before'] = True
+
+    configs['model'] = "causal_lm"
+    configs['model_conf'] = {}
+    configs['model_conf']['linear_bias'] = False
+    configs['model_conf']['tie_word_embedding'] = False
+    configs['model_conf']['lsm_weight'] = 0.1
+    configs['model_conf']['length_normalized_loss'] = False
+
+    configs.update(wenet_llm_dataset_and_train_conf(config))
+    with open(wenet_yaml_path, '+w') as f:
+        f.write(yaml.dump(configs))
+        f.flush()
+
+    print(configs)
 
 
 def convert_to_wenet_state_dict(Llama3_state_dict, wenet_state_dict_path,
@@ -89,11 +120,15 @@ def main():
     wenet_ckpt_path = os.path.join(
         args.output_dir, 'wenet_' + os.path.basename(args.llama_ckpt))
     wenet_ckpt_path = os.path.splitext(wenet_ckpt_path)[0] + ".pt"
-    print(wenet_ckpt_path)
     convert_to_wenet_state_dict(
         checkpoint,
         wenet_ckpt_path,
         config,
+    )
+    wenet_yaml_path = os.path.join(args.output_dir, 'train.yaml')
+    convert_to_wenet_yaml(
+        config,
+        wenet_yaml_path,
     )
 
 

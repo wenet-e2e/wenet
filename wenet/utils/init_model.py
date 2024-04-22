@@ -214,10 +214,6 @@ def init_model(args, configs):
     if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:
         mark_only_lora_as_trainable(model, bias='lora_only')
 
-    # Tie emb.weight to decoder.output_layer.weight
-    if model.decoder.tie_word_embedding:
-        model.decoder.tie_or_clone_weights(jit_mode=args.jit)
-
     if int(os.environ.get('RANK', 0)) == 0:
         print(configs)
 

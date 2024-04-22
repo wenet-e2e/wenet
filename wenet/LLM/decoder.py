@@ -1,3 +1,4 @@
+from functools import partial
 from typing import List, Optional, Tuple, Union
 import torch
 import torch.utils.checkpoint as ckpt
@@ -22,6 +23,7 @@ class DecoderOnly(torch.nn.Module):
         linear_units: int = 2048,
         num_blocks: int = 6,
         dropout_rate: float = 0.1,
+        positional_dropout_rate: float = 0.1,
         attention_dropout_rate: float = 0.0,
         normalize_before: bool = True,
         query_bias: bool = False,
@@ -34,14 +36,16 @@ class DecoderOnly(torch.nn.Module):
         mlp_type: str = 'gated',
         layer_norm_type: str = 'rms_norm',
         norm_eps: float = 1e-5,
+        rms_norm_offset: bool = True,
         selfattention_layer_type: str = "rope_abs_selfattn",
         use_sdpa: bool = False,
         gradient_checkpointing: bool = False,
         rope_theta: float = 10000.0,
+        rope_style: str = 'google',
     ) -> None:
         super().__init__()
 
-        assert selfattention_layer_type in ['selfattn', 'rope_abs_selfattn']
+        assert selfattention_layer_type in ['rope_abs_selfattn']
         self.pos_enc = WENET_EMB_CLASSES["rope_pos"](
             hidden_size,
             head_dim,
@@ -61,21 +65,35 @@ class DecoderOnly(torch.nn.Module):
             TransformerEncoderLayer(
                 hidden_size,
                 WENET_ATTENTION_CLASSES[selfattention_layer_type](
-                    attention_heads, hidden_size, attention_dropout_rate,
-                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
-                    head_dim),
+                    attention_heads,
+                    hidden_size,
+                    attention_dropout_rate,
+                    query_bias,
+                    key_bias,
+                    value_bias,
+                    use_sdpa,
+                    n_kv_head,
+                    head_dim,
+                    style=rope_style),
                 mlp_class(hidden_size, linear_units, dropout_rate, activation,
                           mlp_bias),
                 dropout_rate,
                 normalize_before,
                 layer_norm_type=layer_norm_type,
                 norm_eps=norm_eps,
+                rms_norm_offset=rms_norm_offset,
             ) for _ in range(self.num_blocks)
         ])
         self.pre_norm = normalize_before
         self.final_norm: Optional[torch.nn.Module] = None
         if self.pre_norm:
-            self.final_norm = WENET_NORM_CLASSES[layer_norm_type](hidden_size)
+            norm_class = WENET_NORM_CLASSES[layer_norm_type]
+            if layer_norm_type == "rms_norm":
+                norm_class = partial(
+                    norm_class,
+                    add_unit_offset=rms_norm_offset,
+                )
+            self.final_norm = norm_class(hidden_size, eps=norm_eps)
 
         self.n_kv_head = n_kv_head
         self.head_dim = head_dim

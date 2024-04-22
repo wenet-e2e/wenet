@@ -1,4 +1,5 @@
 import dataclasses
+from typing import Dict, Union
 
 
 # https://github.com/google/gemma_pytorch/blob/main/gemma/config.py#L32
@@ -23,12 +24,37 @@ class Config:
     rms_norm_eps: float = 1e-6
     # tope theta
     rope_theta: float = 500000.0
+    # rope style: google or llama
+    rope_style: str = 'google'
+    # rms_norm offset
+    rms_norm_offset: bool = True
+    # activation type
+    activation_type: str = 'gelu'
+    # gelu approximate
+    gelu_approximate: Union[str, None] = None
     # The dtype of the weights.
     dtype: str = 'bfloat16'
 
+    def to_wenet_config(self) -> Dict:
+        configs = {}
+        configs['max_position_embeding'] = self.max_position_embeddings
+        configs['num_blocks'] = self.num_hidden_layers
+        configs['attention_heads'] = self.num_attention_heads
+        configs['n_kv_head'] = self.num_key_value_heads
+        configs['head_dim'] = self.head_dim
+        configs['hidden_size'] = self.hidden_size
+        configs['linear_units'] = self.intermediate_size
+        configs['norm_eps'] = self.rms_norm_eps
+        configs['rope_theta'] = self.rope_theta
+        configs['activation_type'] = self.activation_type
+        configs['gelu_approximate'] = self.gelu_approximate
+        configs['rope_style'] = self.rope_style
+        configs['rms_norm_offset'] = self.rms_norm_offset
+        return configs
+
 
 def gemma_config_for_7b() -> Config:
-    return Config(rope_theta=10000.0)
+    return Config(rope_theta=10000.0, gelu_approximate='tanh')
 
 
 def gemma_config_for_2b() -> Config:
@@ -37,7 +63,8 @@ def gemma_config_for_2b() -> Config:
                   num_key_value_heads=1,
                   hidden_size=2048,
                   intermediate_size=16384,
-                  rope_theta=10000.0)
+                  rope_theta=10000.0,
+                  gelu_approximate='tanh')
 
 
 def llama3_config_for_8b() -> Config:
@@ -49,7 +76,10 @@ def llama3_config_for_8b() -> Config:
                   head_dim=128,
                   intermediate_size=14336,
                   rms_norm_eps=1e-5,
-                  rope_theta=500000.0)
+                  rope_theta=500000.0,
+                  activation_type='swish',
+                  rms_norm_offset=False,
+                  rope_style='llama')
 
 
 def llama3_config_for_70b() -> Config:
@@ -61,4 +91,7 @@ def llama3_config_for_70b() -> Config:
                   num_key_value_heads=8,
                   intermediate_size=28672,
                   rms_norm_eps=1e-5,
-                  rope_theta=500000.0)
+                  rope_theta=500000.0,
+                  activation_type='swish',
+                  rms_norm_offset=False,
+                  rope_style='llama')

@@ -28,8 +28,11 @@ class CausalLM(torch.nn.Module):
                                    bias=linear_bias)
 
         self.decoder = decoder
-        self.sos = special_tokens['sos']
-        self.eos = special_tokens['eos']
+        # self.sos = special_tokens['sos']
+        # self.eos = special_tokens['eos']
+        self.sos = 0
+        self.eos = 1
+
         self.vocab_size = vocab_size
         self.criterion_att = LabelSmoothingLoss(
             size=vocab_size,
