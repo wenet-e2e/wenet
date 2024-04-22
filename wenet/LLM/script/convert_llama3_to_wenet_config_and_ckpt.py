@@ -1,50 +1,12 @@
 import argparse
-import dataclasses
 import os
 import torch
 
-
-# https://github.com/google/gemma_pytorch/blob/main/gemma/config.py#L32
-@dataclasses.dataclass
-class LlamaConfig:
-    vocab_size: int = 256000
-    # The maximum sequence length that this model might ever be used with.
-    max_position_embeddings: int = 8192
-    # The number of blocks in the model.
-    num_hidden_layers: int = 32
-    # The number of attention heads used in the attention layers of the model.
-    num_attention_heads: int = 32
-    # The number of key-value heads for implementing attention.
-    num_key_value_heads: int = 8
-    # The hidden size of the model.
-    hidden_size: int = 4096
-    # The dimension of the MLP representations.
-    intermediate_size: int = 14336
-    # The number of head dimensions.
-    head_dim: int = 128
-    # The epsilon used by the rms normalization layers.
-    rms_norm_eps: float = 1e-5
-    # tope theta
-    rope_theta: float = 500000.0
-    # The dtype of the weights.
-    dtype: str = 'bfloat16'
-
-
-def get_config_for_8b() -> LlamaConfig:
-    return LlamaConfig()
-
-
-def get_config_for_70b() -> LlamaConfig:
-    return LlamaConfig(
-        num_hidden_layers=80,
-        hidden_size=8192,
-        num_attention_heads=64,
-        intermediate_size=28672,
-    )
+from wenet.LLM.script.config import Config, llama3_config_for_70b, llama3_config_for_8b
 
 
 def convert_to_wenet_state_dict(Llama3_state_dict, wenet_state_dict_path,
-                                config: LlamaConfig):
+                                config: Config):
 
     wenet_state_dict = {}
 
@@ -119,9 +81,9 @@ def main():
     assert model_size in ["8b", "70b"]
 
     if model_size == '8b':
-        config = get_config_for_8b()
+        config = llama3_config_for_8b()
     else:
-        config = get_config_for_70b()
+        config = llama3_config_for_70b()
     os.makedirs(args.output_dir, exist_ok=True)
 
     wenet_ckpt_path = os.path.join(
