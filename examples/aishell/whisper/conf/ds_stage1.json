@@ -3,7 +3,6 @@
   "gradient_accumulation_steps": 1,
   "steps_per_print": 100,
   "gradient_clipping": 5,
-  "dump_state": true,
   "fp16": {
     "enabled": false,
     "auto_cast": false,
@@ -20,6 +19,10 @@
   "zero_force_ds_cpu_optimizer": false,
   "zero_optimization": {
     "stage": 1,
+    "offload_optimizer": {
+      "device": "none",
+      "pin_memory": true
+    },
     "allgather_partitions": true,
     "allgather_bucket_size": 5e8,
     "overlap_comm": true,
