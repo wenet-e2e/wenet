@@ -6,6 +6,24 @@ import yaml
 
 from wenet.LLM.script.config import (Config, gemma_config_for_2b,
                                      gemma_config_for_7b)
+from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
+
+
+def wenet_llm_tokenizer_conf(config: Config, tokenizer_path: str) -> Dict:
+    tokenizer = HuggingFaceTokenizer(tokenizer_path)
+    assert config.vocab_size == tokenizer.vocab_size()
+    bos = tokenizer.tokens2ids(["<bos>"])[0]
+    eos = tokenizer.tokens2ids(["<eos>"])[0]
+    unk = tokenizer.tokens2ids(["<pad>"])[0]
+    configs = {}
+    configs['tokenizer'] = 'huggingface'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['model_path'] = tokenizer_path
+    configs['tokenizer_conf']['special_tokens'] = {}
+    configs['tokenizer_conf']['special_tokens']['<bos>'] = bos
+    configs['tokenizer_conf']['special_tokens']['<eos>'] = eos
+    configs['tokenizer_conf']['special_tokens']['<pad>'] = unk
+    return configs
 
 
 def wenet_llm_dataset_and_train_conf(config: Config) -> Dict:
@@ -26,6 +44,12 @@ def wenet_llm_dataset_and_train_conf(config: Config) -> Dict:
     configs['dataset_conf']['batch_conf']['batch_type'] = 'dynamic'
     configs['dataset_conf']['batch_conf']['max_frames_in_batch'] = 12000
 
+    configs['dataset_conf']['data_style'] = 'sft'
+    configs['dataset_conf']['data_style_conf'] = {}
+    configs['dataset_conf']['data_style_conf']['add_bos'] = True
+    configs['dataset_conf']['data_style_conf']['add_eos'] = True
+    configs['dataset_conf']['data_style_conf']['template'] = 'gemma'
+
     configs['grad_clip'] = 5
     configs['accum_grad'] = 4
     configs['max_epoch'] = 100
@@ -41,10 +65,11 @@ def wenet_llm_dataset_and_train_conf(config: Config) -> Dict:
     return configs
 
 
-def convert_to_wenet_yaml(config: Config, wenet_yaml_path: str):
+def convert_to_wenet_yaml(config: Config, wenet_yaml_path: str,
+                          tokenizer_path):
     configs = {}
+    configs.update(wenet_llm_tokenizer_conf(config, tokenizer_path))
     configs['output_dim'] = config.vocab_size
-
     configs['decoder'] = 'decoder_only'
     configs['decoder_conf'] = config.to_wenet_config()
     configs['decoder_conf']['dropout_rate'] = 0.0
@@ -158,8 +183,10 @@ def main():
 
     if model_size == '2b':
         config = gemma_config_for_2b()
+        args.gemma_tokenizer = 'google/gemma-2b'
     else:
         config = gemma_config_for_7b()
+        args.gemma_tokenizer = 'google/gemma-7b'
     os.makedirs(args.output_dir, exist_ok=True)
 
     wenet_ckpt_path = os.path.join(
@@ -173,6 +200,7 @@ def main():
     convert_to_wenet_yaml(
         config,
         wenet_yaml_path,
+        args.gemma_tokenizer,
     )
 
 

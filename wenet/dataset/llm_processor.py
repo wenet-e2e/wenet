@@ -3,12 +3,18 @@ from typing import Dict, List
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from wenet.LLM.pattern import WENET_LLM_PATTERN
-from wenet.text.base_tokenizer import BaseTokenizer
+from wenet.LLM.pattern import Pattern
+from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 from wenet.utils.common import IGNORE_ID
 
 
-def parse_sft(sample, tokenizer: BaseTokenizer, style='gemma'):
+def parse_sft(
+    sample,
+    tokenizer: HuggingFaceTokenizer,
+    template: Pattern,
+    add_bos: bool = True,
+    add_eos: bool = True,
+):
     """paser sft json line to tensor
        sample:
         {
@@ -20,31 +26,38 @@ def parse_sft(sample, tokenizer: BaseTokenizer, style='gemma'):
         }
     """
     sample = json.loads(sample)
-    chat_pattern = WENET_LLM_PATTERN[style]
+    chat_pattern = template
     input_ids = []
     output_mask = []
     system_text = sample.get('system', '')
-    if chat_pattern.system_format is not None:
-        system_text = chat_pattern.system_format.format(content=system_text)
+    if chat_pattern.system is not None:
+        if add_bos:
+            system_text = template.bos + system_text
+        system_text = chat_pattern.system.format(content=system_text)
+        if add_bos:
+            system_text = template.bos + system_text
         _, system_text_ids = tokenizer.tokenize(system_text)
         input_ids += system_text_ids
         output_mask += [0] * len(system_text_ids)
-    conversations = sample['conversation']
+    conversations = sample['conversations']
     assert isinstance(conversations, List)
-
-    for conversation in enumerate(conversations):
+    for conversation in conversations:
         human = conversation['human']
-        assistant = conversation['assistant']
-
-        human = chat_pattern.user_format.format(content=human)
-        assistant = chat_pattern.assistant_format.format(content=assistant)
-
+        human = chat_pattern.user.format(content=human)
         _, human_ids = tokenizer.tokenize(human)
-        _, assistant_ids = tokenizer.tokenize(assistant)
-
         input_ids += human_ids
-        input_ids += assistant_ids
-        output_mask += [0] * len(human_ids) + [1] * len(assistant_ids)
+        output_mask += [0] * len(human_ids)
+        if 'assistant' in conversation:
+            assistant = conversation['assistant']
+            assistant = chat_pattern.assistant.format(content=assistant)
+            _, assistant_ids = tokenizer.tokenize(assistant)
+            input_ids += assistant_ids
+            output_mask += [1] * len(assistant_ids)
+
+    if add_eos:
+        eos_id = tokenizer.tokens2ids([template.eos])
+        input_ids += eos_id
+        output_mask += [1]
 
     assert len(input_ids) == len(output_mask)
     input_ids_tensor = torch.tensor(input_ids)

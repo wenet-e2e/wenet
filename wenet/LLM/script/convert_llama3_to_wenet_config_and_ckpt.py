@@ -1,5 +1,6 @@
 import argparse
 import os
+from typing import Dict
 import torch
 import yaml
 
@@ -7,11 +8,39 @@ from wenet.LLM.script.config import (Config, llama3_config_for_70b,
                                      llama3_config_for_8b)
 from wenet.LLM.script.convert_gemma_to_wenet_config_and_ckpt import (
     wenet_llm_dataset_and_train_conf)
+from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 
 
-def convert_to_wenet_yaml(config: Config, wenet_yaml_path: str):
+def wenet_llm_tokenizer_conf(config: Config, tokenizer_path: str) -> Dict:
+    tokenizer = HuggingFaceTokenizer(tokenizer_path)
+    assert config.vocab_size == tokenizer.vocab_size()
+    # "<|reserved_special_token_0|>",
+    # "<|reserved_special_token_1|>",
+    # "<|reserved_special_token_2|>",
+    # "<|reserved_special_token_3|>",
+    shi = tokenizer.tokens2ids(["<|start_header_id|>"])[0]
+    ehi = tokenizer.tokens2ids(["<|end_header_id|>"])[0]
+    bos = tokenizer.tokens2ids(["<|begin_of_text|>"])[0]
+    eos = tokenizer.tokens2ids(["<|end_of_text|>"])[0]
+    eoti = tokenizer.tokens2ids(["<|eot_id|>|"])[0]
+    configs = {}
+    configs['tokenizer'] = 'huggingface'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['model_path'] = tokenizer_path
+    configs['tokenizer_conf']['special_tokens'] = {}
+    configs['tokenizer_conf']['special_tokens']['<|begin_of_text|>'] = bos
+    configs['tokenizer_conf']['special_tokens']['<|end_of_text|>'] = eos
+    configs['tokenizer_conf']['special_tokens']['<|eot_id|>'] = eoti
+    configs['tokenizer_conf']['special_tokens']['<|start_header_id|>'] = shi
+    configs['tokenizer_conf']['special_tokens']['<|end_header_id|>'] = ehi
+    return configs
+
+
+def convert_to_wenet_yaml(config: Config, wenet_yaml_path: str,
+                          tokenizer_path: str):
     configs = {}
     configs['output_dim'] = config.vocab_size
+    configs.update(wenet_llm_tokenizer_conf(config, tokenizer_path))
 
     configs['decoder'] = 'decoder_only'
     configs['decoder_conf'] = config.to_wenet_config()
@@ -29,6 +58,7 @@ def convert_to_wenet_yaml(config: Config, wenet_yaml_path: str):
     configs['model_conf']['length_normalized_loss'] = False
 
     configs.update(wenet_llm_dataset_and_train_conf(config))
+    configs['dataset_conf']['data_style_conf']['template'] = 'llama3'
     with open(wenet_yaml_path, '+w') as f:
         f.write(yaml.dump(configs))
         f.flush()
@@ -113,8 +143,10 @@ def main():
 
     if model_size == '8b':
         config = llama3_config_for_8b()
+        args.llama3_tokenizer = 'meta-llama/Meta-Llama-3-8B'
     else:
         config = llama3_config_for_70b()
+        args.llama3_tokenizer = 'meta-llama/Meta-Llama-3-70B'
     os.makedirs(args.output_dir, exist_ok=True)
 
     wenet_ckpt_path = os.path.join(
@@ -129,6 +161,7 @@ def main():
     convert_to_wenet_yaml(
         config,
         wenet_yaml_path,
+        args.llama3_tokenizer,
     )
 
 

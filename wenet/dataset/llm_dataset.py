@@ -1,8 +1,10 @@
 from functools import partial
 import sys
+from wenet.LLM.pattern import WENET_LLM_PATTERN
 from wenet.dataset.datapipes import (WenetRawDatasetSource)
 from wenet.dataset import llm_processor
 from wenet.text.base_tokenizer import BaseTokenizer
+from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 
 
 def Dataset(data_type,
@@ -44,11 +46,20 @@ def Dataset(data_type,
 
     data_style = conf.get('style', 'sft')
     assert data_style in ['pretrain', 'sft']
-    data_style_conf = conf.get('style_pattern', 'gemma')
-    dataset = dataset.map(
-        partial(llm_processor.parse_sft,
+    assert isinstance(tokenizer, HuggingFaceTokenizer)
+    if data_style == 'sft':
+        style_conf = conf.get('data_style_conf', {})
+        template = WENET_LLM_PATTERN[style_conf.get('chat_template', 'gemma')]
+        dataset = dataset.map(
+            partial(
+                llm_processor.parse_sft,
                 tokenizer=tokenizer,
-                style=data_style_conf))
+                template=template,
+                add_bos=style_conf.get('add_bos', True),
+                add_eos=style_conf.get('add_eos', True),
+            ))
+    else:
+        raise NotImplementedError('only support sft for now')
     shuffle = conf.get('shuffle', True)
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})
