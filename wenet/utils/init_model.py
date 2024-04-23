@@ -186,6 +186,8 @@ def init_model(args, configs):
 
     # Tie emb.weight to decoder.output_layer.weight
     if model.decoder.tie_word_embedding:
+        if not hasattr(args, 'jit'):
+            args.jit = True  # i.e. export onnx/jit/ipex
         model.decoder.tie_or_clone_weights(jit_mode=args.jit)
 
     return model, configs
