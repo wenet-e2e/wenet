@@ -28,7 +28,7 @@ def parse_sft(
     sample = json.loads(sample['line'])
     chat_pattern = template
     input_ids = []
-    output_mask = []
+    output_ids = []
     system_text = sample.get('system', '')
     if chat_pattern.system is not None:
         if add_bos:
@@ -38,7 +38,7 @@ def parse_sft(
             system_text = template.bos + system_text
         _, system_text_ids = tokenizer.tokenize(system_text)
         input_ids += system_text_ids
-        output_mask += [0] * len(system_text_ids)
+        output_ids += [IGNORE_ID] * len(system_text_ids)
     conversations = sample['conversation']
     assert isinstance(conversations, List)
     for conversation in conversations:
@@ -46,27 +46,23 @@ def parse_sft(
         human = chat_pattern.user.format(content=human)
         _, human_ids = tokenizer.tokenize(human)
         input_ids += human_ids
-        output_mask += [0] * len(human_ids)
+        output_ids += [IGNORE_ID] * len(human_ids)
         if 'assistant' in conversation:
             assistant = conversation['assistant']
             assistant = chat_pattern.assistant.format(content=assistant)
             _, assistant_ids = tokenizer.tokenize(assistant)
             input_ids += assistant_ids
-            output_mask += [1] * len(assistant_ids)
+            output_ids += [1] * len(assistant_ids)
 
     if add_eos:
         eos_id = tokenizer.tokens2ids([template.eos])
         input_ids += eos_id
-        output_mask += [1]
+        output_ids += [1]
 
-    assert len(input_ids) == len(output_mask)
-    input_ids_tensor = torch.tensor(input_ids)
-    output_mask_tensor = torch.tensor(output_mask)
-    output_ids_tensor = torch.where(output_mask_tensor == 0, IGNORE_ID,
-                                    input_ids_tensor)
+    assert len(input_ids) == len(output_ids)
     return {
-        'input_ids': input_ids_tensor,
-        'output_ids': output_ids_tensor,
+        'input_ids': torch.tensor(input_ids),
+        'output_ids': torch.tensor(output_ids),
     }
 
 
@@ -132,9 +128,7 @@ def padding(data: List[Dict]):
     feats_lengths = torch.tensor(
         [sample[i]['input_ids'].size(0) for i in order], dtype=torch.int32)
     sorted_feats = [sample[i]['input_ids'] for i in order]
-    sorted_labels = [
-        torch.tensor(sample[i]['output_ids'], dtype=torch.int64) for i in order
-    ]
+    sorted_labels = [sample[i]['output_ids'] for i in order]
     padded_feats = pad_sequence(sorted_feats,
                                 batch_first=True,
                                 padding_value=0)
@@ -146,5 +140,6 @@ def padding(data: List[Dict]):
         'feats': padded_feats,
         "target": padding_labels,
         "feats_lengths": feats_lengths,
+        "target_lengths": feats_lengths,
     }
     return batch

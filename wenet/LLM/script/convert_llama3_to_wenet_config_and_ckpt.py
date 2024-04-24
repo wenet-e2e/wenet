@@ -22,11 +22,11 @@ def wenet_llm_tokenizer_conf(config: Config, tokenizer_path: str) -> Dict:
     ehi = tokenizer.tokens2ids(["<|end_header_id|>"])[0]
     bos = tokenizer.tokens2ids(["<|begin_of_text|>"])[0]
     eos = tokenizer.tokens2ids(["<|end_of_text|>"])[0]
-    eoti = tokenizer.tokens2ids(["<|eot_id|>|"])[0]
+    eoti = tokenizer.tokens2ids(["<|eot_id|>"])[0]
     configs = {}
     configs['tokenizer'] = 'huggingface'
     configs['tokenizer_conf'] = {}
-    configs['tokenizer_conf']['model_path'] = tokenizer_path
+    configs['tokenizer_conf']['model'] = tokenizer_path
     configs['tokenizer_conf']['special_tokens'] = {}
     configs['tokenizer_conf']['special_tokens']['<|begin_of_text|>'] = bos
     configs['tokenizer_conf']['special_tokens']['<|end_of_text|>'] = eos

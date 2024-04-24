@@ -63,7 +63,6 @@ def Dataset(data_type,
     shuffle = conf.get('shuffle', True)
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})
-        print(conf, shuffle_conf)
         dataset = dataset.shuffle(buffer_size=shuffle_conf['shuffle_size'])
 
     sort = conf.get('sort', True)

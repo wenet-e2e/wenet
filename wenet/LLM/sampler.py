@@ -10,7 +10,7 @@ def sampler(
     top_ps: torch.Tensor,
     top_ks: torch.Tensor,
 ) -> torch.Tensor:
-    assert logits.ndim == 1
+    assert logits.size(1) == 1
     logits = logits.squeeze(1)  # (batch_size, vocab_size)
     if temperatures is None:
         return torch.argmax(logits, dim=-1).squeeze(dim=-1)

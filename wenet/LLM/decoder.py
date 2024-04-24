@@ -139,7 +139,8 @@ class DecoderOnly(torch.nn.Module):
                 xs, _, new_kv_cache, _ = layer(xs,
                                                att_mask,
                                                pos_emb,
-                                               att_cache=kv_caches[i])
+                                               att_cache=(kv_caches[i][0],
+                                                          kv_caches[i][1]))
                 new_kv_caches.append(new_kv_cache)
 
         return xs, new_kv_caches
@@ -148,7 +149,7 @@ class DecoderOnly(torch.nn.Module):
     def forward_layers_checkpointed(self, xs: torch.Tensor,
                                     att_mask: torch.Tensor,
                                     pos_emb: torch.Tensor) -> torch.Tensor:
-        for layer in self.encoders:
+        for layer in self.decoders:
             xs, _, _, _ = ckpt.checkpoint(layer.__call__, xs, att_mask,
                                           pos_emb)
         return xs

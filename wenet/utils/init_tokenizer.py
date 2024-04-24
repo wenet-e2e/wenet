@@ -50,7 +50,7 @@ def init_tokenizer(configs) -> BaseTokenizer:
             seg_dict=configs['tokenizer_conf']['seg_dict_path'])
     elif tokenizer_type == 'huggingface':
         tokenizer = HuggingFaceTokenizer(
-            model=configs['tokenizer_conf']['model_path'])
+            model=configs['tokenizer_conf']['model'])
     else:
         raise NotImplementedError
     logging.info("use {} tokenizer".format(configs["tokenizer"]))
