@@ -209,6 +209,8 @@ def init_model(args, configs):
     print(configs)
     # Trye to tie some weights
     if hasattr(model, 'tie_or_clone_weights'):
+        if not hasattr(args, 'jit'):
+            args.jit = True  # i.e. export onnx/jit/ipex
         model.tie_or_clone_weights(args.jit)
 
     if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:

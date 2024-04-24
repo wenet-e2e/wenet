@@ -201,6 +201,18 @@ class MultiHeadedAttention(nn.Module):
             #   non-trivial to calculate `next_cache_start` here.
             # new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
             new_cache = (k, v)
+        # for multi query or multi group attention
+        if self.h_kv != self.h and self.h_kv != 1:
+            k = torch.repeat_interleave(
+                k,
+                self.h // self.h_kv,
+                dim=-3,
+            )
+            v = torch.repeat_interleave(
+                v,
+                self.h // self.h_kv,
+                dim=-3,
+            )
         return k, v, new_cache
 
     def forward(
@@ -244,19 +256,6 @@ class MultiHeadedAttention(nn.Module):
         """
         q, k, v = self.forward_qkv(query, key, value)
         k, v, new_cache = self._update_kv_and_cache(k, v, cache)
-
-        # for multi query or multi group attention
-        if self.h_kv != self.h:
-            k = torch.repeat_interleave(
-                k,
-                self.h // self.h_kv,
-                dim=-3,
-            )
-            v = torch.repeat_interleave(
-                v,
-                self.h // self.h_kv,
-                dim=-3,
-            )
 
         if not self.use_sdpa:
             scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
@@ -364,19 +363,6 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
         k, v, new_cache = self._update_kv_and_cache(k, v, cache)
 
-        # for multi query or multi groups attention
-        if self.h_kv != self.h:
-            k = torch.repeat_interleave(
-                k,
-                self.h // self.h_kv,
-                dim=-3,
-            )
-            v = torch.repeat_interleave(
-                v,
-                self.h // self.h_kv,
-                dim=-3,
-            )
-
         n_batch_pos = pos_emb.size(0)
         p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
         p = p.transpose(1, 2)  # (batch, head, time1, d_k)
@@ -458,9 +444,8 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
         else:
             q, k, v = self.forward_qkv(query, key, value)
         new_cache = (k, v) if not self.training else cache
-
         # for multi query or multi groups attention
-        if self.h_kv != self.h:
+        if self.h_kv != self.h and self.h_kv != 1:
             k = torch.repeat_interleave(
                 k,
                 self.h // self.h_kv,
@@ -471,7 +456,6 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
                 self.h // self.h_kv,
                 dim=-3,
             )
-
         B = query.size(0)
         Beams = 1
         if B != k.size(0):
@@ -646,18 +630,6 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         k = WENET_APPLY_ROTARY_EMB[self.style](k, pos_emb)
         # see above
         k, v, new_cache = self._update_kv_and_cache(k, v, cache)
-
-        if self.h_kv != self.h:
-            k = torch.repeat_interleave(
-                k,
-                self.h // self.h_kv,
-                dim=1,
-            )
-            v = torch.repeat_interleave(
-                v,
-                self.h // self.h_kv,
-                dim=1,
-            )
 
         if not self.use_sdpa:
             scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
