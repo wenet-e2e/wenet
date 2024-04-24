@@ -25,7 +25,7 @@ def parse_sft(
             }]
         }
     """
-    sample = json.loads(sample)
+    sample = json.loads(sample['line'])
     chat_pattern = template
     input_ids = []
     output_mask = []
@@ -39,7 +39,7 @@ def parse_sft(
         _, system_text_ids = tokenizer.tokenize(system_text)
         input_ids += system_text_ids
         output_mask += [0] * len(system_text_ids)
-    conversations = sample['conversations']
+    conversations = sample['conversation']
     assert isinstance(conversations, List)
     for conversation in conversations:
         human = conversation['human']
@@ -148,22 +148,3 @@ def padding(data: List[Dict]):
         "feats_lengths": feats_lengths,
     }
     return batch
-
-
-class DynamicBatchWindow:
-
-    def __init__(self, max_tokens_in_batch=22000):
-        self.longest_tokens = 0
-        self.max_token_in_batch = max_tokens_in_batch
-
-    def __call__(self, sample, buffer_size):
-        assert isinstance(sample, dict)
-        assert 'input_ids' in sample
-        assert isinstance(sample['input_ids'], torch.Tensor)
-        new_tokens = sample['input_ids'].size(0)
-        self.longest_tokens = max(self.longest_frames, new_tokens)
-        frames_after_padding = self.longest_frames * (buffer_size + 1)
-        if frames_after_padding > self.max_token_in_batch:
-            self.longest_frames = new_tokens
-            return True
-        return False

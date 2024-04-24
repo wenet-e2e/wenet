@@ -2,7 +2,7 @@ from functools import partial
 import sys
 from wenet.LLM.pattern import WENET_LLM_PATTERN
 from wenet.dataset.datapipes import (WenetRawDatasetSource)
-from wenet.dataset import llm_processor
+from wenet.dataset import (processor, llm_processor)
 from wenet.text.base_tokenizer import BaseTokenizer
 from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 
@@ -63,6 +63,7 @@ def Dataset(data_type,
     shuffle = conf.get('shuffle', True)
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})
+        print(conf, shuffle_conf)
         dataset = dataset.shuffle(buffer_size=shuffle_conf['shuffle_size'])
 
     sort = conf.get('sort', True)
@@ -90,12 +91,14 @@ def Dataset(data_type,
             llm_processor.input_length_fn,
             batch_conf['bucket_boundaries'],
             batch_conf['bucket_batch_sizes'],
-            wrapper_class=llm_processor.padding)
-    else:
-        max_tokens_in_batch = batch_conf.get('max_tokens_in_batch', 12000)
-        dataset = dataset.dynamic_batch(
-            llm_processor.DynamicBatchWindow(max_tokens_in_batch),
             wrapper_class=llm_processor.padding,
+        )
+    else:
+        max_tokens_in_batch = batch_conf.get('max_tokens_in_batch', 50000)
+        dataset = dataset.dynamic_batch(
+            processor.DynamicBatchWindow(max_tokens_in_batch),
+            wrapper_class=llm_processor.padding,
+            elem_size_fn=llm_processor.input_length_fn,
         )
 
     return dataset

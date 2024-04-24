@@ -39,7 +39,6 @@ from deepspeed.runtime.zero.stage3 import (
     estimate_zero3_model_states_mem_needs_all_live)
 from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
-from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
 from wenet.utils.common import (StepTimer, get_nested_attribute, lrs_to_str,
                                 tensor_to_scalar)
@@ -48,6 +47,7 @@ from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
                                     wenet_fsdp_wrap_policy)
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
+from wenet.utils.init_dataset import init_dataset
 
 
 def add_model_args(parser):
@@ -335,13 +335,18 @@ def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
     cv_conf['list_shuffle'] = False
 
     configs['vocab_size'] = tokenizer.vocab_size()
-    train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
-                            train_conf, True)
-    cv_dataset = Dataset(args.data_type,
-                         args.cv_data,
-                         tokenizer,
-                         cv_conf,
-                         partition=False)
+    train_dataset = init_dataset(args.data_type,
+                                 args.train_data,
+                                 tokenizer,
+                                 train_conf,
+                                 True,
+                                 dataset_type=configs['dataset'])
+    cv_dataset = init_dataset(args.data_type,
+                              args.cv_data,
+                              tokenizer,
+                              cv_conf,
+                              partition=False,
+                              dataset_type=configs['dataset'])
 
     # NOTE(xcsong): Why we prefer persistent_workers=True ?
     #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110
