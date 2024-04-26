@@ -1,4 +1,3 @@
-import json
 from typing import Dict, List
 
 import torch
@@ -15,24 +14,26 @@ def parse_sft(
     add_bos: bool = True,
     add_eos: bool = True,
 ):
-    """paser sft json line to tensor
-       sample:
-        {
-            'system': 'you are a helpful ...',
-            "conversation": [{
-                'human': '...',
-                'assistant': '...'
-            }]
-        }
+    """Paser sft json line to tensor
+
+        Args:
+            sample:
+            {
+                'system': 'you are a helpful ...',
+                "conversation": [{
+                    'human': '...',
+                    'assistant': '...'
+                }]
+            }
+
+        Returns:
+            {input_ids, output_ids}
     """
-    sample = json.loads(sample['line'])
     chat_pattern = template
     input_ids = []
     output_ids = []
     system_text = sample.get('system', '')
     if chat_pattern.system is not None:
-        if add_bos:
-            system_text = template.bos + system_text
         system_text = chat_pattern.system.format(content=system_text)
         if add_bos:
             system_text = template.bos + system_text
@@ -52,17 +53,44 @@ def parse_sft(
             assistant = chat_pattern.assistant.format(content=assistant)
             _, assistant_ids = tokenizer.tokenize(assistant)
             input_ids += assistant_ids
-            output_ids += [1] * len(assistant_ids)
+            output_ids += assistant_ids
 
     if add_eos:
         eos_id = tokenizer.tokens2ids([template.eos])
         input_ids += eos_id
-        output_ids += [1]
+        output_ids += eos_id
 
     assert len(input_ids) == len(output_ids)
     return {
         'input_ids': torch.tensor(input_ids),
         'output_ids': torch.tensor(output_ids),
+    }
+
+
+def parse_pretrain(sample,
+                   tokenizer: HuggingFaceTokenizer,
+                   template: Pattern,
+                   add_bos: bool = True,
+                   add_eos: bool = False):
+    """ Parse text from json line
+
+        Args:
+            sample: str, str is a json line has txt
+
+        Returns:
+            {input_ids, output_ids}
+    """
+    assert 'text' in sample
+    text = sample['text']
+    _, input_ids = tokenizer.tokenize(text)
+    if add_bos:
+        input_ids = [template.bos] + input_ids
+    if add_eos:
+        input_ids = input_ids + [template.eos]
+
+    return {
+        'input_ids': torch.tensor(input_ids),
+        'output_ids': torch.tensor(input_ids),
     }
 
 

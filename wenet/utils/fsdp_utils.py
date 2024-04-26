@@ -92,7 +92,7 @@ def check_gradient_checkpoint(model):
         if model.decoder.gradient_checkpointing:
             model.decoder.gradient_checkpointing = False
             ckpt_laye_types += list(WENET_DECODER_LAYERS_CLASSES.values())
-            if isinstance(model.decoder, 'DecoderOnly'):
+            if isinstance(model.decoder, DecoderOnly):
                 ckpt_laye_types += [DecoderOnly]
     return tuple(ckpt_laye_types)
 

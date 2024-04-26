@@ -43,7 +43,7 @@ class CausalLM(torch.nn.Module):
         self.tie_word_embedding = tie_word_embedding
         self.ignore_id = ignore_id
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward(
         self,
         batch: dict,

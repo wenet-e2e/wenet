@@ -797,8 +797,8 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             steps_per_second = timer.steps_per_second(timer_step)
             log_str += 'steps/sec {:.1f}| '.format(steps_per_second)
         log_str += 'Batch {}/{} loss {:.6f} '.format(
-            epoch,
-            batch_idx + 1 if 'save_interval' not in info_dict else step + 1,
+            epoch, batch_idx + 1 if 'save_interval' not in info_dict else
+            (step + 1) * accum_grad,
             tensor_to_scalar(loss_dict['loss']) * accum_grad)
         for name, value in loss_dict.items():
             if name != 'loss' and value is not None:

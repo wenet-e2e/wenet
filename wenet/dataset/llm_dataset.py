@@ -40,16 +40,18 @@ def Dataset(data_type,
                                         shuffle=list_shuffle,
                                         shuffle_size=list_shuffle_size,
                                         cycle=cycle)
+        dataset = dataset.map(processor.parse_json)
 
     else:
         raise NotImplementedError('only support jsonl for now')
 
+    # TODO: DPO etc
     data_style = conf.get('style', 'sft')
     assert data_style in ['pretrain', 'sft']
     assert isinstance(tokenizer, HuggingFaceTokenizer)
+    style_conf = conf.get('data_style_conf', {})
+    template = WENET_LLM_PATTERN[style_conf.get('template', 'gemma')]
     if data_style == 'sft':
-        style_conf = conf.get('data_style_conf', {})
-        template = WENET_LLM_PATTERN[style_conf.get('chat_template', 'gemma')]
         dataset = dataset.map(
             partial(
                 llm_processor.parse_sft,
@@ -59,7 +61,14 @@ def Dataset(data_type,
                 add_eos=style_conf.get('add_eos', True),
             ))
     else:
-        raise NotImplementedError('only support sft for now')
+        dataset = dataset.map(
+            partial(
+                llm_processor.parse_pretrain,
+                tokenizer=tokenizer,
+                template=template,
+                add_bos=style_conf.get('add_bos', True),
+                add_eos=style_conf.get('add_eos', True),
+            ))
     shuffle = conf.get('shuffle', True)
     if shuffle:
         shuffle_conf = conf.get('shuffle_conf', {})
@@ -70,7 +79,7 @@ def Dataset(data_type,
         sort_conf = conf.get('sort_conf', {})
         dataset = dataset.sort(buffer_size=sort_conf['sort_size'],
                                key_func=llm_processor.sort_by_input)
-    shift = conf.get('shif', True)
+    shift = conf.get('shift', True)
     if shift:
         dataset = dataset.map(llm_processor.shift)
     batch_conf = conf.get('batch_conf', {})
