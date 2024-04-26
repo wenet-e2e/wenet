@@ -32,13 +32,13 @@ namespace wenet {
 namespace beast = boost::beast;          // from <boost/beast.hpp>
 namespace http = beast::http;            // from <boost/beast/http.hpp>
 namespace websocket = beast::websocket;  // from <boost/beast/websocket.hpp>
-namespace asio = boost::asio;            // from <boost/asio.hpp>
+namespace asio = boost::asio;            // from <boost/asio.hpp> or
 using tcp = boost::asio::ip::tcp;        // from <boost/asio/ip/tcp.hpp>
 
 class WebSocketClient {
  public:
   WebSocketClient(const std::string& host, int port);
-
+  int sample_rate_;
   void SendTextData(const std::string& data);
   void SendBinaryData(const void* data, size_t size);
   void ReadLoopFunc();
@@ -47,6 +47,7 @@ class WebSocketClient {
   void SendStartSignal();
   void SendEndSignal();
   void set_nbest(int nbest) { nbest_ = nbest; }
+  void set_sr(int sr) { sample_rate_ = sr; }
   void set_continuous_decoding(bool continuous_decoding) {
     continuous_decoding_ = continuous_decoding;
   }
