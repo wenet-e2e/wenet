@@ -781,7 +781,7 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
         return
 
     # TRAIN & CV, Shell log (stdout)
-    if (batch_idx + 1) % log_interval == 0:
+    if (step + 1) % log_interval == 0:
         log_str = '{} | '.format(tag)
         if timer is not None:
             timer_step = step
