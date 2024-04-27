@@ -1,5 +1,7 @@
 import dataclasses
-from typing import Dict, Union
+from typing import Dict, Optional, Union
+
+import yaml
 
 
 # https://github.com/google/gemma_pytorch/blob/main/gemma/config.py#L32
@@ -51,6 +53,106 @@ class Config:
         configs['rope_style'] = self.rope_style
         configs['rms_norm_offset'] = self.rms_norm_offset
         return configs
+
+
+def wenet_llm_tokenizer_conf(config: Config, tokenizer_path: str,
+                             special_tokens: Dict) -> Dict:
+    configs = {}
+    configs['tokenizer'] = 'huggingface'
+    configs['tokenizer_conf'] = {}
+    configs['tokenizer_conf']['model'] = tokenizer_path
+    configs['tokenizer_conf']['special_tokens'] = special_tokens
+    return configs
+
+
+def wenet_llm_dataset_and_train_conf(config: Config,
+                                     template: str = 'gemma') -> Dict:
+    configs = {}
+    configs['dataset'] = "llm"
+    configs['dataset_conf'] = {}
+    configs['dataset_conf']['filter_conf'] = {}
+    configs['dataset_conf']['filter_conf'][
+        'token_max_length'] = config.max_position_embeddings
+    configs['dataset_conf']['filter_conf']['token_min_length'] = 1
+    configs['dataset_conf']['shuffle'] = True
+    configs['dataset_conf']['shuffle_conf'] = {}
+    configs['dataset_conf']['shuffle_conf']['shuffle_size'] = 1500
+    configs['dataset_conf']['shuffle_list'] = True
+    configs['dataset_conf']['shuffle_list_conf'] = {}
+    configs['dataset_conf']['shuffle_list_conf']['shuffle_size'] = 15000
+    configs['dataset_conf']['sort'] = True
+    configs['dataset_conf']['sort_conf'] = {}
+    configs['dataset_conf']['sort_conf']['sort_size'] = 500
+    configs['dataset_conf']['batch_conf'] = {}
+    configs['dataset_conf']['batch_conf']['batch_type'] = 'dynamic'
+    configs['dataset_conf']['batch_conf']['max_frames_in_batch'] = 12000
+
+    configs['dataset_conf']['data_style'] = 'sft'
+    configs['dataset_conf']['data_style_conf'] = {}
+    configs['dataset_conf']['data_style_conf']['add_bos'] = True
+    configs['dataset_conf']['data_style_conf']['add_eos'] = True
+    configs['dataset_conf']['data_style_conf']['template'] = template
+    configs['dataset_conf']['shift'] = True
+
+    configs['grad_clip'] = 5
+    configs['accum_grad'] = 4
+    configs['max_epoch'] = 100
+    configs['log_interval'] = 100
+    configs['save_interval'] = 3000
+
+    configs['optim'] = "adam"
+    configs['optim_conf'] = {}
+    configs['optim_conf']['lr'] = 0.0005
+    configs['scheduler'] = "warmuplr"
+    configs['scheduler_conf'] = {}
+    configs['scheduler_conf']['warmup_steps'] = 12000
+    return configs
+
+
+def wenet_decoderonly_conf(config: Config):
+    configs = {}
+    configs['decoder'] = 'decoder_only'
+    configs['decoder_conf'] = config.to_wenet_config()
+    configs['decoder_conf']['dropout_rate'] = 0.0
+    configs['decoder_conf']['attention_dropout_rate'] = 0.0
+    configs['decoder_conf']['positional_dropout_rate'] = 0.0
+    configs['decoder_conf']['gradient_checkpointing'] = True
+    configs['decoder_conf']['normalize_before'] = True
+    configs['decoder_conf']['use_sdpa'] = True
+    return configs
+
+
+def wenet_model_conf(config: Config, tie_word_embedding: bool = True):
+    configs = {}
+    configs['output_dim'] = config.vocab_size
+    configs['model'] = "causal_lm"
+    configs['model_conf'] = {}
+    configs['model_conf']['linear_bias'] = False
+    configs['model_conf']['tie_word_embedding'] = tie_word_embedding
+    configs['model_conf']['lsm_weight'] = 0.1
+    configs['model_conf']['length_normalized_loss'] = False
+    return configs
+
+
+def convert_to_wenet_yaml(config: Config,
+                          wenet_yaml_path: str,
+                          tokenizer_path,
+                          template: str = 'gemma',
+                          tie_word_embedding: bool = True,
+                          special_tokens: Optional[Dict] = None):
+    configs = {}
+    configs.update(
+        wenet_llm_tokenizer_conf(config, tokenizer_path, special_tokens))
+    configs.update(wenet_decoderonly_conf(config))
+    configs.update(
+        wenet_model_conf(config, tie_word_embedding=tie_word_embedding))
+    configs.update(wenet_llm_dataset_and_train_conf(config, template=template))
+
+    with open(wenet_yaml_path, '+w') as f:
+        f.write(yaml.dump(configs))
+        f.flush()
+
+    print(configs)
 
 
 def gemma_config_for_7b() -> Config:

@@ -82,6 +82,10 @@ def Dataset(data_type,
     shift = conf.get('shift', True)
     if shift:
         dataset = dataset.map(llm_processor.shift)
+
+    filter_conf = conf.get('filter_conf', {})
+    dataset = dataset.filter(partial(llm_processor.filter, **filter_conf))
+
     batch_conf = conf.get('batch_conf', {})
     batch_type = batch_conf.get('batch_type', 'static')
     assert batch_type in ['static', 'bucket', 'dynamic']
