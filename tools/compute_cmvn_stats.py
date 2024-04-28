@@ -11,6 +11,7 @@ import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 from torch.utils.data import Dataset, DataLoader
+import torch.multiprocessing as mp
 
 
 class CollateFunc(object):
@@ -107,12 +108,14 @@ if __name__ == '__main__':
     collate_func = CollateFunc(feat_dim, resample_rate)
     dataset = AudioDataset(args.in_scp)
     batch_size = 20
+    mp_context = mp.get_context("spawn") if args.num_workers > 0 else None
     data_loader = DataLoader(dataset,
                              batch_size=batch_size,
                              shuffle=True,
                              sampler=None,
                              num_workers=args.num_workers,
-                             collate_fn=collate_func)
+                             collate_fn=collate_func,
+                             multiprocessing_context=mp_context)
 
     with torch.no_grad():
         all_number = 0
