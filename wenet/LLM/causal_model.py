@@ -80,8 +80,8 @@ class CausalLM(torch.nn.Module):
             self.out.weight = self.embed.weight
             # TODO(Mddct): whether to deal bias for other llm model
 
-    @torch.jit.ignore(drop=True)
-    @torch.no_grad()
+    @torch.jit.unused
+    @torch.inference_mode()
     def generate(
         self,
         prompts_tokens: List[List[int]],
@@ -113,10 +113,12 @@ class CausalLM(torch.nn.Module):
         # prepare inputs
         token_ids_tensor = torch.full((batch_size, max_seq_len),
                                       IGNORE_ID,
-                                      dtype=torch.int64)
+                                      dtype=torch.int64,
+                                      device=device)
         input_token_ids_tensor = torch.full((batch_size, min_prompt_len),
                                             IGNORE_ID,
-                                            dtype=torch.int64)
+                                            dtype=torch.int64,
+                                            device=device)
         # right padding
         for i, p in enumerate(prompts_tokens):
             token_ids_tensor[i, :len(p)] = torch.tensor(p)
@@ -131,7 +133,8 @@ class CausalLM(torch.nn.Module):
                                  dtype=torch.bool)
         mask_tensor = torch.tril(mask_tensor).to(device)
         curr_mask_tensor = mask_tensor.index_select(2, input_positions_tensor)
-        att_mask = curr_mask_tensor.squeeze(1)
+        att_mask = curr_mask_tensor.squeeze(
+            1)[:, :min_prompt_len, :min_prompt_len]
         output_positions_tensor = torch.LongTensor([min_prompt_len - 1
                                                     ]).to(device)
         temperatures_tensor = None if not temperature else torch.FloatTensor(
@@ -142,15 +145,17 @@ class CausalLM(torch.nn.Module):
                                     dtype=torch.int64).to(device)
 
         input_token_embeding = self.embed(input_token_ids_tensor)
-        input_positions_tensor = torch.tensor([0] *
-                                              len(prompts_tokens)).to(device)
+        offset = torch.tensor([0] * len(prompts_tokens)).to(device)
+        input_offset = offset
         # Prefill up to min_prompt_len tokens, then treat other prefill as
         # decode and ignore output.
         for i in range(max_seq_len - min_prompt_len):
-            decoder_out, kv_caches, = self.decoder(input_token_embeding,
-                                                   att_mask,
-                                                   input_positions_tensor,
-                                                   kv_caches)
+            decoder_out, kv_caches, = self.decoder(
+                input_token_embeding,
+                att_mask,
+                input_offset,
+                kv_caches,
+            )
             decoder_out = self.out(decoder_out)
             decoder_out = decoder_out.index_select(1, output_positions_tensor)
             next_token_ids = sampler(
@@ -169,12 +174,16 @@ class CausalLM(torch.nn.Module):
 
             input_token_ids_tensor = output_token_ids
             input_token_embeding = self.embed(input_token_ids_tensor)
+
             input_positions_tensor = output_index.unsqueeze(dim=-1)
             curr_mask_tensor = mask_tensor.index_select(
                 2, input_positions_tensor)
-            att_mask = curr_mask_tensor.squeeze(1)
+            att_mask = curr_mask_tensor.squeeze(1)[:, :output_index +
+                                                   1, :output_index + 1]
+
             output_positions_tensor = torch.tensor(
                 0, dtype=torch.int64).to(device)
+            input_offset = offset + output_index.unsqueeze(-1)
             output_index = output_index + 1
 
         token_ids = token_ids_tensor.tolist()
