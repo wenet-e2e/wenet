@@ -37,6 +37,9 @@ class Config:
     # The dtype of the weights.
     dtype: str = 'bfloat16'
 
+    # scale embed
+    scale_embed: bool = True
+
     def to_wenet_config(self) -> Dict:
         configs = {}
         configs['max_position_embeding'] = self.max_position_embeddings
@@ -52,6 +55,7 @@ class Config:
         configs['gelu_approximate'] = self.gelu_approximate
         configs['rope_style'] = self.rope_style
         configs['rms_norm_offset'] = self.rms_norm_offset
+        configs['scale_embed'] = self.scale_embed
         return configs
 
 
@@ -181,7 +185,8 @@ def llama3_config_for_8b() -> Config:
                   rope_theta=500000.0,
                   activation_type='swish',
                   rms_norm_offset=False,
-                  rope_style='llama')
+                  rope_style='llama',
+                  scale_embed=False)
 
 
 def llama3_config_for_70b() -> Config:
@@ -196,4 +201,5 @@ def llama3_config_for_70b() -> Config:
                   rope_theta=500000.0,
                   activation_type='swish',
                   rms_norm_offset=False,
-                  rope_style='llama')
+                  rope_style='llama',
+                  scale_embed=False)

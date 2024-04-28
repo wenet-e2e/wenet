@@ -24,7 +24,7 @@ gemma = Pattern(
 )
 
 llama3 = Pattern(
-    '<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>',
+    '<|start_header_id|>system<|end_header_id|>\n\n{content}<|eot_id|>',
     '<|start_header_id|>user<|end_header_id|>\n\n{content}<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n',
     '{content}<|eot_id|>',
     '<|begin_of_text|>',

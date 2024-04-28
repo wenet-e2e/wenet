@@ -205,13 +205,15 @@ class RopePositionalEncoding(PositionalEncoding):
                  head_dim: int,
                  dropout_rate: float,
                  max_len: int = 1500,
-                 rope_theta=10000.0):
+                 rope_theta=10000.0,
+                 scale: bool = True):
         super().__init__(d_model, dropout_rate=dropout_rate, max_len=max_len)
         delattr(self, 'pe')
         self.max_len = max_len * 2
         pe = precompute_freqs_cis(head_dim, self.max_len, rope_theta)
         self.register_buffer("pe", torch.view_as_real(pe.unsqueeze(0)))
         self.dropout_rate = dropout_rate
+        self.scale = scale
 
     def forward(
         self,
@@ -222,8 +224,8 @@ class RopePositionalEncoding(PositionalEncoding):
         pos_emb = self.position_encoding(offset, x.size(1), True)
         pos_emb = pos_emb.unsqueeze(1)  # [1, 1, seq, head_dim//2]
         # NOTE(Mddct): some model don't scale
-        # TODO(Mddct): fix
-        x = x * self.xscale
+        if self.scale:
+            x = x * self.xscale
         return self.dropout(x), pos_emb
 
     def position_encoding(self,

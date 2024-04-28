@@ -42,6 +42,7 @@ class DecoderOnly(torch.nn.Module):
         gradient_checkpointing: bool = False,
         rope_theta: float = 10000.0,
         rope_style: str = 'google',
+        scale_embed: bool = True,
     ) -> None:
         super().__init__()
 
@@ -50,8 +51,9 @@ class DecoderOnly(torch.nn.Module):
             hidden_size,
             head_dim,
             max_len=max_position_embeding,
-            dropout_rate=dropout_rate,
-            rope_theta=rope_theta)
+            dropout_rate=positional_dropout_rate,
+            rope_theta=rope_theta,
+            scale=scale_embed)
         if activation_type == "gelu" and gelu_approximate is not None:
             activation = WENET_ACTIVATION_CLASSES['gelu'](
                 approximate=gelu_approximate)

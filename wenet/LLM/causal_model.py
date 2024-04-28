@@ -91,10 +91,10 @@ class CausalLM(torch.nn.Module):
         temperature: Union[float, None] = 0.95,
         top_p: float = 1.0,
         top_k: int = 100,
+        stop_toksn: Optional[List[int]] = None,
     ) -> List[List[int]]:
         """Generates responses for given prompts using Gemma model."""
         # If a single prompt is provided, treat it as a batch of 1.
-
         batch_size = len(prompts_tokens)
         min_prompt_len = min(len(p) for p in prompts_tokens)
         max_prompt_len = max(len(p) for p in prompts_tokens)
@@ -147,6 +147,13 @@ class CausalLM(torch.nn.Module):
         input_token_embeding = self.embed(input_token_ids_tensor)
         offset = torch.tensor([0] * len(prompts_tokens)).to(device)
         input_offset = offset
+
+        if stop_tokens is not None:
+            stop_tokens_tensor = torch.tensor(stop_tokens, device=device)
+        else:
+            stop_tokens_tensor = torch.tensor([IGNORE_ID],
+                                              device=device,
+                                              dtype=torch.int32)
         # Prefill up to min_prompt_len tokens, then treat other prefill as
         # decode and ignore output.
         for i in range(max_seq_len - min_prompt_len):

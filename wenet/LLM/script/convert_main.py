@@ -43,7 +43,7 @@ MODEL = {
     "llama3": {
         "8b": (llama3_config_for_8b(), 'meta-llama/Meta-Llama-3-8B'),
         "70b": (llama3_config_for_70b(), 'meta-llama/Meta-Llama-3-70B'),
-        "fn": llama3_convert_ckpt_fn,
+        "ckpt_fn": llama3_convert_ckpt_fn,
         'tie_word_embeding': False,
         'special_tokens_fn': llama3_special_tokens,
     },
