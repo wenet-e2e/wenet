@@ -222,7 +222,7 @@ class RopePositionalEncoding(PositionalEncoding):
                       torch.Tensor] = 0) -> Tuple[torch.Tensor, torch.Tensor]:
 
         pos_emb = self.position_encoding(offset, x.size(1), True)
-        pos_emb = pos_emb.unsqueeze(1)  # [1, 1, seq, head_dim//2]
+        pos_emb = pos_emb.unsqueeze(2)  # [1, 1, seq, head_dim//2]
         # NOTE(Mddct): some model don't scale
         if self.scale:
             x = x * self.xscale
