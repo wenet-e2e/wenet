@@ -162,7 +162,7 @@ def padding(data: List[Dict]):
                                 padding_value=0)
     padding_labels = pad_sequence(sorted_labels,
                                   batch_first=True,
-                                  padding_value=-1)
+                                  padding_value=IGNORE_ID)
 
     batch = {
         'feats': padded_feats,

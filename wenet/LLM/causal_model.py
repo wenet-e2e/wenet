@@ -51,7 +51,8 @@ class CausalLM(torch.nn.Module):
         target = batch['target'].to(device)
         text_length = batch['feats_lengths'].to(device)
 
-        mask = ~make_pad_mask(text_length, max_len=text.size(1))  # (B,1,L)
+        mask = ~make_pad_mask(text_length, max_len=text.size(1)).unsqueeze(
+            1)  # (B,1,L)
         causal_mask = subsequent_mask(
             mask.size(-1), device=mask.device).unsqueeze(0)  # (1,L,L)
         att_mask = causal_mask & mask  # (B, L, L)
@@ -64,7 +65,6 @@ class CausalLM(torch.nn.Module):
                           target,
                           ignore_label=self.ignore_id)
 
-        # TODO: ppl
         return {
             "loss": loss,
             "ppl": torch.exp(loss.detach()),
