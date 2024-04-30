@@ -83,7 +83,7 @@ class MultiHeadedAttention(nn.Module):
     def _forward_linearx(self,
                          name: str,
                          x: torch.Tensor,
-                         head_first=True) -> torch.Tensor:
+                         head_first: bool = True) -> torch.Tensor:
         assert x.ndim >= 3
         if name == 'query':
             x = self.linear_q(x)
