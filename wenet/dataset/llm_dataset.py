@@ -1,6 +1,6 @@
 from functools import partial
 import sys
-from wenet.LLM.pattern import WENET_LLM_PATTERN
+from wenet.LLM.template import WENET_LLM_Template
 from wenet.dataset.datapipes import (WenetRawDatasetSource)
 from wenet.dataset import (processor, llm_processor)
 from wenet.text.base_tokenizer import BaseTokenizer
@@ -50,7 +50,7 @@ def Dataset(data_type,
     assert data_style in ['pretrain', 'sft']
     assert isinstance(tokenizer, HuggingFaceTokenizer)
     style_conf = conf.get('data_style_conf', {})
-    template = WENET_LLM_PATTERN[style_conf.get('template', 'gemma')]
+    template = WENET_LLM_Template[style_conf.get('template', 'gemma')]
     if data_style == 'sft':
         dataset = dataset.map(
             partial(

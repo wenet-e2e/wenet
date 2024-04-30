@@ -2,7 +2,7 @@ from typing import Dict, List
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
-from wenet.LLM.pattern import Pattern
+from wenet.LLM.template import Template
 from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 from wenet.utils.common import IGNORE_ID
 
@@ -10,7 +10,7 @@ from wenet.utils.common import IGNORE_ID
 def parse_sft(
     sample,
     tokenizer: HuggingFaceTokenizer,
-    template: Pattern,
+    template: Template,
     add_bos: bool = True,
     add_eos: bool = True,
 ):
@@ -69,7 +69,7 @@ def parse_sft(
 
 def parse_pretrain(sample,
                    tokenizer: HuggingFaceTokenizer,
-                   template: Pattern,
+                   template: Template,
                    add_bos: bool = True,
                    add_eos: bool = False):
     """ Parse text from json line
