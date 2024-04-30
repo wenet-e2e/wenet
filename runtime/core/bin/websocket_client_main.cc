@@ -22,18 +22,19 @@ DEFINE_int32(port, 10086, "port of websocket server");
 DEFINE_int32(nbest, 1, "n-best of decode result");
 DEFINE_string(wav_path, "", "test wav file path");
 DEFINE_bool(continuous_decoding, false, "continuous decoding mode");
+DEFINE_int32(sr, 16000, "audio sample rate");
 
 int main(int argc, char* argv[]) {
   gflags::ParseCommandLineFlags(&argc, &argv, false);
   google::InitGoogleLogging(argv[0]);
   wenet::WebSocketClient client(FLAGS_hostname, FLAGS_port);
   client.set_nbest(FLAGS_nbest);
+  client.set_sr(FLAGS_sr);
   client.set_continuous_decoding(FLAGS_continuous_decoding);
   client.SendStartSignal();
 
   wenet::WavReader wav_reader(FLAGS_wav_path);
-  const int sample_rate = 16000;
-  // Only support 16K
+  int sample_rate = client.sample_rate_;
   CHECK_EQ(wav_reader.sample_rate(), sample_rate);
   const int num_samples = wav_reader.num_samples();
   // Send data every 0.5 second
