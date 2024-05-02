@@ -116,7 +116,7 @@ class MoEFFNLayer(torch.nn.Module):
             noisy_router = self.noisy_gate(xs)
             noisy_router = (
                 torch.randn_like(router) * F.softplus(noisy_router)
-             ) * self.training
+            ) * self.training
             router = router + noisy_router
         logits, selected_experts = torch.topk(
             router, self.n_expert_activated
