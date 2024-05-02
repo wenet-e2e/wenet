@@ -66,6 +66,8 @@ class MoEFFNLayer(torch.nn.Module):
 
     Modified from https://github.com/Lightning-AI/lit-gpt/pull/823
                   https://github.com/mistralai/mistral-src/blob/b46d6/moe_one_file_ref.py#L203-L219
+
+    Noisy-gate reference from https://arxiv.org/pdf/1701.06538.pdf
     Args:
         n_expert: number of expert.
         n_expert_activated: The actual number of experts used for each frame
@@ -112,7 +114,7 @@ class MoEFFNLayer(torch.nn.Module):
         router = self.gate(xs)  # (B*L, n_expert)
         if self.gate_type == 'noisy':
             noisy_router = self.noisy_gate(xs)
-            noisy_router = torch.randn_like(router) * F.softplus(noisy_router)
+            noisy_router = torch.randn_like(router) * F.softplus(noisy_router) * self.training
             router = router + noisy_router
         logits, selected_experts = torch.topk(
             router, self.n_expert_activated
