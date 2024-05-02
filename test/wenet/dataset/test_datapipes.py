@@ -2,6 +2,7 @@ import pytest
 import torch
 from torch.utils.data import datapipes
 from torch.utils.data.datapipes.iter import IterableWrapper
+import torch.multiprocessing as mp
 from functools import partial
 
 from wenet.dataset.datapipes import (RepeatDatapipe, SortDataPipe,
@@ -108,9 +109,11 @@ def test_dynamic_batch_datapipe(data_list):
         window_class=DynamicBatchWindow(max_frames_in_batch),
         wrapper_class=padding)
 
-    dataloader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=None,
-                                             num_workers=2)
+    dataloader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=None,
+        num_workers=2,
+        multiprocessing_context=mp.get_context("spawn"))
     for d in dataloader:
         assert d['feats'].size(1) <= max_frames_in_batch
 
