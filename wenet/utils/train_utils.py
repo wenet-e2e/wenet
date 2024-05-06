@@ -233,6 +233,7 @@ def init_distributed(args):
         dist.init_process_group(args.dist_backend)
     elif args.train_engint == "torch_fsdp":
         # use mesh in wrap_cuda_model
+        torch.cuda.set_device(local_rank)
         pass
     elif args.train_engine == "deepspeed":
         deepspeed.init_distributed(dist_backend=args.dist_backend)
