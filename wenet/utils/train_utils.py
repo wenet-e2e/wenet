@@ -207,12 +207,17 @@ def add_fsdp_args(parser):
         '--fsdp_sharding_strategy',
         default='zero2',
         # TODO(Mddct): pipeline and model parallel (3-D parallelism)
-        choices=['no_shard', 'model', 'zero2', 'zero3'],
+        choices=[
+            'no_shard', 'model', 'zero2', 'zero3', 'hsdp_zero3', 'hsdp_zero2'
+        ],
         help='Sharding strategy for FSDP. Choose from the following options:\n'
         '  - "no_shard": Equivalent to DistributedDataParallel (DDP).\n'
         '  - "model": WENET_ENC_DEC strategy, equivalent to DeepSpeed zero1.\n'
         '  - "zero2": SHARD_GRAD_OP strategy, equivalent to DeepSpeed zero2.\n'
         '  - "zero3": FULL_SHARD strategy, equivalent to DeepSpeed zero3.\n'
+        '  - "hsdp_model": one host sharded and replica across hosts.\n'
+        '  - "hsdp_zero2": one host sharded and replica across hosts.\n'
+        '  - "hsdp_zero3": one host sharded and replica across hosts.\n'
         'For more information, refer to the FSDP API documentation.')
     return parser
 
@@ -403,7 +408,7 @@ def wrap_cuda_model(args, model, configs=None):
     elif args.train_engine == 'torch_fsdp':
         device = torch.device("cuda")
         assert configs is not None
-        # 2x2 device mesh, set up NCCL communicatitor automaticly
+        # 2x2 device mesh, set up NCCL communicatitor automatically
         device_mesh = init_device_mesh(
             "cuda", (world_size // local_world_size, local_world_size))
         mixed_precision_dtype = {
@@ -417,6 +422,9 @@ def wrap_cuda_model(args, model, configs=None):
             'zero2': ShardingStrategy.SHARD_GRAD_OP,
             'zero3': ShardingStrategy.FULL_SHARD,
             'no_shard': ShardingStrategy.NO_SHARD,
+            'hsdp_model': ShardingStrategy._HYBRID_SHARD_ZERO2,
+            'hsdp_zero2': ShardingStrategy._HYBRID_SHARD_ZERO2,
+            'hsdp_zero3': ShardingStrategy.HYBRID_SHARD,
         }[args.fsdp_sharding_strategy]
         wrap_policy = wenet_fsdp_wrap_policy(mode=args.fsdp_sharding_strategy)
         layer_types = check_gradient_checkpoint(model)
