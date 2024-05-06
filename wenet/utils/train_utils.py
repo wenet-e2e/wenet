@@ -17,6 +17,8 @@ from contextlib import nullcontext
 import copy
 from typing import List, Optional
 
+from torch.distributed.device_mesh import init_device_mesh
+
 import deepspeed
 import json
 import logging
@@ -221,9 +223,12 @@ def init_distributed(args):
     rank = int(os.environ.get('RANK', 0))
     logging.info('training on multiple gpus, this gpu {}'.format(local_rank) +
                  ', rank {}, world_size {}'.format(rank, world_size))
-    if args.train_engine in ["torch_ddp", "torch_fsdp"]:
+    if args.train_engine == "torch_ddp":
         torch.cuda.set_device(local_rank)
         dist.init_process_group(args.dist_backend)
+    elif args.train_engint == "torch_fsdp":
+        # use mesh in wrap_cuda_model
+        pass
     elif args.train_engine == "deepspeed":
         deepspeed.init_distributed(dist_backend=args.dist_backend)
     else:
@@ -396,7 +401,11 @@ def wrap_cuda_model(args, model, configs=None):
         device = None  # Init device later
         pass  # Init DeepSpeed later
     elif args.train_engine == 'torch_fsdp':
+        device = torch.device("cuda")
         assert configs is not None
+        # 2x2 device mesh, set up NCCL communicatitor automaticly
+        device_mesh = init_device_mesh(
+            "cuda", (world_size // local_world_size, local_world_size))
         mixed_precision_dtype = {
             'fp32': torch.float32,
             "fp16": torch.float16,
@@ -428,9 +437,9 @@ def wrap_cuda_model(args, model, configs=None):
             # init_distributed is called (torch.cuda.set_device),
             # we should set device_id, see FSDP api
             device_id=torch.cuda.current_device(),
+            device_mesh=device_mesh,
         )
         apply_fsdp_checkpointing(model, layer_types)
-        device = torch.device("cuda")
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
     if args.train_engine in ["torch_fsdp", "torch_ddp"]:
