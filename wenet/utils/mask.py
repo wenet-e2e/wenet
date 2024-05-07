@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional
 import torch
 '''
 def subsequent_mask(
@@ -197,7 +198,8 @@ def add_optional_chunk_mask(xs: torch.Tensor,
     return chunk_masks
 
 
-def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
+def make_pad_mask(lengths: torch.Tensor,
+                  max_len: Optional[torch.Tensor] = None) -> torch.Tensor:
     """Make mask tensor containing indices of padded part.
 
     See description of make_non_pad_mask.
@@ -215,7 +217,8 @@ def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
                  [0, 0, 1, 1, 1]]
     """
     batch_size = lengths.size(0)
-    max_len = max_len if max_len > 0 else lengths.max().item()
+    if max_len is None:
+        max_len = torch.max(lengths)
     seq_range = torch.arange(0,
                              max_len,
                              dtype=torch.int64,
@@ -226,7 +229,8 @@ def make_pad_mask(lengths: torch.Tensor, max_len: int = 0) -> torch.Tensor:
     return mask
 
 
-def make_non_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
+def make_non_pad_mask(lengths: torch.Tensor,
+                      max_len: Optional[torch.Tensor] = None) -> torch.Tensor:
     """Make mask tensor containing indices of non-padded part.
 
     The sequences in a batch may have different lengths. To enable
@@ -251,7 +255,7 @@ def make_non_pad_mask(lengths: torch.Tensor) -> torch.Tensor:
                  [1, 1, 1, 0, 0],
                  [1, 1, 0, 0, 0]]
     """
-    return ~make_pad_mask(lengths)
+    return ~make_pad_mask(lengths, max_len)
 
 
 def mask_finished_scores(score: torch.Tensor,
