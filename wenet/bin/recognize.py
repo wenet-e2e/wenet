@@ -22,6 +22,7 @@ import os
 import torch
 import yaml
 from torch.utils.data import DataLoader
+import torch.multiprocessing as mp
 
 from wenet.dataset.dataset import Dataset
 from wenet.utils.config import override_config
@@ -222,9 +223,11 @@ def main():
                            test_conf,
                            partition=False)
 
+    mp_context = mp.get_context("spawn") if args.num_workers > 0 else None
     test_data_loader = DataLoader(test_dataset,
                                   batch_size=None,
-                                  num_workers=args.num_workers)
+                                  num_workers=args.num_workers,
+                                  multiprocessing_context=mp_context)
 
     # Init asr model from configs
     args.jit = False

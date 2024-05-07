@@ -282,7 +282,7 @@ class SanmEncoder(BaseEncoder):
             xs, _, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         return xs
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward_layers_checkpointed(self, xs: torch.Tensor,
                                     chunk_masks: torch.Tensor,
                                     pos_emb: torch.Tensor,
@@ -290,8 +290,12 @@ class SanmEncoder(BaseEncoder):
         for layer in self.encoders0:
             xs, _, _, _ = layer(xs, chunk_masks, pos_emb, mask_pad)
         for layer in self.encoders:
-            xs, _, _, _ = ckpt.checkpoint(layer.__call__, xs, chunk_masks,
-                                          pos_emb, mask_pad, use_reentrant=False)
+            xs, _, _, _ = ckpt.checkpoint(layer.__call__,
+                                          xs,
+                                          chunk_masks,
+                                          pos_emb,
+                                          mask_pad,
+                                          use_reentrant=False)
         return xs
 
 
@@ -471,7 +475,7 @@ class SanmDecoder(TransformerDecoder):
             x = layer(x)
         return x
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward_layers_checkpointed(self, x: torch.Tensor,
                                     tgt_mask: torch.Tensor,
                                     memory: torch.Tensor,
@@ -480,8 +484,12 @@ class SanmDecoder(TransformerDecoder):
             if i == 0:
                 x, _, _, _ = layer(x, tgt_mask, memory, memory_mask)
             else:
-                x, _, _, _ = ckpt.checkpoint(layer.__call__, x, tgt_mask,
-                                             memory, memory_mask, use_reentrant=False)
+                x, _, _, _ = ckpt.checkpoint(layer.__call__,
+                                             x,
+                                             tgt_mask,
+                                             memory,
+                                             memory_mask,
+                                             use_reentrant=False)
         for layer in self.decoders3:
             x = layer(x)
         return x

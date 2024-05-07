@@ -15,6 +15,7 @@
 """Decoder definition."""
 from typing import Dict, Tuple, List, Optional
 
+import os
 import torch
 import torch.utils.checkpoint as ckpt
 import logging
@@ -209,14 +210,18 @@ class TransformerDecoder(torch.nn.Module):
                                                      memory_mask)
         return x
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward_layers_checkpointed(self, x: torch.Tensor,
                                     tgt_mask: torch.Tensor,
                                     memory: torch.Tensor,
                                     memory_mask: torch.Tensor) -> torch.Tensor:
         for layer in self.decoders:
             x, tgt_mask, memory, memory_mask = ckpt.checkpoint(
-                layer.__call__, x, tgt_mask, memory, memory_mask,
+                layer.__call__,
+                x,
+                tgt_mask,
+                memory,
+                memory_mask,
                 use_reentrant=False)
         return x
 
@@ -280,14 +285,17 @@ class TransformerDecoder(torch.nn.Module):
     def tie_or_clone_weights(self, jit_mode: bool = True):
         """Tie or clone module weights (between word_emb and output_layer)
             depending of whether we are using TorchScript or not"""
+        rank = int(os.environ.get('RANK', 0))
         if not self.use_output_layer:
             return
         if jit_mode:
-            logging.info("clone emb.weight to output.weight")
+            if rank == 0:
+                logging.info("clone emb.weight to output.weight")
             self.output_layer.weight = torch.nn.Parameter(
                 self.embed[0].weight.clone())
         else:
-            logging.info("tie emb.weight with output.weight")
+            if rank == 0:
+                logging.info("tie emb.weight with output.weight")
             self.output_layer.weight = self.embed[0].weight
 
         if getattr(self.output_layer, "bias", None) is not None:

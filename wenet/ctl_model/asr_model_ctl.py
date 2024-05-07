@@ -67,7 +67,7 @@ class CTLModel(ASRModel):
         self.ctl_weight = ctl_weight
         self.logit_temp = logit_temp
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward(
         self,
         batch: dict,
