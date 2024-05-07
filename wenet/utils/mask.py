@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, Union
 import torch
 '''
 def subsequent_mask(
@@ -198,8 +198,9 @@ def add_optional_chunk_mask(xs: torch.Tensor,
     return chunk_masks
 
 
-def make_pad_mask(lengths: torch.Tensor,
-                  max_len: Optional[torch.Tensor] = None) -> torch.Tensor:
+def make_pad_mask(
+        lengths: torch.Tensor,
+        max_len: Optional[Union[torch.Tensor, int]] = None) -> torch.Tensor:
     """Make mask tensor containing indices of padded part.
 
     See description of make_non_pad_mask.
@@ -219,6 +220,14 @@ def make_pad_mask(lengths: torch.Tensor,
     batch_size = lengths.size(0)
     if max_len is None:
         max_len = torch.max(lengths)
+    else:
+        if isinstance(max_len, int):
+            max_len = torch.tensor(max_len,
+                                   dtype=lengths.dtype,
+                                   device=lengths.device)
+        else:
+            assert isinstance(max_len, torch.Tensor)
+
     seq_range = torch.arange(0,
                              max_len,
                              dtype=torch.int64,
