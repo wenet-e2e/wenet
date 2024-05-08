@@ -223,7 +223,7 @@ class MultiHeadedAttention(nn.Module):
                 k_shape[-2:]).reshape(k_shape[:-3] +
                                       torch.Size([self.h_kv * n_repeat]) +
                                       k_shape[-2:])
-            v_shape = k.size()
+            v_shape = v.size()
             v = v.unsqueeze(-3).expand(
                 v_shape[:-2] + torch.Size([n_repeat]) +
                 v_shape[-2:]).reshape(v_shape[:-3] +
