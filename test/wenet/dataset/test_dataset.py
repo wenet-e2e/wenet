@@ -1,6 +1,5 @@
 import pytest
 import torch
-import torch.multiprocessing as mp
 from wenet.dataset.dataset import Dataset
 from wenet.text.char_tokenizer import CharTokenizer
 
@@ -55,11 +54,9 @@ def test_dataset(params):
                       data_list,
                       tokenizer=tokenizer,
                       conf=dataset_conf)
-    dataloader = torch.utils.data.DataLoader(
-        dataset,
-        batch_size=None,
-        num_workers=4,
-        persistent_workers=True,
-        multiprocessing_context=mp.get_context("spawn"))
+    dataloader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=None,
+                                             num_workers=4,
+                                             persistent_workers=True)
     for d in dataloader:
         pass
