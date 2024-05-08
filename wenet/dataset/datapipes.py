@@ -184,21 +184,24 @@ class SortDataPipe(IterDataPipe):
 @functional_datapipe("dynamic_batch")
 class DynamicBatchDataPipe(IterDataPipe):
 
-    def __init__(self, dataset: IterDataPipe, window_class,
-                 wrapper_class) -> None:
+    def __init__(self, dataset: IterDataPipe, window_class, wrapper_class,
+                 elem_size_fn) -> None:
         _check_unpickable_fn(window_class)
         _check_unpickable_fn(wrapper_class)
+        _check_unpickable_fn(elem_size_fn)
         super().__init__()
         self.dp = dataset
         assert window_class is not None
         assert wrapper_class is not None
+        self.elem_size_fn = elem_size_fn
         self.window_class = window_class
         self._buffer = []
         self._wrappr_class = wrapper_class
 
     def __iter__(self):
         for elem in self.dp:
-            if not self.window_class(elem, len(self._buffer)):
+            if not self.window_class(self.elem_size_fn(elem), len(
+                    self._buffer)):
                 self._buffer.append(elem)
             else:
                 if len(self._buffer) > 0:

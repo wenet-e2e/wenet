@@ -7,9 +7,10 @@ from functools import partial
 from wenet.dataset.datapipes import (RepeatDatapipe, SortDataPipe,
                                      WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
-from wenet.dataset.processor import (DynamicBatchWindow, decode_wav, padding,
-                                     parse_json, compute_fbank,
-                                     detect_language, detect_task)
+from wenet.dataset.processor import (DynamicBatchWindow, decode_wav,
+                                     feats_length_fn, padding, parse_json,
+                                     compute_fbank, detect_language,
+                                     detect_task)
 
 
 @pytest.mark.parametrize("data_list", [
@@ -106,7 +107,8 @@ def test_dynamic_batch_datapipe(data_list):
     max_frames_in_batch = 10000
     dataset = dataset.dynamic_batch(
         window_class=DynamicBatchWindow(max_frames_in_batch),
-        wrapper_class=padding)
+        wrapper_class=padding,
+        elem_size_fn=feats_length_fn)
 
     dataloader = torch.utils.data.DataLoader(dataset,
                                              batch_size=None,

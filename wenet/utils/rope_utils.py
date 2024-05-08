@@ -31,3 +31,9 @@ def llama_apply_rotary_emb(x: torch.Tensor,
     x_ = torch.view_as_complex(x.float().reshape(*x.shape[:-1], -1, 2))
     x_out = torch.view_as_real(x_ * freqs_cis).flatten(3)
     return x_out.type_as(x)
+
+
+WENET_APPLY_ROTARY_EMB = {
+    'google': google_apply_rotary_emb,
+    'llama': llama_apply_rotary_emb,
+}

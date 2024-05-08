@@ -39,7 +39,6 @@ from deepspeed.runtime.zero.stage3 import (
     estimate_zero3_model_states_mem_needs_all_live)
 from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
-from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
 from wenet.utils.common import (StepTimer, get_nested_attribute, lrs_to_str,
                                 tensor_to_scalar)
@@ -48,6 +47,7 @@ from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
                                     wenet_fsdp_wrap_policy)
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
+from wenet.utils.init_dataset import init_dataset
 
 
 def add_model_args(parser):
@@ -281,21 +281,23 @@ def check_modify_and_save_config(args, configs, symbol_table):
         configs['encoder_conf']['lora_rank'] = args.lora_rank
         configs['encoder_conf']['lora_alpha'] = args.lora_alpha
         configs['encoder_conf']['lora_dropout'] = args.lora_dropout
-
-    if 'input_dim' not in configs:
-        if 'fbank_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
-        elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['log_mel_spectrogram_conf'][
-                'num_mel_bins']
+    if configs["model"] == 'asr':
+        if 'input_dim' not in configs:
+            if 'fbank_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf']['fbank_conf'][
+                    'num_mel_bins']
+            elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf'][
+                    'log_mel_spectrogram_conf']['num_mel_bins']
+            else:
+                input_dim = configs['dataset_conf']['mfcc_conf'][
+                    'num_mel_bins']
         else:
-            input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
-    else:
-        input_dim = configs['input_dim']
+            input_dim = configs['input_dim']
 
-    configs, _ = get_blank_id(configs, symbol_table)
+        configs, _ = get_blank_id(configs, symbol_table)
 
-    configs['input_dim'] = input_dim
+        configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
 
     configs['train_engine'] = args.train_engine
@@ -335,13 +337,18 @@ def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
     cv_conf['list_shuffle'] = False
 
     configs['vocab_size'] = tokenizer.vocab_size()
-    train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
-                            train_conf, True)
-    cv_dataset = Dataset(args.data_type,
-                         args.cv_data,
-                         tokenizer,
-                         cv_conf,
-                         partition=False)
+    train_dataset = init_dataset(args.data_type,
+                                 args.train_data,
+                                 train_conf,
+                                 tokenizer,
+                                 True,
+                                 dataset_type=configs['dataset'])
+    cv_dataset = init_dataset(args.data_type,
+                              args.cv_data,
+                              cv_conf,
+                              tokenizer,
+                              partition=False,
+                              dataset_type=configs['dataset'])
 
     # NOTE(xcsong): Why we prefer persistent_workers=True ?
     #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110

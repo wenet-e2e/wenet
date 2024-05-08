@@ -150,6 +150,7 @@ def Dataset(data_type,
         dataset = dataset.dynamic_batch(
             processor.DynamicBatchWindow(max_frames_in_batch),
             wrapper_class=processor.padding,
+            elem_size_fn=processor.feats_length_fn,
         )
 
     return dataset
