@@ -157,12 +157,17 @@ class BaseEncoder(torch.nn.Module):
             xs = self.global_cmvn(xs)
         xs, pos_emb, masks = self.embed(xs, masks)
         mask_pad = masks  # (B, 1, T/subsample_rate)
-        chunk_masks = add_optional_chunk_mask(xs, masks,
-                                              self.use_dynamic_chunk,
-                                              self.use_dynamic_left_chunk,
-                                              decoding_chunk_size,
-                                              self.static_chunk_size,
-                                              num_decoding_left_chunks)
+        chunk_masks = add_optional_chunk_mask(
+            xs,
+            masks,
+            self.use_dynamic_chunk,
+            self.use_dynamic_left_chunk,
+            decoding_chunk_size,
+            self.static_chunk_size,
+            num_decoding_left_chunks,
+            # Since we allow up to 1s(100 frames) delay, the maximum
+            # chunk_size is 100 / 4 = 25.
+            max_chunk_size=int(100.0 / self.embed.subsampling_rate))
         if self.use_sdpa:
             chunk_masks = mask_to_bias(chunk_masks, xs.dtype)
         if self.gradient_checkpointing and self.training:
