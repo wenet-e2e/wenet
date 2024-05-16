@@ -37,6 +37,21 @@ lid = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 logging.getLogger('langid').setLevel(logging.INFO)
 
+import os
+try:
+    cpu_info = os.popen("lscpu | grep 'Vendor ID'").read()
+    # 0x48 --> HiSilicon
+    if (cpu_info.rstrip().split(" ")[-1] == "0x48"):
+        # NOTE (MengqingCao): set number of threads in the subprocesses to 1
+        # Why? There may be some operators ultilizing multi-threads in processor,
+        # causing possibly deadlock in Kunpeng.
+        # Similar issue in PyTorch: https://github.com/pytorch/pytorch/issues/45198
+        torch.set_num_threads(1)
+except Exception as ex:
+    logging.warning('Failed to set number of thread in Kunpeng, \
+        this may cause segmentfault while dataloading, \
+        ignore this warning if you are not using Kunpeng')
+
 
 class UrlOpenError(Exception):
 
