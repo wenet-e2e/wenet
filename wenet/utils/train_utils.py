@@ -53,6 +53,8 @@ from wenet.utils.init_dataset import init_dataset
 def add_model_args(parser):
     parser.add_argument('--config', required=True, help='config file')
     parser.add_argument('--model_dir', required=True, help='save model dir')
+    parser.add_argument('--pretrain_encoder', help='pretrain encoder model')
+    parser.add_argument('--pretrain_decoder', help='pretrain decoder model')
     parser.add_argument('--checkpoint', help='checkpoint model')
     parser.add_argument('--tensorboard_dir',
                         default='tensorboard',
@@ -281,7 +283,7 @@ def check_modify_and_save_config(args, configs, symbol_table):
         configs['encoder_conf']['lora_rank'] = args.lora_rank
         configs['encoder_conf']['lora_alpha'] = args.lora_alpha
         configs['encoder_conf']['lora_dropout'] = args.lora_dropout
-    if configs["model"] == 'asr':
+    if configs["model"] == 'asr_model':
         if 'input_dim' not in configs:
             if 'fbank_conf' in configs['dataset_conf']:
                 input_dim = configs['dataset_conf']['fbank_conf'][

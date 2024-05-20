@@ -20,6 +20,7 @@ from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.paraformer import Paraformer, Predictor
+from wenet.AudioLLM.audiollm_model import AudioLLM
 from wenet.LLM.causal_model import CausalLM
 from wenet.LLM.decoder import DecoderOnly
 from wenet.transducer.joint import TransducerJoint
@@ -87,6 +88,7 @@ WENET_MODEL_CLASSES = {
     "transducer": Transducer,
     'paraformer': Paraformer,
     'causal_llm': CausalLM,
+    'audio_llm': AudioLLM,
 }
 
 
@@ -188,12 +190,65 @@ def init_causal_llm(configs):
     )
     return model, configs
 
+def init_audio_llm(args, configs):
+    assert configs['decoder'] == 'decoder_only'
+    assert configs['model'] == 'audio_llm'
+    if configs.get('cmvn', None) == 'global_cmvn':
+        mean, istd = load_cmvn(configs['cmvn_conf']['cmvn_file'],
+                               configs['cmvn_conf']['is_json_cmvn'])
+        global_cmvn = GlobalCMVN(
+            torch.from_numpy(mean).float(),
+            torch.from_numpy(istd).float())
+    else:
+        global_cmvn = None
+
+    input_dim = configs['input_dim']
+    vocab_size = configs['output_dim']
+
+    encoder_type = configs.get('encoder', 'conformer')
+    encoder = WENET_ENCODER_CLASSES[encoder_type](
+        input_dim,
+        global_cmvn=global_cmvn,
+        **configs['encoder_conf'],
+        **configs['encoder_conf']['efficient_conf']
+        if 'efficient_conf' in configs['encoder_conf'] else {})
+
+    decoder = DecoderOnly(**configs['decoder_conf'])
+
+    model = AudioLLM(
+        vocab_size,
+        encoder,
+        decoder,
+        **configs['model_conf'],
+        special_tokens=configs.get('tokenizer_conf',
+                                   {}).get('special_tokens', None),
+    )
+
+    if hasattr(args, 'pretrain_encoder') and args.pretrain_encoder is not None:
+        encoder_state_dict = torch.load(args.pretrain_encoder, map_location='cpu')
+        new_encoder_state_dict = {}
+        for key in encoder_state_dict.keys():
+            if 'encoder.' in key:
+                new_encoder_state_dict[key] = encoder_state_dict[key]
+        model.load_state_dict(new_encoder_state_dict, strict=False)
+        if int(os.environ.get('RANK', 0)) == 0:
+            print("load pretrained encoder from {}".format(args.pretrain_encoder))
+
+    if hasattr(args, 'pretrain_decoder') and args.pretrain_decoder is not None:
+        decoder_state_dict = torch.load(args.pretrain_decoder, map_location='cpu')
+        model.load_state_dict(decoder_state_dict, strict=False)
+        if int(os.environ.get('RANK', 0)) == 0:
+            print("load pretrained decoder from {}".format(args.pretrain_decoder))
+
+    return model, configs
 
 def init_model(args, configs):
 
     model_type = configs.get('model', 'asr_model')
     if model_type == 'causal_lm':
         model, configs = init_causal_llm(configs)
+    elif model_type == 'audio_llm':
+        model, configs = init_audio_llm(args, configs)
     else:
         model, configs = init_speech_model(args, configs)
 
@@ -206,7 +261,6 @@ def init_model(args, configs):
         infos = {}
     configs["init_infos"] = infos
 
-    print(configs)
     # Trye to tie some weights
     if hasattr(model, 'tie_or_clone_weights'):
         if not hasattr(args, 'jit'):

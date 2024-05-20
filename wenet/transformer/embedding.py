@@ -211,7 +211,7 @@ class RopePositionalEncoding(PositionalEncoding):
         delattr(self, 'pe')
         self.max_len = max_len * 2
         pe = precompute_freqs_cis(head_dim, self.max_len, rope_theta)
-        self.register_buffer("pe", torch.view_as_real(pe.unsqueeze(0)))
+        self.register_buffer("pe", pe.unsqueeze(0))
         self.dropout_rate = dropout_rate
         self.scale = scale
 
@@ -233,7 +233,7 @@ class RopePositionalEncoding(PositionalEncoding):
                           size: int,
                           apply_dropout: bool = True) -> torch.Tensor:
 
-        pe = torch.view_as_complex(self.pe)
+        pe = self.pe
         if isinstance(offset, int):
             assert offset + size <= self.max_len
             pos_emb = pe[:, offset:offset + size]
