@@ -36,67 +36,65 @@ class LoRATransformerEncoder(TransformerEncoder):
 
     def __init__(
         self,
-        input_size: int,
-        output_size: int = 256,
-        attention_heads: int = 4,
-        linear_units: int = 2048,
-        num_blocks: int = 6,
-        dropout_rate: float = 0.1,
-        positional_dropout_rate: float = 0.1,
-        attention_dropout_rate: float = 0.0,
-        input_layer: str = "conv2d",
-        pos_enc_layer_type: str = "abs_pos",
-        normalize_before: bool = True,
-        static_chunk_size: int = 0,
-        use_dynamic_chunk: bool = False,
-        global_cmvn: torch.nn.Module = None,
-        use_dynamic_left_chunk: bool = False,
-        query_bias: bool = True,
-        key_bias: bool = True,
-        value_bias: bool = True,
-        mlp_bias: bool = True,
-        activation_type: str = "relu",
-        gradient_checkpointing: bool = False,
-        use_sdpa: bool = False,
-        mlp_type: str = 'position_wise_feed_forward',
-        layer_norm_type: str = 'layer_norm',
-        norm_eps: float = 1e-5,
-        n_kv_head: Optional[int] = None,
-        head_dim: Optional[int] = None,
+        *args,
         lora_rank: int = 8,
         lora_alpha: int = 8,
         lora_dropout: float = 0.0,
         lora_list: Optional[List[str]] = None,
+        **kwargs
     ):
-        """ Construct TransformerEncoder
+        """Construct TransformerEncoder with LoRA parameters
 
-        See Encoder for the meaning of each parameter.
+        Args:
+            *args: Arguments for the TransformerEncoder.
+            **kwargs: Keyword arguments for the TransformerEncoder.
+            lora_rank (int): Rank for LoRA.
+            lora_alpha (int): Alpha for LoRA.
+            lora_dropout (float): Dropout rate for LoRA.
+            lora_list (Optional[List[str]]): List of layers to apply LoRA.
         """
-        super().__init__(input_size, output_size, attention_heads,
-                         linear_units, num_blocks, dropout_rate,
-                         positional_dropout_rate, attention_dropout_rate,
-                         input_layer, pos_enc_layer_type, normalize_before,
-                         static_chunk_size, use_dynamic_chunk, global_cmvn,
-                         use_dynamic_left_chunk, query_bias, key_bias,
-                         value_bias, mlp_bias, activation_type,
-                         gradient_checkpointing, use_sdpa, mlp_type,
-                         layer_norm_type, norm_eps, n_kv_head, head_dim)
-        activation = WENET_ACTIVATION_CLASSES[activation_type]()
-        mlp_class = WENET_MLP_CLASSES[mlp_type]
+        super().__init__(*args, **kwargs)
+        activation = WENET_ACTIVATION_CLASSES[kwargs.get('activation_type',
+                                                         'relu')]()
+
+        # self-attention module definition
+        encoder_selfattn_layer_args = (
+            kwargs.get('attention_heads', 4),
+            kwargs.get('output_size', 256),
+            kwargs.get('attention_dropout_rate', 0.0),
+            kwargs.get('query_bias', True),
+            kwargs.get('key_bias', True),
+            kwargs.get('value_bias', True),
+            kwargs.get('use_sdpa', False),
+            kwargs.get('n_kv_head', None),
+            kwargs.get('head_dim', None),
+            lora_rank,
+            lora_alpha,
+            lora_dropout,
+            lora_list,
+        )
+        # feed-forward module definition
+        positionwise_layer_args = (
+            kwargs.get('output_size', 256),
+            kwargs.get('linear_units', 2048),
+            kwargs.get('dropout_rate', 0.1),
+            activation,
+            kwargs.get('mlp_bias', True),
+        )
+
+        mlp_class = WENET_MLP_CLASSES[kwargs.get('mlp_type',
+                                                 'position_wise_feed_forward')]
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
-                output_size,
+                kwargs.get('output_size', 256),
                 WENET_LORA_ATTENTION_CLASSES["selfattn"](
-                    attention_heads, output_size, attention_dropout_rate,
-                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
-                    head_dim, lora_rank, lora_alpha, lora_dropout, lora_list),
-                mlp_class(output_size, linear_units, dropout_rate, activation,
-                          mlp_bias),
-                dropout_rate,
-                normalize_before,
-                layer_norm_type=layer_norm_type,
-                norm_eps=norm_eps,
-            ) for _ in range(num_blocks)
+                    *encoder_selfattn_layer_args),
+                mlp_class(*positionwise_layer_args),
+                kwargs.get('dropout_rate', 0.1),
+                kwargs.get('normalize_before', True),
+                layer_norm_type=kwargs.get('layer_norm_type', 'layer_norm'),
+                norm_eps=kwargs.get('norm_eps', 1e-5),
+            ) for _ in range(kwargs.get('num_blocks', 6))
         ])
 
 
@@ -105,87 +103,38 @@ class LoRAConformerEncoder(ConformerEncoder):
 
     def __init__(
         self,
-        input_size: int,
-        output_size: int = 256,
-        attention_heads: int = 4,
-        linear_units: int = 2048,
-        num_blocks: int = 6,
-        dropout_rate: float = 0.1,
-        positional_dropout_rate: float = 0.1,
-        attention_dropout_rate: float = 0.0,
-        input_layer: str = "conv2d",
-        pos_enc_layer_type: str = "rel_pos",
-        normalize_before: bool = True,
-        static_chunk_size: int = 0,
-        use_dynamic_chunk: bool = False,
-        global_cmvn: torch.nn.Module = None,
-        use_dynamic_left_chunk: bool = False,
-        positionwise_conv_kernel_size: int = 1,
-        macaron_style: bool = True,
-        selfattention_layer_type: str = "rel_selfattn",
-        activation_type: str = "swish",
-        use_cnn_module: bool = True,
-        cnn_module_kernel: int = 15,
-        causal: bool = False,
-        cnn_module_norm: str = "batch_norm",
-        query_bias: bool = True,
-        key_bias: bool = True,
-        value_bias: bool = True,
-        mlp_bias: bool = True,
-        conv_bias: bool = True,
-        gradient_checkpointing: bool = False,
-        use_sdpa: bool = False,
-        mlp_type: str = 'position_wise_feed_forward',
-        layer_norm_type: str = 'layer_norm',
-        norm_eps: float = 1e-5,
-        n_kv_head: Optional[int] = None,
-        head_dim: Optional[int] = None,
+        *args,
         lora_rank: int = 8,
         lora_alpha: int = 8,
         lora_dropout: float = 0.0,
         lora_list: Optional[List[str]] = None,
+        **kwargs
     ):
-        """Construct ConformerEncoder
+        """Construct ConformerEncoder with LoRA parameters
 
         Args:
-            input_size to use_dynamic_chunk, see in BaseEncoder
-            positionwise_conv_kernel_size (int): Kernel size of positionwise
-                conv1d layer.
-            macaron_style (bool): Whether to use macaron style for
-                positionwise layer.
-            selfattention_layer_type (str): Encoder attention layer type,
-                the parameter has no effect now, it's just for configure
-                compatibility.
-            activation_type (str): Encoder activation function type.
-            use_cnn_module (bool): Whether to use convolution module.
-            cnn_module_kernel (int): Kernel size of convolution module.
-            causal (bool): whether to use causal convolution or not.
-            key_bias: whether use bias in attention.linear_k, False for whisper models.
+            *args: Arguments for the ConformerEncoder.
+            **kwargs: Keyword arguments for the ConformerEncoder.
+            lora_rank (int): Rank for LoRA.
+            lora_alpha (int): Alpha for LoRA.
+            lora_dropout (float): Dropout rate for LoRA.
+            lora_list (Optional[List[str]]): List of layers to apply LoRA.
         """
-        super().__init__(
-            input_size, output_size, attention_heads, linear_units, num_blocks,
-            dropout_rate, positional_dropout_rate, attention_dropout_rate,
-            input_layer, pos_enc_layer_type, normalize_before,
-            static_chunk_size, use_dynamic_chunk, global_cmvn,
-            use_dynamic_left_chunk, positionwise_conv_kernel_size,
-            macaron_style, selfattention_layer_type, activation_type,
-            use_cnn_module, cnn_module_kernel, causal, cnn_module_norm,
-            query_bias, key_bias, value_bias, mlp_bias, conv_bias,
-            gradient_checkpointing, use_sdpa, mlp_type, layer_norm_type,
-            norm_eps, n_kv_head, head_dim)
-        activation = WENET_ACTIVATION_CLASSES[activation_type]()
+        super().__init__(*args, **kwargs)
+        activation = WENET_ACTIVATION_CLASSES[kwargs.get('activation_type',
+                                                         'swish')]()
 
         # self-attention module definition
         encoder_selfattn_layer_args = (
-            attention_heads,
-            output_size,
-            attention_dropout_rate,
-            query_bias,
-            key_bias,
-            value_bias,
-            use_sdpa,
-            n_kv_head,
-            head_dim,
+            kwargs.get('attention_heads', 4),
+            kwargs.get('output_size', 256),
+            kwargs.get('attention_dropout_rate', 0.0),
+            kwargs.get('query_bias', True),
+            kwargs.get('key_bias', True),
+            kwargs.get('value_bias', True),
+            kwargs.get('use_sdpa', False),
+            kwargs.get('n_kv_head', None),
+            kwargs.get('head_dim', None),
             lora_rank,
             lora_alpha,
             lora_dropout,
@@ -193,29 +142,39 @@ class LoRAConformerEncoder(ConformerEncoder):
         )
         # feed-forward module definition
         positionwise_layer_args = (
-            output_size,
-            linear_units,
-            dropout_rate,
+            kwargs.get('output_size', 256),
+            kwargs.get('linear_units', 2048),
+            kwargs.get('dropout_rate', 0.1),
             activation,
-            mlp_bias,
+            kwargs.get('mlp_bias', True),
         )
         # convolution module definition
-        convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  cnn_module_norm, causal, conv_bias)
+        convolution_layer_args = (
+            kwargs.get('output_size', 256),
+            kwargs.get('cnn_module_kernel', 15),
+            activation,
+            kwargs.get('cnn_module_norm', 'batch_norm'),
+            kwargs.get('causal', False),
+            kwargs.get('conv_bias', True)
+        )
 
-        mlp_class = WENET_MLP_CLASSES[mlp_type]
+        mlp_class = WENET_MLP_CLASSES[kwargs.get('mlp_type',
+                                                 'position_wise_feed_forward')]
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(
-                output_size,
-                WENET_LORA_ATTENTION_CLASSES[selfattention_layer_type](
-                    *encoder_selfattn_layer_args),
+                kwargs.get('output_size', 256),
+                WENET_LORA_ATTENTION_CLASSES[
+                    kwargs.get('selfattention_layer_type', 'rel_selfattn')
+                ](*encoder_selfattn_layer_args),
                 mlp_class(*positionwise_layer_args),
-                mlp_class(*positionwise_layer_args) if macaron_style else None,
+                mlp_class(*positionwise_layer_args)
+                    if kwargs.get('macaron_style', True) else None,
                 ConvolutionModule(
-                    *convolution_layer_args) if use_cnn_module else None,
-                dropout_rate,
-                normalize_before,
-                layer_norm_type=layer_norm_type,
-                norm_eps=norm_eps,
-            ) for _ in range(num_blocks)
+                    *convolution_layer_args
+                ) if kwargs.get('use_cnn_module', True) else None,
+                kwargs.get('dropout_rate', 0.1),
+                kwargs.get('normalize_before', True),
+                layer_norm_type=kwargs.get('layer_norm_type', 'layer_norm'),
+                norm_eps=kwargs.get('norm_eps', 1e-5),
+            ) for _ in range(kwargs.get('num_blocks', 6))
         ])
