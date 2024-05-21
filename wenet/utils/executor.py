@@ -21,6 +21,7 @@ from contextlib import nullcontext
 # if your python version < 3.7 use the below one
 # from contextlib import suppress as nullcontext
 import torch
+from wenet.utils.common import StepTimer
 
 from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
                                      update_parameter_and_lr, log_per_step,
@@ -29,13 +30,17 @@ from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
 
 class Executor:
 
-    def __init__(self):
-        self.step = 0
+    def __init__(self, global_step: int = 0):
+        self.step = global_step + 1
+        self.train_step_timer = None
+        self.cv_step_timer = None
 
     def train(self, model, optimizer, scheduler, train_data_loader,
               cv_data_loader, writer, configs, scaler, group_join):
         ''' Train one epoch
         '''
+        if self.train_step_timer is None:
+            self.train_step_timer = StepTimer(self.step)
         model.train()
         info_dict = copy.deepcopy(configs)
         logging.info('using accumulate grad, new batch size is {} times'
@@ -63,8 +68,9 @@ class Executor:
                 # Disable gradient synchronizations across DDP processes.
                 # Within this context, gradients will be accumulated on module
                 # variables, which will later be synchronized.
-                if info_dict.get("train_engine", "torch_ddp") == "torch_ddp" and \
-                        (batch_idx + 1) % info_dict["accum_grad"] != 0:
+                if info_dict.get("train_engine", "torch_ddp") in [
+                        "torch_ddp", "torch_fsdp"
+                ] and (batch_idx + 1) % info_dict["accum_grad"] != 0:
                     context = model.no_sync
                 # Used for single gpu training and DDP gradient synchronization
                 # processes.
@@ -79,9 +85,15 @@ class Executor:
                 info_dict = update_parameter_and_lr(model, optimizer,
                                                     scheduler, scaler,
                                                     info_dict)
+                # write training: tensorboard && log
+                log_per_step(writer, info_dict, timer=self.train_step_timer)
                 save_interval = info_dict.get('save_interval', sys.maxsize)
-                if self.step % save_interval == 0 and self.step != 0 \
-                        and (batch_idx + 1) % info_dict["accum_grad"] == 0:
+                if (self.step +
+                        1) % save_interval == 0 and self.step != 0 and (
+                            batch_idx + 1) % info_dict["accum_grad"] == 0:
+                    import torch.distributed as dist
+                    # Ensure all ranks start CV at the same time in step mode
+                    dist.barrier()
                     loss_dict = self.cv(model, cv_data_loader, configs)
                     model.train()
                     info_dict.update({
@@ -91,17 +103,24 @@ class Executor:
                         loss_dict,
                         "save_time":
                         datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S'),
-                        "lr":
-                        optimizer.param_groups[0]['lr']
+                        "lrs":
+                        [group['lr'] for group in optimizer.param_groups]
                     })
                     save_model(model, info_dict)
-                log_per_step(writer, info_dict)
+                    # write final cv: tensorboard
+                    log_per_step(writer, info_dict)
+                    # Ensure all ranks start Train at the same time in step mode
+                    dist.barrier()
                 self.step += 1 if (batch_idx +
                                    1) % info_dict["accum_grad"] == 0 else 0
 
     def cv(self, model, cv_data_loader, configs):
         ''' Cross validation on
         '''
+        if self.cv_step_timer is None:
+            self.cv_step_timer = StepTimer(0.0)
+        else:
+            self.cv_step_timer.last_iteration = 0.0
         model.eval()
         info_dict = copy.deepcopy(configs)
         num_seen_utts, loss_dict, total_acc = 1, {}, []  # avoid division by 0
@@ -110,6 +129,7 @@ class Executor:
                 info_dict["tag"] = "CV"
                 info_dict["step"] = self.step
                 info_dict["batch_idx"] = batch_idx
+                info_dict["cv_step"] = batch_idx
 
                 num_utts = batch_dict["target_lengths"].size(0)
                 if num_utts == 0:
@@ -127,8 +147,10 @@ class Executor:
                         loss_value = loss_value.item()
                         loss_dict[loss_name] = loss_dict.get(loss_name, 0) + \
                             loss_value * num_utts
-
-                log_per_step(writer=None, info_dict=info_dict)
+                # write cv: log
+                log_per_step(writer=None,
+                             info_dict=info_dict,
+                             timer=self.cv_step_timer)
         for loss_name, loss_value in loss_dict.items():
             loss_dict[loss_name] = loss_dict[loss_name] / num_seen_utts
         loss_dict["acc"] = sum(total_acc) / len(total_acc)

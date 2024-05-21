@@ -141,16 +141,14 @@ class Paraformer(ASRModel):
         self.sampler = sampler
         self.sampling_ratio = sampling_ratio
         if sampler:
-            self.embed = self.decoder.embed
-        else:
-            del self.decoder.embed
+            self.embed = torch.nn.Embedding(vocab_size, encoder.output_size())
         # NOTE(Mddct): add eos in tail of labels for predictor
         # eg:
         #    gt:         你 好 we@@ net
         #    labels:     你 好 we@@ net eos
         self.add_eos = add_eos
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def forward(
         self,
         batch: Dict,
@@ -234,7 +232,7 @@ class Paraformer(ASRModel):
                               ignore_label=self.ignore_id)
         return loss_att, acc_att
 
-    @torch.jit.ignore(drop=True)
+    @torch.jit.unused
     def _sampler(self, encoder_out, encoder_out_mask, ys_pad, ys_pad_lens,
                  pre_acoustic_embeds):
         device = encoder_out.device

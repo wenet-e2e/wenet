@@ -17,6 +17,9 @@ from typing import Dict, Optional, Tuple
 
 import torch
 from torch import nn
+from wenet.transformer.attention import T_CACHE
+
+from wenet.utils.class_utils import WENET_NORM_CLASSES
 
 
 class DecoderLayer(nn.Module):
@@ -46,6 +49,8 @@ class DecoderLayer(nn.Module):
         feed_forward: nn.Module,
         dropout_rate: float,
         normalize_before: bool = True,
+        layer_norm_type: str = 'layer_norm',
+        norm_eps: float = 1e-5,
     ):
         """Construct an DecoderLayer object."""
         super().__init__()
@@ -53,9 +58,10 @@ class DecoderLayer(nn.Module):
         self.self_attn = self_attn
         self.src_attn = src_attn
         self.feed_forward = feed_forward
-        self.norm1 = nn.LayerNorm(size, eps=1e-5)
-        self.norm2 = nn.LayerNorm(size, eps=1e-5)
-        self.norm3 = nn.LayerNorm(size, eps=1e-5)
+        assert layer_norm_type in ['layer_norm', 'rms_norm']
+        self.norm1 = WENET_NORM_CLASSES[layer_norm_type](size, eps=norm_eps)
+        self.norm2 = WENET_NORM_CLASSES[layer_norm_type](size, eps=norm_eps)
+        self.norm3 = WENET_NORM_CLASSES[layer_norm_type](size, eps=norm_eps)
         self.dropout = nn.Dropout(dropout_rate)
         self.normalize_before = normalize_before
 
@@ -65,7 +71,7 @@ class DecoderLayer(nn.Module):
         tgt_mask: torch.Tensor,
         memory: torch.Tensor,
         memory_mask: torch.Tensor,
-        cache: Optional[Dict[str, Optional[torch.Tensor]]] = None
+        cache: Optional[Dict[str, Optional[T_CACHE]]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute decoded features.
 
@@ -100,7 +106,7 @@ class DecoderLayer(nn.Module):
         if att_cache is None:
             tgt_q = tgt
             tgt_q_mask = tgt_mask
-            att_cache = torch.empty(0, 0, 0, 0)
+            att_cache = (torch.empty(0, 0, 0, 0), torch.empty(0, 0, 0, 0))
         else:
             tgt_q = tgt[:, -1:, :]
             residual = residual[:, -1:, :]
@@ -124,7 +130,8 @@ class DecoderLayer(nn.Module):
             if self.normalize_before:
                 x = self.norm2(x)
             if cross_att_cache is None:
-                cross_att_cache = torch.empty(0, 0, 0, 0)
+                cross_att_cache = (torch.empty(0, 0, 0,
+                                               0), torch.empty(0, 0, 0, 0))
             x, new_cross_cache = self.src_attn(x,
                                                memory,
                                                memory,

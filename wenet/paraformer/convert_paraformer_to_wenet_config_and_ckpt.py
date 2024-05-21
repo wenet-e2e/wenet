@@ -186,6 +186,8 @@ def convert_to_wenet_state_dict(args, wenet_model_path):
             wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
         elif wenet_name.startswith('predictor.blstm'):
             wenet_name = wenet_name.replace('predictor.', 'predictor.tp_')
+        elif wenet_name == 'decoder.embed.0.weight':
+            wenet_name = 'embed.weight'
 
         wenet_state_dict[wenet_name] = checkpoint[name].float()
 

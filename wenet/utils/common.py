@@ -15,6 +15,7 @@
 """Unility functions for Transformer."""
 
 import math
+import time
 from typing import List, Tuple
 
 import torch
@@ -309,31 +310,50 @@ def log_add(*args) -> float:
     return a_max + lsp
 
 
-def get_dtype_min(
-    dtype: torch.dtype,
-    eps16: float = torch.finfo(torch.float16).min,
-    eps32: float = torch.finfo(torch.float32).min,
-    eps64: float = torch.finfo(torch.float64).min,
-    epsbf16: float = torch.finfo(torch.bfloat16).min,
-):
-    if dtype == torch.float16:
-        return eps16
-    elif dtype == torch.float32:
-        return eps32
-    elif dtype == torch.float64:
-        return eps64
-    elif dtype == torch.bfloat16:
-        return epsbf16
-    else:
-        raise RuntimeError(f"expected x to be floating-point, got {dtype}")
-
-
 def mask_to_bias(mask: torch.Tensor, dtype: torch.dtype) -> torch.Tensor:
-    return mask
     assert mask.dtype == torch.bool
+    assert dtype in [torch.float32, torch.bfloat16, torch.float16]
     mask = mask.to(dtype)
     # attention mask bias
     # NOTE(Mddct): torch.finfo jit issues
     #     chunk_masks = (1.0 - chunk_masks) * torch.finfo(dtype).min
-    mask = (1.0 - mask) * get_dtype_min(dtype)
+    mask = (1.0 - mask) * -1.0e+10
     return mask
+
+
+def get_nested_attribute(obj, attr_path):
+    if isinstance(obj, torch.nn.parallel.DistributedDataParallel):
+        obj = obj.module
+    attributes = attr_path.split('.')
+    for attr in attributes:
+        obj = getattr(obj, attr)
+    return obj
+
+
+def lrs_to_str(lrs: List):
+    return " ".join(["{:.4e}".format(lr) for lr in lrs])
+
+
+class StepTimer:
+    """Utility class for measuring steps/second."""
+
+    def __init__(self, step=0.0):
+        self.last_iteration = step
+        self.start()
+
+    def start(self):
+        self.last_time = time.time()
+
+    def steps_per_second(self, cur_step, restart=True):
+        value = ((float(cur_step) - self.last_iteration) /
+                 (time.time() - self.last_time))
+        if restart:
+            self.start()
+            self.last_iteration = float(cur_step)
+        return value
+
+
+def tensor_to_scalar(x):
+    if torch.is_tensor(x):
+        return x.item()
+    return x

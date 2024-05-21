@@ -45,8 +45,8 @@ def get_args():
                         help='gpu id for this rank, -1 for cpu')
     parser.add_argument('--dtype',
                         type=str,
-                        default='float32',
-                        choices=['float16', 'float32', 'bfloat16'],
+                        default='fp32',
+                        choices=['fp16', 'fp32', 'bf16'],
                         help='model\'s dtype')
     parser.add_argument('--num_workers',
                         default=0,
@@ -171,6 +171,11 @@ def get_args():
                         default=0.0,
                         help='''The higher the score, the greater the degree of
                                 bias using decoding-graph for biasing''')
+
+    parser.add_argument('--use_lora',
+                        type=bool,
+                        default=False,
+                        help='''Whether to use lora for biasing''')
     args = parser.parse_args()
     print(args)
     return args
@@ -201,6 +206,8 @@ def main():
     test_conf['spec_trim'] = False
     test_conf['shuffle'] = False
     test_conf['sort'] = False
+    test_conf['cycle'] = 1
+    test_conf['list_shuffle'] = False
     if 'fbank_conf' in test_conf:
         test_conf['fbank_conf']['dither'] = 0.0
     elif 'mfcc_conf' in test_conf:
@@ -228,9 +235,9 @@ def main():
     model = model.to(device)
     model.eval()
     dtype = torch.float32
-    if args.dtype == 'float16':
+    if args.dtype == 'fp16':
         dtype = torch.float16
-    elif args.dtype == 'bfloat16':
+    elif args.dtype == 'bf16':
         dtype = torch.bfloat16
     logging.info("compute dtype is {}".format(dtype))
 

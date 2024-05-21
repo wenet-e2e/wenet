@@ -1,4 +1,4 @@
-# Copyright (c) 2022 Horizon Inc. (author: Xingchen Song)
+# Copyright (c) 2022 Tsinghua Univ. (author: Xingchen Song)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.

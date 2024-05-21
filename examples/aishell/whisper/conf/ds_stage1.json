@@ -23,40 +23,11 @@
       "device": "none",
       "pin_memory": true
     },
-    "offload_param": {
-      "device": "none",
-      "pin_memory": true
-    },
     "allgather_partitions": true,
     "allgather_bucket_size": 5e8,
     "overlap_comm": true,
     "reduce_scatter": true,
     "reduce_bucket_size": 5e8,
-    "contiguous_gradients" : true,
-    "stage3_max_live_parameters": 1e9,
-    "stage3_max_reuse_distance": 1e9,
-    "stage3_prefetch_bucket_size": 5e8,
-    "stage3_param_persistence_threshold": 1e6
-  },
-  "activation_checkpointing": {
-    "partition_activations": false,
-    "cpu_checkpointing": false,
-    "contiguous_memory_optimization": false,
-    "number_checkpoints": null,
-    "synchronize_checkpoint_boundary": false,
-    "profile": false
-  },
-  "flops_profiler": {
-    "enabled": false,
-    "profile_step": 100,
-    "module_depth": -1,
-    "top_modules": 1,
-    "detailed": true,
-    "output_file": null
-  },
-  "tensorboard": {
-    "enabled": false,
-    "output_path": "tensorboard/ds_logs/",
-    "job_name": "deepspeed"
+    "contiguous_gradients" : true
   }
 }

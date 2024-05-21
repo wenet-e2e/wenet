@@ -318,7 +318,8 @@ def test_model(model, audio_path):
                                        attn_ln_x,
                                        attn_ln_x,
                                        masks,
-                                       cache=torch.zeros((0, 0, 0, 0)))
+                                       cache=(torch.zeros((0, 0, 0, 0)),
+                                              torch.zeros(0, 0, 0, 0)))
             wenet_layers_output.append({
                 "name": "enc.layer{}.attn".format(i),
                 "value": x_att.clone()

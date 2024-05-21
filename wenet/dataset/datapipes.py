@@ -14,6 +14,7 @@
 
 import collections
 from collections.abc import Callable
+import copy
 import sys
 import tarfile
 import logging
@@ -254,6 +255,26 @@ class PrefetchDataPipe(IterDataPipe):
             yield from self.dp
 
 
+@functional_datapipe("repeat")
+class RepeatDatapipe(IterDataPipe):
+
+    def __init__(self, dataset: IterDataPipe, count: int = -1):
+        super().__init__()
+        self.dp = dataset
+        self.count = count
+
+    def __iter__(self):
+        if self.count == 1:
+            yield from self.dp
+            return
+        i = 0
+        while self.count < 0 or i < self.count:
+            for elem in self.dp:
+                new_elem = copy.copy(elem)
+                yield new_elem
+            i += 1
+
+
 @functional_datapipe("shard")
 class ShardDataPipe(ShardingFilterIterDataPipe):
 
@@ -369,10 +390,16 @@ class WenetRawDatasetSource(IterDataPipe):
     def __init__(self,
                  filenames: str,
                  prefetch: int = 500,
-                 partition=True) -> None:
+                 partition: bool = True,
+                 shuffle: bool = False,
+                 shuffle_size: int = 10000,
+                 cycle: int = 1) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).prefetch(prefetch).shard(
-            partition)
+        self.dp = TextLineDataPipe(filenames)
+        if shuffle:
+            self.dp = self.dp.shuffle(buffer_size=shuffle_size)
+        self.dp = self.dp.repeat(cycle).prefetch(prefetch)
+        self.dp = self.dp.shard(partition)
 
     def __iter__(self):
         for d in self.dp:
@@ -384,11 +411,17 @@ class WenetTarShardDatasetSource(IterDataPipe):
     def __init__(self,
                  filenames: str,
                  prefetch: int = 500,
-                 partition: bool = False) -> None:
+                 partition: bool = True,
+                 shuffle: bool = False,
+                 shuffle_size: int = 10000,
+                 cycle: int = 1) -> None:
         super().__init__()
-        self.dp = TextLineDataPipe(filenames).shard(
-            partition).map_ignore_error(
-                parse_url).tar_file_and_group().prefetch(prefetch)
+        self.dp = TextLineDataPipe(filenames)
+        if shuffle:
+            self.dp = self.dp.shuffle(buffer_size=shuffle_size)
+        self.dp = self.dp.repeat(cycle)
+        self.dp = self.dp.shard(partition).map_ignore_error(
+            parse_url).tar_file_and_group().prefetch(prefetch)
 
     def __iter__(self):
         for d in self.dp:

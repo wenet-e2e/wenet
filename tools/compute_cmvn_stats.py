@@ -12,8 +12,6 @@ import torchaudio
 import torchaudio.compliance.kaldi as kaldi
 from torch.utils.data import Dataset, DataLoader
 
-torchaudio.set_audio_backend("sox_io")
-
 
 class CollateFunc(object):
     ''' Collate function for AudioDataset
@@ -32,15 +30,14 @@ class CollateFunc(object):
             value = item[1].strip().split(",")
             assert len(value) == 3 or len(value) == 1
             wav_path = value[0]
-            sample_rate = torchaudio.backend.sox_io_backend.info(
-                wav_path).sample_rate
+            sample_rate = torchaudio.info(wav_path).sample_rate
             resample_rate = sample_rate
             # len(value) == 3 means segmented wav.scp,
             # len(value) == 1 means original wav.scp
             if len(value) == 3:
                 start_frame = int(float(value[1]) * sample_rate)
                 end_frame = int(float(value[2]) * sample_rate)
-                waveform, sample_rate = torchaudio.backend.sox_io_backend.load(
+                waveform, sample_rate = torchaudio.load(
                     filepath=wav_path,
                     num_frames=end_frame - start_frame,
                     frame_offset=start_frame)

@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 # Copyright [2023-11-28] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 import torch
+from torch.nn import BatchNorm1d, LayerNorm
 from wenet.paraformer.embedding import ParaformerPositinoalEncoding
+from wenet.transformer.norm import RMSNorm
+from wenet.transformer.positionwise_feed_forward import (
+    GatedVariantsMLP, MoEFFNLayer, PositionwiseFeedForward)
 
 from wenet.transformer.swish import Swish
 from wenet.transformer.subsampling import (
@@ -12,18 +16,23 @@ from wenet.transformer.subsampling import (
     Conv2dSubsampling4,
     Conv2dSubsampling6,
     Conv2dSubsampling8,
+    StackNFramesSubsampling,
 )
 from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
 from wenet.transformer.embedding import (PositionalEncoding,
                                          RelPositionalEncoding,
+                                         RopePositionalEncoding,
                                          WhisperPositionalEncoding,
                                          LearnablePositionalEncoding,
                                          NoPositionalEncoding)
 from wenet.transformer.attention import (MultiHeadedAttention,
                                          MultiHeadedCrossAttention,
-                                         RelPositionMultiHeadedAttention)
-from wenet.efficient_conformer.attention import GroupedRelPositionMultiHeadedAttention
+                                         RelPositionMultiHeadedAttention,
+                                         RopeMultiHeadedAttention,
+                                         ShawRelPositionMultiHeadedAttention)
+from wenet.efficient_conformer.attention import (
+    GroupedRelPositionMultiHeadedAttention)
 
 WENET_ACTIVATION_CLASSES = {
     "hardtanh": torch.nn.Hardtanh,
@@ -49,7 +58,8 @@ WENET_SUBSAMPLE_CLASSES = {
     "dwconv2d4": DepthwiseConv2dSubsampling4,
     "conv2d6": Conv2dSubsampling6,
     "conv2d8": Conv2dSubsampling8,
-    'paraformer_dummy': torch.nn.Identity
+    'paraformer_dummy': torch.nn.Identity,
+    'stack_n_frames': StackNFramesSubsampling,
 }
 
 WENET_EMB_CLASSES = {
@@ -60,6 +70,7 @@ WENET_EMB_CLASSES = {
     "abs_pos_whisper": WhisperPositionalEncoding,
     "embed_learnable_pe": LearnablePositionalEncoding,
     "abs_pos_paraformer": ParaformerPositinoalEncoding,
+    'rope_pos': RopePositionalEncoding,
 }
 
 WENET_ATTENTION_CLASSES = {
@@ -67,4 +78,18 @@ WENET_ATTENTION_CLASSES = {
     "rel_selfattn": RelPositionMultiHeadedAttention,
     "grouped_rel_selfattn": GroupedRelPositionMultiHeadedAttention,
     "crossattn": MultiHeadedCrossAttention,
+    'shaw_rel_selfattn': ShawRelPositionMultiHeadedAttention,
+    'rope_abs_selfattn': RopeMultiHeadedAttention,
+}
+
+WENET_MLP_CLASSES = {
+    'position_wise_feed_forward': PositionwiseFeedForward,
+    'moe': MoEFFNLayer,
+    'gated': GatedVariantsMLP
+}
+
+WENET_NORM_CLASSES = {
+    'layer_norm': LayerNorm,
+    'batch_norm': BatchNorm1d,
+    'rms_norm': RMSNorm
 }

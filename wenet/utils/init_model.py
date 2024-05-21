@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import torch
 
+from wenet.finetune.lora.utils import mark_only_lora_as_trainable
 from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
@@ -36,6 +38,8 @@ from wenet.ctl_model.asr_model_ctl import CTLModel
 from wenet.whisper.whisper import Whisper
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
+from wenet.finetune.lora.encoder import (LoRATransformerEncoder,
+                                         LoRAConformerEncoder)
 
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
@@ -47,6 +51,8 @@ WENET_ENCODER_CLASSES = {
     "dual_transformer": DualTransformerEncoder,
     "dual_conformer": DualConformerEncoder,
     'sanm_encoder': SanmEncoder,
+    "lora_transformer": LoRATransformerEncoder,
+    "lora_conformer": LoRAConformerEncoder,
 }
 
 WENET_DECODER_CLASSES = {
@@ -99,6 +105,9 @@ def init_model(args, configs):
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')
     ctc_type = configs.get('ctc', 'ctc')
+
+    if hasattr(args, 'use_lora') and args.use_lora:
+        encoder_type = "lora_" + encoder_type
 
     encoder = WENET_ENCODER_CLASSES[encoder_type](
         input_dim,
@@ -168,10 +177,17 @@ def init_model(args, configs):
     else:
         infos = {}
     configs["init_infos"] = infos
-    print(configs)
+
+    if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:
+        mark_only_lora_as_trainable(model, bias='lora_only')
+
+    if int(os.environ.get('RANK', 0)) == 0:
+        print(configs)
 
     # Tie emb.weight to decoder.output_layer.weight
     if model.decoder.tie_word_embedding:
+        if not hasattr(args, 'jit'):
+            args.jit = True  # i.e. export onnx/jit/ipex
         model.decoder.tie_or_clone_weights(jit_mode=args.jit)
 
     return model, configs

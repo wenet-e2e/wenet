@@ -20,10 +20,6 @@ import torchaudio.compliance.kaldi as kaldi
 
 import wenet.dataset.kaldi_io as kaldi_io
 
-# The "sox" backends are deprecated and will be removed in 0.9.0 release.
-# So here we use sox_io backend
-torchaudio.set_audio_backend("sox_io")
-
 
 def parse_opts():
     parser = argparse.ArgumentParser(description='training your network')
@@ -104,14 +100,14 @@ if __name__ == '__main__':
         for item in audio_list:
             if len(item) == 2:
                 key, wav_path = item
-                waveform, sample_rate = torchaudio.load_wav(wav_path)
+                waveform, sample_rate = torchaudio.load(wav_path)
             else:
                 assert len(item) == 4
                 key, wav_path, start, end = item
                 sample_rate = torchaudio.info(wav_path).sample_rate
                 frame_offset = int(start * sample_rate)
                 num_frames = int((end - start) * sample_rate)
-                waveform, sample_rate = torchaudio.load_wav(
+                waveform, sample_rate = torchaudio.load(
                     wav_path, frame_offset, num_frames)
 
             mat = kaldi.fbank(waveform,

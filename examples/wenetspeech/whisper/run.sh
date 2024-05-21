@@ -44,13 +44,12 @@ train_set=train_l
 dev_set=dev
 test_sets="test_net test_meeting"
 
-epoch=100
 train_config=conf/finetune_whisper_largev3.yaml
 checkpoint=exp/whisper/large-v3/wenet_whisper.init-ctc.pt
 dir=exp/finetune_whisper_largev3
 tensorboard_dir=tensorboard
-num_workers=1
-prefetch=500
+num_workers=8
+prefetch=10
 
 # use average_checkpoint will get better result
 average_checkpoint=true
@@ -92,19 +91,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
     echo "$0: using torch ddp"
   fi
 
-  # repeat data.list, we use step_save instead of epoch_save for large datasets
-  train_data=data/$train_set/data.list.repeat${epoch}
-  if [ ! -f "${train_data}" ]; then
-    echo "repeat data/$train_set/data.list ${epoch} times"
-    for (( i=1; i<=$epoch; i++ ))
-    do
-        cat "data/$train_set/data.list" >> "${train_data}"
-    done
-    echo "save new data.list in ${train_data}, it will be used for training"
-  else
-    echo "${train_data} already exists."
-  fi
-
   # NOTE(xcsong): Both ddp & deepspeed can be launched by torchrun
   # NOTE(xcsong): To unify single-node & multi-node training, we add
   #               all related args. You should change `nnodes` &
@@ -128,7 +114,7 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type  $data_type \
-      --train_data ${train_data} \
+      --train_data data/$train_set/data.list \
       --cv_data data/$dev_set/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \

@@ -32,7 +32,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.9
+          python-version: 3.10.14
           architecture: x64
       - name: Fetch Wenet
         uses: actions/checkout@v1
@@ -60,7 +60,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.x
+          python-version: 3.10.14
           architecture: x64
       - name: Fetch Wenet
         uses: actions/checkout@v1
@@ -77,7 +77,7 @@ jobs:
       - name: Run cpplint
         run: |
           set -eux
-          pip install cpplint
+          pip install cpplint==1.6.1
           cpplint --version
           cpplint --recursive .
           if [ $? != 0 ]; then exit 1; fi
@@ -88,7 +88,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.x
+          python-version: 3.10.14
           architecture: x64
       - name: Fetch Wenet
         uses: actions/checkout@v1
@@ -105,7 +105,7 @@ jobs:
       - name: Run clang-format
         run: |
           set -eux
-          pip install clang-format
+          pip install clang-format==17.0.6
           clang-format --version
           # find all cxx files in runtime/core (exclude kaldi & path) and dry-run clang-format
           find runtime/core \( -name "*.h" -o -name "*.hpp" -o -name "*.cpp" -o -name "*.cc" \) ! -path "runtime/core/kaldi/*" ! -path "runtime/core/patch/*"  -exec clang-format -style=file --dry-run --Werror --verbose {} +

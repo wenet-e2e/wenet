@@ -14,7 +14,6 @@ option(HTTP "whether to build with http" OFF)
 option(TORCH "whether to build with Torch" ON)
 option(ONNX "whether to build with ONNX" OFF)
 option(GPU "whether to build with GPU" OFF)
-option(ITN "whether to use WeTextProcessing" ON)
 
 set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -g")
 set(CMAKE_VERBOSE_MAKEFILE OFF)
@@ -28,7 +27,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 if(NOT MSVC)
   # Keep the same with openfst, -fPIC or -fpic
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -fPIC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -pthread -fPIC")
 else()
   set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
   add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
@@ -48,9 +47,7 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
 
-if(ITN)
-  include(wetextprocessing)
-endif()
+include(wetextprocessing)
 
 # Build all libraries
 add_subdirectory(utils)

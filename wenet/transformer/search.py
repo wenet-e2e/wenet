@@ -175,7 +175,7 @@ def ctc_prefix_beam_search(
                         next_score1.ns = log_add(next_score1.ns,
                                                  prefix_score.ns + prob)
                         if next_score1.v_ns < prefix_score.v_ns + prob:
-                            next_score1.vs_ns = prefix_score.v_ns + prob
+                            next_score1.v_ns = prefix_score.v_ns + prob
                             if next_score1.cur_token_prob < prob:
                                 next_score1.cur_token_prob = prob
                                 next_score1.times_ns = prefix_score.times_ns.copy(
@@ -320,7 +320,8 @@ def attention_beam_search(
             -1, 1).repeat([1, beam_size]) * beam_size).view(-1)  # (B*N)
         cache_index = base_cache_index + cache_index
         cache['self_att_cache'] = {
-            i_layer: torch.index_select(value, dim=0, index=cache_index)
+            i_layer: (torch.index_select(value[0], dim=0, index=cache_index),
+                      torch.index_select(value[1], dim=0, index=cache_index))
             for (i_layer, value) in cache['self_att_cache'].items()
         }
         # NOTE(Mddct): we don't need select cross att here
@@ -440,7 +441,7 @@ def attention_rescoring(
             # add ctc score
             score += ctc_scores[i] * ctc_weight
             if score > best_score:
-                best_score = score
+                best_score = score.item()
                 best_index = i
             tokens_confidences.append(tc)
         results.append(
