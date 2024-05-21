@@ -24,7 +24,7 @@ import yaml
 import torch.distributed as dist
 
 from torch.distributed.elastic.multiprocessing.errors import record
-from wenet.utils.common import lrs_to_str
+from wenet.utils.common import lrs_to_str, TORCH_NPU_AVAILABLE  # noqa just ensure to check torch-npu
 
 from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
@@ -45,6 +45,10 @@ def get_args():
                         default='torch_ddp',
                         choices=['torch_ddp', 'torch_fsdp', 'deepspeed'],
                         help='Engine for paralleled training')
+    # set default value of device to "cuda", avoiding the modify of original scripts
+    parser.add_argument('--device',
+                        default='cuda',
+                        help='accelerator for training')
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)
     parser = add_ddp_args(parser)
@@ -118,7 +122,8 @@ def main():
 
     # Get executor
     tag = configs["init_infos"].get("tag", "init")
-    executor = Executor(global_step=configs["init_infos"].get('step', -1))
+    executor = Executor(global_step=configs["init_infos"].get('step', -1),
+                        device=device)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = init_scaler(args)

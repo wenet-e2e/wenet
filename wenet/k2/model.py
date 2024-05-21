@@ -39,6 +39,7 @@ class K2Model(ASRModel):
         length_normalized_loss: bool = False,
         lfmmi_dir: str = '',
         special_tokens: dict = None,
+        device: torch.device = "cuda",
     ):
         super().__init__(vocab_size,
                          encoder,
@@ -51,6 +52,7 @@ class K2Model(ASRModel):
                          length_normalized_loss,
                          special_tokens=special_tokens)
         self.lfmmi_dir = lfmmi_dir
+        self.device = device
         if self.lfmmi_dir != '':
             self.load_lfmmi_resource()
 
@@ -74,7 +76,7 @@ class K2Model(ASRModel):
                 arr = line.strip().split()
                 if arr[0] == '<sos/eos>':
                     self.sos_eos_id = int(arr[1])
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device(self.device)
         self.graph_compiler = icefall.mmi_graph_compiler.MmiTrainingGraphCompiler(
             self.lfmmi_dir,
             device=device,
@@ -124,8 +126,7 @@ class K2Model(ASRModel):
         except ImportError:
             print('Error: Failed to import k2')
         if not hasattr(self, 'hlg'):
-            device = torch.device(
-                'cuda' if torch.cuda.is_available() else 'cpu')
+            device = torch.device(self.device)
             self.hlg = k2.Fsa.from_dict(torch.load(hlg, map_location=device))
         if not hasattr(self.hlg, "lm_scores"):
             self.hlg.lm_scores = self.hlg.scores.clone()
