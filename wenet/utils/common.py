@@ -368,9 +368,8 @@ def is_torch_npu_available() -> bool:
         import torch_npu  # noqa
         return True
     except ImportError:
-        print(
-            "torch_npu is unavailable. Please \"pip install torch_npu\" if you are using Ascend NPU"
-        )
+        print("Module \"torch_npu\" not found. \"pip install torch_npu\" \
+            if you are using Ascend NPU, otherwise, ignore it")
     return False
 
 
