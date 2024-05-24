@@ -525,8 +525,8 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, None, None)
         # TODO(Mddct): 64 8 1 as args
-        self.max_right_rel_pos = 64
-        self.max_left_rel_pos = 8
+        self.max_right_rel_pos = 8
+        self.max_left_rel_pos = 64
         self.rel_k_embed = torch.nn.Embedding(
             self.max_left_rel_pos + self.max_right_rel_pos + 1, self.d_k)
 
