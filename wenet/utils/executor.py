@@ -140,7 +140,7 @@ class Executor:
 
                 num_seen_utts += num_utts
                 total_acc.append(_dict['th_accuracy'].item(
-                ) if _dict['th_accuracy'] is not None else 0.0)
+                ) if _dict.get('th_accuracy', None) is not None else 0.0)
                 for loss_name, loss_value in _dict.items():
                     if loss_value is not None and "loss" in loss_name \
                             and torch.isfinite(loss_value):
