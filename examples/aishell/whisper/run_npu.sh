@@ -96,8 +96,8 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       --train_engine ${train_engine} \
       --config $train_config \
       --data_type  $data_type \
-      --train_data data/$train_set/data-whisper.list \
-      --cv_data data/dev/data-whisper.list \
+      --train_data data/$train_set/data.list \
+      --cv_data data/dev/data.list \
       ${checkpoint:+--checkpoint $checkpoint} \
       --model_dir $dir \
       --tensorboard_dir ${tensorboard_dir} \
