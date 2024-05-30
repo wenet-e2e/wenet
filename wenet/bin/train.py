@@ -47,7 +47,9 @@ def get_args():
                         help='Engine for paralleled training')
     # set default value of device to "cuda", avoiding the modify of original scripts
     parser.add_argument('--device',
+                        type=str,
                         default='cuda',
+                        choices=["cpu", "npu", "cuda"],
                         help='accelerator for training')
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)

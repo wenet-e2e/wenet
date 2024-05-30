@@ -47,6 +47,7 @@ def get_args():
     parser.add_argument('--device',
                         type=str,
                         default="cpu",
+                        choices=["cpu", "npu", "cuda"],
                         help='accelerator to use')
     parser.add_argument('--dtype',
                         type=str,

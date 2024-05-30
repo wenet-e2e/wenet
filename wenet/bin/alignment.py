@@ -139,6 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('--device',
                         type=str,
                         default="cpu",
+                        choices=["cpu", "npu", "cuda"],
                         help='accelerator to use')
     parser.add_argument('--blank_thres',
                         default=0.999999,
