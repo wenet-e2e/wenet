@@ -42,7 +42,6 @@ class Transducer(ASRModel):
         lm_only_scale: float = 0.25,
         am_only_scale: float = 0.0,
         special_tokens: dict = None,
-        device: torch.device = "cuda",
     ) -> None:
         assert attention_weight + ctc_weight + transducer_weight == 1.0
         super().__init__(vocab_size,

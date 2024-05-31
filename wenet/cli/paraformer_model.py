@@ -13,20 +13,13 @@ from wenet.utils.common import TORCH_NPU_AVAILABLE  # noqa just ensure to check 
 
 class Paraformer:
 
-    def __init__(self,
-                 model_dir: str,
-                 gpu: int = -1,
-                 device: str = "cpu",
-                 resample_rate: int = 16000) -> None:
+    def __init__(self, model_dir: str, resample_rate: int = 16000) -> None:
 
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
         self.resample_rate = resample_rate
-        if gpu != -1:
-            device = "cuda"
-        self.device = torch.device(device)
-        self.model = self.model.to(self.device)
+        self.device = torch.device("cpu")
         self.tokenizer = ParaformerTokenizer(symbol_table=units_path)
 
     def transcribe(self, audio_file: str, tokens_info: bool = False) -> dict:
@@ -79,4 +72,10 @@ def load_model(model_dir: str = None,
                device: str = "cpu") -> Paraformer:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang('paraformer')
-    return Paraformer(model_dir, gpu, device)
+    if gpu != -1:
+        # remain the original usage of gpu
+        device = "cuda"
+    paraformer = Paraformer(model_dir)
+    paraformer.device = torch.device(device)
+    paraformer.model.to(device)
+    return paraformer

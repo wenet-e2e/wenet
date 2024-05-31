@@ -32,22 +32,16 @@ class Model:
 
     def __init__(self,
                  model_dir: str,
-                 gpu: int = -1,
                  beam: int = 5,
                  context_path: str = None,
                  context_score: float = 6.0,
-                 resample_rate: int = 16000,
-                 device: str = "cpu"):
+                 resample_rate: int = 16000):
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
         self.resample_rate = resample_rate
         self.model.eval()
-        if gpu != -1:
-            # remain the original usage of gpu
-            device = "cuda"
-        self.device = torch.device(device)
-        self.model = self.model.to(self.device)
+        self.device = torch.device("cpu")
         self.symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
         self.beam = beam
@@ -166,9 +160,11 @@ def load_model(language: str = None,
                device: str = "cpu") -> Model:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang(language)
-    return Model(model_dir,
-                 gpu,
-                 beam,
-                 context_path,
-                 context_score,
-                 device=device)
+
+    if gpu != -1:
+        # remain the original usage of gpu
+        device = "cuda"
+    model = Model(model_dir, beam, context_path, context_score)
+    model.device = torch.device(device)
+    model.model.to(device)
+    return model
