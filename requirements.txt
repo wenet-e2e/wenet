@@ -15,8 +15,6 @@ pycodestyle==2.6.0
 pyflakes==2.2.0
 clang-format==17.0.6
 cpplint==1.6.1
-torch>=2.1.2
-torchaudio>=2.1.2
 tqdm
 deepspeed>=0.14.0
 librosa
