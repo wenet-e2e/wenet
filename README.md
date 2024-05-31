@@ -61,7 +61,6 @@ conda activate wenet
 conda install conda-forge::sox
 ```
 
-
 - Install CUDA: please follow this [link](https://icefall.readthedocs.io/en/latest/installation/index.html#id1), It's recomended to install CUDA 12.1
 - Install torch and torchaudio, It's recomended to use 2.2.2+cu121:
 
