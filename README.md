@@ -59,9 +59,25 @@ git clone https://github.com/wenet-e2e/wenet.git
 conda create -n wenet python=3.10
 conda activate wenet
 conda install conda-forge::sox
+```
+
+- Install CUDA: please follow this [link](https://icefall.readthedocs.io/en/latest/installation/index.html#id1), It's recomended to install CUDA 12.1
+- Install torch and torchaudio, It's recomended to use 2.2.2+cu121:
+
+``` sh
+pip install torch==2.2.2+cu121 torchaudio==2.2.2+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+- Install other python packages
+
+``` sh
 pip install -r requirements.txt
 pre-commit install  # for clean and tidy code
+```
 
+- Frequently Asked Questions (FAQs)
+
+``` sh
 # If you encounter sox compatibility issues
 RuntimeError: set_buffer_size requires sox extension which is not available.
 # ubuntu
