@@ -282,7 +282,7 @@ def check_modify_and_save_config(args, configs, symbol_table):
         configs['encoder_conf']['lora_alpha'] = args.lora_alpha
         configs['encoder_conf']['lora_dropout'] = args.lora_dropout
 
-    if configs["model"] == 'asr':
+    if configs["model"] == 'asr_model':
         if 'input_dim' not in configs:
             if 'fbank_conf' in configs['dataset_conf']:
                 input_dim = configs['dataset_conf']['fbank_conf'][
