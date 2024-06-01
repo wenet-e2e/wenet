@@ -20,6 +20,8 @@ from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.paraformer import Paraformer, Predictor
+from wenet.LLM.causallm_model import CausalLM
+from wenet.LLM.decoder import DecoderOnly
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -84,11 +86,11 @@ WENET_MODEL_CLASSES = {
     "k2_model": K2Model,
     "transducer": Transducer,
     'paraformer': Paraformer,
+    'causal_llm': CausalLM,
 }
 
 
-def init_model(args, configs):
-
+def init_speech_model(args, configs):
     # TODO(xcsong): Forcefully read the 'cmvn' attribute.
     if configs.get('cmvn', None) == 'global_cmvn':
         mean, istd = load_cmvn(configs['cmvn_conf']['cmvn_file'],
@@ -168,6 +170,32 @@ def init_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
             **configs['model_conf'])
+    return model, configs
+
+
+def init_causal_llm(configs):
+    vocab_size = configs['output_dim']
+    assert configs['decoder'] == 'decoder_only'
+    assert configs['model'] == 'causal_lm'
+    decoder_only = DecoderOnly(**configs['decoder_conf'])
+
+    model = CausalLM(
+        vocab_size,
+        decoder_only,
+        **configs['model_conf'],
+        special_tokens=configs.get('tokenizer_conf',
+                                   {}).get('special_tokens', None),
+    )
+    return model, configs
+
+
+def init_model(args, configs):
+
+    model_type = configs.get('model', 'asr_model')
+    if model_type == 'causal_lm':
+        model, configs = init_causal_llm(configs)
+    else:
+        model, configs = init_speech_model(args, configs)
 
     # If specify checkpoint, load some info from checkpoint
     if hasattr(args, 'checkpoint') and args.checkpoint is not None:
@@ -178,16 +206,17 @@ def init_model(args, configs):
         infos = {}
     configs["init_infos"] = infos
 
+    print(configs)
+    # Trye to tie some weights
+    if hasattr(model, 'tie_or_clone_weights'):
+        if not hasattr(args, 'jit'):
+            args.jit = True  # i.e. export onnx/jit/ipex
+        model.tie_or_clone_weights(args.jit)
+
     if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:
         mark_only_lora_as_trainable(model, bias='lora_only')
 
     if int(os.environ.get('RANK', 0)) == 0:
         print(configs)
-
-    # Tie emb.weight to decoder.output_layer.weight
-    if model.decoder.tie_word_embedding:
-        if not hasattr(args, 'jit'):
-            args.jit = True  # i.e. export onnx/jit/ipex
-        model.decoder.tie_or_clone_weights(jit_mode=args.jit)
 
     return model, configs
