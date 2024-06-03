@@ -40,7 +40,8 @@ class Paraformer:
                             frame_length=25,
                             frame_shift=10,
                             energy_floor=0.0,
-                            sample_frequency=self.resample_rate)
+                            sample_frequency=self.resample_rate,
+                            window_type="hamming")
         feats = feats.unsqueeze(0)
         feats_lens = torch.tensor([feats.size(1)],
                                   dtype=torch.int64,
