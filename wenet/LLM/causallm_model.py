@@ -2,7 +2,6 @@ from typing import Dict, List, Optional, Union
 import torch
 from wenet.LLM.decoder import DecoderOnly
 from wenet.LLM.sampler import sampler
-from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import IGNORE_ID, th_accuracy
 from wenet.utils.mask import make_pad_mask, subsequent_mask
 
@@ -18,7 +17,7 @@ class CausalLM(torch.nn.Module):
         linear_bias: bool = False,
         ignore_id: int = IGNORE_ID,
         lsm_weight: float = 0.0,
-        length_normalized_loss: bool = False,
+        reduction: str = 'mean',
     ) -> None:
         super().__init__()
         del special_tokens
@@ -30,11 +29,10 @@ class CausalLM(torch.nn.Module):
 
         self.decoder = decoder
         self.vocab_size = vocab_size
-        self.criterion_att = LabelSmoothingLoss(
-            size=vocab_size,
-            padding_idx=ignore_id,
-            smoothing=lsm_weight,
-            normalize_length=length_normalized_loss,
+        self.criterion_att = torch.nn.CrossEntropyLoss(
+            ignore_index=ignore_id,
+            label_smoothing=lsm_weight,
+            reduction=reduction,
         )
         self.tie_word_embedding = tie_word_embedding
         self.ignore_id = ignore_id
@@ -60,7 +58,8 @@ class CausalLM(torch.nn.Module):
         embeding = self.embed(text)
         decoder_out = self.out(self.decoder(embeding,
                                             att_mask)[0])  # (B, L, vocab_size)
-        loss = self.criterion_att(decoder_out, target)
+        loss = self.criterion_att(decoder_out.view(-1, self.vocab_size),
+                                  target.view(-1))
         acc = th_accuracy(decoder_out.view(-1, self.vocab_size),
                           target,
                           ignore_label=self.ignore_id)
