@@ -231,7 +231,8 @@ def compute_fbank(sample,
                   num_mel_bins=23,
                   frame_length=25,
                   frame_shift=10,
-                  dither=0.0):
+                  dither=0.0,
+                  window_type="povey"):
     """ Extract fbank
 
         Args:
@@ -253,7 +254,8 @@ def compute_fbank(sample,
                       frame_shift=frame_shift,
                       dither=dither,
                       energy_floor=0.0,
-                      sample_frequency=sample_rate)
+                      sample_frequency=sample_rate,
+                      window_type=window_type)
     sample['feat'] = mat
     return sample
 
