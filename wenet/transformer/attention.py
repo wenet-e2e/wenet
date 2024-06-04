@@ -534,7 +534,7 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
                           device: torch.device):
         l_indices = torch.arange(query_length, device=device).view(-1, 1)
         r_indices = torch.arange(key_length, device=device).view(1, -1)
-        rel_indices = l_indices - r_indices
+        rel_indices = r_indices - l_indices
         rel_indices = torch.clamp(rel_indices, -self.max_left_rel_pos,
                                   self.max_right_rel_pos)
         return rel_indices + self.max_left_rel_pos
