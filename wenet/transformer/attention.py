@@ -530,13 +530,16 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
         self.rel_k_embed = torch.nn.Embedding(
             self.max_left_rel_pos + self.max_right_rel_pos + 1, self.d_k)
 
-    def _relative_indices(self, query_length: int, key_length: int,
-                          device: torch.device):
-        l_indices = torch.arange(query_length, device=device).view(-1, 1)
-        r_indices = torch.arange(key_length, device=device).view(1, -1)
-        rel_indices = r_indices - l_indices
+    def _relative_indices(self, keys: torch.Tensor) -> torch.Tensor:
+        # (S, 1)
+        indices = torch.arange(keys.size(2), device=keys.device).unsqueeze(0)
+
+        # (S, S)
+        rel_indices = indices - indices.transpose(0, 1)
+
         rel_indices = torch.clamp(rel_indices, -self.max_left_rel_pos,
                                   self.max_right_rel_pos)
+
         return rel_indices + self.max_left_rel_pos
 
     def forward(
@@ -552,15 +555,8 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
         q, k, v = self.forward_qkv(query, key, value)
         k, v, new_cache = self._update_kv_and_cache(k, v, cache)
 
-        rel_k = self.rel_k_embed(
-            self._relative_indices(q.size(2), k.size(2),
-                                   query.device))  # (t2, t2, d_k)
-        # rel_k = rel_k[-q.size(2):]  # (t1, t2, d_k)
-        # # b,h,t1,dk
-        # rel_k = rel_k.unsqueeze(0).unsqueeze(0)  # (1, 1, t1, t2, d_k)
-        # q_expand = q.unsqueeze(3)  # (batch, h, t1, 1, d_k)
-        # rel_att_weights = (rel_k * q_expand).sum(-1).squeeze(
-        #     -1)  # (batch, h, t1, t2)
+        rel_k = self.rel_k_embed(self._relative_indices(k))  # (t2, t2, d_k)
+        rel_k = rel_k[-q.size(2):]
         rel_att_weights = torch.einsum("bhld,lrd->bhlr", q, rel_k)
 
         if not self.use_sdpa:
