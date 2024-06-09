@@ -90,6 +90,7 @@ class Transducer(ASRModel):
                 normalize_length=length_normalized_loss,
             )
 
+    @torch.jit.unused
     def forward(
         self,
         batch: dict,
