@@ -176,7 +176,7 @@ class BestRQModel(torch.nn.Module):
         subsampling_masks = masked_masks.unfold(1,
                                                 size=self.stack_frames,
                                                 step=self.stride)
-        # NOTE(Mddct): you can try torch.max(subsampling_masks, 2) if 
+        # NOTE(Mddct): you can try torch.max(subsampling_masks, 2) if
         #  subsampling rate == 2 or mask probs is smaller
         code_ids_mask, _ = torch.min(subsampling_masks, 2)
 
