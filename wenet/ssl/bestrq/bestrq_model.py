@@ -81,12 +81,6 @@ class BestRQModel(torch.nn.Module):
 
         # encoder
         self.encoder = encoder
-        assert self.encoder.global_cmvn is not None
-        self.register_buffer('signal_mean', self.encoder.global_cmvn.mean)
-        self.register_buffer('signal_istd', self.encoder.global_cmvn.istd)
-        self.signal_norm_var = self.encoder.global_cmvn.norm_var
-        # NOTE(Mddct): disable encoder's global_cmvn
-        self.encoder.global_cmvn = None
 
         # n softmax
         self.encoder_top_n_out = torch.nn.parameter.Parameter(
@@ -169,10 +163,6 @@ class BestRQModel(torch.nn.Module):
     ):
         xs = batch['feats'].to(device)
         xs_lens = batch['feats_lengths'].to(device)
-        # force global cmvn
-        xs = xs - self.signal_mean
-        if self.signal_norm_var:
-            xs = xs * self.signal_istd
         input = xs
 
         features_pen: Optional[torch.Tensor] = None
@@ -267,10 +257,13 @@ class BestRQModel(torch.nn.Module):
         return loss
 
     def _nearest_embedding_idx(self, xs: torch.Tensor) -> torch.Tensor:
-        xs = self.norm(xs)
+        if self.encoder.global_cmvn is None:
+            xs = self.norm(xs)
         xs = torch.matmul(xs, self.projection.to(xs.device))
-
+        xs = xs / (xs.norm(dim=-1, p=2, keepdim=True) + 1e-8)
+        codebooks = self.embeddings / (
+            self.embeddings.norm(dim=-1, p=2, keepdim=True) + 1e-8)
         B, T, C = xs.size()
         xs_flatten = xs.view(B * T, C)
-        _, codes, _ = quantize_vector(xs_flatten, self.embeddings)
+        _, codes, _ = quantize_vector(xs_flatten, codebooks)
         return codes.reshape(B, T, -1)  # [B, T, num_codebooks]
