@@ -267,5 +267,8 @@ class BestRQModel(torch.nn.Module):
             self.embeddings.norm(dim=-1, p=2, keepdim=True) + 1e-8)
         B, T, C = xs.size()
         xs_flatten = xs.view(B * T, C)
-        _, codes, _ = quantize_vector(xs_flatten, codebooks)
+        # _, codes, _ = quantize_vector(xs_flatten, codebooks)
+        distance = xs_flatten.unsqueeze(1).unsqueeze(1) - codebooks.unsqueeze(
+            0)
+        codes = torch.linalg.vector_norm(distance, dim=-1).argmin(dim=1)
         return codes.reshape(B, T, -1)  # [B, T, num_codebooks]
