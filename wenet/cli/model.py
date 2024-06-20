@@ -32,6 +32,7 @@ class Model:
 
     def __init__(self,
                  model_dir: str,
+                 gpu: int = -1,
                  beam: int = 5,
                  context_path: str = None,
                  context_score: float = 6.0,
@@ -41,7 +42,11 @@ class Model:
         self.model = torch.jit.load(model_path)
         self.resample_rate = resample_rate
         self.model.eval()
-        self.device = torch.device("cpu")
+        if gpu >= 0:
+            device = 'cuda:{}'.format(gpu)
+        else:
+            device = 'cpu'
+        self.device = torch.device(device)
         self.symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
         self.beam = beam
