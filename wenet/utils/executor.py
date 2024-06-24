@@ -109,8 +109,7 @@ class Executor:
                         "lrs":
                         [group['lr'] for group in optimizer.param_groups]
                     })
-                    if self.step % 100 == 0:
-                        save_model(model, info_dict)
+                    save_model(model, info_dict)
                     # write final cv: tensorboard
                     log_per_step(writer, info_dict)
                     # Ensure all ranks start Train at the same time in step mode

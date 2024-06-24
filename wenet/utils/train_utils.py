@@ -226,6 +226,8 @@ def init_distributed(args):
             torch.cuda.set_device(local_rank)
         elif "npu" in args.device and TORCH_NPU_AVAILABLE:
             torch.npu.set_device(local_rank)
+        else:
+            logging.error("not supported device: {}".format(args.device))
         dist.init_process_group(args.dist_backend)
     elif args.train_engine == "deepspeed":
         deepspeed.init_distributed(dist_backend=args.dist_backend)
@@ -414,6 +416,8 @@ def wrap_cuda_model(args, model, configs=None):
             device_id = torch.cuda.current_device()
         elif "npu" in args.device and TORCH_NPU_AVAILABLE:
             device_id = torch.npu.current_device()
+        else:
+            logging.error("not supported device: {}".format(args.device))
         model = FSDP(
             model,
             auto_wrap_policy=wrap_policy,
@@ -552,6 +556,8 @@ def init_scaler(args):
             scaler = torch.cuda.amp.GradScaler()
         elif "npu" in args.device and TORCH_NPU_AVAILABLE:
             scaler = torch.npu.amp.GradScaler()
+        else:
+            logging.error("not supported device: {}".format(args.device))
     elif args.train_engine == 'torch_fsdp':
         # why bf16 don't need scaler:
         # https://discuss.pytorch.org/t/why-bf16-do-not-need-loss-scaling/176596
