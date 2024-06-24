@@ -136,6 +136,11 @@ if __name__ == '__main__':
                         type=int,
                         default=-1,
                         help='gpu id for this rank, -1 for cpu')
+    parser.add_argument('--device',
+                        type=str,
+                        default="cpu",
+                        choices=["cpu", "npu", "cuda"],
+                        help='accelerator to use')
     parser.add_argument('--blank_thres',
                         default=0.999999,
                         type=float,
@@ -165,7 +170,11 @@ if __name__ == '__main__':
     print(args)
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    if args.gpu != -1:
+        # remain the original usage of gpu
+        args.device = "cuda"
+    if "cuda" in args.device:
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
     if args.batch_size > 1:
         logging.fatal('alignment mode must be running with batch_size == 1')
@@ -213,8 +222,7 @@ if __name__ == '__main__':
     # Init asr model from configs
     model, configs = init_model(args, configs)
 
-    use_cuda = args.gpu >= 0 and torch.cuda.is_available()
-    device = torch.device('cuda' if use_cuda else 'cpu')
+    device = torch.device(args.device)
     model = model.to(device)
 
     model.eval()

@@ -38,6 +38,11 @@ def get_args():
                         type=int,
                         default='-1',
                         help='gpu id to decode, default is cpu.')
+    parser.add_argument('--device',
+                        type=str,
+                        default='cpu',
+                        choices=["cpu", "npu", "cuda"],
+                        help='accelerator to use')
     parser.add_argument('-t',
                         '--show_tokens_info',
                         action='store_true',
@@ -67,10 +72,10 @@ def main():
     args = get_args()
 
     if args.paraformer:
-        model = load_paraformer(args.model_dir, args.gpu)
+        model = load_paraformer(args.model_dir, args.gpu, args.device)
     else:
         model = load_model(args.language, args.model_dir, args.gpu, args.beam,
-                           args.context_path, args.context_score)
+                           args.context_path, args.context_score, args.device)
     if args.align:
         result = model.align(args.audio_file, args.label)
     else:

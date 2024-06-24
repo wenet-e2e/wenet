@@ -48,6 +48,7 @@ from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
                                     wenet_fsdp_wrap_policy)
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
+from wenet.utils.common import TORCH_NPU_AVAILABLE
 
 
 def add_model_args(parser):
@@ -146,7 +147,7 @@ def add_ddp_args(parser):
     parser.add_argument('--ddp.dist_backend',
                         dest='dist_backend',
                         default='nccl',
-                        choices=['nccl', 'gloo'],
+                        choices=['nccl', 'gloo', "hccl"],
                         help='distributed backend')
     parser.add_argument('--use_amp',
                         action='store_true',
@@ -221,7 +222,12 @@ def init_distributed(args):
     logging.info('training on multiple gpus, this gpu {}'.format(local_rank) +
                  ', rank {}, world_size {}'.format(rank, world_size))
     if args.train_engine in ["torch_ddp", "torch_fsdp"]:
-        torch.cuda.set_device(local_rank)
+        if "cuda" in args.device:
+            torch.cuda.set_device(local_rank)
+        elif "npu" in args.device and TORCH_NPU_AVAILABLE:
+            torch.npu.set_device(local_rank)
+        else:
+            logging.error("not supported device: {}".format(args.device))
         dist.init_process_group(args.dist_backend)
     elif args.train_engine == "deepspeed":
         deepspeed.init_distributed(dist_backend=args.dist_backend)
@@ -370,11 +376,10 @@ def wrap_cuda_model(args, model, configs=None):
     else:
         grad_ckpt = False
     if args.train_engine == "torch_ddp":  # native pytorch ddp
-        assert (torch.cuda.is_available())
-        model.cuda()
+        device = torch.device(args.device)
+        model.to(device)
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=not grad_ckpt)
-        device = torch.device("cuda")
     elif args.train_engine == "deepspeed":  # deepspeed
         # NOTE(xcsong): look in detail how the memory estimator API works:
         #   https://deepspeed.readthedocs.io/en/latest/memory.html#discussion
@@ -389,7 +394,7 @@ def wrap_cuda_model(args, model, configs=None):
                 model,
                 num_gpus_per_node=local_world_size,
                 num_nodes=world_size // local_world_size)
-        device = None  # Init device later
+        device = torch.device(args.device)  # Init device later
         pass  # Init DeepSpeed later
     elif args.train_engine == 'torch_fsdp':
         assert configs is not None
@@ -407,6 +412,12 @@ def wrap_cuda_model(args, model, configs=None):
         }[args.fsdp_sharding_strategy]
         wrap_policy = wenet_fsdp_wrap_policy(mode=args.fsdp_sharding_strategy)
         layer_types = check_gradient_checkpoint(model)
+        if "cuda" in args.device:
+            device_id = torch.cuda.current_device()
+        elif "npu" in args.device and TORCH_NPU_AVAILABLE:
+            device_id = torch.npu.current_device()
+        else:
+            logging.error("not supported device: {}".format(args.device))
         model = FSDP(
             model,
             auto_wrap_policy=wrap_policy,
@@ -423,10 +434,9 @@ def wrap_cuda_model(args, model, configs=None):
             sync_module_states=args.fsdp_sync_module_states,
             # init_distributed is called (torch.cuda.set_device),
             # we should set device_id, see FSDP api
-            device_id=torch.cuda.current_device(),
-        )
+            device_id=device_id)
         apply_fsdp_checkpointing(model, layer_types)
-        device = torch.device("cuda")
+        device = torch.device(args.device)
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
     if args.train_engine in ["torch_fsdp", "torch_ddp"]:
@@ -542,7 +552,12 @@ def init_summarywriter(args):
 def init_scaler(args):
     scaler = None
     if args.use_amp:
-        scaler = torch.cuda.amp.GradScaler()
+        if "cuda" in args.device:
+            scaler = torch.cuda.amp.GradScaler()
+        elif "npu" in args.device and TORCH_NPU_AVAILABLE:
+            scaler = torch.npu.amp.GradScaler()
+        else:
+            logging.error("not supported device: {}".format(args.device))
     elif args.train_engine == 'torch_fsdp':
         # why bf16 don't need scaler:
         # https://discuss.pytorch.org/t/why-bf16-do-not-need-loss-scaling/176596
@@ -612,9 +627,8 @@ def wenet_join(group_join, info_dict):
     return False
 
 
-def batch_forward(model, batch, scaler, info_dict):
+def batch_forward(model, batch, scaler, info_dict, device):
     train_engine = info_dict.get('train_engine', "torch_ddp")
-    device = int(os.environ.get('LOCAL_RANK', 0))
     accum_grad = info_dict.get('accum_grad', 1)
 
     dtype = info_dict.get("dtype", "fp32")
@@ -628,15 +642,18 @@ def batch_forward(model, batch, scaler, info_dict):
     # autocast context
     # The more details about amp can be found in
     # https://pytorch.org/docs/stable/notes/amp_examples.html
+    amp_autocast = torch.cuda.amp.autocast
+    if "npu" in device.__str__() and TORCH_NPU_AVAILABLE:
+        amp_autocast = torch.npu.amp.autocast
     autocast = {
         "deepspeed":
-        torch.cuda.amp.autocast(enabled=dtype is not None,
-                                dtype=dtype,
-                                cache_enabled=False),
+        amp_autocast(enabled=dtype is not None,
+                     dtype=dtype,
+                     cache_enabled=False),
         "torch_ddp":
-        torch.cuda.amp.autocast(enabled=scaler is not None),
+        amp_autocast(enabled=scaler is not None),
         "torch_fsdp":
-        torch.cuda.amp.autocast(enabled=True, dtype=dtype)
+        amp_autocast(enabled=True, dtype=dtype)
         if dtype is not None else nullcontext()
     }[train_engine]
     with autocast:

@@ -25,6 +25,7 @@ from wenet.utils.file_utils import read_symbol_table
 from wenet.transformer.search import (attention_rescoring,
                                       ctc_prefix_beam_search, DecodeResult)
 from wenet.utils.context_graph import ContextGraph
+from wenet.utils.common import TORCH_NPU_AVAILABLE  # noqa just ensure to check torch-npu
 
 
 class Model:
@@ -46,7 +47,6 @@ class Model:
         else:
             device = 'cpu'
         self.device = torch.device(device)
-        self.model = self.model.to(self.device)
         self.symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
         self.beam = beam
@@ -63,13 +63,19 @@ class Model:
         if sample_rate != self.resample_rate:
             waveform = torchaudio.transforms.Resample(
                 orig_freq=sample_rate, new_freq=self.resample_rate)(waveform)
-        waveform = waveform.to(self.device)
+        # NOTE (MengqingCao): complex dtype not supported in torch_npu.abs() now,
+        # thus, delay placing data on NPU after the calculation of fbank.
+        # revert me after complex dtype is supported.
+        if "npu" not in self.device.__str__():
+            waveform = waveform.to(self.device)
         feats = kaldi.fbank(waveform,
                             num_mel_bins=80,
                             frame_length=25,
                             frame_shift=10,
                             energy_floor=0.0,
                             sample_frequency=self.resample_rate)
+        if "npu" in self.device.__str__():
+            feats = feats.to(self.device)
         feats = feats.unsqueeze(0)
         return feats
 
@@ -155,7 +161,15 @@ def load_model(language: str = None,
                gpu: int = -1,
                beam: int = 5,
                context_path: str = None,
-               context_score: float = 6.0) -> Model:
+               context_score: float = 6.0,
+               device: str = "cpu") -> Model:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang(language)
-    return Model(model_dir, gpu, beam, context_path, context_score)
+
+    if gpu != -1:
+        # remain the original usage of gpu
+        device = "cuda"
+    model = Model(model_dir, beam, context_path, context_score)
+    model.device = torch.device(device)
+    model.model.to(device)
+    return model
