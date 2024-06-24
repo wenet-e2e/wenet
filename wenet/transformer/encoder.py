@@ -399,6 +399,7 @@ class TransformerEncoder(BaseEncoder):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        gate_type: str = 'normal',
     ):
         """ Construct TransformerEncoder
 
@@ -428,7 +429,8 @@ class TransformerEncoder(BaseEncoder):
                           activation,
                           mlp_bias,
                           n_expert=n_expert,
-                          n_expert_activated=n_expert_activated),
+                          n_expert_activated=n_expert_activated,
+                          gate_type=gate_type),
                 dropout_rate,
                 normalize_before,
                 layer_norm_type=layer_norm_type,
@@ -479,6 +481,7 @@ class ConformerEncoder(BaseEncoder):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        gate_type: str = 'normal',
     ):
         """Construct ConformerEncoder
 
@@ -527,6 +530,7 @@ class ConformerEncoder(BaseEncoder):
             mlp_bias,
             n_expert,
             n_expert_activated,
+            gate_type,
         )
         # convolution module definition
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
