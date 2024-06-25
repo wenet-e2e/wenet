@@ -288,20 +288,23 @@ def check_modify_and_save_config(args, configs, symbol_table):
         configs['encoder_conf']['lora_alpha'] = args.lora_alpha
         configs['encoder_conf']['lora_dropout'] = args.lora_dropout
 
-    if 'input_dim' not in configs:
-        if 'fbank_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
-        elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['log_mel_spectrogram_conf'][
-                'num_mel_bins']
+    if configs["model"] == 'asr_model':
+        if 'input_dim' not in configs:
+            if 'fbank_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf']['fbank_conf'][
+                    'num_mel_bins']
+            elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf'][
+                    'log_mel_spectrogram_conf']['num_mel_bins']
+            else:
+                input_dim = configs['dataset_conf']['mfcc_conf'][
+                    'num_mel_bins']
         else:
-            input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
-    else:
-        input_dim = configs['input_dim']
+            input_dim = configs['input_dim']
+
+        configs['input_dim'] = input_dim
 
     configs, _ = get_blank_id(configs, symbol_table)
-
-    configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
 
     configs['train_engine'] = args.train_engine
