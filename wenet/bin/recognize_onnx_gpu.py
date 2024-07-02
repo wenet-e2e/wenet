@@ -122,6 +122,7 @@ def main():
         configs = override_config(configs, args.override_config)
 
     reverse_weight = configs["model_conf"].get("reverse_weight", 0.0)
+    special_tokens=configs.get('tokenizer_conf',{}).get('special_tokens', None)
     test_conf = copy.deepcopy(configs['dataset_conf'])
     test_conf['filter_conf']['max_length'] = 102400
     test_conf['filter_conf']['min_length'] = 0
@@ -138,6 +139,8 @@ def main():
     test_conf['fbank_conf']['dither'] = 0.0
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
+    
+
 
     tokenizer = init_tokenizer(configs)
     test_dataset = Dataset(args.data_type,
@@ -165,13 +168,21 @@ def main():
     # Load dict
     vocabulary = []
     char_dict = {}
+    
+
     with open(args.dict, 'r') as fin:
         for line in fin:
             arr = line.strip().split()
             assert len(arr) == 2
             char_dict[int(arr[1])] = arr[0]
             vocabulary.append(arr[0])
-    eos = sos = len(char_dict) - 1
+
+    vocab_size = len(char_dict)
+    sos = (vocab_size - 1 if special_tokens is None else
+                    special_tokens.get("<sos>", vocab_size - 1))
+    eos = (vocab_size - 1 if special_tokens is None else
+                    special_tokens.get("<eos>", vocab_size - 1))
+
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for _, batch in enumerate(test_data_loader):
             keys, feats, _, feats_lengths, _ = batch
