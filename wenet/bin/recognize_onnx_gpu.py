@@ -185,7 +185,9 @@ def main():
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for _, batch in enumerate(test_data_loader):
-            keys, feats, _, feats_lengths, _ = batch
+            keys = batch['keys']
+            feats = batch['feats']
+            feats_lengths = batch['feats_lengths']
             feats, feats_lengths = feats.numpy(), feats_lengths.numpy()
             if args.fp16:
                 feats = feats.astype(np.float16)
