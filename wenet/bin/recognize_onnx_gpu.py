@@ -179,9 +179,9 @@ def main():
 
     vocab_size = len(char_dict)
     sos = (vocab_size - 1 if special_tokens is None else
-                        special_tokens.get("<sos>", vocab_size - 1))
+           special_tokens.get("<sos>", vocab_size - 1))
     eos = (vocab_size - 1 if special_tokens is None else
-                        special_tokens.get("<eos>", vocab_size - 1))
+           special_tokens.get("<eos>", vocab_size - 1))
 
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for _, batch in enumerate(test_data_loader):
