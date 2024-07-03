@@ -74,8 +74,7 @@ class TritonPythonModel:
 
     def init_ctc_rescore(self, parameters):
         num_processes = multiprocessing.cpu_count()
-        cutoff_prob = 0.9999
-       
+        cutoff_prob = 0.9999      
         alpha = 2.0
         beta = 1.0
         bidecoder = 0
@@ -130,9 +129,6 @@ class TritonPythonModel:
                 )
         self.vocabulary = vocab
         self.bidecoder = bidecoder
-
-       
- 
 
     def load_vocab(self, vocab_file):
         """
