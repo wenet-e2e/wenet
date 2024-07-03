@@ -103,7 +103,6 @@ class TritonPythonModel:
 
         self.num_processes = num_processes
         self.cutoff_prob = cutoff_prob
-        
         ret = self.load_vocab(vocab_path)
         id2vocab, vocab, space_id, blank_id, sos_eos = ret
         self.space_id = space_id if space_id else -1
