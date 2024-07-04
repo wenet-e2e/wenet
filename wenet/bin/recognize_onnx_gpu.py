@@ -62,7 +62,6 @@ except ImportError:
           'https://github.com/Slyne/ctc_decoder.git')
     sys.exit(1)
 
-
 def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
@@ -105,10 +104,8 @@ def get_args():
     parser.add_argument('--fp16',
                         action='store_true',
                         help='whether to export fp16 model, default false')
-    args = parser.parse_args()
-    print(args)
+    args = parser.parse_args()   
     return args
-
 
 def main():
     args = get_args()
@@ -140,15 +137,12 @@ def main():
     test_conf['batch_conf']['batch_type'] = "static"
     test_conf['batch_conf']['batch_size'] = args.batch_size
 
-
-
     tokenizer = init_tokenizer(configs)
     test_dataset = Dataset(args.data_type,
                            args.test_data,
                            tokenizer,
                            test_conf,
                            partition=False)
-
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
@@ -168,8 +162,6 @@ def main():
     # Load dict
     vocabulary = []
     char_dict = {}
-
-
     with open(args.dict, 'r') as fin:
         for line in fin:
             arr = line.strip().split()
@@ -300,7 +292,6 @@ def main():
                 content = hyps[i]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
-
 
 if __name__ == '__main__':
     main()
