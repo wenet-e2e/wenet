@@ -104,7 +104,7 @@ def get_args():
     parser.add_argument('--fp16',
                         action='store_true',
                         help='whether to export fp16 model, default false')
-    args = parser.parse_args()   
+    args = parser.parse_args()
     return args
 
 def main():
