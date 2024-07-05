@@ -169,7 +169,7 @@ def load_model(language: str = None,
     if gpu != -1:
         # remain the original usage of gpu
         device = "cuda"
-    model = Model(model_dir, beam, context_path, context_score)
+    model = Model(model_dir, gpu, beam, context_path, context_score)
     model.device = torch.device(device)
     model.model.to(device)
     return model
