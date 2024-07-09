@@ -183,11 +183,12 @@ class WenetModel(object):
                 hist_enc = batch_encoder_hist[idx]
                 if hist_enc is None:
                     cur_enc = cur_encoder_out[idx]
+                    cur_mask_len = int(0 + seq_lens[idx])
                 else:
                     cur_enc = torch.cat([hist_enc, cur_encoder_out[idx]],
                                         axis=0)
+                    cur_mask_len = int(len(hist_enc) + seq_lens[idx])
                 rescore_encoder_hist.append(cur_enc)
-                cur_mask_len = int(len(hist_enc) + seq_lens[idx])
                 rescore_encoder_lens.append(cur_mask_len)
                 rescore_hyps.append(score_hyps[idx])
                 if cur_enc.shape[0] > max_length:

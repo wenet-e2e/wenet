@@ -62,7 +62,6 @@ except ImportError:
           'https://github.com/Slyne/ctc_decoder.git')
     sys.exit(1)
 
-
 def get_args():
     parser = argparse.ArgumentParser(description='recognize with your model')
     parser.add_argument('--config', required=True, help='config file')
@@ -106,9 +105,7 @@ def get_args():
                         action='store_true',
                         help='whether to export fp16 model, default false')
     args = parser.parse_args()
-    print(args)
     return args
-
 
 def main():
     args = get_args()
@@ -122,6 +119,7 @@ def main():
         configs = override_config(configs, args.override_config)
 
     reverse_weight = configs["model_conf"].get("reverse_weight", 0.0)
+    special_tokens = configs.get('tokenizer_conf', {}).get('special_tokens', None)
     test_conf = copy.deepcopy(configs['dataset_conf'])
     test_conf['filter_conf']['max_length'] = 102400
     test_conf['filter_conf']['min_length'] = 0
@@ -145,7 +143,6 @@ def main():
                            tokenizer,
                            test_conf,
                            partition=False)
-
     test_data_loader = DataLoader(test_dataset, batch_size=None, num_workers=0)
 
     # Init asr model from configs
@@ -171,10 +168,18 @@ def main():
             assert len(arr) == 2
             char_dict[int(arr[1])] = arr[0]
             vocabulary.append(arr[0])
-    eos = sos = len(char_dict) - 1
+
+    vocab_size = len(char_dict)
+    sos = (vocab_size - 1 if special_tokens is None else
+           special_tokens.get("<sos>", vocab_size - 1))
+    eos = (vocab_size - 1 if special_tokens is None else
+           special_tokens.get("<eos>", vocab_size - 1))
+
     with torch.no_grad(), open(args.result_file, 'w') as fout:
         for _, batch in enumerate(test_data_loader):
-            keys, feats, _, feats_lengths, _ = batch
+            keys = batch['keys']
+            feats = batch['feats']
+            feats_lengths = batch['feats_lengths']
             feats, feats_lengths = feats.numpy(), feats_lengths.numpy()
             if args.fp16:
                 feats = feats.astype(np.float16)
@@ -287,7 +292,6 @@ def main():
                 content = hyps[i]
                 logging.info('{} {}'.format(key, content))
                 fout.write('{} {}\n'.format(key, content))
-
 
 if __name__ == '__main__':
     main()
