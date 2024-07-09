@@ -68,6 +68,28 @@ conda install conda-forge::sox
 pip install torch==2.2.2+cu121 torchaudio==2.2.2+cu121 -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
+<details><summary><b>For Ascend NPU users:</b></summary>
+
+- Install CANN: please follow this [link](https://ascend.github.io/docs/sources/ascend/quick_install.html) to install CANN toolkit and kernels.
+
+- Install WeNet with torch-npu dependencies:
+
+``` sh
+pip install -e .[torch-npu]
+```
+
+- Related version control table:
+
+| Requirement  |      Minimum     | Recommend   |
+| ------------ | ---------------- | ----------- |
+| CANN         | 8.0.RC2.alpha003 | latest      |
+| torch        | 2.1.0            | 2.2.0       |
+| torch-npu    | 2.1.0            | 2.2.0       |
+| torchaudio   | 2.1.0            | 2.2.0       |
+| deepspeed    | 0.13.2           | latest      |
+
+</details>
+
 - Install other python packages
 
 ``` sh
