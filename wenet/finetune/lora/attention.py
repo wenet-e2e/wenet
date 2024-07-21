@@ -27,41 +27,40 @@ import wenet.finetune.lora.layers as lora
 
 
 class LoRAMultiHeadedAttention(MultiHeadedAttention):
-    """Multi-Head Attention layer with lora.
+    """LoRA Multi-Head Attention layer with lora.
 
     Args:
-        *args: Arguments for the MultiHeadedAttention.
-        **kwargs: Keyword arguments for the MultiHeadedAttention.
+        n_head (int): The number of heads.
+        n_feat (int): The number of features.
+        dropout_rate (float): Dropout rate.
         lora_rank (int): Rank for LoRA.
         lora_alpha (int): Alpha for LoRA.
         lora_dropout (float): Dropout rate for LoRA.
         lora_list (Optional[List[str]]): List of layers to apply LoRA.
     """
-
-    def __init__(
-        self,
-        *args,
-        lora_rank: int = 8,
-        lora_alpha: int = 8,
-        lora_dropout: float = 0.0,
-        lora_list: Optional[List[str]] = None,
-        **kwargs
-    ):
-        """Construct an MultiHeadedAttention object."""
-        super().__init__(*args, **kwargs)
-
-        n_feat = args[1]  # Assuming the second argument is n_feat
-        n_head = args[0]  # Assuming the first argument is n_head
+    def __init__(self,
+                 n_head: int,
+                 n_feat: int,
+                 dropout_rate: float,
+                 query_bias: bool = True,
+                 key_bias: bool = True,
+                 value_bias: bool = True,
+                 use_sdpa: bool = False,
+                 n_kv_head: Optional[int] = None,
+                 head_dim: Optional[int] = None,
+                 lora_rank: int = 8,
+                 lora_alpha: int = 8,
+                 lora_dropout: float = 0.0,
+                 lora_list: Optional[List[str]] = None):
+        """Construct an LoRAMultiHeadedAttention object."""
+        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
+                         value_bias, use_sdpa, n_kv_head, head_dim)
         assert n_feat % n_head == 0
         # We assume d_v always equals d_k
         self.d_k = n_feat // n_head
         self.h = n_head
-
         self.linear_out = lora.Linear(
-            n_feat,
-            n_feat,
-            r=lora_rank,
-            lora_alpha=lora_alpha,
+            n_feat, n_feat, r=lora_rank, lora_alpha=lora_alpha,
             lora_dropout=lora_dropout
         ) if lora_list and "o" in lora_list else nn.Linear(n_feat, n_feat)
 
@@ -70,53 +69,52 @@ class LoRAMultiHeadedAttention(MultiHeadedAttention):
             "k": lora_list and "k" in lora_list,
             "v": lora_list and "v" in lora_list
         }
-        bias_dict = {
-            "q": kwargs.get('query_bias', True),
-            "k": kwargs.get('key_bias', True),
-            "v": kwargs.get('value_bias', True)
-        }
+        bias_dict = {"q": query_bias, "k": key_bias, "v": value_bias}
 
         for key, value in lora_qkv_dict.items():
-            setattr(
-                self, f"linear_{key}",
-                lora.Linear(n_feat,
-                            n_feat,
-                            r=lora_rank,
-                            lora_alpha=lora_alpha,
-                            lora_dropout=lora_dropout,
-                            bias=bias_dict[key]) if value else nn.Linear(
-                                n_feat, n_feat, bias_dict[key]))
-        self.dropout = nn.Dropout(p=kwargs.get('dropout_rate', 0.1))
+            setattr(self, f"linear_{key}",
+                    lora.Linear(n_feat, n_feat, r=lora_rank,
+                                lora_alpha=lora_alpha,
+                                lora_dropout=lora_dropout,
+                                bias=bias_dict[key])
+                    if value else nn.Linear(n_feat, n_feat, bias_dict[key]))
+
+        self.dropout = nn.Dropout(p=dropout_rate)
 
 
 class LoRARelPositionMultiHeadedAttention(LoRAMultiHeadedAttention,
                                           RelPositionMultiHeadedAttention):
-    """Multi-Head Attention layer with relative position encoding.
+    """LoRA Multi-Head Attention layer with relative position encoding.
     Paper: https://arxiv.org/abs/1901.02860
     Args:
-        *args: Arguments for the MultiHeadedAttention.
-        **kwargs: Keyword arguments for the MultiHeadedAttention.
+        n_head (int): The number of heads.
+        n_feat (int): The number of features.
+        dropout_rate (float): Dropout rate.
         lora_rank (int): Rank for LoRA.
         lora_alpha (int): Alpha for LoRA.
         lora_dropout (float): Dropout rate for LoRA.
         lora_list (Optional[List[str]]): List of layers to apply LoRA.
     """
+    def __init__(self,
+                 n_head: int,
+                 n_feat: int,
+                 dropout_rate: float,
+                 query_bias: bool = True,
+                 key_bias: bool = True,
+                 value_bias: bool = True,
+                 use_sdpa: bool = False,
+                 n_kv_head: Optional[int] = None,
+                 head_dim: Optional[int] = None,
+                 lora_rank: int = 8,
+                 lora_alpha: int = 8,
+                 lora_dropout: float = 0.0,
+                 lora_list: Optional[List[str]] = None):
+        """Construct an LoRARelPositionMultiHeadedAttention object."""
 
-    def __init__(
-        self,
-        *args,
-        lora_rank: int = 8,
-        lora_alpha: int = 8,
-        lora_dropout: float = 0.0,
-        lora_list: Optional[List[str]] = None,
-        **kwargs
-    ):
-        """Construct an RelPositionMultiHeadedAttention object."""
-        super().__init__(*args, lora_rank=lora_rank, lora_alpha=lora_alpha,
-                         lora_dropout=lora_dropout, lora_list=lora_list,
-                         **kwargs)
-        
-        n_feat = args[1]  # Assuming the second argument is n_feat
+        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
+                         value_bias, use_sdpa, n_kv_head, head_dim, lora_rank,
+                         lora_alpha, lora_dropout, lora_list)
+        # linear transformation for positional encoding
         self.linear_pos = nn.Linear(n_feat, n_feat, bias=False)
         # these two learnable bias are used in matrix c and matrix d
         # as described in https://arxiv.org/abs/1901.02860 Section 3.3

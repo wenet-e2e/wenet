@@ -116,6 +116,10 @@ def add_dataset_args(parser):
 
 
 def add_lora_args(parser):
+    '''Configure parameters for LoRA fine-tuning. Set use_lora and only_optimize_lora to true to enable LoRA functionality.
+       LoRA weights will be merged after calling model.eval() (or model.train(mode=False)).
+       LoRA weights need to be loaded after fine-tuning with DeepSpeed.
+    '''
     parser.add_argument("--use_lora",
                         default=False,
                         type=bool,

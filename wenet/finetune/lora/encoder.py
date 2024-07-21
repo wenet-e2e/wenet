@@ -36,24 +36,21 @@ class LoRATransformerEncoder(TransformerEncoder):
 
     def __init__(
         self,
-        *args,
-        lora_rank: int = 8,
-        lora_alpha: int = 8,
-        lora_dropout: float = 0.0,
-        lora_list: Optional[List[str]] = None,
+        input_size: int,
         **kwargs
     ):
         """Construct TransformerEncoder with LoRA parameters
 
         Args:
-            *args: Arguments for the TransformerEncoder.
-            **kwargs: Keyword arguments for the TransformerEncoder.
-            lora_rank (int): Rank for LoRA.
-            lora_alpha (int): Alpha for LoRA.
-            lora_dropout (float): Dropout rate for LoRA.
-            lora_list (Optional[List[str]]): List of layers to apply LoRA.
+            input_size (int): input dim.
+            **kwargs: Keyword arguments for the LoRATransformerEncoder.
         """
-        super().__init__(*args, **kwargs)
+        # filter parameters
+        transformer_kwargs = {
+            k: v for k, v in kwargs.items() \
+            if k in TransformerEncoder.__init__.__code__.co_varnames
+        }
+        super().__init__(input_size=input_size, **transformer_kwargs)
         activation = WENET_ACTIVATION_CLASSES[kwargs.get('activation_type',
                                                          'relu')]()
 
@@ -68,10 +65,10 @@ class LoRATransformerEncoder(TransformerEncoder):
             kwargs.get('use_sdpa', False),
             kwargs.get('n_kv_head', None),
             kwargs.get('head_dim', None),
-            lora_rank,
-            lora_alpha,
-            lora_dropout,
-            lora_list,
+            kwargs.get('lora_rank', 8),
+            kwargs.get('lora_alpha', 8),
+            kwargs.get('lora_dropout',0.0),
+            kwargs.get('lora_list', None),
         )
         # feed-forward module definition
         positionwise_layer_args = (
@@ -86,12 +83,12 @@ class LoRATransformerEncoder(TransformerEncoder):
                                                  'position_wise_feed_forward')]
         self.encoders = torch.nn.ModuleList([
             TransformerEncoderLayer(
-                kwargs.get('output_size', 256),
-                WENET_LORA_ATTENTION_CLASSES["selfattn"](
+                size=kwargs.get('output_size', 256),
+                self_attn=WENET_LORA_ATTENTION_CLASSES["selfattn"](
                     *encoder_selfattn_layer_args),
-                mlp_class(*positionwise_layer_args),
-                kwargs.get('dropout_rate', 0.1),
-                kwargs.get('normalize_before', True),
+                feed_forward=mlp_class(*positionwise_layer_args),
+                dropout_rate=kwargs.get('dropout_rate', 0.1),
+                normalize_before=kwargs.get('normalize_before', True),
                 layer_norm_type=kwargs.get('layer_norm_type', 'layer_norm'),
                 norm_eps=kwargs.get('norm_eps', 1e-5),
             ) for _ in range(kwargs.get('num_blocks', 6))
@@ -103,24 +100,21 @@ class LoRAConformerEncoder(ConformerEncoder):
 
     def __init__(
         self,
-        *args,
-        lora_rank: int = 8,
-        lora_alpha: int = 8,
-        lora_dropout: float = 0.0,
-        lora_list: Optional[List[str]] = None,
+        input_size: int,
         **kwargs
     ):
         """Construct ConformerEncoder with LoRA parameters
 
         Args:
-            *args: Arguments for the ConformerEncoder.
-            **kwargs: Keyword arguments for the ConformerEncoder.
-            lora_rank (int): Rank for LoRA.
-            lora_alpha (int): Alpha for LoRA.
-            lora_dropout (float): Dropout rate for LoRA.
-            lora_list (Optional[List[str]]): List of layers to apply LoRA.
+            input_size (int): input dim.
+            **kwargs: Keyword arguments for the LoRAConformerEncoder.
         """
-        super().__init__(*args, **kwargs)
+        # filter parameters
+        conformer_kwargs = {
+            k: v for k, v in kwargs.items() \
+            if k in ConformerEncoder.__init__.__code__.co_varnames
+        }
+        super().__init__(input_size=input_size, **conformer_kwargs)
         activation = WENET_ACTIVATION_CLASSES[kwargs.get('activation_type',
                                                          'swish')]()
 
@@ -135,10 +129,10 @@ class LoRAConformerEncoder(ConformerEncoder):
             kwargs.get('use_sdpa', False),
             kwargs.get('n_kv_head', None),
             kwargs.get('head_dim', None),
-            lora_rank,
-            lora_alpha,
-            lora_dropout,
-            lora_list,
+            kwargs.get('lora_rank', 8),
+            kwargs.get('lora_alpha', 8),
+            kwargs.get('lora_dropout',0.0),
+            kwargs.get('lora_list', None),
         )
         # feed-forward module definition
         positionwise_layer_args = (
@@ -162,18 +156,18 @@ class LoRAConformerEncoder(ConformerEncoder):
                                                  'position_wise_feed_forward')]
         self.encoders = torch.nn.ModuleList([
             ConformerEncoderLayer(
-                kwargs.get('output_size', 256),
-                WENET_LORA_ATTENTION_CLASSES[
+                size=kwargs.get('output_size', 256),
+                self_attn=WENET_LORA_ATTENTION_CLASSES[
                     kwargs.get('selfattention_layer_type', 'rel_selfattn')
                 ](*encoder_selfattn_layer_args),
-                mlp_class(*positionwise_layer_args),
-                mlp_class(*positionwise_layer_args)
+                feed_forward=mlp_class(*positionwise_layer_args),
+                feed_forward_macaron=mlp_class(*positionwise_layer_args)
                     if kwargs.get('macaron_style', True) else None,
-                ConvolutionModule(
+                conv_module=ConvolutionModule(
                     *convolution_layer_args
                 ) if kwargs.get('use_cnn_module', True) else None,
-                kwargs.get('dropout_rate', 0.1),
-                kwargs.get('normalize_before', True),
+                dropout_rate=kwargs.get('dropout_rate', 0.1),
+                normalize_before=kwargs.get('normalize_before', True),
                 layer_norm_type=kwargs.get('layer_norm_type', 'layer_norm'),
                 norm_eps=kwargs.get('norm_eps', 1e-5),
             ) for _ in range(kwargs.get('num_blocks', 6))
