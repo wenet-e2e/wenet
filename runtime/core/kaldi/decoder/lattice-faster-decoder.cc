@@ -811,20 +811,8 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
           if (state != arc.nextstate) {
             graph_cost += config_.length_penalty;
           }
-          BaseFloat cur_cost = tok->tot_cost;
-          float context_score = 0;
-          int context_state = 0;
-          if (context_graph_ != nullptr) {
-            // Current ilabel is blank or current ilabel equals to previous.
-            if (arc.ilabel - 1 == 0 || arc.ilabel == tok->ilabel) {
-              context_state = tok->context_state;
-            } else {
-              context_state = context_graph_->GetNextState(
-                  tok->context_state, arc.ilabel - 1, &context_score);
-              graph_cost -= context_score;
-            }
-          }
-          BaseFloat tot_cost = cur_cost + ac_cost + graph_cost;
+          BaseFloat cur_cost = tok->tot_cost,
+                    tot_cost = cur_cost + ac_cost + graph_cost;
           if (tot_cost >= next_cutoff)
             continue;
           else if (tot_cost + adaptive_beam < next_cutoff)
@@ -836,9 +824,18 @@ BaseFloat LatticeFasterDecoderTpl<FST, Token>::ProcessEmitting(
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, NULL);
           // NULL: no change indicator needed
 
+          float context_score = 0;
+          int context_state = 0;
           if (context_graph_ != nullptr) {
             // Current ilabel is blank or current ilabel equals to previous.
-            e_next->val->context_state = context_state;
+            if (arc.ilabel - 1 == 0 || arc.ilabel == tok->ilabel) {
+              context_state = tok->context_state;
+            } else {
+              context_state = context_graph_->GetNextState(
+                  tok->context_state, arc.ilabel - 1, &context_score);
+              graph_cost -= context_score;
+              tot_cost -= context_score;
+            }
           }
 
           // Add ForwardLink from tok to next_tok (put on head of list
@@ -920,27 +917,15 @@ void LatticeFasterDecoderTpl<FST, Token>::ProcessNonemitting(BaseFloat cutoff) {
          aiter.Next()) {
       const Arc& arc = aiter.Value();
       if (arc.ilabel == 0) {  // propagate nonemitting only...
-        BaseFloat graph_cost = arc.weight.Value();
-        float context_score = 0;
-        int context_state = 0;
-        if (context_graph_ != nullptr) {
-          // Current ilabel is blank or current ilabel equals to previous.
-          if (arc.ilabel - 1 == 0 || arc.ilabel == tok->ilabel) {
-            context_state = tok->context_state;
-          } else {
-            context_state = context_graph_->GetNextState(
-                tok->context_state, arc.ilabel - 1, &context_score);
-            graph_cost -= context_score;
-          }
-        }
-        BaseFloat tot_cost = cur_cost + graph_cost;
+        BaseFloat graph_cost = arc.weight.Value(),
+                  tot_cost = cur_cost + graph_cost;
         if (tot_cost < cutoff) {
           bool changed;
           Elem* e_new =
               FindOrAddToken(arc.nextstate, frame + 1, tot_cost, tok, &changed);
 
-          if (context_graph_ != nullptr) {
-            e_new->val->context_state = context_state;
+          if (context_graph_ != nullptr && changed) {
+            e_new->val->context_state = tok->context_state;
           }
 
           tok->links = new ForwardLinkT(e_new->val, 0, arc.olabel, graph_cost,
