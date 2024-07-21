@@ -1200,7 +1200,7 @@ if __name__ == "__main__":
             configs['cmvn_conf'] = {}
         else:
             assert configs['cmvn'] == "global_cmvn"
-            assert configs['cmvn']['cmvn_conf'] is not None
+            assert configs['cmvn_conf'] is not None
         configs['cmvn_conf']["cmvn_file"] = args.cmvn_file
     if (args.reverse_weight != -1.0
             and "reverse_weight" in configs["model_conf"]):

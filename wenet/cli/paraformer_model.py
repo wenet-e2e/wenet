@@ -8,25 +8,18 @@ from wenet.cli.hub import Hub
 from wenet.paraformer.search import (gen_timestamps_from_peak,
                                      paraformer_greedy_search)
 from wenet.text.paraformer_tokenizer import ParaformerTokenizer
+from wenet.utils.common import TORCH_NPU_AVAILABLE  # noqa just ensure to check torch-npu
 
 
 class Paraformer:
 
-    def __init__(self,
-                 model_dir: str,
-                 device: int = -1,
-                 resample_rate: int = 16000) -> None:
+    def __init__(self, model_dir: str, resample_rate: int = 16000) -> None:
 
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
         self.model = torch.jit.load(model_path)
         self.resample_rate = resample_rate
-        if device >= 0:
-            device = 'cuda:{}'.format(device)
-        else:
-            device = 'cpu'
-        self.device = torch.device(device)
-        self.model = self.model.to(self.device)
+        self.device = torch.device("cpu")
         self.tokenizer = ParaformerTokenizer(symbol_table=units_path)
 
     def transcribe(self, audio_file: str, tokens_info: bool = False) -> dict:
@@ -75,7 +68,15 @@ class Paraformer:
         raise NotImplementedError("Align is currently not supported")
 
 
-def load_model(model_dir: str = None, gpu: int = -1) -> Paraformer:
+def load_model(model_dir: str = None,
+               gpu: int = -1,
+               device: str = "cpu") -> Paraformer:
     if model_dir is None:
         model_dir = Hub.get_model_by_lang('paraformer')
-    return Paraformer(model_dir, gpu)
+    if gpu != -1:
+        # remain the original usage of gpu
+        device = "cuda"
+    paraformer = Paraformer(model_dir)
+    paraformer.device = torch.device(device)
+    paraformer.model.to(device)
+    return paraformer
