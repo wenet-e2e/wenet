@@ -53,8 +53,16 @@ class LoRAMultiHeadedAttention(MultiHeadedAttention):
                  lora_dropout: float = 0.0,
                  lora_list: Optional[List[str]] = None):
         """Construct an LoRAMultiHeadedAttention object."""
-        super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
-                         value_bias, use_sdpa, n_kv_head, head_dim)
+        super().__init__(
+            n_head=n_head,
+            n_feat=n_feat,
+            dropout_rate=dropout_rate,
+            query_bias=query_bias,
+            key_bias=key_bias,
+            value_bias=value_bias,
+            use_sdpa=use_sdpa,
+            n_kv_head=n_kv_head,
+            head_dim=head_dim)
         assert n_feat % n_head == 0
         # We assume d_v always equals d_k
         self.d_k = n_feat // n_head
