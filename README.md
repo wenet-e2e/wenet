@@ -61,7 +61,7 @@ conda activate wenet
 conda install conda-forge::sox
 ```
 
-- Install CUDA: please follow this [link](https://icefall.readthedocs.io/en/latest/installation/index.html#id1), It's recomended to install CUDA 12.1
+- Install CUDA: please follow this [link](https://icefall.readthedocs.io/en/latest/installation/index.html#id1), It's recommended to install CUDA 12.1
 - Install torch and torchaudio, It's recomended to use 2.2.2+cu121:
 
 ``` sh
@@ -107,7 +107,7 @@ runtime on more platforms and OS.
 
 You can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
 
-For Chinese users, you can aslo scan the QR code on the left to follow our offical account of WeNet.
+For Chinese users, you can also scan the QR code on the left to follow our official account of WeNet.
 We created a WeChat group for better discussion and quicker response.
 Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 
