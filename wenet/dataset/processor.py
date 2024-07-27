@@ -144,7 +144,7 @@ def decode_wav(sample):
         start_frame = int(sample['start'] * sample_rate)
         end_frame = int(sample['end'] * sample_rate)
         with io.BytesIO(wav_file) as file_obj:
-            waveform, _ = torchaudio.load(filepath=file_obj,
+            waveform, _ = torchaudio.load(file_obj,
                                           num_frames=end_frame - start_frame,
                                           frame_offset=start_frame)
     else:
