@@ -600,6 +600,7 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, n_kv_head, head_dim)
         self.qk_norm = qk_norm
+        # https://arxiv.org/pdf/2302.05442
         if self.qk_norm:
             self.q_norm = WENET_NORM_CLASSES['rms_norm'](self.d_k, eps=1e-6)
             self.k_norm = WENET_NORM_CLASSES['rms_norm'](self.d_k, eps=1e-6)
