@@ -20,6 +20,7 @@ from typing import Optional, Tuple
 
 import torch
 from torch import nn
+from wenet.utils.class_utils import WENET_NORM_CLASSES
 
 from wenet.utils.rope_utils import llama_apply_rotary_emb
 
@@ -594,9 +595,14 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                  value_bias: bool = True,
                  use_sdpa: bool = False,
                  n_kv_head: Optional[int] = None,
-                 head_dim: Optional[int] = None):
+                 head_dim: Optional[int] = None,
+                 qk_norm: bool = False):
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, n_kv_head, head_dim)
+        self.qk_norm = qk_norm
+        if self.qk_norm:
+            self.q_norm = WENET_NORM_CLASSES['rms_norm'](self.d_k, eps=1e-6)
+            self.k_norm = WENET_NORM_CLASSES['rms_norm'](self.d_k, eps=1e-6)
 
     def forward(
         self,
@@ -642,9 +648,12 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         #    these two lines are not placed in MultiHeadedAttention.
         q = llama_apply_rotary_emb(q, pos_emb)
         k = llama_apply_rotary_emb(k, pos_emb)
+        if self.qk_norm:
+            q = self.q_norm(q)
+            k = self.k_norm(k)
+
         # see above
         k, v, new_cache = self._update_kv_and_cache(k, v, cache)
-
         if not self.use_sdpa:
             scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
             return self.forward_attention(v, scores, mask), new_cache
