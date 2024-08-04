@@ -116,9 +116,12 @@ def add_dataset_args(parser):
 
 
 def add_lora_args(parser):
-    '''Configure parameters for LoRA fine-tuning. Set use_lora and only_optimize_lora to true to enable LoRA functionality.
-       LoRA will be injected to model through lora_modules, lora_attn_attr, lora_list.
-       LoRA weights will be merged after calling model.eval() (or model.train(mode=False)).
+    '''Configure parameters for LoRA fine-tuning. Set use_lora and
+       only_optimize_lora to true to enable LoRA functionality.
+       LoRA will be injected to model through (lora_modules, lora_attn_attr,
+       lora_list).
+       LoRA weights will be merged after calling model.eval()
+       (or model.train(mode=False)).
        LoRA weights need to be loaded after fine-tuning with DeepSpeed.
     '''
     parser.add_argument("--use_lora",
@@ -136,14 +139,16 @@ def add_lora_args(parser):
         type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
         help='modules names needs inject lora',
     )
-    parser.add_argument("--lora_attn_attr",
-                        default="self_attn,src_attn",
-                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
-                        help="lora_attn_attr.")
-    parser.add_argument("--lora_list",
-                        default="linear_out,linear_q,linear_k,linear_v",
-                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
-                        help="lora module list.")
+    parser.add_argument(
+        "--lora_attn_attr",
+        default="self_attn,src_attn",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help="lora_attn_attr.")
+    parser.add_argument(
+        "--lora_list",
+        default="linear_out,linear_q,linear_k,linear_v",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help="lora module list.")
     parser.add_argument("--lora_rank",
                         default=8,
                         type=int,

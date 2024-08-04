@@ -32,9 +32,9 @@ def inject_lora(module, lora_config):
         if hasattr(module, lora_attr):
             submodule = getattr(module, lora_attr)
             n_feat = submodule.in_features
-            lora_linear  = lora.Linear(n_feat, n_feat, r=lora_rank,
-                                     lora_alpha=lora_alpha,
-                                     lora_dropout=lora_dropout)
+            lora_linear = lora.Linear(n_feat, n_feat, r=lora_rank,
+                                      lora_alpha=lora_alpha,
+                                      lora_dropout=lora_dropout)
             setattr(module, lora_attr, lora_linear)
 
 
