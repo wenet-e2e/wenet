@@ -133,6 +133,9 @@ class ASRModel(torch.nn.Module):
             "th_accuracy": acc_att,
         }
 
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        self.decoder.tie_or_clone_weights(jit_mode)
+
     @torch.jit.unused
     def _forward_ctc(
             self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
