@@ -117,6 +117,7 @@ def add_dataset_args(parser):
 
 def add_lora_args(parser):
     '''Configure parameters for LoRA fine-tuning. Set use_lora and only_optimize_lora to true to enable LoRA functionality.
+       LoRA will be injected to model through lora_modules, lora_attn_attr, lora_list.
        LoRA weights will be merged after calling model.eval() (or model.train(mode=False)).
        LoRA weights need to be loaded after fine-tuning with DeepSpeed.
     '''
@@ -129,8 +130,19 @@ def add_lora_args(parser):
                         type=bool,
                         help="freeze all other paramters and only optimize \
                         LoRA-related prameters.")
+    parser.add_argument(
+        '--lora_modules',
+        default="encoder.encoders",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help='modules names needs inject lora',
+    )
+    parser.add_argument("--lora_attn_attr",
+                        default="self_attn,src_attn",
+                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+                        help="lora_attn_attr.")
     parser.add_argument("--lora_list",
-                        default=['o', 'q', 'k', 'v'],
+                        default="linear_out,linear_q,linear_k,linear_v",
+                        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
                         help="lora module list.")
     parser.add_argument("--lora_rank",
                         default=8,
@@ -144,6 +156,10 @@ def add_lora_args(parser):
                         default=0,
                         type=float,
                         help="lora dropout param.")
+    parser.add_argument("--lora_ckpt_path",
+                        default=None,
+                        type=str,
+                        help="lora checkpoint path.")
     return parser
 
 
@@ -287,10 +303,13 @@ def check_modify_and_save_config(args, configs, symbol_table):
         assert ds_configs["steps_per_print"] == configs['log_interval']
 
     if args.use_lora:
-        configs['encoder_conf']['lora_list'] = args.lora_list
-        configs['encoder_conf']['lora_rank'] = args.lora_rank
-        configs['encoder_conf']['lora_alpha'] = args.lora_alpha
-        configs['encoder_conf']['lora_dropout'] = args.lora_dropout
+        configs['lora_conf'] = {}
+        configs['lora_conf']['lora_modules'] = args.lora_modules
+        configs['lora_conf']['lora_attn_attr'] = args.lora_attn_attr
+        configs['lora_conf']['lora_list'] = args.lora_list
+        configs['lora_conf']['lora_rank'] = args.lora_rank
+        configs['lora_conf']['lora_alpha'] = args.lora_alpha
+        configs['lora_conf']['lora_dropout'] = args.lora_dropout
 
     if configs["model"] == 'asr_model':
         if 'input_dim' not in configs:
