@@ -45,12 +45,13 @@ def inject_lora_to_model(model, lora_config):
         for layer in submodule:
             lora_modules.append(layer)
 
+    updated_lora_modules = []
     for i in range(len(lora_modules)):
         for attn_attr in lora_config["lora_attn_attr"]:
             if hasattr(lora_modules[i], attn_attr):
-                lora_modules[i] = getattr(lora_modules[i], attn_attr)
+                updated_lora_modules.append(getattr(lora_modules[i], attn_attr))
 
-    for lora_module in lora_modules:
+    for lora_module in updated_lora_modules:
         inject_lora(lora_module, lora_config)
 
 
