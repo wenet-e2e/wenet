@@ -178,6 +178,8 @@ def main():
             final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
+    dist.barrier(
+    )  # NOTE(yktian): Ensure all ranks end Train before destroy process group.
     dist.destroy_process_group()
 
 
