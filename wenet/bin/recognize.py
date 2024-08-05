@@ -182,6 +182,10 @@ def get_args():
                         type=bool,
                         default=False,
                         help='''Whether to use lora for biasing''')
+    parser.add_argument("--lora_ckpt_path",
+                        default=None,
+                        type=str,
+                        help="lora checkpoint path.")
     args = parser.parse_args()
     print(args)
     return args
