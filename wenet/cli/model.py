@@ -167,5 +167,10 @@ def load_model(language: str = None,
     if model_dir is None:
         model_dir = Hub.get_model_by_lang(language)
 
+    if gpu != -1:
+        # remain the original usage of gpu
+        device = "cuda"
     model = Model(model_dir, gpu, beam, context_path, context_score)
+    model.device = torch.device(device)
+    model.model.to(device)
     return model

@@ -12,10 +12,10 @@ else
   npu_list="-1"
 fi
 
-# You can also manually specify NPU_VISIBLE_DEVICES
+# You can also manually specify ASCEND_RT_VISIBLE_DEVICES
 # if you don't want to utilize all available NPU resources.
-export NPU_VISIBLE_DEVICES="${npu_list}"
-echo "NPU_VISIBLE_DEVICES is ${NPU_VISIBLE_DEVICES}"
+export ASCEND_RT_VISIBLE_DEVICES="${npu_list}"
+echo "ASCEND_RT_VISIBLE_DEVICES is ${ASCEND_RT_VISIBLE_DEVICES}"
 
 stage=4 # start from 0 if you need to start from data preparation
 stop_stage=4
@@ -128,7 +128,7 @@ fi
 
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
   mkdir -p $dir
-  num_npus=$(echo $NPU_VISIBLE_DEVICES | awk -F "," '{print NF}')
+  num_npus=$(echo $ASCEND_RT_VISIBLE_DEVICES | awk -F "," '{print NF}')
   # Use "hccl" for npu if it works, otherwise use "gloo"
   # NOTE(xcsong): deepspeed fails with gloo, see
   #   https://github.com/microsoft/DeepSpeed/issues/2818
