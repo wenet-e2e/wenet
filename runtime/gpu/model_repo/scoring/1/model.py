@@ -75,7 +75,6 @@ class TritonPythonModel:
     def init_ctc_rescore(self, parameters):
         num_processes = multiprocessing.cpu_count()
         cutoff_prob = 0.9999
-        blank_id = 0
         alpha = 2.0
         beta = 1.0
         bidecoder = 0
@@ -104,8 +103,12 @@ class TritonPythonModel:
 
         self.num_processes = num_processes
         self.cutoff_prob = cutoff_prob
-        self.blank_id = blank_id
-        _, vocab = self.load_vocab(vocab_path)
+        ret = self.load_vocab(vocab_path)
+        id2vocab, vocab, space_id, blank_id, sos_eos = ret
+        self.space_id = space_id if space_id else -1
+        self.blank_id = blank_id if blank_id else 0
+        self.eos = self.sos = sos_eos if sos_eos else len(vocab) - 1
+
         if lm_path and os.path.exists(lm_path):
             self.lm = Scorer(alpha, beta, lm_path, vocab)
             print("Successfully load language model!")
@@ -125,24 +128,28 @@ class TritonPythonModel:
                 )
         self.vocabulary = vocab
         self.bidecoder = bidecoder
-        sos = eos = len(vocab) - 1
-        self.sos = sos
-        self.eos = eos
 
     def load_vocab(self, vocab_file):
         """
         load lang_char.txt
         """
         id2vocab = {}
+        space_id, blank_id, sos_eos = None, None, None
         with open(vocab_file, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 char, id = line.split()
                 id2vocab[int(id)] = char
+                if char == " ":
+                    space_id = int(id)
+                elif char == "<blank>":
+                    blank_id = int(id)
+                elif char == "<sos/eos>":
+                    sos_eos = int(id)
         vocab = [0] * len(id2vocab)
         for id, char in id2vocab.items():
             vocab[id] = char
-        return id2vocab, vocab
+        return (id2vocab, vocab, space_id, blank_id, sos_eos)
 
     def load_hotwords(self, hotwords_file):
         """

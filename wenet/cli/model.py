@@ -47,6 +47,7 @@ class Model:
         else:
             device = 'cpu'
         self.device = torch.device(device)
+        self.model.to(device)
         self.symbol_table = read_symbol_table(units_path)
         self.char_dict = {v: k for k, v in self.symbol_table.items()}
         self.beam = beam
