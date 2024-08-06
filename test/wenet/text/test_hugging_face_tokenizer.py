@@ -3,7 +3,7 @@ import pytest
 
 from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 
-os.system('pip install --no-input tiktoken transformers==4.40.1')
+os.system('pip install --no-input transformers==4.40.1')
 import transformers  # noqa
 
 
@@ -80,7 +80,7 @@ def test_vocab_size(hugging_face_tokenizer: HuggingFaceTokenizer):
 
 def test_tongyi_tokenizer():
     # NOTE(Mddct): tongyi need extra matplotlib package
-    os.system('pip install --no-input matplotlib==3.9.0')
+    os.system('pip install --no-input matplotlib')
     model_dir = 'Qwen/Qwen-Audio-Chat'
     tongyi_tokenizer = transformers.AutoTokenizer.from_pretrained(
         model_dir, trust_remote_code=True)
