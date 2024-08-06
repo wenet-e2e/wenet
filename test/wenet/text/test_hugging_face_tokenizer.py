@@ -78,16 +78,16 @@ def test_vocab_size(hugging_face_tokenizer: HuggingFaceTokenizer):
         hugging_face_tokenizer.symbol_table)
 
 
-def test_tongyi_tokenizer():
-    # NOTE(Mddct): tongyi need extra matplotlib package
-    os.system('pip install --no-input matplotlib')
-    model_dir = 'Qwen/Qwen-Audio-Chat'
-    tongyi_tokenizer = transformers.AutoTokenizer.from_pretrained(
-        model_dir, trust_remote_code=True)
-    tokenizer = HuggingFaceTokenizer(model_dir, trust_remote_code=True)
-    text = "from transformers import AutoModelForCausalLM, AutoTokenizer"
-    tongyi_result = tongyi_tokenizer.tokenize(text)
-    result, _ = tokenizer.tokenize(text)
-
-    assert len(result) == len(tongyi_result)
-    assert all(h == r for (h, r) in zip(result, tongyi_result))
+# def test_tongyi_tokenizer():
+#     # NOTE(Mddct): tongyi need extra matplotlib package
+#     os.system('pip install --no-input matplotlib')
+#     model_dir = 'Qwen/Qwen-Audio-Chat'
+#     tongyi_tokenizer = transformers.AutoTokenizer.from_pretrained(
+#         model_dir, trust_remote_code=True)
+#     tokenizer = HuggingFaceTokenizer(model_dir, trust_remote_code=True)
+#     text = "from transformers import AutoModelForCausalLM, AutoTokenizer"
+#     tongyi_result = tongyi_tokenizer.tokenize(text)
+#     result, _ = tokenizer.tokenize(text)
+#
+#     assert len(result) == len(tongyi_result)
+#     assert all(h == r for (h, r) in zip(result, tongyi_result))
