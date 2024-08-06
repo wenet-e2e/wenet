@@ -6,7 +6,7 @@ from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 try:
     import transformers  # noqa
 except ImportError:
-    os.system('pip install --no-input transformers==4.41.1')
+    os.system('pip install --no-input tiktoken==0.6.0 transformers==4.41.1')
     import transformers  # noqa
 
 
