@@ -42,7 +42,6 @@ from wenet.whisper.whisper import Whisper
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 
-
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
     "conformer": ConformerEncoder,
@@ -156,7 +155,7 @@ def init_speech_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
         )
-    else:
+    elif model_type == 'asr_model':
         model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             encoder=encoder,
@@ -165,6 +164,10 @@ def init_speech_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
             **configs['model_conf'])
+    else:
+        from wenet.ssl.init_model import init_model as init_ssl_model
+        model = init_ssl_model(configs, encoder)
+
     return model, configs
 
 
@@ -187,6 +190,7 @@ def init_causal_llm(configs):
 def init_model(args, configs):
 
     model_type = configs.get('model', 'asr_model')
+    configs['model'] = model_type
     if model_type == 'causal_lm':
         model, configs = init_causal_llm(configs)
     else:
