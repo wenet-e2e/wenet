@@ -668,6 +668,9 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         q = WENET_APPLY_ROTARY_EMB[self.style](q, pos_emb)
         k = WENET_APPLY_ROTARY_EMB[self.style](k, pos_emb)
 
+        if self.qk_norm:
+            q = self.q_norm(q)
+            k = self.k_norm(k)
         k, v, new_cache = self._update_kv_and_cache(k,
                                                     v,
                                                     cache,
