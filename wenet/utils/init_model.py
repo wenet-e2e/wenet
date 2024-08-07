@@ -23,6 +23,7 @@ from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.paraformer import Paraformer, Predictor
 from wenet.LLM.causallm_model import CausalLM
 from wenet.LLM.decoder import DecoderOnly
+from wenet.ssl.init_model import WENET_SSL_MODEL_CLASS
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -155,7 +156,10 @@ def init_speech_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
         )
-    elif model_type in ['asr_model', 'whisper']:
+    elif model_type in WENET_SSL_MODEL_CLASS.keys():
+        from wenet.ssl.init_model import init_model as init_ssl_model
+        model = init_ssl_model(configs, encoder)
+    else:
         model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             encoder=encoder,
@@ -164,10 +168,6 @@ def init_speech_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
             **configs['model_conf'])
-    else:
-        from wenet.ssl.init_model import init_model as init_ssl_model
-        model = init_ssl_model(configs, encoder)
-
     return model, configs
 
 
