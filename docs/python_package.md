@@ -31,6 +31,7 @@ You can specify the following parameters.
 * `--align`: force align the input audio and transcript
 * `--label`: the input label to align
 * `--paraformer`: use the best Chinese model
+* `--device`: specify the backend accelerator (cuda/npu/cpu)
 
 ## Python Programming Usage
 

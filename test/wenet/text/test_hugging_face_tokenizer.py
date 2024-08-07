@@ -3,11 +3,8 @@ import pytest
 
 from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 
-try:
-    import transformers  # noqa
-except ImportError:
-    os.system('pip install --no-input transformers')
-    import transformers  # noqa
+os.system('pip install --no-input transformers==4.40.1')
+import transformers  # noqa
 
 
 @pytest.fixture(params=["bert-base-cased"])

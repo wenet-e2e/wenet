@@ -116,6 +116,14 @@ def add_dataset_args(parser):
 
 
 def add_lora_args(parser):
+    '''Configure parameters for LoRA fine-tuning. Set use_lora and
+       only_optimize_lora to true to enable LoRA functionality.
+       LoRA will be injected to model through (lora_modules, lora_attn_attr,
+       lora_list).
+       LoRA weights will be merged after calling model.eval()
+       (or model.train(mode=False)).
+       LoRA weights need to be loaded after fine-tuning with DeepSpeed.
+    '''
     parser.add_argument("--use_lora",
                         default=False,
                         type=bool,
@@ -125,9 +133,22 @@ def add_lora_args(parser):
                         type=bool,
                         help="freeze all other paramters and only optimize \
                         LoRA-related prameters.")
-    parser.add_argument("--lora_list",
-                        default=['o', 'q', 'k', 'v'],
-                        help="lora module list.")
+    parser.add_argument(
+        '--lora_modules',
+        default="encoder.encoders",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help='modules names needs inject lora',
+    )
+    parser.add_argument(
+        "--lora_attn_attr",
+        default="self_attn,src_attn",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help="lora_attn_attr.")
+    parser.add_argument(
+        "--lora_list",
+        default="linear_out,linear_q,linear_k,linear_v",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help="lora module list.")
     parser.add_argument("--lora_rank",
                         default=8,
                         type=int,
@@ -140,6 +161,10 @@ def add_lora_args(parser):
                         default=0,
                         type=float,
                         help="lora dropout param.")
+    parser.add_argument("--lora_ckpt_path",
+                        default=None,
+                        type=str,
+                        help="lora checkpoint path.")
     return parser
 
 
@@ -283,25 +308,31 @@ def check_modify_and_save_config(args, configs, symbol_table):
         assert ds_configs["steps_per_print"] == configs['log_interval']
 
     if args.use_lora:
-        configs['encoder_conf']['lora_list'] = args.lora_list
-        configs['encoder_conf']['lora_rank'] = args.lora_rank
-        configs['encoder_conf']['lora_alpha'] = args.lora_alpha
-        configs['encoder_conf']['lora_dropout'] = args.lora_dropout
+        configs['lora_conf'] = {}
+        configs['lora_conf']['lora_modules'] = args.lora_modules
+        configs['lora_conf']['lora_attn_attr'] = args.lora_attn_attr
+        configs['lora_conf']['lora_list'] = args.lora_list
+        configs['lora_conf']['lora_rank'] = args.lora_rank
+        configs['lora_conf']['lora_alpha'] = args.lora_alpha
+        configs['lora_conf']['lora_dropout'] = args.lora_dropout
 
-    if 'input_dim' not in configs:
-        if 'fbank_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
-        elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['log_mel_spectrogram_conf'][
-                'num_mel_bins']
+    if configs["model"] == 'asr_model':
+        if 'input_dim' not in configs:
+            if 'fbank_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf']['fbank_conf'][
+                    'num_mel_bins']
+            elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf'][
+                    'log_mel_spectrogram_conf']['num_mel_bins']
+            else:
+                input_dim = configs['dataset_conf']['mfcc_conf'][
+                    'num_mel_bins']
         else:
-            input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
-    else:
-        input_dim = configs['input_dim']
+            input_dim = configs['input_dim']
+
+        configs['input_dim'] = input_dim
 
     configs, _ = get_blank_id(configs, symbol_table)
-
-    configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
 
     configs['train_engine'] = args.train_engine
