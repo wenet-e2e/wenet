@@ -155,7 +155,7 @@ def init_speech_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
         )
-    elif model_type == 'asr_model':
+    elif model_type in ['asr_model', 'whisper']:
         model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
             encoder=encoder,
