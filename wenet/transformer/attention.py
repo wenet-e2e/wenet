@@ -20,7 +20,6 @@ from typing import Optional, Tuple
 
 import torch
 from torch import nn
-from wenet.utils.class_utils import WENET_NORM_CLASSES
 
 from wenet.utils.rope_utils import WENET_APPLY_ROTARY_EMB
 
@@ -617,6 +616,7 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         self.qk_norm = qk_norm
         # https://arxiv.org/pdf/2302.05442
         if self.qk_norm:
+            from wenet.utils.class_utils import WENET_NORM_CLASSES
             self.q_norm = WENET_NORM_CLASSES['rms_norm'](self.d_k, eps=1e-6)
             self.k_norm = WENET_NORM_CLASSES['rms_norm'](self.d_k, eps=1e-6)
         self.style = style
@@ -663,6 +663,7 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
         q = self._forward_linearx('query', query, head_first=False)
         k = self._forward_linearx('key', key, head_first=False)
         v = self._forward_linearx('value', value, head_first=False)
+
         # NOTE(Mddct): In order to make the code easier to read,
         #    these two lines are not placed in MultiHeadedAttention.
         q = WENET_APPLY_ROTARY_EMB[self.style](q, pos_emb)
