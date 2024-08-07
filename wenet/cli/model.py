@@ -1,3 +1,4 @@
+
 # Copyright (c) 2023 Binbin Zhang (binbzha@qq.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,9 +129,9 @@ class Model:
             for i, x in enumerate(res.tokens):
                 tokens_info.append({
                     'token': self.char_dict[x],
-                    'start': times[i][0],
-                    'end': times[i][1],
-                    'confidence': res.tokens_confidence[i]
+                    'start': round(times[i][0], 3),
+                    'end': round(times[i][1], 3),
+                    'confidence': round(res.tokens_confidence[i], 2)
                 })
             result['tokens'] = tokens_info
         return result
