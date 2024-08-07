@@ -126,14 +126,13 @@ def decode_wav(sample):
     """ Parse key/wav/txt from json line
 
         Args:
-            sample: str, str is a json line has key/wav/txt
+            sample: str, str is a json line has key/wav
 
         Returns:
             {key, wav, sample_rate, ...}
     """
     assert 'key' in sample
     assert 'wav' in sample
-    assert 'txt' in sample
     wav_file = sample['wav']
     if isinstance(wav_file, str):
         with open(wav_file, 'rb') as f:
