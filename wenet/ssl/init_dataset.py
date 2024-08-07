@@ -32,6 +32,9 @@ def padding(data):
         "keys": sorted_keys,
         "feats": padded_feats,
         "feats_lengths": feats_lengths,
+        # NOTE(Mddct): cv need targets , refine later
+        "target": padded_feats,
+        "target_lengths": feats_lengths,
     }
     return batch
 
