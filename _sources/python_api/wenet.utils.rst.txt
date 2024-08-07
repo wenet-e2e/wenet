@@ -22,6 +22,7 @@ Submodules
    wenet.utils.executor
    wenet.utils.file_utils
    wenet.utils.fsdp_utils
+   wenet.utils.init_dataset
    wenet.utils.init_model
    wenet.utils.init_tokenizer
    wenet.utils.mask

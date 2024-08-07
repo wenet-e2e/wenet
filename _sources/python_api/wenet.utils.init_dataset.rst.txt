@@ -1,0 +1,7 @@
+wenet.utils.init\_dataset module
+================================
+
+.. automodule:: wenet.utils.init_dataset
+   :members:
+   :undoc-members:
+   :show-inheritance:
