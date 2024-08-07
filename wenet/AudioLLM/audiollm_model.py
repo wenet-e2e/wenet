@@ -36,7 +36,6 @@ class AudioLLM(torch.nn.Module):
                                    bias=linear_bias)
         if bottleneck_type == "conv-linear":
             self.bottleneck = ConvLinearBottleNeck(encoder.output_size(), decoder.hidden_size, **kwargs)
-        self.speech_ln = torch.nn.LayerNorm(decoder.hidden_size)
         self.vocab_size = vocab_size
         self.criterion_att = torch.nn.CrossEntropyLoss(ignore_index=ignore_id, 
                                                        reduction='sum' if length_normalized_loss else 'mean', 
@@ -44,26 +43,34 @@ class AudioLLM(torch.nn.Module):
         self.tie_word_embedding = tie_word_embedding
         self.ignore_id = ignore_id
 
+        self.freeze_encoder = freeze_encoder
         if freeze_encoder:
             self.freeze_parameters(self.encoder)
             self.encoder.eval()
-
+        self.freeze_decoder = freeze_decoder
         if freeze_decoder:
             self.freeze_parameters(self.decoder)
             self.decoder.eval()
-
+        self.freeze_llm_embed = freeze_llm_embed
         if freeze_llm_embed:
             self.freeze_parameters(self.embed)
             self.freeze_parameters(self.out)
-
-    def extract_audio_features(self, audio, audio_lengths):
-        output, masks = self.encoder(audio, audio_lengths)
-        output, sub_lengths = self.bottleneck(output, masks.sum(-1))
-        return self.speech_ln(output), sub_lengths
+    
+    def train(self, mode: bool = True):
+        self.bottleneck.train(mode)
+        if not self.freeze_encoder:
+            self.encoder.train(mode)
+        if not self.freeze_decoder:
+            self.encoder.train(mode)
     
     def freeze_parameters(self, moudle: torch.nn.Module):
         for _, param in moudle.named_parameters():
                 param.requires_grad = False
+
+    def extract_audio_features(self, audio, audio_lengths):
+        output, masks = self.encoder(audio, audio_lengths)
+        output, sub_lengths = self.bottleneck(output, masks.sum(-1))
+        return output, sub_lengths
 
     @torch.jit.unused
     def forward(
@@ -87,8 +94,7 @@ class AudioLLM(torch.nn.Module):
         prefix_tokens_embeds = self.embed(prefix_tokens)
         suffix_tokens_embeds = self.embed(suffix_tokens)
 
-        # token padding | audio padding | prefix_embeds | audio_embeds | suffix_embeds
-        #              \_prefix_padding | suffix_padding
+        # | prefix_embeds | audio_embeds | suffix_embeds | paddings | 
         b, c = prefix_tokens_embeds.size(0), prefix_tokens_embeds.size(2)
         prefix_t = prefix_tokens_embeds.size(1)
         audio_t = audio_embeds.size(1)
@@ -96,27 +102,28 @@ class AudioLLM(torch.nn.Module):
         inputs_lengths = prefix_t + audio_t + suffix_t
         input_embeds = torch.ones([b, inputs_lengths, c], device=device)
         targets = torch.ones([b, inputs_lengths], dtype=torch.long, device=device)
-
         for i in range(b):
             index = 0
-            input_embeds[i,index:prefix_t - prefix_tokens_lengths[i]] = prefix_tokens_embeds[i, prefix_tokens_lengths[i]:]
-            index += prefix_t - prefix_tokens_lengths[i]
-            input_embeds[i, index:index + audio_t - audio_lengths[i]] = audio_embeds[i, audio_lengths[i]:]
-            index += audio_t - audio_lengths[i]
-            input_embeds[i, index:index + suffix_t - suffix_tokens_lengths[i]] = suffix_tokens_embeds[i, suffix_tokens_lengths[i]:]
-            index += suffix_t - suffix_tokens_lengths[i]
-            targets[i,:index] = self.ignore_id
-            input_embeds[i, index:index + prefix_tokens_lengths[i]] = prefix_tokens_embeds[i, :prefix_tokens_lengths[i]]
-            targets[i, index:index + prefix_tokens_lengths[i]-1] = prefix_target[i, :prefix_tokens_lengths[i]]
+            input_embeds[i, :prefix_tokens_lengths[i]] = prefix_tokens_embeds[i, :prefix_tokens_lengths[i]]
+            targets[i, :prefix_tokens_lengths[i]-1] = prefix_target[i, :prefix_tokens_lengths[i]-1]
+
             index += prefix_tokens_lengths[i]
             input_embeds[i, index:index + audio_lengths[i]] = audio_embeds[i, :audio_lengths[i]]
-            targets[i, index -1:index -1 + audio_lengths[i]] = self.ignore_id
+            targets[i, index-1:index + audio_lengths[i]-1] = self.ignore_id
+
             index += audio_lengths[i]
             input_embeds[i, index:index + suffix_tokens_lengths[i]] = suffix_tokens_embeds[i, :suffix_tokens_lengths[i]]
-            targets[i, index-1:index + suffix_tokens_lengths[i]] = suffix_target[i, :suffix_tokens_lengths[i] + 1]
+            targets[i, index-1:index + suffix_tokens_lengths[i]] = suffix_target[i, :suffix_tokens_lengths[i]+1]
+
+            index += suffix_tokens_lengths[i]
+            input_embeds[i, index:] = torch.cat([prefix_tokens_embeds[i, prefix_tokens_lengths[i]:],
+                                                  audio_embeds[i, audio_lengths[i]:],
+                                                    suffix_tokens_embeds[i, suffix_tokens_lengths[i]:]], dim=0)
+            targets[i,index:] = self.ignore_id
+
         mask = ~make_pad_mask(audio_lengths + prefix_tokens_lengths + suffix_tokens_lengths, 
                               max_len=inputs_lengths,
-                              pad_type="left").unsqueeze(
+                              pad_type="right").unsqueeze(
             1)  # (B,1,L)
 
         causal_mask = subsequent_mask(
@@ -125,6 +132,7 @@ class AudioLLM(torch.nn.Module):
 
         decoder_out = self.out(self.decoder(input_embeds,
                                             att_mask)[0]) # (B, L, vocab_size)
+
         loss = self.criterion_att(decoder_out.view(-1, self.vocab_size), 
                                   targets.view(-1))
         acc = th_accuracy(decoder_out.view(-1, self.vocab_size),
@@ -150,7 +158,7 @@ class AudioLLM(torch.nn.Module):
     @torch.inference_mode()
     def generate(
         self,
-        prompts_tokens: List[List[int]],
+        batch: dict,
         device: torch.device,
         stop_tokens: List[int],
         dtype: torch.dtype = torch.float32,
@@ -161,37 +169,68 @@ class AudioLLM(torch.nn.Module):
     ) -> List[List[int]]:
         """Generates responses for given prompts using Gemma model."""
         # If a single prompt is provided, treat it as a batch of 1.
-        batch_size = len(prompts_tokens)
-        min_prompt_len = min(len(p) for p in prompts_tokens)
-        max_prompt_len = max(len(p) for p in prompts_tokens)
+
+        prefix_tokens = batch['prefix_tokens'].to(device)
+        audio_feats = batch['audio_feats'].to(device)
+        suffix_tokens = batch['suffix_tokens'].to(device)
+        prefix_tokens_lengths = batch['prefix_tokens_lengths'].to(device)
+        audio_feats_lengths = batch['audio_feats_lengths'].to(device)
+        suffix_tokens_lengths = batch['suffix_tokens_lengths'].to(device)
+
+        audio_embeds, audio_lengths = self.extract_audio_features(audio_feats, audio_feats_lengths)
+
+        prefix_tokens_embeds = self.embed(prefix_tokens)
+        suffix_tokens_embeds = self.embed(suffix_tokens)
+
+        b, c = prefix_tokens_embeds.size(0), prefix_tokens_embeds.size(2)
+        input_embeds_list = []
+        token_ids_list = []
+        for i in range(b):
+            input_embeds = []
+            token_ids = []
+            input_embeds.append(prefix_tokens_embeds[i, :prefix_tokens_lengths[i]])
+            token_ids.append(prefix_tokens[i, :prefix_tokens_lengths[i]])
+            input_embeds.append(audio_embeds[i, :audio_lengths[i]])
+            token_ids.append(torch.full((1, audio_lengths[i]),
+                                      IGNORE_ID,
+                                      dtype=torch.int64,
+                                      device=device).squeeze(0))
+            input_embeds.append(suffix_tokens_embeds[i, :suffix_tokens_lengths[i]])
+            token_ids.append(suffix_tokens[i, :suffix_tokens_lengths[i]])
+            input_embeds = torch.cat(input_embeds, dim=0)
+            token_ids = torch.cat(token_ids, dim=0)
+            input_embeds_list.append(input_embeds)
+            token_ids_list.append(token_ids)
+
+        min_prompt_len = min(p.shape[0] for p in token_ids_list)
+        max_prompt_len = max(p.shape[0] for p in token_ids_list)
         max_seq_len = max_prompt_len + output_len
         assert max_seq_len <= self.decoder.pos_enc.max_len
 
         # build KV caches
         kv_caches = []
         for _ in range(len(self.decoder.decoders)):
-            size = (batch_size, 0, self.decoder.n_kv_head,
+            size = (b, 0, self.decoder.n_kv_head,
                     self.decoder.head_dim)
             k_cache = torch.zeros(size=size, dtype=dtype, device=device)
             v_cache = torch.zeros(size=size, dtype=dtype, device=device)
             kv_caches.append((k_cache, v_cache))
 
         # prepare inputs
-        token_ids_tensor = torch.full((batch_size, max_seq_len),
+        token_ids_tensor = torch.full((b, max_seq_len),
                                       IGNORE_ID,
                                       dtype=torch.int64,
                                       device=device)
-        input_token_ids_tensor = torch.full((batch_size, min_prompt_len),
-                                            IGNORE_ID,
-                                            dtype=torch.int64,
+        input_embeds_tensor = torch.zeros((b, min_prompt_len, c),
+                                            dtype=dtype,
                                             device=device)
         # right padding
-        for i, p in enumerate(prompts_tokens):
-            token_ids_tensor[i, :len(p)] = torch.tensor(p)
-            input_token_ids_tensor[i, :min_prompt_len] = torch.tensor(
-                p[:min_prompt_len])
+        for i, (embeds, tokens) in enumerate(zip(input_embeds_list, token_ids_list)):
+            token_ids_tensor[i, :len(tokens)] = tokens
+            input_embeds_tensor[i, :min_prompt_len] = embeds[:min_prompt_len]
 
-        prompt_mask_tensor = token_ids_tensor != IGNORE_ID
+        prompt_mask_tensor = ~make_pad_mask(audio_lengths + prefix_tokens_lengths + suffix_tokens_lengths,
+                              max_len=max_seq_len)
         input_positions_tensor = torch.arange(0,
                                               min_prompt_len,
                                               dtype=torch.int64).to(device)
@@ -204,14 +243,13 @@ class AudioLLM(torch.nn.Module):
         output_positions_tensor = torch.LongTensor([min_prompt_len - 1
                                                     ]).to(device)
         temperatures_tensor = None if not temperature else torch.FloatTensor(
-            [temperature] * batch_size).to(device)
-        top_ps_tensor = torch.FloatTensor([top_p] * batch_size).to(device)
-        top_ks_tensor = torch.LongTensor([top_k] * batch_size).to(device)
+            [temperature] * b).to(device)
+        top_ps_tensor = torch.FloatTensor([top_p] * b).to(device)
+        top_ks_tensor = torch.LongTensor([top_k] * b).to(device)
         output_index = torch.tensor(min_prompt_len,
                                     dtype=torch.int64).to(device)
 
-        input_token_embeding = self.embed(input_token_ids_tensor)
-        offset = torch.tensor([0] * len(prompts_tokens)).to(device)
+        offset = torch.tensor([0] * b).to(device)
         input_offset = offset
 
         stop_tokens_tensor = torch.tensor(stop_tokens, device=device)
@@ -219,7 +257,7 @@ class AudioLLM(torch.nn.Module):
         # decode and ignore output.
         for i in range(max_seq_len - min_prompt_len):
             decoder_out, kv_caches, = self.decoder(
-                input_token_embeding,
+                input_embeds_tensor,
                 att_mask,
                 input_offset,
                 kv_caches,
@@ -241,7 +279,7 @@ class AudioLLM(torch.nn.Module):
             token_ids_tensor.index_copy_(1, output_index, output_token_ids)
 
             input_token_ids_tensor = output_token_ids
-            input_token_embeding = self.embed(input_token_ids_tensor)
+            input_embeds_tensor = self.embed(input_token_ids_tensor)
 
             input_positions_tensor = output_index.unsqueeze(dim=-1)
             curr_mask_tensor = mask_tensor.index_select(
@@ -260,8 +298,8 @@ class AudioLLM(torch.nn.Module):
         token_ids = token_ids_tensor.tolist()
         results = []
         for i, tokens in enumerate(token_ids):
-            trimmed_output = tokens[len(prompts_tokens[i]
-                                        ):len(prompts_tokens[i]) + output_len]
+            trimmed_output = tokens[len(token_ids_list[i]
+                                        ):len(token_ids_list[i]) + output_len]
             for stop_token in stop_tokens:
                 try:
                     eos_index = trimmed_output.index(stop_token)

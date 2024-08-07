@@ -64,6 +64,8 @@ class ConvLinearBottleNeck(nn.Module):
         self.activation = nn.GELU()
         self.fc1 = nn.Linear(decoder_dim, bottleneck_mid_dim, bias=False)
         self.fc2 = nn.Linear(bottleneck_mid_dim, decoder_dim, bias=False)
+        
+        self.speech_ln = torch.nn.LayerNorm(decoder_dim)
 
     def forward(self, x, x_lengths):
         x, out_lengths = self.subsampling(x, x_lengths)
@@ -71,4 +73,4 @@ class ConvLinearBottleNeck(nn.Module):
         x = self.fc1(x)
         x = self.activation(x)
         x = self.fc2(x)
-        return residual + x, out_lengths
+        return self.speech_ln(residual + x), out_lengths

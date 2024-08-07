@@ -2,7 +2,7 @@ from functools import partial
 import sys
 from wenet.AudioLLM.template import WENET_LLM_Template
 from wenet.dataset.datapipes import (WenetRawDatasetSource)
-from wenet.dataset import (processor, llm_processor, audiollm_processor)
+from wenet.dataset import (processor, audiollm_processor)
 from wenet.text.base_tokenizer import BaseTokenizer
 from wenet.utils.file_utils import read_symbol_table
 from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
@@ -12,7 +12,8 @@ def Dataset(data_type,
             data_list_file,
             tokenizer: BaseTokenizer,
             conf=None,
-            partition=True):
+            partition=True,
+            train=True):
     """ Construct dataset from arguments
 
         We have two shuffle stage in the Dataset. The first is global
@@ -58,7 +59,8 @@ def Dataset(data_type,
         speaker_table = read_symbol_table(speaker_conf['speaker_table_path'])
         dataset = dataset.map(
             partial(processor.parse_speaker, speaker_dict=speaker_table))
-
+    if tokenizer is not None:
+        dataset = dataset.map(partial(processor.tokenize, tokenizer=tokenizer))
     audio_filter_conf = conf.get('audio_filter_conf', {})
     dataset = dataset.filter(partial(processor.filter, **audio_filter_conf))
 
@@ -105,6 +107,7 @@ def Dataset(data_type,
             audiollm_processor.parse_audiosft,
             tokenizer=tokenizer,
             template=template,
+            train=train,
             add_bos=style_conf.get('add_bos', True),
             add_eos=style_conf.get('add_eos', True),
         ))

@@ -9,6 +9,7 @@ from wenet.utils.common import IGNORE_ID
 def parse_audiosft(sample,
                    tokenizer: HuggingFaceTokenizer,
                    template: Template,
+                   train: bool = True,
                    add_bos: bool = True,
                    add_eos: bool = True):
     """Paser sft json line to tensor
@@ -47,12 +48,12 @@ def parse_audiosft(sample,
     _, suffix_ids = tokenizer.tokenize(chat_pattern.suffix_user)
     suffix_input_ids += suffix_ids
     suffix_output_ids += [IGNORE_ID] * len(suffix_ids)
-
-    assistant = sample['txt']
-    assistant = chat_pattern.assistant.format(content=assistant)
-    _, assistant_ids = tokenizer.tokenize(assistant)
-    suffix_input_ids += assistant_ids
-    suffix_output_ids += assistant_ids
+    if train:
+        assistant = sample['txt']
+        assistant = chat_pattern.assistant.format(content=assistant)
+        _, assistant_ids = tokenizer.tokenize(assistant)
+        suffix_input_ids += assistant_ids
+        suffix_output_ids += assistant_ids
 
     if add_eos:
         eos_id = tokenizer.tokens2ids([template.eos])
@@ -159,6 +160,12 @@ def padding(data: List[Dict]):
     padding_suffix_labels = pad_sequence(sorted_suffix_labels,
                                   batch_first=True,
                                   padding_value=IGNORE_ID)
+    sorted_labels = [
+        torch.tensor(sample[i]['label'], dtype=torch.int64) for i in order
+    ]
+    padding_labels = pad_sequence(sorted_labels,
+                                batch_first=True,
+                                padding_value=-1)
     batch = {
         'keys': sorted_keys,
         'prefix_tokens': padded_prefix_tokens,
@@ -169,6 +176,7 @@ def padding(data: List[Dict]):
         "prefix_tokens_lengths": prefix_tokens_lengths,
         "audio_feats_lengths": audio_feats_lengths,
         "suffix_tokens_lengths": suffix_tokens_lengths,
-        "target_lengths": prefix_tokens_lengths + audio_feats_lengths + suffix_tokens_lengths
+        "target_lengths": prefix_tokens_lengths + audio_feats_lengths + suffix_tokens_lengths,
+        "label": padding_labels,
     }
     return batch

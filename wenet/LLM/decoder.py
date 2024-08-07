@@ -130,7 +130,7 @@ class DecoderOnly(torch.nn.Module):
         pos_emb: torch.Tensor,
         kv_caches: Optional[List[T_CACHE]] = None,
     ) -> Tuple[torch.Tensor, Union[List[T_CACHE], None]]:
-        if self.training:
+        if self.training or kv_caches is None:
             for (i, layer) in enumerate(self.decoders):
                 xs, _, _, _ = layer(xs, att_mask, pos_emb)
             new_kv_caches = kv_caches
