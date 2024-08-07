@@ -217,7 +217,8 @@ class BestRQModel(torch.nn.Module):
             "features_l2": features_pen,
             "loss": loss,
             "num_codes": num_codes,
-            "uniq_num_codes": uniq_num_codes
+            "uniq_num_codes": uniq_num_codes,
+            "th_accuracy": codes_acc,
         }
 
     def _apply_mask_signal(
@@ -232,6 +233,7 @@ class BestRQModel(torch.nn.Module):
                                         device=input.device)
 
         masks_expand = masks.unsqueeze(-1)  # [B, T, 1]
+        # NOTE(Mddct): you can use size (b,t,d) for torch.normal
         mask_emb = torch.normal(mean=0, std=0.1,
                                 size=(1, 1, input.size(2))).to(input.device)
         xs = torch.where(masks_expand, mask_emb, input)
@@ -260,8 +262,7 @@ class BestRQModel(torch.nn.Module):
         return loss
 
     def _nearest_embedding_idx(self, xs: torch.Tensor) -> torch.Tensor:
-        if self.encoder.global_cmvn is None:
-            xs = self.norm(xs)
+        xs = self.norm(xs)
         xs = torch.matmul(xs, self.projection.to(xs.device))
         xs = xs / (xs.norm(dim=-1, p=2, keepdim=True) + 1e-8)
         codebooks = self.embeddings
