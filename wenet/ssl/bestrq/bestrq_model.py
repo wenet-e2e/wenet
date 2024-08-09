@@ -236,7 +236,7 @@ class BestRQModel(torch.nn.Module):
         # calc signal mask
         subsampling_mask = masks
         bool_stride_mask = torch.ones_like(padding_mask_stride, device=device)
-        mask_stride = torch.where(masks.unsqueeze(1), bool_stride_mask, False)
+        mask_stride = torch.where(masks.unsqueeze(-1), bool_stride_mask, False)
         # recover orign seq masks
         masks = mask_stride[:, :, :self.stride].flatten(start_dim=1)
         masks_padding = torch.zeros(
