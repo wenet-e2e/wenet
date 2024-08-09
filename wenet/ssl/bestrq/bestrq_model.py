@@ -234,7 +234,7 @@ class BestRQModel(torch.nn.Module):
                                         min_masks=self.min_masks,
                                         device=device)
         # calc signal mask
-        subsampleing_mask = masks
+        subsampling_mask = masks
         bool_stride_mask = torch.ones_like(padding_mask_stride, device=device)
         mask_stride = torch.where(masks.unsqueeze(1), bool_stride_mask, False)
         # recover orign seq masks
@@ -252,7 +252,7 @@ class BestRQModel(torch.nn.Module):
         mask_emb = torch.normal(mean=0, std=0.1,
                                 size=(1, 1, input.size(2))).to(input.device)
         xs = torch.where(masks_expand, mask_emb, input)
-        return xs, subsampleing_mask
+        return xs, subsampling_mask
 
     def _stack_features(self, input: torch.Tensor) -> torch.Tensor:
 
