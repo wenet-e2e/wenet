@@ -9,7 +9,6 @@ import logging
 import torch
 import torch.nn as nn
 
-from tqdm import tqdm
 from typing import Dict, List
 
 import wenet.finetune.lora.layers as lora
@@ -157,9 +156,9 @@ def estimate_gradient(
 @torch.no_grad()
 def reinit_lora_modules(name, module, init_config, **kwargs):
     r"""
-    Refer to https://github.com/Outsider565/LoRA-GA/blob/c185846309ea9012d0bcd46ebd30347dda1c592c/run_exp.py#L67
     Reinitialize the lora model with the given configuration.
     """
+    # Refer to https://github.com/Outsider565/LoRA-GA/blob/c185846309ea9012d0bcd46ebd30347dda1c592c/run_exp.py#L67
     import math
     lora_r = min(module.lora_A.shape)
     a_dim = max(module.lora_A.shape)
@@ -168,7 +167,7 @@ def reinit_lora_modules(name, module, init_config, **kwargs):
         match init_config.lora_A:
             case "gaussian":
                 torch.nn.init.normal_(
-                    module.lora_A, mean=0.0, 
+                    module.lora_A, mean=0.0,
                     std=init_config.lora_A_std
                 )
             case "kaiming":
@@ -253,12 +252,12 @@ def reinit_lora_modules(name, module, init_config, **kwargs):
         elif init_config.scale == "normalized":
             S_sum = S[:lora_r].sum()
             module.lora_B = torch.nn.Parameter(
-                (U[:, :lora_r] * torch.sqrt(S[:lora_r]) \
-                 / torch.sqrt(S_sum)*lora_r**0.5).contiguous()
+                (U[:, :lora_r] * torch.sqrt(S[:lora_r])
+                 / torch.sqrt(S_sum) * lora_r**0.5).contiguous()
             )
             module.lora_A = torch.nn.Parameter(
-                (V[:lora_r, :].T * torch.sqrt(S[:lora_r]) \
-                 / torch.sqrt(S_sum)*lora_r**0.5).T.contiguous()
+                (V[:lora_r, :].T * torch.sqrt(S[:lora_r])
+                 / torch.sqrt(S_sum) * lora_r**0.5).T.contiguous()
             )
     elif init_config.mode == "gradient":
         named_grad = kwargs["named_grads"]
@@ -284,7 +283,8 @@ def reinit_lora_modules(name, module, init_config, **kwargs):
             # Because A,B is orthogonal, do not need to scale
             pass
         elif init_config.scale == "stable":
-            m, n = grads.shape # m: feature_out, n: feature_in
+            m, n = grads.shape 
+            # m: feature_out, n: feature_in
             # the scale of output is only related to the feature_out
             gamma = init_config.stable_gamma
             B = B * m**0.25 / gamma**0.5
@@ -309,14 +309,16 @@ def reinit_lora_modules(name, module, init_config, **kwargs):
         elif init_config.dtype == "fp32":
             module.lora_A.data = module.lora_A.data.to(torch.float32)
             module.lora_B.data = module.lora_B.data.to(torch.float32)
-        # If lora_A@lora_B is not zero, then we need to subtract lora_A@lora_B from the original weight matrix
+        # If lora_A@lora_B is not zero,
+        # then we need to subtract lora_A@lora_B from the original weight matrix
         offset = (
             module.lora_B @ module.lora_A
         ).to(module.weight.data.device)
         scaling_factor = module.scaling
         offset *= scaling_factor
         if hasattr(init_config, "norm_clip") and init_config.norm_clip:
-            # for numerical stability, offset's largest value must be less then weight's largest value
+            # for numerical stability,
+            # offset's largest value must be less then weight's largest value
             ratio = torch.max(torch.abs(module.weight.data)) / torch.max(
                 torch.abs(offset)
             )
@@ -327,5 +329,6 @@ def reinit_lora_modules(name, module, init_config, **kwargs):
                 logging.warning(f"Clipping offset by {ratio}")
         try:
             module.weight.data -= offset
-        except:
+        except Exception as e:
+            logging.warning(f"{e}")
             breakpoint()

@@ -890,7 +890,7 @@ def reinit_lora(model, args, dataset_configs, tokenizer, seed=777):
     from wenet.finetune.lora.layers import LoRALayer
     from types import SimpleNamespace
 
-    logging.info(f"reinit lora modules.")
+    logging.info("reinit lora modules.")
     with open(args.lora_init_yaml, 'r') as file:
         config = yaml.safe_load(file)
 
