@@ -128,9 +128,9 @@ class Model:
             for i, x in enumerate(res.tokens):
                 tokens_info.append({
                     'token': self.char_dict[x],
-                    'start': times[i][0],
-                    'end': times[i][1],
-                    'confidence': res.tokens_confidence[i]
+                    'start': round(times[i][0], 3),
+                    'end': round(times[i][1], 3),
+                    'confidence': round(res.tokens_confidence[i], 2)
                 })
             result['tokens'] = tokens_info
         return result
@@ -167,5 +167,10 @@ def load_model(language: str = None,
     if model_dir is None:
         model_dir = Hub.get_model_by_lang(language)
 
+    if gpu != -1:
+        # remain the original usage of gpu
+        device = "cuda"
     model = Model(model_dir, gpu, beam, context_path, context_score)
+    model.device = torch.device(device)
+    model.model.to(device)
     return model

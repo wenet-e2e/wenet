@@ -18,13 +18,13 @@ export ASCEND_RT_VISIBLE_DEVICES="${npu_list}"
 echo "ASCEND_RT_VISIBLE_DEVICES is ${ASCEND_RT_VISIBLE_DEVICES}"
 
 stage=0
-stop_stage=0
+stop_stage=2
 
 # You should change the following two parameters for multiple machine training,
 # see https://pytorch.org/docs/stable/elastic/run.html
 HOST_NODE_ADDR="localhost:0"
 num_nodes=1
-job_id=2023
+job_id=2024
 
 # data_type can be `raw` or `shard`. Typically, raw is used for small dataset,
 # `shard` is used for large dataset which is over 1k hours, and `shard` is
@@ -32,36 +32,31 @@ job_id=2023
 data_type=raw
 
 train_set=train
-# Optional train_config
-# 1. Standard whisper largev3
-#        train_config=conf/finetune_whisper_largev3.yaml
-#        checkpoint=exp/whisper/large-v3/wenet_whisper.init-ctc.pt
-# 2. Whisper largev3 with randomly init conv2d4
-#        train_config=conf/finetune_whisper_largev3_conv2d4.yaml
-#        checkpoint=exp/whisper/large-v3/wenet_whisper.remove-subsample.init-ctc.pt
-train_config=conf/finetune_whisper_largev3_conv2d4.yaml
-checkpoint=exp/whisper/large-v3/wenet_whisper.remove-subsample.init-ctc.pt
-dir=exp/finetune_whisper_largev3_conv1d2
+
+train_config=conf/train_paraformer_dynamic.yaml
+checkpoint=exp/paraformer/large/wenet_paraformer.init-ctc.init-embed.pt
+dir=exp/finetune_paraformer_dynamic
 tensorboard_dir=tensorboard
 num_workers=8
-prefetch=10
+prefetch=500
 
 # use average_checkpoint will get better result
 average_checkpoint=true
 decode_checkpoint=$dir/final.pt
 average_num=5
-decode_modes="ctc_greedy_search ctc_prefix_beam_search attention attention_rescoring"
+decode_modes="ctc_greedy_search ctc_prefix_beam_search paraformer_greedy_search"
 decode_device=0
 decoding_chunk_size=-1
+decode_batch=16
 ctc_weight=0.3
-reverse_weight=0.0
-decode_batch=4
+reverse_weight=0.5
+max_epoch=100
 
-train_engine=deepspeed
+train_engine=torch_fsdp
 
 # model+optimizer or model_only, model+optimizer is more time-efficient but
 # consumes more space, while model_only is the opposite
-deepspeed_config=conf/ds_stage1.json
+deepspeed_config=../whisper/conf/ds_stage1.json
 deepspeed_save_states="model+optimizer"
 
 . tools/parse_options.sh || exit 1;
@@ -69,7 +64,7 @@ deepspeed_save_states="model+optimizer"
 if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   mkdir -p $dir
   num_npus=$(echo $ASCEND_RT_VISIBLE_DEVICES | awk -F "," '{print NF}')
-  # Use "hccl" if it works, otherwise use "gloo"
+  # Use "hccl" for npu if it works, otherwise use "gloo"
   # NOTE(xcsong): deepspeed fails with gloo, see
   #   https://github.com/microsoft/DeepSpeed/issues/2818
   dist_backend="hccl"
@@ -88,6 +83,13 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
   #               `rdzv_id` - A user-defined id that uniquely identifies the worker group for a job.
   #                           This id is used by each node to join as a member of a particular worker group.
   #               `rdzv_endpoint` - The rendezvous backend endpoint; usually in form <host>:<port>.
+  # NOTE(xcsong): In multi-node training, some clusters require special NCCL variables to set prior to training.
+  #               For example: `NCCL_IB_DISABLE=1` + `NCCL_SOCKET_IFNAME=enp` + `NCCL_DEBUG=INFO`
+  #               without NCCL_IB_DISABLE=1
+  #                   RuntimeError: NCCL error in: ../torch/csrc/distributed/c10d/ProcessGroupNCCL.cpp:1269, internal error, NCCL Version xxx
+  #               without NCCL_SOCKET_IFNAME=enp  (IFNAME could be get by `ifconfig`)
+  #                   RuntimeError: The server socket has failed to listen on any local network address. The server socket has failed to bind to [::]:xxx
+  #               ref: https://github.com/google/jax/issues/13559#issuecomment-1343573764
   echo "$0: num_nodes is $num_nodes, proc_per_node is $num_npus"
   torchrun --nnodes=$num_nodes --nproc_per_node=$num_npus \
            --rdzv_id=$job_id --rdzv_backend="c10d" --rdzv_endpoint=$HOST_NODE_ADDR \
@@ -109,7 +111,6 @@ if [ ${stage} -le 0 ] && [ ${stop_stage} -ge 0 ]; then
       --deepspeed.save_states ${deepspeed_save_states}
 fi
 
-
 if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
   if [ "$deepspeed_save_states" = "model+optimizer" ]; then
     for subdir in $(find "$dir" -maxdepth 1 -type d | grep -v "^$dir$")
@@ -127,12 +128,13 @@ fi
 if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
   # Test model, please specify the model you want to test by --checkpoint
   if [ ${average_checkpoint} == true ]; then
-    decode_checkpoint=$dir/avg_${average_num}.pt
+    decode_checkpoint=$dir/avg_${average_num}_maxepoch_${max_epoch}.pt
     echo "do model average and final checkpoint is $decode_checkpoint"
     python wenet/bin/average_model.py \
       --dst_model $decode_checkpoint \
       --src_path $dir  \
       --num ${average_num} \
+      --max_epoch ${max_epoch} \
       --val_best
   fi
   # Please specify decoding_chunk_size for unified streaming and
@@ -156,16 +158,22 @@ if [ ${stage} -le 2 ] && [ ${stop_stage} -ge 2 ]; then
     ${decoding_chunk_size:+--decoding_chunk_size $decoding_chunk_size}
   for mode in ${decode_modes}; do
     python tools/compute-wer.py --char=1 --v=1 \
-      data/test/text $result_dir/$mode/text > $result_dir/$mode/wer
+      data/test/data.list $result_dir/$mode/text > $result_dir/$mode/wer
   done
 fi
 
 
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
   # Export the best model you want
+  # NOTE (MengqingCao): if RuntimeError "Expected a value of type 'Tuple[Tensor, Tensor]'
+  #    for argument 'hx' but instead found type 'Tensor (inferred)'." occured,
+  #    modify the function "def lstm_forward(self, input1,hx = None):" to
+  #    "def lstm_forward(self, input1, hx: Optional[tuple[torch.Tensor, torch.Tensor]] = None):"
+  #    in torch-npu/utils/module.py
+  # revert this note when torch-npu fix it. sa: https://gitee.com/ascend/pytorch/pulls/12818
   python wenet/bin/export_jit.py \
     --config $dir/train.yaml \
-    --checkpoint $dir/avg_${average_num}.pt \
+    --checkpoint $dir/avg_${average_num}_maxepoch_${max_epoch}.pt \
     --output_file $dir/final.zip \
     --output_quant_file $dir/final_quant.zip
 fi

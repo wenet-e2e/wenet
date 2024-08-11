@@ -10,6 +10,14 @@ requirements = [
     "openai-whisper",
     "librosa",
 ]
+
+extra_require = {
+    "torch-npu": [
+        "torch==2.2.0", "torch-npu==2.2.0", "torchaudio==2.2.0", "decorator",
+        "numpy<2.0.0", "attrs", "psutil"
+    ],
+}
+
 if platform.system() == 'Windows':
     requirements += ['PySoundFile']
 
@@ -20,4 +28,5 @@ setup(
     entry_points={"console_scripts": [
         "wenet = wenet.cli.transcribe:main",
     ]},
+    extras_require=extra_require,
 )
