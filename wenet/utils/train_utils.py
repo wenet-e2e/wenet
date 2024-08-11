@@ -898,8 +898,9 @@ def reinit_lora(model, args, dataset_configs, tokenizer, seed=777):
     generator.manual_seed(seed)
     dataset_conf = copy.deepcopy(dataset_configs['dataset_conf'])
     dataset_conf['batch_conf']['batch_size'] = config['init_batch_size']
-    dataset = Dataset(args.data_type, args.train_data, tokenizer,
-                      dataset_conf, True)
+    dataset_type = dataset_configs.get('dataset', 'asr')
+    dataset = init_dataset(dataset_type, args.data_type, args.train_data,
+                           tokenizer, dataset_conf, True)
     dataloader = DataLoader(dataset,
                             batch_size=None,
                             pin_memory=args.pin_memory,
