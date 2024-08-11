@@ -885,19 +885,34 @@ def freeze_modules(model, args):
                 logging.debug("{} module is freezed".format(name))
 
 
-def reinit_lora(model, dataset, args):
-    import tqdm
+def reinit_lora(model, args, dataset_configs, tokenizer, seed=777):
+    from tqdm import tqdm
     from wenet.finetune.lora.utils import estimate_gradient, reinit_lora_modules
     from wenet.finetune.lora.layers import LoRALayer
+    from types import SimpleNamespace
 
-    logging.info("reinit lora modules.")
+    logging.info(f"reinit lora modules.")
     with open(args.lora_init_yaml, 'r') as file:
         config = yaml.safe_load(file)
 
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    dataset_conf = copy.deepcopy(dataset_configs['dataset_conf'])
+    dataset_conf['batch_conf']['batch_size'] = config['init_batch_size']
+    dataset = Dataset(args.data_type, args.train_data, tokenizer,
+                      dataset_conf, True)
+    dataloader = DataLoader(dataset,
+                            batch_size=None,
+                            pin_memory=args.pin_memory,
+                            num_workers=args.num_workers,
+                            persistent_workers=True,
+                            generator=generator,
+                            prefetch_factor=args.prefetch)
     additional_kwargs = {}
-    named_grads = estimate_gradient(model, dataset, config["init_batchsize"],
-                                    config["init_iters"])
-    additional_kwargs["named_grads"] = named_grads
+    if config["init_config"]["mode"] == "gradient":
+        named_grads = estimate_gradient(model, dataloader, config['init_iters'])
+        additional_kwargs["named_grads"] = named_grads
+    config = SimpleNamespace(**config["init_config"])
     for name, module in tqdm(
         model.named_modules(),
         desc="Reinitializing Lora",

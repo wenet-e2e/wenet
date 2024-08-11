@@ -100,7 +100,7 @@ def main():
     model, configs = init_model(args, configs)
 
     if hasattr(args, 'lora_reinit') and args.lora_reinit:
-       reinit_lora(model, train_dataset, args)
+        reinit_lora(model, args, configs, tokenizer)
 
     # Check model is jitable & print model archtectures
     trace_and_print_model(args, model)
