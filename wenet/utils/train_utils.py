@@ -165,6 +165,14 @@ def add_lora_args(parser):
                         default=None,
                         type=str,
                         help="lora checkpoint path.")
+    parser.add_argument("--lora_reinit",
+                        default=False,
+                        type=bool,
+                        help="whether use the lora init, default is zero init.")
+    parser.add_argument('--lora_init_yaml',
+                        default="wenet/finetune/lora/config.yaml",
+                        type=str,
+                        help='Path to the configuration YAML file')
     return parser
 
 
@@ -875,3 +883,25 @@ def freeze_modules(model, args):
             if module_name in name:
                 param.requires_grad = False
                 logging.debug("{} module is freezed".format(name))
+
+
+def reinit_lora(model, dataset, args):
+    import tqdm
+    from wenet.finetune.lora.utils import estimate_gradient, reinit_lora_modules
+    from wenet.finetune.lora.layers import LoRALayer
+
+    logging.info("reinit lora modules.")
+    with open(args.lora_init_yaml, 'r') as file:
+        config = yaml.safe_load(file)
+
+    additional_kwargs = {}
+    named_grads = estimate_gradient(model, dataset, config["init_batchsize"],
+                                    config["init_iters"])
+    additional_kwargs["named_grads"] = named_grads
+    for name, module in tqdm(
+        model.named_modules(),
+        desc="Reinitializing Lora",
+        total=len(list(model.named_modules())),
+    ):
+        if isinstance(module, LoRALayer):
+            reinit_lora_modules(name, module, config, **additional_kwargs)

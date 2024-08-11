@@ -7,9 +7,10 @@
 
 import logging
 import torch
+import tqdm
 import torch.nn as nn
 
-from typing import Dict
+from typing import Dict, List
 
 import wenet.finetune.lora.layers as lora
 
@@ -97,3 +98,236 @@ def lora_state_dict(model: nn.Module,
         return to_return
     else:
         raise NotImplementedError
+
+
+def get_record_gradient_hook(model, record_dict):
+    def record_gradient_hook(grad):
+        for n, p in model.named_parameters():
+            if p.requires_grad and p.grad is not None:
+                if n not in record_dict:
+                    record_dict[n] = p.grad.cpu()
+                else:
+                    record_dict[n] += p.grad.cpu()
+                p.grad = None
+        return grad
+
+    return record_gradient_hook
+
+
+def estimate_gradient(
+    model, dataset, batch_size: int = 4, max_iters: int = 8
+) -> Dict[str, List[torch.Tensor]]:
+    r"""
+    Estimate the gradient of the model on the given dataset
+    """
+    logging.info("Estimating gradient")
+    model.train()
+    named_grads = {}
+    hooks = []
+    for _, param in model.named_parameters():
+        hook = param.register_hook(get_record_gradient_hook(model, named_grads))
+        hooks.append(hook)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=batch_size)
+    num = 0
+    for batch in tqdm(dataloader, desc="Estimating gradient"):
+        num += 1
+        if max_iters is not None and num >= max_iters:
+            break
+        batch = {k: v.to(model.device) for k, v in batch.items()}
+        outputs = model(**batch)
+        outputs.loss.backward()
+        get_record_gradient_hook(model, named_grads)(None)  # get gradient of last layer
+        # make sure the gradient is cleared
+        for n, p in model.named_parameters():
+            if p.grad is not None:
+                p.grad = None
+    for n, _ in named_grads.items():
+        named_grads[n] /= num
+    for hook in hooks:
+        hook.remove()
+    torch.cuda.empty_cache()
+    return named_grads
+
+
+@torch.no_grad()
+def reinit_lora_modules(name, module, init_config, **kwargs):
+    r"""
+    Refer to https://github.com/Outsider565/LoRA-GA/blob/c185846309ea9012d0bcd46ebd30347dda1c592c/run_exp.py#L67
+    Reinitialize the lora model with the given configuration.
+    """
+    import math
+    lora_r = min(module.lora_A.default.weight.shape)
+    a_dim = max(module.lora_A.default.weight.shape)
+    b_dim = max(module.lora_B.default.weight.shape)
+    if init_config.mode == "simple":
+        match init_config.lora_A:
+            case "gaussian":
+                torch.nn.init.normal_(
+                    module.lora_A.default.weight, mean=0.0, 
+                    std=init_config.lora_A_std
+                )
+            case "kaiming":
+                # https://github.com/microsoft/LoRA/blob/a0a92e0f26c067cf94747bdbf1ce73793fa44d19/loralib/layers.py#L124
+                torch.nn.init.kaiming_uniform_(module.lora_A.default.weight,
+                                               a=math.sqrt(5))
+            case "fan_out_kaiming":
+                torch.nn.init.kaiming_normal_(
+                    module.lora_A.default.weight, mode="fan_out"
+                )
+            case "xavier":
+                torch.nn.init.xavier_normal_(module.lora_A.default.weight)
+            case "zeros":
+                torch.nn.init.zeros_(module.lora_A.default.weight)
+            case "unit":
+                torch.nn.init.normal_(
+                    module.lora_A.default.weight, mean=0.0,
+                    std=1.0 / (a_dim**0.5)
+                )
+            case "orthogonal":
+                torch.nn.init.orthogonal_(module.lora_A.default.weight)
+            case _:
+                raise ValueError(
+                    f"Unknown lora_A initialization: {init_config.lora_A}"
+                )
+        match init_config.lora_B:
+            case "gaussian":
+                torch.nn.init.normal_(
+                    module.lora_B.default.weight, mean=0.0,
+                    std=init_config.lora_B_std
+                )
+            case "kaiming":
+                torch.nn.init.kaiming_normal_(module.lora_B.default.weight)
+            case "fan_out_kaiming":
+                torch.nn.init.kaiming_normal_(
+                    module.lora_B.default.weight, mode="fan_out"
+                )
+            case "xavier":
+                torch.nn.init.xavier_normal_(module.lora_B.default.weight)
+            case "zeros":
+                torch.nn.init.zeros_(module.lora_B.default.weight)
+            case "unit":
+                torch.nn.init.normal_(
+                    module.lora_B.default.weight, mean=0.0,
+                    std=1.0 / (b_dim**0.5)
+                )
+            case "orthogonal":
+                torch.nn.init.orthogonal_(module.lora_B.default.weight)
+            case _:
+                raise ValueError(
+                    f"Unknown lora_B initialization: {init_config.lora_B}"
+                )
+        if init_config.get("scale", "") == "stable":
+            gamma = init_config.stable_gamma
+            module.lora_B.default.weight.data *= (m**0.25) / gamma**0.5
+            module.lora_A.default.weight.data *= (n**0.25) / gamma**0.5
+    elif init_config.mode == "svd":
+        U, S, V = torch.svd_lowrank(module.weight.float(), q=4 * lora_r,
+                                    niter=4)
+        V = V.T
+        m, n = module.weight.shape
+        if init_config.scale == "default":
+            S = S / module.scaling["default"]
+            module.lora_B.default.weight = torch.nn.Parameter(
+                (U[:, :lora_r] * torch.sqrt(S[:lora_r])).contiguous()
+            )
+            module.lora_A.default.weight = torch.nn.Parameter(
+                (V[:lora_r, :].T * torch.sqrt(S[:lora_r])).T.contiguous()
+            )
+        elif init_config.scale == "stable":
+            gamma = init_config.stable_gamma
+            module.lora_B.default.weight = torch.nn.Parameter(
+                (U[:, :lora_r] * (m**0.25) / gamma**0.5).contiguous()
+            )
+            module.lora_A.default.weight = torch.nn.Parameter(
+                (V[:lora_r, :] * (n**0.25) / gamma**0.5).contiguous()
+            )
+        elif init_config.scale == "unit":
+            module.lora_B.default.weight = torch.nn.Parameter(
+                (U[:, :lora_r]).contiguous()
+            )
+            module.lora_A.default.weight = torch.nn.Parameter(
+                (V[:lora_r, :]).contiguous()
+            )
+        elif init_config.scale == "normalized":
+            S_sum = S[:lora_r].sum()
+            module.lora_B.default.weight = torch.nn.Parameter(
+                (U[:, :lora_r] * torch.sqrt(S[:lora_r]) \
+                 / torch.sqrt(S_sum)*lora_r**0.5).contiguous()
+            )
+            module.lora_A.default.weight = torch.nn.Parameter(
+                (V[:lora_r, :].T * torch.sqrt(S[:lora_r]) \
+                 / torch.sqrt(S_sum)*lora_r**0.5).T.contiguous()
+            )
+    elif init_config.mode == "gradient":
+        named_grad = kwargs["named_grads"]
+        grad_name = ".".join(name.split(".")[2:]) + ".weight"
+        grads = named_grad[grad_name]
+        U, S, V = torch.svd_lowrank(grads.cuda().float(), q=4 * lora_r, niter=4)
+        V = V.T
+        # set direction
+        if init_config.direction == "ArBr":
+            B = U[:, 0 : 2 * lora_r : 2]
+            A = V[1 : 2 * lora_r : 2, :]
+        elif init_config.direction == "A2rBr":
+            B = U[:, :lora_r]
+            A = V[lora_r : 2 * lora_r, :]
+        elif init_config.direction == "ArB2r":
+            B = U[:, lora_r : 2 * lora_r]
+            A = V[:lora_r, :]
+        scaling_factor = module.scaling["default"]
+        if init_config.scale == "gd":
+            A = A / scaling_factor
+            B = B / scaling_factor
+        elif init_config.scale == "unit":
+            # Because A,B is orthogonal, do not need to scale
+            pass
+        elif init_config.scale == "stable":
+            m, n = grads.shape # m: feature_out, n: feature_in
+            # the scale of output is only related to the feature_out
+            gamma = init_config.stable_gamma
+            B = B * m**0.25 / gamma**0.5
+            A = A * m**0.25 / gamma**0.5
+        elif init_config.scale == "weightS":
+            _, S, _ = torch.svd_lowrank(module.weight.float(), q=4 * lora_r,
+                                        niter=4)
+            S = S / module.scaling["default"]
+            avg_s = torch.sqrt(S[:lora_r]).mean().to(A.device)
+            B = B * avg_s
+            A = A * avg_s
+        module.lora_B.default.weight = torch.nn.Parameter(B.contiguous().cuda())
+        module.lora_A.default.weight = torch.nn.Parameter(A.contiguous().cuda())
+
+    with torch.no_grad():
+        # consider dtype not in init_config
+        if "dtype" not in init_config:
+            pass
+        elif init_config.dtype == "bf16":
+            module.lora_A.default.weight.data = \
+                module.lora_A.default.weight.data.to(torch.bfloat16)
+            module.lora_B.default.weight.data = \
+                module.lora_B.default.weight.data.to(torch.bfloat16)
+        elif init_config.dtype == "fp32":
+            module.lora_A.default.weight.data = \
+                module.lora_A.default.weight.data.to(torch.float32)
+            module.lora_B.default.weight.data = \
+                module.lora_B.default.weight.data.to(torch.float32)
+        # If lora_A@lora_B is not zero, then we need to subtract lora_A@lora_B from the original weight matrix
+        offset = (
+            module.lora_B.default.weight @ module.lora_A.default.weight
+        ).to(module.weight.data.device)
+        scaling_factor = module.scaling["default"]
+        offset *= scaling_factor
+        if "norm_clip" in init_config and init_config.norm_clip:
+            # for numerical stability, offset's largest value must be less then weight's largest value
+            ratio = torch.max(torch.abs(module.weight.data)) / torch.max(
+                torch.abs(offset)
+            )
+            if ratio < 1:
+                offset *= ratio
+                module.lora_A.default.weight.data *= ratio**0.5
+                module.lora_B.default.weight.data *= ratio**0.5
+                logging.warning(f"Clipping offset by {ratio}")
+        try:
+            module.weight.data -= offset
+        except:
+            breakpoint()

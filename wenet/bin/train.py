@@ -36,7 +36,7 @@ from wenet.utils.train_utils import (
     init_dataset_and_dataloader, check_modify_and_save_config,
     init_optimizer_and_scheduler, init_scaler, trace_and_print_model,
     wrap_cuda_model, init_summarywriter, save_model, log_per_epoch,
-    add_lora_args)
+    add_lora_args, reinit_lora)
 
 
 def get_args():
@@ -98,6 +98,9 @@ def main():
 
     # Init asr model from configs
     model, configs = init_model(args, configs)
+
+    if hasattr(args, 'lora_reinit') and args.lora_reinit:
+       reinit_lora(model, train_dataset, args)
 
     # Check model is jitable & print model archtectures
     trace_and_print_model(args, model)
