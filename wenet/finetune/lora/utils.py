@@ -155,10 +155,10 @@ def estimate_gradient(
 
 @torch.no_grad()
 def reinit_lora_modules(name, module, init_config, **kwargs):
-    r"""
+    r"""Refer to https://github.com/Outsider565/LoRA-GA/blob/
+    c185846309ea9012d0bcd46ebd30347dda1c592c/run_exp.py#L67
     Reinitialize the lora model with the given configuration.
     """
-    # Refer to https://github.com/Outsider565/LoRA-GA/blob/c185846309ea9012d0bcd46ebd30347dda1c592c/run_exp.py#L67
     import math
     lora_r = min(module.lora_A.shape)
     a_dim = max(module.lora_A.shape)
@@ -283,7 +283,7 @@ def reinit_lora_modules(name, module, init_config, **kwargs):
             # Because A,B is orthogonal, do not need to scale
             pass
         elif init_config.scale == "stable":
-            m, n = grads.shape 
+            m, n = grads.shape
             # m: feature_out, n: feature_in
             # the scale of output is only related to the feature_out
             gamma = init_config.stable_gamma
