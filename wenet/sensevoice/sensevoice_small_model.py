@@ -203,7 +203,7 @@ class SenseVoiceSmall(ASRModel):
         event = batch['enent'].to(device).unsqueeze(1)  # [B,1]
         context = torch.stack([lid, itn, event, emo], dim=1)
 
-        context_embed = self.embed(context)  # [B,3,D]
+        context_embed = self.embed(context)  # [B,4,D]
         speech = torch.cat((context_embed, speech), dim=1)
         speech_lengths = speech_lengths + 3 + 1
 
