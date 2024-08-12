@@ -10,6 +10,7 @@ class SentencepieceTokenizer(BaseTokenizer):
     def __init__(
         self,
         model_path: Union[PathLike, str],
+        **kwargs,
     ) -> None:
         super().__init__()
 
@@ -24,7 +25,7 @@ class SentencepieceTokenizer(BaseTokenizer):
             self.model = spm.SentencePieceProcessor()
             self.model.load(self.model_path)
             self._symbol_table = {
-                _id: self.model.id_to_piece(_id)
+                self.model.id_to_piece(_id): _id
                 for _id in range(self.model.get_piece_size())
             }
             self.vocab_size = len(self._symbol_table)
