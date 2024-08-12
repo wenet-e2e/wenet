@@ -199,8 +199,6 @@ def init_model(args, configs):
 
     if hasattr(args, 'use_lora') and args.use_lora:
         inject_lora_to_model(model, configs['lora_conf'])
-        if hasattr(args, 'lora_ckpt_path') and args.lora_ckpt_path:
-            load_checkpoint(model, args.lora_ckpt_path)
 
     # If specify checkpoint, load some info from checkpoint
     if hasattr(args, 'checkpoint') and args.checkpoint is not None:
@@ -210,6 +208,10 @@ def init_model(args, configs):
     else:
         infos = {}
     configs["init_infos"] = infos
+
+    if hasattr(args, 'use_lora') and args.use_lora:
+        if hasattr(args, 'lora_ckpt_path') and args.lora_ckpt_path:
+            load_checkpoint(model, args.lora_ckpt_path)
 
     print(configs)
     # Trye to tie some weights
