@@ -18,8 +18,8 @@ from wenet.utils.mask import add_optional_chunk_mask, make_pad_mask
 class SanmEncoderWithTp(SanmEncoder):
 
     def __init__(self,
-                 tp_num_blocks: int,
                  input_size: int,
+                 tp_blocks: int,
                  output_size: int = 256,
                  attention_heads: int = 4,
                  linear_units: int = 2048,
@@ -64,7 +64,7 @@ class SanmEncoderWithTp(SanmEncoder):
                 ),
                 dropout_rate,
                 normalize_before,
-                in_size=output_size) for _ in range(tp_num_blocks - 1)
+                in_size=output_size) for _ in range(tp_blocks)
         ])
         self.tp_norm = torch.nn.LayerNorm(output_size)
 
@@ -140,7 +140,6 @@ class SanmEncoderWithTp(SanmEncoder):
 class SenseVoiceSmall(ASRModel):
 
     def __init__(self,
-                 input_dim: int,
                  vocab_size: int,
                  encoder: SanmEncoderWithTp,
                  decoder: TransformerDecoder,
@@ -163,14 +162,11 @@ class SenseVoiceSmall(ASRModel):
         self.decoder = decoder
         self.lfr = LFR()
 
-        self.sos = special_tokens['sos']
-        self.eos = special_tokens['eos']
+        self.sos = special_tokens['<s>']
+        self.eos = special_tokens['</s>']
 
-        self.lid_dict = special_tokens['lid']
-        self.itn_dict = special_tokens['itn']
-        self.emo_dict = special_tokens['emo']
-        self.embed = torch.nn.Embedding(
-            7 + len(self.lid_dict) + len(self.emo_dict), input_dim)
+        # hard code for sensevoice small
+        self.embed = torch.nn.Embedding(7 + 7 + 2, 560)
 
         assert self.encoder.global_cmvn is not None
         self.global_cmvn = self.encoder.global_cmvn
@@ -182,6 +178,10 @@ class SenseVoiceSmall(ASRModel):
             smoothing=lsm_weight,
             normalize_length=length_normalized_loss,
         )
+
+    @torch.jit.unused
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        pass
 
     @torch.jit.unused
     def forward(self, batch: dict,

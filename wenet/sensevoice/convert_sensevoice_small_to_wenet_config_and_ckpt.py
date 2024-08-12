@@ -23,6 +23,8 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str, unit_path: str,
     configs['encoder_conf']['input_layer'] = 'paraformer_dummy'
     configs['lfr_conf'] = {'lfr_m': 7, 'lfr_n': 6}
 
+    configs['decoder'] = None
+
     configs['input_dim'] = configs['lfr_conf']['lfr_m'] * 80
     # This type not use
     del configs['encoder_conf']['selfattention_layer_type'], configs[
