@@ -67,6 +67,7 @@ class BestRQModel(torch.nn.Module):
         mask_length: int = 10,
         min_masks: int = 2,
         norm_epsilon: float = 1e-5,
+        out_bias: bool = False,
         features_regularization_weight: float = 0.01,
     ) -> None:
         super().__init__()
@@ -86,9 +87,11 @@ class BestRQModel(torch.nn.Module):
             torch.empty(self.num_codebooks, self.encoder.output_size(),
                         num_embeddings))
         torch.nn.init.trunc_normal_(self.encoder_top_n_out, std=0.02)
-        self.encoder_top_n_out_bias = torch.nn.parameter.Parameter(
-            torch.empty(self.num_codebooks, num_embeddings))
-        torch.nn.init.zeros_(self.encoder_top_n_out_bias)
+        self.out_bias = out_bias
+        if self.out_bias:
+            self.encoder_top_n_out_bias = torch.nn.parameter.Parameter(
+                torch.empty(self.num_codebooks, num_embeddings))
+            torch.nn.init.zeros_(self.encoder_top_n_out_bias)
 
         # stack input: eg: fbank
         self.stack_frames = self.encoder.embed.right_context + 1
@@ -189,7 +192,8 @@ class BestRQModel(torch.nn.Module):
             0)  # [1, num_codebooks, dim, num_embeddings]
         out = torch.matmul(out,
                            top_n_out)  # [B, num_codebooks, T', num_embeddings]
-        out = out + self.encoder_top_n_out_bias.unsqueeze(0).unsqueeze(2)
+        if self.out_bias:
+            out = out + self.encoder_top_n_out_bias.unsqueeze(0).unsqueeze(2)
 
         # 5 compute loss
         masks = out_mask.squeeze(1) * code_ids_mask
