@@ -19,6 +19,7 @@ import sys
 import tarfile
 import logging
 from typing import List, Optional
+import numpy as np
 import torch
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
@@ -28,7 +29,6 @@ from torch.utils.data.datapipes.iter.sharding import (
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
 
 from wenet.dataset.processor import parse_url
-import random
 
 
 @functional_datapipe("map_ignore_error")
@@ -310,8 +310,10 @@ class InterlaveDataPipe(IterDataPipe):
         self,
         source_datapipes: List[IterDataPipe],
         weights: Optional[List[float]] = None,
+        seed=2027,
     ):
         super().__init__()
+        self.rng = np.random.default_rng(seed)
         self.source_datapipes = source_datapipes
         self.weights = weights
         if weights is None:
@@ -322,23 +324,24 @@ class InterlaveDataPipe(IterDataPipe):
         self.iters = None
 
     def __iter__(self):
+        weights = copy.deepcopy(self.weights)
         exhausted = len(self.source_datapipes) * [False]
         if self.iters is None:
             self.iters = [(i, iter(d))
                           for i, d in enumerate(self.source_datapipes)]
-
         while True:
             # TODO(Mddct): rng
-            index_iter = random.choices(self.iters, self.weights)[0]
+            index_iter = self.rng.choice(self.iters, p=weights)
             i, ite = index_iter
             try:
                 elem = next(ite)
                 yield elem
             except StopIteration:
-                self.weights[i] = 0.
+                weights[i] = 0.
                 exhausted[i] = True
                 if all(exhausted):
                     return
+                weights = [weight / sum(weights) for weight in weights]
 
 
 class TextLineDataPipe(IterDataPipe):
