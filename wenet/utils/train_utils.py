@@ -923,4 +923,4 @@ def reinit_lora(model, args, configs, tokenizer, seed=777):
             reinit_lora_modules(name, module, lora_config, **additional_kwargs)
     # lora_init_model needs to be saved, w0 = w0 - A0 * B0
     save_checkpoint(model, os.path.join(args.model_dir, "lora_init.pt"),
-                    infos={"tag":"lora_init", **configs})
+                    infos={"tag": "lora_init", **configs})
