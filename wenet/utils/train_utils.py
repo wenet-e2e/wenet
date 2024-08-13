@@ -165,6 +165,14 @@ def add_lora_args(parser):
                         default=None,
                         type=str,
                         help="lora checkpoint path.")
+    parser.add_argument("--lora_reinit",
+                        default=False,
+                        type=bool,
+                        help="whether use the lora init, default is zero init.")
+    parser.add_argument('--lora_init_yaml',
+                        default="wenet/finetune/lora/config.yaml",
+                        type=str,
+                        help='Path to the configuration YAML file')
     return parser
 
 
@@ -874,3 +882,45 @@ def freeze_modules(model, args):
             if module_name in name:
                 param.requires_grad = False
                 logging.debug("{} module is freezed".format(name))
+
+
+def reinit_lora(model, args, configs, tokenizer, seed=777):
+    from tqdm import tqdm
+    from wenet.finetune.lora.utils import estimate_gradient, reinit_lora_modules
+    from wenet.finetune.lora.layers import LoRALayer
+    from types import SimpleNamespace
+
+    logging.info("reinit lora modules.")
+    with open(args.lora_init_yaml, 'r') as file:
+        lora_config = yaml.safe_load(file)
+
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    dataset_conf = copy.deepcopy(configs['dataset_conf'])
+    dataset_conf['batch_conf']['batch_size'] = lora_config['init_batch_size']
+    dataset_type = configs.get('dataset', 'asr')
+    dataset = init_dataset(dataset_type, args.data_type, args.train_data,
+                           tokenizer, dataset_conf, True)
+    dataloader = DataLoader(dataset,
+                            batch_size=None,
+                            pin_memory=args.pin_memory,
+                            num_workers=args.num_workers,
+                            persistent_workers=True,
+                            generator=generator,
+                            prefetch_factor=args.prefetch)
+    additional_kwargs = {}
+    if lora_config["init_config"]["mode"] == "gradient":
+        named_grads = estimate_gradient(model, dataloader,
+                                        lora_config['init_iters'])
+        additional_kwargs["named_grads"] = named_grads
+    lora_config = SimpleNamespace(**lora_config["init_config"])
+    for name, module in tqdm(
+        model.named_modules(),
+        desc="Reinitializing Lora",
+        total=len(list(model.named_modules())),
+    ):
+        if isinstance(module, LoRALayer):
+            reinit_lora_modules(name, module, lora_config, **additional_kwargs)
+    # lora_init_model needs to be saved, w0 = w0 - A0 * B0
+    save_checkpoint(model, os.path.join(args.model_dir, "lora_init.pt"),
+                    infos={"tag": "lora_init", **configs})
