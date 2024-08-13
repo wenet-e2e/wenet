@@ -223,7 +223,8 @@ def main():
 
             if wav_number % args.log_interval == 0:
                 print(
-                    f"worker_id {worker_id} processed {wav_number} wavs, {all_number} frames",
+                    f"worker_id {worker_id} processed {wav_number} wavs "
+                    f"{all_number} frames",
                     file=sys.stderr,
                     flush=True,
                 )
@@ -236,6 +237,7 @@ def main():
 
     with open(args.out_cmvn, "w") as fout:
         fout.write(json.dumps(cmvn_info))
+
 
 if __name__ == "__main__":
     main()

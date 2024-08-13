@@ -14,12 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import torch
 import tarfile
 import argparse
 import soundfile
-import torchaudio
 import logging
 from tqdm import tqdm
 from urllib.parse import urlparse
@@ -165,7 +163,8 @@ def main():
 
     if args.flag == "duration":
         print(
-            f"Mode: {args.flag} total duration: {total_duration/3600} h, saved to: {args.out_file}"
+            f"Mode: {args.flag} total duration: {total_duration/3600} h "
+            f"saved to: {args.out_file}"
         )
     else:
         print(f"Mode: {args.flag} saved to: {args.out_file}")
