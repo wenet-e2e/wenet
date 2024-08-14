@@ -42,7 +42,7 @@ class PackSpeechDatapipe(IterDataPipe):
                 self.buf = []
                 self.length = 0
             self.buf.append(elem)
-            self.length += current_length
+            self.length += elem_length
         if len(self.buf) > 0:
             yield self.merge_fn(self.buf)
         del self.buf
@@ -53,7 +53,7 @@ class PackSpeechDatapipe(IterDataPipe):
 def cat_speech(buffer: List):
     assert len(buffer) > 0
     waves = [sample['wav'] for sample in buffer]
-    sample_rate = waves[0]['sample_rate']
+    sample_rate = buffer[0]['sample_rate']
     wav = torch.cat(waves, dim=1)
     return {"wav": wav, "sample_rate": sample_rate}
 
