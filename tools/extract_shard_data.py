@@ -14,9 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import torch
 import tarfile
 import argparse
+import torchaudio
 import soundfile
 import logging
 from tqdm import tqdm
@@ -89,13 +91,16 @@ class AudioIterableDataset(IterableDataset):
                     try:
                         if postfix == "txt" and self.flag == "text":
                             example["txt"] = file_obj.read().decode("utf8").strip()
-                        if postfix in AUDIO_FORMAT_SETS and self.flag == "duration":
+                        elif postfix in AUDIO_FORMAT_SETS and self.flag == "duration":
+                            # only need duration
                             info = soundfile.info(file_obj)
                             example["duration"] = info.duration
-                            # only need duration
-                            # waveform, sample_rate = torchaudio.load(file_obj)
-                            # example['wav'] = waveform
-                            # example['sample_rate'] = sample_rate
+                        elif postfix in AUDIO_FORMAT_SETS and self.flag == "audio":
+                            waveform, sample_rate = torchaudio.load(file_obj)
+                            example["wav"] = waveform
+                            example["sample_rate"] = sample_rate
+                        elif self.flag == "content":
+                            example[postfix] = file_obj.read()
                     except Exception as ex:
                         valid = False
                         logging.warning("{} error to parse {}".format(ex, name))
@@ -129,7 +134,10 @@ def main():
     parser.add_argument("in_file", type=str, help="Input file list")
     parser.add_argument("out_file", type=str, help="Output file")
     parser.add_argument(
-        "flag", type=str, choices=["text", "duration"], help="Mode: text or duration"
+        "flag",
+        type=str,
+        choices=["text", "duration", "audio", "content"],
+        help="Mode: text or duration",
     )
     parser.add_argument(
         "--num_workers", type=int, default=8, help="Number of worker threads"
@@ -148,26 +156,43 @@ def main():
 
     total_duration = 0.0
 
-    with open(args.out_file, "w") as f:
-        with tqdm() as pbar:
-            for batch in dataloader:
-                for result in batch:
-                    if args.flag == "text":
-                        text = result["txt"]
-                    else:
-                        text = result["duration"]
-                        total_duration += text
-                    key = result["key"]
-                    print(f"{key} {text}", file=f)
-                pbar.update()
-
-    if args.flag == "duration":
-        print(
-            f"Mode: {args.flag} total duration: {total_duration/3600} h "
-            f"saved to: {args.out_file}"
-        )
+    if args.flag in ["text", "duration"]:
+        f = open(args.out_file, "w")
     else:
-        print(f"Mode: {args.flag} saved to: {args.out_file}")
+        os.makedirs(args.out_file, exist_ok=True)
+
+    with tqdm() as pbar:
+        for batch in dataloader:
+            for result in batch:
+                key = result["key"]
+                if args.flag == "text":
+                    text = result["txt"]
+                    print(f"{key} {text}", file=f)
+                elif args.flag == "duration":
+                    duration = result["duration"]
+                    total_duration += duration
+                    print(f"{key} {duration}", file=f)
+                elif args.flag == "audio":
+                    sample_rate = result["sample_rate"]
+                    wav = result["wav"]
+                    duration = wav.shape[-1] / sample_rate
+                    total_duration += duration
+                    torchaudio.save(f"{args.out_file}/{key}.wav", wav, sample_rate)
+                elif args.flag == "content":
+                    for postfix, content in result.items():
+                        if postfix != "key":
+                            out_file = f"{args.out_file}/{key}.{postfix}"
+                            with open(out_file, "wb") as f1:
+                                f1.write(content)
+            pbar.update()
+
+    if args.flag in ["text", "duration"]:
+        f.close()
+
+    print(
+        f"Mode: {args.flag} total duration: {total_duration/3600} h "
+        f"saved to: {args.out_file}"
+    )
 
 
 if __name__ == "__main__":
