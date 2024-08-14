@@ -33,16 +33,21 @@ class PackSpeechDatapipe(IterDataPipe):
 
     def __iter__(self):
         for elem in self.dp:
-            current_length = self.length + self.length_fn(elem)
+            elem_length = self.length_fn(elem)
+            current_length = self.length + elem_length
             if current_length >= self.max_length:
                 long_elem = self.merge_fn(self.buf)
                 yield long_elem
                 del self.buf
                 self.buf = []
+                self.length = 0
             self.buf.append(elem)
+            self.length += current_length
         if len(self.buf) > 0:
             yield self.merge_fn(self.buf)
         del self.buf
+        self.buf = []
+        self.length = 0
 
 
 def cat_speech(buffer: List):
