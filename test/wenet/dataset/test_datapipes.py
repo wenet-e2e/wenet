@@ -4,8 +4,8 @@ from torch.utils.data import datapipes
 from torch.utils.data.datapipes.iter import IterableWrapper
 from functools import partial
 
-from wenet.dataset.datapipes import (RepeatDatapipe, SortDataPipe,
-                                     WenetRawDatasetSource,
+from wenet.dataset.datapipes import (InterlaveDataPipe, RepeatDatapipe,
+                                     SortDataPipe, WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
 from wenet.dataset.processor import (DynamicBatchWindow, decode_wav, padding,
                                      parse_json, compute_fbank,
@@ -224,3 +224,25 @@ def test_repeat():
 
     assert len(result) == len(expected)
     all(h == r for h, r in zip(result, expected))
+
+
+def test_interleave():
+    dataset_1 = IterableWrapper(range(10))
+    dataset_2 = IterableWrapper(range(20, 30, 2))
+
+    dataset = InterlaveDataPipe([dataset_1, dataset_2])
+    dataset = dataset.batch(4)
+    generator = torch.Generator()
+    generator.manual_seed(100)
+    dataloader = torch.utils.data.DataLoader(dataset,
+                                             batch_size=None,
+                                             num_workers=0,
+                                             generator=generator,
+                                             persistent_workers=False)
+    expected = [[0, 1, 2, 3], [4, 20, 5, 22], [24, 6, 7, 8], [26, 9, 28]]
+
+    result = []
+    for batch in dataloader:
+        result.append(batch)
+
+    assert expected == result
