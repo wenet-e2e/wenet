@@ -278,7 +278,7 @@ class BestRQModel(torch.nn.Module):
 
     def _compute_loss(self, input: torch.Tensor, target: torch.Tensor,
                       mask: torch.Tensor) -> torch.Tensor:
-        logits = input.contiguous().view(-1, input.size(-1))
+        logits = input.transpose(1, 2).contiguous().view(-1, input.size(-1))
         loss = torch.nn.functional.cross_entropy(
             logits,
             target.contiguous().view(-1),
