@@ -44,8 +44,8 @@ class OnnxAsrModel : public AsrModel {
                           std::vector<float>* rescoring_score) override;
   std::shared_ptr<AsrModel> Copy() const override;
   void GetInputOutputInfo(const std::shared_ptr<Ort::Session>& session,
-                          std::vector<const char*>* in_names,
-                          std::vector<const char*>* out_names);
+                          std::vector<std::string>* in_names,
+                          std::vector<std::string>* out_names);
 
  protected:
   void ForwardEncoderFunc(const std::vector<std::vector<float>>& chunk_feats,
@@ -70,9 +70,9 @@ class OnnxAsrModel : public AsrModel {
   std::shared_ptr<Ort::Session> ctc_session_ = nullptr;
 
   // node names
-  std::vector<const char*> encoder_in_names_, encoder_out_names_;
-  std::vector<const char*> ctc_in_names_, ctc_out_names_;
-  std::vector<const char*> rescore_in_names_, rescore_out_names_;
+  std::vector<std::string> encoder_in_names_, encoder_out_names_;
+  std::vector<std::string> ctc_in_names_, ctc_out_names_;
+  std::vector<std::string> rescore_in_names_, rescore_out_names_;
 
   // caches
   Ort::Value att_cache_ort_{nullptr};
