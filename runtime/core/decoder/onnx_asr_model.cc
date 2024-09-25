@@ -40,7 +40,8 @@ void OnnxAsrModel::GetInputOutputInfo(
   int num_nodes = session->GetInputCount();
   in_names->resize(num_nodes);
   for (int i = 0; i < num_nodes; ++i) {
-    Ort::AllocatedStringPtr in_name_ptr = session->GetInputNameAllocated(i, allocator);
+    Ort::AllocatedStringPtr in_name_ptr =
+        session->GetInputNameAllocated(i, allocator);
     Ort::TypeInfo type_info = session->GetInputTypeInfo(i);
     auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
     ONNXTensorElementDataType type = tensor_info.GetElementType();
@@ -50,15 +51,16 @@ void OnnxAsrModel::GetInputOutputInfo(
       shape << j;
       shape << " ";
     }
-    LOG(INFO) << "\tInput " << i << " : name=" << in_name_ptr.get() << " type=" << type
-              << " dims=" << shape.str();
-    (*in_names)[i] = std::string(in_name_ptr.get());;
+    LOG(INFO) << "\tInput " << i << " : name=" << in_name_ptr.get()
+              << " type=" << type << " dims=" << shape.str();
+    (*in_names)[i] = std::string(in_name_ptr.get());
   }
   // Output info
   num_nodes = session->GetOutputCount();
   out_names->resize(num_nodes);
   for (int i = 0; i < num_nodes; ++i) {
-    Ort::AllocatedStringPtr out_name_ptr= session->GetOutputNameAllocated(i, allocator);
+    Ort::AllocatedStringPtr out_name_ptr =
+        session->GetOutputNameAllocated(i, allocator);
     Ort::TypeInfo type_info = session->GetOutputTypeInfo(i);
     auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
     ONNXTensorElementDataType type = tensor_info.GetElementType();
@@ -68,8 +70,8 @@ void OnnxAsrModel::GetInputOutputInfo(
       shape << j;
       shape << " ";
     }
-    LOG(INFO) << "\tOutput " << i << " : name=" << out_name_ptr.get() << " type=" << type
-              << " dims=" << shape.str();
+    LOG(INFO) << "\tOutput " << i << " : name=" << out_name_ptr.get()
+              << " type=" << type << " dims=" << shape.str();
     (*out_names)[i] = std::string(out_name_ptr.get());
   }
 }
@@ -105,25 +107,43 @@ void OnnxAsrModel::Read(const std::string& model_dir) {
   auto model_metadata = encoder_session_->GetModelMetadata();
 
   Ort::AllocatorWithDefaultOptions allocator;
-  encoder_output_size_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("output_size", allocator).get());
-  num_blocks_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("num_blocks", allocator).get());
-  head_ = atoi(model_metadata.LookupCustomMetadataMapAllocated("head", allocator).get());
-  cnn_module_kernel_ = atoi(
-      model_metadata.LookupCustomMetadataMapAllocated("cnn_module_kernel", allocator).get());
-  subsampling_rate_ = atoi(
-      model_metadata.LookupCustomMetadataMapAllocated("subsampling_rate", allocator).get());
+  encoder_output_size_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated("output_size", allocator)
+          .get());
+  num_blocks_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated("num_blocks", allocator)
+          .get());
+  head_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated("head", allocator).get());
+  cnn_module_kernel_ =
+      atoi(model_metadata
+               .LookupCustomMetadataMapAllocated("cnn_module_kernel", allocator)
+               .get());
+  subsampling_rate_ =
+      atoi(model_metadata
+               .LookupCustomMetadataMapAllocated("subsampling_rate", allocator)
+               .get());
   right_context_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("right_context", allocator).get());
-  sos_ = atoi(model_metadata.LookupCustomMetadataMapAllocated("sos_symbol", allocator).get());
-  eos_ = atoi(model_metadata.LookupCustomMetadataMapAllocated("eos_symbol", allocator).get());
-  is_bidirectional_decoder_ = atoi(model_metadata.LookupCustomMetadataMapAllocated(
-      "is_bidirectional_decoder", allocator).get());
-  chunk_size_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("chunk_size", allocator).get());
-  num_left_chunks_ =
-      atoi(model_metadata.LookupCustomMetadataMapAllocated("left_chunks", allocator).get());
+      atoi(model_metadata
+               .LookupCustomMetadataMapAllocated("right_context", allocator)
+               .get());
+  sos_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated("sos_symbol", allocator)
+          .get());
+  eos_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated("eos_symbol", allocator)
+          .get());
+  is_bidirectional_decoder_ =
+      atoi(model_metadata
+               .LookupCustomMetadataMapAllocated("is_bidirectional_decoder",
+                                                 allocator)
+               .get());
+  chunk_size_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated("chunk_size", allocator)
+          .get());
+  num_left_chunks_ = atoi(
+      model_metadata.LookupCustomMetadataMapAllocated("left_chunks", allocator)
+          .get());
 
   LOG(INFO) << "Onnx Model Info:";
   LOG(INFO) << "\tencoder_output_size " << encoder_output_size_;
@@ -279,13 +299,16 @@ void OnnxAsrModel::ForwardEncoderFunc(
     }
   }
 
-  // Convert std::vector<std::string> to std::vector<const char*> for using C-style strings
+  // Convert std::vector<std::string> to std::vector<const char*> for using
+  // C-style strings
   std::vector<const char*> encoder_in_names(encoder_in_names_.size());
   std::vector<const char*> encoder_out_names(encoder_out_names_.size());
-  std::transform(encoder_in_names_.begin(), encoder_in_names_.end(), encoder_in_names.begin(),
-               [](const std::string& name) { return name.c_str(); });
-  std::transform(encoder_out_names_.begin(), encoder_out_names_.end(), encoder_out_names.begin(),
-               [](const std::string& name) { return name.c_str(); });
+  std::transform(encoder_in_names_.begin(), encoder_in_names_.end(),
+                 encoder_in_names.begin(),
+                 [](const std::string& name) { return name.c_str(); });
+  std::transform(encoder_out_names_.begin(), encoder_out_names_.end(),
+                 encoder_out_names.begin(),
+                 [](const std::string& name) { return name.c_str(); });
 
   std::vector<Ort::Value> ort_outputs = encoder_session_->Run(
       Ort::RunOptions{nullptr}, encoder_in_names.data(), inputs.data(),
@@ -299,13 +322,16 @@ void OnnxAsrModel::ForwardEncoderFunc(
   std::vector<Ort::Value> ctc_inputs;
   ctc_inputs.emplace_back(std::move(ort_outputs[0]));
 
-  // Convert std::vector<std::string> to std::vector<const char*> for using C-style strings
+  // Convert std::vector<std::string> to std::vector<const char*> for using
+  // C-style strings
   std::vector<const char*> ctc_in_names(ctc_in_names_.size());
   std::vector<const char*> ctc_out_names(ctc_out_names_.size());
-  std::transform(ctc_in_names_.begin(), ctc_in_names_.end(), ctc_in_names.begin(),
-               [](const std::string& name) { return name.c_str(); });
-  std::transform(ctc_out_names_.begin(), ctc_out_names_.end(), ctc_out_names.begin(),
-               [](const std::string& name) { return name.c_str(); });
+  std::transform(ctc_in_names_.begin(), ctc_in_names_.end(),
+                 ctc_in_names.begin(),
+                 [](const std::string& name) { return name.c_str(); });
+  std::transform(ctc_out_names_.begin(), ctc_out_names_.end(),
+                 ctc_out_names.begin(),
+                 [](const std::string& name) { return name.c_str(); });
 
   std::vector<Ort::Value> ctc_ort_outputs = ctc_session_->Run(
       Ort::RunOptions{nullptr}, ctc_in_names.data(), ctc_inputs.data(),
@@ -409,18 +435,21 @@ void OnnxAsrModel::AttentionRescoring(const std::vector<std::vector<int>>& hyps,
   rescore_inputs.emplace_back(std::move(hyps_lens_tensor_));
   rescore_inputs.emplace_back(std::move(decode_input_tensor_));
 
-  // Convert std::vector<std::string> to std::vector<const char*> for using C-style strings
+  // Convert std::vector<std::string> to std::vector<const char*> for using
+  // C-style strings
   std::vector<const char*> rescore_in_names(rescore_in_names_.size());
   std::vector<const char*> rescore_out_names(rescore_out_names_.size());
-  std::transform(rescore_in_names_.begin(), rescore_in_names_.end(), rescore_in_names.begin(),
-               [](const std::string& name) { return name.c_str(); });
-  std::transform(rescore_out_names_.begin(), rescore_out_names_.end(), rescore_out_names.begin(),
-               [](const std::string& name) { return name.c_str(); });
+  std::transform(rescore_in_names_.begin(), rescore_in_names_.end(),
+                 rescore_in_names.begin(),
+                 [](const std::string& name) { return name.c_str(); });
+  std::transform(rescore_out_names_.begin(), rescore_out_names_.end(),
+                 rescore_out_names.begin(),
+                 [](const std::string& name) { return name.c_str(); });
 
-  std::vector<Ort::Value> rescore_outputs = rescore_session_->Run(
-      Ort::RunOptions{nullptr}, rescore_in_names.data(), rescore_inputs.data(),
-      rescore_inputs.size(), rescore_out_names.data(),
-      rescore_out_names.size());
+  std::vector<Ort::Value> rescore_outputs =
+      rescore_session_->Run(Ort::RunOptions{nullptr}, rescore_in_names.data(),
+                            rescore_inputs.data(), rescore_inputs.size(),
+                            rescore_out_names.data(), rescore_out_names.size());
 
   float* decoder_outs_data = rescore_outputs[0].GetTensorMutableData<float>();
   float* r_decoder_outs_data = rescore_outputs[1].GetTensorMutableData<float>();
