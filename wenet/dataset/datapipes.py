@@ -451,10 +451,10 @@ class WenetRawDatasetSource(IterDataPipe):
             dp = IterableWrapperIterDataPipe(filenames)
             # 0 shard many jsonl files
             dp = dp.shuffle().repeat(cycle).shard(partition)
-            if shuffle:
-                self.dp = self.dp.shuffle(buffer_size=shuffle_size)
             # 1 read one json file
             self.dp = TextLineDataPipe(dp)
+            if shuffle:
+                self.dp = self.dp.shuffle(buffer_size=shuffle_size)
             self.dp = self.dp.prefetch(prefetch)
         else:
             # shard line by line
