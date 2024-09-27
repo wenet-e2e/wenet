@@ -444,6 +444,7 @@ class WenetRawDatasetSource(IterDataPipe):
             # shard by files
             info = torch.utils.data.get_worker_info()
             if info is not None:
+                assert isinstance(filenames, List)
                 n_workers_per_device = info.num_workers
                 world_size = torch.distributed.get_world_size()
                 assert n_workers_per_device * world_size > len(
