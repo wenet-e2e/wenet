@@ -19,6 +19,7 @@ from wenet.text.base_tokenizer import BaseTokenizer
 from wenet.text.bpe_tokenizer import BpeTokenizer
 from wenet.text.char_tokenizer import CharTokenizer
 from wenet.text.paraformer_tokenizer import ParaformerTokenizer
+from wenet.text.sentencepiece_tokenizer import SentencepieceTokenizer
 from wenet.text.whisper_tokenizer import WhisperTokenizer
 
 
@@ -47,6 +48,9 @@ def init_tokenizer(configs) -> BaseTokenizer:
         tokenizer = ParaformerTokenizer(
             symbol_table=configs['tokenizer_conf']['symbol_table_path'],
             seg_dict=configs['tokenizer_conf']['seg_dict_path'])
+    elif tokenizer_type == 'sentencepiece':
+        tokenizer = SentencepieceTokenizer(
+            model_path=configs['tokenizer_conf']['model_path'])
     else:
         raise NotImplementedError
     logging.info("use {} tokenizer".format(configs["tokenizer"]))
