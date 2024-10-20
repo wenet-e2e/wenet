@@ -90,6 +90,7 @@ class TransformerDecoder(torch.nn.Module):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        gate_type: str = 'normal',
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -131,7 +132,8 @@ class TransformerDecoder(torch.nn.Module):
                           activation,
                           mlp_bias,
                           n_expert=n_expert,
-                          n_expert_activated=n_expert_activated),
+                          n_expert_activated=n_expert_activated,
+                          gate_type=gate_type),
                 dropout_rate,
                 normalize_before,
                 layer_norm_type,
@@ -362,6 +364,7 @@ class BiTransformerDecoder(torch.nn.Module):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        gate_type: str = 'normal'
     ):
 
         super().__init__()
@@ -395,7 +398,8 @@ class BiTransformerDecoder(torch.nn.Module):
             mlp_type=mlp_type,
             mlp_bias=mlp_bias,
             n_expert=n_expert,
-            n_expert_activated=n_expert_activated)
+            n_expert_activated=n_expert_activated,
+            gate_type=gate_type)
 
         self.right_decoder = TransformerDecoder(
             vocab_size,
@@ -425,7 +429,8 @@ class BiTransformerDecoder(torch.nn.Module):
             mlp_type=mlp_type,
             mlp_bias=mlp_bias,
             n_expert=n_expert,
-            n_expert_activated=n_expert_activated)
+            n_expert_activated=n_expert_activated,
+            gate_type=gate_type)
 
     def forward(
         self,
