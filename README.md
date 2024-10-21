@@ -9,6 +9,7 @@
 | [**Runtime**](https://github.com/wenet-e2e/wenet/tree/main/runtime)
 | [**Pretrained Models**](docs/pretrained_models.md)
 | [**HuggingFace**](https://huggingface.co/spaces/wenet/wenet_demo)
+| [**Ask WeNet Guru**](https://gurubase.io/g/wenet)
 
 **We** share **Net** together.
 
