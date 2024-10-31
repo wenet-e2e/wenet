@@ -40,7 +40,7 @@ class Paraformer:
                     orig_freq=sample_rate,
                     new_freq=self.resample_rate)(waveform)
 
-            waveform = waveform.to(torch.float).to(self.device)
+            waveform = waveform.to(torch.float)
             feats = kaldi.fbank(waveform,
                                 num_mel_bins=80,
                                 frame_length=25,
@@ -53,7 +53,7 @@ class Paraformer:
                 torch.tensor(feats.shape[0], dtype=torch.int64))
         feats_tensor = torch.nn.utils.rnn.pad_sequence(
             feats_lst, batch_first=True).to(device=self.device)
-        feats_lens_tensor = torch.tensor(feats_lens_lst)
+        feats_lens_tensor = torch.tensor(feats_lens_lst, device=self.device)
 
         decoder_out, token_num, tp_alphas = self.model.forward_paraformer(
             feats_tensor, feats_lens_tensor)
