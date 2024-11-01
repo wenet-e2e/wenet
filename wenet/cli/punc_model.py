@@ -16,7 +16,6 @@ class PuncModel:
 
         self.model = torch.jit.load(model_path)
         self.tokenizer = CharTokenizer(units_path)
-        # self.model = torch.jit.load(model_path)
         self.device = torch.device("cpu")
         self.use_jieba = False
 
@@ -24,6 +23,7 @@ class PuncModel:
 
     def split_words(self, text: str):
         if not self.use_jieba:
+            self.use_jieba = True
             import logging
 
             import jieba
