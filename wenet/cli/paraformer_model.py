@@ -55,24 +55,25 @@ class Paraformer:
             feats_lst, batch_first=True).to(device=self.device)
         feats_lens_tensor = torch.tensor(feats_lens_lst, device=self.device)
 
-        decoder_out, token_num, tp_alphas = self.model.forward_paraformer(
+        decoder_out, token_num, tp_alphas, frames = self.model.forward_paraformer(
             feats_tensor, feats_lens_tensor)
+        frames = frames.cpu().numpy()
         cif_peaks = self.model.forward_cif_peaks(tp_alphas, token_num)
 
         results = paraformer_greedy_search(decoder_out, token_num, cif_peaks)
 
         r = []
-        for res in results:
+        for (i, res) in enumerate(results):
             result = {}
             result['confidence'] = res.confidence
             result['text'] = self.tokenizer.detokenize(res.tokens)[0]
             if tokens_info:
                 tokens_info_l = []
                 times = gen_timestamps_from_peak(res.times,
-                                                 num_frames=tp_alphas.size(1),
+                                                 num_frames=frames[i],
                                                  frame_rate=0.02)
 
-                for i, x in enumerate(res.tokens):
+                for i, x in enumerate(res.tokens[:len(times)]):
                     tokens_info_l.append({
                         'token':
                         self.tokenizer.char_dict[x],

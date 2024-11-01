@@ -19,9 +19,7 @@ from typing import Dict, List, Optional, Tuple
 
 import torch
 from wenet.paraformer.cif import Cif, cif_without_hidden
-
-from wenet.paraformer.layers import SanmDecoder, SanmEncoder
-from wenet.paraformer.layers import LFR
+from wenet.paraformer.layers import LFR, SanmDecoder, SanmEncoder
 from wenet.paraformer.search import (paraformer_beam_search,
                                      paraformer_greedy_search)
 from wenet.transformer.asr_model import ASRModel
@@ -99,7 +97,8 @@ class Predictor(torch.nn.Module):
         tp_alphas = tp_alphas.squeeze(-1)
         tp_token_num = tp_alphas.sum(-1)
 
-        return acoustic_embeds, token_num, alphas, cif_peak, tp_alphas, tp_token_num
+        return acoustic_embeds, token_num, alphas, cif_peak, tp_alphas, \
+            tp_token_num, mask
 
 
 class Paraformer(ASRModel):
@@ -170,7 +169,7 @@ class Paraformer(ASRModel):
         if self.add_eos:
             _, ys_pad = add_sos_eos(text, self.sos, self.eos, self.ignore_id)
             ys_pad_lens = text_lengths + 1
-        acoustic_embd, token_num, _, _, _, tp_token_num = self.predictor(
+        acoustic_embd, token_num, _, _, _, tp_token_num, _ = self.predictor(
             encoder_out, ys_pad, encoder_out_mask, self.ignore_id)
 
         # 2 decoder with sampler
@@ -295,9 +294,10 @@ class Paraformer(ASRModel):
         self,
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         res = self._forward_paraformer(speech, speech_lengths)
-        return res['decoder_out'], res['decoder_out_lens'], res['tp_alphas']
+        return res['decoder_out'], res['decoder_out_lens'], res[
+            'tp_alphas'], res['tp_mask'].sum(1).squeeze(-1)
 
     @torch.jit.export
     def forward_encoder_chunk(
@@ -336,8 +336,10 @@ class Paraformer(ASRModel):
             num_decoding_left_chunks)
 
         # cif predictor
-        acoustic_embed, token_num, _, _, tp_alphas, _ = self.predictor(
-            encoder_out, mask=encoder_out_mask)
+        acoustic_embed, token_num, _, _, tp_alphas, _, tp_mask = self.predictor(
+            encoder_out,
+            mask=encoder_out_mask,
+        )
         token_num = token_num.floor().to(speech_lengths.dtype)
 
         # decoder
@@ -350,7 +352,8 @@ class Paraformer(ASRModel):
             "encoder_out_mask": encoder_out_mask,
             "decoder_out": decoder_out,
             "tp_alphas": tp_alphas,
-            "decoder_out_lens": token_num
+            "decoder_out_lens": token_num,
+            "tp_mask": tp_mask
         }
 
     def decode(
