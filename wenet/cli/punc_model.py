@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+import jieba
 import torch
 from wenet.cli.hub import Hub
 from wenet.paraformer.search import _isAllAlpha
@@ -25,8 +26,6 @@ class PuncModel:
         if not self.use_jieba:
             self.use_jieba = True
             import logging
-
-            import jieba
 
             # Disable jieba's logger
             logging.getLogger('jieba').disabled = True
@@ -95,12 +94,11 @@ class PuncModel:
             result.append(sentence.replace('▁', ' '))
         return result
 
-    def __call__(self, result):
-        text = result['text']
+    def __call__(self, text: str):
         if text != '':
             r = self.add_punc_batch([text])[0]
-            result['text_with_punc'] = r
-        return result
+            return r
+        return ''
 
 
 def load_model(model_dir: str = None,

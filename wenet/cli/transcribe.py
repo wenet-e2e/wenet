@@ -94,7 +94,7 @@ def main():
         result = model.transcribe(args.audio_file, args.show_tokens_info)
         if args.punc:
             assert punc_model is not None
-            result = punc_model(result)
+            result['text_with_punc'] = punc_model(result['text'])
     print(result)
 
 
