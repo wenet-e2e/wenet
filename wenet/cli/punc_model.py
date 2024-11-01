@@ -96,6 +96,7 @@ class PuncModel:
         if text != '':
             r = self.add_punc_batch([text])[0]
             result['text_with_punc'] = r
+        return result
 
 
 def load_model(model_dir: str = None,
