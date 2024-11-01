@@ -97,7 +97,8 @@ class Predictor(torch.nn.Module):
         tp_alphas = tp_alphas.squeeze(-1)
         tp_token_num = tp_alphas.sum(-1)
 
-        return acoustic_embeds, token_num, alphas, cif_peak, tp_alphas, tp_token_num, mask
+        return acoustic_embeds, token_num, alphas, cif_peak, tp_alphas, \
+            tp_token_num, mask
 
 
 class Paraformer(ASRModel):
