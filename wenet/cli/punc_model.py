@@ -10,10 +10,9 @@ from wenet.text.char_tokenizer import CharTokenizer
 class PuncModel:
 
     def __init__(self, model_dir: str) -> None:
-
+        self.model_dir = model_dir
         model_path = os.path.join(model_dir, 'final.zip')
         units_path = os.path.join(model_dir, 'units.txt')
-        self.model_dir = model_path
 
         self.model = torch.jit.load(model_path)
         self.tokenizer = CharTokenizer(units_path)
@@ -25,7 +24,12 @@ class PuncModel:
 
     def split_words(self, text: str):
         if not self.use_jieba:
+            import logging
+
             import jieba
+
+            # Disable jieba's logger
+            logging.getLogger('jieba').disabled = True
             jieba.load_userdict(os.path.join(self.model_dir, 'jieba_usr_dict'))
 
         result_list = []
@@ -92,7 +96,7 @@ class PuncModel:
         return result
 
     def __call__(self, result):
-        text = result['tezt']
+        text = result['text']
         if text != '':
             r = self.add_punc_batch([text])[0]
             result['text_with_punc'] = r
