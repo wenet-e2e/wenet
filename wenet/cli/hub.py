@@ -13,12 +13,12 @@
 # limitations under the License.
 
 import os
-import requests
 import sys
 import tarfile
 from pathlib import Path
 from urllib.request import urlretrieve
 
+import requests
 import tqdm
 
 
@@ -77,7 +77,9 @@ class Hub(object):
         # gigaspeech
         "english": "gigaspeech_u2pp_conformer_libtorch.tar.gz",
         # paraformer
-        "paraformer": "paraformer.tar.gz"
+        "paraformer": "paraformer.tar.gz",
+        # punc
+        "punc": "punc.tar.gz"
     }
 
     def __init__(self) -> None:
