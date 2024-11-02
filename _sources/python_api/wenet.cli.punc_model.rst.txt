@@ -1,0 +1,7 @@
+wenet.cli.punc\_model module
+============================
+
+.. automodule:: wenet.cli.punc_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
