@@ -168,10 +168,10 @@ class StreamingEncoder(torch.nn.Module):
         r_att_cache = []
         r_cnn_cache = []
         for i, layer in enumerate(self.encoder.encoders):
-            i_kv_cache = att_cache[i:i + 1]
+            i_kv_cache = att_cache[i]
             size = att_cache.size(-1) // 2
             kv_cache = (i_kv_cache[:, :, :, :size], i_kv_cache[:, :, :, size:])
-            xs, _, new_att_cache, new_cnn_cache = layer(
+            xs, _, new_kv_cache, new_cnn_cache = layer(
                 xs,
                 masks,
                 pos_emb,
@@ -180,6 +180,7 @@ class StreamingEncoder(torch.nn.Module):
             )
             #   shape(new_att_cache) is (B, head, attention_key_size, d_k * 2),
             #   shape(new_cnn_cache) is (B, hidden-dim, cache_t2)
+            new_att_cache = torch.cat(new_kv_cache, dim=-1)
             r_att_cache.append(
                 new_att_cache[:, :, next_cache_start:, :].unsqueeze(1))
             if not self.transformer:
