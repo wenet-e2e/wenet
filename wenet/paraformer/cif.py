@@ -153,7 +153,7 @@ class Cif(nn.Module):
         else:
             token_num = torch.floor(torch.sum(alphas, dim=1)).type(int_type)
 
-        max_token_num = torch.max(token_num).item()
+        max_token_num = torch.max(token_num)
 
         alphas_cumsum = torch.cumsum(alphas, dim=1)
         alphas_cumsum = torch.floor(alphas_cumsum).type(int_type)
