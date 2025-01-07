@@ -192,7 +192,7 @@ def load_model_pt(model_dir):
         file_path = os.path.join(model_dir, file)
         if not os.path.exists(file_path):
             raise FileNotFoundError(
-                f"Required file '{file}' not found in '{model_dir}'")
+                f"Required file {file} not found in {model_dir}")
     # Read config and override some config
     config_file = os.path.join(model_dir, 'train.yaml')
     with open(config_file, 'r') as fin:
