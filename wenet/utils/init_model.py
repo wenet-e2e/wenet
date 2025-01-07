@@ -216,7 +216,7 @@ def init_model(args, configs):
     # Trye to tie some weights
     if hasattr(model, 'tie_or_clone_weights'):
         if not hasattr(args, 'jit'):
-            jit = True # i.e. export onnx/jit/ipex
+            jit = True  # i.e. export onnx/jit/ipex
         else:
             jit = False
         model.tie_or_clone_weights(jit)
