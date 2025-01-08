@@ -213,12 +213,13 @@ def init_model(args, configs):
         if hasattr(args, 'lora_ckpt_path') and args.lora_ckpt_path:
             load_checkpoint(model, args.lora_ckpt_path)
 
-    print(configs)
     # Trye to tie some weights
     if hasattr(model, 'tie_or_clone_weights'):
         if not hasattr(args, 'jit'):
-            args.jit = True  # i.e. export onnx/jit/ipex
-        model.tie_or_clone_weights(args.jit)
+            jit = True  # i.e. export onnx/jit/ipex
+        else:
+            jit = False
+        model.tie_or_clone_weights(jit)
 
     if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:
         mark_only_lora_as_trainable(model, bias='lora_only')

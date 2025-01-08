@@ -17,11 +17,13 @@ import os
 import torch
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
+import yaml
 
 from wenet.cli.hub import Hub
 from wenet.utils.ctc_utils import (force_align, gen_ctc_peak_time,
                                    gen_timestamps_from_peak)
 from wenet.utils.file_utils import read_symbol_table
+from wenet.utils.init_model import init_model
 from wenet.transformer.search import (attention_rescoring,
                                       ctc_prefix_beam_search, DecodeResult)
 from wenet.utils.context_graph import ContextGraph
@@ -173,4 +175,35 @@ def load_model(language: str = None,
     model = Model(model_dir, gpu, beam, context_path, context_score)
     model.device = torch.device(device)
     model.model.to(device)
+    return model
+
+# Load the pytorch pt model which contains all the details compared with jit.
+# And we can use the pt model as a third party pytorch nn.Module for training
+def load_model_pt(model_dir):
+    """ There are the followi files in in `model_dir`
+        * final.pt, required
+        * train.yaml, required
+        * units.txt, required
+        * global_cmvn, optional
+    """
+    # Check required files
+    required_files = ['train.yaml', 'final.pt', 'units.txt']
+    for file in required_files:
+        file_path = os.path.join(model_dir, file)
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(
+                f"Required file {file} not found in {model_dir}")
+    # Read config and override some config
+    config_file = os.path.join(model_dir, 'train.yaml')
+    with open(config_file, 'r') as fin:
+        configs = yaml.load(fin, Loader=yaml.FullLoader)
+    token_file = os.path.join(model_dir, 'units.txt')
+    configs['tokenizer_conf']['symbol_table_path'] = token_file
+    cmvn_file = os.path.join(model_dir, 'global_cmvn')
+    if os.path.exists(cmvn_file):
+        configs['cmvn_conf']['cmvn_file'] = cmvn_file
+    # Read model
+    pt_file = os.path.join(model_dir, 'final.pt')
+    args = {'checkpoint': pt_file}
+    model, configs = init_model(args, configs)
     return model
