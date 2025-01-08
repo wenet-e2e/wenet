@@ -1,0 +1,24 @@
+wenet.bin package
+=================
+
+.. automodule:: wenet.bin
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.bin.alignment
+   wenet.bin.average_model
+   wenet.bin.export_ipex
+   wenet.bin.export_jit
+   wenet.bin.export_onnx_bpu
+   wenet.bin.export_onnx_cpu
+   wenet.bin.export_onnx_gpu
+   wenet.bin.recognize
+   wenet.bin.recognize_onnx_gpu
+   wenet.bin.train

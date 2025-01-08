@@ -1,0 +1,7 @@
+wenet.LLM.causallm\_model module
+================================
+
+.. automodule:: wenet.LLM.causallm_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

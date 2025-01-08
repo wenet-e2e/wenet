@@ -1,0 +1,7 @@
+wenet.bin.export\_ipex module
+=============================
+
+.. automodule:: wenet.bin.export_ipex
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+wenet.LLM.decoder module
+========================
+
+.. automodule:: wenet.LLM.decoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

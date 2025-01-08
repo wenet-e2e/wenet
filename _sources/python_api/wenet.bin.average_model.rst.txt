@@ -1,0 +1,7 @@
+wenet.bin.average\_model module
+===============================
+
+.. automodule:: wenet.bin.average_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

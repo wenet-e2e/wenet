@@ -6,6 +6,14 @@ wenet.transducer package
    :undoc-members:
    :show-inheritance:
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.transducer.search
+
 Submodules
 ----------
 

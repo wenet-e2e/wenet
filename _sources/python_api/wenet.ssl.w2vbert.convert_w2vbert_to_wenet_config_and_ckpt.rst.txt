@@ -1,0 +1,7 @@
+wenet.ssl.w2vbert.convert\_w2vbert\_to\_wenet\_config\_and\_ckpt module
+=======================================================================
+
+.. automodule:: wenet.ssl.w2vbert.convert_w2vbert_to_wenet_config_and_ckpt
+   :members:
+   :undoc-members:
+   :show-inheritance:

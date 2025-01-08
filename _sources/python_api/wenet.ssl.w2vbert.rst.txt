@@ -1,0 +1,16 @@
+wenet.ssl.w2vbert package
+=========================
+
+.. automodule:: wenet.ssl.w2vbert
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.ssl.w2vbert.convert_w2vbert_to_wenet_config_and_ckpt
+   wenet.ssl.w2vbert.w2vbert_model

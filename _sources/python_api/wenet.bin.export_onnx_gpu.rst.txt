@@ -1,0 +1,7 @@
+wenet.bin.export\_onnx\_gpu module
+==================================
+
+.. automodule:: wenet.bin.export_onnx_gpu
+   :members:
+   :undoc-members:
+   :show-inheritance:

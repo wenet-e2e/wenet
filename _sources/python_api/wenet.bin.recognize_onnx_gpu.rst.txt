@@ -1,0 +1,7 @@
+wenet.bin.recognize\_onnx\_gpu module
+=====================================
+
+.. automodule:: wenet.bin.recognize_onnx_gpu
+   :members:
+   :undoc-members:
+   :show-inheritance:

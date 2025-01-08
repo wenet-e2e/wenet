@@ -1,0 +1,7 @@
+wenet.bin.recognize module
+==========================
+
+.. automodule:: wenet.bin.recognize
+   :members:
+   :undoc-members:
+   :show-inheritance:

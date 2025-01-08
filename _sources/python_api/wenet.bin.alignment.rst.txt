@@ -1,0 +1,7 @@
+wenet.bin.alignment module
+==========================
+
+.. automodule:: wenet.bin.alignment
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+wenet.bin.export\_onnx\_cpu module
+==================================
+
+.. automodule:: wenet.bin.export_onnx_cpu
+   :members:
+   :undoc-members:
+   :show-inheritance:

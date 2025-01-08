@@ -1,0 +1,7 @@
+wenet.bin.export\_onnx\_bpu module
+==================================
+
+.. automodule:: wenet.bin.export_onnx_bpu
+   :members:
+   :undoc-members:
+   :show-inheritance:

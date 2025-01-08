@@ -1,0 +1,7 @@
+wenet.bin.export\_jit module
+============================
+
+.. automodule:: wenet.bin.export_jit
+   :members:
+   :undoc-members:
+   :show-inheritance:

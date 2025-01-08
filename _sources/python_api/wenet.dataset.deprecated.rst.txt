@@ -1,0 +1,16 @@
+wenet.dataset.deprecated package
+================================
+
+.. automodule:: wenet.dataset.deprecated
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.dataset.deprecated.dataset
+   wenet.dataset.deprecated.processor

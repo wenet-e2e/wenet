@@ -1,0 +1,7 @@
+wenet.dataset.deprecated.dataset module
+=======================================
+
+.. automodule:: wenet.dataset.deprecated.dataset
+   :members:
+   :undoc-members:
+   :show-inheritance:

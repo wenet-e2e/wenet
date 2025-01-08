@@ -1,0 +1,7 @@
+wenet.ssl.w2vbert.w2vbert\_model module
+=======================================
+
+.. automodule:: wenet.ssl.w2vbert.w2vbert_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
