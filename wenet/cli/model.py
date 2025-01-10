@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 import os
 
 import torch
@@ -204,6 +205,7 @@ def load_model_pt(model_dir):
         configs['cmvn_conf']['cmvn_file'] = cmvn_file
     # Read model
     pt_file = os.path.join(model_dir, 'final.pt')
-    args = {'checkpoint': pt_file}
+    args = argparse.Namespace()
+    args.checkpoint = pt_file
     model, configs = init_model(args, configs)
     return model
