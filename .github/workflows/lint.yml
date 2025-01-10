@@ -5,7 +5,7 @@ on:
 
 jobs:
   quick-checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Fetch Wenet
         uses: actions/checkout@v1
@@ -27,12 +27,12 @@ jobs:
           (! git grep -I -n $' $' -- . ':(exclude)*.txt' ':(exclude)third_party' ':(exclude).gitattributes' ':(exclude).gitmodules' || (echo "The above files have trailing whitespace; please remove them"; false))
 
   flake8-py3:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.10.15
+          python-version: 3.10.16
           architecture: x64
       - name: Fetch Wenet
         uses: actions/checkout@v1
@@ -55,12 +55,12 @@ jobs:
           if [ $? != 0 ]; then exit 1; fi
 
   cpplint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.10.15
+          python-version: 3.10.16
           architecture: x64
       - name: Fetch Wenet
         uses: actions/checkout@v1
@@ -83,12 +83,12 @@ jobs:
           if [ $? != 0 ]; then exit 1; fi
 
   clang-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Setup Python
         uses: actions/setup-python@v1
         with:
-          python-version: 3.10.15
+          python-version: 3.10.16
           architecture: x64
       - name: Fetch Wenet
         uses: actions/checkout@v1
