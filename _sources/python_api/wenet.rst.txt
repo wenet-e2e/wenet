@@ -12,7 +12,6 @@ Subpackages
 .. toctree::
    :maxdepth: 2
 
-   wenet.LLM
    wenet.bin
    wenet.branchformer
    wenet.cli

@@ -1,7 +1,0 @@
-wenet.LLM.sampler module
-========================
-
-.. automodule:: wenet.LLM.sampler
-   :members:
-   :undoc-members:
-   :show-inheritance:
