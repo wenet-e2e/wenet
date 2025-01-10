@@ -21,8 +21,6 @@ from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.paraformer import Paraformer, Predictor
-from wenet.LLM.causallm_model import CausalLM
-from wenet.LLM.decoder import DecoderOnly
 from wenet.ssl.init_model import WENET_SSL_MODEL_CLASS
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
@@ -42,7 +40,6 @@ from wenet.ctl_model.asr_model_ctl import CTLModel
 from wenet.whisper.whisper import Whisper
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
-
 
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
@@ -85,7 +82,6 @@ WENET_MODEL_CLASSES = {
     "k2_model": K2Model,
     "transducer": Transducer,
     'paraformer': Paraformer,
-    'causal_llm': CausalLM,
 }
 
 
@@ -172,30 +168,11 @@ def init_speech_model(args, configs):
     return model, configs
 
 
-def init_causal_llm(configs):
-    vocab_size = configs['output_dim']
-    assert configs['decoder'] == 'decoder_only'
-    assert configs['model'] == 'causal_lm'
-    decoder_only = DecoderOnly(**configs['decoder_conf'])
-
-    model = CausalLM(
-        vocab_size,
-        decoder_only,
-        **configs['model_conf'],
-        special_tokens=configs.get('tokenizer_conf',
-                                   {}).get('special_tokens', None),
-    )
-    return model, configs
-
-
 def init_model(args, configs):
 
     model_type = configs.get('model', 'asr_model')
     configs['model'] = model_type
-    if model_type == 'causal_lm':
-        model, configs = init_causal_llm(configs)
-    else:
-        model, configs = init_speech_model(args, configs)
+    model, configs = init_speech_model(args, configs)
 
     if hasattr(args, 'use_lora') and args.use_lora:
         inject_lora_to_model(model, configs['lora_conf'])
