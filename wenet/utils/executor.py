@@ -30,10 +30,13 @@ from wenet.utils.train_utils import (wenet_join, batch_forward, batch_backward,
 
 class Executor:
 
-    def __init__(self, global_step: int = 0):
+    def __init__(self,
+                 global_step: int = 0,
+                 device: torch.device = torch.device("cpu")):
         self.step = global_step + 1
         self.train_step_timer = None
         self.cv_step_timer = None
+        self.device = device
 
     def train(self, model, optimizer, scheduler, train_data_loader,
               cv_data_loader, writer, configs, scaler, group_join):
@@ -79,7 +82,7 @@ class Executor:
 
                 with context():
                     info_dict = batch_forward(model, batch_dict, scaler,
-                                              info_dict)
+                                              info_dict, self.device)
                     info_dict = batch_backward(model, scaler, info_dict)
 
                 info_dict = update_parameter_and_lr(model, optimizer,
@@ -135,12 +138,13 @@ class Executor:
                 if num_utts == 0:
                     continue
 
-                info_dict = batch_forward(model, batch_dict, None, info_dict)
+                info_dict = batch_forward(model, batch_dict, None, info_dict,
+                                          self.device)
                 _dict = info_dict["loss_dict"]
 
                 num_seen_utts += num_utts
                 total_acc.append(_dict['th_accuracy'].item(
-                ) if _dict['th_accuracy'] is not None else 0.0)
+                ) if _dict.get('th_accuracy', None) is not None else 0.0)
                 for loss_name, loss_value in _dict.items():
                     if loss_value is not None and "loss" in loss_name \
                             and torch.isfinite(loss_value):

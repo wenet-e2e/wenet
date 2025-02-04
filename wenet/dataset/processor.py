@@ -37,6 +37,21 @@ lid = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 
 logging.getLogger('langid').setLevel(logging.INFO)
 
+import os
+try:
+    cpu_info = os.popen("lscpu | grep 'Vendor ID'").read()
+    # 0x48 --> HiSilicon
+    if (cpu_info.rstrip().split(" ")[-1] == "0x48"):
+        # NOTE (MengqingCao): set number of threads in the subprocesses to 1
+        # Why? There may be some operators ultilizing multi-threads in processor,
+        # causing possibly deadlock in Kunpeng.
+        # Similar issue in PyTorch: https://github.com/pytorch/pytorch/issues/45198
+        torch.set_num_threads(1)
+except Exception as ex:
+    logging.warning('Failed to set number of thread in Kunpeng, \
+        this may cause segmentfault while dataloading, \
+        ignore this warning if you are not using Kunpeng')
+
 
 class UrlOpenError(Exception):
 
@@ -111,14 +126,13 @@ def decode_wav(sample):
     """ Parse key/wav/txt from json line
 
         Args:
-            sample: str, str is a json line has key/wav/txt
+            sample: str, str is a json line has key/wav
 
         Returns:
             {key, wav, sample_rate, ...}
     """
     assert 'key' in sample
     assert 'wav' in sample
-    assert 'txt' in sample
     wav_file = sample['wav']
     if isinstance(wav_file, str):
         with open(wav_file, 'rb') as f:
@@ -129,7 +143,7 @@ def decode_wav(sample):
         start_frame = int(sample['start'] * sample_rate)
         end_frame = int(sample['end'] * sample_rate)
         with io.BytesIO(wav_file) as file_obj:
-            waveform, _ = torchaudio.load(filepath=file_obj,
+            waveform, _ = torchaudio.load(file_obj,
                                           num_frames=end_frame - start_frame,
                                           frame_offset=start_frame)
     else:
@@ -216,7 +230,8 @@ def compute_fbank(sample,
                   num_mel_bins=23,
                   frame_length=25,
                   frame_shift=10,
-                  dither=0.0):
+                  dither=0.0,
+                  window_type="povey"):
     """ Extract fbank
 
         Args:
@@ -238,7 +253,8 @@ def compute_fbank(sample,
                       frame_shift=frame_shift,
                       dither=dither,
                       energy_floor=0.0,
-                      sample_frequency=sample_rate)
+                      sample_frequency=sample_rate,
+                      window_type=window_type)
     sample['feat'] = mat
     return sample
 

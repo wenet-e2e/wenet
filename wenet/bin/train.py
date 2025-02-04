@@ -24,7 +24,7 @@ import yaml
 import torch.distributed as dist
 
 from torch.distributed.elastic.multiprocessing.errors import record
-from wenet.utils.common import lrs_to_str
+from wenet.utils.common import lrs_to_str, TORCH_NPU_AVAILABLE  # noqa just ensure to check torch-npu
 
 from wenet.utils.executor import Executor
 from wenet.utils.config import override_config
@@ -36,7 +36,7 @@ from wenet.utils.train_utils import (
     init_dataset_and_dataloader, check_modify_and_save_config,
     init_optimizer_and_scheduler, init_scaler, trace_and_print_model,
     wrap_cuda_model, init_summarywriter, save_model, log_per_epoch,
-    add_lora_args)
+    add_lora_args, reinit_lora)
 
 
 def get_args():
@@ -45,6 +45,12 @@ def get_args():
                         default='torch_ddp',
                         choices=['torch_ddp', 'torch_fsdp', 'deepspeed'],
                         help='Engine for paralleled training')
+    # set default value of device to "cuda", avoiding the modify of original scripts
+    parser.add_argument('--device',
+                        type=str,
+                        default='cuda',
+                        choices=["cpu", "npu", "cuda"],
+                        help='accelerator for training')
     parser = add_model_args(parser)
     parser = add_dataset_args(parser)
     parser = add_ddp_args(parser)
@@ -93,6 +99,9 @@ def main():
     # Init asr model from configs
     model, configs = init_model(args, configs)
 
+    if hasattr(args, 'lora_reinit') and args.lora_reinit:
+        reinit_lora(model, args, configs, tokenizer)
+
     # Check model is jitable & print model archtectures
     trace_and_print_model(args, model)
 
@@ -118,7 +127,8 @@ def main():
 
     # Get executor
     tag = configs["init_infos"].get("tag", "init")
-    executor = Executor(global_step=configs["init_infos"].get('step', -1))
+    executor = Executor(global_step=configs["init_infos"].get('step', -1),
+                        device=device)
 
     # Init scaler, used for pytorch amp mixed precision training
     scaler = init_scaler(args)
@@ -171,6 +181,8 @@ def main():
             final_model_path) else None
         os.symlink('{}.pt'.format(final_epoch), final_model_path)
         writer.close()
+    dist.barrier(
+    )  # NOTE(yktian): Ensure all ranks end Train before destroy process group.
     dist.destroy_process_group()
 
 

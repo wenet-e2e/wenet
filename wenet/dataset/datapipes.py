@@ -18,7 +18,8 @@ import copy
 import sys
 import tarfile
 import logging
-from typing import List
+from typing import List, Optional
+import numpy as np
 import torch
 from torch.utils.data import IterDataPipe, functional_datapipe
 from torch.utils.data import datapipes
@@ -300,6 +301,47 @@ class ShardDataPipe(ShardingFilterIterDataPipe):
                 n_workers_per_device = info.num_workers
                 self.num_of_instances = n_workers_per_device
                 self.instance_id = info.id
+
+
+@functional_datapipe("interleave")
+class InterlaveDataPipe(IterDataPipe):
+
+    def __init__(
+        self,
+        source_datapipes: List[IterDataPipe],
+        weights: Optional[List[float]] = None,
+        seed=2027,
+    ):
+        super().__init__()
+        self.rng = np.random.default_rng(seed)
+        self.source_datapipes = source_datapipes
+        self.weights = weights
+        if weights is None:
+            self.weights = [1 / len(self.source_datapipes)] * len(
+                self.source_datapipes)
+        else:
+            self.weights = [weight / sum(weights) for weight in weights]
+        self.iters = None
+
+    def __iter__(self):
+        weights = copy.deepcopy(self.weights)
+        exhausted = len(self.source_datapipes) * [False]
+        if self.iters is None:
+            self.iters = [(i, iter(d))
+                          for i, d in enumerate(self.source_datapipes)]
+        while True:
+            # TODO(Mddct): rng
+            index_iter = self.rng.choice(self.iters, p=weights)
+            i, ite = index_iter
+            try:
+                elem = next(ite)
+                yield elem
+            except StopIteration:
+                weights[i] = 0.
+                exhausted[i] = True
+                if all(exhausted):
+                    return
+                weights = [weight / sum(weights) for weight in weights]
 
 
 class TextLineDataPipe(IterDataPipe):

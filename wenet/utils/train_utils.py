@@ -39,7 +39,6 @@ from deepspeed.runtime.zero.stage3 import (
     estimate_zero3_model_states_mem_needs_all_live)
 from deepspeed.utils.zero_to_fp32 import (
     convert_zero_checkpoint_to_fp32_state_dict)
-from wenet.dataset.dataset import Dataset
 from wenet.utils.checkpoint import save_checkpoint
 from wenet.utils.common import (StepTimer, get_nested_attribute, lrs_to_str,
                                 tensor_to_scalar)
@@ -48,6 +47,8 @@ from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
                                     wenet_fsdp_wrap_policy)
 from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
+from wenet.utils.common import TORCH_NPU_AVAILABLE
+from wenet.utils.init_dataset import init_dataset
 
 
 def add_model_args(parser):
@@ -115,6 +116,14 @@ def add_dataset_args(parser):
 
 
 def add_lora_args(parser):
+    '''Configure parameters for LoRA fine-tuning. Set use_lora and
+       only_optimize_lora to true to enable LoRA functionality.
+       LoRA will be injected to model through (lora_modules, lora_attn_attr,
+       lora_list).
+       LoRA weights will be merged after calling model.eval()
+       (or model.train(mode=False)).
+       LoRA weights need to be loaded after fine-tuning with DeepSpeed.
+    '''
     parser.add_argument("--use_lora",
                         default=False,
                         type=bool,
@@ -124,9 +133,22 @@ def add_lora_args(parser):
                         type=bool,
                         help="freeze all other paramters and only optimize \
                         LoRA-related prameters.")
-    parser.add_argument("--lora_list",
-                        default=['o', 'q', 'k', 'v'],
-                        help="lora module list.")
+    parser.add_argument(
+        '--lora_modules',
+        default="encoder.encoders",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help='modules names needs inject lora',
+    )
+    parser.add_argument(
+        "--lora_attn_attr",
+        default="self_attn,src_attn",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help="lora_attn_attr.")
+    parser.add_argument(
+        "--lora_list",
+        default="linear_out,linear_q,linear_k,linear_v",
+        type=lambda s: [str(mod) for mod in s.split(",") if s != ""],
+        help="lora module list.")
     parser.add_argument("--lora_rank",
                         default=8,
                         type=int,
@@ -139,6 +161,18 @@ def add_lora_args(parser):
                         default=0,
                         type=float,
                         help="lora dropout param.")
+    parser.add_argument("--lora_ckpt_path",
+                        default=None,
+                        type=str,
+                        help="lora checkpoint path.")
+    parser.add_argument("--lora_reinit",
+                        default=False,
+                        type=bool,
+                        help="whether use the lora init, default is zero init.")
+    parser.add_argument('--lora_init_yaml',
+                        default="wenet/finetune/lora/config.yaml",
+                        type=str,
+                        help='Path to the configuration YAML file')
     return parser
 
 
@@ -146,7 +180,7 @@ def add_ddp_args(parser):
     parser.add_argument('--ddp.dist_backend',
                         dest='dist_backend',
                         default='nccl',
-                        choices=['nccl', 'gloo'],
+                        choices=['nccl', 'gloo', "hccl"],
                         help='distributed backend')
     parser.add_argument('--use_amp',
                         action='store_true',
@@ -221,7 +255,12 @@ def init_distributed(args):
     logging.info('training on multiple gpus, this gpu {}'.format(local_rank) +
                  ', rank {}, world_size {}'.format(rank, world_size))
     if args.train_engine in ["torch_ddp", "torch_fsdp"]:
-        torch.cuda.set_device(local_rank)
+        if "cuda" in args.device:
+            torch.cuda.set_device(local_rank)
+        elif "npu" in args.device and TORCH_NPU_AVAILABLE:
+            torch.npu.set_device(local_rank)
+        else:
+            logging.error("not supported device: {}".format(args.device))
         dist.init_process_group(args.dist_backend)
     elif args.train_engine == "deepspeed":
         deepspeed.init_distributed(dist_backend=args.dist_backend)
@@ -277,25 +316,31 @@ def check_modify_and_save_config(args, configs, symbol_table):
         assert ds_configs["steps_per_print"] == configs['log_interval']
 
     if args.use_lora:
-        configs['encoder_conf']['lora_list'] = args.lora_list
-        configs['encoder_conf']['lora_rank'] = args.lora_rank
-        configs['encoder_conf']['lora_alpha'] = args.lora_alpha
-        configs['encoder_conf']['lora_dropout'] = args.lora_dropout
+        configs['lora_conf'] = {}
+        configs['lora_conf']['lora_modules'] = args.lora_modules
+        configs['lora_conf']['lora_attn_attr'] = args.lora_attn_attr
+        configs['lora_conf']['lora_list'] = args.lora_list
+        configs['lora_conf']['lora_rank'] = args.lora_rank
+        configs['lora_conf']['lora_alpha'] = args.lora_alpha
+        configs['lora_conf']['lora_dropout'] = args.lora_dropout
 
-    if 'input_dim' not in configs:
-        if 'fbank_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['fbank_conf']['num_mel_bins']
-        elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
-            input_dim = configs['dataset_conf']['log_mel_spectrogram_conf'][
-                'num_mel_bins']
+    if configs["model"] == 'asr_model':
+        if 'input_dim' not in configs:
+            if 'fbank_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf']['fbank_conf'][
+                    'num_mel_bins']
+            elif 'log_mel_spectrogram_conf' in configs['dataset_conf']:
+                input_dim = configs['dataset_conf'][
+                    'log_mel_spectrogram_conf']['num_mel_bins']
+            else:
+                input_dim = configs['dataset_conf']['mfcc_conf'][
+                    'num_mel_bins']
         else:
-            input_dim = configs['dataset_conf']['mfcc_conf']['num_mel_bins']
-    else:
-        input_dim = configs['input_dim']
+            input_dim = configs['input_dim']
+
+        configs['input_dim'] = input_dim
 
     configs, _ = get_blank_id(configs, symbol_table)
-
-    configs['input_dim'] = input_dim
     configs['output_dim'] = configs['vocab_size']
 
     configs['train_engine'] = args.train_engine
@@ -324,24 +369,23 @@ def init_dataset_and_dataloader(args, configs, tokenizer, seed=777):
     # if save_interval in configs, steps mode else epoch mode
     if "save_interval" in configs:
         configs['dataset_conf']['cycle'] = configs.get('max_epoch', 100)
-    train_conf = configs['dataset_conf']
-    cv_conf = copy.deepcopy(train_conf)
-    cv_conf['cycle'] = 1
-    cv_conf['speed_perturb'] = False
-    cv_conf['spec_aug'] = False
-    cv_conf['spec_sub'] = False
-    cv_conf['spec_trim'] = False
-    cv_conf['shuffle'] = False
-    cv_conf['list_shuffle'] = False
-
+    conf = configs['dataset_conf']
+    dataset_type = configs.get('dataset', 'asr')
     configs['vocab_size'] = tokenizer.vocab_size()
-    train_dataset = Dataset(args.data_type, args.train_data, tokenizer,
-                            train_conf, True)
-    cv_dataset = Dataset(args.data_type,
-                         args.cv_data,
-                         tokenizer,
-                         cv_conf,
-                         partition=False)
+    train_dataset = init_dataset(dataset_type,
+                                 args.data_type,
+                                 args.train_data,
+                                 tokenizer,
+                                 conf,
+                                 True,
+                                 split='train')
+    cv_dataset = init_dataset(dataset_type,
+                              args.data_type,
+                              args.cv_data,
+                              tokenizer,
+                              conf,
+                              partition=False,
+                              split='cv')
 
     # NOTE(xcsong): Why we prefer persistent_workers=True ?
     #   https://discuss.pytorch.org/t/what-are-the-dis-advantages-of-persistent-workers/102110
@@ -370,11 +414,10 @@ def wrap_cuda_model(args, model, configs=None):
     else:
         grad_ckpt = False
     if args.train_engine == "torch_ddp":  # native pytorch ddp
-        assert (torch.cuda.is_available())
-        model.cuda()
+        device = torch.device(args.device)
+        model.to(device)
         model = torch.nn.parallel.DistributedDataParallel(
             model, find_unused_parameters=not grad_ckpt)
-        device = torch.device("cuda")
     elif args.train_engine == "deepspeed":  # deepspeed
         # NOTE(xcsong): look in detail how the memory estimator API works:
         #   https://deepspeed.readthedocs.io/en/latest/memory.html#discussion
@@ -389,7 +432,7 @@ def wrap_cuda_model(args, model, configs=None):
                 model,
                 num_gpus_per_node=local_world_size,
                 num_nodes=world_size // local_world_size)
-        device = None  # Init device later
+        device = torch.device(args.device)  # Init device later
         pass  # Init DeepSpeed later
     elif args.train_engine == 'torch_fsdp':
         assert configs is not None
@@ -407,6 +450,12 @@ def wrap_cuda_model(args, model, configs=None):
         }[args.fsdp_sharding_strategy]
         wrap_policy = wenet_fsdp_wrap_policy(mode=args.fsdp_sharding_strategy)
         layer_types = check_gradient_checkpoint(model)
+        if "cuda" in args.device:
+            device_id = torch.cuda.current_device()
+        elif "npu" in args.device and TORCH_NPU_AVAILABLE:
+            device_id = torch.npu.current_device()
+        else:
+            logging.error("not supported device: {}".format(args.device))
         model = FSDP(
             model,
             auto_wrap_policy=wrap_policy,
@@ -423,10 +472,9 @@ def wrap_cuda_model(args, model, configs=None):
             sync_module_states=args.fsdp_sync_module_states,
             # init_distributed is called (torch.cuda.set_device),
             # we should set device_id, see FSDP api
-            device_id=torch.cuda.current_device(),
-        )
+            device_id=device_id)
         apply_fsdp_checkpointing(model, layer_types)
-        device = torch.device("cuda")
+        device = torch.device(args.device)
     else:
         logging.error("not supported engine: {}".format(args.train_engine))
     if args.train_engine in ["torch_fsdp", "torch_ddp"]:
@@ -542,7 +590,12 @@ def init_summarywriter(args):
 def init_scaler(args):
     scaler = None
     if args.use_amp:
-        scaler = torch.cuda.amp.GradScaler()
+        if "cuda" in args.device:
+            scaler = torch.cuda.amp.GradScaler()
+        elif "npu" in args.device and TORCH_NPU_AVAILABLE:
+            scaler = torch.npu.amp.GradScaler()
+        else:
+            logging.error("not supported device: {}".format(args.device))
     elif args.train_engine == 'torch_fsdp':
         # why bf16 don't need scaler:
         # https://discuss.pytorch.org/t/why-bf16-do-not-need-loss-scaling/176596
@@ -612,9 +665,8 @@ def wenet_join(group_join, info_dict):
     return False
 
 
-def batch_forward(model, batch, scaler, info_dict):
+def batch_forward(model, batch, scaler, info_dict, device):
     train_engine = info_dict.get('train_engine', "torch_ddp")
-    device = int(os.environ.get('LOCAL_RANK', 0))
     accum_grad = info_dict.get('accum_grad', 1)
 
     dtype = info_dict.get("dtype", "fp32")
@@ -628,15 +680,18 @@ def batch_forward(model, batch, scaler, info_dict):
     # autocast context
     # The more details about amp can be found in
     # https://pytorch.org/docs/stable/notes/amp_examples.html
+    amp_autocast = torch.cuda.amp.autocast
+    if "npu" in device.__str__() and TORCH_NPU_AVAILABLE:
+        amp_autocast = torch.npu.amp.autocast
     autocast = {
         "deepspeed":
-        torch.cuda.amp.autocast(enabled=dtype is not None,
-                                dtype=dtype,
-                                cache_enabled=False),
+        amp_autocast(enabled=dtype is not None,
+                     dtype=dtype,
+                     cache_enabled=False),
         "torch_ddp":
-        torch.cuda.amp.autocast(enabled=scaler is not None),
+        amp_autocast(enabled=scaler is not None),
         "torch_fsdp":
-        torch.cuda.amp.autocast(enabled=True, dtype=dtype)
+        amp_autocast(enabled=True, dtype=dtype)
         if dtype is not None else nullcontext()
     }[train_engine]
     with autocast:
@@ -788,7 +843,7 @@ def log_per_step(writer, info_dict, timer: Optional[StepTimer] = None):
             if info_dict.get("cv_step", None) is not None:
                 timer_step = info_dict['cv_step']
             steps_per_second = timer.steps_per_second(timer_step)
-            log_str += 'steps/sec {:.1f}| '.format(steps_per_second)
+            log_str += 'steps/sec {:.3f}| '.format(steps_per_second)
         log_str += 'Batch {}/{} loss {:.6f} '.format(
             epoch, batch_idx + 1 if 'save_interval' not in info_dict else
             (step + 1) * accum_grad,
@@ -827,3 +882,45 @@ def freeze_modules(model, args):
             if module_name in name:
                 param.requires_grad = False
                 logging.debug("{} module is freezed".format(name))
+
+
+def reinit_lora(model, args, configs, tokenizer, seed=777):
+    from tqdm import tqdm
+    from wenet.finetune.lora.utils import estimate_gradient, reinit_lora_modules
+    from wenet.finetune.lora.layers import LoRALayer
+    from types import SimpleNamespace
+
+    logging.info("reinit lora modules.")
+    with open(args.lora_init_yaml, 'r') as file:
+        lora_config = yaml.safe_load(file)
+
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    dataset_conf = copy.deepcopy(configs['dataset_conf'])
+    dataset_conf['batch_conf']['batch_size'] = lora_config['init_batch_size']
+    dataset_type = configs.get('dataset', 'asr')
+    dataset = init_dataset(dataset_type, args.data_type, args.train_data,
+                           tokenizer, dataset_conf, True)
+    dataloader = DataLoader(dataset,
+                            batch_size=None,
+                            pin_memory=args.pin_memory,
+                            num_workers=args.num_workers,
+                            persistent_workers=True,
+                            generator=generator,
+                            prefetch_factor=args.prefetch)
+    additional_kwargs = {}
+    if lora_config["init_config"]["mode"] == "gradient":
+        named_grads = estimate_gradient(model, dataloader,
+                                        lora_config['init_iters'])
+        additional_kwargs["named_grads"] = named_grads
+    lora_config = SimpleNamespace(**lora_config["init_config"])
+    for name, module in tqdm(
+        model.named_modules(),
+        desc="Reinitializing Lora",
+        total=len(list(model.named_modules())),
+    ):
+        if isinstance(module, LoRALayer):
+            reinit_lora_modules(name, module, lora_config, **additional_kwargs)
+    # lora_init_model needs to be saved, w0 = w0 - A0 * B0
+    save_checkpoint(model, os.path.join(args.model_dir, "lora_init.pt"),
+                    infos={"tag": "lora_init", **configs})

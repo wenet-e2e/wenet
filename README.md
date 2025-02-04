@@ -9,6 +9,7 @@
 | [**Runtime**](https://github.com/wenet-e2e/wenet/tree/main/runtime)
 | [**Pretrained Models**](docs/pretrained_models.md)
 | [**HuggingFace**](https://huggingface.co/spaces/wenet/wenet_demo)
+| [**Ask WeNet Guru**](https://gurubase.io/g/wenet)
 
 **We** share **Net** together.
 
@@ -59,9 +60,47 @@ git clone https://github.com/wenet-e2e/wenet.git
 conda create -n wenet python=3.10
 conda activate wenet
 conda install conda-forge::sox
+```
+
+- Install CUDA: please follow this [link](https://icefall.readthedocs.io/en/latest/installation/index.html#id1), It's recommended to install CUDA 12.1
+- Install torch and torchaudio, It's recomended to use 2.2.2+cu121:
+
+``` sh
+pip install torch==2.2.2+cu121 torchaudio==2.2.2+cu121 -f https://download.pytorch.org/whl/torch_stable.html
+```
+
+<details><summary><b>For Ascend NPU users:</b></summary>
+
+- Install CANN: please follow this [link](https://ascend.github.io/docs/sources/ascend/quick_install.html) to install CANN toolkit and kernels.
+
+- Install WeNet with torch-npu dependencies:
+
+``` sh
+pip install -e .[torch-npu]
+```
+
+- Related version control table:
+
+| Requirement  |      Minimum     | Recommend   |
+| ------------ | ---------------- | ----------- |
+| CANN         | 8.0.RC2.alpha003 | latest      |
+| torch        | 2.1.0            | 2.2.0       |
+| torch-npu    | 2.1.0            | 2.2.0       |
+| torchaudio   | 2.1.0            | 2.2.0       |
+| deepspeed    | 0.13.2           | latest      |
+
+</details>
+
+- Install other python packages
+
+``` sh
 pip install -r requirements.txt
 pre-commit install  # for clean and tidy code
+```
 
+- Frequently Asked Questions (FAQs)
+
+``` sh
 # If you encounter sox compatibility issues
 RuntimeError: set_buffer_size requires sox extension which is not available.
 # ubuntu
@@ -91,7 +130,7 @@ runtime on more platforms and OS.
 
 You can directly discuss on [Github Issues](https://github.com/wenet-e2e/wenet/issues).
 
-For Chinese users, you can aslo scan the QR code on the left to follow our offical account of WeNet.
+For Chinese users, you can also scan the QR code on the left to follow our official account of WeNet.
 We created a WeChat group for better discussion and quicker response.
 Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 

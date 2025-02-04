@@ -1,0 +1,13 @@
+init_batch_size: 2
+init_iters: 8
+init_config:
+  mode: "gradient"  # option: "simple", "svd", "gradient"
+  lora_A: "unit"  # option: "gaussian", "kaiming", "fan_out_kaiming", "xavier", "zeros", "unit", "orthogonal"
+  lora_A_std: 0.01  # only needed when lora_A is "gaussian"
+  lora_B: "unit"  # option: "gaussian", "kaiming", "fan_out_kaiming", "xavier", "zeros", "unit", "orthogonal"
+  lora_B_std: 0.01  # only needed when lora_B is "gaussian"
+  scale: "stable"  # option: "default", "stable", "unit", "normalized", "gd", "weightS"
+  stable_gamma: 2  # only needed when scale is "stable"
+  direction: "ArB2r"  # option: "ArBr", "A2rBr", "ArB2r"（only needed when mode is "gradient"）
+  dtype: "fp32"  # option: "bf16", "fp32"
+  norm_clip: false  # norm clipping

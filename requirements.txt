@@ -20,6 +20,6 @@ torchaudio>=2.1.2
 tqdm
 deepspeed>=0.14.0
 librosa
-openai-whisper
+openai-whisper==20231117
 pre-commit==3.5.0
 langid

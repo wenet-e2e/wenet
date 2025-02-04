@@ -15,11 +15,13 @@
 import os
 import torch
 
-from wenet.finetune.lora.utils import mark_only_lora_as_trainable
+from wenet.finetune.lora.utils import (inject_lora_to_model,
+                                       mark_only_lora_as_trainable)
 from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.paraformer import Paraformer, Predictor
+from wenet.ssl.init_model import WENET_SSL_MODEL_CLASS
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
                                         RNNPredictor)
@@ -38,8 +40,6 @@ from wenet.ctl_model.asr_model_ctl import CTLModel
 from wenet.whisper.whisper import Whisper
 from wenet.utils.cmvn import load_cmvn
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
-from wenet.finetune.lora.encoder import (LoRATransformerEncoder,
-                                         LoRAConformerEncoder)
 
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
@@ -51,8 +51,6 @@ WENET_ENCODER_CLASSES = {
     "dual_transformer": DualTransformerEncoder,
     "dual_conformer": DualConformerEncoder,
     'sanm_encoder': SanmEncoder,
-    "lora_transformer": LoRATransformerEncoder,
-    "lora_conformer": LoRAConformerEncoder,
 }
 
 WENET_DECODER_CLASSES = {
@@ -87,8 +85,7 @@ WENET_MODEL_CLASSES = {
 }
 
 
-def init_model(args, configs):
-
+def init_speech_model(args, configs):
     # TODO(xcsong): Forcefully read the 'cmvn' attribute.
     if configs.get('cmvn', None) == 'global_cmvn':
         mean, istd = load_cmvn(configs['cmvn_conf']['cmvn_file'],
@@ -105,9 +102,6 @@ def init_model(args, configs):
     encoder_type = configs.get('encoder', 'conformer')
     decoder_type = configs.get('decoder', 'bitransformer')
     ctc_type = configs.get('ctc', 'ctc')
-
-    if hasattr(args, 'use_lora') and args.use_lora:
-        encoder_type = "lora_" + encoder_type
 
     encoder = WENET_ENCODER_CLASSES[encoder_type](
         input_dim,
@@ -159,6 +153,9 @@ def init_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
         )
+    elif model_type in WENET_SSL_MODEL_CLASS.keys():
+        from wenet.ssl.init_model import init_model as init_ssl_model
+        model = init_ssl_model(configs, encoder)
     else:
         model = WENET_MODEL_CLASSES[model_type](
             vocab_size=vocab_size,
@@ -168,6 +165,17 @@ def init_model(args, configs):
             special_tokens=configs.get('tokenizer_conf',
                                        {}).get('special_tokens', None),
             **configs['model_conf'])
+    return model, configs
+
+
+def init_model(args, configs):
+
+    model_type = configs.get('model', 'asr_model')
+    configs['model'] = model_type
+    model, configs = init_speech_model(args, configs)
+
+    if hasattr(args, 'use_lora') and args.use_lora:
+        inject_lora_to_model(model, configs['lora_conf'])
 
     # If specify checkpoint, load some info from checkpoint
     if hasattr(args, 'checkpoint') and args.checkpoint is not None:
@@ -178,16 +186,22 @@ def init_model(args, configs):
         infos = {}
     configs["init_infos"] = infos
 
+    if hasattr(args, 'use_lora') and args.use_lora:
+        if hasattr(args, 'lora_ckpt_path') and args.lora_ckpt_path:
+            load_checkpoint(model, args.lora_ckpt_path)
+
+    # Trye to tie some weights
+    if hasattr(model, 'tie_or_clone_weights'):
+        if not hasattr(args, 'jit'):
+            jit = True  # i.e. export onnx/jit/ipex
+        else:
+            jit = False
+        model.tie_or_clone_weights(jit)
+
     if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:
         mark_only_lora_as_trainable(model, bias='lora_only')
 
     if int(os.environ.get('RANK', 0)) == 0:
         print(configs)
-
-    # Tie emb.weight to decoder.output_layer.weight
-    if model.decoder.tie_word_embedding:
-        if not hasattr(args, 'jit'):
-            args.jit = True  # i.e. export onnx/jit/ipex
-        model.decoder.tie_or_clone_weights(jit_mode=args.jit)
 
     return model, configs

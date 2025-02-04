@@ -37,6 +37,8 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
 )
 
+include(wetextprocessing)
+
 # Build all libraries
 add_subdirectory(utils)
 add_subdirectory(frontend)

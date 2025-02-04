@@ -140,6 +140,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str,
     configs['dataset_conf']['fbank_conf']['frame_shift'] = 10
     configs['dataset_conf']['fbank_conf']['frame_length'] = 25
     configs['dataset_conf']['fbank_conf']['dither'] = 0.1
+    configs['dataset_conf']['fbank_conf']['window_type'] = 'hamming'
     configs['dataset_conf']['spec_sub'] = False
     configs['dataset_conf']['spec_trim'] = False
     configs['dataset_conf']['shuffle'] = True

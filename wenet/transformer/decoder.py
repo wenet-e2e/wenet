@@ -286,6 +286,8 @@ class TransformerDecoder(torch.nn.Module):
         rank = int(os.environ.get('RANK', 0))
         if not self.use_output_layer:
             return
+        if not self.tie_word_embedding:
+            return
         if jit_mode:
             if rank == 0:
                 logging.info("clone emb.weight to output.weight")

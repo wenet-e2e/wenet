@@ -29,6 +29,7 @@ from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 from wenet.utils.context_graph import ContextGraph
 from wenet.utils.ctc_utils import get_blank_id
+from wenet.utils.common import TORCH_NPU_AVAILABLE  # noqa just ensure to check torch-npu
 
 
 def get_args():
@@ -43,6 +44,11 @@ def get_args():
                         type=int,
                         default=-1,
                         help='gpu id for this rank, -1 for cpu')
+    parser.add_argument('--device',
+                        type=str,
+                        default="cpu",
+                        choices=["cpu", "npu", "cuda"],
+                        help='accelerator to use')
     parser.add_argument('--dtype',
                         type=str,
                         default='fp32',
@@ -176,6 +182,10 @@ def get_args():
                         type=bool,
                         default=False,
                         help='''Whether to use lora for biasing''')
+    parser.add_argument("--lora_ckpt_path",
+                        default=None,
+                        type=str,
+                        help="lora checkpoint path.")
     args = parser.parse_args()
     print(args)
     return args
@@ -185,7 +195,11 @@ def main():
     args = get_args()
     logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(levelname)s %(message)s')
-    os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+    if args.gpu != -1:
+        # remain the original usage of gpu
+        args.device = "cuda"
+    if "cuda" in args.device:
+        os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
 
     with open(args.config, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
@@ -230,8 +244,7 @@ def main():
     args.jit = False
     model, configs = init_model(args, configs)
 
-    use_cuda = args.gpu >= 0 and torch.cuda.is_available()
-    device = torch.device('cuda' if use_cuda else 'cpu')
+    device = torch.device(args.device)
     model = model.to(device)
     model.eval()
     dtype = torch.float32

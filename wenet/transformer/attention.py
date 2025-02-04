@@ -21,7 +21,7 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
-from wenet.utils.rope_utils import llama_apply_rotary_emb
+from wenet.utils.rope_utils import WENET_APPLY_ROTARY_EMB
 
 T_CACHE = Tuple[torch.Tensor, torch.Tensor]
 
@@ -80,7 +80,10 @@ class MultiHeadedAttention(nn.Module):
         self.use_sdpa = use_sdpa
         self.dropout_rate = dropout_rate
 
-    def _forward_linearx(self, name: str, x: torch.Tensor) -> torch.Tensor:
+    def _forward_linearx(self,
+                         name: str,
+                         x: torch.Tensor,
+                         head_first: bool = True) -> torch.Tensor:
         assert x.ndim >= 3
         if name == 'query':
             x = self.linear_q(x)
@@ -98,7 +101,9 @@ class MultiHeadedAttention(nn.Module):
 
         # split last dim
         x = x.view(x_shape)
-        x = x.transpose(-3, -2)  # (batch, ...,  head or head_kv, time, d_k)
+        if head_first:
+            x = x.transpose(-3,
+                            -2)  # (batch, ...,  head or head_kv, time, d_k)
         return x
 
     def forward_qkv(
@@ -155,14 +160,15 @@ class MultiHeadedAttention(nn.Module):
             # For last chunk, time2 might be larger than scores.size(-1)
             mask = mask[..., :scores.size(-1)]  # (batch, 1, *, time2)
             scores = scores.masked_fill(mask, -float('inf'))
-            attn = torch.softmax(scores, dim=-1).masked_fill(
-                mask, 0.0)  # (batch, head, time1, time2)
+            attn = torch.softmax(scores.float(),
+                                 dim=-1).type_as(value).masked_fill(
+                                     mask, 0.0)  # (batch, head, time1, time2)
         # NOTE(xcsong): When will `if mask.size(2) > 0` be False?
         #   1. onnx(16/-1, -1/-1, 16/0)
         #   2. jit (16/-1, -1/-1, 16/0, 16/4)
         else:
-            attn = torch.softmax(scores,
-                                 dim=-1)  # (batch, ..., head, time1, time2)
+            attn = torch.softmax(scores.float(), dim=-1).type_as(
+                value)  # (batch, ..., head, time1, time2)
 
         p_attn = self.dropout(attn)
         x = torch.matmul(p_attn, value)  # (batch, ...,  head, time1, d_k)
@@ -172,9 +178,15 @@ class MultiHeadedAttention(nn.Module):
         return self.linear_out(x)  # (batch, ...,  time1, d_model)
 
     def _update_kv_and_cache(
-            self, k: torch.Tensor, v: torch.Tensor,
-            cache: T_CACHE) -> Tuple[torch.Tensor, torch.Tensor, T_CACHE]:
+            self,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            cache: T_CACHE,
+            head_first: bool = True
+    ) -> Tuple[torch.Tensor, torch.Tensor, T_CACHE]:
         new_cache = cache
+        seq_axis = -2 if head_first else -3
+        head_axis = -3 if head_first else -2
         if not self.training:
             # NOTE(xcsong):
             #   when export onnx model, for 1st chunk, we feed
@@ -194,25 +206,42 @@ class MultiHeadedAttention(nn.Module):
             # >>> torch.equal(d[0], d[1])  # True
             key_cache, value_cache = cache
             if key_cache.size(0) > 0:
-                k = torch.cat([key_cache, k], dim=2)
+                k = torch.cat([key_cache, k], dim=seq_axis)
             if value_cache.size(0) > 0:
-                v = torch.cat([value_cache, v], dim=2)
+                v = torch.cat([value_cache, v], dim=seq_axis)
             # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
             #   non-trivial to calculate `next_cache_start` here.
             # new_cache = torch.cat((k, v), dim=-1) if not self.training else cache
             new_cache = (k, v)
         # for multi query or multi group attention
         if self.h_kv != self.h and self.h_kv != 1:
-            k = torch.repeat_interleave(
-                k,
-                self.h // self.h_kv,
-                dim=-3,
-            )
-            v = torch.repeat_interleave(
-                v,
-                self.h // self.h_kv,
-                dim=-3,
-            )
+            # NOTE: onnxruntime issues:
+            #     https://github.com/wenet-e2e/wenet/issues/2517
+            # k = torch.repeat_interleave(
+            #     k,
+            #     self.h // self.h_kv,
+            #     dim=-3,
+            # )
+            # v = torch.repeat_interleave(
+            #     v,
+            #     self.h // self.h_kv,
+            #     dim=-3,
+            # )
+            n_repeat = self.h // self.h_kv
+            k_shape = k.size()
+            repeat_axis = head_axis + 1
+            k = k.unsqueeze(head_axis).expand(
+                k_shape[:repeat_axis] + torch.Size([n_repeat]) +
+                k_shape[repeat_axis:]).reshape(
+                    k_shape[:head_axis] + torch.Size([self.h_kv * n_repeat]) +
+                    k_shape[repeat_axis:])
+            v_shape = v.size()
+            v = v.unsqueeze(head_axis).expand(
+                v_shape[:repeat_axis] + torch.Size([n_repeat]) +
+                v_shape[(repeat_axis):]).reshape(
+                    v_shape[:head_axis] + torch.Size([self.h_kv * n_repeat]) +
+                    v_shape[repeat_axis:])
+
         return k, v, new_cache
 
     def forward(
@@ -509,16 +538,21 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, None, None)
         # TODO(Mddct): 64 8 1 as args
-        self.max_right_rel_pos = 64
-        self.max_left_rel_pos = 8
+        self.max_right_rel_pos = 8
+        self.max_left_rel_pos = 64
         self.rel_k_embed = torch.nn.Embedding(
             self.max_left_rel_pos + self.max_right_rel_pos + 1, self.d_k)
 
-    def _relative_indices(self, length: int, device: torch.device):
-        indices = torch.arange(length, device=device).unsqueeze(0)
+    def _relative_indices(self, keys: torch.Tensor) -> torch.Tensor:
+        # (S, 1)
+        indices = torch.arange(keys.size(2), device=keys.device).unsqueeze(0)
+
+        # (S, S)
         rel_indices = indices - indices.transpose(0, 1)
+
         rel_indices = torch.clamp(rel_indices, -self.max_left_rel_pos,
                                   self.max_right_rel_pos)
+
         return rel_indices + self.max_left_rel_pos
 
     def forward(
@@ -534,14 +568,9 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
         q, k, v = self.forward_qkv(query, key, value)
         k, v, new_cache = self._update_kv_and_cache(k, v, cache)
 
-        rel_k = self.rel_k_embed(
-            self._relative_indices(k.size(2), query.device))  # (t2, t2, d_k)
-        rel_k = rel_k[-q.size(2):]  # (t1, t2, d_k)
-        # b,h,t1,dk
-        rel_k = rel_k.unsqueeze(0).unsqueeze(0)  # (1, 1, t1, t2, d_k)
-        q_expand = q.unsqueeze(3)  # (batch, h, t1, 1, d_k)
-        rel_att_weights = (rel_k * q_expand).sum(-1).squeeze(
-            -1)  # (batch, h, t1, t2)
+        rel_k = self.rel_k_embed(self._relative_indices(k))  # (t2, t2, d_k)
+        rel_k = rel_k[-q.size(2):]
+        rel_att_weights = torch.einsum("bhld,lrd->bhlr", q, rel_k)
 
         if not self.use_sdpa:
             scores = (torch.matmul(q, k.transpose(-2, -1)) +
@@ -578,9 +607,11 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                  value_bias: bool = True,
                  use_sdpa: bool = False,
                  n_kv_head: Optional[int] = None,
-                 head_dim: Optional[int] = None):
+                 head_dim: Optional[int] = None,
+                 style='google'):
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, n_kv_head, head_dim)
+        self.style = style
 
     def forward(
         self,
@@ -621,14 +652,22 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                 and `head * d_k == size`
 
         """
-        q, k, v = self.forward_qkv(query, key, value)
+        q = self._forward_linearx('query', query, head_first=False)
+        k = self._forward_linearx('key', key, head_first=False)
+        v = self._forward_linearx('value', value, head_first=False)
         # NOTE(Mddct): In order to make the code easier to read,
         #    these two lines are not placed in MultiHeadedAttention.
-        q = llama_apply_rotary_emb(q, pos_emb)
-        k = llama_apply_rotary_emb(k, pos_emb)
-        # see above
-        k, v, new_cache = self._update_kv_and_cache(k, v, cache)
+        q = WENET_APPLY_ROTARY_EMB[self.style](q, pos_emb)
+        k = WENET_APPLY_ROTARY_EMB[self.style](k, pos_emb)
 
+        k, v, new_cache = self._update_kv_and_cache(k,
+                                                    v,
+                                                    cache,
+                                                    head_first=False)
+
+        q = q.transpose(1, 2)
+        k = k.transpose(1, 2)
+        v = v.transpose(1, 2)
         if not self.use_sdpa:
             scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
             return self.forward_attention(v, scores, mask), new_cache

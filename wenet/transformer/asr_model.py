@@ -133,6 +133,9 @@ class ASRModel(torch.nn.Module):
             "th_accuracy": acc_att,
         }
 
+    def tie_or_clone_weights(self, jit_mode: bool = True):
+        self.decoder.tie_or_clone_weights(jit_mode)
+
     @torch.jit.unused
     def _forward_ctc(
             self, encoder_out: torch.Tensor, encoder_mask: torch.Tensor,
@@ -229,6 +232,17 @@ class ASRModel(torch.nn.Module):
                 decoding_chunk_size=decoding_chunk_size,
                 num_decoding_left_chunks=num_decoding_left_chunks
             )  # (B, maxlen, encoder_dim)
+        return encoder_out, encoder_mask
+
+    # The same interface just like whisper
+    # see https://github.com/openai/whisper/blob/main/whisper/model.py#L287
+    def embed_audio(
+        self,
+        mel: torch.Tensor,
+        mel_len: torch.Tensor,
+        chunk_size: int = -1,
+    ) -> [torch.Tensor, torch.Tensor]:
+        encoder_out, encoder_mask = self.encoder(mel, mel_len, chunk_size)
         return encoder_out, encoder_mask
 
     @torch.jit.unused

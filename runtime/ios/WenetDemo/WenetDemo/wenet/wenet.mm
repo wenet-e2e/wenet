@@ -83,7 +83,7 @@ using namespace wenet;
 - (void)reset {
   decoder->Reset();
   state = kEndBatch;
-  total_result = "";
+  total_result.clear();
 }
 
 - (void)acceptWaveForm: (float*)pcm: (int)size {
@@ -122,14 +122,15 @@ using namespace wenet;
   }
 }
 
-- (NSString*)get_result {
+- (NSString *)get_result {
   std::string result;
   if (decoder->DecodedSomething()) {
     result = decoder->result()[0].sentence;
   }
-  LOG(INFO) << "wenet ui result: " << total_result + result;
-  NSLog(@"wenet ui result: %s", (total_result + result).c_str());
-  return [NSString stringWithUTF8String:(total_result + result).c_str()];
+  std::string final_result = total_result + result;
+  LOG(INFO) << "wenet ui result: " << final_result;
+  NSLog(@"wenet ui result: %s", final_result.c_str());
+  return [NSString stringWithUTF8String:final_result.c_str()];
 }
 
 @end

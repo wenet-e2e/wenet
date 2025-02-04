@@ -126,12 +126,13 @@ def gen_timestamps_from_peak(cif_peaks: List[int],
         else:
             split = fire_place[i] + MAX_TOKEN_DURATION
             times.append([fire_place[i] * frame_rate, split * frame_rate])
-    if num_frames - fire_place[-1] > START_END_THRESHOLD:
-        end = (num_frames + fire_place[-1]) * 0.5
-        times[-1][1] = end * frame_rate
-        times.append([end * frame_rate, num_frames * frame_rate])
-    else:
-        times[-1][1] = num_frames * frame_rate
+    if len(times) > 0:
+        if num_frames - fire_place[-1] > START_END_THRESHOLD:
+            end = (num_frames + fire_place[-1]) * 0.5
+            times[-1][1] = end * frame_rate
+            times.append([end * frame_rate, num_frames * frame_rate])
+        else:
+            times[-1][1] = num_frames * frame_rate
     return times
 
 

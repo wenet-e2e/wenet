@@ -2,8 +2,8 @@ FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y git cmake wget build-essential python-is-python3 python3-pip google-perftools
-RUN pip install torch==2.0.1 torchaudio==2.0.2 --index-url https://download.pytorch.org/whl/cpu
-RUN pip install intel_extension_for_pytorch==2.0.100 pyyaml six intel-openmp
+RUN pip install torch==2.3.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cpu
+RUN pip install intel_extension_for_pytorch==2.3.0 pyyaml six intel-openmp
 RUN ln -s /usr/lib/x86_64-linux-gnu/libtcmalloc.so.4 /usr/lib/x86_64-linux-gnu/libtcmalloc.so
 
 RUN git clone https://github.com/wenet-e2e/wenet.git /home/wenet

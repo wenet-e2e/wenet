@@ -385,6 +385,10 @@ class StackNFramesSubsampling(BaseSubsampling):
             new_mask = ~make_pad_mask(seq_len, max_len=s // self.stride)
             x = x.view(b, s // self.stride, self.idim * self.stride)
             _, pos_emb = self.pos_enc_class(x, offset)
-            x = self.norm(x)
-            x = self.out(x)
+        x = self.norm(x)
+        x = self.out(x)
         return x, pos_emb, new_mask.unsqueeze(1)
+
+    def position_encoding(self, offset: Union[int, torch.Tensor],
+                          size: int) -> torch.Tensor:
+        return self.pos_enc_class.position_encoding(offset, size)

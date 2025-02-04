@@ -14,8 +14,9 @@
 
 import argparse
 
-from wenet.cli.paraformer_model import load_model as load_paraformer
 from wenet.cli.model import load_model
+from wenet.cli.paraformer_model import load_model as load_paraformer
+from wenet.cli.punc_model import load_model as load_punc_model
 
 
 def get_args():
@@ -38,6 +39,11 @@ def get_args():
                         type=int,
                         default='-1',
                         help='gpu id to decode, default is cpu.')
+    parser.add_argument('--device',
+                        type=str,
+                        default='cpu',
+                        choices=["cpu", "npu", "cuda"],
+                        help='accelerator to use')
     parser.add_argument('-t',
                         '--show_tokens_info',
                         action='store_true',
@@ -59,6 +65,13 @@ def get_args():
                         type=float,
                         default=6.0,
                         help='context score')
+    parser.add_argument('--punc', action='store_true', help='context score')
+
+    parser.add_argument('-pm',
+                        '--punc_model_dir',
+                        default=None,
+                        help='specify your own punc model dir')
+
     args = parser.parse_args()
     return args
 
@@ -67,14 +80,21 @@ def main():
     args = get_args()
 
     if args.paraformer:
-        model = load_paraformer(args.model_dir, args.gpu)
+        model = load_paraformer(args.model_dir, args.gpu, args.device)
     else:
         model = load_model(args.language, args.model_dir, args.gpu, args.beam,
-                           args.context_path, args.context_score)
+                           args.context_path, args.context_score, args.device)
+    punc_model = None
+    if args.punc:
+        punc_model = load_punc_model(args.punc_model_dir, args.gpu,
+                                     args.device)
     if args.align:
         result = model.align(args.audio_file, args.label)
     else:
         result = model.transcribe(args.audio_file, args.show_tokens_info)
+        if args.punc:
+            assert punc_model is not None
+            result['text_with_punc'] = punc_model(result['text'])
     print(result)
 
 

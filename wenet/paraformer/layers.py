@@ -3,18 +3,17 @@
 
 import math
 from typing import Optional, Tuple
+
 import torch
-
 import torch.utils.checkpoint as ckpt
-
 from wenet.paraformer.attention import (DummyMultiHeadSANM,
                                         MultiHeadAttentionCross,
                                         MultiHeadedAttentionSANM)
 from wenet.paraformer.embedding import ParaformerPositinoalEncoding
 from wenet.paraformer.subsampling import IdentitySubsampling
-from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.decoder import TransformerDecoder
 from wenet.transformer.decoder_layer import DecoderLayer
+from wenet.transformer.encoder import BaseEncoder
 from wenet.transformer.encoder_layer import TransformerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.utils.mask import make_non_pad_mask
@@ -190,7 +189,7 @@ class SanmEncoder(BaseEncoder):
         num_blocks: int = 6,
         dropout_rate: float = 0.1,
         positional_dropout_rate: float = 0.1,
-        attention_dropout_rate: float = 0,
+        attention_dropout_rate: float = 0.0,
         input_layer: str = "conv2d",
         pos_enc_layer_type: str = "abs_pos",
         normalize_before: bool = True,
@@ -389,8 +388,8 @@ class SanmDecoder(TransformerDecoder):
         num_blocks: int = 6,
         dropout_rate: float = 0.1,
         positional_dropout_rate: float = 0.1,
-        self_attention_dropout_rate: float = 0,
-        src_attention_dropout_rate: float = 0,
+        self_attention_dropout_rate: float = 0.0,
+        src_attention_dropout_rate: float = 0.0,
         input_layer: str = "embed",
         use_output_layer: bool = True,
         normalize_before: bool = True,

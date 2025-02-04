@@ -6,7 +6,7 @@ from wenet.text.hugging_face_tokenizer import HuggingFaceTokenizer
 try:
     import transformers  # noqa
 except ImportError:
-    os.system('pip install --no-input transformers')
+    os.system('pip install --no-input transformers==4.40.1')
     import transformers  # noqa
 
 

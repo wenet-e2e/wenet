@@ -13,7 +13,7 @@ from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
 from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
 from wenet.utils.common import (IGNORE_ID, add_blank, add_sos_eos,
-                                reverse_pad_list)
+                                reverse_pad_list, TORCH_NPU_AVAILABLE)
 
 
 class Transducer(ASRModel):
@@ -90,6 +90,7 @@ class Transducer(ASRModel):
                 normalize_length=length_normalized_loss,
             )
 
+    @torch.jit.unused
     def forward(
         self,
         batch: dict,
@@ -97,6 +98,7 @@ class Transducer(ASRModel):
     ) -> Dict[str, Optional[torch.Tensor]]:
         """Frontend + Encoder + predictor + joint + loss
         """
+        self.device = device
         speech = batch['feats'].to(device)
         speech_lengths = batch['feats_lengths'].to(device)
         text = batch['target'].to(device)
@@ -513,7 +515,10 @@ class Transducer(ASRModel):
             rnnt_text = torch.where(text == self.ignore_id, 0, text)
             lm = self.simple_lm_proj(predictor_out)
             am = self.simple_am_proj(encoder_out)
-            with torch.cuda.amp.autocast(enabled=False):
+            amp_autocast = torch.cuda.amp.autocast
+            if "npu" in self.device.__str__() and TORCH_NPU_AVAILABLE:
+                amp_autocast = torch.npu.amp.autocast
+            with amp_autocast(enabled=False):
                 simple_loss, (px_grad, py_grad) = k2.rnnt_loss_smoothed(
                     lm=lm.float(),
                     am=am.float(),
@@ -543,7 +548,7 @@ class Transducer(ASRModel):
                 lm_pruned,
                 pre_project=False,
             )
-            with torch.cuda.amp.autocast(enabled=False):
+            with amp_autocast(enabled=False):
                 pruned_loss = k2.rnnt_loss_pruned(
                     logits=logits.float(),
                     symbols=rnnt_text,
