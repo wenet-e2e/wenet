@@ -106,9 +106,9 @@ class BaseEncoder(torch.nn.Module):
 
         assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.normalize_before = normalize_before
+        self.final_norm = final_norm
         self.after_norm = WENET_NORM_CLASSES[layer_norm_type](output_size,
                                                               eps=norm_eps)
-        self.final_norm = final_norm
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
