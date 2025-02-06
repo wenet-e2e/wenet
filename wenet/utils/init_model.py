@@ -13,14 +13,22 @@
 # limitations under the License.
 
 import os
-import torch
 
+import torch
+from wenet.branchformer.encoder import BranchformerEncoder
+from wenet.ctl_model.asr_model_ctl import CTLModel
+from wenet.ctl_model.encoder import (DualConformerEncoder,
+                                     DualTransformerEncoder)
+from wenet.e_branchformer.encoder import EBranchformerEncoder
+from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.finetune.lora.utils import (inject_lora_to_model,
                                        mark_only_lora_as_trainable)
+from wenet.firered.model import FirereadModel
 from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.paraformer.paraformer import Paraformer, Predictor
+from wenet.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.ssl.init_model import WENET_SSL_MODEL_CLASS
 from wenet.transducer.joint import TransducerJoint
 from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
@@ -29,17 +37,11 @@ from wenet.transducer.transducer import Transducer
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.cmvn import GlobalCMVN
 from wenet.transformer.ctc import CTC
-from wenet.transformer.encoder import TransformerEncoder, ConformerEncoder
 from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
-from wenet.branchformer.encoder import BranchformerEncoder
-from wenet.e_branchformer.encoder import EBranchformerEncoder
-from wenet.squeezeformer.encoder import SqueezeformerEncoder
-from wenet.efficient_conformer.encoder import EfficientConformerEncoder
-from wenet.ctl_model.encoder import DualTransformerEncoder, DualConformerEncoder
-from wenet.ctl_model.asr_model_ctl import CTLModel
-from wenet.whisper.whisper import Whisper
-from wenet.utils.cmvn import load_cmvn
+from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
+from wenet.utils.cmvn import load_cmvn
+from wenet.whisper.whisper import Whisper
 
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
@@ -79,6 +81,7 @@ WENET_MODEL_CLASSES = {
     "asr_model": ASRModel,
     "ctl_model": CTLModel,
     "whisper": Whisper,
+    "firered": FirereadModel,
     "k2_model": K2Model,
     "transducer": Transducer,
     'paraformer': Paraformer,

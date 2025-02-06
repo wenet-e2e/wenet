@@ -18,21 +18,16 @@ from typing import Optional, Tuple
 
 import torch
 import torch.utils.checkpoint as ckpt
-
 from wenet.transformer.convolution import ConvolutionModule
-from wenet.transformer.encoder_layer import TransformerEncoderLayer
-from wenet.transformer.encoder_layer import ConformerEncoderLayer
-from wenet.utils.class_utils import (
-    WENET_EMB_CLASSES,
-    WENET_MLP_CLASSES,
-    WENET_NORM_CLASSES,
-    WENET_SUBSAMPLE_CLASSES,
-    WENET_ATTENTION_CLASSES,
-    WENET_ACTIVATION_CLASSES,
-)
-from wenet.utils.mask import make_pad_mask
-from wenet.utils.mask import add_optional_chunk_mask
+from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
+                                             TransformerEncoderLayer)
+from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
+                                     WENET_ATTENTION_CLASSES,
+                                     WENET_EMB_CLASSES, WENET_MLP_CLASSES,
+                                     WENET_NORM_CLASSES,
+                                     WENET_SUBSAMPLE_CLASSES)
 from wenet.utils.common import mask_to_bias
+from wenet.utils.mask import add_optional_chunk_mask, make_pad_mask
 
 
 class BaseEncoder(torch.nn.Module):
@@ -58,6 +53,7 @@ class BaseEncoder(torch.nn.Module):
         use_sdpa: bool = False,
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        final_norm: bool = True,
     ):
         """
         Args:
@@ -112,6 +108,7 @@ class BaseEncoder(torch.nn.Module):
         self.normalize_before = normalize_before
         self.after_norm = WENET_NORM_CLASSES[layer_norm_type](output_size,
                                                               eps=norm_eps)
+        self.final_norm = final_norm
         self.static_chunk_size = static_chunk_size
         self.use_dynamic_chunk = use_dynamic_chunk
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
@@ -175,7 +172,7 @@ class BaseEncoder(torch.nn.Module):
                                                   mask_pad)
         else:
             xs = self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
-        if self.normalize_before:
+        if self.normalize_before and self.final_norm:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
         # return the masks before encoder layers, and the masks will be used
@@ -290,7 +287,7 @@ class BaseEncoder(torch.nn.Module):
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
             r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
             r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
-        if self.normalize_before:
+        if self.normalize_before and self.final_norm:
             xs = self.after_norm(xs)
 
         # NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),
@@ -479,6 +476,9 @@ class ConformerEncoder(BaseEncoder):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        conv_norm_eps: float = 1e-5,
+        conv_inner_factor: int = 2,
+        final_norm: bool = True,
     ):
         """Construct ConformerEncoder
 
@@ -503,7 +503,7 @@ class ConformerEncoder(BaseEncoder):
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa, layer_norm_type, norm_eps)
+                         use_sdpa, layer_norm_type, norm_eps, final_norm)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition
@@ -530,7 +530,8 @@ class ConformerEncoder(BaseEncoder):
         )
         # convolution module definition
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  cnn_module_norm, causal, conv_bias)
+                                  cnn_module_norm, causal, conv_bias,
+                                  conv_norm_eps, conv_inner_factor)
 
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([

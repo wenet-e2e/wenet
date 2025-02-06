@@ -18,7 +18,6 @@ from typing import Tuple
 
 import torch
 from torch import nn
-
 from wenet.utils.class_utils import WENET_NORM_CLASSES
 
 
@@ -34,6 +33,7 @@ class ConvolutionModule(nn.Module):
         causal: bool = False,
         bias: bool = True,
         norm_eps: float = 1e-5,
+        conv_inner_factor: int = 2,
     ):
         """Construct an ConvolutionModule object.
         Args:
@@ -45,7 +45,7 @@ class ConvolutionModule(nn.Module):
 
         self.pointwise_conv1 = nn.Conv1d(
             channels,
-            2 * channels,
+            conv_inner_factor * channels,
             kernel_size=1,
             stride=1,
             padding=0,
@@ -64,12 +64,12 @@ class ConvolutionModule(nn.Module):
             padding = (kernel_size - 1) // 2
             self.lorder = 0
         self.depthwise_conv = nn.Conv1d(
-            channels,
-            channels,
+            conv_inner_factor * channels // 2,
+            conv_inner_factor * channels // 2,
             kernel_size,
             stride=1,
             padding=padding,
-            groups=channels,
+            groups=conv_inner_factor * channels // 2,
             bias=bias,
         )
 
@@ -83,7 +83,7 @@ class ConvolutionModule(nn.Module):
             self.norm = WENET_NORM_CLASSES[norm](channels, eps=norm_eps)
 
         self.pointwise_conv2 = nn.Conv1d(
-            channels,
+            conv_inner_factor * channels // 2,
             channels,
             kernel_size=1,
             stride=1,
