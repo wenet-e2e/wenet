@@ -18,21 +18,16 @@ from typing import Optional, Tuple
 
 import torch
 import torch.utils.checkpoint as ckpt
-
 from wenet.transformer.convolution import ConvolutionModule
-from wenet.transformer.encoder_layer import TransformerEncoderLayer
-from wenet.transformer.encoder_layer import ConformerEncoderLayer
-from wenet.utils.class_utils import (
-    WENET_EMB_CLASSES,
-    WENET_MLP_CLASSES,
-    WENET_NORM_CLASSES,
-    WENET_SUBSAMPLE_CLASSES,
-    WENET_ATTENTION_CLASSES,
-    WENET_ACTIVATION_CLASSES,
-)
-from wenet.utils.mask import make_pad_mask
-from wenet.utils.mask import add_optional_chunk_mask
+from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
+                                             TransformerEncoderLayer)
+from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
+                                     WENET_ATTENTION_CLASSES,
+                                     WENET_EMB_CLASSES, WENET_MLP_CLASSES,
+                                     WENET_NORM_CLASSES,
+                                     WENET_SUBSAMPLE_CLASSES)
 from wenet.utils.common import mask_to_bias
+from wenet.utils.mask import add_optional_chunk_mask, make_pad_mask
 
 
 class BaseEncoder(torch.nn.Module):
@@ -479,6 +474,8 @@ class ConformerEncoder(BaseEncoder):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        conv_norm_eps: float = 1e-5,
+        conv_inner_factor: int = 2,
     ):
         """Construct ConformerEncoder
 
@@ -530,7 +527,8 @@ class ConformerEncoder(BaseEncoder):
         )
         # convolution module definition
         convolution_layer_args = (output_size, cnn_module_kernel, activation,
-                                  cnn_module_norm, causal, conv_bias)
+                                  cnn_module_norm, causal, conv_bias,
+                                  conv_norm_eps, conv_inner_factor)
 
         mlp_class = WENET_MLP_CLASSES[mlp_type]
         self.encoders = torch.nn.ModuleList([
