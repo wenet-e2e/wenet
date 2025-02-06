@@ -53,6 +53,7 @@ class BaseEncoder(torch.nn.Module):
         use_sdpa: bool = False,
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
+        final_norm: bool = True,
     ):
         """
         Args:
@@ -105,6 +106,7 @@ class BaseEncoder(torch.nn.Module):
 
         assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.normalize_before = normalize_before
+        self.final_norm = final_norm
         self.after_norm = WENET_NORM_CLASSES[layer_norm_type](output_size,
                                                               eps=norm_eps)
         self.static_chunk_size = static_chunk_size
@@ -170,7 +172,7 @@ class BaseEncoder(torch.nn.Module):
                                                   mask_pad)
         else:
             xs = self.forward_layers(xs, chunk_masks, pos_emb, mask_pad)
-        if self.normalize_before:
+        if self.normalize_before and self.final_norm:
             xs = self.after_norm(xs)
         # Here we assume the mask is not changed in encoder layers, so just
         # return the masks before encoder layers, and the masks will be used
@@ -285,7 +287,7 @@ class BaseEncoder(torch.nn.Module):
             #   shape(new_cnn_cache) is (b=1, hidden-dim, cache_t2)
             r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
             r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
-        if self.normalize_before:
+        if self.normalize_before and self.final_norm:
             xs = self.after_norm(xs)
 
         # NOTE(xcsong): shape(r_att_cache) is (elayers, head, ?, d_k * 2),
@@ -476,6 +478,7 @@ class ConformerEncoder(BaseEncoder):
         n_expert_activated: int = 2,
         conv_norm_eps: float = 1e-5,
         conv_inner_factor: int = 2,
+        final_norm: bool = True,
     ):
         """Construct ConformerEncoder
 
@@ -500,7 +503,7 @@ class ConformerEncoder(BaseEncoder):
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa, layer_norm_type, norm_eps)
+                         use_sdpa, layer_norm_type, norm_eps, final_norm)
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
 
         # self-attention module definition
