@@ -37,7 +37,7 @@ def convert_to_wenet_yaml(tokenizer: BaseTokenizer, dims, wenet_yaml_path: str,
     configs['encoder'] = 'firered_conformer'
     configs['encoder_conf'] = {}
     configs['encoder_conf']['gradient_checkpointing'] = True
-    configs['encoder_conf']['input_layer'] = 'conv2d'
+    configs['encoder_conf']['input_layer'] = 'firered_conv2d4'
     configs['encoder_conf']['final_norm'] = False
     configs['encoder_conf']['output_size'] = dims['d_model']
     configs['encoder_conf']['attention_heads'] = dims['n_head']
@@ -58,6 +58,7 @@ def convert_to_wenet_yaml(tokenizer: BaseTokenizer, dims, wenet_yaml_path: str,
     configs['encoder_conf']['conv_bias'] = False
     configs['encoder_conf']['conv_inner_factor'] = 4
     configs['encoder_conf']['cnn_module_kernel'] = 33
+    configs['encoder_conf']['cnn_module_norm'] = 'layer_norm'
     configs['encoder_conf'][
         'selfattention_layer_type'] = 'firered_rel_selfattn'
 
