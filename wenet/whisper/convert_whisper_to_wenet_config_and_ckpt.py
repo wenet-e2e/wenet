@@ -84,6 +84,7 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     configs['decoder_conf']['normalize_before'] = True
     configs['decoder_conf']['src_attention'] = True
     configs['decoder_conf']['key_bias'] = False
+    configs['decoder_conf']['src_key_bias'] = False
     configs['decoder_conf']['activation_type'] = "gelu"
 
     configs['tokenizer'] = 'whisper'
