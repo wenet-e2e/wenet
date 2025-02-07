@@ -58,8 +58,6 @@ class FirereadModel(ASRModel):
 
         # fix final norm in conformer
         del self.encoder.after_norm
-        # fix output bias
-        del self.decoder.output_layer.bias
 
     @torch.jit.unused
     def forward_encoder_chunk(

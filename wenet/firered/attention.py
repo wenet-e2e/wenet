@@ -49,7 +49,7 @@ class FireRedRelPositionalEncoding(PositionalEncoding):
 
         raise NotImplementedError('firedasr not support streaming pos encding')
 
-    def forward(self, x):
+    def forward(self, x, offset=None):
         Tmax, T = self.pe.size(1), x.size(1)
         pos_emb = self.pe[:, Tmax // 2 - T + 1:Tmax // 2 + T].clone().detach()
         return self.dropout(x), self.dropout(pos_emb)
@@ -99,7 +99,7 @@ class FiredRelPositionMultiHeadedAttention(RelPositionMultiHeadedAttention):
                                  x.size()[1],
                                  x.size(3) + 1, x.size(2))
         x = x_padded[:, :, 1:].view_as(x)
-        x = x[:, :, :, :, x.size(-1) // 2 + 1]
+        x = x[:, :, :, :x.size(-1) // 2 + 1]
 
         return x
 

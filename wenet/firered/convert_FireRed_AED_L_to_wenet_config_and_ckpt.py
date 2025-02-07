@@ -92,7 +92,7 @@ def convert_to_wenet_yaml(tokenizer: BaseTokenizer, dims, wenet_yaml_path: str,
     configs['ctc_conf'] = {}
     configs['ctc_conf']['ctc_blank_id'] = 0
 
-    configs['cmvn'] = None
+    configs['cmvn'] = 'global_cmvn'
     configs['cmvn_conf'] = {}
     configs['cmvn_conf']['cmvn_file'] = json_cmvn_path
     configs['cmvn_conf']['is_json_cmvn'] = True
