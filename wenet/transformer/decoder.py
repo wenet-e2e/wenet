@@ -90,6 +90,9 @@ class TransformerDecoder(torch.nn.Module):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        src_query_bias: bool = True,
+        src_key_bias: bool = True,
+        src_value_bias: bool = True,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -123,8 +126,8 @@ class TransformerDecoder(torch.nn.Module):
                     value_bias, use_sdpa, n_kv_head, head_dim),
                 WENET_ATTENTION_CLASSES["crossattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
-                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
-                    head_dim) if src_attention else None,
+                    src_query_bias, src_key_bias, src_value_bias, use_sdpa,
+                    n_kv_head, head_dim) if src_attention else None,
                 mlp_class(attention_dim,
                           linear_units,
                           dropout_rate,
