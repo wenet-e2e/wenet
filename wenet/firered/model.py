@@ -18,7 +18,7 @@ import torch
 from wenet.transformer.asr_model import ASRModel
 from wenet.transformer.ctc import CTC
 from wenet.transformer.decoder import TransformerDecoder
-from wenet.transformer.encoder import TransformerEncoder
+from wenet.transformer.encoder import ConformerEncoder
 from wenet.utils.common import IGNORE_ID
 
 
@@ -27,7 +27,7 @@ class FirereadModel(ASRModel):
     def __init__(
         self,
         vocab_size: int,
-        encoder: TransformerEncoder,
+        encoder: ConformerEncoder,
         decoder: TransformerDecoder,
         ctc: Optional[CTC] = None,
         ctc_weight: float = 0.5,
@@ -45,6 +45,21 @@ class FirereadModel(ASRModel):
         self.sos = special_tokens["sos"]
         self.eos = special_tokens["eos"]
         self.decode_maxlen = self.decoder.embed[1].max_len
+
+        # fix subsampling
+        odim = 32
+        idim = 80
+        self.encoder.embed.conv = torch.nn.Sequential(
+            torch.nn.Conv2d(1, odim, 3, 2), torch.nn.ReLU(),
+            torch.nn.Conv2d(odim, odim, 3, 2), torch.nn.ReLU())
+        self.encoder.embed.out = torch.nn.Sequential(
+            torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2),
+                            self.encoder.output_size()))
+
+        # fix final norm in conformer
+        del self.encoder.after_norm
+        # fix output bias
+        del self.decoder.output_layer.bias
 
     @torch.jit.unused
     def forward_encoder_chunk(

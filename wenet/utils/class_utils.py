@@ -6,7 +6,8 @@ from torch.nn import BatchNorm1d, LayerNorm
 from wenet.efficient_conformer.attention import \
     GroupedRelPositionMultiHeadedAttention
 from wenet.efficient_conformer.subsampling import Conv2dSubsampling2
-from wenet.firered.attention import FireRedRelPositionalEncoding
+from wenet.firered.attention import (FiredRelPositionMultiHeadedAttention,
+                                     FireRedRelPositionalEncoding)
 from wenet.paraformer.embedding import ParaformerPositinoalEncoding
 from wenet.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
 from wenet.transformer.attention import (MultiHeadedAttention,
@@ -73,6 +74,7 @@ WENET_ATTENTION_CLASSES = {
     "crossattn": MultiHeadedCrossAttention,
     'shaw_rel_selfattn': ShawRelPositionMultiHeadedAttention,
     'rope_abs_selfattn': RopeMultiHeadedAttention,
+    'firered_rel_selfattn': FiredRelPositionMultiHeadedAttention,
 }
 
 WENET_MLP_CLASSES = {

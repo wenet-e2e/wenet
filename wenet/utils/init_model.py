@@ -23,6 +23,7 @@ from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.finetune.lora.utils import (inject_lora_to_model,
                                        mark_only_lora_as_trainable)
+from wenet.firered.encoder import FireRedConformerEncoder
 from wenet.firered.model import FirereadModel
 from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
@@ -53,6 +54,7 @@ WENET_ENCODER_CLASSES = {
     "dual_transformer": DualTransformerEncoder,
     "dual_conformer": DualConformerEncoder,
     'sanm_encoder': SanmEncoder,
+    "firered_conformer": FireRedConformerEncoder,
 }
 
 WENET_DECODER_CLASSES = {

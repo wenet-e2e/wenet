@@ -34,10 +34,10 @@ def convert_to_wenet_yaml(tokenizer: BaseTokenizer, dims, wenet_yaml_path: str,
     assert dims['odim'] == tokenizer.vocab_size(), "{} v.s. {}".format(
         dims['odim'], tokenizer.vocab_size())
 
-    configs['encoder'] = 'conformer'
+    configs['encoder'] = 'firered_conformer'
     configs['encoder_conf'] = {}
     configs['encoder_conf']['gradient_checkpointing'] = True
-    configs['encoder_conf']['input_layer'] = 'conv1d2'
+    configs['encoder_conf']['input_layer'] = 'conv2d'
     configs['encoder_conf']['final_norm'] = False
     configs['encoder_conf']['output_size'] = dims['d_model']
     configs['encoder_conf']['attention_heads'] = dims['n_head']
@@ -56,6 +56,10 @@ def convert_to_wenet_yaml(tokenizer: BaseTokenizer, dims, wenet_yaml_path: str,
     configs['encoder_conf']['query_bias'] = False
     configs['encoder_conf']['activation_type'] = "swish"
     configs['encoder_conf']['conv_bias'] = False
+    configs['encoder_conf']['conv_inner_factor'] = 4
+    configs['encoder_conf']['cnn_module_kernel'] = 33
+    configs['encoder_conf'][
+        'selfattention_layer_type'] = 'firered_rel_selfattn'
 
     configs['decoder'] = 'transformer'
     configs['decoder_conf'] = {}
@@ -72,6 +76,8 @@ def convert_to_wenet_yaml(tokenizer: BaseTokenizer, dims, wenet_yaml_path: str,
     configs['decoder_conf']['normalize_before'] = True
     configs['decoder_conf']['src_attention'] = True
     configs['decoder_conf']['activation_type'] = "gelu"
+    configs['decoder_conf']['src_key_bias'] = False
+    configs['decoder_conf']['key_bias'] = False
 
     configs['tokenizer'] = 'bpe'
     configs['tokenizer_conf'] = {}
@@ -162,7 +168,8 @@ def convert_to_wenet_state_dict(firered_state_dict, wenet_state_dict_path):
     for name in firered_state_dict.keys():
         original_name = copy.deepcopy(name)
         if 'input_preprocessor' in original_name:
-            name = name.replace("input_preprocessor", "encoder.embed")
+            name = name.replace("input_preprocessor", "embed")
+            name = name.replace('encoder.embed.out', 'encoder.embed.out.0')
 
         name = name.replace("decoder.token_embedding", "decoder.embed.0")
         name = name.replace("encoder.layer_stack", "encoder.encoders")
@@ -174,13 +181,16 @@ def convert_to_wenet_state_dict(firered_state_dict, wenet_state_dict_path):
         name = name.replace(".cross_attn.fc", ".src_attn.linear_out")
         name = name.replace(".self_attn.w_qs", ".self_attn.linear_q")
         name = name.replace(".self_attn.w_ks", ".self_attn.linear_k")
-        name = name.replace(".self.attn.w_vs", ".self_attn.linear_v")
-        name = name.replace(".self_attn.out", ".self_attn.linear_out")
+        name = name.replace(".self_attn.w_vs", ".self_attn.linear_v")
+        name = name.replace(".self_attn.fc", ".self_attn.linear_out")
         # encoder attn
         name = name.replace(".mhsa.w_qs", ".self_attn.linear_q")
         name = name.replace(".mhsa.w_ks", ".self_attn.linear_k")
         name = name.replace(".mhsa.w_vs", ".self_attn.linear_v")
         name = name.replace(".mhsa.fc", ".self_attn.linear_out")
+        name = name.replace(".mhsa.pos_bias_u", ".self_attn.pos_bias_u")
+        name = name.replace(".mhsa.pos_bias_v", ".self_attn.pos_bias_v")
+        name = name.replace(".mhsa.linear_pos", ".self_attn.linear_pos")
 
         # decoder mlp
         name = name.replace(".mlp.", ".feed_forward.")
@@ -191,17 +201,23 @@ def convert_to_wenet_state_dict(firered_state_dict, wenet_state_dict_path):
         name = name.replace(".ffn2.net.4", ".feed_forward.w_2")
 
         # decoder pre norm
-        name = name.replace(".self_attn_norm", ".norm1.")
-        name = name.replace(".cross_attn_norm", ".norm2.")
+        name = name.replace(".self_attn_norm.", ".norm1.")
+        name = name.replace(".cross_attn_norm.", ".norm2.")
         name = name.replace(".mlp_norm.", ".norm3.")
         # encoder pre norm
         name = name.replace(".ffn1.net.0.", ".norm_ff_macaron.")
-        name = name.replace(".mhsa.layer_norm_q.", ".self_attn.layer_norm_q")
-        name = name.replace(".mhsa.layer_norm_k.", ".self_attn.layer_norm_k")
-        name = name.replace(".mhsa.layer_norm_v.", ".self_attn.layer_norm_v")
+        name = name.replace(".mhsa.layer_norm_q.", ".self_attn.layer_norm_q.")
+        name = name.replace(".mhsa.layer_norm_k.", ".self_attn.layer_norm_k.")
+        name = name.replace(".mhsa.layer_norm_v.", ".self_attn.layer_norm_v.")
         name = name.replace(".conv.pre_layer_norm.", ".norm_conv.")
         name = name.replace(".ffn2.net.0", ".norm_ff")
         name = name.replace(".layer_norm.", ".norm_final.")
+        name = name.replace(".layer_norm.", ".norm_final.")
+
+        # encoder conv
+        if 'embed' not in name:
+            name = name.replace(".conv.", ".conv_module.")
+            name = name.replace(".batch_norm.", ".norm.")
 
         if "decoder" in name:
             name = name.replace("cross_attn_ln", "norm2")

@@ -13,24 +13,20 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Decoder definition."""
-from typing import Dict, Tuple, List, Optional
-
+import logging
 import os
+from typing import Dict, List, Optional, Tuple
+
 import torch
 import torch.utils.checkpoint as ckpt
-import logging
 from wenet.transformer.attention import T_CACHE
-
 from wenet.transformer.decoder_layer import DecoderLayer
-from wenet.utils.class_utils import (
-    WENET_EMB_CLASSES,
-    WENET_ATTENTION_CLASSES,
-    WENET_ACTIVATION_CLASSES,
-    WENET_MLP_CLASSES,
-    WENET_NORM_CLASSES,
-)
+from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
+                                     WENET_ATTENTION_CLASSES,
+                                     WENET_EMB_CLASSES, WENET_MLP_CLASSES,
+                                     WENET_NORM_CLASSES)
 from wenet.utils.common import mask_to_bias
-from wenet.utils.mask import (subsequent_mask, make_pad_mask)
+from wenet.utils.mask import make_pad_mask, subsequent_mask
 
 
 class TransformerDecoder(torch.nn.Module):
@@ -90,6 +86,9 @@ class TransformerDecoder(torch.nn.Module):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        src_query_bias: bool = True,
+        src_key_bias: bool = True,
+        src_value_bias: bool = True,
     ):
         super().__init__()
         attention_dim = encoder_output_size
@@ -123,8 +122,8 @@ class TransformerDecoder(torch.nn.Module):
                     value_bias, use_sdpa, n_kv_head, head_dim),
                 WENET_ATTENTION_CLASSES["crossattn"](
                     attention_heads, attention_dim, src_attention_dropout_rate,
-                    query_bias, key_bias, value_bias, use_sdpa, n_kv_head,
-                    head_dim) if src_attention else None,
+                    src_query_bias, src_key_bias, src_value_bias, use_sdpa,
+                    n_kv_head, head_dim) if src_attention else None,
                 mlp_class(attention_dim,
                           linear_units,
                           dropout_rate,

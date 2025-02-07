@@ -78,12 +78,14 @@ class FiredRelPositionMultiHeadedAttention(RelPositionMultiHeadedAttention):
         super().__init__(n_head, n_feat, dropout_rate, query_bias, key_bias,
                          value_bias, use_sdpa, n_kv_head, head_dim)
 
-    def rel_shift(self, x, zero_triu: bool = False):
+        self.layer_norm_q = torch.nn.LayerNorm(n_feat)
+        self.layer_norm_k = torch.nn.LayerNorm(n_feat)
+        self.layer_norm_v = torch.nn.LayerNorm(n_feat)
+
+    def rel_shift(self, x):
         """Compute relative positinal encoding.
         Args:
             x (torch.Tensor): Input tensor (batch, time, size).
-            zero_triu (bool): If true, return the lower triangular part of
-                the matrix.
         Returns:
             torch.Tensor: Output tensor.
         """
@@ -99,11 +101,15 @@ class FiredRelPositionMultiHeadedAttention(RelPositionMultiHeadedAttention):
         x = x_padded[:, :, 1:].view_as(x)
         x = x[:, :, :, :, x.size(-1) // 2 + 1]
 
-        if zero_triu:
-            ones = torch.ones((x.size(2), x.size(3)))
-            x = x * torch.tril(ones, x.size(3) - x.size(2))[None, None, :, :]
-
         return x
+
+    def forward_qkv(
+        self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        query = self.layer_norm_q(query)
+        key = self.layer_norm_k(key)
+        value = self.layer_norm_v(value)
+        return super().forward_qkv(query, key, value)
 
     def forward(
         self,
