@@ -24,7 +24,7 @@ from wenet.efficient_conformer.encoder import EfficientConformerEncoder
 from wenet.finetune.lora.utils import (inject_lora_to_model,
                                        mark_only_lora_as_trainable)
 from wenet.firered.encoder import FireRedConformerEncoder
-from wenet.firered.model import FirereadModel
+from wenet.firered.model import FireReadModel
 from wenet.k2.model import K2Model
 from wenet.paraformer.cif import Cif
 from wenet.paraformer.layers import SanmDecoder, SanmEncoder
@@ -83,7 +83,7 @@ WENET_MODEL_CLASSES = {
     "asr_model": ASRModel,
     "ctl_model": CTLModel,
     "whisper": Whisper,
-    "firered": FirereadModel,
+    "firered": FireReadModel,
     "k2_model": K2Model,
     "transducer": Transducer,
     'paraformer': Paraformer,

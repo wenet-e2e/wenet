@@ -22,7 +22,7 @@ from wenet.transformer.encoder import ConformerEncoder
 from wenet.utils.common import IGNORE_ID
 
 
-class FirereadModel(ASRModel):
+class FireReadModel(ASRModel):
 
     def __init__(
         self,
