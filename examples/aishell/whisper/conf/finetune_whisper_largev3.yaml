@@ -25,6 +25,7 @@ decoder_conf:
   gradient_checkpointing: true
   input_layer: embed_learnable_pe
   key_bias: false
+  src_key_bias: false
   linear_units: 5120
   normalize_before: true
   num_blocks: 32
