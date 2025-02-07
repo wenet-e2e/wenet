@@ -76,11 +76,15 @@ class ConvolutionModule(nn.Module):
         assert norm in ['batch_norm', 'layer_norm', 'rms_norm']
         if norm == "batch_norm":
             self.use_layer_norm = False
-            self.norm = WENET_NORM_CLASSES['batch_norm'](channels,
+            self.norm = WENET_NORM_CLASSES['batch_norm'](conv_inner_factor *
+                                                         channels // 2,
                                                          eps=norm_eps)
         else:
             self.use_layer_norm = True
-            self.norm = WENET_NORM_CLASSES[norm](channels, eps=norm_eps)
+            self.norm = WENET_NORM_CLASSES[norm](conv_inner_factor *
+                                                 channels // 2,
+                                                 eps=norm_eps)
+
 
         self.pointwise_conv2 = nn.Conv1d(
             conv_inner_factor * channels // 2,
