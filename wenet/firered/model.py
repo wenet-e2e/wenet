@@ -46,8 +46,6 @@ class FireReadModel(ASRModel):
         self.eos = special_tokens["eos"]
         self.decode_maxlen = self.decoder.embed[1].max_len
 
-        del self.encoder.after_norm
-
     @torch.jit.unused
     def forward_encoder_chunk(
         self,
