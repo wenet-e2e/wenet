@@ -65,6 +65,10 @@ class FireRedConv2dSubsampling4(Conv2dSubsampling4):
         x_mask = make_non_pad_mask(x_lens).unsqueeze(1)
         x = torch.nn.functional.pad(x, (0, 0, 0, self.right_context),
                                     'constant', 0.0)
-        x, pos, _ = super().forward(x, x_mask, offset)
+        x = x.unsqueeze(1)  # (b, c=1, t, f)
+        x = self.conv(x)
+        b, c, t, f = x.size()
+        x = self.out(x.transpose(1, 2).contiguous().view(b, t, c * f))
+        x, pos_emb = self.pos_enc(x, offset)
         mask = x_mask[:, :, :-2:2][:, :, :-2:2]
-        return x, pos, mask
+        return x, pos_emb, mask

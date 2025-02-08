@@ -49,7 +49,7 @@ class FireRedRelPositionalEncoding(PositionalEncoding):
 
         raise NotImplementedError('firedasr not support streaming pos encding')
 
-    def forward(self, x, offset=None):
+    def forward(self, x, offset: Optional[Union[int, torch.Tensor]] = None):
         Tmax, T = self.pe.size(1), x.size(1)
         pos_emb = self.pe[:, Tmax // 2 - T + 1:Tmax // 2 + T].clone().detach()
         return self.dropout(x), self.dropout(pos_emb)
@@ -103,14 +103,6 @@ class FiredRelPositionMultiHeadedAttention(RelPositionMultiHeadedAttention):
 
         return x
 
-    def forward_qkv(
-        self, query: torch.Tensor, key: torch.Tensor, value: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        query = self.layer_norm_q(query)
-        key = self.layer_norm_k(key)
-        value = self.layer_norm_v(value)
-        return super().forward_qkv(query, key, value)
-
     def forward(
         self,
         query: torch.Tensor,
@@ -138,6 +130,10 @@ class FiredRelPositionMultiHeadedAttention(RelPositionMultiHeadedAttention):
                 where `cache_t == chunk_size * num_decoding_left_chunks`
                 and `head * d_k == size`
         """
+        query = self.layer_norm_q(query)
+        key = self.layer_norm_k(key)
+        value = self.layer_norm_v(value)
+
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
         k, v, new_cache = self._update_kv_and_cache(k, v, cache)
