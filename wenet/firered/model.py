@@ -46,17 +46,6 @@ class FireReadModel(ASRModel):
         self.eos = special_tokens["eos"]
         self.decode_maxlen = self.decoder.embed[1].max_len
 
-        # fix subsampling
-        odim = 32
-        idim = 80
-        self.encoder.embed.conv = torch.nn.Sequential(
-            torch.nn.Conv2d(1, odim, 3, 2), torch.nn.ReLU(),
-            torch.nn.Conv2d(odim, odim, 3, 2), torch.nn.ReLU())
-        self.encoder.embed.out = torch.nn.Sequential(
-            torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2),
-                            self.encoder.output_size()))
-
-        # fix final norm in conformer
         del self.encoder.after_norm
 
     @torch.jit.unused
