@@ -85,7 +85,6 @@ class ConvolutionModule(nn.Module):
                                                  channels // 2,
                                                  eps=norm_eps)
 
-
         self.pointwise_conv2 = nn.Conv1d(
             conv_inner_factor * channels // 2,
             channels,

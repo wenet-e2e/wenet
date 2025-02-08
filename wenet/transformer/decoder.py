@@ -13,24 +13,20 @@
 # limitations under the License.
 # Modified from ESPnet(https://github.com/espnet/espnet)
 """Decoder definition."""
-from typing import Dict, Tuple, List, Optional
-
+import logging
 import os
+from typing import Dict, List, Optional, Tuple
+
 import torch
 import torch.utils.checkpoint as ckpt
-import logging
 from wenet.transformer.attention import T_CACHE
-
 from wenet.transformer.decoder_layer import DecoderLayer
-from wenet.utils.class_utils import (
-    WENET_EMB_CLASSES,
-    WENET_ATTENTION_CLASSES,
-    WENET_ACTIVATION_CLASSES,
-    WENET_MLP_CLASSES,
-    WENET_NORM_CLASSES,
-)
+from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
+                                     WENET_ATTENTION_CLASSES,
+                                     WENET_EMB_CLASSES, WENET_MLP_CLASSES,
+                                     WENET_NORM_CLASSES)
 from wenet.utils.common import mask_to_bias
-from wenet.utils.mask import (subsequent_mask, make_pad_mask)
+from wenet.utils.mask import make_pad_mask, subsequent_mask
 
 
 class TransformerDecoder(torch.nn.Module):
