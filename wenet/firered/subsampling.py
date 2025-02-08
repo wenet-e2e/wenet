@@ -36,7 +36,6 @@ class FireRedConv2dSubsampling4(Conv2dSubsampling4):
                  pos_enc_class: torch.nn.Module,
                  odim: int = 32):
         """Construct an Conv2dSubsampling4 object."""
-
         super().__init__(idim, d_model, dropout_rate, pos_enc_class)
         del self.conv, self.out
         self.conv = torch.nn.Sequential(
@@ -46,7 +45,7 @@ class FireRedConv2dSubsampling4(Conv2dSubsampling4):
             torch.nn.ReLU(),
         )
         self.out = torch.nn.Sequential(
-            torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2), odim))
+            torch.nn.Linear(odim * (((idim - 1) // 2 - 1) // 2), d_model))
         self.pos_enc = pos_enc_class
         # The right context for every conv layer is computed by:
         # (kernel_size - 1) * frame_rate_of_this_layer
