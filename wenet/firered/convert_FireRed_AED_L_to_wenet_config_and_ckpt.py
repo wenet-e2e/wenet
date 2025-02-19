@@ -167,6 +167,8 @@ def convert_to_wenet_state_dict(firered_state_dict, wenet_state_dict_path):
         "===================== start CKPT Conversion ========================="
     )
     for name in firered_state_dict.keys():
+        if 'llm.base_model' in name:
+            continue
         original_name = copy.deepcopy(name)
         if 'input_preprocessor' in original_name:
             name = name.replace("input_preprocessor", "embed")
