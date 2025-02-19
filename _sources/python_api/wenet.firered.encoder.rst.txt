@@ -1,0 +1,7 @@
+wenet.firered.encoder module
+============================
+
+.. automodule:: wenet.firered.encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

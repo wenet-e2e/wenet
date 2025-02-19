@@ -1,0 +1,7 @@
+wenet.firered.convert\_FireRed\_AED\_L\_to\_wenet\_config\_and\_ckpt module
+===========================================================================
+
+.. automodule:: wenet.firered.convert_FireRed_AED_L_to_wenet_config_and_ckpt
+   :members:
+   :undoc-members:
+   :show-inheritance:

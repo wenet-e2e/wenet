@@ -20,6 +20,7 @@ Subpackages
    wenet.e_branchformer
    wenet.efficient_conformer
    wenet.finetune
+   wenet.firered
    wenet.k2
    wenet.paraformer
    wenet.squeezeformer
