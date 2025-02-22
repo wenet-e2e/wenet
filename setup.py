@@ -9,6 +9,8 @@ requirements = [
     "torchaudio>=0.13.0",
     "openai-whisper",
     "librosa",
+    "pyyaml",
+    "jieba"
 ]
 
 extra_require = {
