@@ -295,7 +295,7 @@ class MultiHeadedAttention(nn.Module):
                 k,
                 v,
                 attn_mask=mask.unsqueeze(1),
-                dropout_p=self.dropout_rate,
+                dropout_p=self.dropout_rate if self.training else 0.0,
                 scale=1 / math.sqrt(self.d_k),
             )
             output = (output.transpose(1, 2).contiguous().view(
@@ -429,7 +429,7 @@ class RelPositionMultiHeadedAttention(MultiHeadedAttention):
                 k,
                 v,
                 attn_mask=mask,
-                dropout_p=self.dropout_rate,
+                dropout_p=self.dropout_rate if self.training else 0.0,
                 scale=1 / math.sqrt(self.d_k),
             )
             output = (output.transpose(1, 2).contiguous().view(
@@ -505,7 +505,7 @@ class MultiHeadedCrossAttention(MultiHeadedAttention):
                 k,
                 v,
                 attn_mask=mask.unsqueeze(1),
-                dropout_p=self.dropout_rate,
+                dropout_p=self.dropout_rate if self.training else 0.0,
                 scale=1 / math.sqrt(self.d_k),
             )
             output = output.transpose(-2, -3).contiguous()
@@ -587,7 +587,7 @@ class ShawRelPositionMultiHeadedAttention(MultiHeadedAttention):
                 k,
                 v,
                 attn_mask=mask,
-                dropout_p=self.dropout_rate,
+                dropout_p=self.dropout_rate if self.training else 0.0,
                 scale=1 / math.sqrt(self.d_k),
             )
             output = (output.transpose(1, 2).contiguous().view(
@@ -677,7 +677,7 @@ class RopeMultiHeadedAttention(MultiHeadedAttention):
                 k,
                 v,
                 attn_mask=mask.unsqueeze(1),
-                dropout_p=self.dropout_rate,
+                dropout_p=self.dropout_rate if self.training else 0.0,
                 scale=1 / math.sqrt(self.d_k),
             )
             output = (output.transpose(1, 2).contiguous().view(

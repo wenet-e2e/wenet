@@ -173,7 +173,7 @@ class FiredRelPositionMultiHeadedAttention(RelPositionMultiHeadedAttention):
                 k,
                 v,
                 attn_mask=mask,
-                dropout_p=self.dropout_rate,
+                dropout_p=self.dropout_rate if self.training else 0.0,
                 scale=1 / math.sqrt(self.d_k),
             )
             output = (output.transpose(1, 2).contiguous().view(
