@@ -40,3 +40,22 @@ for i in range(0, len(wav), interval):
     chunk_wav = wav[i: min(i + interval, len(wav))]
     ans = decoder.decode(chunk_wav, last)
     print(ans)
+
+# CTC WFST beam search demo
+print('-----CTC WFST beam search demo-----')
+import numpy as np
+
+# Example: Create log probabilities for 3 frames, each with vocab_size=5
+logp = np.array([
+    # Frame 1: High prob for label 1
+    [-5.0, -0.1, -5.0, -5.0, -5.0],
+    # Frame 2: High prob for label 2
+    [-5.0, -5.0, -0.1, -5.0, -5.0],
+    # Frame 3: High prob for label 3
+    [-5.0, -5.0, -5.0, -0.1, -5.0],
+], dtype=np.float32)
+
+# Perform CTC WFST beam search
+ans = decoder.ctc_search(logp)
+print('CTC search result:')
+print(ans)

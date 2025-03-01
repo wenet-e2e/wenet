@@ -107,6 +107,15 @@ void wenet_set_continuous_decoding(void* decoder, int flag);
  */
 void wenet_set_chunk_size(void* decoder, int chunk_size);
 
+/** Perform CTC WFST beam search on logp array
+ * @param decoder: the decoder object
+ * @param logp: pointer to logp array data
+ * @param rows: number of frames (rows) in logp array
+ * @param cols: number of labels (columns) in logp array
+ * @returns json string containing search results
+ */
+const char* wenet_ctc_search(void* decoder, const float* logp, int rows, int cols);
+
 #ifdef __cplusplus
 }
 #endif

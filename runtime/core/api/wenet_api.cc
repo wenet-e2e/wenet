@@ -280,3 +280,24 @@ void wenet_set_chunk_size(void* decoder, int chunk_size) {
   Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
   recognizer->set_chunk_size(chunk_size);
 }
+
+const char* wenet_ctc_search(void* decoder, const float* logp, int rows, int cols) {
+  Recognizer* recognizer = reinterpret_cast<Recognizer*>(decoder);
+  
+  // Convert the flat array into vector of vectors
+  std::vector<std::vector<float>> logp_vec;
+  logp_vec.reserve(rows);
+  for (int i = 0; i < rows; ++i) {
+    std::vector<float> row(logp + i * cols, logp + (i + 1) * cols);
+    logp_vec.push_back(std::move(row));
+  }
+  
+  // Perform search
+  if (recognizer->decoder_ == nullptr) {
+    recognizer->InitDecoder();
+  }
+  recognizer->decoder_->ctc_wfst_beam_search_->Search(logp_vec);
+  
+  // Get results and format as JSON
+  return recognizer->UpdateResult(true).c_str();
+}
