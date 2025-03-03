@@ -425,8 +425,7 @@ class BaseEncoder(torch.nn.Module):
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            chunk_lens = masks_TF[:,:,cur:end]
-          
+            chunk_lens = masks_TF[:, :, cur:end]
             if chunk_xs.size(0) == 1:
                 (y, att_cache,
                  cnn_cache) = self.forward_chunk(chunk_xs, offset,
