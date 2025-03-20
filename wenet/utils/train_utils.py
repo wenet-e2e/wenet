@@ -680,7 +680,7 @@ def batch_forward(model, batch, scaler, info_dict, device):
     # autocast context
     # The more details about amp can be found in
     # https://pytorch.org/docs/stable/notes/amp_examples.html
-    amp_autocast = torch.cuda.amp.autocast
+    amp_autocast = torch.amp.autocast
     if "npu" in device.__str__() and TORCH_NPU_AVAILABLE:
         amp_autocast = torch.npu.amp.autocast
     autocast = {
