@@ -1,7 +1,10 @@
+<div align="center">
+
 # WeNet
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-brightgreen.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python-Version](https://img.shields.io/badge/Python-3.7%7C3.8-brightgreen)](https://github.com/wenet-e2e/wenet)
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/xingchensong/wenet?utm_source=oss&utm_medium=github&utm_campaign=xingchensong%2Fwenet&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 [**Roadmap**](https://github.com/wenet-e2e/wenet/issues/1683)
 | [**Docs**](https://wenet-e2e.github.io/wenet)
@@ -12,6 +15,8 @@
 | [**Ask WeNet Guru**](https://gurubase.io/g/wenet)
 
 **We** share **Net** together.
+
+</div>
 
 ## Highlights
 
