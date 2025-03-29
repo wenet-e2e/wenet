@@ -39,7 +39,7 @@ class CharTokenizer(BaseTokenizer):
         line = line.strip()
         if self.non_lang_syms_pattern is not None:
             parts = self.non_lang_syms_pattern.split(line.upper())
-            parts = [w for w in parts if len(w.strip()) > 0]
+            parts = [w.strip() for w in parts if len(w.strip()) > 0]
         else:
             parts = [line]
 
