@@ -21,6 +21,7 @@ from wenet.ctl_model.encoder import (DualConformerEncoder,
                                      DualTransformerEncoder)
 from wenet.e_branchformer.encoder import EBranchformerEncoder
 from wenet.efficient_conformer.encoder import EfficientConformerEncoder
+from wenet.chunkformer.encoder import ChunkFormerEncoder
 from wenet.finetune.lora.utils import (inject_lora_to_model,
                                        mark_only_lora_as_trainable)
 from wenet.firered.encoder import FireRedConformerEncoder
@@ -45,6 +46,7 @@ from wenet.utils.cmvn import load_cmvn
 from wenet.whisper.whisper import Whisper
 
 WENET_ENCODER_CLASSES = {
+    "chunkformer": ChunkFormerEncoder,
     "transformer": TransformerEncoder,
     "conformer": ConformerEncoder,
     "squeezeformer": SqueezeformerEncoder,
