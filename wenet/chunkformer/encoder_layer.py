@@ -118,7 +118,9 @@ class ChunkFormerEncoderLayer(nn.Module):
             if self.normalize_before:
                 x = self.norm_conv(x)
 
-            x, new_cnn_cache = self.conv_module(x, mask_pad, cnn_cache, decoding_chunk_size=decoding_chunk_size)
+            x, new_cnn_cache = self.conv_module(
+                x, mask_pad, cnn_cache, 
+                decoding_chunk_size=decoding_chunk_size)
             x = residual + self.dropout(x)
 
             if not self.normalize_before:
@@ -189,7 +191,10 @@ class ChunkFormerEncoderLayer(nn.Module):
             x = self.norm_mha(x)
 
         x_att, new_att_cache = self.self_attn.forward_parallel_chunk(
-            x, x, x, mask, pos_emb, att_cache, right_context_size=right_context_size, left_context_size=left_context_size, truncated_context_size=truncated_context_size)
+            x, x, x, mask, pos_emb, att_cache, 
+            right_context_size=right_context_size, 
+            left_context_size=left_context_size, 
+            truncated_context_size=truncated_context_size)
 
         x = residual + self.dropout(x_att)
         if not self.normalize_before:
@@ -203,7 +208,10 @@ class ChunkFormerEncoderLayer(nn.Module):
             if self.normalize_before:
                 x = self.norm_conv(x)
 
-            x, new_cnn_cache = self.conv_module.forward_parallel_chunk(x, mask_pad, cnn_cache, truncated_context_size=truncated_context_size)
+            x, new_cnn_cache = self.conv_module.forward_parallel_chunk(
+                x, mask_pad, 
+                cnn_cache, 
+                truncated_context_size=truncated_context_size)
 
             x = residual + self.dropout(x)
 

@@ -19,8 +19,6 @@ from typing import Tuple
 
 import torch
 from torch import nn
-from wenet.utils.class_utils import WENET_NORM_CLASSES
-
 
 class ChunkConvolutionModule(nn.Module):
     """ConvolutionModule in ChunkFormer model."""
@@ -58,11 +56,13 @@ class ChunkConvolutionModule(nn.Module):
             padding = 0
             self.lorder = kernel_size - 1
         elif dynamic_conv:
+            # kernel_size should be an odd number for none causal convolution
             assert (kernel_size - 1) % 2 == 0
             padding = 0
-            self.lorder = (kernel_size - 1)//2
+            self.lorder = (kernel_size - 1) // 2
         else:
             # kernel_size should be an odd number for none causal convolution
+            assert (kernel_size - 1) % 2 == 0
             padding = (kernel_size - 1) // 2
             self.lorder = 0
         self.depthwise_conv = nn.Conv1d(
@@ -92,7 +92,7 @@ class ChunkConvolutionModule(nn.Module):
             bias=bias,
         )
         self.activation = activation
-        
+
     def forward(
         self,
         x: torch.Tensor,
@@ -145,13 +145,17 @@ class ChunkConvolutionModule(nn.Module):
             size = self.lorder + decoding_chunk_size
             step = decoding_chunk_size
 
-            n_frames_pad = (step - ((x.size(2) - size) %  step)) % step
-            x = torch.nn.functional.pad(x, (0, n_frames_pad)) # (batch, 2*channel, dim + n_frames_pad)
+            n_frames_pad = (step - ((x.size(2) - size) % step)) % step
+            # (batch, 2*channel, dim + n_frames_pad)
+            x = torch.nn.functional.pad(x, (0, n_frames_pad))
 
             n_chunks = ((x.size(2) - size) // step) + 1
-            x = x.unfold(-1, size=size, step=step) # [B, C, n_chunks, size]
-            x = x.transpose(1, 2) # [B, n_chunks, C, size]
-            x = x.reshape(-1, x.size(2), x.size(3)) # [B * n_chunks, C, size]
+            # [B, C, n_chunks, size]
+            x = x.unfold(-1, size=size, step=step)
+            # [B, n_chunks, C, size]
+            x = x.transpose(1, 2)
+            # [B * n_chunks, C, size]
+            x = x.reshape(-1, x.size(2), x.size(3))
 
             # pad right for dynamic conv
             x = nn.functional.pad(x, (0, self.lorder), 'constant', 0.0)
@@ -161,11 +165,14 @@ class ChunkConvolutionModule(nn.Module):
         x = self.depthwise_conv(x)
 
         if self.dynamic_conv:
-            # x size: [B * n_chunk, C, decoding_chunk_size]
-            x = x.reshape(-1, n_chunks, x.size(1), x.size(2)) # [B, n_chunk, C, decoding_chunk_size]
-            x = x.transpose(1, 2) # [B, C, n_chunks, decoding_chunk_size]
-            x = x.reshape(x.size(0), x.size(1), -1) # [B, C, n_chunks * decoding_chunk_size]
-            x = x[..., :x.size(2) - n_frames_pad] # (batch, channel, dim)
+            # [B, n_chunk, C, decoding_chunk_size]
+            x = x.reshape(-1, n_chunks, x.size(1), x.size(2))
+            # [B, C, n_chunks, decoding_chunk_size]
+            x = x.transpose(1, 2)
+            # [B, C, n_chunks * decoding_chunk_size]
+            x = x.reshape(x.size(0), x.size(1), -1)
+            # remove padding
+            x = x[..., :x.size(2) - n_frames_pad]
 
         if self.use_layer_norm:
             x = x.transpose(1, 2)
@@ -173,7 +180,7 @@ class ChunkConvolutionModule(nn.Module):
         if self.use_layer_norm:
             x = x.transpose(1, 2)
         x = self.pointwise_conv2(x)
-        
+
         # mask batch padding
         if mask_pad.size(2) > 0:  # time > 0
             x.masked_fill_(~mask_pad.to(torch.bool), 0.0)
@@ -202,7 +209,7 @@ class ChunkConvolutionModule(nn.Module):
         """
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)  # (#batch, channels, time)
-        lorder = self.kernel_size//2
+        lorder = self.kernel_size // 2
         chunk_size = x.shape[-1]
         cache_t = cache.size(-1)
         if cache_t == 0:
@@ -211,19 +218,21 @@ class ChunkConvolutionModule(nn.Module):
         x = self.pointwise_conv1(x)  # (batch, 2*channel, dim)
         x = nn.functional.glu(x, dim=1)  # (batch, channel, dim)
 
-        #----------Overlapping Chunk Transformation-----------------------------------
-        x = x.transpose(0, 1).reshape( self.channels, -1)  # [C, n_chunk * T]
+        # ----------Overlapping Chunk Transformation-----------------------------------
+        x = x.transpose(0, 1).reshape(self.channels, -1)  # [C, n_chunk * T]
         x = torch.cat([cache, x], dim=-1)
 
-        # streaming long-form transcription is disabled if input cache is empty, only support long-form transcription and masked batch
+        # Streaming long-form transcription is disabled if input cache is empty
         if cache_t > 0:
-            new_cache = x[:, :truncated_context_size + cache.size(-1)][:, -cache.size(-1):]
+            new_cache = x[:, :truncated_context_size + cache.size(-1)]
+            new_cache = new_cache[:, -cache.size(-1):]
         else:
             new_cache = torch.zeros((0, 0))
 
         x = nn.functional.pad(x, (0, lorder), 'constant', 0.0)
-        x = x.unfold(-1, chunk_size + 2 * lorder, chunk_size).transpose(0, 1) #[n_chunk +1, C, chunk_size + 2 * lorder]
-        #-----------------------------------------------------------------------------
+        x = x.unfold(-1, chunk_size + 2 * lorder, chunk_size).transpose(0, 1)
+        # [n_chunk +1, C, chunk_size + 2 * lorder]
+        # -----------------------------------------------------------------------------
 
         if mask_pad.size(2) > 0:  # time > 0
             x = torch.where(mask_pad, x, 0)

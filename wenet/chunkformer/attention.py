@@ -1,7 +1,7 @@
 """Multi-Head Attention layer definition."""
 
 import math
-from typing import Tuple, Union
+from typing import Tuple
 
 import torch
 from torch import nn
@@ -107,7 +107,6 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
             #   non-trivial to calculate `next_cache_start` here.
             new_cache = torch.cat((k, v), dim=-1)
         else:
-            # streaming long-form transcription is disabled if input cache is empty, only support long-form transcription and masked batch
             new_cache = cache
 
         n_batch_pos = pos_emb.size(0)
@@ -137,15 +136,18 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
 
         return self.forward_attention(v, scores, mask), new_cache
 
-    def forward_parallel_chunk(self, query: torch.Tensor,
-                key: torch.Tensor, value: torch.Tensor,
-                mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-                pos_emb: torch.Tensor = torch.empty(0),
-                cache: torch.Tensor = torch.zeros((0, 0, 0)),
-                right_context_size: int = 0,
-                left_context_size: int = 0,
-                truncated_context_size: int = 0
-                ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward_parallel_chunk(
+        self,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        pos_emb: torch.Tensor = torch.empty(0),
+        cache: torch.Tensor = torch.zeros((0, 0, 0)),
+        right_context_size: int = 0,
+        left_context_size: int = 0,
+        truncated_context_size: int = 0
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
             query (torch.Tensor): Query tensor (#batch, time1, size).
@@ -169,32 +171,39 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
         cache_t = cache.size(0)
         if cache_t == 0:
-            cache = torch.zeros((left_context_size, self.h, self.d_k * 2), device=q.device, dtype=q.dtype)
+            cache = torch.zeros(
+                (left_context_size, self.h, self.d_k * 2), 
+                device=q.device, dtype=q.dtype
+            )
+        # (B, head, time1, d_k * 2),
+        kv = torch.cat([k, v], dim=-1)
+        # [n_chunk * chunk_size, head, F]
+        kv = kv.transpose(1, 2).reshape(-1, self.h, self.d_k * 2)
 
-        kv = torch.cat([k, v], dim=-1) # (B, head, time1, d_k * 2),
-        kv = kv.transpose(1, 2).reshape(-1, self.h, self.d_k * 2) # [n_chunk * chunk_size, head, F]
 
-
-        #----------Overlapping Chunk Transformation-----------------------------------
+        # ----------Overlapping Chunk Transformation-----------------------------------
         kv = torch.cat([cache, kv], dim=0)
 
         if cache_t > 0:
             new_cache = kv[:truncated_context_size + cache.size(0)][-cache.size(0):]
         else:
+            # Streaming long-form transcription is disabled if input cache is empty,
             new_cache = torch.zeros((0, 0, 0), device=q.device, dtype=q.dtype)
         kv = torch.nn.functional.pad(kv, (0, 0, 0, 0, 0, right_context_size))
-        kv = kv.unfold(0, left_context_size + q.shape[1] + right_context_size, q.shape[1])
-        #-----------------------------------------------------------------------------
+        kv = kv.unfold(
+            0, 
+            left_context_size + q.shape[1] + right_context_size, 
+            q.shape[1]
+        )
+        # -----------------------------------------------------------------------------
 
-
-        kv = kv.transpose(2, 3) #[n_chunk + 1, head, F, left_context_size]
+        # [n_chunk + 1, head, F, left_context_size]
+        kv = kv.transpose(2, 3)
         k, v = torch.split(
             kv, kv.size(-1) // 2, dim=-1)
-        
+
         # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
         #   non-trivial to calculate `next_cache_start` here.
-
-
         n_batch_pos = pos_emb.size(0)
         p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
         p = p.transpose(1, 2)  # (batch, head, time1, d_k)
@@ -216,14 +225,10 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         # (batch, head, time1, time2)
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
 
-        # Remove rel_shift since it is useless in speech recognition,
-        # and it requires special attention for streaming.
-
+        # Add relative shift with right context inclusion,it can stream
         matrix_bd = self.rel_shift(matrix_bd, left_context_size, right_context_size)
 
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k)  # (batch, head, time1, time2)
 
-
         return self.forward_attention(v, scores, mask), new_cache
-

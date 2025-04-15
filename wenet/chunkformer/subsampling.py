@@ -1,19 +1,17 @@
 """Subsampling layer definition."""
 
-from typing import Tuple, Union
+from typing import Union
 
 import torch
 import math
-from wenet.utils.mask import add_optional_chunk_mask, make_pad_mask
+from wenet.utils.mask import make_pad_mask
 
 class DepthwiseConvSubsampling(torch.nn.Module):
-    """Convolutional subsampling which supports VGGNet and striding approach introduced in:
-    VGGNet Subsampling: Transformer-transducer: end-to-end speech recognition with self-attention (https://arxiv.org/pdf/1910.12977.pdf)
-    Striding Subsampling: "Speech-Transformer: A No-Recurrence Sequence-to-Sequence Model for Speech Recognition" by Linhao Dong et al. (https://ieeexplore.ieee.org/document/8462506)
+    """
     Args:
-        subsampling (str): The subsampling technique from {"vggnet", "striding", "dw-striding"}
+        subsampling (str): The subsampling technique
         subsampling_rate (int): The subsampling factor which should be a power of 2
-        subsampling_conv_chunking_factor (int): Input chunking factor which can be -1 (no chunking) 
+        subsampling_conv_chunking_factor (int): Input chunking factor
         1 (auto) or a power of 2. Default is 1
         feat_in (int): size of the input features
         feat_out (int): size of the output features
@@ -50,7 +48,8 @@ class DepthwiseConvSubsampling(torch.nn.Module):
             and subsampling_conv_chunking_factor != 1
             and subsampling_conv_chunking_factor % 2 != 0
         ):
-            raise ValueError("subsampling_conv_chunking_factor should be -1, 1, or a power of 2")
+            raise ValueError("""subsampling_conv_chunking_factor
+                                "should be -1, 1, or a power of 2""")
         self.subsampling_conv_chunking_factor = subsampling_conv_chunking_factor
 
         in_channels = 1
@@ -119,7 +118,11 @@ class DepthwiseConvSubsampling(torch.nn.Module):
     def get_streaming_cache_size(self):
         return [0, self.subsampling_rate + 1]
 
-    def forward(self, x, mask, offset: Union[int, torch.Tensor] = 0, right_context_size: int = 0):
+    def forward(self, 
+                x, 
+                mask, 
+                offset: Union[int, torch.Tensor] = 0, 
+                right_context_size: int = 0):
         lengths = mask.sum(dim=-1).squeeze(-1)
         lengths = self.calc_length(
             lengths,
@@ -146,7 +149,7 @@ class DepthwiseConvSubsampling(torch.nn.Module):
             else:
                 # if subsampling_conv_chunking_factor > 1 we always split
                 need_to_split = True
-                
+
             # need_to_split = False
             if need_to_split:
                 x, success = self.conv_split_by_batch(x)
@@ -169,7 +172,9 @@ class DepthwiseConvSubsampling(torch.nn.Module):
         # Transpose to Channel Last mode
         else:
             x = x.transpose(1, 2)
-        x, pos_emb = self.pos_enc(x, offset=offset, right_context_size=right_context_size)
+        x, pos_emb = self.pos_enc(
+            x, offset=offset, 
+            right_context_size=right_context_size)
         mask = ~make_pad_mask(lengths, x.size(1)).unsqueeze(1)
         return x, pos_emb, mask
 
@@ -203,21 +208,19 @@ class DepthwiseConvSubsampling(torch.nn.Module):
 
         if self.subsampling_conv_chunking_factor > 1:
             cf = self.subsampling_conv_chunking_factor
-            #logging.debug(f'using manually set chunking factor: {cf}')
         else:
             # avoiding a bug / feature limiting indexing of tensors to 2**31
             # see https://github.com/pytorch/pytorch/issues/80020
             x_ceil = 2 ** 31 / self._conv_channels * self._stride * self._stride
             p = math.ceil(math.log(torch.numel(x) / x_ceil, 2))
             cf = 2 ** p
-            #logging.debug(f'using auto set chunking factor: {cf}')
 
         new_batch_size = b // cf
         if new_batch_size == 0:  # input is too big
             return x, False
 
-        #logging.debug(f'conv subsampling: using split batch size {new_batch_size}')
-        return torch.cat([self.conv(chunk) for chunk in torch.split(x, new_batch_size, 0)]), True
+        return torch.cat([self.conv(chunk) 
+                          for chunk in torch.split(x, new_batch_size, 0)]), True
 
     def conv_split_by_channel(self, x):
         """ For dw convs, tries to split input by time, run conv and concat results """
@@ -229,29 +232,25 @@ class DepthwiseConvSubsampling(torch.nn.Module):
 
             if self.subsampling_conv_chunking_factor > 1:
                 cf = self.subsampling_conv_chunking_factor
-                #logging.debug(f'using manually set chunking factor: {cf}')
             else:
                 # avoiding a bug / feature limiting indexing of tensors to 2**31
                 # see https://github.com/pytorch/pytorch/issues/80020
                 p = math.ceil(math.log(torch.numel(x) / 2 ** 31, 2))
                 cf = 2 ** p
-                #logging.debug(f'using auto set chunking factor: {cf}')
 
             new_c = int(c // cf)
             if new_c == 0:
-                #logging.warning(f'chunking factor {cf} is too high; splitting down to one channel.')
                 new_c = 1
 
             new_t = int(t // cf)
             if new_t == 0:
-                #logging.warning(f'chunking factor {cf} is too high; splitting down to one timestep.')
                 new_t = 1
 
-            #logging.debug(f'conv dw subsampling: using split C size {new_c} and split T size {new_t}')
-            x = self.channel_chunked_conv(self.conv[i * 3 + 2], new_c, x)  # conv2D, depthwise
+            x = self.channel_chunked_conv(self.conv[i * 3 + 2], new_c, x)
 
             # splitting pointwise convs by time
-            x = torch.cat([self.conv[i * 3 + 3](chunk) for chunk in torch.split(x, new_t, 2)], 2)  # conv2D, pointwise
+            x = torch.cat([self.conv[i * 3 + 3](chunk) 
+                           for chunk in torch.split(x, new_t, 2)], 2)
             x = self.conv[i * 3 + 4](x)  # activation
         return x
 
@@ -275,18 +274,11 @@ class DepthwiseConvSubsampling(torch.nn.Module):
 
         return torch.cat(out_chunks, 1)
 
-    def change_subsampling_conv_chunking_factor(self, subsampling_conv_chunking_factor: int):
-        if (
-            subsampling_conv_chunking_factor != -1
-            and subsampling_conv_chunking_factor != 1
-            and subsampling_conv_chunking_factor % 2 != 0
-        ):
-            raise ValueError("subsampling_conv_chunking_factor should be -1, 1, or a power of 2")
-        self.subsampling_conv_chunking_factor = subsampling_conv_chunking_factor
-
-
     def calc_length(self, lengths):
-        """ Calculates the output length of a Tensor passed through a convolution or max pooling layer"""
+        """ 
+        Calculates the output length of a Tensor 
+        passed through a convolution or max pooling layer
+        """
         all_paddings = self._left_padding + self._right_padding
         kernel_size = self._kernel_size
         stride = self._stride

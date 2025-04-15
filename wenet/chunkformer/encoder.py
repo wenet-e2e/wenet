@@ -15,10 +15,9 @@
 # Modified from ESPnet(https://github.com/espnet/espnet)
 
 """Encoder definition."""
-from typing import Tuple, Optional
+from typing import Tuple
 
 import torch
-import math
 
 
 from wenet.chunkformer.attention import ChunkAttentionWithRelativeRightContext
@@ -28,12 +27,9 @@ from wenet.chunkformer.encoder_layer import ChunkFormerEncoderLayer
 from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
 from wenet.chunkformer.subsampling import DepthwiseConvSubsampling
 from wenet.utils.mask import make_pad_mask
-from wenet.transformer.encoder import WENET_ACTIVATION_CLASSES, BaseEncoder
+from wenet.transformer.encoder import BaseEncoder
 from wenet.utils.class_utils import (WENET_ACTIVATION_CLASSES,
-                                     WENET_ATTENTION_CLASSES,
-                                     WENET_EMB_CLASSES, WENET_MLP_CLASSES,
-                                     WENET_NORM_CLASSES,
-                                     WENET_SUBSAMPLE_CLASSES)
+                                     WENET_NORM_CLASSES)
 class ChunkFormerEncoder(BaseEncoder):
     """ChunkFormer encoder module."""
     def __init__(
@@ -86,13 +82,11 @@ class ChunkFormerEncoder(BaseEncoder):
             causal (bool): whether to use causal convolution or not.
         """
         torch.nn.Module.__init__(self)        
-        assert  selfattention_layer_type == "chunk_rel_seflattn", f"ChunkFormer requires chunk_rel_seflattn, but {pos_enc_layer_type} is given"
-        assert  pos_enc_layer_type == "chunk_rel_pos", f"ChunkFormer requires chunk_rel_pos, but {pos_enc_layer_type} is given"
-        assert input_layer == "dw_striding", f"ChunkFormer requires input_layer, but {input_layer} is given"
-
+        assert selfattention_layer_type == "chunk_rel_seflattn"
+        assert pos_enc_layer_type == "chunk_rel_pos"
+        assert input_layer == "dw_striding"
 
         self._output_size = output_size
-
         self.global_cmvn = global_cmvn
 
         assert layer_norm_type in ['layer_norm', 'rms_norm']
@@ -105,7 +99,7 @@ class ChunkFormerEncoder(BaseEncoder):
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
         self.gradient_checkpointing = gradient_checkpointing
         self.use_sdpa = use_sdpa
-        
+
         self._output_size = output_size
         self.global_cmvn = global_cmvn
         # NOTE(Mddct): head_dim == output_size // attention_heads for most of
@@ -122,22 +116,21 @@ class ChunkFormerEncoder(BaseEncoder):
         self.use_dynamic_left_chunk = use_dynamic_left_chunk
         self.gradient_checkpointing = gradient_checkpointing
 
-
-
         self.cnn_module_kernel = cnn_module_kernel
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
         self.num_blocks = num_blocks
         self.dynamic_conv = dynamic_conv
         self.input_size = input_size
         self.attention_heads = attention_heads
-            
+
         self.embed = DepthwiseConvSubsampling(
             subsampling=input_layer,
             subsampling_rate=8,
             feat_in=input_size,
             feat_out=output_size,
             conv_channels=output_size,
-            pos_enc_class=RelPositionalEncodingWithRightContext(output_size, positional_dropout_rate),
+            pos_enc_class=RelPositionalEncodingWithRightContext(
+                output_size, positional_dropout_rate),
             subsampling_conv_chunking_factor=1,
             activation=torch.nn.ReLU(),
         )
@@ -205,7 +198,8 @@ class ChunkFormerEncoder(BaseEncoder):
                     xs_origin_lens=xs_lens,
                     chunk_size=decoding_chunk_size,
                     left_context_size=num_decoding_left_chunks,
-                    right_context_size=num_decoding_left_chunks, # we assume left and right context are the same
+                    # we assume left and right context are the same
+                    right_context_size=num_decoding_left_chunks
                 )
             else:
                 # Otherwise, use the standard forward pass
@@ -226,9 +220,9 @@ class ChunkFormerEncoder(BaseEncoder):
         right_context_size: int = -1,
         att_cache: torch.Tensor = torch.zeros((0, 0, 0)),
         cnn_cache: torch.Tensor = torch.zeros((0, 0)),
-        truncated_context_size:int = 0,
+        truncated_context_size: int = 0,
         offset: torch.Tensor = torch.zeros(0),
-        ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Embed positions in tensor.
 
         Args:
@@ -249,11 +243,14 @@ class ChunkFormerEncoder(BaseEncoder):
                 (B, 1, T' ~= T/subsample_rate)
         """
         if offset.shape[0] == 0:
-            offset = torch.zeros(len(xs), dtype=torch.long, device=xs_origin_lens.device)
-        
-        # --------------------------Chunk Batching-------------------------------------------
+            offset = torch.zeros(
+                len(xs), dtype=torch.long, 
+                device=xs_origin_lens.device
+            )
+
+        # --------------------------Masked Batching----------------------------------
         subsampling = self.embed.subsampling_rate
-        context = self.embed.right_context + 1 # Add current frame
+        context = self.embed.right_context + 1  # Add current frame
         size = (chunk_size - 1) * subsampling + context
         step = subsampling * chunk_size
         device = xs_origin_lens.device
@@ -267,24 +264,39 @@ class ChunkFormerEncoder(BaseEncoder):
         x_pad = []
         xs_lens = []
         n_chunks = []
-        for xs_origin_len, x, offs in zip(xs_origin_lens, xs, offset): # cost O(input_batch_size | ccu)
+        for xs_origin_len, x, offs in zip(xs_origin_lens, xs, offset):
             x = x.to(device)
+
+            # padding for unfold
             if x.size(0) >= size:
-                n_frames_pad = (step - ((x.size(0) - size) %  step)) % step
+                n_frames_pad = (step - ((x.size(0) - size) % step)) % step
             else:
                 n_frames_pad = size - x.size(0)
-            x = torch.nn.functional.pad(x, (0, 0, 0, n_frames_pad)) # (T, 80)
+            x = torch.nn.functional.pad(x, (0, 0, 0, n_frames_pad))  # (T, 80)
             n_chunk = ((x.size(0) - size) // step) + 1
-            x = x.unfold(0, size=size, step=step) # [n_chunk, 80, size]
+            x = x.unfold(0, size=size, step=step)  # [n_chunk, 80, size]
             x = x.transpose(2, 1)
 
-            max_len = 1  + (xs_origin_len - context)//subsampling
-            upper_bound = chunk_size + right_context_size + torch.arange(0, 1 + (xs_origin_len + n_frames_pad - context)//subsampling, 1 + (size - context)//subsampling, device=device)
+            # attention boundaries
+            max_len = 1 + (xs_origin_len - context) // subsampling
+            upper_bound = chunk_size + right_context_size + torch.arange(
+                0, 
+                1 + (xs_origin_len + n_frames_pad - context) // subsampling, 
+                1 + (size - context) // subsampling, device=device
+            )
             lower_bound = upper_bound - max_len
             upper_bound += offs
-            
-            upper_bound_conv = chunk_size + conv_lorder + torch.arange(0, 1  + (xs_origin_len + n_frames_pad - context)//subsampling, 1 + (size - context)//subsampling, device=device)
-            lower_bound_conv = torch.maximum(upper_bound_conv - max_len, torch.full_like(upper_bound_conv, conv_lorder - right_context_size))
+
+            # convolution boundaries
+            upper_bound_conv = chunk_size + conv_lorder + torch.arange(
+                0, 
+                1 + (xs_origin_len + n_frames_pad - context) // subsampling, 
+                1 + (size - context) // subsampling, device=device
+            )
+            lower_bound_conv = torch.maximum(
+                upper_bound_conv - max_len, 
+                torch.full_like(upper_bound_conv, conv_lorder - right_context_size)
+            )
             upper_bound_conv += offs
 
 
@@ -311,27 +323,50 @@ class ChunkFormerEncoder(BaseEncoder):
             xs = self.global_cmvn(xs)
 
 
-        xs, pos_emb, masks = self.embed(xs, masks, offset=left_context_size, right_context_size=right_context_size)
+        xs, pos_emb, masks = self.embed(
+            xs, masks, 
+            offset=left_context_size, 
+            right_context_size=right_context_size
+        )
 
-        mask_pad = torch.arange(0, conv_lorder + chunk_size + conv_lorder, device=masks.device).unsqueeze(0).repeat(xs.size(0), 1) # [B, left_context_size + chunksize]
+        # convolution mask
+        # [B, left_context_size + chunksize]
+        mask_pad = torch.arange(
+            0, 
+            conv_lorder + chunk_size + conv_lorder, 
+            device=masks.device
+        ).unsqueeze(0).repeat(xs.size(0), 1)
         mask_pad = (lower_bounds_conv <= mask_pad) & (mask_pad < upper_bounds_conv)
         mask_pad = mask_pad.flip(-1).unsqueeze(1)
-        att_mask = torch.arange(0, left_context_size + chunk_size + right_context_size, device=masks.device).unsqueeze(0).repeat(xs.size(0), 1) # [B, left_context_size + chunksize]
+
+        # attention mask
+        # [B, left_context_size + chunksize]
+        att_mask = torch.arange(
+            0, 
+            left_context_size + chunk_size + right_context_size, 
+            device=masks.device
+        ).unsqueeze(0).repeat(xs.size(0), 1)
         att_mask = (lower_bounds <= att_mask) & (att_mask < upper_bounds)
         att_mask = att_mask.flip(-1).unsqueeze(1)
 
         r_att_cache = []
         r_cnn_cache = []
+        att_cache = att_cache.to(device)
+        cnn_cache = cnn_cache.to(device)
+
         for i, layer in enumerate(self.encoders):
-            xs, _, new_att_cache, new_cnn_cache = layer.forward_parallel_chunk(xs, att_mask, pos_emb, 
+            xs, _, new_att_cache, new_cnn_cache = layer.forward_parallel_chunk(
+                xs,
+                att_mask,
+                pos_emb,
                 mask_pad=mask_pad,
                 right_context_size=right_context_size,
                 left_context_size=left_context_size,
-                att_cache=att_cache[i].to(device) if att_cache.size(0) > 0 else att_cache,
-                cnn_cache=cnn_cache[i].to(device) if cnn_cache.size(0) > 0 else cnn_cache,
-                truncated_context_size=truncated_context_size
-
+                att_cache=att_cache[i] if att_cache.size(0) > 0 else att_cache,
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache,
+                truncated_context_size=truncated_context_size,
             )
+
             r_att_cache.append(new_att_cache)
             r_cnn_cache.append(new_cnn_cache)
 
@@ -352,7 +387,7 @@ class ChunkFormerEncoder(BaseEncoder):
         offset += xs_lens
 
         return xs, masks
-    
+
     def reconstruct(
         self, 
         xs,
@@ -362,8 +397,12 @@ class ChunkFormerEncoder(BaseEncoder):
         xs = xs.split(n_chunks, dim=0)   
         xs = [x.reshape(-1, self._output_size)[:x_len] for x, x_len in zip(xs, xs_lens)]
 
-        xs = torch.nn.utils.rnn.pad_sequence(xs,
-                                    batch_first=True,
-                                    padding_value=0)
-        masks = ~make_pad_mask(xs_lens, xs.size(1)).unsqueeze(1).to(xs.device) # (B, 1, T)
+        xs = torch.nn.utils.rnn.pad_sequence(
+            xs,
+            batch_first=True,
+            padding_value=0
+        )
+        masks = ~make_pad_mask(xs_lens, xs.size(1))
+        # (B, 1, T)
+        masks = masks.unsqueeze(1).to(xs.device)
         return xs, masks

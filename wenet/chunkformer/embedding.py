@@ -4,13 +4,9 @@ import math
 from typing import Tuple, Union
 
 import torch
-import torch.nn.functional as F
 
 class RelPositionalEncodingWithRightContext(torch.nn.Module):
     """Relative positional encoding module.
-
-    See : Appendix B in "Transformer-XL: Attentive Language Models Beyond a Fixed-Length Context"
-    Modified from https://github.com/espnet/espnet/blob/master/espnet/nets/pytorch_backend/transformer/embedding.py
 
     Args:
         d_model: Embedding dimension.
@@ -50,14 +46,19 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
 
         # Reserve the order of positive indices and concat both positive and
         # negative indices. This is used to support the shifting trick
-        # as in "Transformer-XL: Attentive Language Models Beyond a Fixed-Length Context"
+        # as in "Transformer-XL: Attentive Language Models Beyond a 
+        # Fixed-Length Context"
         pe_positive = torch.flip(pe_positive, [0]).unsqueeze(0)
         pe_negative = pe_negative[1:].unsqueeze(0)
         self.pe = torch.cat([pe_positive, pe_negative], dim=1)
 
-    def position_encoding(self, offset: Union[int, torch.Tensor], size: int,
-                          apply_dropout: bool = False, 
-                          right_context_size: Union[int, torch.Tensor] = 0) -> torch.Tensor:
+    def position_encoding(
+        self,
+        offset: Union[int, torch.Tensor],
+        size: int,
+        apply_dropout: bool = False,
+        right_context_size: Union[int, torch.Tensor] = 0
+    ) -> torch.Tensor:
 
         if isinstance(offset, int):
             assert offset + size < self.max_len
@@ -102,5 +103,7 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
 
         """
         x = x * self.xscale
-        pos_emb = self.position_encoding(offset, x.size(1), False, right_context_size).to(device=x.device, dtype=x.dtype)
+        pos_emb = self.position_encoding(
+            offset, x.size(1), False, 
+            right_context_size).to(device=x.device, dtype=x.dtype)
         return self.dropout(x), self.dropout(pos_emb)

@@ -138,7 +138,9 @@ def Dataset(data_type,
     if batch_type == 'static':
         assert 'batch_size' in batch_conf
         batch_size = batch_conf.get('batch_size', 16)
-        dataset = dataset.batch(batch_size, wrapper_class=lambda batch: processor.padding(batch, pad_feat))
+        dataset = dataset.batch(
+            batch_size, 
+            wrapper_class=lambda batch: processor.padding(batch, pad_feat))
     elif batch_type == 'bucket':
         assert 'bucket_boundaries' in batch_conf
         assert 'bucket_batch_sizes' in batch_conf
