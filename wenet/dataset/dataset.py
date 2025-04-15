@@ -132,11 +132,13 @@ def Dataset(data_type,
 
     batch_conf = conf.get('batch_conf', {})
     batch_type = batch_conf.get('batch_type', 'static')
+    pad_feat = batch_conf.get('pad_feat', 'True')
+
     assert batch_type in ['static', 'bucket', 'dynamic']
     if batch_type == 'static':
         assert 'batch_size' in batch_conf
         batch_size = batch_conf.get('batch_size', 16)
-        dataset = dataset.batch(batch_size, wrapper_class=processor.padding)
+        dataset = dataset.batch(batch_size, wrapper_class=lambda batch: processor.padding(batch, pad_feat))
     elif batch_type == 'bucket':
         assert 'bucket_boundaries' in batch_conf
         assert 'bucket_batch_sizes' in batch_conf
@@ -144,12 +146,12 @@ def Dataset(data_type,
             processor.feats_length_fn,
             batch_conf['bucket_boundaries'],
             batch_conf['bucket_batch_sizes'],
-            wrapper_class=processor.padding)
+            wrapper_class=lambda batch: processor.padding(batch, pad_feat))
     else:
         max_frames_in_batch = batch_conf.get('max_frames_in_batch', 12000)
         dataset = dataset.dynamic_batch(
             processor.DynamicBatchWindow(max_frames_in_batch),
-            wrapper_class=processor.padding,
+            wrapper_class=lambda batch: processor.padding(batch, pad_feat)
         )
 
     return dataset

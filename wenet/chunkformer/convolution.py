@@ -185,26 +185,27 @@ class ChunkConvolutionModule(nn.Module):
         self,
         x: torch.Tensor,
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
-        cache: torch.Tensor = torch.zeros((0, 0, 0)),
+        cache: torch.Tensor = torch.zeros((0, 0)),
         truncated_context_size: int = 0
 
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute convolution module.
         Args:
-            x (torch.Tensor): Input tensor (#batch, time, channels).
+            x (torch.Tensor): Input tensor (time, channels).
             mask_pad (torch.Tensor): used for batch padding (#batch, 1, time),
                 (0, 0, 0) means fake mask.
             cache (torch.Tensor): left context cache, it is only
-                used in causal convolution (#batch, channels, cache_t),
-                (0, 0, 0) meas fake cache.
+                used in causal convolution (channels, cache_t),
+                (0, 0) meas fake cache.
         Returns:
-            torch.Tensor: Output tensor (#batch, time, channels).
+            torch.Tensor: Output tensor (time, channels).
         """
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)  # (#batch, channels, time)
         lorder = self.kernel_size//2
         chunk_size = x.shape[-1]
-        if cache.size(0) == 0:
+        cache_t = cache.size(-1)
+        if cache_t == 0:
             cache = torch.zeros(self.channels, lorder).to(x.device)
         # GLU mechanism
         x = self.pointwise_conv1(x)  # (batch, 2*channel, dim)
@@ -213,9 +214,15 @@ class ChunkConvolutionModule(nn.Module):
         #----------Overlapping Chunk Transformation-----------------------------------
         x = x.transpose(0, 1).reshape( self.channels, -1)  # [C, n_chunk * T]
         x = torch.cat([cache, x], dim=-1)
-        new_cache = x[:, :truncated_context_size + cache.size(-1)][:, -cache.size(-1):].cpu()
+
+        # streaming long-form transcription is disabled if input cache is empty, only support long-form transcription and masked batch
+        if cache_t > 0:
+            new_cache = x[:, :truncated_context_size + cache.size(-1)][:, -cache.size(-1):]
+        else:
+            new_cache = torch.zeros((0, 0))
+
         x = nn.functional.pad(x, (0, lorder), 'constant', 0.0)
-        x = x.unfold(-1, chunk_size + 2 * lorder, chunk_size).transpose(0, 1) #[n_chunk +1, C, cnn_cache_size]
+        x = x.unfold(-1, chunk_size + 2 * lorder, chunk_size).transpose(0, 1) #[n_chunk +1, C, chunk_size + 2 * lorder]
         #-----------------------------------------------------------------------------
 
         if mask_pad.size(2) > 0:  # time > 0
@@ -232,7 +239,6 @@ class ChunkConvolutionModule(nn.Module):
         x = self.pointwise_conv2(x)
         # mask batch padding
         if mask_pad.size(2) > 0:  # time > 0
-            # x.masked_fill_(~mask_pad[:, :, self.lorder:], 0.0)
-            x.masked_fill_(~mask_pad[:, :, self.lorder:-self.lorder], 0.0)
+            x.masked_fill_(~mask_pad[:, :, lorder:-lorder], 0.0)
 
         return x.transpose(1, 2), new_cache

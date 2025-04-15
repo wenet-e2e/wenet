@@ -301,7 +301,7 @@ class ASRModel(torch.nn.Module):
 
         Returns: dict results of all decoding methods
         """
-        assert speech.shape[0] == speech_lengths.shape[0]
+        assert len(speech) == len(speech_lengths)
         assert decoding_chunk_size != 0
         encoder_out, encoder_mask = self._forward_encoder(
             speech, speech_lengths, decoding_chunk_size,

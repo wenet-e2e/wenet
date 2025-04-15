@@ -103,10 +103,12 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
             k = torch.cat([key_cache, k], dim=2)
             v = torch.cat([value_cache, v], dim=2)
 
-        # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
-        #   non-trivial to calculate `next_cache_start` here.
-
-        new_cache = torch.cat((k, v), dim=-1)
+            # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
+            #   non-trivial to calculate `next_cache_start` here.
+            new_cache = torch.cat((k, v), dim=-1)
+        else:
+            # streaming long-form transcription is disabled if input cache is empty, only support long-form transcription and masked batch
+            new_cache = cache
 
         n_batch_pos = pos_emb.size(0)
         p = self.linear_pos(pos_emb).view(n_batch_pos, -1, self.h, self.d_k)
@@ -139,7 +141,7 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
                 key: torch.Tensor, value: torch.Tensor,
                 mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
                 pos_emb: torch.Tensor = torch.empty(0),
-                cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+                cache: torch.Tensor = torch.zeros((0, 0, 0)),
                 right_context_size: int = 0,
                 left_context_size: int = 0,
                 truncated_context_size: int = 0
@@ -153,20 +155,20 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
                 (#batch, time1, time2), (0, 0, 0) means fake mask.
             pos_emb (torch.Tensor): Positional embedding tensor
                 (#batch, time2, size).
-            cache (torch.Tensor): Cache tensor (B, 1, head, cache_t, d_k * 2),
-                where `cache_t == chunk_size * num_decoding_left_chunks`
+            cache (torch.Tensor): Cache tensor (cache_t, head, d_k * 2),
+                where `cache_t == left_context_size`
                 and `head * d_k == size`
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
-            torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
-                where `cache_t == chunk_size * num_decoding_left_chunks`
+            torch.Tensor: Cache tensor (cache_t, head, d_k * 2)
+                where `cache_t == left_context_size`
                 and `head * d_k == size`
         """
         q, k, v = self.forward_qkv(query, key, value)
 
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
-
-        if cache.size(2) <= 0:
+        cache_t = cache.size(0)
+        if cache_t == 0:
             cache = torch.zeros((left_context_size, self.h, self.d_k * 2), device=q.device, dtype=q.dtype)
 
         kv = torch.cat([k, v], dim=-1) # (B, head, time1, d_k * 2),
@@ -175,7 +177,11 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
 
         #----------Overlapping Chunk Transformation-----------------------------------
         kv = torch.cat([cache, kv], dim=0)
-        new_cache = kv[:truncated_context_size + cache.size(0)][-cache.size(0):].cpu()
+
+        if cache_t > 0:
+            new_cache = kv[:truncated_context_size + cache.size(0)][-cache.size(0):]
+        else:
+            new_cache = torch.zeros((0, 0, 0), device=q.device, dtype=q.dtype)
         kv = torch.nn.functional.pad(kv, (0, 0, 0, 0, 0, right_context_size))
         kv = kv.unfold(0, left_context_size + q.shape[1] + right_context_size, q.shape[1])
         #-----------------------------------------------------------------------------

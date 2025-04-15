@@ -527,7 +527,7 @@ def spec_trim(sample, max_t=20):
     return sample
 
 
-def padding(data):
+def padding(data, pad_feat=True):
     """ Padding the data into training data
 
         Args:
@@ -565,7 +565,7 @@ def padding(data):
 
     batch = {
         "keys": sorted_keys,
-        "feats": padded_feats,
+        "feats": padded_feats if pad_feat else sorted_feats,
         "target": padding_labels,
         "feats_lengths": feats_lengths,
         "target_lengths": label_lengths,

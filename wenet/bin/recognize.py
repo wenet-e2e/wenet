@@ -281,7 +281,7 @@ def main():
         with torch.no_grad():
             for batch_idx, batch in enumerate(test_data_loader):
                 keys = batch["keys"]
-                feats = batch["feats"].to(device)
+                feats = batch["feats"].to(device) if type(batch["feats"]) is torch.Tensor else batch["feats"]
                 target = batch["target"].to(device)
                 feats_lengths = batch["feats_lengths"].to(device)
                 target_lengths = batch["target_lengths"].to(device)
