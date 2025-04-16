@@ -257,8 +257,8 @@ class ChunkFormerEncoder(BaseEncoder):
 
         conv_lorder = self.cnn_module_kernel // 2
 
-        upper_bounds = []
-        lower_bounds = []
+        upper_bounds_att = []
+        lower_bounds_att = []
         upper_bounds_conv = []
         lower_bounds_conv = []
         x_pad = []
@@ -279,13 +279,13 @@ class ChunkFormerEncoder(BaseEncoder):
 
             # attention boundaries
             max_len = 1 + (xs_origin_len - context) // subsampling
-            upper_bound = chunk_size + right_context_size + torch.arange(
+            upper_bound_att = chunk_size + right_context_size + torch.arange(
                 0, 
                 1 + (xs_origin_len + n_frames_pad - context) // subsampling, 
                 1 + (size - context) // subsampling, device=device
             )
-            lower_bound = upper_bound - max_len
-            upper_bound += offs
+            lower_bound_att = upper_bound_att - max_len
+            upper_bound_att += offs
 
             # convolution boundaries
             upper_bound_conv = chunk_size + conv_lorder + torch.arange(
@@ -301,8 +301,8 @@ class ChunkFormerEncoder(BaseEncoder):
 
 
             xs_lens += [size] * (n_chunk - 1) + [size - n_frames_pad]
-            upper_bounds.append(upper_bound)
-            lower_bounds.append(lower_bound)
+            upper_bounds_att.append(upper_bound_att)
+            lower_bounds_att.append(lower_bound_att)
             upper_bounds_conv.append(upper_bound_conv)
             lower_bounds_conv.append(lower_bound_conv)
             x_pad.append(x)
@@ -312,8 +312,8 @@ class ChunkFormerEncoder(BaseEncoder):
         xs = torch.cat(x_pad, dim=0).to(device)
         xs_lens = torch.tensor(xs_lens).to(device)
         masks = ~make_pad_mask(xs_lens, xs.size(1)).unsqueeze(1)  # (B, 1, T)
-        upper_bounds = torch.cat(upper_bounds).unsqueeze(1).to(device)
-        lower_bounds = torch.cat(lower_bounds).unsqueeze(1).to(device)
+        upper_bounds_att = torch.cat(upper_bounds_att).unsqueeze(1).to(device)
+        lower_bounds_att = torch.cat(lower_bounds_att).unsqueeze(1).to(device)
         upper_bounds_conv = torch.cat(upper_bounds_conv).unsqueeze(1).to(device)
         lower_bounds_conv = torch.cat(lower_bounds_conv).unsqueeze(1).to(device)
 
@@ -346,7 +346,7 @@ class ChunkFormerEncoder(BaseEncoder):
             left_context_size + chunk_size + right_context_size, 
             device=masks.device
         ).unsqueeze(0).repeat(xs.size(0), 1)
-        att_mask = (lower_bounds <= att_mask) & (att_mask < upper_bounds)
+        att_mask = (lower_bounds_att <= att_mask) & (att_mask < upper_bounds_att)
         att_mask = att_mask.flip(-1).unsqueeze(1)
 
         r_att_cache = []

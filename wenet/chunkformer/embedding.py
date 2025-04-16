@@ -25,16 +25,14 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
         self.max_len = max_len
         self.extend_pe(max_len)
 
-    def extend_pe(self, size: int, left_context: Union[int, torch.Tensor] = 0) -> None:
+    def extend_pe(self, size: int) -> None:
         """Reset the positional encodings."""
-        x_size_1 = size + left_context
-
         # Suppose `i` means to the position of query vector and `j` means the
         # position of key vector. We use position relative positions when keys
         # are to the left (i>j) and negative relative positions otherwise (i<j).
-        pe_positive = torch.zeros(x_size_1, self.d_model)
-        pe_negative = torch.zeros(x_size_1, self.d_model)
-        position = torch.arange(0, x_size_1, dtype=torch.float32).unsqueeze(1)
+        pe_positive = torch.zeros(size, self.d_model)
+        pe_negative = torch.zeros(size, self.d_model)
+        position = torch.arange(0, size, dtype=torch.float32).unsqueeze(1)
         div_term = torch.exp(
             torch.arange(0, self.d_model, 2, dtype=torch.float32)
             * -(math.log(10000.0) / self.d_model)
