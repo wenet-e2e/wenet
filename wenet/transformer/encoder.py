@@ -313,7 +313,6 @@ class BaseEncoder(torch.nn.Module):
 
         if self.global_cmvn is not None:
             xs = self.global_cmvn(xs)
-        
         xs, pos_emb, _= self.embed(xs, chunk_mask, offset)
 
         elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
@@ -321,29 +320,22 @@ class BaseEncoder(torch.nn.Module):
         attention_key_size = cache_t1 + chunk_size
         pos_emb = self.embed.position_encoding(offset=offset - cache_t1,
                                                size=attention_key_size)
-        
         if required_cache_size < 0:
             next_cache_start = 0
         elif required_cache_size == 0:
             next_cache_start = attention_key_size
         else:
             next_cache_start = max(attention_key_size - required_cache_size, 0)
-        
         r_att_cache = []
         r_cnn_cache = []
-
         for i, layer in enumerate(self.encoders):
-
             if elayers == 0:
                 kv_cache = (att_cache, att_cache)
-        
             else:
                 i_kv_cache = att_cache[i* batch_size :i* batch_size + batch_size]
                 size = att_cache.size(-1) // 2
-
                 kv_cache = (i_kv_cache[:, :, :, :size], i_kv_cache[:, :, :,
                                                                    size:])
-                
             xs, _, new_kv_cache, new_cnn_cache = layer(
                 xs,
                 att_mask,
@@ -352,15 +344,12 @@ class BaseEncoder(torch.nn.Module):
                 cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache)
             
             new_att_cache = torch.cat(new_kv_cache, dim=-1)
-
             r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
-
             r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
         if self.normalize_before:
             xs = self.after_norm(xs)
         r_att_cache = torch.cat(r_att_cache, dim=0)
         r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
-
         return (xs, r_att_cache, r_cnn_cache)
 
     def forward_chunk_by_chunk(
@@ -431,7 +420,6 @@ class BaseEncoder(torch.nn.Module):
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)
-        
         return ys, masks
 
 
