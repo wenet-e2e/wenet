@@ -81,7 +81,7 @@ class ChunkFormerEncoder(BaseEncoder):
             cnn_module_kernel (int): Kernel size of convolution module.
             causal (bool): whether to use causal convolution or not.
         """
-        torch.nn.Module.__init__(self)        
+        torch.nn.Module.__init__(self)
         assert selfattention_layer_type == "chunk_rel_seflattn"
         assert pos_enc_layer_type == "chunk_rel_pos"
         assert input_layer == "dw_striding"
@@ -170,7 +170,7 @@ class ChunkFormerEncoder(BaseEncoder):
             ) for _ in range(num_blocks)
         ])
 
-    def forward(self, 
+    def forward(self,
                 xs: torch.Tensor,
                 xs_lens: torch.Tensor,
                 decoding_chunk_size: int = 0,
@@ -244,7 +244,7 @@ class ChunkFormerEncoder(BaseEncoder):
         """
         if offset.shape[0] == 0:
             offset = torch.zeros(
-                len(xs), dtype=torch.long, 
+                len(xs), dtype=torch.long,
                 device=xs_origin_lens.device
             )
 
@@ -280,8 +280,8 @@ class ChunkFormerEncoder(BaseEncoder):
             # attention boundaries
             max_len = 1 + (xs_origin_len - context) // subsampling
             upper_bound_att = chunk_size + right_context_size + torch.arange(
-                0, 
-                1 + (xs_origin_len + n_frames_pad - context) // subsampling, 
+                0,
+                1 + (xs_origin_len + n_frames_pad - context) // subsampling,
                 1 + (size - context) // subsampling, device=device
             )
             lower_bound_att = upper_bound_att - max_len
@@ -289,12 +289,12 @@ class ChunkFormerEncoder(BaseEncoder):
 
             # convolution boundaries
             upper_bound_conv = chunk_size + conv_lorder + torch.arange(
-                0, 
-                1 + (xs_origin_len + n_frames_pad - context) // subsampling, 
+                0,
+                1 + (xs_origin_len + n_frames_pad - context) // subsampling,
                 1 + (size - context) // subsampling, device=device
             )
             lower_bound_conv = torch.maximum(
-                upper_bound_conv - max_len, 
+                upper_bound_conv - max_len,
                 torch.full_like(upper_bound_conv, conv_lorder - right_context_size)
             )
             upper_bound_conv += offs
@@ -324,16 +324,16 @@ class ChunkFormerEncoder(BaseEncoder):
 
 
         xs, pos_emb, masks = self.embed(
-            xs, masks, 
-            offset=left_context_size, 
+            xs, masks,
+            offset=left_context_size,
             right_context_size=right_context_size
         )
 
         # convolution mask
         # [B, left_context_size + chunksize]
         mask_pad = torch.arange(
-            0, 
-            conv_lorder + chunk_size + conv_lorder, 
+            0,
+            conv_lorder + chunk_size + conv_lorder,
             device=masks.device
         ).unsqueeze(0).repeat(xs.size(0), 1)
         mask_pad = (lower_bounds_conv <= mask_pad) & (mask_pad < upper_bounds_conv)
@@ -342,8 +342,8 @@ class ChunkFormerEncoder(BaseEncoder):
         # attention mask
         # [B, left_context_size + chunksize]
         att_mask = torch.arange(
-            0, 
-            left_context_size + chunk_size + right_context_size, 
+            0,
+            left_context_size + chunk_size + right_context_size,
             device=masks.device
         ).unsqueeze(0).repeat(xs.size(0), 1)
         att_mask = (lower_bounds_att <= att_mask) & (att_mask < upper_bounds_att)
@@ -380,7 +380,7 @@ class ChunkFormerEncoder(BaseEncoder):
         # NOTE(xcsong): shape(r_cnn_cache) is (e, b=1, hidden-dim, cache_t2)
         r_cnn_cache = torch.stack(r_cnn_cache, dim=0)
 
-        # It would be no need to reconstruct (padding) in greedy search 
+        # It would be no need to reconstruct (padding) in greedy search
         # but for compatibility with Wenet, we reconstruct it here
         xs_lens = self.embed.calc_length(xs_origin_lens)
         xs, masks = self.reconstruct(xs, xs_lens, n_chunks)
@@ -389,12 +389,12 @@ class ChunkFormerEncoder(BaseEncoder):
         return xs, masks
 
     def reconstruct(
-        self, 
+        self,
         xs,
         xs_lens,
         n_chunks
     ):
-        xs = xs.split(n_chunks, dim=0)   
+        xs = xs.split(n_chunks, dim=0)
         xs = [x.reshape(-1, self._output_size)[:x_len] for x, x_len in zip(xs, xs_lens)]
 
         xs = torch.nn.utils.rnn.pad_sequence(

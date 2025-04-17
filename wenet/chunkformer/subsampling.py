@@ -118,10 +118,10 @@ class DepthwiseConvSubsampling(torch.nn.Module):
     def get_streaming_cache_size(self):
         return [0, self.subsampling_rate + 1]
 
-    def forward(self, 
-                x, 
-                mask, 
-                offset: Union[int, torch.Tensor] = 0, 
+    def forward(self,
+                x,
+                mask,
+                offset: Union[int, torch.Tensor] = 0,
                 right_context_size: int = 0):
         lengths = mask.sum(dim=-1).squeeze(-1)
         lengths = self.calc_length(
@@ -173,7 +173,7 @@ class DepthwiseConvSubsampling(torch.nn.Module):
         else:
             x = x.transpose(1, 2)
         x, pos_emb = self.pos_enc(
-            x, offset=offset, 
+            x, offset=offset,
             right_context_size=right_context_size)
         mask = ~make_pad_mask(lengths, x.size(1)).unsqueeze(1)
         return x, pos_emb, mask
@@ -219,7 +219,7 @@ class DepthwiseConvSubsampling(torch.nn.Module):
         if new_batch_size == 0:  # input is too big
             return x, False
 
-        return torch.cat([self.conv(chunk) 
+        return torch.cat([self.conv(chunk)
                           for chunk in torch.split(x, new_batch_size, 0)]), True
 
     def conv_split_by_channel(self, x):
@@ -249,7 +249,7 @@ class DepthwiseConvSubsampling(torch.nn.Module):
             x = self.channel_chunked_conv(self.conv[i * 3 + 2], new_c, x)
 
             # splitting pointwise convs by time
-            x = torch.cat([self.conv[i * 3 + 3](chunk) 
+            x = torch.cat([self.conv[i * 3 + 3](chunk)
                            for chunk in torch.split(x, new_t, 2)], 2)
             x = self.conv[i * 3 + 4](x)  # activation
         return x
@@ -275,14 +275,14 @@ class DepthwiseConvSubsampling(torch.nn.Module):
         return torch.cat(out_chunks, 1)
 
     def calc_length(self, lengths):
-        """ 
-        Calculates the output length of a Tensor 
+        """
+        Calculates the output length of a Tensor
         passed through a convolution or max pooling layer
         """
         all_paddings = self._left_padding + self._right_padding
         kernel_size = self._kernel_size
         stride = self._stride
-        ceil_mode = self._ceil_mode 
+        ceil_mode = self._ceil_mode
         repeat_num = self._sampling_num
         add_pad = all_paddings - kernel_size
         one = 1.0

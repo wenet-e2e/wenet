@@ -44,7 +44,7 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
 
         # Reserve the order of positive indices and concat both positive and
         # negative indices. This is used to support the shifting trick
-        # as in "Transformer-XL: Attentive Language Models Beyond a 
+        # as in "Transformer-XL: Attentive Language Models Beyond a
         # Fixed-Length Context"
         pe_positive = torch.flip(pe_positive, [0]).unsqueeze(0)
         pe_negative = pe_negative[1:].unsqueeze(0)
@@ -102,6 +102,6 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
         """
         x = x * self.xscale
         pos_emb = self.position_encoding(
-            offset, x.size(1), False, 
+            offset, x.size(1), False,
             right_context_size).to(device=x.device, dtype=x.dtype)
         return self.dropout(x), self.dropout(pos_emb)

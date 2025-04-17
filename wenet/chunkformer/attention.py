@@ -172,7 +172,7 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         cache_t = cache.size(0)
         if cache_t == 0:
             cache = torch.zeros(
-                (left_context_size, self.h, self.d_k * 2), 
+                (left_context_size, self.h, self.d_k * 2),
                 device=q.device, dtype=q.dtype
             )
         # (B, head, time1, d_k * 2),
@@ -191,8 +191,8 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
             new_cache = torch.zeros((0, 0, 0), device=q.device, dtype=q.dtype)
         kv = torch.nn.functional.pad(kv, (0, 0, 0, 0, 0, right_context_size))
         kv = kv.unfold(
-            0, 
-            left_context_size + q.shape[1] + right_context_size, 
+            0,
+            left_context_size + q.shape[1] + right_context_size,
             q.shape[1]
         )
         # -----------------------------------------------------------------------------
