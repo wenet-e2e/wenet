@@ -98,7 +98,7 @@ class ChunkConvolutionModule(nn.Module):
         x: torch.Tensor,
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         cache: torch.Tensor = torch.zeros((0, 0, 0)),
-        decoding_chunk_size: int = -1,
+        chunk_size: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute convolution module.
         Args:
@@ -108,14 +108,15 @@ class ChunkConvolutionModule(nn.Module):
             cache (torch.Tensor): left context cache, it is only
                 used in causal convolution (#batch, channels, cache_t),
                 (0, 0, 0) meas fake cache.
+            chunk_size (int): Chunk size for dynamic chunk convolution.
         Returns:
             torch.Tensor: Output tensor (#batch, time, channels).
         """
         # exchange the temporal dimension and the feature dimension
         x = x.transpose(1, 2)  # (#batch, channels, time)
 
-        if self.dynamic_conv and decoding_chunk_size < 1:
-            decoding_chunk_size = x.size(2)
+        if self.dynamic_conv and chunk_size <= 0:
+            chunk_size = x.size(2)
         # mask batch padding
         if mask_pad.size(2) > 0:  # time > 0
             x.masked_fill_(~mask_pad.to(torch.bool), 0.0)
@@ -142,8 +143,8 @@ class ChunkConvolutionModule(nn.Module):
         n_frames_pad = -1
         n_chunks = -1
         if self.dynamic_conv:
-            size = self.lorder + decoding_chunk_size
-            step = decoding_chunk_size
+            size = self.lorder + chunk_size
+            step = chunk_size
 
             n_frames_pad = (step - ((x.size(2) - size) % step)) % step
             # (batch, 2*channel, dim + n_frames_pad)
@@ -165,11 +166,11 @@ class ChunkConvolutionModule(nn.Module):
         x = self.depthwise_conv(x)
 
         if self.dynamic_conv:
-            # [B, n_chunk, C, decoding_chunk_size]
+            # [B, n_chunk, C, chunk_size]
             x = x.reshape(-1, n_chunks, x.size(1), x.size(2))
-            # [B, C, n_chunks, decoding_chunk_size]
+            # [B, C, n_chunks, chunk_size]
             x = x.transpose(1, 2)
-            # [B, C, n_chunks * decoding_chunk_size]
+            # [B, C, n_chunks * chunk_size]
             x = x.reshape(x.size(0), x.size(1), -1)
             # remove padding
             x = x[..., :x.size(2) - n_frames_pad]

@@ -52,31 +52,32 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
 
     def position_encoding(
         self,
-        offset: Union[int, torch.Tensor],
-        size: int,
+        chunk_size: Union[int, torch.Tensor] = 0,
+        left_context_size: Union[int, torch.Tensor] = 0,
+        right_context_size: Union[int, torch.Tensor] = 0,
         apply_dropout: bool = False,
-        right_context_size: Union[int, torch.Tensor] = 0
+
     ) -> torch.Tensor:
 
-        if isinstance(offset, int):
-            assert offset + size < self.max_len
-            x_size_1 = size + offset
+        if isinstance(left_context_size, int):
+            assert left_context_size + chunk_size < self.max_len
+            x_size_1 = chunk_size + left_context_size
             pos_emb = self.pe[
                 :,
                 self.pe.size(1) // 2
                 - x_size_1
                 + 1 : self.pe.size(1) // 2  # noqa E203
-                + size + right_context_size,
+                + chunk_size + right_context_size,
             ]
         else:
-            assert offset + size < self.max_len
-            x_size_1 = size + offset
+            assert left_context_size + chunk_size < self.max_len
+            x_size_1 = chunk_size + left_context_size
             pos_emb = self.pe[
                 :,
                 self.pe.size(1) // 2
                 - x_size_1
                 + 1 : self.pe.size(1) // 2  # noqa E203
-                + size + right_context_size,
+                + chunk_size + right_context_size,
             ]
 
         return pos_emb
@@ -84,7 +85,8 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-        offset: Union[int, torch.Tensor] = 0,
+        chunk_size: Union[int, torch.Tensor] = 0,
+        left_context_size: Union[int, torch.Tensor] = 0,
         right_context_size: Union[int, torch.Tensor] = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Add positional encoding.
@@ -94,14 +96,20 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
             offset (int): left context (in frames) used during streaming decoding.
                 this is used only in real streaming decoding, in other circumstances,
                 it MUST be 0.
-
+            chunk_size (int): Chunk size for limited chunk context
+            left_context_size (int): Left context size for limited chunk context
+            right_context_size (int): Right context size for limited chunk context
         Returns:
             torch.Tensor: Encoded tensor (batch, time, `*`).
             torch.Tensor: Encoded tensor (batch, 2*time-1, `*`).
 
         """
         x = x * self.xscale
+        chunk_size = x.size(1) if chunk_size <= 0 else chunk_size
         pos_emb = self.position_encoding(
-            offset, x.size(1), False,
-            right_context_size).to(device=x.device, dtype=x.dtype)
+            chunk_size=chunk_size,
+            left_context_size=left_context_size,
+            right_context_size=right_context_size, 
+            apply_dropout=False
+        ).to(device=x.device, dtype=x.dtype)
         return self.dropout(x), self.dropout(pos_emb)

@@ -67,7 +67,9 @@ class ChunkFormerEncoderLayer(nn.Module):
         mask_pad: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
         att_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
         cnn_cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
-        decoding_chunk_size: int = -1,
+        chunk_size: int = 0,
+        left_context_size: int = 0,
+        right_context_size: int = 0,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute encoded features.
 
@@ -83,6 +85,9 @@ class ChunkFormerEncoderLayer(nn.Module):
                 (batch, 1, head, cache_t1, d_k * 3), head * d_k == size.
             cnn_cache (torch.Tensor): Convolution cache in ChunkFormer layer
                 (batch, 1, size, cache_t2)
+            chunk_size (int): Chunk size for limited chunk context
+            left_context_size (int): Left context size for limited chunk context
+            right_context_size (int): Right context size for limited chunk context
         Returns:
             torch.Tensor: Output tensor (#batch, time, size).
             torch.Tensor: Mask tensor (#batch, time, time).
@@ -105,7 +110,11 @@ class ChunkFormerEncoderLayer(nn.Module):
         if self.normalize_before:
             x = self.norm_mha(x)
         x_att, new_att_cache = self.self_attn(
-            x, x, x, mask, pos_emb, att_cache)
+            x, x, x, mask, pos_emb, att_cache,
+            chunk_size=chunk_size,
+            left_context_size=left_context_size,
+            right_context_size=right_context_size
+        )
         x = residual + self.dropout(x_att)
         if not self.normalize_before:
             x = self.norm_mha(x)
@@ -120,7 +129,7 @@ class ChunkFormerEncoderLayer(nn.Module):
 
             x, new_cnn_cache = self.conv_module(
                 x, mask_pad, cnn_cache,
-                decoding_chunk_size=decoding_chunk_size)
+                chunk_size=chunk_size)
             x = residual + self.dropout(x)
 
             if not self.normalize_before:

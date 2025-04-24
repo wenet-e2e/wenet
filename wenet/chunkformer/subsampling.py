@@ -1,6 +1,5 @@
 """Subsampling layer definition."""
 
-from typing import Union
 
 import torch
 import math
@@ -121,7 +120,8 @@ class DepthwiseConvSubsampling(torch.nn.Module):
     def forward(self,
                 x,
                 mask,
-                offset: Union[int, torch.Tensor] = 0,
+                chunk_size: int = -1,
+                left_context_size: int = 0,
                 right_context_size: int = 0):
         lengths = mask.sum(dim=-1).squeeze(-1)
         lengths = self.calc_length(
@@ -155,11 +155,7 @@ class DepthwiseConvSubsampling(torch.nn.Module):
                 x, success = self.conv_split_by_batch(x)
                 # success = False
                 if not success:  # if unable to split by batch, try by channel
-                    if self._subsampling == 'dw_striding':
-                        x = self.conv_split_by_channel(x)
-
-                    else:
-                        x = self.conv(x)  # try anyway
+                    x = self.conv_split_by_channel(x)
             else:
                 x = self.conv(x)
         else:
@@ -173,32 +169,33 @@ class DepthwiseConvSubsampling(torch.nn.Module):
         else:
             x = x.transpose(1, 2)
         x, pos_emb = self.pos_enc(
-            x, offset=offset,
+            x, 
+            chunk_size=chunk_size, 
+            left_context_size=left_context_size,
             right_context_size=right_context_size)
         mask = ~make_pad_mask(lengths, x.size(1)).unsqueeze(1)
         return x, pos_emb, mask
 
     def reset_parameters(self):
         # initialize weights
-        if self._subsampling == 'dw_striding':
-            with torch.no_grad():
-                # init conv
-                scale = 1.0 / self._kernel_size
-                dw_max = (self._kernel_size ** 2) ** -0.5
-                pw_max = self._conv_channels ** -0.5
+        with torch.no_grad():
+            # init conv
+            scale = 1.0 / self._kernel_size
+            dw_max = (self._kernel_size ** 2) ** -0.5
+            pw_max = self._conv_channels ** -0.5
 
-                torch.nn.init.uniform_(self.conv[0].weight, -scale, scale)
-                torch.nn.init.uniform_(self.conv[0].bias, -scale, scale)
+            torch.nn.init.uniform_(self.conv[0].weight, -scale, scale)
+            torch.nn.init.uniform_(self.conv[0].bias, -scale, scale)
 
-                for idx in range(2, len(self.conv), 3):
-                    torch.nn.init.uniform_(self.conv[idx].weight, -dw_max, dw_max)
-                    torch.nn.init.uniform_(self.conv[idx].bias, -dw_max, dw_max)
-                    torch.nn.init.uniform_(self.conv[idx + 1].weight, -pw_max, pw_max)
-                    torch.nn.init.uniform_(self.conv[idx + 1].bias, -pw_max, pw_max)
+            for idx in range(2, len(self.conv), 3):
+                torch.nn.init.uniform_(self.conv[idx].weight, -dw_max, dw_max)
+                torch.nn.init.uniform_(self.conv[idx].bias, -dw_max, dw_max)
+                torch.nn.init.uniform_(self.conv[idx + 1].weight, -pw_max, pw_max)
+                torch.nn.init.uniform_(self.conv[idx + 1].bias, -pw_max, pw_max)
 
-                fc_scale = (self._feat_out * self._feat_in / self._sampling_num) ** -0.5
-                torch.nn.init.uniform_(self.out.weight, -fc_scale, fc_scale)
-                torch.nn.init.uniform_(self.out.bias, -fc_scale, fc_scale)
+            fc_scale = (self._feat_out * self._feat_in / self._sampling_num) ** -0.5
+            torch.nn.init.uniform_(self.out.weight, -fc_scale, fc_scale)
+            torch.nn.init.uniform_(self.out.bias, -fc_scale, fc_scale)
 
     def conv_split_by_batch(self, x):
         """ Tries to split input by batch, run conv and concat results """

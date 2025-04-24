@@ -27,23 +27,22 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         torch.nn.init.xavier_uniform_(self.pos_bias_u)
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
 
-    def rel_shift(self, x, offset: int = 0, right_context_size: int = 0):
-        """Compute relative positional encoding.
+    def rel_shift(self, x, left_context_size: int = 0, right_context_size: int = 0):
+        """Compute relative positional encoding. The position should capture both 
+        left and right context.
 
         Args:
-            x: Input tensor (batch, head, time1, 2*time1-1+left_context).
+            x: Input tensor (batch, head, time1, 2*time1-1+left_context_size).
                 time1 means the length of query vector.
-            left_context (int): left context (in frames) used during streaming decoding.
-                this is used only in real streaming decoding, in other circumstances,
-                it MUST be 0.
-
+            left_context_size (int): Left context size for limited chunk context
+            right_context_size (int): Right context size for limited chunk context
         Returns:
             Tensor: tensor of shape (batch, head, time1, time2)
           (note: time2 has the same value as time1, but it is for
           the key, while time1 is for the query).
         """
         (batch_size, num_heads, time1, n) = x.size()
-        time2 = time1 + offset + right_context_size
+        time2 = time1 + left_context_size + right_context_size
         batch_stride = x.stride(0)
         head_stride = x.stride(1)
         time1_stride = x.stride(2)
@@ -58,7 +57,10 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
                 key: torch.Tensor, value: torch.Tensor,
                 mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
                 pos_emb: torch.Tensor = torch.empty(0),
-                cache: torch.Tensor = torch.zeros((0, 0, 0, 0))
+                cache: torch.Tensor = torch.zeros((0, 0, 0, 0)),
+                chunk_size: int = 0,
+                left_context_size: int = 0,
+                right_context_size: int = 0,
                 ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute 'Scaled Dot Product Attention' with rel. positional encoding.
         Args:
@@ -72,14 +74,23 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
             cache (torch.Tensor): Cache tensor (B, 1, head, cache_t, d_k * 2),
                 where `cache_t == chunk_size * num_decoding_left_chunks`
                 and `head * d_k == size`
+            chunk_size (int): Chunk size for limited chunk context
+            left_context_size (int): Left context size for limited chunk context
+            right_context_size (int): Right context size for limited chunk context
         Returns:
             torch.Tensor: Output tensor (#batch, time1, d_model).
             torch.Tensor: Cache tensor (1, head, cache_t + time1, d_k * 2)
                 where `cache_t == chunk_size * num_decoding_left_chunks`
                 and `head * d_k == size`
         """
+        bz = query.shape[0]
+        n_feat = query.shape[2]
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
+
+        limited_context_attn = (chunk_size > 0 
+                                and left_context_size > 0 
+                                and right_context_size > 0)
 
         # NOTE(xcsong):
         #   when export onnx model, for 1st chunk, we feed
@@ -106,6 +117,62 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
             # NOTE(xcsong): We do cache slicing in encoder.forward_chunk, since it's
             #   non-trivial to calculate `next_cache_start` here.
             new_cache = torch.cat((k, v), dim=-1)
+        elif limited_context_attn:
+            # chunking query
+            # [B, time1, head, d_k]
+            q_size = q.size(1)
+            n_frames_pad = (chunk_size - ((q_size - chunk_size) % chunk_size)) 
+            n_frames_pad = n_frames_pad % chunk_size
+            q = torch.nn.functional.pad(q, (0, 0, 0, 0, 0, n_frames_pad))
+            # [B, n_chunks, head, d_k, q_size]
+            q = q.unfold(1, size=chunk_size, step=chunk_size)
+            # [B * n_chunks, head, d_k, q_size]
+            q = q.reshape(-1, q.size(2), q.size(3), q.size(4))
+            # [B * n_chunks,q_size, head, d_k]
+            q = q.permute(0, 3, 1, 2)
+
+            # Chunking key and value
+            # (batch, head, time1, d_k * 2)
+            kv = torch.cat([k, v], dim=-1)
+            kv = torch.nn.functional.pad(
+                kv, 
+                (0, 0, left_context_size, n_frames_pad + right_context_size))
+            # [B, head, n_chunks, d_k * 2, l + c + r]
+            kv = kv.unfold(
+                2, 
+                size=left_context_size + chunk_size + right_context_size, 
+                step=chunk_size)
+            # [B, n_chunks, head, l + c + r, d_k * 2]
+            kv = kv.permute(0, 2, 1, 4, 3)
+            # [B * n_chunks, head, l + c + r, d_k * 2]
+            kv = kv.reshape(-1, kv.size(2), kv.size(3), kv.size(4))
+            k, v = torch.split(kv, kv.size(-1) // 2, dim=-1)
+
+            # Chunking mask for query
+            # [B, 1, T + n_frames_pad]
+            mask1 = torch.nn.functional.pad(mask, (0, n_frames_pad))
+            # [B, 1, n_chunks, chunk_size]
+            mask1 = mask1.unfold(-1, size=chunk_size, step=chunk_size)
+            # [B *n_chunks, chunk_size]
+            mask1 = mask1.reshape(-1, mask1.size(-1))
+
+            # Chunking mask for key and value
+            mask2 = torch.nn.functional.pad(
+                mask, 
+                (left_context_size, n_frames_pad + right_context_size))
+            # [B, 1, n_chunks, chunk_size]
+            mask2 = mask2.unfold(
+                -1, 
+                size=left_context_size + chunk_size + right_context_size, 
+                step=chunk_size)
+            # [B, * n_chunks, chunk_size]
+            mask2 = mask2.reshape(-1, mask2.size(3))
+
+            # finalize mask
+            mask = mask1.unsqueeze(-1) & mask2.unsqueeze(1)
+
+            # return dummy new cache
+            new_cache = cache
         else:
             new_cache = cache
 
@@ -127,14 +194,18 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         # compute matrix b and matrix d
         # (batch, head, time1, time2)
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
-        # Remove rel_shift since it is useless in speech recognition,
-        # and it requires special attention for streaming.
-        matrix_bd = self.rel_shift(matrix_bd, cache.size(2))
+        # Add relative shift with left and right context inclusion, it can stream
+        matrix_bd = self.rel_shift(matrix_bd, left_context_size, right_context_size)
 
         scores = (matrix_ac + matrix_bd) / math.sqrt(
             self.d_k)  # (batch, head, time1, time2)
 
-        return self.forward_attention(v, scores, mask), new_cache
+        attn_output = self.forward_attention(v, scores, mask)
+        if limited_context_attn:
+            attn_output = attn_output.reshape(bz, -1, n_feat)
+            attn_output = attn_output[:, :q_size, :]
+
+        return attn_output, new_cache
 
     def forward_parallel_chunk(
         self,
@@ -225,7 +296,7 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         # (batch, head, time1, time2)
         matrix_bd = torch.matmul(q_with_bias_v, p.transpose(-2, -1))
 
-        # Add relative shift with right context inclusion,it can stream
+        # Add relative shift with left and right context inclusion, it can stream
         matrix_bd = self.rel_shift(matrix_bd, left_context_size, right_context_size)
 
         scores = (matrix_ac + matrix_bd) / math.sqrt(
