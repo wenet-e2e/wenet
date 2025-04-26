@@ -57,7 +57,6 @@ class PositionwiseFeedForward(torch.nn.Module):
         """
         return self.w_2(self.dropout(self.activation(self.w_1(xs))))
 
-
 class MoEFFNLayer(torch.nn.Module):
     """
     Mixture of expert with Positionwise feed forward layer
@@ -102,24 +101,36 @@ class MoEFFNLayer(torch.nn.Module):
             output tensor, (B, L, D)
 
         """
-        B, L, D = xs.size(
-        )  # batch size, sequence length, embedding dimension (idim)
-        xs = xs.view(-1, D)  # (B*L, D)
-        router = self.gate(xs)  # (B*L, n_expert)
+        B, L, D = xs.size()
+        xs_flat = xs.view(-1, D)  # (B*L, D)
+
+        # Calculate routing weights
+        router = self.gate(xs_flat)  # (B*L, n_expert)
         logits, selected_experts = torch.topk(
             router, self.n_expert_activated
-        )  # probs:(B*L, n_expert_activated), selected_exp: (B*L, n_expert_activated)
+        )  # (B*L, k), (B*L, k)
         weights = torch.nn.functional.softmax(
-            logits, dim=1,
-            dtype=torch.float).to(dtype=xs.dtype)  # (B*L, n_expert_activated)
-        output = torch.zeros_like(xs)  # (B*L, D)
-        for i, expert in enumerate(self.experts):
-            mask = selected_experts == i
-            token_ids, ith_expert = torch.where(mask)
-            output[token_ids] += weights[token_ids, ith_expert, None] * expert(
-                xs[token_ids])
-        return output.view(B, L, D)
+            logits, dim=1).to(xs_flat.dtype)  # (B*L, k)
 
+        # Compute all experts outputs in parallel
+        expert_outputs = torch.stack(
+            [expert(xs_flat) for expert in self.experts],
+            dim=1
+        )  # (B*L, n_expert, D)
+
+        # Create selection mask
+        batch_indices = torch.arange(
+            expert_outputs.size(0),
+            device=expert_outputs.device
+        )[:, None].expand(-1, self.n_expert_activated)  # (B*L, k)
+
+        # Gather selected expert outputs
+        selected_outputs = expert_outputs[batch_indices, selected_experts, :]
+
+        # Weighted sum of expert outputs
+        weighted_outputs = selected_outputs * weights.unsqueeze(-1)
+        output_flat = weighted_outputs.sum(dim=1)  # (B*L, D)
+        return output_flat.view(B, L, D)
 
 class GatedVariantsMLP(torch.nn.Module):
     """ https://arxiv.org/pdf/2002.05202.pdf
