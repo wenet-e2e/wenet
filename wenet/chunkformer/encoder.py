@@ -183,8 +183,8 @@ class ChunkFormerEncoder(BaseEncoder):
 
     def limited_context_selection(self):
         full_context_training = True
-        if (self.dynamic_chunk_sizes is not None 
-            and self.dynamic_left_context_sizes is not None 
+        if (self.dynamic_chunk_sizes is not None
+            and self.dynamic_left_context_sizes is not None
                 and self.dynamic_right_context_sizes is not None):
             chunk_size = random.choice(self.dynamic_chunk_sizes)
             left_context_size = random.choice(self.dynamic_left_context_sizes)
@@ -274,12 +274,12 @@ class ChunkFormerEncoder(BaseEncoder):
         Main forward function that dispatches to either the standard
         forward pass or the parallel chunk version based on the
         model's training mode.
-        """     
+        """
         # for masked batch chunk context inference
         # should add a better flag to trigger
         if decoding_chunk_size > 0 and num_decoding_left_chunks > 0:
             # If both decoding_chunk_size and num_decoding_left_chunks
-            # are set, use the parallel chunk decoding. 
+            # are set, use the parallel chunk decoding.
             return self.forward_parallel_chunk(
                 xs=xs,
                 xs_origin_lens=xs_lens,
@@ -290,8 +290,8 @@ class ChunkFormerEncoder(BaseEncoder):
                 **kwargs
             )
         else:
-            (chunk_size, 
-                left_context_size, 
+            (chunk_size,
+                left_context_size,
                 right_context_size) = self.limited_context_selection()
             return self.forward_encoder(
                 xs=xs,

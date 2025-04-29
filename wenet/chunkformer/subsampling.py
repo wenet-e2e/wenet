@@ -169,8 +169,8 @@ class DepthwiseConvSubsampling(torch.nn.Module):
         else:
             x = x.transpose(1, 2)
         x, pos_emb = self.pos_enc(
-            x, 
-            chunk_size=chunk_size, 
+            x,
+            chunk_size=chunk_size,
             left_context_size=left_context_size,
             right_context_size=right_context_size)
         mask = ~make_pad_mask(lengths, x.size(1)).unsqueeze(1)

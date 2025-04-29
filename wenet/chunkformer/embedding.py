@@ -109,7 +109,7 @@ class RelPositionalEncodingWithRightContext(torch.nn.Module):
         pos_emb = self.position_encoding(
             chunk_size=chunk_size,
             left_context_size=left_context_size,
-            right_context_size=right_context_size, 
+            right_context_size=right_context_size,
             apply_dropout=False
         ).to(device=x.device, dtype=x.dtype)
         return self.dropout(x), self.dropout(pos_emb)

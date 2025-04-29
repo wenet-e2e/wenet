@@ -365,7 +365,7 @@ test other
     * dynamic batch size 120.000, 2 gpu, acc_grad 4, 200 epochs, dither 1.0
     * adamw, lr 1e-3, warmuplr, warmup_steps: 25000
     * specaug and speed perturb
-* Decoding info: 
+* Decoding info:
     * ctc_weight 0.3, reverse weight 0.5, average_num 100, beam size 10
     * Chunk size, left context size, and right context size are represented as (c, l, r)
     * Results on test-clean / test other

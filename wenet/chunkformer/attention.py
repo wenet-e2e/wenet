@@ -28,7 +28,7 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         torch.nn.init.xavier_uniform_(self.pos_bias_v)
 
     def rel_shift(self, x, left_context_size: int = 0, right_context_size: int = 0):
-        """Compute relative positional encoding. The position should capture both 
+        """Compute relative positional encoding. The position should capture both
         left and right context.
 
         Args:
@@ -88,8 +88,8 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
         q, k, v = self.forward_qkv(query, key, value)
         q = q.transpose(1, 2)  # (batch, time1, head, d_k)
 
-        limited_context_attn = (chunk_size > 0 
-                                and left_context_size > 0 
+        limited_context_attn = (chunk_size > 0
+                                and left_context_size > 0
                                 and right_context_size > 0)
 
         # NOTE(xcsong):
@@ -121,7 +121,7 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
             # chunking query
             # [B, time1, head, d_k]
             q_size = q.size(1)
-            n_frames_pad = (chunk_size - ((q_size - chunk_size) % chunk_size)) 
+            n_frames_pad = (chunk_size - ((q_size - chunk_size) % chunk_size))
             n_frames_pad = n_frames_pad % chunk_size
             q = torch.nn.functional.pad(q, (0, 0, 0, 0, 0, n_frames_pad))
             # [B, n_chunks, head, d_k, q_size]
@@ -135,12 +135,12 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
             # (batch, head, time1, d_k * 2)
             kv = torch.cat([k, v], dim=-1)
             kv = torch.nn.functional.pad(
-                kv, 
+                kv,
                 (0, 0, left_context_size, n_frames_pad + right_context_size))
             # [B, head, n_chunks, d_k * 2, l + c + r]
             kv = kv.unfold(
-                2, 
-                size=left_context_size + chunk_size + right_context_size, 
+                2,
+                size=left_context_size + chunk_size + right_context_size,
                 step=chunk_size)
             # [B, n_chunks, head, l + c + r, d_k * 2]
             kv = kv.permute(0, 2, 1, 4, 3)
@@ -158,12 +158,12 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
 
             # Chunking mask for key and value
             mask_kv = torch.nn.functional.pad(
-                mask, 
+                mask,
                 (left_context_size, n_frames_pad + right_context_size))
             # [B, 1, n_chunks, chunk_size]
             mask_kv = mask_kv.unfold(
-                -1, 
-                size=left_context_size + chunk_size + right_context_size, 
+                -1,
+                size=left_context_size + chunk_size + right_context_size,
                 step=chunk_size)
             # [B, * n_chunks, chunk_size]
             mask_kv = mask_kv.reshape(-1, mask_kv.size(3))
