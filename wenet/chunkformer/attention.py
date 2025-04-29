@@ -150,26 +150,26 @@ class ChunkAttentionWithRelativeRightContext(MultiHeadedAttention):
 
             # Chunking mask for query
             # [B, 1, T + n_frames_pad]
-            mask1 = torch.nn.functional.pad(mask, (0, n_frames_pad))
+            mask_q = torch.nn.functional.pad(mask, (0, n_frames_pad))
             # [B, 1, n_chunks, chunk_size]
-            mask1 = mask1.unfold(-1, size=chunk_size, step=chunk_size)
+            mask_q = mask_q.unfold(-1, size=chunk_size, step=chunk_size)
             # [B *n_chunks, chunk_size]
-            mask1 = mask1.reshape(-1, mask1.size(-1))
+            mask_q = mask_q.reshape(-1, mask_q.size(-1))
 
             # Chunking mask for key and value
-            mask2 = torch.nn.functional.pad(
+            mask_kv = torch.nn.functional.pad(
                 mask, 
                 (left_context_size, n_frames_pad + right_context_size))
             # [B, 1, n_chunks, chunk_size]
-            mask2 = mask2.unfold(
+            mask_kv = mask_kv.unfold(
                 -1, 
                 size=left_context_size + chunk_size + right_context_size, 
                 step=chunk_size)
             # [B, * n_chunks, chunk_size]
-            mask2 = mask2.reshape(-1, mask2.size(3))
+            mask_kv = mask_kv.reshape(-1, mask_kv.size(3))
 
             # finalize mask
-            mask = mask1.unsqueeze(-1) & mask2.unsqueeze(1)
+            mask = mask_q.unsqueeze(-1) & mask_kv.unsqueeze(1)
 
             # return dummy new cache
             new_cache = cache

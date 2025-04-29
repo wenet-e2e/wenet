@@ -292,7 +292,7 @@ class ChunkFormerEncoder(BaseEncoder):
         else:
             (chunk_size, 
                 left_context_size, 
-                right_context_size) = self.limited_context_selection()   
+                right_context_size) = self.limited_context_selection()
             return self.forward_encoder(
                 xs=xs,
                 xs_lens=xs_lens,

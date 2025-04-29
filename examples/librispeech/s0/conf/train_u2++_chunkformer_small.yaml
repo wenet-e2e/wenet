@@ -18,6 +18,11 @@ encoder_conf:
     selfattention_layer_type: 'chunk_rel_seflattn'
     dynamic_conv: false
     cnn_module_norm: 'layer_norm' # using nn.LayerNorm makes model converge faster
+    # Enable the settings below for joint training on full and chunk context
+    # dynamic_conv: true
+    # dynamic_chunk_sizes: [-1, -1, 64, 128, 256]
+    # dynamic_left_context_sizes: [64, 128, 256]
+    # dynamic_right_context_sizes: [64, 128, 256]
 
 # decoder related
 decoder: bitransformer
