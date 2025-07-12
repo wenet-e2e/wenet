@@ -20,7 +20,6 @@ class CollateFunc(object):
     def __init__(self, feat_dim, resample_rate):
         self.feat_dim = feat_dim
         self.resample_rate = resample_rate
-        pass
 
     def __call__(self, batch):
         mean_stat = torch.zeros(self.feat_dim)
