@@ -15,25 +15,18 @@
 import argparse
 
 from wenet.cli.model import load_model
-from wenet.cli.paraformer_model import load_model as load_paraformer
-from wenet.cli.punc_model import load_model as load_punc_model
+from wenet.cli.paraformer_model import load_model as load_paraformer  # noqa
+from wenet.cli.punc_model import load_model as load_punc_model  # noqa
 
 
 def get_args():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('audio_file', help='audio file to transcribe')
-    parser.add_argument('-l',
-                        '--language',
-                        choices=[
-                            'chinese',
-                            'english',
-                        ],
-                        default='chinese',
-                        help='language type')
     parser.add_argument('-m',
-                        '--model_dir',
-                        default=None,
-                        help='specify your own model dir')
+                        '--model',
+                        default='wenetspeech',
+                        help='model name or local model dir, built in models:'
+                        '[wenetspeech|paraformer|firered|whisper*]')
     parser.add_argument('-g',
                         '--gpu',
                         type=int,
@@ -78,24 +71,10 @@ def get_args():
 
 def main():
     args = get_args()
-
-    if args.paraformer:
-        model = load_paraformer(args.model_dir, args.gpu, args.device)
-    else:
-        model = load_model(args.language, args.model_dir, args.gpu, args.beam,
-                           args.context_path, args.context_score, args.device)
-    punc_model = None
-    if args.punc:
-        punc_model = load_punc_model(args.punc_model_dir, args.gpu,
-                                     args.device)
-    if args.align:
-        result = model.align(args.audio_file, args.label)
-    else:
-        result = model.transcribe(args.audio_file, args.show_tokens_info)
-        if args.punc:
-            assert punc_model is not None
-            result['text_with_punc'] = punc_model(result['text'])
-    print(result)
+    # TODO(Binbin Zhang): Add other feature, such as device, paraformer, ...
+    model = load_model(args.model)
+    result = model.transcribe(args.audio_file)
+    print(result.text)
 
 
 if __name__ == "__main__":

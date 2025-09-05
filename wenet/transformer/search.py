@@ -37,7 +37,8 @@ class DecodeResult:
                  times: List[int] = None,
                  nbest: List[List[int]] = None,
                  nbest_scores: List[float] = None,
-                 nbest_times: List[List[int]] = None):
+                 nbest_times: List[List[int]] = None,
+                 text: str = ''):
         """
         Args:
             tokens: decode token list
@@ -57,6 +58,7 @@ class DecodeResult:
         self.nbest = nbest
         self.nbest_scores = nbest_scores
         self.nbest_times = nbest_times
+        self.text = text
 
 
 class PrefixScore:

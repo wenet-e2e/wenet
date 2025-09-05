@@ -13,8 +13,10 @@
 # limitations under the License.
 
 import os
+import shutil
 import sys
 import tarfile
+import tempfile
 from pathlib import Path
 from urllib.request import urlretrieve
 
@@ -54,31 +56,36 @@ def download(url: str, dest: str, only_child=True):
                     data=None)
         t.total = t.n
 
-    with tarfile.open(tar_path) as f:
-        if not only_child:
-            f.extractall(dest)
-        else:
-            for tarinfo in f:
-                if "/" not in tarinfo.name:
-                    continue
-                name = os.path.basename(tarinfo.name)
-                fileobj = f.extractfile(tarinfo)
-                with open(os.path.join(dest, name), "wb") as writer:
-                    writer.write(fileobj.read())
+    with tempfile.TemporaryDirectory() as temp_dir:
+        try:
+            with tarfile.open(tar_path, 'r') as tar:
+                tar.extractall(path=temp_dir)
+            contents = os.listdir(temp_dir)
+            extracted_dir = os.path.join(temp_dir, contents[0])
+            for item in os.listdir(extracted_dir):
+                source_item = os.path.join(extracted_dir, item)
+                dest_item = os.path.join(dest, item)
+                if os.path.exists(dest_item):
+                    if os.path.isdir(dest_item):
+                        shutil.rmtree(dest_item)
+                    else:
+                        os.remove(dest_item)
+                shutil.move(source_item, dest)
+                print(f"Extract {source_item} to {dest}")
+
+        except tarfile.TarError as e:
+            print(f"Error during tar file extraction: {e}")
+        except OSError as e:
+            print(f"Error during file operation: {e}")
 
 
 class Hub(object):
-    """Hub for wenet pretrain runtime model
+    """Hub for wenet pretrain model
     """
-    # TODO(Mddct): make assets class to support other language
-    Assets = {
-        # wenetspeech
-        "chinese": "wenetspeech_u2pp_conformer_libtorch.tar.gz",
-        # gigaspeech
-        "english": "gigaspeech_u2pp_conformer_libtorch.tar.gz",
-        # paraformer
+    # TODO(Binbin Zhang): make assets class to support more models
+    assets = {
+        "wenetspeech": "wenetspeech_u2pp_conformer_exp.tar.gz",
         "paraformer": "paraformer.tar.gz",
-        # punc
         "punc": "punc.tar.gz"
     }
 
@@ -86,26 +93,16 @@ class Hub(object):
         pass
 
     @staticmethod
-    def get_model_by_lang(lang: str) -> str:
-        if lang not in Hub.Assets.keys():
-            print('ERROR: Unsupported language {} !!!'.format(lang))
+    def download_model(model_name: str) -> str:
+        if model_name not in Hub.assets.keys():
+            print('ERROR: Unsupported model {} !!!'.format(model_name))
             sys.exit(1)
-
-        # NOTE(Mddct): model_dir structure
-        # Path.Home()/.wenet
-        # - chs
-        #    - units.txt
-        #    - final.zip
-        # - en
-        #    - units.txt
-        #    - final.zip
-        model = Hub.Assets[lang]
-        model_dir = os.path.join(Path.home(), ".wenet", lang)
+        model = Hub.assets[model_name]
+        model_dir = os.path.join(Path.home(), ".wenet", model_name)
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
-        # TODO(Mddct): model metadata
-        if set(["final.zip",
-                "units.txt"]).issubset(set(os.listdir(model_dir))):
+        if set(["final.pt",
+                "train.yaml"]).issubset(set(os.listdir(model_dir))):
             return model_dir
         # If not exist, download
         response = requests.get(
