@@ -313,3 +313,67 @@ test other
 | ctc_greedy_search      | 8.73 | 9.82 | 9.83 |
 | ctc prefix beam search | 8.70 | 9.81 | 9.79 |
 | attention rescoring    | 8.05 | 9.08 | 9.10 |
+
+
+## ChunkFormer U2++ Result
+
+* Model info:
+    * Encoder Params: 32,356,096
+    * Downsample rate: dw_striding 8x
+    * encoder_dim 256, head 4, linear_units 2048
+    * num_blocks 12, cnn_module_kernel 15
+* Feature info: using fbank feature, cmvn, dither, online speed perturb
+* Training info:
+    * train_u2++_chunkformer_small.yaml, kernel size 15
+    * dynamic batch size 120.000, 2 gpu, acc_grad 4, 200 epochs, dither 1.0
+    * adamw, lr 1e-3, warmuplr, warmup_steps: 25000
+    * specaug and speed perturb
+* Decoding info: ctc_weight 0.3, reverse weight 0.5, average_num 100, beam size 10
+
+#### Full context training -> Chunk context inferencing:
+⚠️ Attention Decoder does **not** support chunk-context inference due to cross-attention mismatch with full context training. Chunk-context training is required to resolve this mismatch.
+
+| Decoding Mode          | Dev Clean | Dev Other | Test Clean | Test Other |
+|------------------------|-----------|-----------|------------|------------|
+| CTC Greedy Search      | 3.05      | 8.84      | 3.27       | 8.54       |
+| CTC Prefix Beam Search | 3.04      | 8.83      | 3.26       | 8.54       |
+| Attention Decoder      | 4.58      | 9.62      | 5.07       | 9.22       |
+| Attention Rescoring    | 2.83      | 8.39      | 2.97       | 8.02       |
+
+#### Full context training -> Full context inferencing:
+| Decoding Mode          | Dev Clean | Dev Other | Test Clean | Test Other |
+|------------------------|-----------|-----------|------------|------------|
+| CTC Greedy Search      | 3.08      | 8.82      | 3.24       | 8.55       |
+| CTC Prefix Beam Search | 3.06      | 8.80      | 3.23       | 8.53       |
+| Attention Decoder      | 2.92      | 8.28      | 3.03       | 8.05       |
+| Attention Rescoring    | 2.80      | 8.37      | 2.94       | 8.03       |
+
+
+## ChunkFormer U2++ Result: Joint Full and Chunk Context Training
+* Model info:
+    * Encoder Params: 32,356,096
+    * Downsample rate: dw_striding 8x
+    * encoder_dim 256, head 4, linear_units 2048
+    * num_blocks 12, cnn_module_kernel 15
+    * dynamic_conv: true
+    * dynamic_chunk_sizes: [-1, -1, 64, 128, 256]
+    * dynamic_left_context_sizes: [64, 128, 256]
+    * dynamic_right_context_sizes: [64, 128, 256]
+* Feature info: using fbank feature, cmvn, dither, online speed perturb
+* Training info:
+    * train_u2++_chunkformer_small.yaml, kernel size 15
+    * dynamic batch size 120.000, 2 gpu, acc_grad 4, 200 epochs, dither 1.0
+    * adamw, lr 1e-3, warmuplr, warmup_steps: 25000
+    * specaug and speed perturb
+* Decoding info:
+    * ctc_weight 0.3, reverse weight 0.5, average_num 100, beam size 10
+    * Chunk size, left context size, and right context size are represented as (c, l, r)
+    * Results on test-clean / test other
+
+| Decoding Mode         | (-1, -1, -1)   | (64, 128, 128) | (128, 128, 128)  | (128, 256, 256)  | (256, 64, 64)  | (256, 128, 128)  |
+|-----------------------|----------------|----------------|------------------|------------------|----------------|------------------|
+| ctc_greedy_search     | 3.19 / 8.51*   | 3.22 / 8.54    | 3.20 / 8.53      | 3.20 / 8.53      | 3.18* / 8.52   | 3.18* / 8.51*    |
+| ctc_prefix_beam_search| 3.17 / 8.50    | 3.20 / 8.53    | 3.18 / 8.51      | 3.19 / 8.51      | 3.16* / 8.50   | 3.16* / 8.49*    |
+| attention             | 3.24* / 8.03*  | 3.38 / 8.16    | 3.24* / 8.07     | 3.28 / 8.05      | 3.29 / 8.13    | 3.26 / 8.08      |
+| attention_rescoring   | 2.96 / 7.88*   | 2.82* / 7.89   | 2.96 / 7.90      | 2.97 / 7.90      | 2.95 / 7.89    | 2.95 / 7.88*     |
+| Average               | 3.14* / 8.23*  | 3.16 / 8.28    | 3.15 / 8.25      | 3.16 / 8.25      | 3.15 / 8.26    | 3.14* / 8.24     |
