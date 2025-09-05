@@ -265,8 +265,13 @@ def attention_beam_search(
     encoder_dim = encoder_out.size(2)
     running_size = batch_size * beam_size
     if getattr(model, 'special_tokens', None) is not None \
-            and "transcribe" in model.special_tokens:
-        tasks, langs = infos["tasks"], infos["langs"]
+            and "transcribe" in model.special_tokens:  # whisper
+        if infos is None:
+            tasks = ['transcribe' for _ in range(batch_size)]
+            # TODO(Binbin Zhang): Fix me
+            langs = ['en' for _ in range(batch_size)]
+        else:
+            tasks, langs = infos["tasks"], infos["langs"]
         tasks = [t for t in tasks for _ in range(beam_size)]
         langs = [l for l in langs for _ in range(beam_size)]
         hyps = torch.ones([running_size, 0], dtype=torch.long,
@@ -293,8 +298,6 @@ def attention_beam_search(
     }
     if model.decoder.use_sdpa:
         encoder_mask = mask_to_bias(encoder_mask, encoder_out.dtype)
-    if hasattr(model, 'decode_maxlen'):
-        maxlen = model.decode_maxlen
     # 2. Decoder forward step by step
     for i in range(prefix_len, maxlen + 1):
         # Stop if all batch and all beam produce eos

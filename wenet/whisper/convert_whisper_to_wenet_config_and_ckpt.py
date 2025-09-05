@@ -32,6 +32,7 @@ import argparse
 import copy
 import os
 import sys
+
 import torch
 import yaml
 
@@ -189,7 +190,9 @@ def convert_to_wenet_yaml(tokenizer, dims, wenet_yaml_path: str):
     print(configs)
 
 
-def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
+def convert_to_wenet_state_dict(whisper_state_dict,
+                                wenet_state_dict_path,
+                                bf16=False):
     wenet_state_dict = {}
     unused = []
     print(
@@ -236,10 +239,14 @@ def convert_to_wenet_state_dict(whisper_state_dict, wenet_state_dict_path):
             wenet_state_dict[name] = whisper_state_dict[original_name].float()
     for name in unused:
         print("NOTE!!! drop {}".format(name))
-    print("Saving fp32 ckpt to {}...".format(wenet_state_dict_path))
+    if bf16:
+        for k, v in wenet_state_dict.items():
+            if isinstance(v, torch.Tensor) and v.is_floating_point():
+                wenet_state_dict[k] = v.to(torch.bfloat16)
+    print("Saving ckpt to {}...".format(wenet_state_dict_path))
     torch.save(wenet_state_dict, wenet_state_dict_path)
     print(
-        "DONE\n===================== End CKPT Conversion =========================\n"
+        "===================== End CKPT Conversion =========================\n"
     )
 
 
@@ -270,6 +277,9 @@ def get_args():
         required=True,
         help='https://openaipublic.azureedge.net/main/whisper/models/e5b1a55b89c1367dacf97e3e19bfd829a01529dbfdeefa8caeb59b3f1b81dadb/large-v3.pt'  # noqa
     )
+    parser.add_argument('--bf16',
+                        action='store_true',
+                        help='save bf16 model')
     # yapf: enable
     parser.add_argument('--output_dir',
                         default='.',
@@ -287,9 +297,9 @@ def main():
     tokenizer = get_tokenizer(multilingual=multilingual,
                               num_languages=num_languages)
 
-    convert_to_wenet_state_dict(
-        checkpoint["model_state_dict"],
-        os.path.join(args.output_dir, 'wenet_whisper.pt'))
+    convert_to_wenet_state_dict(checkpoint["model_state_dict"],
+                                os.path.join(args.output_dir, 'final.pt'),
+                                args.bf16)
     convert_to_wenet_units(tokenizer, os.path.join(args.output_dir,
                                                    'units.txt'))
     convert_to_wenet_yaml(tokenizer, checkpoint["dims"],
@@ -297,5 +307,4 @@ def main():
 
 
 if __name__ == "__main__":
-
     main()
