@@ -86,6 +86,7 @@ class Hub(object):
     assets = {
         "wenetspeech": "wenetspeech_u2pp_conformer_exp.tar.gz",
         "paraformer": "paraformer.tar.gz",
+        "firered": "firered.tar.gz",
         "punc": "punc.tar.gz"
     }
 
