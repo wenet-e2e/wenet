@@ -98,7 +98,8 @@ def add_dataset_args(parser):
                         default='raw',
                         choices=['raw', 'shard'],
                         help='train and cv data type')
-    parser.add_argument('--train_data', required=True, nargs='+', help='train data file')
+    parser.add_argument('--train_data', required=True, nargs='+',
+                        help='train data file')
     parser.add_argument('--cv_data', required=True, help='cv data file')
     parser.add_argument('--num_workers',
                         default=0,
