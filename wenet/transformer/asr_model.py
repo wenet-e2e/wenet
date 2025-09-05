@@ -35,6 +35,9 @@ from wenet.utils.context_graph import ContextGraph
 class ASRModel(torch.nn.Module):
     """CTC-attention hybrid Encoder-Decoder model"""
 
+    # default decoding method for cli
+    default_decode_method = "attention_rescoring"
+
     def __init__(
         self,
         vocab_size: int,
@@ -338,14 +341,15 @@ class ASRModel(torch.nn.Module):
         return results
 
     def transcribe(self, wav: str):
-        """ We use attention_rescoring for transcribe"""
+        """Transcribe for cli"""
         assert hasattr(self, 'compute_feature')  # Dynamic inject in cli
         assert hasattr(self, 'tokenizer')  # Dynamic inject in cli
+        self.eval()
         speech = self.compute_feature(wav)
         speech_lengths = torch.tensor([speech.size(0)], device=speech.device)
         speech = speech.unsqueeze(0)
-        results = self.decode(['attention_rescoring'], speech, speech_lengths)
-        result = results['attention_rescoring'][0]
+        results = self.decode([self.default_decode_method], speech, speech_lengths)
+        result = results[self.default_decode_method][0]
         result.text = self.tokenizer.detokenize(result.tokens)[0]
         return result
 

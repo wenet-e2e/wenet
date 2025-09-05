@@ -24,6 +24,9 @@ from wenet.utils.common import IGNORE_ID
 
 class FireRedModel(ASRModel):
 
+    # FireRedModel only support autogressive decoding
+    default_decode_method = "attention"
+
     def __init__(
         self,
         vocab_size: int,
