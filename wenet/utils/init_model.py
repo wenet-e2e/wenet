@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 
 import torch
 from wenet.branchformer.encoder import BranchformerEncoder
@@ -205,8 +204,5 @@ def init_model(args, configs):
 
     if hasattr(args, 'only_optimize_lora') and args.only_optimize_lora:
         mark_only_lora_as_trainable(model, bias='lora_only')
-
-    if int(os.environ.get('RANK', 0)) == 0:
-        print(configs)
 
     return model, configs
