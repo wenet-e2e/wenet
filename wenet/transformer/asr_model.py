@@ -267,7 +267,7 @@ class ASRModel(torch.nn.Module):
         methods: List[str],
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-        beam_size: int = 10,
+        beam_size: int = 1,
         decoding_chunk_size: int = -1,
         num_decoding_left_chunks: int = -1,
         ctc_weight: float = 0.0,

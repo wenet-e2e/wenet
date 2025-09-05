@@ -85,6 +85,8 @@ class Hub(object):
     # TODO(Binbin Zhang): make assets class to support more models
     assets = {
         "wenetspeech": "wenetspeech_u2pp_conformer_exp.tar.gz",
+        "whisper-large-v3": "whisper-large-v3.tar.gz",
+        "whisper-large-v3-turbo": "whisper-large-v3-turbo.tar.gz",
         "paraformer": "paraformer.tar.gz",
         "firered": "firered.tar.gz",
         "punc": "punc.tar.gz"

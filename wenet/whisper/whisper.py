@@ -27,6 +27,9 @@ from wenet.utils.common import IGNORE_ID, add_whisper_tokens, th_accuracy
 
 class Whisper(ASRModel):
 
+    # Whisper only support autogressive decoding
+    default_decode_method = "attention"
+
     def __init__(
         self,
         vocab_size: int,
