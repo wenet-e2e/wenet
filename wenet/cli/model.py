@@ -15,9 +15,8 @@
 import argparse
 import os
 
-import yaml
-
 import wenet.dataset.processor as processor
+import yaml
 from wenet.cli.hub import Hub
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
@@ -27,12 +26,12 @@ def load_tokenizer(model_dir):
     config_file = os.path.join(model_dir, 'train.yaml')
     with open(config_file, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
-    token_file = os.path.join(model_dir, 'units.txt')
-    if os.path.exists(token_file):
-        configs['tokenizer_conf']['symbol_table_path'] = token_file
-    bpe_file = os.path.join(model_dir, 'bpe.model')
-    if os.path.exists(bpe_file):
-        configs['tokenizer_conf']['bpe_path'] = bpe_file
+
+    for key, value in configs['tokenizer_conf'].items():
+        if isinstance(value, str):
+            rewrite_path = os.path.join(model_dir, os.path.basename(value))
+            if os.path.exists(rewrite_path):
+                configs['tokenizer_conf'][key] = rewrite_path
     return init_tokenizer(configs)
 
 

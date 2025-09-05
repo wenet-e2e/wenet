@@ -107,6 +107,8 @@ class Paraformer(ASRModel):
         see https://arxiv.org/pdf/2206.08317.pdf
 
     """
+    # default decoding method for cli
+    default_decode_method = "paraformer_greedy_search"
 
     def __init__(self,
                  vocab_size: int,
@@ -361,7 +363,7 @@ class Paraformer(ASRModel):
         methods: List[str],
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-        beam_size: int,
+        beam_size: int = 1,
         decoding_chunk_size: int = -1,
         num_decoding_left_chunks: int = -1,
         ctc_weight: float = 0,
