@@ -29,8 +29,6 @@ import torchaudio.compliance.kaldi as kaldi
 import torch.nn.functional as F
 from wenet.text.base_tokenizer import BaseTokenizer
 
-torchaudio.utils.sox_utils.set_buffer_size(16500)
-
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
 
 lid = LanguageIdentifier.from_modelstring(model, norm_probs=True)
