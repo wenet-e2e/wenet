@@ -345,8 +345,9 @@ class ASRModel(torch.nn.Module):
         assert hasattr(self, 'compute_feature')  # Dynamic inject in cli
         assert hasattr(self, 'tokenizer')  # Dynamic inject in cli
         self.eval()
-        speech = self.compute_feature(wav)
-        speech_lengths = torch.tensor([speech.size(0)], device=speech.device)
+        device = next(self.parameters()).device
+        speech = self.compute_feature(wav).to(device)
+        speech_lengths = torch.tensor([speech.size(0)], device=device)
         speech = speech.unsqueeze(0)
         results = self.decode([self.default_decode_method], speech, speech_lengths)
         result = results[self.default_decode_method][0]
