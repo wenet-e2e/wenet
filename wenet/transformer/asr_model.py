@@ -264,7 +264,7 @@ class ASRModel(torch.nn.Module):
         methods: List[str],
         speech: torch.Tensor,
         speech_lengths: torch.Tensor,
-        beam_size: int,
+        beam_size: int = 10,
         decoding_chunk_size: int = -1,
         num_decoding_left_chunks: int = -1,
         ctc_weight: float = 0.0,
@@ -336,6 +336,18 @@ class ASRModel(torch.nn.Module):
                 self, ctc_prefix_result, encoder_out, encoder_lens, ctc_weight,
                 reverse_weight, infos)
         return results
+
+    def transcribe(self, wav: str):
+        """ We use attention_rescoring for transcribe"""
+        assert hasattr(self, 'compute_feature')  # Dynamic inject in cli
+        assert hasattr(self, 'tokenizer')  # Dynamic inject in cli
+        speech = self.compute_feature(wav)
+        speech_lengths = torch.tensor([speech.size(0)], device=speech.device)
+        speech = speech.unsqueeze(0)
+        results = self.decode(['attention_rescoring'], speech, speech_lengths)
+        result = results['attention_rescoring'][0]
+        result.text = self.tokenizer.detokenize(result.tokens)[0]
+        return result
 
     @torch.jit.export
     def subsampling_rate(self) -> int:
