@@ -84,8 +84,8 @@ def load_model_local(model_dir):
     # load model
     model, configs = init_model(args, configs)
     # load and set tokenizer
+    tokenizer = load_tokenizer(model_dir)
     setattr(model, 'tokenizer', tokenizer)  # noqa, dynamic inject
-    model.tokenizer = tokenizer
     # load and set feature function
     compute_feature = load_feature_function(model_dir)
     setattr(model, 'compute_feature', compute_feature)  # noqa, dynamic inject
