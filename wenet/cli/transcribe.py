@@ -27,11 +27,6 @@ def get_args():
                         default='wenetspeech',
                         help='model name or local model dir, built in models:'
                         '[wenetspeech|paraformer|firered|whisper*]')
-    parser.add_argument('-g',
-                        '--gpu',
-                        type=int,
-                        default='-1',
-                        help='gpu id to decode, default is cpu.')
     parser.add_argument('--device',
                         type=str,
                         default='cpu',
@@ -72,7 +67,7 @@ def get_args():
 def main():
     args = get_args()
     # TODO(Binbin Zhang): Add other feature, such as device, paraformer, ...
-    model = load_model(args.model)
+    model = load_model(args.model, device=args.device)
     result = model.transcribe(args.audio_file)
     print(result.text)
 

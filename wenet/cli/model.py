@@ -92,10 +92,11 @@ def load_model_local(model_dir):
     return model
 
 
-def load_model(model_name_or_path):
+def load_model(model_name_or_path, device='cpu'):
     if model_name_or_path in Hub.assets:
         model_dir = Hub.download_model(model_name_or_path)
     else:
         model_dir = model_name_or_path
     model = load_model_local(model_dir)
+    model = model.to(device)
     return model
