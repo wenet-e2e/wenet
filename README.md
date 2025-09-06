@@ -34,7 +34,7 @@ pip install git+https://github.com/wenet-e2e/wenet.git
 wenet -m paraformer audio.wav
 ```
 
-You can set `-m` with `paraformer` or `firered` or `wenetspeech` chinese,
+You can set `-m` with `paraformer` or `firered` or `wenetspeech` for chinese,
 and set it to `whisper-large-v3` or `whisper-large-v3-turbo` for english.
 
 
