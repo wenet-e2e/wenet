@@ -41,9 +41,6 @@ def get_args():
                         action='store_true',
                         help='force align the input audio and transcript')
     parser.add_argument('--label', type=str, help='the input label to align')
-    parser.add_argument('--paraformer',
-                        action='store_true',
-                        help='whether to use the best chinese model')
     parser.add_argument('--beam', type=int, default=5, help="beam size")
     parser.add_argument('--context_path',
                         type=str,
