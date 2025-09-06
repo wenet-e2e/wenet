@@ -31,8 +31,12 @@ pip install git+https://github.com/wenet-e2e/wenet.git
 **Command-line usage** (use `-h` for parameters):
 
 ``` sh
-wenet --language chinese audio.wav
+wenet -m paraformer audio.wav
 ```
+
+You can set `-m` with `paraformer` or `firered` or `wenetspeech` chinese,
+and set it to `whisper-large-v3` or `whisper-large-v3-turbo` for english.
+
 
 **Python programming usage**:
 
@@ -41,7 +45,7 @@ import wenet
 
 model = wenet.load_model('chinese')
 result = model.transcribe('audio.wav')
-print(result['text'])
+print(result.text)
 ```
 
 Please refer [python usage](docs/python_package.md) for more command line and python programming usage.

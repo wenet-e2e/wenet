@@ -15,7 +15,6 @@
 import argparse
 
 from wenet.cli.model import load_model
-from wenet.cli.paraformer_model import load_model as load_paraformer  # noqa
 from wenet.cli.punc_model import load_model as load_punc_model  # noqa
 
 

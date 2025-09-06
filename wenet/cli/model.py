@@ -15,14 +15,24 @@
 import argparse
 import os
 
-import wenet.dataset.processor as processor
 import yaml
+
+import wenet.dataset.processor as processor
 from wenet.cli.hub import Hub
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
 
 
-def load_tokenizer(model_dir):
+def load_or_download(model_name_or_path):
+    if model_name_or_path in Hub.assets:
+        model_dir = Hub.download_model(model_name_or_path)
+    else:
+        model_dir = model_name_or_path
+    return model_dir
+
+
+def load_tokenizer(model_name_or_path):
+    model_dir = load_or_download(model_name_or_path)
     config_file = os.path.join(model_dir, 'train.yaml')
     with open(config_file, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
@@ -35,7 +45,8 @@ def load_tokenizer(model_dir):
     return init_tokenizer(configs)
 
 
-def load_feature_function(model_dir):
+def load_feature(model_name_or_path):
+    model_dir = load_or_download(model_name_or_path)
     config_file = os.path.join(model_dir, 'train.yaml')
     with open(config_file, 'r') as fin:
         configs = yaml.load(fin, Loader=yaml.FullLoader)
@@ -44,6 +55,7 @@ def load_feature_function(model_dir):
     assert feats_type in ['fbank', 'mfcc', 'log_mel_spectrogram']
     feats_conf = conf.get(f'{feats_type}_conf', {})
     feats_func = getattr(processor, f'compute_{feats_type}')
+    feature_dim = feats_conf.get('num_mel_bins', 80)
 
     def compute_feature(wav_file):
         sample = {'key': wav_file, 'wav': wav_file}
@@ -52,10 +64,11 @@ def load_feature_function(model_dir):
         sample = feats_func(sample, **feats_conf)
         return sample['feat']
 
-    return compute_feature
+    return compute_feature, feature_dim
 
 
-def load_model_local(model_dir):
+def load_model(model_name_or_path, device='cpu'):
+    model_dir = load_or_download(model_name_or_path)
     """ There are the follow files in in `model_dir`
         * final.pt, required
         * train.yaml, required
@@ -86,16 +99,7 @@ def load_model_local(model_dir):
     tokenizer = load_tokenizer(model_dir)
     setattr(model, 'tokenizer', tokenizer)  # noqa, dynamic inject
     # load and set feature function
-    compute_feature = load_feature_function(model_dir)
+    compute_feature, _ = load_feature(model_dir)
     setattr(model, 'compute_feature', compute_feature)  # noqa, dynamic inject
-    return model
-
-
-def load_model(model_name_or_path, device='cpu'):
-    if model_name_or_path in Hub.assets:
-        model_dir = Hub.download_model(model_name_or_path)
-    else:
-        model_dir = model_name_or_path
-    model = load_model_local(model_dir)
     model = model.to(device)
     return model
