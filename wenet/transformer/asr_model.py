@@ -225,6 +225,7 @@ class ASRModel(torch.nn.Module):
         if simulate_streaming and decoding_chunk_size > 0:
             encoder_out, encoder_mask = self.encoder.forward_chunk_by_chunk(
                 speech,
+                speech_lengths,
                 decoding_chunk_size=decoding_chunk_size,
                 num_decoding_left_chunks=num_decoding_left_chunks
             )  # (B, maxlen, encoder_dim)
@@ -383,6 +384,7 @@ class ASRModel(torch.nn.Module):
     def forward_encoder_chunk(
         self,
         xs: torch.Tensor,
+        speech_lengths: torch.Tensor,
         offset: int,
         required_cache_size: int,
         att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
@@ -419,7 +421,7 @@ class ASRModel(torch.nn.Module):
                 same shape as the original cnn_cache.
 
         """
-        return self.encoder.forward_chunk(xs, offset, required_cache_size,
+        return self.encoder.forward_chunk(xs, speech_lengths, offset, required_cache_size,
                                           att_cache, cnn_cache)
 
     @torch.jit.export

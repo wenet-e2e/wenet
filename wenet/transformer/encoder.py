@@ -298,6 +298,60 @@ class BaseEncoder(torch.nn.Module):
 
         return (xs, r_att_cache, r_cnn_cache)
 
+    def forward_batch_chunk(self, 
+        xs: torch.Tensor,
+        xs_lens: torch.Tensor,
+        offset: int,
+        required_cache_size: int,
+        att_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+        cnn_cache: torch.Tensor = torch.zeros(0, 0, 0, 0),
+        att_mask: torch.Tensor = torch.ones((0, 0, 0), dtype=torch.bool),
+        )-> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        batch_size = xs.size(0)
+        chunk_mask = xs_lens.to(xs.dtype)
+
+        if self.global_cmvn is not None:
+            xs = self.global_cmvn(xs)
+        xs, pos_emb, _= self.embed(xs, chunk_mask, offset)
+
+        elayers, cache_t1 = att_cache.size(0), att_cache.size(2)
+        chunk_size = xs.size(1)
+        attention_key_size = cache_t1 + chunk_size
+        pos_emb = self.embed.position_encoding(offset=offset - cache_t1,
+                                               size=attention_key_size)
+        if required_cache_size < 0:
+            next_cache_start = 0
+        elif required_cache_size == 0:
+            next_cache_start = attention_key_size
+        else:
+            next_cache_start = max(attention_key_size - required_cache_size, 0)
+        r_att_cache = []
+        r_cnn_cache = []
+        for i, layer in enumerate(self.encoders):
+            if elayers == 0:
+                kv_cache = (att_cache, att_cache)
+            else:
+                i_kv_cache = att_cache[i* batch_size :i* batch_size + batch_size]
+                size = att_cache.size(-1) // 2
+                kv_cache = (i_kv_cache[:, :, :, :size], i_kv_cache[:, :, :,
+                                                                   size:])
+            xs, _, new_kv_cache, new_cnn_cache = layer(
+                xs,
+                att_mask,
+                pos_emb,
+                att_cache=kv_cache,
+                cnn_cache=cnn_cache[i] if cnn_cache.size(0) > 0 else cnn_cache)
+            
+            new_att_cache = torch.cat(new_kv_cache, dim=-1)
+            r_att_cache.append(new_att_cache[:, :, next_cache_start:, :])
+            r_cnn_cache.append(new_cnn_cache.unsqueeze(0))
+        if self.normalize_before:
+            xs = self.after_norm(xs)
+        r_att_cache = torch.cat(r_att_cache, dim=0)
+        r_cnn_cache = torch.cat(r_cnn_cache, dim=0)
+        return (xs, r_att_cache, r_cnn_cache)
+
     def forward_chunk_by_chunk(
         self,
         xs: torch.Tensor,
@@ -343,21 +397,29 @@ class BaseEncoder(torch.nn.Module):
         outputs = []
         offset = 0
         required_cache_size = decoding_chunk_size * num_decoding_left_chunks
+      
+        T = xs.size(1)
+        masks = ~make_pad_mask(xs_lens, T).unsqueeze(1)  # (B, 1, T)
+        masks_TF = torch.where(masks, 1, 0)
 
         # Feed forward overlap input step by step
         for cur in range(0, num_frames - context + 1, stride):
             end = min(cur + decoding_window, num_frames)
             chunk_xs = xs[:, cur:end, :]
-            (y, att_cache,
-             cnn_cache) = self.forward_chunk(chunk_xs, offset,
+            chunk_lens = masks_TF[:, :, cur:end]
+            if chunk_xs.size(0) == 1:
+                (y, att_cache,
+                 cnn_cache) = self.forward_chunk(chunk_xs, offset,
+                                             required_cache_size, att_cache,
+                                             cnn_cache)
+            else:
+                (y, att_cache,
+                 cnn_cache) = self.forward_batch_chunk(chunk_xs,chunk_lens, offset,
                                              required_cache_size, att_cache,
                                              cnn_cache)
             outputs.append(y)
             offset += y.size(1)
         ys = torch.cat(outputs, 1)
-        masks = torch.ones((1, 1, ys.size(1)),
-                           device=ys.device,
-                           dtype=torch.bool)
         return ys, masks
 
 
