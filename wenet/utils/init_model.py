@@ -14,34 +14,38 @@
 
 
 import torch
-from wenet.branchformer.encoder import BranchformerEncoder
-from wenet.ctl_model.asr_model_ctl import CTLModel
-from wenet.ctl_model.encoder import (DualConformerEncoder,
-                                     DualTransformerEncoder)
-from wenet.e_branchformer.encoder import EBranchformerEncoder
-from wenet.efficient_conformer.encoder import EfficientConformerEncoder
-from wenet.finetune.lora.utils import (inject_lora_to_model,
-                                       mark_only_lora_as_trainable)
-from wenet.firered.encoder import FireRedConformerEncoder
-from wenet.firered.model import FireRedModel
-from wenet.k2.model import K2Model
-from wenet.paraformer.cif import Cif
-from wenet.paraformer.layers import SanmDecoder, SanmEncoder
-from wenet.paraformer.paraformer import Paraformer, Predictor
-from wenet.squeezeformer.encoder import SqueezeformerEncoder
-from wenet.ssl.init_model import WENET_SSL_MODEL_CLASS
-from wenet.transducer.joint import TransducerJoint
-from wenet.transducer.predictor import (ConvPredictor, EmbeddingPredictor,
-                                        RNNPredictor)
-from wenet.transducer.transducer import Transducer
-from wenet.transformer.asr_model import ASRModel
-from wenet.transformer.cmvn import GlobalCMVN
-from wenet.transformer.ctc import CTC
-from wenet.transformer.decoder import BiTransformerDecoder, TransformerDecoder
-from wenet.transformer.encoder import ConformerEncoder, TransformerEncoder
+
+from wenet.models.branchformer.encoder import BranchformerEncoder
+from wenet.models.ctl_model.asr_model_ctl import CTLModel
+from wenet.models.ctl_model.encoder import (DualConformerEncoder,
+                                            DualTransformerEncoder)
+from wenet.models.e_branchformer.encoder import EBranchformerEncoder
+from wenet.models.efficient_conformer.encoder import EfficientConformerEncoder
+from wenet.models.finetune.lora.utils import (inject_lora_to_model,
+                                              mark_only_lora_as_trainable)
+from wenet.models.firered.encoder import FireRedConformerEncoder
+from wenet.models.firered.model import FireRedModel
+from wenet.models.k2.model import K2Model
+from wenet.models.paraformer.cif import Cif
+from wenet.models.paraformer.layers import SanmDecoder, SanmEncoder
+from wenet.models.paraformer.paraformer import Paraformer, Predictor
+from wenet.models.squeezeformer.encoder import SqueezeformerEncoder
+from wenet.models.ssl.init_model import WENET_SSL_MODEL_CLASS
+from wenet.models.transducer.joint import TransducerJoint
+from wenet.models.transducer.predictor import (ConvPredictor,
+                                               EmbeddingPredictor,
+                                               RNNPredictor)
+from wenet.models.transducer.transducer import Transducer
+from wenet.models.transformer.asr_model import ASRModel
+from wenet.models.transformer.cmvn import GlobalCMVN
+from wenet.models.transformer.ctc import CTC
+from wenet.models.transformer.decoder import (BiTransformerDecoder,
+                                              TransformerDecoder)
+from wenet.models.transformer.encoder import (ConformerEncoder,
+                                              TransformerEncoder)
+from wenet.models.whisper.whisper import Whisper
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 from wenet.utils.cmvn import load_cmvn
-from wenet.whisper.whisper import Whisper
 
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
@@ -158,7 +162,7 @@ def init_speech_model(args, configs):
                                        {}).get('special_tokens', None),
         )
     elif model_type in WENET_SSL_MODEL_CLASS.keys():
-        from wenet.ssl.init_model import init_model as init_ssl_model
+        from wenet.models.ssl.init_model import init_model as init_ssl_model
         model = init_ssl_model(configs, encoder)
     else:
         model = WENET_MODEL_CLASSES[model_type](
