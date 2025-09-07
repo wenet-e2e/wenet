@@ -3,11 +3,10 @@ import torch
 
 from wenet.models.transformer.attention import (
     MultiHeadedAttention, RelPositionMultiHeadedAttention,
-    ShawRelPositionMultiHeadedAttention, models.)
+    ShawRelPositionMultiHeadedAttention)
 from wenet.models.transformer.embedding import RelPositionalEncoding
 from wenet.models.transformer.encoder_layer import (ConformerEncoderLayer,
-                                                    TransformerEncoderLayer,
-                                                    models.)
+                                                    TransformerEncoderLayer)
 from wenet.models.transformer.positionwise_feed_forward import \
     PositionwiseFeedForward
 from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
