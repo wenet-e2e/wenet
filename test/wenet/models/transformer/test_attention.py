@@ -1,14 +1,16 @@
-import torch
 import pytest
-from wenet.transformer.attention import (MultiHeadedAttention,
-                                         RelPositionMultiHeadedAttention,
-                                         ShawRelPositionMultiHeadedAttention)
-from wenet.transformer.embedding import RelPositionalEncoding
-from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
-                                             TransformerEncoderLayer)
-from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
+import torch
 
+from wenet.models.transformer.attention import (
+    MultiHeadedAttention, RelPositionMultiHeadedAttention,
+    ShawRelPositionMultiHeadedAttention, models.)
+from wenet.models.transformer.embedding import RelPositionalEncoding
+from wenet.models.transformer.encoder_layer import (ConformerEncoderLayer,
+                                                    TransformerEncoderLayer,
+                                                    models.)
+from wenet.models.transformer.positionwise_feed_forward import \
+    PositionwiseFeedForward
+from wenet.utils.class_utils import WENET_ACTIVATION_CLASSES
 from wenet.utils.mask import add_optional_chunk_mask, make_non_pad_mask
 
 

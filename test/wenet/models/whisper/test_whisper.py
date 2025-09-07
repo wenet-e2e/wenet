@@ -3,22 +3,21 @@
 # Copyright [2023-11-21] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 
 import os
+
+import numpy as np
 import pytest
 import torch
+import torch.nn.functional as F
 import torchaudio
 import whisper
 import yaml
-
-import numpy as np
-import torch.nn.functional as F
-
-from whisper.audio import N_FFT, HOP_LENGTH, N_SAMPLES, N_FRAMES, pad_or_trim
+from wenet.transformer.embedding import WhisperPositionalEncoding
+from whisper.audio import HOP_LENGTH, N_FFT, N_FRAMES, N_SAMPLES, pad_or_trim
 
 from wenet.dataset.processor import compute_log_mel_spectrogram
+from wenet.models.whisper.convert_whisper_to_wenet_config_and_ckpt import (
+    convert_to_wenet_state_dict, convert_to_wenet_units, convert_to_wenet_yaml)
 from wenet.text.whisper_tokenizer import WhisperTokenizer
-from wenet.transformer.embedding import WhisperPositionalEncoding
-from wenet.whisper.convert_whisper_to_wenet_config_and_ckpt import (
-    convert_to_wenet_yaml, convert_to_wenet_state_dict, convert_to_wenet_units)
 from wenet.utils.common import add_whisper_tokens
 from wenet.utils.init_model import init_model
 from wenet.utils.mask import make_pad_mask, subsequent_mask

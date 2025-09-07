@@ -1,6 +1,6 @@
 import torch
 
-from wenet.paraformer.embedding import ParaformerPositinoalEncoding
+from wenet.models.paraformer.embedding import ParaformerPositinoalEncoding
 
 
 class SinusoidalPositionEncoder(torch.nn.Module):

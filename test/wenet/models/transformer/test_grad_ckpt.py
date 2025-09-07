@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 # Copyright [2023-11-30] <sxc19@mails.tsinghua.edu.cn, Xingchen Song>
 
-import torch
-import pytest
 import numpy as np
+import pytest
+import torch
 
-from wenet.transformer.encoder import TransformerEncoder, ConformerEncoder
-from wenet.transformer.decoder import TransformerDecoder, BiTransformerDecoder
+from wenet.models.transformer.decoder import (BiTransformerDecoder,
+                                              TransformerDecoder)
+from wenet.models.transformer.encoder import (ConformerEncoder,
+                                              TransformerEncoder)
 
 
 @pytest.mark.parametrize("module", [
