@@ -11,10 +11,10 @@ import torch.nn.functional as F
 import torchaudio
 import whisper
 import yaml
-from wenet.transformer.embedding import WhisperPositionalEncoding
 from whisper.audio import HOP_LENGTH, N_FFT, N_FRAMES, N_SAMPLES, pad_or_trim
 
 from wenet.dataset.processor import compute_log_mel_spectrogram
+from wenet.models.transformer.embedding import WhisperPositionalEncoding
 from wenet.models.whisper.convert_whisper_to_wenet_config_and_ckpt import (
     convert_to_wenet_state_dict, convert_to_wenet_units, convert_to_wenet_yaml)
 from wenet.text.whisper_tokenizer import WhisperTokenizer
