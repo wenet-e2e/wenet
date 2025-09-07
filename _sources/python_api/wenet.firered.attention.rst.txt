@@ -1,7 +1,0 @@
-wenet.firered.attention module
-==============================
-
-.. automodule:: wenet.firered.attention
-   :members:
-   :undoc-members:
-   :show-inheritance:

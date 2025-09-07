@@ -1,7 +1,0 @@
-wenet.finetune.lora.layers module
-=================================
-
-.. automodule:: wenet.finetune.lora.layers
-   :members:
-   :undoc-members:
-   :show-inheritance:

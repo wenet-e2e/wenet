@@ -1,7 +1,0 @@
-wenet.paraformer.attention module
-=================================
-
-.. automodule:: wenet.paraformer.attention
-   :members:
-   :undoc-members:
-   :show-inheritance:

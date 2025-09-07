@@ -1,7 +1,0 @@
-wenet.firered.subsampling module
-================================
-
-.. automodule:: wenet.firered.subsampling
-   :members:
-   :undoc-members:
-   :show-inheritance:

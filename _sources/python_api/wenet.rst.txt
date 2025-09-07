@@ -13,20 +13,7 @@ Subpackages
    :maxdepth: 2
 
    wenet.bin
-   wenet.branchformer
    wenet.cli
-   wenet.ctl_model
    wenet.dataset
-   wenet.e_branchformer
-   wenet.efficient_conformer
-   wenet.finetune
-   wenet.firered
-   wenet.k2
-   wenet.paraformer
-   wenet.squeezeformer
-   wenet.ssl
    wenet.text
-   wenet.transducer
-   wenet.transformer
    wenet.utils
-   wenet.whisper

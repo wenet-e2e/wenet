@@ -1,7 +1,0 @@
-wenet.transformer.encoder\_layer module
-=======================================
-
-.. automodule:: wenet.transformer.encoder_layer
-   :members:
-   :undoc-members:
-   :show-inheritance:

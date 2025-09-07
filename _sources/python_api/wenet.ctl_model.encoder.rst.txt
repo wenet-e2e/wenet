@@ -1,7 +1,0 @@
-wenet.ctl\_model.encoder module
-===============================
-
-.. automodule:: wenet.ctl_model.encoder
-   :members:
-   :undoc-members:
-   :show-inheritance:

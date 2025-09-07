@@ -1,7 +1,0 @@
-wenet.transformer.norm module
-=============================
-
-.. automodule:: wenet.transformer.norm
-   :members:
-   :undoc-members:
-   :show-inheritance:

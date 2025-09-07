@@ -1,7 +1,0 @@
-wenet.k2.model module
-=====================
-
-.. automodule:: wenet.k2.model
-   :members:
-   :undoc-members:
-   :show-inheritance:

@@ -1,7 +1,0 @@
-wenet.efficient\_conformer.encoder\_layer module
-================================================
-
-.. automodule:: wenet.efficient_conformer.encoder_layer
-   :members:
-   :undoc-members:
-   :show-inheritance:
