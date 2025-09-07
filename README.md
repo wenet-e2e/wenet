@@ -43,7 +43,7 @@ and set it to `whisper-large-v3` or `whisper-large-v3-turbo` for english.
 ``` python
 import wenet
 
-model = wenet.load_model('chinese')
+model = wenet.load_model('paraformer')
 result = model.transcribe('audio.wav')
 print(result.text)
 ```
