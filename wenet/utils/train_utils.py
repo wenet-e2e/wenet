@@ -13,42 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import nullcontext
 import copy
-from typing import List, Optional
-
-import deepspeed
 import json
 import logging
 import os
+from contextlib import nullcontext
+from typing import List, Optional
+
+import deepspeed
 import torch
-import yaml
-
-import torch.optim as optim
 import torch.distributed as dist
-
+import torch.optim as optim
+import yaml
+from deepspeed.runtime.zero.stage3 import \
+    estimate_zero3_model_states_mem_needs_all_live
+from deepspeed.runtime.zero.stage_1_and_2 import \
+    estimate_zero2_model_states_mem_needs_all_live
+from deepspeed.utils.zero_to_fp32 import \
+    convert_zero_checkpoint_to_fp32_state_dict
 from tensorboardX import SummaryWriter
-from torch.utils.data import DataLoader
+from torch.distributed.fsdp import CPUOffload
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp import (MixedPrecision, ShardingStrategy,
+                                    sharded_grad_scaler)
 from torch.nn.utils import clip_grad_norm_
-from torch.distributed.fsdp import (FullyShardedDataParallel as FSDP,
-                                    CPUOffload, MixedPrecision,
-                                    sharded_grad_scaler, ShardingStrategy)
-from deepspeed.runtime.zero.stage_1_and_2 import (
-    estimate_zero2_model_states_mem_needs_all_live)
-from deepspeed.runtime.zero.stage3 import (
-    estimate_zero3_model_states_mem_needs_all_live)
-from deepspeed.utils.zero_to_fp32 import (
-    convert_zero_checkpoint_to_fp32_state_dict)
+from torch.utils.data import DataLoader
+
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.common import (StepTimer, get_nested_attribute, lrs_to_str,
+from wenet.utils.common import (TORCH_NPU_AVAILABLE, StepTimer,
+                                get_nested_attribute, lrs_to_str,
                                 tensor_to_scalar)
-from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
-                                    apply_fsdp_checkpointing,
-                                    wenet_fsdp_wrap_policy)
-from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
-from wenet.utils.common import TORCH_NPU_AVAILABLE
+from wenet.utils.fsdp_utils import (apply_fsdp_checkpointing,
+                                    check_gradient_checkpoint, fsdp_save_model,
+                                    wenet_fsdp_wrap_policy)
 from wenet.utils.init_dataset import init_dataset
+from wenet.utils.scheduler import NoamHoldAnnealing, WarmupLR
 
 
 def add_model_args(parser):
@@ -480,8 +480,8 @@ def wrap_cuda_model(args, model, configs=None):
         logging.error("not supported engine: {}".format(args.train_engine))
     if args.train_engine in ["torch_fsdp", "torch_ddp"]:
         if args.fp16_grad_sync:
-            from torch.distributed.algorithms.ddp_comm_hooks import (
-                default as comm_hooks, )
+            from torch.distributed.algorithms.ddp_comm_hooks import \
+                default as comm_hooks
             model.register_comm_hook(state=None,
                                      hook=comm_hooks.fp16_compress_hook)
 
@@ -886,10 +886,13 @@ def freeze_modules(model, args):
 
 
 def reinit_lora(model, args, configs, tokenizer, seed=777):
-    from tqdm import tqdm
-    from wenet.finetune.lora.utils import estimate_gradient, reinit_lora_modules
-    from wenet.finetune.lora.layers import LoRALayer
     from types import SimpleNamespace
+
+    from tqdm import tqdm
+
+    from wenet.models.finetune.lora.layers import LoRALayer
+    from wenet.models.finetune.lora.utils import (estimate_gradient,
+                                                  reinit_lora_modules)
 
     logging.info("reinit lora modules.")
     with open(args.lora_init_yaml, 'r') as file:

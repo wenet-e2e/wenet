@@ -22,9 +22,10 @@ import sys
 import torch
 import torch.nn.functional as F
 import yaml
-from wenet.transformer.ctc import CTC
-from wenet.transformer.decoder import TransformerDecoder
-from wenet.transformer.encoder import BaseEncoder
+
+from wenet.models.transformer.ctc import CTC
+from wenet.models.transformer.decoder import TransformerDecoder
+from wenet.models.transformer.encoder import BaseEncoder
 from wenet.utils.init_model import init_model
 from wenet.utils.mask import make_pad_mask
 

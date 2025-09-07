@@ -3,8 +3,9 @@ from typing import List
 
 import jieba
 import torch
+
 from wenet.cli.hub import Hub
-from wenet.paraformer.search import _isAllAlpha
+from wenet.models.paraformer.search import _isAllAlpha
 from wenet.text.char_tokenizer import CharTokenizer
 
 
