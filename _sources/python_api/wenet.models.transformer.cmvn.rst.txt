@@ -1,0 +1,7 @@
+wenet.models.transformer.cmvn module
+====================================
+
+.. automodule:: wenet.models.transformer.cmvn
+   :members:
+   :undoc-members:
+   :show-inheritance:

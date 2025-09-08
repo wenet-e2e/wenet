@@ -1,0 +1,7 @@
+wenet.models.ssl.bestrq.bestrq\_model module
+============================================
+
+.. automodule:: wenet.models.ssl.bestrq.bestrq_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

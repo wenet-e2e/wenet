@@ -1,0 +1,22 @@
+wenet.models.paraformer package
+===============================
+
+.. automodule:: wenet.models.paraformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.paraformer.attention
+   wenet.models.paraformer.cif
+   wenet.models.paraformer.convert_paraformer_to_wenet_config_and_ckpt
+   wenet.models.paraformer.embedding
+   wenet.models.paraformer.layers
+   wenet.models.paraformer.paraformer
+   wenet.models.paraformer.search
+   wenet.models.paraformer.subsampling

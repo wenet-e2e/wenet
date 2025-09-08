@@ -1,0 +1,19 @@
+wenet.models.efficient\_conformer package
+=========================================
+
+.. automodule:: wenet.models.efficient_conformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.efficient_conformer.attention
+   wenet.models.efficient_conformer.convolution
+   wenet.models.efficient_conformer.encoder
+   wenet.models.efficient_conformer.encoder_layer
+   wenet.models.efficient_conformer.subsampling

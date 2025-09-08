@@ -1,0 +1,16 @@
+wenet.models.ctl\_model package
+===============================
+
+.. automodule:: wenet.models.ctl_model
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.ctl_model.asr_model_ctl
+   wenet.models.ctl_model.encoder

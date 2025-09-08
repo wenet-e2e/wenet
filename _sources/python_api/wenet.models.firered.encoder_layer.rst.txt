@@ -1,0 +1,7 @@
+wenet.models.firered.encoder\_layer module
+==========================================
+
+.. automodule:: wenet.models.firered.encoder_layer
+   :members:
+   :undoc-members:
+   :show-inheritance:

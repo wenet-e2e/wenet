@@ -1,0 +1,7 @@
+wenet.models.ssl.wav2vec2.wav2vec2\_model module
+================================================
+
+.. automodule:: wenet.models.ssl.wav2vec2.wav2vec2_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,16 @@
+wenet.models.ssl.bestrq package
+===============================
+
+.. automodule:: wenet.models.ssl.bestrq
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.ssl.bestrq.bestrq_model
+   wenet.models.ssl.bestrq.mask

@@ -1,0 +1,7 @@
+wenet.models.transformer.decoder\_layer module
+==============================================
+
+.. automodule:: wenet.models.transformer.decoder_layer
+   :members:
+   :undoc-members:
+   :show-inheritance:

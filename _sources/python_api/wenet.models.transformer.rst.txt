@@ -1,0 +1,30 @@
+wenet.models.transformer package
+================================
+
+.. automodule:: wenet.models.transformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.transformer.asr_model
+   wenet.models.transformer.attention
+   wenet.models.transformer.cmvn
+   wenet.models.transformer.convolution
+   wenet.models.transformer.ctc
+   wenet.models.transformer.decoder
+   wenet.models.transformer.decoder_layer
+   wenet.models.transformer.embedding
+   wenet.models.transformer.encoder
+   wenet.models.transformer.encoder_layer
+   wenet.models.transformer.label_smoothing_loss
+   wenet.models.transformer.norm
+   wenet.models.transformer.positionwise_feed_forward
+   wenet.models.transformer.search
+   wenet.models.transformer.subsampling
+   wenet.models.transformer.swish

@@ -1,0 +1,7 @@
+wenet.models.efficient\_conformer.convolution module
+====================================================
+
+.. automodule:: wenet.models.efficient_conformer.convolution
+   :members:
+   :undoc-members:
+   :show-inheritance:

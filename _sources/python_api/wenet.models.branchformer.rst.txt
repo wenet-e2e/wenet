@@ -1,0 +1,17 @@
+wenet.models.branchformer package
+=================================
+
+.. automodule:: wenet.models.branchformer
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.branchformer.cgmlp
+   wenet.models.branchformer.encoder
+   wenet.models.branchformer.encoder_layer

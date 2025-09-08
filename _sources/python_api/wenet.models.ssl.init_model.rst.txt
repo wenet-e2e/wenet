@@ -1,0 +1,7 @@
+wenet.models.ssl.init\_model module
+===================================
+
+.. automodule:: wenet.models.ssl.init_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

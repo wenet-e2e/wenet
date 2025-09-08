@@ -1,0 +1,7 @@
+wenet.models.paraformer.cif module
+==================================
+
+.. automodule:: wenet.models.paraformer.cif
+   :members:
+   :undoc-members:
+   :show-inheritance:

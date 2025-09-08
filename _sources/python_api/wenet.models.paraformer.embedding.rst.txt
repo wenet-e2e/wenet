@@ -1,0 +1,7 @@
+wenet.models.paraformer.embedding module
+========================================
+
+.. automodule:: wenet.models.paraformer.embedding
+   :members:
+   :undoc-members:
+   :show-inheritance:

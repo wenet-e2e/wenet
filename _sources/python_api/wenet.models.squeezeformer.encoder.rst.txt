@@ -1,0 +1,7 @@
+wenet.models.squeezeformer.encoder module
+=========================================
+
+.. automodule:: wenet.models.squeezeformer.encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

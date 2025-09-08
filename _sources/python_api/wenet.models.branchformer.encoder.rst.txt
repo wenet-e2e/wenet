@@ -1,0 +1,7 @@
+wenet.models.branchformer.encoder module
+========================================
+
+.. automodule:: wenet.models.branchformer.encoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+wenet.models.ctl\_model.asr\_model\_ctl module
+==============================================
+
+.. automodule:: wenet.models.ctl_model.asr_model_ctl
+   :members:
+   :undoc-members:
+   :show-inheritance:

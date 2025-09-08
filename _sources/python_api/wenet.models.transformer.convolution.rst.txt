@@ -1,0 +1,7 @@
+wenet.models.transformer.convolution module
+===========================================
+
+.. automodule:: wenet.models.transformer.convolution
+   :members:
+   :undoc-members:
+   :show-inheritance:

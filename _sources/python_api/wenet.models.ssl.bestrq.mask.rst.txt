@@ -1,0 +1,7 @@
+wenet.models.ssl.bestrq.mask module
+===================================
+
+.. automodule:: wenet.models.ssl.bestrq.mask
+   :members:
+   :undoc-members:
+   :show-inheritance:

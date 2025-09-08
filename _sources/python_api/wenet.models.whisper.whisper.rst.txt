@@ -1,0 +1,7 @@
+wenet.models.whisper.whisper module
+===================================
+
+.. automodule:: wenet.models.whisper.whisper
+   :members:
+   :undoc-members:
+   :show-inheritance:

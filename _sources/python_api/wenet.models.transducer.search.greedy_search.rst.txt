@@ -1,0 +1,7 @@
+wenet.models.transducer.search.greedy\_search module
+====================================================
+
+.. automodule:: wenet.models.transducer.search.greedy_search
+   :members:
+   :undoc-members:
+   :show-inheritance:

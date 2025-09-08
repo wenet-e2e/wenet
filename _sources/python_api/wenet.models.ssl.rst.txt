@@ -1,0 +1,26 @@
+wenet.models.ssl package
+========================
+
+.. automodule:: wenet.models.ssl
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.ssl.bestrq
+   wenet.models.ssl.w2vbert
+   wenet.models.ssl.wav2vec2
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.ssl.init_dataset
+   wenet.models.ssl.init_model

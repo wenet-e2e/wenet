@@ -1,0 +1,7 @@
+wenet.models.transformer.swish module
+=====================================
+
+.. automodule:: wenet.models.transformer.swish
+   :members:
+   :undoc-members:
+   :show-inheritance:

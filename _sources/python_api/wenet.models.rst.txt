@@ -1,0 +1,27 @@
+wenet.models package
+====================
+
+.. automodule:: wenet.models
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.branchformer
+   wenet.models.ctl_model
+   wenet.models.e_branchformer
+   wenet.models.efficient_conformer
+   wenet.models.finetune
+   wenet.models.firered
+   wenet.models.k2
+   wenet.models.paraformer
+   wenet.models.squeezeformer
+   wenet.models.ssl
+   wenet.models.transducer
+   wenet.models.transformer
+   wenet.models.whisper

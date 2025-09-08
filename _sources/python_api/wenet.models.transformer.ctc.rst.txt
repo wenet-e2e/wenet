@@ -1,0 +1,7 @@
+wenet.models.transformer.ctc module
+===================================
+
+.. automodule:: wenet.models.transformer.ctc
+   :members:
+   :undoc-members:
+   :show-inheritance:

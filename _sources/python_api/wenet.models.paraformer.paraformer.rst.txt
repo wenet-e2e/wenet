@@ -1,0 +1,7 @@
+wenet.models.paraformer.paraformer module
+=========================================
+
+.. automodule:: wenet.models.paraformer.paraformer
+   :members:
+   :undoc-members:
+   :show-inheritance:

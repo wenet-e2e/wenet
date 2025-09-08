@@ -15,5 +15,6 @@ Subpackages
    wenet.bin
    wenet.cli
    wenet.dataset
+   wenet.models
    wenet.text
    wenet.utils

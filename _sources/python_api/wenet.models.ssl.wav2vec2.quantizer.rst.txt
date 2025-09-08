@@ -1,0 +1,7 @@
+wenet.models.ssl.wav2vec2.quantizer module
+==========================================
+
+.. automodule:: wenet.models.ssl.wav2vec2.quantizer
+   :members:
+   :undoc-members:
+   :show-inheritance:

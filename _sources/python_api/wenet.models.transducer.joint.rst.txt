@@ -1,0 +1,7 @@
+wenet.models.transducer.joint module
+====================================
+
+.. automodule:: wenet.models.transducer.joint
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,15 @@
+wenet.models.finetune package
+=============================
+
+.. automodule:: wenet.models.finetune
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.finetune.lora

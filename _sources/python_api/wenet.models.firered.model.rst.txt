@@ -1,0 +1,7 @@
+wenet.models.firered.model module
+=================================
+
+.. automodule:: wenet.models.firered.model
+   :members:
+   :undoc-members:
+   :show-inheritance:

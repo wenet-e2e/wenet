@@ -1,0 +1,7 @@
+wenet.models.transformer.decoder module
+=======================================
+
+.. automodule:: wenet.models.transformer.decoder
+   :members:
+   :undoc-members:
+   :show-inheritance:

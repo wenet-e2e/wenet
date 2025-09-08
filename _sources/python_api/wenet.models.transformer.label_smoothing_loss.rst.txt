@@ -1,0 +1,7 @@
+wenet.models.transformer.label\_smoothing\_loss module
+======================================================
+
+.. automodule:: wenet.models.transformer.label_smoothing_loss
+   :members:
+   :undoc-members:
+   :show-inheritance:

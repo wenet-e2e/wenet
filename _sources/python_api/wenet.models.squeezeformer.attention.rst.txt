@@ -1,0 +1,7 @@
+wenet.models.squeezeformer.attention module
+===========================================
+
+.. automodule:: wenet.models.squeezeformer.attention
+   :members:
+   :undoc-members:
+   :show-inheritance:

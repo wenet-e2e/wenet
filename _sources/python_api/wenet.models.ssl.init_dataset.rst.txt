@@ -1,0 +1,7 @@
+wenet.models.ssl.init\_dataset module
+=====================================
+
+.. automodule:: wenet.models.ssl.init_dataset
+   :members:
+   :undoc-members:
+   :show-inheritance:

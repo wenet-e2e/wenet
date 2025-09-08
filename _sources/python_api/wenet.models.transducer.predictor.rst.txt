@@ -1,0 +1,7 @@
+wenet.models.transducer.predictor module
+========================================
+
+.. automodule:: wenet.models.transducer.predictor
+   :members:
+   :undoc-members:
+   :show-inheritance:

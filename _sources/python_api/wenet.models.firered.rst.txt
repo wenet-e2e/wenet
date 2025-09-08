@@ -1,0 +1,20 @@
+wenet.models.firered package
+============================
+
+.. automodule:: wenet.models.firered
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 2
+
+   wenet.models.firered.attention
+   wenet.models.firered.convert_FireRed_AED_L_to_wenet_config_and_ckpt
+   wenet.models.firered.encoder
+   wenet.models.firered.encoder_layer
+   wenet.models.firered.model
+   wenet.models.firered.subsampling
