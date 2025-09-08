@@ -15,6 +15,7 @@
 import argparse
 import os
 
+import torch
 import yaml
 
 import wenet.dataset.processor as processor
@@ -101,5 +102,9 @@ def load_model(model_name_or_path, device='cpu'):
     # load and set feature function
     compute_feature, _ = load_feature(model_dir)
     setattr(model, 'compute_feature', compute_feature)  # noqa, dynamic inject
-    model = model.to(device)
+
+    if next(model.parameters()).device == torch.device('meta'):
+        print('model is on a meta device, this is for huggingface transformer')
+    else:
+        model = model.to(device)
     return model
