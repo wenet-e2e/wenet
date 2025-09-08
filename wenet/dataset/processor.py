@@ -15,18 +15,19 @@
 
 import io
 import json
+import logging
+import random
 from subprocess import PIPE, Popen
 from urllib.parse import urlparse
-from langid.langid import LanguageIdentifier, model
-import logging
-import librosa
-import random
 
+import librosa
 import torch
-from torch.nn.utils.rnn import pad_sequence
+import torch.nn.functional as F
 import torchaudio
 import torchaudio.compliance.kaldi as kaldi
-import torch.nn.functional as F
+from langid.langid import LanguageIdentifier, model
+from torch.nn.utils.rnn import pad_sequence
+
 from wenet.text.base_tokenizer import BaseTokenizer
 
 AUDIO_FORMAT_SETS = set(['flac', 'mp3', 'm4a', 'ogg', 'opus', 'wav', 'wma'])
@@ -36,6 +37,7 @@ lid = LanguageIdentifier.from_modelstring(model, norm_probs=True)
 logging.getLogger('langid').setLevel(logging.INFO)
 
 import os
+
 try:
     cpu_info = os.popen("lscpu | grep 'Vendor ID'").read()
     # 0x48 --> HiSilicon
@@ -131,23 +133,19 @@ def decode_wav(sample):
     """
     assert 'key' in sample
     assert 'wav' in sample
-    wav_file = sample['wav']
-    if isinstance(wav_file, str):
-        with open(wav_file, 'rb') as f:
-            wav_file = f.read()
+    wav_file = sample['wav']  # str/io.BytesIO, directly load in torchaudio
+    if isinstance(wav_file, bytes):
+        wav_file = io.BytesIO(wav_file)
     if 'start' in sample:
         assert 'end' in sample
-        with io.BytesIO(wav_file) as file_obj:
-            sample_rate = torchaudio.info(file_obj).sample_rate
-            start_frame = int(sample['start'] * sample_rate)
-            end_frame = int(sample['end'] * sample_rate)
-            file_obj.seek(0)
-            waveform, _ = torchaudio.load(file_obj,
-                                          num_frames=end_frame - start_frame,
-                                          frame_offset=start_frame)
+        sample_rate = torchaudio.info(wav_file).sample_rate
+        start_frame = int(sample['start'] * sample_rate)
+        end_frame = int(sample['end'] * sample_rate)
+        waveform, _ = torchaudio.load(wav_file,
+                                      num_frames=end_frame - start_frame,
+                                      frame_offset=start_frame)
     else:
-        with io.BytesIO(wav_file) as file_obj:
-            waveform, sample_rate = torchaudio.load(file_obj)
+        waveform, sample_rate = torchaudio.load(wav_file)
     # del wav_file
     del sample['wav']
     sample['wav'] = waveform  # overwrite wav

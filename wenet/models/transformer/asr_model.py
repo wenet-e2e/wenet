@@ -246,7 +246,8 @@ class ASRModel(torch.nn.Module):
         mel_len: torch.Tensor,
         chunk_size: int = -1,
     ) -> [torch.Tensor, torch.Tensor]:
-        encoder_out, encoder_mask = self.encoder(mel, mel_len, chunk_size)
+        encoder_out, encoder_mask = self._forward_encoder(
+            mel, mel_len, chunk_size)
         return encoder_out, encoder_mask
 
     @torch.jit.unused
@@ -350,7 +351,8 @@ class ASRModel(torch.nn.Module):
         speech = self.compute_feature(wav).to(device)
         speech_lengths = torch.tensor([speech.size(0)], device=device)
         speech = speech.unsqueeze(0)
-        results = self.decode([self.default_decode_method], speech, speech_lengths)
+        results = self.decode([self.default_decode_method], speech,
+                              speech_lengths)
         result = results[self.default_decode_method][0]
         result.text = self.tokenizer.detokenize(result.tokens)[0]
         return result
