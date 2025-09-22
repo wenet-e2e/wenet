@@ -13,21 +13,20 @@
 # limitations under the License.
 
 import collections
-from collections.abc import Callable
 import copy
+import logging
 import sys
 import tarfile
-import logging
+from collections.abc import Callable
 from typing import List, Optional
+
 import numpy as np
 import torch
-from torch.utils.data import IterDataPipe, functional_datapipe
-from torch.utils.data import datapipes
+from torch.utils.data import IterDataPipe, datapipes, functional_datapipe
 from torch.utils.data.datapipes.iter import Mapper
 from torch.utils.data.datapipes.iter.sharding import (
     SHARDING_PRIORITIES, ShardingFilterIterDataPipe)
 from torch.utils.data.datapipes.utils.common import _check_unpickable_fn
-
 from wenet.dataset.processor import parse_url
 
 
@@ -435,12 +434,14 @@ class WenetRawDatasetSource(IterDataPipe):
                  partition: bool = True,
                  shuffle: bool = False,
                  shuffle_size: int = 10000,
-                 cycle: int = 1) -> None:
+                 cycle: int = 1,
+                 resume_steps: int = 0) -> None:
         super().__init__()
         self.dp = TextLineDataPipe(filenames)
         if shuffle:
             self.dp = self.dp.shuffle(buffer_size=shuffle_size)
-        self.dp = self.dp.repeat(cycle).prefetch(prefetch)
+        self.dp = self.dp.repeat(cycle).skip_first(resume_steps).prefetch(
+            prefetch)
         self.dp = self.dp.shard(partition)
 
     def __iter__(self):
@@ -456,7 +457,8 @@ class WenetTarShardDatasetSource(IterDataPipe):
                  partition: bool = True,
                  shuffle: bool = False,
                  shuffle_size: int = 10000,
-                 cycle: int = 1) -> None:
+                 cycle: int = 1,
+                 resume_steps: int = 0) -> None:
         super().__init__()
         self.dp = TextLineDataPipe(filenames)
         if shuffle:
@@ -467,4 +469,31 @@ class WenetTarShardDatasetSource(IterDataPipe):
 
     def __iter__(self):
         for d in self.dp:
+            yield d
+
+
+@functional_datapipe("skip_first_n")
+class SkipFirstNPipe(IterDataPipe):
+
+    def __init__(self, dataset: IterDataPipe, first_n=0):
+        super().__init__()
+        self.skip_steps = first_n
+        self.dataset = dataset
+        import torch.distributed as dist
+        self.rank = 0
+        if dist.is_initialized():
+            self.rank = dist.get_rank()
+
+    def __iter__(self):
+        steps = 0
+        for d in self.dataset:
+            if steps <= self.skip_steps:
+                if steps % 1000 == 0:
+                    logging.info(
+                        f'[Rank {self.rank}] Skipping sample {steps} / {self.skip_steps}'
+                    )
+                continue
+            if steps == self.skip_steps:
+                logging.info(
+                    f'Completed skipping first {self.skip_steps} samples.')
             yield d
