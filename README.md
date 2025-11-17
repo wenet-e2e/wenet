@@ -138,8 +138,8 @@ For Chinese users, you can also scan the QR code on the left to follow our offic
 We created a WeChat group for better discussion and quicker response.
 Please scan the personal QR code on the right, and the guy is responsible for inviting you to the chat group.
 
-| <img src="https://github.com/robin1001/qr/blob/master/wenet.jpeg" width="250px"> | <img src="https://github.com/robin1001/qr/blob/master/binbin.jpeg" width="250px"> |
-| ---- | ---- |
+| <img src="https://github.com/robin1001/qr/blob/master/wenet.jpeg" width="250px"> |<img src="https://github.com/robin1001/qr/blob/master/chengdong.jpg" width="250px">| <img src="https://github.com/robin1001/qr/blob/master/binbin.jpeg" width="250px"> |
+| ---- | ---- | ---- |
 
 
 ## Acknowledge
