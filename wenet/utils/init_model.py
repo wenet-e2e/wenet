@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import torch
-
 from wenet.models.branchformer.encoder import BranchformerEncoder
 from wenet.models.ctl_model.asr_model_ctl import CTLModel
 from wenet.models.ctl_model.encoder import (DualConformerEncoder,
@@ -46,6 +44,7 @@ from wenet.models.transformer.encoder import (ConformerEncoder,
 from wenet.models.whisper.whisper import Whisper
 from wenet.utils.checkpoint import load_checkpoint, load_trained_modules
 from wenet.utils.cmvn import load_cmvn
+from wenet.utils.hook import apply_fsq_configuration
 
 WENET_ENCODER_CLASSES = {
     "transformer": TransformerEncoder,
@@ -184,6 +183,8 @@ def init_model(args, configs):
 
     if hasattr(args, 'use_lora') and args.use_lora:
         inject_lora_to_model(model, configs['lora_conf'])
+    # if fsq is None or disabled in configs, this is a noop
+    model = apply_fsq_configuration(model, configs)
 
     # If specify checkpoint, load some info from checkpoint
     if hasattr(args, 'checkpoint') and args.checkpoint is not None:
