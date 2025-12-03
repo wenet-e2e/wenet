@@ -1,5 +1,6 @@
 import platform
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 requirements = [
     "numpy",
@@ -10,7 +11,9 @@ requirements = [
     "openai-whisper",
     "librosa",
     "pyyaml",
-    "jieba"
+    "jieba",
+    "sentencepiece",
+    "langid",
 ]
 
 extra_require = {
