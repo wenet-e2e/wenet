@@ -14,11 +14,12 @@
 # limitations under the License.
 
 import gradio as gr
+
 import wenet
 
 # TODO: add hotword
-chs_model = wenet.load_model('chinese')
-en_model = wenet.load_model('english')
+chs_model = wenet.load_model('firered')
+en_model = wenet.load_model('whisper-large-v3-turbo')
 
 
 def recognition(audio, lang='CN'):
@@ -34,7 +35,7 @@ def recognition(audio, lang='CN'):
 
     if ans is None:
         return "ERROR! No text output! Please try again!"
-    txt = ans['text']
+    txt = ans.text
     return txt
 
 
