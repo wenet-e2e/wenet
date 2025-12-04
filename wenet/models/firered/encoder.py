@@ -126,3 +126,4 @@ class FireRedConformerEncoder(BaseEncoder):
                 norm_eps=norm_eps,
             ) for _ in range(num_blocks)
         ])
+        self.after_norm = torch.nn.Identity()
