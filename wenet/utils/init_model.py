@@ -29,6 +29,7 @@ from wenet.models.k2.model import K2Model
 from wenet.models.paraformer.cif import Cif
 from wenet.models.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.models.paraformer.paraformer import Paraformer, Predictor
+from wenet.models.qwen3omni_aut.model_aut import Qwen3OmniAUT
 from wenet.models.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.models.ssl.init_model import WENET_SSL_MODEL_CLASS
 from wenet.models.transducer.joint import TransducerJoint
@@ -90,6 +91,7 @@ WENET_MODEL_CLASSES = {
     "k2_model": K2Model,
     "transducer": Transducer,
     'paraformer': Paraformer,
+    "qwen3omni_aut": Qwen3OmniAUT,
 }
 
 
@@ -108,7 +110,7 @@ def init_speech_model(args, configs):
     vocab_size = configs['output_dim']
 
     encoder_type = configs.get('encoder', 'conformer')
-    decoder_type = configs.get('decoder', 'bitransformer')
+    decoder_type = configs.get('decoder', None)
     ctc_type = configs.get('ctc', 'ctc')
 
     encoder = WENET_ENCODER_CLASSES[encoder_type](
@@ -118,9 +120,12 @@ def init_speech_model(args, configs):
         **configs['encoder_conf']['efficient_conf']
         if 'efficient_conf' in configs['encoder_conf'] else {})
 
-    decoder = WENET_DECODER_CLASSES[decoder_type](vocab_size,
-                                                  encoder.output_size(),
-                                                  **configs['decoder_conf'])
+    if decoder_type is not None:
+        decoder = WENET_DECODER_CLASSES[decoder_type](vocab_size,
+                                                      encoder.output_size(),
+                                                      **configs['decoder_conf'])
+    else:
+        decoder = torch.nn.Identity()
 
     ctc = WENET_CTC_CLASSES[ctc_type](
         vocab_size,

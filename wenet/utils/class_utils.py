@@ -11,6 +11,7 @@ from wenet.models.firered.attention import (
     FiredRelPositionMultiHeadedAttention, FireRedRelPositionalEncoding)
 from wenet.models.firered.subsampling import FireRedConv2dSubsampling4
 from wenet.models.paraformer.embedding import ParaformerPositinoalEncoding
+from wenet.models.qwen3omni_aut.subsampling import AUTConv2dSubsampling8
 from wenet.models.squeezeformer.subsampling import DepthwiseConv2dSubsampling4
 from wenet.models.transformer.attention import (
     MultiHeadedAttention, MultiHeadedCrossAttention,
@@ -60,7 +61,8 @@ WENET_SUBSAMPLE_CLASSES = {
     "conv2d8": Conv2dSubsampling8,
     'paraformer_dummy': torch.nn.Identity,
     'stack_n_frames': StackNFramesSubsampling,
-    'firered_conv2d4': FireRedConv2dSubsampling4
+    'firered_conv2d4': FireRedConv2dSubsampling4,
+    'qwen3omni_aut_conv2d8': AUTConv2dSubsampling8,
 }
 
 WENET_EMB_CLASSES = {

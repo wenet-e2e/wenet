@@ -99,7 +99,9 @@ class BaseEncoder(torch.nn.Module):
         #    speech tasks,  but for other task (LLM),
         #    head_dim == hidden_size * attention_heads. refactor later
         self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
-            input_size, output_size, dropout_rate,
+            input_size,
+            output_size,
+            dropout_rate,
             pos_emb_class(output_size, positional_dropout_rate)
             if pos_enc_layer_type != 'rope_pos' else pos_emb_class(
                 output_size, output_size //
