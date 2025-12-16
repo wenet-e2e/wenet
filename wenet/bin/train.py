@@ -18,25 +18,30 @@ import argparse
 import datetime
 import logging
 import os
+
 import torch
-import yaml
-
 import torch.distributed as dist
-
+import yaml
 from torch.distributed.elastic.multiprocessing.errors import record
-from wenet.utils.common import lrs_to_str, TORCH_NPU_AVAILABLE  # noqa just ensure to check torch-npu
 
-from wenet.utils.executor import Executor
+from wenet.utils.common import (  # noqa just ensure to check torch-npu
+    TORCH_NPU_AVAILABLE, lrs_to_str)
 from wenet.utils.config import override_config
+from wenet.utils.executor import Executor
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
-from wenet.utils.train_utils import (
-    add_fsdp_args, add_model_args, add_dataset_args, add_ddp_args,
-    add_deepspeed_args, add_trace_args, init_distributed,
-    init_dataset_and_dataloader, check_modify_and_save_config,
-    init_optimizer_and_scheduler, init_scaler, trace_and_print_model,
-    wrap_cuda_model, init_summarywriter, save_model, log_per_epoch,
-    add_lora_args, reinit_lora)
+from wenet.utils.train_utils import (add_dataset_args, add_ddp_args,
+                                     add_deepspeed_args, add_fsdp_args,
+                                     add_lora_args, add_model_args,
+                                     add_trace_args,
+                                     check_modify_and_save_config,
+                                     freeze_modules,
+                                     init_dataset_and_dataloader,
+                                     init_distributed,
+                                     init_optimizer_and_scheduler, init_scaler,
+                                     init_summarywriter, log_per_epoch,
+                                     reinit_lora, save_model,
+                                     trace_and_print_model, wrap_cuda_model)
 
 
 def get_args():
@@ -98,6 +103,10 @@ def main():
 
     # Init asr model from configs
     model, configs = init_model(args, configs)
+
+    # freeze module
+    freeze_modules(model, args)
+
 
     if hasattr(args, 'lora_reinit') and args.lora_reinit:
         reinit_lora(model, args, configs, tokenizer)

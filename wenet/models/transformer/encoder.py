@@ -55,6 +55,7 @@ class BaseEncoder(torch.nn.Module):
         layer_norm_type: str = 'layer_norm',
         norm_eps: float = 1e-5,
         final_norm: bool = True,
+        input_layer_hidden_size: int = None,
     ):
         """
         Args:
@@ -99,11 +100,14 @@ class BaseEncoder(torch.nn.Module):
         #    speech tasks,  but for other task (LLM),
         #    head_dim == hidden_size * attention_heads. refactor later
         self.embed = WENET_SUBSAMPLE_CLASSES[input_layer](
-            input_size, output_size, dropout_rate,
+            input_size,
+            output_size,
+            dropout_rate,
             pos_emb_class(output_size, positional_dropout_rate)
             if pos_enc_layer_type != 'rope_pos' else pos_emb_class(
                 output_size, output_size //
-                attention_heads, positional_dropout_rate))
+                attention_heads, positional_dropout_rate),
+            input_layer_hidden_size)
 
         assert layer_norm_type in ['layer_norm', 'rms_norm']
         self.normalize_before = normalize_before
@@ -397,6 +401,7 @@ class TransformerEncoder(BaseEncoder):
         mlp_bias: bool = True,
         n_expert: int = 8,
         n_expert_activated: int = 2,
+        input_layer_hidden_size: int = None,
     ):
         """ Construct TransformerEncoder
 
@@ -408,7 +413,8 @@ class TransformerEncoder(BaseEncoder):
                          input_layer, pos_enc_layer_type, normalize_before,
                          static_chunk_size, use_dynamic_chunk, global_cmvn,
                          use_dynamic_left_chunk, gradient_checkpointing,
-                         use_sdpa, layer_norm_type, norm_eps)
+                         use_sdpa, layer_norm_type, norm_eps,
+                         input_layer_hidden_size=input_layer_hidden_size)
 
         assert selfattention_layer_type in ['selfattn', 'rope_abs_selfattn']
         activation = WENET_ACTIVATION_CLASSES[activation_type]()
