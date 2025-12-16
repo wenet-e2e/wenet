@@ -31,7 +31,6 @@ def convert_to_wenet_yaml(tokenizer, wenet_yaml_path: str):
     configs['encoder_conf'] = {}
     configs['encoder_conf']['gradient_checkpointing'] = True
     configs['encoder_conf']['input_layer'] = 'qwen3omni_aut_conv2d8'
-    configs['encoder_conf']['input_layer_hidden_size'] = 480
     configs['encoder_conf']['output_size'] = 1280
     configs['encoder_conf']['attention_heads'] = 20
     configs['encoder_conf']['linear_units'] = 5120

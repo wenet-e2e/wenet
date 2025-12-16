@@ -32,10 +32,9 @@ class AUTConv2dSubsampling8(BaseSubsampling):
     """
 
     def __init__(self, idim: int, odim: int, dropout_rate: float,
-                 pos_enc_class: torch.nn.Module, hidden_size: int = None):
+                 pos_enc_class: torch.nn.Module, hidden_size: int = 480):
         """Construct an Conv2dSubsampling8 object."""
         super().__init__()
-        hidden_size = odim if hidden_size is None else hidden_size
         self.conv = torch.nn.Sequential(
             torch.nn.Conv2d(1, hidden_size, 3, 2, padding=1),
             torch.nn.GELU(),
