@@ -94,7 +94,6 @@ WENET_MODEL_CLASSES = {
     "transducer": Transducer,
     'paraformer': Paraformer,
     "sensevoice_small": SenseVoiceSmall,
-    'causal_llm': CausalLM,
 }
 
 
