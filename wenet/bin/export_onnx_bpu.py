@@ -36,21 +36,21 @@
 
 from __future__ import print_function
 
+import copy
+import logging
+import math
 import os
 import sys
-import copy
-import math
-import yaml
-import logging
 from typing import Tuple
 
-import torch
 import numpy as np
+import torch
+import yaml
 
-from wenet.transformer.embedding import NoPositionalEncoding
+from wenet.bin.export_onnx_cpu import (get_args, print_input_output_info,
+                                       to_numpy)
+from wenet.models.transformer.embedding import NoPositionalEncoding
 from wenet.utils.init_model import init_model
-from wenet.bin.export_onnx_cpu import (get_args, to_numpy,
-                                       print_input_output_info)
 
 try:
     import onnx

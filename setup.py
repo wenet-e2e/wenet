@@ -1,5 +1,6 @@
 import platform
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 requirements = [
     "numpy",
@@ -9,6 +10,10 @@ requirements = [
     "torchaudio>=0.13.0",
     "openai-whisper",
     "librosa",
+    "pyyaml",
+    "jieba",
+    "sentencepiece",
+    "langid",
 ]
 
 extra_require = {

@@ -1,24 +1,38 @@
+exclude: 'build'
+
+default_language_version:
+  python: python3
+
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
-    hooks:
-    - id: trailing-whitespace
-      exclude: 'test/resources/.*'
-  - repo: https://github.com/pre-commit/mirrors-yapf
-    rev: 'v0.32.0'
-    hooks:
-    - id: yapf
-  - repo: https://github.com/pycqa/flake8
-    rev: '3.8.2'
-    hooks:
-    - id: flake8
-  - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: 'v17.0.6'
-    hooks:
-    - id: clang-format
-      args: ['--style=file']
-      exclude: 'runtime/ios/WenetDemo/WenetDemo/wenet/.*\.h$|.*\.(json|java|js|m|mm|proto)'
-  - repo: https://github.com/cpplint/cpplint
-    rev: '1.6.1'
-    hooks:
-    - id: cpplint
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  - id: check-symlinks
+  - id: trailing-whitespace
+    args: [--markdown-linebreak-ext=md]
+  - id: end-of-file-fixer
+    exclude: '^(.*\.svg)$'
+  - id: check-yaml
+  - id: check-toml
+  - id: check-ast
+  - id: check-added-large-files
+    args: ['--maxkb=8192']
+  - id: check-merge-conflict
+  - id: detect-private-key
+  - id: debug-statements
+
+- repo: https://github.com/PyCQA/isort
+  rev: 5.12.0
+  hooks:
+  - id: isort
+
+- repo: https://github.com/PyCQA/flake8
+  rev: "7.2.0"
+  hooks:
+  - id: flake8
+    args: ['--config=.flake8']
+
+- repo: https://github.com/cpplint/cpplint
+  rev: 2.0.2
+  hooks:
+  - id: cpplint

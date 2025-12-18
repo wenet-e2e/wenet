@@ -13,42 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from contextlib import nullcontext
 import copy
-from typing import List, Optional
-
-import deepspeed
 import json
 import logging
 import os
+from contextlib import nullcontext
+from typing import List, Optional
+
+import deepspeed
 import torch
-import yaml
-
-import torch.optim as optim
 import torch.distributed as dist
-
+import torch.optim as optim
+import yaml
+from deepspeed.runtime.zero.stage3 import \
+    estimate_zero3_model_states_mem_needs_all_live
+from deepspeed.runtime.zero.stage_1_and_2 import \
+    estimate_zero2_model_states_mem_needs_all_live
+from deepspeed.utils.zero_to_fp32 import \
+    convert_zero_checkpoint_to_fp32_state_dict
 from tensorboardX import SummaryWriter
-from torch.utils.data import DataLoader
+from torch.distributed.fsdp import CPUOffload
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp import (MixedPrecision, ShardingStrategy,
+                                    sharded_grad_scaler)
 from torch.nn.utils import clip_grad_norm_
-from torch.distributed.fsdp import (FullyShardedDataParallel as FSDP,
-                                    CPUOffload, MixedPrecision,
-                                    sharded_grad_scaler, ShardingStrategy)
-from deepspeed.runtime.zero.stage_1_and_2 import (
-    estimate_zero2_model_states_mem_needs_all_live)
-from deepspeed.runtime.zero.stage3 import (
-    estimate_zero3_model_states_mem_needs_all_live)
-from deepspeed.utils.zero_to_fp32 import (
-    convert_zero_checkpoint_to_fp32_state_dict)
+from torch.utils.data import DataLoader
+
 from wenet.utils.checkpoint import save_checkpoint
-from wenet.utils.common import (StepTimer, get_nested_attribute, lrs_to_str,
+from wenet.utils.common import (TORCH_NPU_AVAILABLE, StepTimer,
+                                get_nested_attribute, lrs_to_str,
                                 tensor_to_scalar)
-from wenet.utils.fsdp_utils import (check_gradient_checkpoint, fsdp_save_model,
-                                    apply_fsdp_checkpointing,
-                                    wenet_fsdp_wrap_policy)
-from wenet.utils.scheduler import WarmupLR, NoamHoldAnnealing
 from wenet.utils.ctc_utils import get_blank_id
-from wenet.utils.common import TORCH_NPU_AVAILABLE
+from wenet.utils.fsdp_utils import (apply_fsdp_checkpointing,
+                                    check_gradient_checkpoint, fsdp_save_model,
+                                    wenet_fsdp_wrap_policy)
 from wenet.utils.init_dataset import init_dataset
+from wenet.utils.scheduler import NoamHoldAnnealing, WarmupLR
 
 
 def add_model_args(parser):
@@ -98,7 +98,8 @@ def add_dataset_args(parser):
                         default='raw',
                         choices=['raw', 'shard'],
                         help='train and cv data type')
-    parser.add_argument('--train_data', required=True, help='train data file')
+    parser.add_argument('--train_data', required=True, nargs='+',
+                        help='train data file')
     parser.add_argument('--cv_data', required=True, help='cv data file')
     parser.add_argument('--num_workers',
                         default=0,
@@ -165,6 +166,14 @@ def add_lora_args(parser):
                         default=None,
                         type=str,
                         help="lora checkpoint path.")
+    parser.add_argument("--lora_reinit",
+                        default=False,
+                        type=bool,
+                        help="whether use the lora init, default is zero init.")
+    parser.add_argument('--lora_init_yaml',
+                        default="wenet/finetune/lora/config.yaml",
+                        type=str,
+                        help='Path to the configuration YAML file')
     return parser
 
 
@@ -471,8 +480,8 @@ def wrap_cuda_model(args, model, configs=None):
         logging.error("not supported engine: {}".format(args.train_engine))
     if args.train_engine in ["torch_fsdp", "torch_ddp"]:
         if args.fp16_grad_sync:
-            from torch.distributed.algorithms.ddp_comm_hooks import (
-                default as comm_hooks, )
+            from torch.distributed.algorithms.ddp_comm_hooks import \
+                default as comm_hooks
             model.register_comm_hook(state=None,
                                      hook=comm_hooks.fp16_compress_hook)
 
@@ -874,3 +883,48 @@ def freeze_modules(model, args):
             if module_name in name:
                 param.requires_grad = False
                 logging.debug("{} module is freezed".format(name))
+
+
+def reinit_lora(model, args, configs, tokenizer, seed=777):
+    from types import SimpleNamespace
+
+    from tqdm import tqdm
+
+    from wenet.models.finetune.lora.layers import LoRALayer
+    from wenet.models.finetune.lora.utils import (estimate_gradient,
+                                                  reinit_lora_modules)
+
+    logging.info("reinit lora modules.")
+    with open(args.lora_init_yaml, 'r') as file:
+        lora_config = yaml.safe_load(file)
+
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    dataset_conf = copy.deepcopy(configs['dataset_conf'])
+    dataset_conf['batch_conf']['batch_size'] = lora_config['init_batch_size']
+    dataset_type = configs.get('dataset', 'asr')
+    dataset = init_dataset(dataset_type, args.data_type, args.train_data,
+                           tokenizer, dataset_conf, True)
+    dataloader = DataLoader(dataset,
+                            batch_size=None,
+                            pin_memory=args.pin_memory,
+                            num_workers=args.num_workers,
+                            persistent_workers=True,
+                            generator=generator,
+                            prefetch_factor=args.prefetch)
+    additional_kwargs = {}
+    if lora_config["init_config"]["mode"] == "gradient":
+        named_grads = estimate_gradient(model, dataloader,
+                                        lora_config['init_iters'])
+        additional_kwargs["named_grads"] = named_grads
+    lora_config = SimpleNamespace(**lora_config["init_config"])
+    for name, module in tqdm(
+        model.named_modules(),
+        desc="Reinitializing Lora",
+        total=len(list(model.named_modules())),
+    ):
+        if isinstance(module, LoRALayer):
+            reinit_lora_modules(name, module, lora_config, **additional_kwargs)
+    # lora_init_model needs to be saved, w0 = w0 - A0 * B0
+    save_checkpoint(model, os.path.join(args.model_dir, "lora_init.pt"),
+                    infos={"tag": "lora_init", **configs})

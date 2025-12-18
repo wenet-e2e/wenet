@@ -1,19 +1,22 @@
-from functools import partial
 import os
-from torch.distributed.fsdp import (FullyShardedDataParallel as FSDP,
-                                    FullStateDictConfig, StateDictType)
+from functools import partial
 
+from torch.distributed.fsdp import FullStateDictConfig
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp import StateDictType
 from torch.distributed.fsdp.wrap import (lambda_auto_wrap_policy,
                                          transformer_auto_wrap_policy)
-from wenet.LLM.decoder import DecoderOnly
-from wenet.branchformer.encoder_layer import BranchformerEncoderLayer
-from wenet.e_branchformer.encoder_layer import EBranchformerEncoderLayer
-from wenet.efficient_conformer.encoder_layer import StrideConformerEncoderLayer
-from wenet.paraformer.layers import AliParaformerEncoderLayer, SanmDecoderLayer
-from wenet.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
-from wenet.transformer.encoder_layer import (ConformerEncoderLayer,
-                                             TransformerEncoderLayer)
-from wenet.transformer.decoder_layer import DecoderLayer
+
+from wenet.models.branchformer.encoder_layer import BranchformerEncoderLayer
+from wenet.models.e_branchformer.encoder_layer import EBranchformerEncoderLayer
+from wenet.models.efficient_conformer.encoder_layer import \
+    StrideConformerEncoderLayer
+from wenet.models.paraformer.layers import (AliParaformerEncoderLayer,
+                                            SanmDecoderLayer)
+from wenet.models.squeezeformer.encoder_layer import SqueezeformerEncoderLayer
+from wenet.models.transformer.decoder_layer import DecoderLayer
+from wenet.models.transformer.encoder_layer import (ConformerEncoderLayer,
+                                                    TransformerEncoderLayer)
 from wenet.utils.checkpoint import save_state_dict_and_infos
 from wenet.utils.init_model import WENET_DECODER_CLASSES, WENET_ENCODER_CLASSES
 
@@ -92,8 +95,6 @@ def check_gradient_checkpoint(model):
         if model.decoder.gradient_checkpointing:
             model.decoder.gradient_checkpointing = False
             ckpt_laye_types += list(WENET_DECODER_LAYERS_CLASSES.values())
-            if isinstance(model.decoder, DecoderOnly):
-                ckpt_laye_types += [DecoderOnly]
     return tuple(ckpt_laye_types)
 
 
@@ -104,10 +105,7 @@ def apply_fsdp_checkpointing(model, ckpt_layer_types: tuple):
     if len(ckpt_layer_types) == 0:
         return
     from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
-        checkpoint_wrapper,
-        CheckpointImpl,
-        apply_activation_checkpointing,
-    )
+        CheckpointImpl, apply_activation_checkpointing, checkpoint_wrapper)
     non_reentrant_wrapper = partial(
         checkpoint_wrapper,
         checkpoint_impl=CheckpointImpl.NO_REENTRANT,

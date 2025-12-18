@@ -43,7 +43,7 @@ if [ ! -d tools/sph2pipe_${sph2pipe_version} ]; then
         gcc -o sph2pipe  *.c -lm
   cd -
 fi
-sph2pipe=`which sph2pipe` || sph2pipe=`pwd`/tools/sph2pipe_${sph2pipe_version}/sph2pipe
+sph2pipe=`which sph2pipe` || sph2pipe=`pwd`/tools/sph2pipe_${sph2pipe_version}/sph2pipe.exe
 
 if ! command -v "${sph2pipe}" &> /dev/null; then
     echo "Could not find (or execute) the sph2pipe program at $sph2pipe";

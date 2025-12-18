@@ -272,7 +272,7 @@ def main():
         dir_name = os.path.join(args.result_dir, mode)
         os.makedirs(dir_name, exist_ok=True)
         file_name = os.path.join(dir_name, 'text')
-        files[mode] = open(file_name, 'w')
+        files[mode] = open(file_name, 'w', encoding='utf-8')
     max_format_len = max([len(mode) for mode in args.modes])
 
     with torch.cuda.amp.autocast(enabled=True,
