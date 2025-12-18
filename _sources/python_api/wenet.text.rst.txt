@@ -17,5 +17,6 @@ Submodules
    wenet.text.char_tokenizer
    wenet.text.hugging_face_tokenizer
    wenet.text.paraformer_tokenizer
+   wenet.text.sentencepiece_tokenizer
    wenet.text.tokenize_utils
    wenet.text.whisper_tokenizer

@@ -1,0 +1,7 @@
+wenet.models.sensevoice.sensevoice\_small\_model module
+=======================================================
+
+.. automodule:: wenet.models.sensevoice.sensevoice_small_model
+   :members:
+   :undoc-members:
+   :show-inheritance:

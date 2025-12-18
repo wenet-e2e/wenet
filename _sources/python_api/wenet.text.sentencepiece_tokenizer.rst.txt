@@ -1,0 +1,7 @@
+wenet.text.sentencepiece\_tokenizer module
+==========================================
+
+.. automodule:: wenet.text.sentencepiece_tokenizer
+   :members:
+   :undoc-members:
+   :show-inheritance:

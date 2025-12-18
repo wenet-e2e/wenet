@@ -20,6 +20,7 @@ Subpackages
    wenet.models.firered
    wenet.models.k2
    wenet.models.paraformer
+   wenet.models.sensevoice
    wenet.models.squeezeformer
    wenet.models.ssl
    wenet.models.transducer

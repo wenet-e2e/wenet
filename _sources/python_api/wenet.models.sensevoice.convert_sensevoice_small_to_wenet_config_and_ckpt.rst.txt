@@ -1,0 +1,7 @@
+wenet.models.sensevoice.convert\_sensevoice\_small\_to\_wenet\_config\_and\_ckpt module
+=======================================================================================
+
+.. automodule:: wenet.models.sensevoice.convert_sensevoice_small_to_wenet_config_and_ckpt
+   :members:
+   :undoc-members:
+   :show-inheritance:
