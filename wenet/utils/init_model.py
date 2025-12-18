@@ -29,6 +29,8 @@ from wenet.models.k2.model import K2Model
 from wenet.models.paraformer.cif import Cif
 from wenet.models.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.models.paraformer.paraformer import Paraformer, Predictor
+from wenet.models.sensevoice.sensevoice_small_model import (SanmEncoderWithTp,
+                                                            SenseVoiceSmall)
 from wenet.models.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.models.ssl.init_model import WENET_SSL_MODEL_CLASS
 from wenet.models.transducer.joint import TransducerJoint
@@ -57,6 +59,7 @@ WENET_ENCODER_CLASSES = {
     "dual_transformer": DualTransformerEncoder,
     "dual_conformer": DualConformerEncoder,
     'sanm_encoder': SanmEncoder,
+    'sanm_encoder_with_tp': SanmEncoderWithTp,
     "firered_conformer": FireRedConformerEncoder,
 }
 
@@ -90,6 +93,7 @@ WENET_MODEL_CLASSES = {
     "k2_model": K2Model,
     "transducer": Transducer,
     'paraformer': Paraformer,
+    "sensevoice_small": SenseVoiceSmall,
 }
 
 
@@ -118,9 +122,10 @@ def init_speech_model(args, configs):
         **configs['encoder_conf']['efficient_conf']
         if 'efficient_conf' in configs['encoder_conf'] else {})
 
-    decoder = WENET_DECODER_CLASSES[decoder_type](vocab_size,
-                                                  encoder.output_size(),
-                                                  **configs['decoder_conf'])
+    decoder = None
+    if decoder_type is not None:
+        decoder = WENET_DECODER_CLASSES[decoder_type](
+            vocab_size, encoder.output_size(), **configs['decoder_conf'])
 
     ctc = WENET_CTC_CLASSES[ctc_type](
         vocab_size,
