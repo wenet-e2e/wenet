@@ -2,6 +2,7 @@ from typing import Dict, List, Optional, Tuple
 
 import torch
 import torch.utils.checkpoint as ckpt
+
 from wenet.paraformer.attention import MultiHeadedAttentionSANM
 from wenet.paraformer.layers import LFR, AliParaformerEncoderLayer, SanmEncoder
 from wenet.transformer.asr_model import ASRModel

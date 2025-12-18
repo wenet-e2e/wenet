@@ -29,6 +29,8 @@ from wenet.models.k2.model import K2Model
 from wenet.models.paraformer.cif import Cif
 from wenet.models.paraformer.layers import SanmDecoder, SanmEncoder
 from wenet.models.paraformer.paraformer import Paraformer, Predictor
+from wenet.models.sensevoice.sensevoice_small_model import (SanmEncoderWithTp,
+                                                            SenseVoiceSmall)
 from wenet.models.squeezeformer.encoder import SqueezeformerEncoder
 from wenet.models.ssl.init_model import WENET_SSL_MODEL_CLASS
 from wenet.models.transducer.joint import TransducerJoint
