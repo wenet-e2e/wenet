@@ -141,6 +141,7 @@ class SanmEncoderWithTp(SanmEncoder):
 
 
 class SenseVoiceSmall(ASRModel):
+    default_decode_method = "ctc_greedy_search"
 
     def __init__(self,
                  vocab_size: int,
@@ -169,7 +170,12 @@ class SenseVoiceSmall(ASRModel):
         self.eos = special_tokens['</s>']
 
         # hard code for sensevoice small
-        self.embed = torch.nn.Embedding(7 + 7 + 2, 560)
+        self.lid_dict = {"auto": 0, "zh": 3, "en": 4, "yue": 7, "ja": 11, "ko": 12, "nospeech": 13}
+        self.lid_int_dict = {24884: 3, 24885: 4, 24888: 7, 24892: 11, 24896: 12, 24992: 13}
+        self.textnorm_dict = {"withitn": 14, "woitn": 15}
+        self.textnorm_int_dict = {25016: 14, 25017: 15}
+        self.emo_dict = {"unk": 25009, "happy": 25001, "sad": 25002, "angry": 25003, "neutral": 25004}
+        self.embed = torch.nn.Embedding(7 + len(self.lid_dict) + len(self.textnorm_dict), 560)
 
         assert self.encoder.global_cmvn is not None
         self.global_cmvn = self.encoder.global_cmvn
@@ -195,16 +201,16 @@ class SenseVoiceSmall(ASRModel):
         text_lengths = batch['target_lengths'].to(device)
 
         speech, speech_lengths = self.lfr(speech, speech_lengths)
-        speech = self.global_cmvn = self.global_cmvn(speech)
+        speech = self.global_cmvn(speech)
 
         # context pattern:
         # lid emo event tn speech
         # TODO: move to dataset
         lid = batch['lid'].to(device).unsqueeze(1)  # [B,1]
         itn = batch['itn'].to(device).unsqueeze(1)  # [B,1]
-        emo = batch['emo'].to(device).unsqueeze(1)  # [B,1]
-        event = batch['enent'].to(device).unsqueeze(1)  # [B,1]
-        context = torch.stack([lid, itn, event, emo], dim=1)
+        event_emo_query = torch.LongTensor([[1, 2]]).to(speech.device).repeat(
+            speech.size(0), 1)  # [B,2]
+        context = torch.stack([lid, event_emo_query, itn], dim=1)
 
         context_embed = self.embed(context)  # [B,4,D]
         speech = torch.cat((context_embed, speech), dim=1)
@@ -241,21 +247,44 @@ class SenseVoiceSmall(ASRModel):
         }
 
     def decode(
-            self,
-            methods: List[str],
-            speech: torch.Tensor,
-            speech_lengths: torch.Tensor,
-            beam_size: int,
-            decoding_chunk_size: int = -1,
-            num_decoding_left_chunks: int = -1,
-            ctc_weight: float = 0,
-            simulate_streaming: bool = False,
-            reverse_weight: float = 0,
-            context_graph: ContextGraph = None,
-            blank_id: int = 0,
-            blank_penalty: float = 0,
-            length_penalty: float = 0,
-            infos: Dict[str,
-                        List[str]] = None) -> Dict[str, List[DecodeResult]]:
-
-        pass
+        self,
+        methods: List[str],
+        speech: torch.Tensor,
+        speech_lengths: torch.Tensor,
+        beam_size: int = 1,
+        decoding_chunk_size: int = -1,
+        num_decoding_left_chunks: int = -1,
+        ctc_weight: float = 0.0,
+        simulate_streaming: bool = False,
+        reverse_weight: float = 0.0,
+        context_graph: ContextGraph = None,
+        blank_id: int = 0,
+        blank_penalty: float = 0.0,
+        length_penalty: float = 0.0,
+        infos: Dict[str, List[str]] = {},
+    ) -> Dict[str, List[DecodeResult]]:
+        assert simulate_streaming is False
+        speech, speech_lengths = self.lfr(speech, speech_lengths)
+        speech = self.global_cmvn(speech)
+        # context pattern
+        itn = infos.get('itn', 'woitn')
+        lid = infos.get('lid', 'auto')
+        lid_query = self.embed(torch.LongTensor(
+            [[self.lid_dict[lid] if lid in self.lid_dict else 0]]).to(speech.device)).repeat(
+                speech.size(0), 1, 1
+        )
+        itn_query = self.embed(torch.LongTensor(
+            [[self.textnorm_dict[itn] if itn in self.textnorm_dict else 15]]).to(speech.device)).repeat(
+                speech.size(0), 1, 1
+        )
+        # hard code
+        event_emo_query = self.embed(torch.LongTensor([[1, 2]]).to(speech.device)).repeat(
+            speech.size(0), 1, 1
+        )
+        speech = torch.cat((lid_query, event_emo_query, itn_query, speech), dim=1)
+        speech_lengths += 4
+        return super().decode(
+            methods, speech, speech_lengths, beam_size,
+            decoding_chunk_size, num_decoding_left_chunks, ctc_weight,
+            simulate_streaming, reverse_weight, context_graph, blank_id,
+            blank_penalty, length_penalty, infos)

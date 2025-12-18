@@ -32,7 +32,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str, unit_path: str,
     configs['ctc_conf'] = {}
     configs['ctc_conf']['ctc_blank_id'] = 0
 
-    configs['tokenizer'] = 'tokenizer'
+    configs['tokenizer'] = 'sentencepiece'
     configs['tokenizer_conf'] = {}
     configs['tokenizer_conf']['model_path'] = tokenizer_path
     configs['tokenizer_conf']['special_tokens'] = {}
