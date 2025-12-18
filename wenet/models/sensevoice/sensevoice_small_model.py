@@ -3,14 +3,16 @@ from typing import Dict, List, Optional, Tuple
 import torch
 import torch.utils.checkpoint as ckpt
 
-from wenet.paraformer.attention import MultiHeadedAttentionSANM
-from wenet.paraformer.layers import LFR, AliParaformerEncoderLayer, SanmEncoder
-from wenet.transformer.asr_model import ASRModel
-from wenet.transformer.ctc import CTC
-from wenet.transformer.decoder import TransformerDecoder
-from wenet.transformer.label_smoothing_loss import LabelSmoothingLoss
-from wenet.transformer.positionwise_feed_forward import PositionwiseFeedForward
-from wenet.transformer.search import DecodeResult
+from wenet.models.paraformer.attention import MultiHeadedAttentionSANM
+from wenet.models.paraformer.layers import (LFR, AliParaformerEncoderLayer,
+                                            SanmEncoder)
+from wenet.models.transformer.asr_model import ASRModel
+from wenet.models.transformer.ctc import CTC
+from wenet.models.transformer.decoder import TransformerDecoder
+from wenet.models.transformer.label_smoothing_loss import LabelSmoothingLoss
+from wenet.models.transformer.positionwise_feed_forward import \
+    PositionwiseFeedForward
+from wenet.models.transformer.search import DecodeResult
 from wenet.utils.common import IGNORE_ID, mask_to_bias
 from wenet.utils.context_graph import ContextGraph
 from wenet.utils.mask import add_optional_chunk_mask, make_pad_mask

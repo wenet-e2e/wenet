@@ -8,7 +8,7 @@ from typing import Dict
 import torch
 import yaml
 
-from wenet.paraformer.convert_paraformer_to_wenet_config_and_ckpt import (
+from wenet.models.paraformer.convert_paraformer_to_wenet_config_and_ckpt import (
     _filter_dict_fields, convert_to_wenet_json_cmvn)
 from wenet.text.sentencepiece_tokenizer import SentencepieceTokenizer
 

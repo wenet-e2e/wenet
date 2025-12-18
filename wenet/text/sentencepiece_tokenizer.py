@@ -1,6 +1,7 @@
 from os import PathLike
 from typing import Dict, List, Union
-from wenet.text.base_tokenizer import (BaseTokenizer, T)
+
+from wenet.text.base_tokenizer import BaseTokenizer, T
 
 
 class SentencepieceTokenizer(BaseTokenizer):
