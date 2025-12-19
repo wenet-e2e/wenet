@@ -93,6 +93,7 @@ class Hub(object):
         "whisper-large-v3-turbo": "whisper-large-v3-turbo.tar.gz",
         "paraformer": "paraformer.tar.gz",
         "firered": "firered.tar.gz",
+        "sensevoice_small": "sensevoice_small.tar.gz",
         "punc": "punc.tar.gz"
     }
 
