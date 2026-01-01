@@ -39,6 +39,7 @@ if(ONNX)
   include(onnx)
 endif()
 include(openfst)
+include(wetextprocessing)
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/kaldi
