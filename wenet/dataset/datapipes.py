@@ -379,7 +379,7 @@ class TarsDataPipe(IterDataPipe):
             assert 'stream' in sample
             try:
                 with tarfile.open(fileobj=sample['stream'],
-                                  mode="r:*") as stream:
+                                  mode="r|*") as stream:
                     prev_prefix = None
                     example = {
                         'file_name': sample['file_name'],
