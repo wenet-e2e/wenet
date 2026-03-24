@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		372EA5222F72CB1D00A9B8A7 /* zh_itn_verbalizer.fst in Resources */ = {isa = PBXBuildFile; fileRef = 372EA5212F72CB1D00A9B8A7 /* zh_itn_verbalizer.fst */; };
+		372EA5232F72CB1D00A9B8A7 /* zh_itn_tagger.fst in Resources */ = {isa = PBXBuildFile; fileRef = 372EA5202F72CB1D00A9B8A7 /* zh_itn_tagger.fst */; };
 		374FEB34291019EE00513F88 /* libeigen_blas.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 37FD7E1E2910198A00853C23 /* libeigen_blas.a */; };
 		37C64C892912A94B00BFCE0B /* final.zip in Resources */ = {isa = PBXBuildFile; fileRef = 37C64C882912A94A00BFCE0B /* final.zip */; };
 		37C64C8B2912ABE900BFCE0B /* units.txt in Resources */ = {isa = PBXBuildFile; fileRef = 37C64C8A2912ABE900BFCE0B /* units.txt */; };
@@ -34,6 +36,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		372EA5202F72CB1D00A9B8A7 /* zh_itn_tagger.fst */ = {isa = PBXFileReference; lastKnownFileType = file; path = zh_itn_tagger.fst; sourceTree = "<group>"; };
+		372EA5212F72CB1D00A9B8A7 /* zh_itn_verbalizer.fst */ = {isa = PBXFileReference; lastKnownFileType = file; path = zh_itn_verbalizer.fst; sourceTree = "<group>"; };
 		373FDD93291BE53D00DF4BEA /* libglog.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libglog.a; path = "../fc_base/glog-build/Release-iphoneos/libglog.a"; sourceTree = "<group>"; };
 		373FDD95291BE5A800DF4BEA /* libgflags_nothreads.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgflags_nothreads.a; path = "../fc_base/gflags-build/Release-iphoneos/libgflags_nothreads.a"; sourceTree = "<group>"; };
 		37C64C882912A94A00BFCE0B /* final.zip */ = {isa = PBXFileReference; lastKnownFileType = archive.zip; path = final.zip; sourceTree = "<group>"; };
@@ -97,6 +101,8 @@
 		37C64C812912A21300BFCE0B /* model */ = {
 			isa = PBXGroup;
 			children = (
+				372EA5202F72CB1D00A9B8A7 /* zh_itn_tagger.fst */,
+				372EA5212F72CB1D00A9B8A7 /* zh_itn_verbalizer.fst */,
 				37C64C8A2912ABE900BFCE0B /* units.txt */,
 				37C64C882912A94A00BFCE0B /* final.zip */,
 			);
@@ -231,6 +237,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				372EA5222F72CB1D00A9B8A7 /* zh_itn_verbalizer.fst in Resources */,
+				372EA5232F72CB1D00A9B8A7 /* zh_itn_tagger.fst in Resources */,
 				37C64C8B2912ABE900BFCE0B /* units.txt in Resources */,
 				37FD7E0F2910094500853C23 /* LaunchScreen.storyboard in Resources */,
 				37FD7E0C2910094500853C23 /* Assets.xcassets in Resources */,

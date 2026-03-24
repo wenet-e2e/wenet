@@ -44,7 +44,14 @@ class ViewController: UIViewController {
       return
     }
 
-    wenetModel = Wenet(modelPath: modelPath, dictPath: dictPath)
+    // ITN model paths (optional)
+    let itnTaggerPath = Bundle.main.path(forResource: "zh_itn_tagger", ofType: "fst")
+    let itnVerbalizerPath = Bundle.main.path(forResource: "zh_itn_verbalizer", ofType: "fst")
+
+    wenetModel = Wenet(modelPath: modelPath,
+                       dictPath: dictPath,
+                       itnTaggerPath: itnTaggerPath,
+                       itnVerbalizerPath: itnVerbalizerPath)
     wenetModel?.reset()
     print("Model initialized successfully.")
   }
