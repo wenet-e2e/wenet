@@ -33,7 +33,7 @@ class BaseSubsampling(torch.nn.Module):
         return self.pos_enc.position_encoding(offset, size)
 
 
-class EmbedinigNoSubsampling(BaseSubsampling):
+class EmbeddingNoSubsampling(BaseSubsampling):
     """Embedding input without subsampling
     """
 

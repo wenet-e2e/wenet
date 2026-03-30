@@ -29,7 +29,7 @@ from wenet.models.transformer.subsampling import (Conv1dSubsampling2,
                                                   Conv2dSubsampling4,
                                                   Conv2dSubsampling6,
                                                   Conv2dSubsampling8,
-                                                  EmbedinigNoSubsampling,
+                                                  EmbeddingNoSubsampling,
                                                   LinearNoSubsampling,
                                                   StackNFramesSubsampling)
 from wenet.models.transformer.swish import Swish
@@ -51,7 +51,7 @@ WENET_RNN_CLASSES = {
 
 WENET_SUBSAMPLE_CLASSES = {
     "linear": LinearNoSubsampling,
-    "embed": EmbedinigNoSubsampling,
+    "embed": EmbeddingNoSubsampling,
     "conv1d2": Conv1dSubsampling2,
     "conv2d2": Conv2dSubsampling2,
     "conv2d": Conv2dSubsampling4,
