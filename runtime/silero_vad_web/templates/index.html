@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silero VAD + WeNet 实时语音识别</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .control-panel {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .btn-start {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(17, 153, 142, 0.4);
+        }
+        
+        .btn-stop {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+        
+        .btn-stop:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(235, 51, 73, 0.4);
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            transition: all 0.3s ease;
+        }
+        
+        .status-dot.recording {
+            background: #eb3349;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-dot.speaking {
+            background: #38ef7d;
+            animation: pulse 0.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .status-text {
+            font-weight: 500;
+            color: #666;
+        }
+        
+        .params-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .param-group {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .param-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .param-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .param-slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .param-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .param-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+        
+        .param-desc {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .result-container {
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: #333;
+        }
+        
+        .result-container:empty::before {
+            content: '识别结果将显示在这里...';
+            color: #aaa;
+        }
+        
+        .partial-text {
+            color: #667eea;
+            font-style: italic;
+        }
+        
+        .final-text {
+            color: #333;
+        }
+        
+        .log-container {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #1e1e1e;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.85rem;
+            color: #d4d4d4;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+        }
+        
+        .log-time {
+            color: #6a9955;
+        }
+        
+        .log-info {
+            color: #569cd6;
+        }
+        
+        .log-error {
+            color: #f44747;
+        }
+        
+        .log-success {
+            color: #4ec9b0;
+        }
+        
+        .audio-visualizer {
+            height: 60px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            padding: 10px;
+            margin-top: 15px;
+        }
+        
+        .visualizer-bar {
+            width: 4px;
+            background: #667eea;
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+        
+        .session-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .info-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .info-label {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 3px;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎤 实时语音识别系统</h1>
+            <p>Silero VAD + WeNet 端到端语音识别</p>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">控制面板</h2>
+            
+            <div class="control-panel">
+                <button id="startBtn" class="btn btn-start">
+                    <span>🎙️</span> 开始录音
+                </button>
+                <button id="stopBtn" class="btn btn-stop" disabled>
+                    <span>⏹️</span> 停止录音
+                </button>
+                
+                <div class="status-indicator">
+                    <div id="statusDot" class="status-dot"></div>
+                    <span id="statusText" class="status-text">未连接</span>
+                </div>
+            </div>
+            
+            <div class="audio-visualizer" id="visualizer">
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+                <div class="visualizer-bar" style="height: 10px;"></div>
+            </div>
+            
+            <div class="session-info" id="sessionInfo" style="display: none;">
+                <div class="info-item">
+                    <span class="info-label">会话ID</span>
+                    <span class="info-value" id="sessionId">-</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">语音片段数</span>
+                    <span class="info-value" id="speechCount">0</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">识别字数</span>
+                    <span class="info-value" id="wordCount">0</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">VAD 参数设置</h2>
+            
+            <div class="params-grid">
+                <div class="param-group">
+                    <div class="param-label">
+                        <span>检测阈值 (threshold)</span>
+                        <span class="param-value" id="thresholdValue">0.5</span>
+                    </div>
+                    <input type="range" id="threshold" class="param-slider" 
+                           min="0" max="1" step="0.05" value="0.5">
+                    <div class="param-desc">语音检测阈值，越高越严格（0-1）</div>
+                </div>
+                
+                <div class="param-group">
+                    <div class="param-label">
+                        <span>最小静音时长 (ms)</span>
+                        <span class="param-value" id="minSilenceValue">100</span>
+                    </div>
+                    <input type="range" id="minSilence" class="param-slider" 
+                           min="50" max="1000" step="50" value="100">
+                    <div class="param-desc">判定语音结束的最小静音时长</div>
+                </div>
+                
+                <div class="param-group">
+                    <div class="param-label">
+                        <span>语音填充时长 (ms)</span>
+                        <span class="param-value" id="speechPadValue">30</span>
+                    </div>
+                    <input type="range" id="speechPad" class="param-slider" 
+                           min="0" max="500" step="10" value="30">
+                    <div class="param-desc">语音片段前后的填充时长</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <button id="applyParamsBtn" class="btn" style="background: #667eea; color: white;">
+                    <span>⚙️</span> 应用参数
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">识别结果</h2>
+            <div id="resultContainer" class="result-container"></div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title">运行日志</h2>
+            <div id="logContainer" class="log-container"></div>
+        </div>
+    </div>
+    
+    <script>
+        let socket = null;
+        let sessionId = null;
+        let mediaRecorder = null;
+        let audioContext = null;
+        let analyser = null;
+        let dataArray = null;
+        let animationId = null;
+        let isRecording = false;
+        let speechCount = 0;
+        let wordCount = 0;
+        let fullText = '';
+        
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const resultContainer = document.getElementById('resultContainer');
+        const logContainer = document.getElementById('logContainer');
+        const sessionInfo = document.getElementById('sessionInfo');
+        const applyParamsBtn = document.getElementById('applyParamsBtn');
+        
+        const thresholdSlider = document.getElementById('threshold');
+        const minSilenceSlider = document.getElementById('minSilence');
+        const speechPadSlider = document.getElementById('speechPad');
+        
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            
+            let typeClass = 'log-info';
+            if (type === 'error') typeClass = 'log-error';
+            if (type === 'success') typeClass = 'log-success';
+            
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="${typeClass}">${message}</span>`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        function updateStatus(status, isSpeaking = false) {
+            statusDot.className = 'status-dot';
+            if (status === 'recording') {
+                statusDot.classList.add(isSpeaking ? 'speaking' : 'recording');
+                statusText.textContent = isSpeaking ? '检测到语音' : '录音中...';
+            } else if (status === 'connected') {
+                statusText.textContent = '已连接';
+            } else {
+                statusText.textContent = '未连接';
+            }
+        }
+        
+        function getVadParams() {
+            return {
+                threshold: parseFloat(thresholdSlider.value),
+                min_silence_duration_ms: parseInt(minSilenceSlider.value),
+                speech_pad_ms: parseInt(speechPadSlider.value)
+            };
+        }
+        
+        function updateParamDisplays() {
+            document.getElementById('thresholdValue').textContent = thresholdSlider.value;
+            document.getElementById('minSilenceValue').textContent = minSilenceSlider.value;
+            document.getElementById('speechPadValue').textContent = speechPadSlider.value;
+        }
+        
+        thresholdSlider.addEventListener('input', updateParamDisplays);
+        minSilenceSlider.addEventListener('input', updateParamDisplays);
+        speechPadSlider.addEventListener('input', updateParamDisplays);
+        
+        function initSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            
+            log(`连接到服务器: ${wsUrl}`);
+            
+            socket = io(wsUrl, {
+                transports: ['websocket', 'polling']
+            });
+            
+            socket.on('connect', () => {
+                log('WebSocket 连接成功', 'success');
+                updateStatus('connected');
+            });
+            
+            socket.on('connected', (data) => {
+                log('服务器确认连接');
+            });
+            
+            socket.on('session_started', (data) => {
+                sessionId = data.session_id;
+                document.getElementById('sessionId').textContent = sessionId.substring(0, 8) + '...';
+                sessionInfo.style.display = 'flex';
+                log(`会话已创建: ${sessionId}`, 'success');
+            });
+            
+            socket.on('speech_start', (data) => {
+                updateStatus('recording', true);
+                log('检测到语音开始');
+            });
+            
+            socket.on('speech_end', (data) => {
+                updateStatus('recording', false);
+                speechCount++;
+                document.getElementById('speechCount').textContent = speechCount;
+                log(`语音片段结束: ${data.text || '(空)'}`);
+            });
+            
+            socket.on('recognition_result', (data) => {
+                const text = data.text;
+                if (text) {
+                    fullText += text;
+                    wordCount += text.length;
+                    document.getElementById('wordCount').textContent = wordCount;
+                    
+                    resultContainer.innerHTML = `<span class="final-text">${fullText}</span>`;
+                    resultContainer.scrollTop = resultContainer.scrollHeight;
+                    
+                    log(`识别结果: ${text}`, 'success');
+                }
+            });
+            
+            socket.on('vad_params_updated', (data) => {
+                log('VAD 参数已更新', 'success');
+            });
+            
+            socket.on('session_stopped', (data) => {
+                log(`会话已停止: ${data.session_id}`, 'success');
+            });
+            
+            socket.on('error', (data) => {
+                log(`错误: ${data.message}`, 'error');
+            });
+            
+            socket.on('disconnect', () => {
+                log('WebSocket 连接断开', 'error');
+                updateStatus('disconnected');
+            });
+        }
+        
+        async function startRecording() {
+            try {
+                log('请求麦克风权限...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    } 
+                });
+                
+                log('麦克风权限已获取', 'success');
+                
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000
+                });
+                
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+                
+                const bufferSize = 4096;
+                const scriptProcessor = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                
+                scriptProcessor.onaudioprocess = (e) => {
+                    if (!isRecording) return;
+                    
+                    const inputData = e.inputBuffer.getChannelData(0);
+                    const int16Data = float32ToInt16(inputData);
+                    
+                    if (socket && sessionId) {
+                        socket.emit('audio_data', {
+                            session_id: sessionId,
+                            audio_data: int16Data.buffer
+                        });
+                    }
+                };
+                
+                source.connect(scriptProcessor);
+                scriptProcessor.connect(audioContext.destination);
+                
+                if (!socket) {
+                    initSocket();
+                }
+                
+                const vadParams = getVadParams();
+                log(`启动会话，VAD参数: ${JSON.stringify(vadParams)}`);
+                
+                socket.emit('start_session', {
+                    vad_params: vadParams
+                });
+                
+                isRecording = true;
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                updateStatus('recording');
+                
+                startVisualizer();
+                
+                log('录音已开始', 'success');
+                
+            } catch (error) {
+                log(`启动录音失败: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+        
+        function stopRecording() {
+            isRecording = false;
+            
+            if (socket && sessionId) {
+                socket.emit('stop_session', {
+                    session_id: sessionId
+                });
+            }
+            
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus('connected');
+            
+            log('录音已停止', 'success');
+        }
+        
+        function applyParams() {
+            if (socket && sessionId) {
+                const vadParams = getVadParams();
+                log(`应用新的 VAD 参数: ${JSON.stringify(vadParams)}`);
+                
+                socket.emit('update_vad_params', {
+                    session_id: sessionId,
+                    vad_params: vadParams
+                });
+            } else {
+                log('请先开始录音', 'error');
+            }
+        }
+        
+        function float32ToInt16(float32Array) {
+            const int16Array = new Int16Array(float32Array.length);
+            for (let i = 0; i < float32Array.length; i++) {
+                const s = Math.max(-1, Math.min(1, float32Array[i]));
+                int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            return int16Array;
+        }
+        
+        function startVisualizer() {
+            const bars = document.querySelectorAll('.visualizer-bar');
+            
+            function animate() {
+                if (!isRecording || !analyser) return;
+                
+                analyser.getByteFrequencyData(dataArray);
+                
+                const step = Math.floor(dataArray.length / bars.length);
+                bars.forEach((bar, i) => {
+                    const value = dataArray[i * step];
+                    const height = Math.max(10, (value / 255) * 50);
+                    bar.style.height = `${height}px`;
+                });
+                
+                animationId = requestAnimationFrame(animate);
+            }
+            
+            animate();
+        }
+        
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+        applyParamsBtn.addEventListener('click', applyParams);
+        
+        updateParamDisplays();
+        log('页面加载完成，点击"开始录音"按钮开始');
+    </script>
+</body>
+</html>
