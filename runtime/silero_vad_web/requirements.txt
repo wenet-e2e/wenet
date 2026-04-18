@@ -1,0 +1,9 @@
+flask==2.3.3
+flask-socketio==5.3.6
+python-engineio==4.8.0
+python-socketio==5.10.0
+torch==2.0.1
+torchaudio==2.0.2
+silero-vad==5.1
+numpy==1.24.3
+eventlet==0.33.3
