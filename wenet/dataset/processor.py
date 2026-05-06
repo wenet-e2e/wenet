@@ -41,7 +41,7 @@ import os
 try:
     cpu_info = os.popen("lscpu | grep 'Vendor ID'").read()
     # 0x48 --> HiSilicon
-    if (cpu_info.rstrip().split(" ")[-1] == "0x48"):
+    if (cpu_info.rstrip().split(" ")[-1] == "0x48") or (cpu_info.rstrip().split(" ")[-1].lower() == "hisilicon"):
         # NOTE (MengqingCao): set number of threads in the subprocesses to 1
         # Why? There may be some operators ultilizing multi-threads in processor,
         # causing possibly deadlock in Kunpeng.
