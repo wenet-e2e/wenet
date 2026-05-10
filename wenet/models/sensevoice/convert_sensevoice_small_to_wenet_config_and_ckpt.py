@@ -46,7 +46,7 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str, unit_path: str,
     configs['tokenizer_conf']['special_tokens']['<blank>'] = 0
     configs['tokenizer_conf']['special_tokens']['<unk>'] = 0
 
-    configs['dataset'] = 'asr_dataset'
+    configs['dataset'] = 'asr'
     configs['dataset_conf'] = {}
     configs['dataset_conf']['filter_conf'] = {}
     configs['dataset_conf']['filter_conf']['max_length'] = 20000
@@ -99,6 +99,8 @@ def convert_to_wenet_yaml(configs, wenet_yaml_path: str, unit_path: str,
 
 def convert_to_wenet_state_dict(args, wenet_model_path):
     checkpoint = torch.load(args.sensevoice_model, map_location='cpu')
+    if isinstance(checkpoint, dict) and 'state_dict' in checkpoint:
+        checkpoint = checkpoint['state_dict']
     torch.save(checkpoint, wenet_model_path)
 
 

@@ -102,6 +102,8 @@ def parse_speaker(sample, speaker_dict):
 
 def detect_language(sample, limited_langs):
     assert 'txt' in sample
+    if 'lang' in sample:
+        return sample
     # NOTE(xcsong): Because language classification may not be very accurate
     #   (for example, Chinese being classified as Japanese), our workaround,
     #   given we know for certain that the training data only consists of
@@ -119,6 +121,12 @@ def detect_task(sample):
     #   the contents of sample. For instance, if a sample contains both
     #   'txt_en' and 'txt_zh', the task should be set to 'translate'.
     sample['task'] = "transcribe"
+    return sample
+
+
+def detect_itn(sample):
+    if 'itn' not in sample:
+        sample['itn'] = "woitn"
     return sample
 
 
@@ -547,6 +555,7 @@ def padding(data):
     sorted_wavs = [sample[i]['wav'].squeeze(0) for i in order]
     langs = [sample[i]['lang'] for i in order]
     tasks = [sample[i]['task'] for i in order]
+    itns = [sample[i].get('itn', 'woitn') for i in order]
     label_lengths = torch.tensor([x.size(0) for x in sorted_labels],
                                  dtype=torch.int32)
     wav_lengths = torch.tensor([x.size(0) for x in sorted_wavs],
@@ -569,6 +578,7 @@ def padding(data):
         "pcm_length": wav_lengths,
         "langs": langs,
         "tasks": tasks,
+        "itns": itns,
     }
     if 'speaker' in sample[0]:
         speaker = torch.tensor([sample[i]['speaker'] for i in order],

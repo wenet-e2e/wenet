@@ -1,0 +1,95 @@
+input_dim: 560
+
+encoder: sanm_encoder_with_tp
+encoder_conf:
+  attention_dropout_rate: 0.1
+  attention_heads: 4
+  dropout_rate: 0.1
+  input_layer: paraformer_dummy
+  kernel_size: 11
+  linear_units: 2048
+  normalize_before: true
+  num_blocks: 50
+  output_size: 512
+  pos_enc_layer_type: abs_pos_paraformer
+  positional_dropout_rate: 0.1
+  sanm_shfit: 0
+  tp_blocks: 20
+  gradient_checkpointing: false
+
+decoder: null
+
+tokenizer: sentencepiece
+tokenizer_conf:
+  model_path: exp/sensevoice/small/chn_jpn_yue_eng_ko_spectok.bpe.model
+  special_tokens:
+    <blank>: 0
+    <s>: 1
+    </s>: 2
+    <unk>: 0
+  symbol_table_path: exp/sensevoice/small/units.txt
+
+ctc: ctc
+ctc_conf:
+  ctc_blank_id: 0
+
+cmvn: global_cmvn
+cmvn_conf:
+  cmvn_file: exp/sensevoice/small/global_cmvn
+  is_json_cmvn: true
+
+model: sensevoice_small
+model_conf:
+  ctc_weight: 1.0
+  length_normalized_loss: true
+  lsm_weight: 0.1
+
+lfr_conf:
+  lfr_m: 7
+  lfr_n: 6
+
+dataset: asr
+dataset_conf:
+  filter_conf:
+    max_length: 20000
+    min_length: 0
+    token_max_length: 200
+    token_min_length: 1
+  resample_conf:
+    resample_rate: 16000
+  speed_perturb: true
+  fbank_conf:
+    num_mel_bins: 80
+    frame_shift: 10
+    frame_length: 25
+    dither: 0.1
+    window_type: hamming
+  spec_aug: true
+  spec_aug_conf:
+    num_t_mask: 2
+    num_f_mask: 2
+    max_t: 50
+    max_f: 10
+  spec_sub: false
+  spec_trim: false
+  shuffle: true
+  shuffle_conf:
+    shuffle_size: 1500
+  sort: true
+  sort_conf:
+    sort_size: 500
+  batch_conf:
+    batch_type: dynamic
+    max_frames_in_batch: 6000
+
+grad_clip: 5
+accum_grad: 1
+max_epoch: 60
+log_interval: 100
+
+optim: adamw
+optim_conf:
+  lr: 0.00002
+scheduler: warmuplr
+scheduler_conf:
+  warmup_steps: 25000
