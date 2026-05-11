@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from functools import partial
 import sys
+from functools import partial
 from typing import Optional
+
 from wenet.dataset import processor
 from wenet.dataset.datapipes import (WenetRawDatasetSource,
                                      WenetTarShardDatasetSource)
