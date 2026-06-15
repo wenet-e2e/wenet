@@ -25,7 +25,7 @@
 @interface Wenet : NSObject
 
 - (nullable instancetype)initWithModelPath:
-(NSString*)modelPath DictPath:(NSString*)dictPath;  // NOLINT
+(NSString*)modelPath DictPath:(NSString*)dictPath ITNTaggerPath:(nullable NSString*)itnTaggerPath ITNVerbalizerPath:(nullable NSString*)itnVerbalizerPath;  // NOLINT
 
 - (void)reset;
 
