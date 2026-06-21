@@ -340,6 +340,7 @@ class InterlaveDataPipe(IterDataPipe):
                 weights[i] = 0.
                 exhausted[i] = True
                 if all(exhausted):
+                    self.iters = None
                     return
                 weights = [weight / sum(weights) for weight in weights]
 
