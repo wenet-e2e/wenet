@@ -76,10 +76,13 @@ Measured on a Tesla T4 (16GB, Turing/sm_75), torch 2.4.0+cu121.
   46.6ms -> 33.1ms (~29%, cutting most of the bf16 slowdown above). This
   toggle only applies to WeNet's own Conformer models; Paraformer (SANM
   attention) does not have a `use_sdpa` code path.
-* **int8 dynamic quantization is CPU-only.** `torch.quantization.quantize_dynamic`
-  (used by `wenet/bin/export_onnx_cpu.py`/`export_jit.py`) works on CPU but
-  raises `NotImplementedError: Could not run 'quantized::linear_dynamic' with
+* **int8 dynamic quantization is CPU-only.** `wenet/bin/export_jit.py` uses
+  `torch.quantization.quantize_dynamic`, which works on CPU but raises
+  `NotImplementedError: Could not run 'quantized::linear_dynamic' with
   arguments from the 'CUDA' backend` if applied to a CUDA model — this is a
-  PyTorch backend limitation, not a WeNet bug. For GPU-side reduced precision,
-  see `wenet/bin/export_onnx_gpu.py --fp16` (ONNX export, a separate
-  fp16-only workflow).
+  PyTorch backend limitation, not a WeNet bug. (`wenet/bin/export_onnx_cpu.py`
+  quantizes separately via `onnxruntime.quantization.quantize_dynamic`, a
+  different, ONNX-graph-level API that isn't affected by this PyTorch
+  limitation.) For GPU-side reduced precision, see
+  `wenet/bin/export_onnx_gpu.py --fp16` (ONNX export, a separate fp16-only
+  workflow).
