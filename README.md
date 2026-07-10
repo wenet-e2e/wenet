@@ -29,6 +29,22 @@
 pip install git+https://github.com/wenet-e2e/wenet.git
 ```
 
+This pulls in `torch>=1.13.0` with no upper bound, so pip may install a torch
+build newer than your installed GPU driver supports. If you plan to use a GPU,
+verify it after install:
+
+``` sh
+python -c "import torch; print(torch.cuda.is_available())"
+```
+
+If this prints `False` on a machine with a GPU, torch silently falls back to
+CPU with no error. Reinstall a torch build matching your driver's CUDA
+version, e.g.:
+
+``` sh
+pip install torch==2.4.0+cu121 torchaudio==2.4.0+cu121 --index-url https://download.pytorch.org/whl/cu121 --force-reinstall
+```
+
 **Command-line usage** (use `-h` for parameters):
 
 ``` sh
@@ -37,6 +53,12 @@ wenet -m paraformer audio.wav
 
 You can set `-m` with `paraformer` or `firered` or `wenetspeech` for chinese,
 and set it to `whisper-large-v3` or `whisper-large-v3-turbo` for english.
+
+Note: this runs on **CPU by default** (`--device` defaults to `cpu`), even if
+a GPU is available. Pass `--device cuda` explicitly to use the GPU (Python API:
+`wenet.load_model(model_name, device='cuda')`). See
+[python usage](docs/python_package.md#gpuhardware-notes) for GPU/Turing (e.g.
+Tesla T4) specific notes on dtype and attention-backend options.
 
 
 **Python programming usage**:
