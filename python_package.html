@@ -50,6 +50,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#development-install">Development Install</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#command-line-usage">Command line Usage</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#python-programming-usage">Python Programming Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#gpu-hardware-notes">GPU/Hardware Notes</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="train.html">How to train models?</a></li>
@@ -118,12 +119,55 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 <h2>Python Programming Usage<a class="headerlink" href="#python-programming-usage" title="Link to this heading"></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">wenet</span>
 
-<span class="n">model</span> <span class="o">=</span> <span class="n">wenet</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="s1">&#39;chinese&#39;</span><span class="p">)</span>
-<span class="c1"># or model = wenet.load_model(model_dir=&#39;xxx&#39;)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">transcribe</span><span class="p">(</span><span class="s1">&#39;audio.wav&#39;</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;text&#39;</span><span class="p">])</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">wenet</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="s1">'chinese'</span><span class="p">)</span>
+<span class="c1"># or model = wenet.load_model(model_dir='xxx')</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">transcribe</span><span class="p">(</span><span class="s1">'audio.wav'</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s1">'text'</span><span class="p">])</span>
 </pre></div>
 </div>
+</section>
+<section id="gpu-hardware-notes">
+<h2>GPU/Hardware Notes<a class="headerlink" href="#gpu-hardware-notes" title="Link to this heading"></a></h2>
+<p>Measured on a Tesla T4 (16GB, Turing/sm_75), torch 2.4.0+cu121.</p>
+<ul class="simple">
+<li><p><strong>GPU is not the default.</strong> <code class="docutils literal notranslate"><span class="pre">--device</span></code> (CLI) and <code class="docutils literal notranslate"><span class="pre">device</span></code> (<code class="docutils literal notranslate"><span class="pre">wenet.load_model</span></code>)
+both default to <code class="docutils literal notranslate"><span class="pre">'cpu'</span></code>. On a GPU host, <code class="docutils literal notranslate"><span class="pre">wenet</span> <span class="pre">-m</span> <span class="pre">&lt;model&gt;</span> <span class="pre">audio.wav</span></code> still
+runs on CPU unless you pass <code class="docutils literal notranslate"><span class="pre">--device</span> <span class="pre">cuda</span></code>. There is no warning when this
+happens. Measured on paraformer: CUDA is <strong>2.84x</strong> faster than CPU
+(0.205s vs 0.581s per utterance, cached model, T4).</p></li>
+<li><p><strong>No dtype flag on the pip-installed CLI.</strong> The <code class="docutils literal notranslate"><span class="pre">wenet</span></code> console command
+(<code class="docutils literal notranslate"><span class="pre">wenet/cli/transcribe.py</span></code>) always runs fp32 and has no <code class="docutils literal notranslate"><span class="pre">--dtype</span></code>/<code class="docutils literal notranslate"><span class="pre">--fp16</span></code>
+flag. The training-recipe script <code class="docutils literal notranslate"><span class="pre">wenet/bin/recognize.py</span></code> does expose
+<code class="docutils literal notranslate"><span class="pre">--dtype</span> <span class="pre">{fp16,fp32,bf16}</span></code>, but that is a separate, more involved entry
+point (local recipe checkout, not the pip package).</p></li>
+<li><p><strong>bf16 can be slower than fp32 on Turing-class GPUs (e.g. T4).</strong> T4 lacks
+bf16 tensor-core acceleration. On WeNet’s own Conformer models (e.g.
+<code class="docutils literal notranslate"><span class="pre">wenetspeech</span></code>), casting to bf16 measured <strong>~47% slower</strong> than fp32
+(46.6ms vs 31.7ms per forward pass). fp16 does not crash but shows no
+speedup at batch size 1 with short audio (launch-overhead bound), though it
+does cut VRAM by about 46%.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">use_sdpa</span></code> is off by default in the shipped configs, and turning it on
+helps most on bf16.</strong> WeNet’s own Conformer implementation supports a
+<code class="docutils literal notranslate"><span class="pre">use_sdpa:</span> <span class="pre">true</span></code> toggle (<code class="docutils literal notranslate"><span class="pre">encoder_conf</span></code>/<code class="docutils literal notranslate"><span class="pre">decoder_conf</span></code>) that switches
+attention from a manual matmul+softmax to
+<code class="docutils literal notranslate"><span class="pre">torch.nn.functional.scaled_dot_product_attention</span></code>, using the same
+checkpoint with no retraining. The <code class="docutils literal notranslate"><span class="pre">train.yaml</span></code> shipped with pretrained
+models (e.g. <code class="docutils literal notranslate"><span class="pre">wenetspeech</span></code>) does not set this key, so it loads as <code class="docutils literal notranslate"><span class="pre">False</span></code>.
+Enabling it measured 7-29% faster on a T4, with identical output text:
+fp32 31.7ms -&gt; 29.4ms (~7%), fp16 32.2ms -&gt; 30.0ms (~7%), bf16
+46.6ms -&gt; 33.1ms (~29%, cutting most of the bf16 slowdown above). This
+toggle only applies to WeNet’s own Conformer models; Paraformer (SANM
+attention) does not have a <code class="docutils literal notranslate"><span class="pre">use_sdpa</span></code> code path.</p></li>
+<li><p><strong>int8 dynamic quantization is CPU-only.</strong> <code class="docutils literal notranslate"><span class="pre">wenet/bin/export_jit.py</span></code> uses
+<code class="docutils literal notranslate"><span class="pre">torch.quantization.quantize_dynamic</span></code>, which works on CPU but raises
+<code class="docutils literal notranslate"><span class="pre">NotImplementedError:</span> <span class="pre">Could</span> <span class="pre">not</span> <span class="pre">run</span> <span class="pre">'quantized::linear_dynamic'</span> <span class="pre">with</span> <span class="pre">arguments</span> <span class="pre">from</span> <span class="pre">the</span> <span class="pre">'CUDA'</span> <span class="pre">backend</span></code> if applied to a CUDA model — this is a
+PyTorch backend limitation, not a WeNet bug. (<code class="docutils literal notranslate"><span class="pre">wenet/bin/export_onnx_cpu.py</span></code>
+quantizes separately via <code class="docutils literal notranslate"><span class="pre">onnxruntime.quantization.quantize_dynamic</span></code>, a
+different, ONNX-graph-level API that isn’t affected by this PyTorch
+limitation.) For GPU-side reduced precision, see
+<code class="docutils literal notranslate"><span class="pre">wenet/bin/export_onnx_gpu.py</span> <span class="pre">--fp16</span></code> (ONNX export, a separate fp16-only
+workflow).</p></li>
+</ul>
 </section>
 </section>
 

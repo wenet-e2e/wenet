@@ -98,7 +98,7 @@ which is essential for deploying the model to production.</p>
 If it fails, we should modify the training code to satisfy the export requirements.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># See in wenet/bin/train.py</span>
 <span class="n">script_model</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">jit</span><span class="o">.</span><span class="n">script</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
-<span class="n">script_model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">&#39;init.zip&#39;</span><span class="p">))</span>
+<span class="n">script_model</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">model_dir</span><span class="p">,</span> <span class="s1">'init.zip'</span><span class="p">))</span>
 </pre></div>
 </div>
 <p>Two principles should be taken into consideration when we contribute our python code
