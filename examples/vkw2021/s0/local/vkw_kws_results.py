@@ -20,16 +20,17 @@ import logging
 import os
 
 import torch
+import torch.distributed as dist
 import yaml
 from torch.utils.data import DataLoader
 
 from wenet.dataset.dataset import Dataset
+from wenet.utils.checkpoint import load_checkpoint
+from wenet.utils.common import get_subsample
+from wenet.utils.ctc_utils import remove_duplicates_and_blank
+from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.init_model import init_model
 from wenet.utils.init_tokenizer import init_tokenizer
-
-from wenet.utils.common import get_subsample
-from wenet.utils.common import remove_duplicates_and_blank
-from wenet.utils.file_utils import read_symbol_table
 from wenet.utils.mask import make_pad_mask
 
 
@@ -186,7 +187,7 @@ if __name__ == '__main__':
     cv_conf['speed_perturb'] = False
     cv_conf['spec_aug'] = False
 
-    tokenizer = init_tokenizer(ali_conf, args.symbol_table, args.bpe_model)
+    tokenizer = init_tokenizer(configs)
     cv_dataset = Dataset(args.data_type,
                          args.input_data,
                          tokenizer,
