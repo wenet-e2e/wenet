@@ -4,7 +4,7 @@ project(kaldi)
 
 # include_directories() is called in the root CMakeLists.txt
 
-add_library(kaldi-util
+add_library(kaldi-util STATIC
   base/kaldi-error.cc
   base/kaldi-math.cc
   util/kaldi-io.cc
@@ -14,7 +14,7 @@ add_library(kaldi-util
 )
 target_link_libraries(kaldi-util PUBLIC utils)
 
-add_library(kaldi-decoder
+add_library(kaldi-decoder STATIC
   lat/determinize-lattice-pruned.cc
   lat/lattice-functions.cc
   decoder/lattice-faster-decoder.cc

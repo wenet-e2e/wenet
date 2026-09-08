@@ -17,7 +17,18 @@
 #ifndef KALDI_BASE_KALDI_ERROR_H_
 #define KALDI_BASE_KALDI_ERROR_H_ 1
 
+#include "base/kaldi-types.h"
 #include "utils/log.h"
+#include "glog/logging.h"
+
+// glog's logging.h #undefs DECLARE_*/DEFINE_* at end of file.
+// Restore openfst's FST_FLAGS_-prefixed versions.
+#define DECLARE_bool(name)    extern bool FST_FLAGS_##name
+#define DECLARE_string(name)  extern std::string FST_FLAGS_##name
+#define DECLARE_int32(name)   extern int32_t FST_FLAGS_##name
+#define DECLARE_int64(name)   extern int64_t FST_FLAGS_##name
+#define DECLARE_uint64(name)  extern uint64_t FST_FLAGS_##name
+#define DECLARE_double(name)  extern double FST_FLAGS_##name
 
 namespace kaldi {
 

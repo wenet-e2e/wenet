@@ -24,20 +24,12 @@ if(NOT ANDROID)
     add_compile_options(/W0 /wd4244 /wd4267)
   endif()
 
-  # "OpenFST port for Windows" builds openfst with cmake for multiple platforms.
-  # Openfst is compiled with glog/gflags to avoid log and flag conflicts with log and flags in wenet/libtorch.
-  # To build openfst with gflags and glog, we comment out some vars of {flags, log}.h and flags.cc.
   set(openfst_SOURCE_DIR ${fc_base}/openfst-src CACHE PATH "OpenFST source directory")
-    FetchContent_Declare(openfst
-      URL           https://github.com/kkm000/openfst/archive/refs/tags/win/1.7.2.1.tar.gz
-      URL_HASH      SHA256=e04e1dabcecf3a687ace699ccb43a8a27da385777a56e69da6e103344cc66bca
-      #URL           https://github.com/kkm000/openfst/archive/refs/tags/win/1.6.5.1.tar.gz
-      #URL_HASH      SHA256=02c49b559c3976a536876063369efc0e41ab374be1035918036474343877046e
-      PATCH_COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/patch/openfst ${openfst_SOURCE_DIR}
-    )
-    FetchContent_MakeAvailable(openfst)
-    add_dependencies(fst gflags glog)
-    target_link_libraries(fst PUBLIC gflags_nothreads_static glog)
+  FetchContent_Declare(openfst
+    URL      https://github.com/csukuangfj/openfst/archive/refs/tags/v1.8.5-2026-04-11.tar.gz
+    URL_HASH SHA256=57fbc4b950ae81b1a0e1e298af15652da968a6723a592b7874e9b4027a80a5b4
+  )
+  FetchContent_MakeAvailable(openfst)
   include_directories(${openfst_SOURCE_DIR}/src/include)
 else()
   set(openfst_BINARY_DIR ${build_DIR}/wenet-openfst-android-1.0.2.aar/jni)

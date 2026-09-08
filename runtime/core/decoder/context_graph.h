@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "fst/compose.h"
+#include "fst/flags.h"
 #include "fst/fst.h"
 #include "fst/matcher.h"
 #include "fst/vector-fst.h"

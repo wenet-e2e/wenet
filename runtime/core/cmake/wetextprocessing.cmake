@@ -1,12 +1,11 @@
 if(NOT ANDROID)
   FetchContent_Declare(wetextprocessing
     GIT_REPOSITORY https://github.com/wenet-e2e/WeTextProcessing.git
-    GIT_TAG        origin/master
+    GIT_TAG        v1.2.0
+    SOURCE_SUBDIR  runtime
   )
   FetchContent_MakeAvailable(wetextprocessing)
   include_directories(${wetextprocessing_SOURCE_DIR}/runtime)
-  add_subdirectory(${wetextprocessing_SOURCE_DIR}/runtime/utils)
-  add_subdirectory(${wetextprocessing_SOURCE_DIR}/runtime/processor)
 else()
   include(ExternalProject)
   set(ANDROID_CMAKE_ARGS
@@ -22,7 +21,7 @@ else()
   )
   ExternalProject_Add(wetextprocessing
     GIT_REPOSITORY https://github.com/wenet-e2e/WeTextProcessing.git
-    GIT_TAG origin/master
+    GIT_TAG v1.2.0
     SOURCE_SUBDIR runtime
     CMAKE_ARGS ${ANDROID_CMAKE_ARGS}
     INSTALL_COMMAND ""
@@ -32,4 +31,3 @@ else()
   link_directories(${BINARY_DIR}/processor ${BINARY_DIR}/utils)
   link_libraries(wetext_utils)
 endif()
-

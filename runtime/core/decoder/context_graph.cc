@@ -15,8 +15,13 @@
 #include "decoder/context_graph.h"
 
 #include <fstream>
+#include <memory>
 #include <queue>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "fst/determinize.h"
 
@@ -148,7 +153,7 @@ void ContextGraph::BuildContextGraph(
 }
 
 void ContextGraph::ConvertToAC() {
-  CHECK(graph_ != nullptr) << "Context graph should not be nullptr!";
+  CHECK(graph_ != nullptr);
   int num_states = graph_->NumStates();
   std::vector<int> fail_states(num_states, 0);
   std::vector<float> total_weights(num_states, 0);

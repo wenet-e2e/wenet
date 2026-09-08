@@ -14,7 +14,9 @@
 // limitations under the License
 
 #include "post_processor/post_processor.h"
+#include <memory>
 #include <sstream>
+#include <string>
 #include <vector>
 #include "processor/wetext_processor.h"
 #include "utils/string.h"
@@ -65,7 +67,7 @@ std::string PostProcessor::ProcessSpace(const std::string& str) {
 std::string del_substr(const std::string& str, const std::string& sub) {
   std::string result = str;
   int pos = 0;
-  while (string::npos != (pos = result.find(sub))) {
+  while (std::string::npos != (pos = result.find(sub))) {
     result.erase(pos, sub.size());
   }
   return result;
