@@ -7,6 +7,14 @@ if(NOT ANDROID)
   include_directories(${wetextprocessing_SOURCE_DIR}/runtime)
   add_subdirectory(${wetextprocessing_SOURCE_DIR}/runtime/utils)
   add_subdirectory(${wetextprocessing_SOURCE_DIR}/runtime/processor)
+
+  # Disable code signing for wetext_processor_c shared library on iOS
+  if(IOS)
+    set_target_properties(wetext_processor_c PROPERTIES
+      XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED "NO"
+      XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO"
+    )
+  endif()
 else()
   include(ExternalProject)
   set(ANDROID_CMAKE_ARGS
@@ -32,4 +40,3 @@ else()
   link_directories(${BINARY_DIR}/processor ${BINARY_DIR}/utils)
   link_libraries(wetext_utils)
 endif()
-

@@ -6,7 +6,7 @@
 
 ```
 cd runtime/ios/build
-cmake .. -G Xcode -DTORCH=ON -DONNX=OFF -DIOS=ON -DGRAPH_TOOLS=OFF -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE=../toolchains/ios.toolchain.cmake -DPLATFORM=OS64 -DENABLE_BITCODE=FALSE
+cmake .. -G Xcode -DTORCH=ON -DONNX=OFF -DIOS=ON -DGRAPH_TOOLS=OFF -DBUILD_TESTING=OFF -DCMAKE_TOOLCHAIN_FILE=../toolchains/ios.toolchain.cmake -DPLATFORM=OS64 -DENABLE_BITCODE=FALSE -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 pod install
 
 # Build debug version

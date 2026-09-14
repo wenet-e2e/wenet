@@ -262,8 +262,8 @@ if(NOT DEFINED DEPLOYMENT_TARGET)
     # Unless specified, SDK version 13.0 is used by default as minimum target version (mac catalyst minimum requirement).
     set(DEPLOYMENT_TARGET "13.1")
   else()
-    # Unless specified, SDK version 11.0 is used by default as minimum target version (iOS, tvOS).
-    set(DEPLOYMENT_TARGET "11.0")
+    # Unless specified, SDK version 12.0 is used by default as minimum target version (iOS, tvOS).
+    set(DEPLOYMENT_TARGET "12.0")
   endif()
   message(STATUS "[DEFAULTS] Using the default min-version since DEPLOYMENT_TARGET not provided!")
 elseif(DEFINED DEPLOYMENT_TARGET AND PLATFORM MATCHES "^MAC_CATALYST" AND ${DEPLOYMENT_TARGET} VERSION_LESS "13.1")

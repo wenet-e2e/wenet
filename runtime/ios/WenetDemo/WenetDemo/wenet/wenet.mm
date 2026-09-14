@@ -41,7 +41,7 @@ using namespace wenet;
 }
 
 - (nullable instancetype)initWithModelPath:
-(NSString*)modelPath DictPath:(NSString*)dictPath {
+(NSString*)modelPath DictPath:(NSString*)dictPath ITNTaggerPath:(nullable NSString*)itnTaggerPath ITNVerbalizerPath:(nullable NSString*)itnVerbalizerPath {
   self = [super init];
   if (self) {
     try {
@@ -58,8 +58,32 @@ using namespace wenet;
       (fst::SymbolTable::ReadText(dictPath.UTF8String));
 
       PostProcessOptions post_process_opts;
-      resource->post_processor =
-      std::make_shared<PostProcessor>(post_process_opts);
+      // Load ITN resources if paths are provided
+      if (itnTaggerPath != nil && itnVerbalizerPath != nil) {
+        NSString* taggerPath = [itnTaggerPath stringByStandardizingPath];
+        NSString* verbalizerPath = [itnVerbalizerPath stringByStandardizingPath];
+        NSFileManager* fileManager = [NSFileManager defaultManager];
+        if ([fileManager fileExistsAtPath:taggerPath] &&
+            [fileManager fileExistsAtPath:verbalizerPath]) {
+          LOG(INFO) << "Reading ITN fst";
+          NSLog(@"Reading ITN fst from: %@ and %@", taggerPath, verbalizerPath);
+          // IMPORTANT: Set itn = true BEFORE constructing PostProcessor
+          // because PostProcessOptions is passed as const reference
+          post_process_opts.itn = true;
+          auto postprocessor = std::make_shared<PostProcessor>(std::move(post_process_opts));
+          postprocessor->InitITNResource(taggerPath.UTF8String,
+                                         verbalizerPath.UTF8String);
+          resource->post_processor = postprocessor;
+        } else {
+          LOG(INFO) << "ITN files not found, skipping ITN";
+          NSLog(@"ITN files not found, skipping ITN");
+          resource->post_processor =
+          std::make_shared<PostProcessor>(std::move(post_process_opts));
+        }
+      } else {
+        resource->post_processor =
+        std::make_shared<PostProcessor>(std::move(post_process_opts));
+      }
 
       feature_config = std::make_shared<FeaturePipelineConfig>(80, 16000);
       feature_pipeline = std::make_shared<FeaturePipeline>(*feature_config);
