@@ -39,9 +39,9 @@ typedef float BaseFloat;
 // we find in the future lacks stdint.h
 #include <stdint.h>
 
-// for discussion on what to do if you need compile kaldi
-// without OpenFST, see the bottom of this this file
-#include <fst/types.h>
+// The new csukuangfj/openfst no longer provides fst/types.h.
+// Include our own compatibility header instead.
+#include "base/fst_types.h"
 
 namespace kaldi {
 using ::int16;

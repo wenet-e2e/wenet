@@ -170,7 +170,7 @@ void RemoveSomeInputSymbols(const std::vector<I>& to_remove,
                             MutableFst<Arc>* fst) {
   KALDI_ASSERT_IS_INTEGER_TYPE(I);
   RemoveSomeInputSymbolsMapper<Arc, I> mapper(to_remove);
-  Map(fst, mapper);
+  ArcMap(fst, mapper);
 }
 
 template <class Arc, class I>
@@ -230,7 +230,7 @@ void MapInputSymbols(const std::vector<I>& symbol_mapping,
   // false == don't copy the "symbol_mapping", retain pointer--
   // safe since short-lived object.
   MapInputSymbolsMapper<Arc, I> mapper(symbol_mapping, false);
-  Map(fst, mapper);
+  ArcMap(fst, mapper);
 }
 
 template <class Arc, class I>

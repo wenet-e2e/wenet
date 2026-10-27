@@ -19,5 +19,16 @@
 // the gflags/glog from openfst to avoid them linked both statically and
 // dynamically into the executable.
 #include "fst/flags.h"
+#include <gflags/gflags.h>
+#include <glog/logging.h>
+
+// glog's logging.h #undefs DECLARE_* macros at end of file.
+// Restore openfst's FST_FLAGS_-prefixed versions for openfst headers.
+#define DECLARE_bool(name)    extern bool FST_FLAGS_##name
+#define DECLARE_string(name)  extern std::string FST_FLAGS_##name
+#define DECLARE_int32(name)   extern int32_t FST_FLAGS_##name
+#define DECLARE_int64(name)   extern int64_t FST_FLAGS_##name
+#define DECLARE_uint64(name)  extern uint64_t FST_FLAGS_##name
+#define DECLARE_double(name)  extern double FST_FLAGS_##name
 
 #endif  // UTILS_FLAGS_H_

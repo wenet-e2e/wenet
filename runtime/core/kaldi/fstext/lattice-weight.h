@@ -401,8 +401,8 @@ template <class FloatType>
 inline std::ostream& operator<<(std::ostream& strm,
                                 const LatticeWeightTpl<FloatType>& w) {
   LatticeWeightTpl<FloatType>::WriteFloatType(strm, w.Value1());
-  CHECK(FLAGS_fst_weight_separator.size() == 1);  // NOLINT
-  strm << FLAGS_fst_weight_separator[0];          // comma by default;
+  CHECK(FST_FLAGS_fst_weight_separator.size() == 1);  // NOLINT
+  strm << FST_FLAGS_fst_weight_separator[0];          // comma by default;
   // may or may not be settable from Kaldi programs.
   LatticeWeightTpl<FloatType>::WriteFloatType(strm, w.Value2());
   return strm;
@@ -411,9 +411,9 @@ inline std::ostream& operator<<(std::ostream& strm,
 template <class FloatType>
 inline std::istream& operator>>(std::istream& strm,
                                 LatticeWeightTpl<FloatType>& w1) {
-  CHECK(FLAGS_fst_weight_separator.size() == 1);  // NOLINT
+  CHECK(FST_FLAGS_fst_weight_separator.size() == 1);  // NOLINT
   // separator defaults to ','
-  return w1.ReadNoParen(strm, FLAGS_fst_weight_separator[0]);
+  return w1.ReadNoParen(strm, FST_FLAGS_fst_weight_separator[0]);
 }
 
 // CompactLattice will be an acceptor (accepting the words/output-symbols),
@@ -752,8 +752,8 @@ template <class WeightType, class IntType>
 inline std::ostream& operator<<(
     std::ostream& strm, const CompactLatticeWeightTpl<WeightType, IntType>& w) {
   strm << w.Weight();
-  CHECK(FLAGS_fst_weight_separator.size() == 1);  // NOLINT
-  strm << FLAGS_fst_weight_separator[0];          // comma by default.
+  CHECK(FST_FLAGS_fst_weight_separator.size() == 1);  // NOLINT
+  strm << FST_FLAGS_fst_weight_separator[0];          // comma by default.
   for (size_t i = 0; i < w.String().size(); i++) {
     strm << w.String()[i];
     if (i + 1 < w.String().size())
@@ -771,8 +771,8 @@ inline std::istream& operator>>(
   if (strm.fail()) {
     return strm;
   }
-  CHECK(FLAGS_fst_weight_separator.size() == 1);            // NOLINT
-  size_t pos = s.find_last_of(FLAGS_fst_weight_separator);  // normally ","
+  CHECK(FST_FLAGS_fst_weight_separator.size() == 1);            // NOLINT
+  size_t pos = s.find_last_of(FST_FLAGS_fst_weight_separator);  // normally ","
   if (pos == std::string::npos) {
     strm.clear(std::ios::badbit);
     return strm;
