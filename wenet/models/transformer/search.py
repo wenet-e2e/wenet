@@ -14,17 +14,17 @@
 
 import math
 from collections import defaultdict
-from typing import List, Dict
+from typing import Dict, List
 
 import torch
 from torch.nn.utils.rnn import pad_sequence
 
-from wenet.utils.common import (add_sos_eos, log_add, add_whisper_tokens,
+from wenet.utils.common import (add_sos_eos, add_whisper_tokens, log_add,
                                 mask_to_bias)
+from wenet.utils.context_graph import ContextGraph, ContextState
 from wenet.utils.ctc_utils import remove_duplicates_and_blank
 from wenet.utils.mask import (make_pad_mask, mask_finished_preds,
                               mask_finished_scores, subsequent_mask)
-from wenet.utils.context_graph import ContextGraph, ContextState
 
 
 class DecodeResult:
@@ -230,8 +230,9 @@ def ctc_prefix_beam_search(
             for i, hyp in enumerate(cur_hyps):
                 context_score, new_context_state = context_graph.finalize(
                     hyp[1].context_state)
-                cur_hyps[i][1].context_score = context_score
+                cur_hyps[i][1].context_score += context_score
                 cur_hyps[i][1].context_state = new_context_state
+            cur_hyps.sort(key=lambda x: x[1].total_score(), reverse=True)
 
         nbest = [y[0] for y in cur_hyps]
         nbest_scores = [y[1].total_score() for y in cur_hyps]
