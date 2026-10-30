@@ -16,9 +16,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from wenet.text.tokenize_utils import tokenize_by_bpe_model
-from typing import Dict, List, Tuple
 from collections import deque
+from typing import Dict, List, Tuple
+
+from wenet.text.tokenize_utils import tokenize_by_bpe_model
 
 
 def tokenize(context_list_path, symbol_table, bpe_model=None):
@@ -157,20 +158,23 @@ class ContextGraph:
         """
         for tokens in token_ids:
             node = self.root
-            for i, token in enumerate(tokens):
+            for token in tokens:
                 if token not in node.next:
                     self.num_nodes += 1
-                    is_end = i == len(tokens) - 1
                     node_score = node.node_score + self.context_score
                     node.next[token] = ContextState(
                         id=self.num_nodes,
                         token=token,
                         token_score=self.context_score,
                         node_score=node_score,
-                        output_score=node_score if is_end else 0,
-                        is_end=is_end,
+                        output_score=0,
+                        is_end=False,
                     )
                 node = node.next[token]
+            # The last node may already exist as part of a longer phrase
+            if tokens:
+                node.is_end = True
+                node.output_score = node.node_score
         self._fill_fail_output()  # AC
 
     def _fill_fail_output(self):
