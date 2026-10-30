@@ -73,6 +73,17 @@ def test_unfinished_phrase_does_not_beat_a_likelier_hypothesis(tmp_path):
 
     assert list(biased.tokens) == tokens('背景')
     assert biased.score == pytest.approx(plain.score)
+    assert biased.nbest_scores == sorted(biased.nbest_scores, reverse=True)
+
+
+def test_unfinished_phrase_keeps_the_bonus_of_a_phrase_inside_it(tmp_path):
+    graph = build_graph(tmp_path, ['北京', '北京大学'])
+    frames = [{'北': 1.0}, {'京': 1.0}, {'大': 1.0}]
+
+    plain = beam_search(frames)[0]
+    biased = beam_search(frames, graph)[0]
+
+    assert biased.score == pytest.approx(plain.score + 2 * CONTEXT_SCORE)
 
 
 def test_attention_rescoring_sees_the_bonus(tmp_path):
